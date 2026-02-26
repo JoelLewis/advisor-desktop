@@ -86,7 +86,7 @@ export function TaxManagementPage() {
     return (
       <div className="space-y-4">
         <Skeleton className="h-8 w-64" />
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24" />)}
         </div>
         <Skeleton className="h-96" />
@@ -126,7 +126,7 @@ export function TaxManagementPage() {
 
       {/* Summary cards */}
       {stats && (
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
           <Card>
             <CardContent>
               <p className="text-caption text-text-secondary">Unrealized Gains</p>

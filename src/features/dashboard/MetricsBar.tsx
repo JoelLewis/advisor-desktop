@@ -8,7 +8,7 @@ export function MetricsBar() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-4">
         {Array.from({ length: 5 }).map((_, i) => (
           <Skeleton key={i} className="h-[88px]" />
         ))}
@@ -19,7 +19,7 @@ export function MetricsBar() {
   if (!data) return <div className="py-4 text-center text-caption text-text-tertiary">Unable to load metrics</div>
 
   return (
-    <div className="grid grid-cols-5 gap-4">
+    <div className="grid grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-4">
       <MetricCard
         label="Total AUM"
         value={formatCurrency(data.totalAUM, true)}

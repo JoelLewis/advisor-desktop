@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { TreemapChart } from '@/components/ui/TreemapChart'
 import { useConcentration } from '@/hooks/use-portfolio'
+import { useContainerWidth } from '@/hooks/use-container-width'
 import { formatCurrency, cn } from '@/lib/utils'
 
 const ASSET_CLASS_LABELS: Record<string, string> = {
@@ -25,11 +26,12 @@ type ConcentrationViewProps = {
 
 export function ConcentrationView({ accountId }: ConcentrationViewProps) {
   const { data, isLoading } = useConcentration(accountId)
+  const { containerRef: treemapContainerRef, width: treemapWidth } = useContainerWidth(720)
 
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-24" />
           ))}
@@ -75,7 +77,7 @@ export function ConcentrationView({ accountId }: ConcentrationViewProps) {
       )}
 
       {/* Summary cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         <Card>
           <CardContent>
             <p className="text-caption text-text-secondary">Top 10 Concentration</p>
@@ -117,7 +119,9 @@ export function ConcentrationView({ accountId }: ConcentrationViewProps) {
       <Card>
         <CardHeader>Position Concentration</CardHeader>
         <CardContent>
-          <TreemapChart data={treemapData} />
+          <div ref={treemapContainerRef}>
+            <TreemapChart data={treemapData} width={treemapWidth} height={Math.round(treemapWidth * 0.6)} />
+          </div>
         </CardContent>
       </Card>
 

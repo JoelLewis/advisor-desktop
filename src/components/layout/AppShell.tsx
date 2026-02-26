@@ -8,8 +8,9 @@ import { AIChatPanel } from '@/features/ai-assistant/AIChatPanel'
 import { CommandPalette } from '@/features/command-palette/CommandPalette'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/store/ui-store'
+import { useBreakpoint } from '@/hooks/use-breakpoint'
 
-const NAV_ROUTES = ['/dashboard', '/clients', '/portfolios', '/growth', '/workflows', '/settings'] as const
+const NAV_ROUTES = ['/dashboard', '/actions', '/clients', '/households', '/portfolios', '/growth', '/engage', '/workflows', '/settings'] as const
 
 export function AppShell() {
   const sidebarExpanded = useUIStore((s) => s.sidebarExpanded)
@@ -19,6 +20,15 @@ export function AppShell() {
   const toggleAI = useUIStore((s) => s.toggleAIPanel)
   const toggleMessaging = useUIStore((s) => s.toggleMessaging)
   const navigate = useNavigate()
+  const { isBase } = useBreakpoint()
+
+  // Auto-collapse sidebar when viewport shrinks below xl
+  useEffect(() => {
+    if (isBase) {
+      const { sidebarExpanded: expanded, toggleSidebar } = useUIStore.getState()
+      if (expanded) toggleSidebar()
+    }
+  }, [isBase])
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -75,7 +85,7 @@ export function AppShell() {
           'pt-[calc(theme(spacing.topbar)+theme(spacing.breadcrumb))] pb-statusbar transition-[margin] duration-200 ease-in-out',
           sidebarExpanded ? 'ml-sidebar-expanded' : 'ml-sidebar-collapsed',
         )}
-        style={{ marginRight: aiPanelOpen ? aiPanelWidth : 0 }}
+        style={{ marginRight: aiPanelOpen && !isBase ? aiPanelWidth : 0 }}
       >
         <div className="p-6 animate-fade-in">
           <Outlet />

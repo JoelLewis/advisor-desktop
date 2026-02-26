@@ -86,7 +86,7 @@ export function MeetingPrepModal({ eventId, onClose }: MeetingPrepModalProps) {
             <div className="divide-y divide-border-primary">
               <div className="px-5 py-4">
                 <SectionHeader icon={Activity}>Portfolio Summary</SectionHeader>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
                   {prep.portfolioSummary.map((item) => (
                     <div key={item.label} className="rounded-md bg-surface-secondary px-3 py-2">
                       <p className="text-[10px] uppercase text-text-tertiary">{item.label}</p>

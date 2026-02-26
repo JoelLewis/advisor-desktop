@@ -1,5 +1,5 @@
 import { MetricsBar } from './MetricsBar'
-import { NBAFeed } from './NBAFeed'
+import { NBAQuickView } from './NBAQuickView'
 import { SchedulePanel } from './SchedulePanel'
 import { ActivityStream } from './ActivityStream'
 import { AIInsightStack } from '@/components/ui/AIInsightCard'
@@ -30,9 +30,9 @@ export function DashboardPage() {
         <AIInsightStack insights={insights} />
       )}
 
-      <div className="grid grid-cols-3 gap-6">
-        <div className="col-span-2">
-          <NBAFeed />
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div className="xl:col-span-2">
+          <NBAQuickView />
         </div>
         <SchedulePanel />
       </div>

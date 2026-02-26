@@ -32,7 +32,7 @@ export function AccountSetupStep({ selectedType, fields, onSelectType, onFieldCh
       </div>
 
       {/* Account type selection */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
         {requirements.map((req) => (
           <button
             key={req.accountType}

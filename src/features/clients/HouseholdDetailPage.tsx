@@ -199,13 +199,13 @@ export function HouseholdDetailPage() {
             <AIInsightStack insights={insights} />
           )}
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
             <MetricSummaryCard label="Total AUM" value={formatCurrency(household.totalAUM, true)} />
             <MetricSummaryCard label="Managed" value={formatCurrency(household.managedAUM, true)} />
             <MetricSummaryCard label="Held Away" value={formatCurrency(household.heldAwayAUM, true)} />
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <Card>
               <CardHeader>Consolidated Allocation</CardHeader>
               <CardContent>
