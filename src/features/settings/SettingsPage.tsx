@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
 import { Save } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { TabLayout } from '@/components/ui/TabLayout'
@@ -99,7 +100,10 @@ function AISettingsPanel() {
   if (isLoading || !settings) return <Skeleton className="h-64" />
 
   function save() {
-    if (settings) update.mutate(settings)
+    if (settings) update.mutate(settings, {
+      onSuccess: () => toast.success('AI settings saved'),
+      onError: () => toast.error('Failed to save AI settings'),
+    })
   }
 
   function updatePermission(key: string, value: boolean) {
@@ -165,7 +169,10 @@ function NBASettingsPanel() {
   if (isLoading || !settings) return <Skeleton className="h-64" />
 
   function save() {
-    if (settings) update.mutate(settings)
+    if (settings) update.mutate(settings, {
+      onSuccess: () => toast.success('NBA settings saved'),
+      onError: () => toast.error('Failed to save NBA settings'),
+    })
   }
 
   function updateWeight(key: string, value: number) {
@@ -278,7 +285,10 @@ function NotificationSettingsPanel() {
   if (isLoading || !settings) return <Skeleton className="h-64" />
 
   function save() {
-    if (settings) update.mutate(settings)
+    if (settings) update.mutate(settings, {
+      onSuccess: () => toast.success('Notification settings saved'),
+      onError: () => toast.error('Failed to save notification settings'),
+    })
   }
 
   function updateChannel(key: string, value: boolean) {

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { Sparkles, FileText, Pin, Send } from 'lucide-react'
 import { ClientHeader } from '@/components/ui/ClientHeader'
 import { TabLayout } from '@/components/ui/TabLayout'
@@ -155,7 +156,10 @@ export function ClientDetailPage() {
 
   function handleAddNote() {
     if (!noteText.trim()) return
-    createNote.mutate(noteText.trim())
+    createNote.mutate(noteText.trim(), {
+      onSuccess: () => toast.success('Note added'),
+      onError: () => toast.error('Failed to add note'),
+    })
     setNoteText('')
   }
 
@@ -178,9 +182,6 @@ export function ClientDetailPage() {
               </div>
             </CardContent>
           </Card>
-          {insights && insights.length > 0 && (
-            <AIInsightStack insights={insights} />
-          )}
           <div className="grid grid-cols-2 gap-6">
             <Card>
               <CardHeader>Asset Allocation</CardHeader>
@@ -366,6 +367,9 @@ export function ClientDetailPage() {
           metrics: [{ label: 'AUM', value: formatCurrency(client.totalAUM, true) }],
         }} />
       </div>
+      {insights && insights.length > 0 && (
+        <AIInsightStack insights={insights} />
+      )}
       <TabLayout tabs={tabs} />
     </div>
   )

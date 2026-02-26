@@ -26,8 +26,9 @@ export function ClientInfoStep({ data, onChange }: ClientInfoStepProps) {
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="mb-1 block text-caption font-medium text-text-secondary">First Name *</label>
+          <label htmlFor="onboard-first-name" className="mb-1 block text-caption font-medium text-text-secondary">First Name *</label>
           <input
+            id="onboard-first-name"
             type="text"
             value={info.firstName}
             onChange={(e) => update('firstName', e.target.value)}
@@ -36,8 +37,9 @@ export function ClientInfoStep({ data, onChange }: ClientInfoStepProps) {
           />
         </div>
         <div>
-          <label className="mb-1 block text-caption font-medium text-text-secondary">Last Name *</label>
+          <label htmlFor="onboard-last-name" className="mb-1 block text-caption font-medium text-text-secondary">Last Name *</label>
           <input
+            id="onboard-last-name"
             type="text"
             value={info.lastName}
             onChange={(e) => update('lastName', e.target.value)}
@@ -49,8 +51,9 @@ export function ClientInfoStep({ data, onChange }: ClientInfoStepProps) {
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="mb-1 block text-caption font-medium text-text-secondary">Email *</label>
+          <label htmlFor="onboard-email" className="mb-1 block text-caption font-medium text-text-secondary">Email *</label>
           <input
+            id="onboard-email"
             type="email"
             value={info.email}
             onChange={(e) => update('email', e.target.value)}
@@ -59,8 +62,9 @@ export function ClientInfoStep({ data, onChange }: ClientInfoStepProps) {
           />
         </div>
         <div>
-          <label className="mb-1 block text-caption font-medium text-text-secondary">Phone *</label>
+          <label htmlFor="onboard-phone" className="mb-1 block text-caption font-medium text-text-secondary">Phone *</label>
           <input
+            id="onboard-phone"
             type="tel"
             value={info.phone}
             onChange={(e) => update('phone', e.target.value)}
@@ -71,8 +75,9 @@ export function ClientInfoStep({ data, onChange }: ClientInfoStepProps) {
       </div>
 
       <div>
-        <label className="mb-1 block text-caption font-medium text-text-secondary">Date of Birth *</label>
+        <label htmlFor="onboard-dob" className="mb-1 block text-caption font-medium text-text-secondary">Date of Birth *</label>
         <input
+          id="onboard-dob"
           type="date"
           value={info.dateOfBirth}
           onChange={(e) => update('dateOfBirth', e.target.value)}
@@ -81,8 +86,9 @@ export function ClientInfoStep({ data, onChange }: ClientInfoStepProps) {
       </div>
 
       <div>
-        <label className="mb-1 block text-caption font-medium text-text-secondary">Address</label>
+        <label htmlFor="onboard-address" className="mb-1 block text-caption font-medium text-text-secondary">Address</label>
         <input
+          id="onboard-address"
           type="text"
           value={info.address}
           onChange={(e) => update('address', e.target.value)}

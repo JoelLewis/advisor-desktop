@@ -55,12 +55,22 @@ export function AppShell() {
 
   return (
     <div className="min-h-screen bg-surface-secondary">
+      {/* Skip navigation link */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-md focus:bg-accent-blue focus:px-4 focus:py-2 focus:text-white focus:shadow-lg"
+      >
+        Skip to main content
+      </a>
+
       <Sidebar />
       <TopBar />
       <BreadcrumbBar />
 
       {/* Main content area */}
       <main
+        id="main-content"
+        aria-label="Main content"
         className={cn(
           'pt-[calc(theme(spacing.topbar)+theme(spacing.breadcrumb))] pb-statusbar transition-[margin] duration-200 ease-in-out',
           sidebarExpanded ? 'ml-sidebar-expanded' : 'ml-sidebar-collapsed',

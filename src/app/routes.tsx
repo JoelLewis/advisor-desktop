@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppShell } from '@/components/layout/AppShell'
 import { PageSkeleton } from '@/components/layout/PageSkeleton'
+import { RouteErrorPage } from '@/components/RouteErrorPage'
 
 // Lazy-loaded feature pages
 const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })))
@@ -29,44 +30,49 @@ export const router = createBrowserRouter([
   {
     path: '/',
     element: <AppShell />,
+    errorElement: <RouteErrorPage />,
     children: [
       { index: true, element: <Navigate to="/dashboard" replace /> },
-      { path: 'dashboard', element: suspense(<DashboardPage />) },
-      { path: 'dashboard/nba-effectiveness', element: suspense(<NBAEffectivenessPage />) },
+      { path: 'dashboard', element: suspense(<DashboardPage />), handle: { breadcrumb: 'Dashboard' } },
+      { path: 'dashboard/nba-effectiveness', element: suspense(<NBAEffectivenessPage />), handle: { breadcrumb: 'NBA Effectiveness' } },
       {
         path: 'clients',
+        handle: { breadcrumb: 'Clients' },
         children: [
           { index: true, element: suspense(<ClientListPage />) },
-          { path: ':clientId', element: suspense(<ClientDetailPage />) },
-          { path: 'onboard/:prospectId?', element: suspense(<OnboardingWizard />) },
+          { path: ':clientId', element: suspense(<ClientDetailPage />), handle: { breadcrumb: 'Client' } },
+          { path: 'onboard/:prospectId?', element: suspense(<OnboardingWizard />), handle: { breadcrumb: 'Onboarding' } },
         ],
       },
       {
         path: 'households/:householdId',
         element: suspense(<HouseholdDetailPage />),
+        handle: { breadcrumb: 'Household' },
       },
       {
         path: 'portfolios',
+        handle: { breadcrumb: 'Portfolios' },
         children: [
           { index: true, element: suspense(<PortfolioPage />) },
-          { path: 'accounts/:accountId', element: suspense(<AccountDetailPage />) },
-          { path: 'accounts/:accountId/attribution', element: suspense(<AttributionPage />) },
-          { path: 'accounts/:accountId/tax', element: suspense(<TaxManagementPage />) },
-          { path: 'rebalance', element: suspense(<RebalancePage />) },
-          { path: 'risk', element: suspense(<RiskAnalyticsPage />) },
-          { path: 'models', element: suspense(<ModelGovernancePage />) },
-          { path: 'trading', element: suspense(<TradingPage />) },
+          { path: 'accounts/:accountId', element: suspense(<AccountDetailPage />), handle: { breadcrumb: 'Account' } },
+          { path: 'accounts/:accountId/attribution', element: suspense(<AttributionPage />), handle: { breadcrumb: 'Attribution' } },
+          { path: 'accounts/:accountId/tax', element: suspense(<TaxManagementPage />), handle: { breadcrumb: 'Tax Management' } },
+          { path: 'rebalance', element: suspense(<RebalancePage />), handle: { breadcrumb: 'Rebalance' } },
+          { path: 'risk', element: suspense(<RiskAnalyticsPage />), handle: { breadcrumb: 'Risk Analytics' } },
+          { path: 'models', element: suspense(<ModelGovernancePage />), handle: { breadcrumb: 'Model Governance' } },
+          { path: 'trading', element: suspense(<TradingPage />), handle: { breadcrumb: 'Trading' } },
         ],
       },
       {
         path: 'growth',
+        handle: { breadcrumb: 'Growth' },
         children: [
           { index: true, element: suspense(<ProspectsPage />) },
-          { path: 'revenue', element: suspense(<RevenuePage />) },
+          { path: 'revenue', element: suspense(<RevenuePage />), handle: { breadcrumb: 'Revenue' } },
         ],
       },
-      { path: 'workflows', element: suspense(<WorkflowCenterPage />) },
-      { path: 'settings', element: suspense(<SettingsPage />) },
+      { path: 'workflows', element: suspense(<WorkflowCenterPage />), handle: { breadcrumb: 'Workflows' } },
+      { path: 'settings', element: suspense(<SettingsPage />), handle: { breadcrumb: 'Settings' } },
     ],
   },
 ])

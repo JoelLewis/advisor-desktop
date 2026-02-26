@@ -33,6 +33,38 @@ function deriveScreenType(pathname: string): string {
   return 'dashboard'
 }
 
+const MIN_PANEL_WIDTH = 320
+const MAX_PANEL_WIDTH = 800
+
+function useDragResize(setPanelWidth: (w: number) => void) {
+  const [isDragging, setIsDragging] = useState(false)
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const newWidth = Math.min(MAX_PANEL_WIDTH, Math.max(MIN_PANEL_WIDTH, window.innerWidth - moveEvent.clientX))
+      setPanelWidth(newWidth)
+    }
+
+    const handleMouseUp = () => {
+      setIsDragging(false)
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  }, [setPanelWidth])
+
+  return { isDragging, handleMouseDown }
+}
+
 export function AIChatPanel() {
   const panelWidth = useUIStore((s) => s.aiPanelWidth)
   const setPanelWidth = useUIStore((s) => s.setAIPanelWidth)
@@ -42,6 +74,7 @@ export function AIChatPanel() {
   const panelTab = useUIStore((s) => s.panelTab)
   const setPanelTab = useUIStore((s) => s.setPanelTab)
   const entityContext = useNavigationStore((s) => s.entityContext)
+  const { isDragging, handleMouseDown } = useDragResize(setPanelWidth)
 
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -139,6 +172,20 @@ export function AIChatPanel() {
       className="fixed right-0 top-0 bottom-0 z-40 flex flex-col border-l border-border-primary bg-surface-primary shadow-lg animate-slide-in-right"
       style={{ width: panelWidth }}
     >
+      {/* Drag handle for resizing */}
+      <div
+        onMouseDown={handleMouseDown}
+        className={cn(
+          'absolute left-0 top-0 bottom-0 w-1 cursor-col-resize transition-colors hover:bg-accent-blue/30',
+          isDragging && 'bg-accent-blue/40',
+        )}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize panel"
+        aria-valuenow={panelWidth}
+        aria-valuemin={MIN_PANEL_WIDTH}
+        aria-valuemax={MAX_PANEL_WIDTH}
+      />
       {/* Header with tabs */}
       <div className="shrink-0 border-b border-border-primary">
         <div className="flex h-topbar items-center justify-between px-4">
@@ -164,11 +211,12 @@ export function AIChatPanel() {
           </div>
           <div className="flex items-center gap-1">
             <button
-              onClick={() => setPanelWidth(panelWidth === 400 ? 600 : 400)}
+              onClick={() => setPanelWidth(panelWidth < 500 ? 600 : 400)}
               className="flex h-7 w-7 items-center justify-center rounded text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-secondary"
-              aria-label={panelWidth === 400 ? 'Expand panel' : 'Collapse panel'}
+              aria-label={panelWidth < 500 ? 'Expand panel' : 'Collapse panel'}
+              aria-expanded={panelWidth >= 500}
             >
-              {panelWidth === 400 ? <Maximize2 className="h-3.5 w-3.5" /> : <Minimize2 className="h-3.5 w-3.5" />}
+              {panelWidth < 500 ? <Maximize2 className="h-3.5 w-3.5" /> : <Minimize2 className="h-3.5 w-3.5" />}
             </button>
             <button
               onClick={togglePanel}
@@ -195,7 +243,7 @@ export function AIChatPanel() {
           <ContextBriefing screenType={screenType} entityId={entityContext.id ?? undefined} />
 
           {/* Messages area */}
-          <div className="flex-1 overflow-y-auto scrollbar-thin p-4">
+          <div className="flex-1 overflow-y-auto scrollbar-thin p-4" aria-live="polite">
             {messages.length === 0 ? (
               <div>
                 <ActionTemplateGrid screenType={screenType} />
@@ -207,9 +255,9 @@ export function AIChatPanel() {
                   <ChatBubble key={msg.id} message={msg} onExecuteTrade={setTradePrefill} />
                 ))}
                 {sendMutation.isPending && (
-                  <div className="flex justify-start">
+                  <div className="flex justify-start" role="status" aria-label="AI is thinking">
                     <div className="flex items-center gap-2 rounded-lg border-l-2 border-l-accent-purple bg-surface-primary px-3.5 py-2.5">
-                      <div className="flex gap-1">
+                      <div className="flex gap-1" aria-hidden="true">
                         <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-accent-purple [animation-delay:0ms]" />
                         <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-accent-purple [animation-delay:150ms]" />
                         <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-accent-purple [animation-delay:300ms]" />

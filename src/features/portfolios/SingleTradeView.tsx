@@ -135,8 +135,9 @@ export function SingleTradeView() {
             )}
 
             {/* Account selector */}
-            <FieldGroup label="Account">
+            <FieldGroup label="Account" htmlFor="single-trade-account">
               <select
+                id="single-trade-account"
                 value={accountId}
                 onChange={(e) => setAccountId(e.target.value)}
                 className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary outline-none focus:border-accent-blue focus:ring-1 focus:ring-accent-blue"
@@ -152,8 +153,9 @@ export function SingleTradeView() {
 
             {/* Symbol search */}
             <div ref={dropdownRef} className="relative">
-              <label className="mb-1 block text-caption font-semibold text-text-secondary">Symbol</label>
+              <label htmlFor="single-trade-symbol" className="mb-1 block text-caption font-semibold text-text-secondary">Symbol</label>
               <input
+                id="single-trade-symbol"
                 type="text"
                 value={symbolQuery}
                 onChange={(e) => {
@@ -219,8 +221,9 @@ export function SingleTradeView() {
               </div>
             </FieldGroup>
 
-            <FieldGroup label="Quantity">
+            <FieldGroup label="Quantity" htmlFor="single-trade-qty">
               <input
+                id="single-trade-qty"
                 type="number"
                 min="1"
                 value={quantity}
@@ -250,8 +253,9 @@ export function SingleTradeView() {
 
             {/* Limit price (conditional) */}
             {orderType === 'limit' && (
-              <FieldGroup label="Limit Price">
+              <FieldGroup label="Limit Price" htmlFor="single-trade-limit">
                 <input
+                  id="single-trade-limit"
                   type="number"
                   min="0.01"
                   step="0.01"
@@ -316,10 +320,10 @@ export function SingleTradeView() {
   )
 }
 
-function FieldGroup({ label, children }: { label: string; children: React.ReactNode }) {
+function FieldGroup({ label, htmlFor, children }: { label: string; htmlFor?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="mb-1 block text-caption font-semibold text-text-secondary">{label}</label>
+      <label htmlFor={htmlFor} className="mb-1 block text-caption font-semibold text-text-secondary">{label}</label>
       {children}
     </div>
   )

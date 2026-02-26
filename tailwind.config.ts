@@ -24,6 +24,7 @@ const config: Config = {
           green: 'var(--accent-green)',
           red: 'var(--accent-red)',
           purple: 'var(--accent-purple)',
+          amber: 'var(--accent-amber)',
         },
       },
       fontFamily: {
@@ -54,6 +55,8 @@ const config: Config = {
         'slide-out-right': 'slideOutRight 200ms ease-in',
         'fade-in': 'fadeIn 200ms ease-out',
         'scale-in': 'scaleIn 150ms ease-out',
+        'fade-out': 'fadeOut 150ms ease-in',
+        'scale-out': 'scaleOut 100ms ease-in',
       },
       keyframes: {
         shimmer: {
@@ -75,6 +78,14 @@ const config: Config = {
         scaleIn: {
           '0%': { opacity: '0', transform: 'scale(0.95)' },
           '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        fadeOut: {
+          '0%': { opacity: '1' },
+          '100%': { opacity: '0' },
+        },
+        scaleOut: {
+          '0%': { opacity: '1', transform: 'scale(1)' },
+          '100%': { opacity: '0', transform: 'scale(0.95)' },
         },
       },
     },

@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+import { Users } from 'lucide-react'
 import { Avatar } from './Avatar'
 import { Badge } from './Badge'
 import { cn } from '@/lib/utils'
@@ -31,6 +33,18 @@ export function ClientHeader({ client, className }: ClientHeaderProps) {
           <span>{client.email}</span>
           <span className="text-border-secondary">|</span>
           <span>{client.phone}</span>
+          {client.householdId && (
+            <>
+              <span className="text-border-secondary">|</span>
+              <Link
+                to={`/households/${client.householdId}`}
+                className="flex items-center gap-1 text-accent-blue transition-colors hover:text-accent-blue/80"
+              >
+                <Users className="h-3 w-3" />
+                Household
+              </Link>
+            </>
+          )}
         </div>
       </div>
       <div className="text-right">

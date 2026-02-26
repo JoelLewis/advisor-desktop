@@ -279,7 +279,7 @@ export function ModelGovernancePage() {
     )
   }
 
-  if (!models) return null
+  if (!models) return <div className="py-12 text-center text-caption text-text-tertiary">Unable to load model governance data</div>
 
   const totalModels = models.length
   const totalAccounts = models.reduce((s, m) => s + m.assignedAccounts, 0)

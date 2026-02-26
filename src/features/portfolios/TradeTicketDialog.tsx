@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { X, AlertTriangle, Check } from 'lucide-react'
+import { AlertTriangle, Check } from 'lucide-react'
 import { useSubmitTrade } from '@/hooks/use-orders'
-import { Card, CardContent } from '@/components/ui/Card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/Dialog'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'
 
@@ -46,18 +46,6 @@ export function TradeTicketDialog({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- trade.reset is stable, including trade object would cause infinite loop
   }, [open, prefill?.symbol, prefill?.side, prefill?.quantity])
-
-  // Escape key closes dialog
-  useEffect(() => {
-    if (!open) return
-
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [open, onClose])
 
   // Auto-close after successful submission
   useEffect(() => {
@@ -105,38 +93,20 @@ export function TradeTicketDialog({
     parsedLimitPrice,
   ])
 
-  if (!open) return null
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
-      }}
-    >
-      <Card className="w-full max-w-lg shadow-xl">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-border-primary p-4">
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
           <div>
-            <h2 className="text-section-header text-text-primary">
-              Trade Ticket
-            </h2>
-            <p className="mt-0.5 text-caption text-text-secondary">
-              {accountName}
-            </p>
+            <DialogTitle className="text-section-header">Trade Ticket</DialogTitle>
+            <DialogDescription>{accountName}</DialogDescription>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-md p-1.5 text-text-tertiary hover:bg-surface-tertiary hover:text-text-secondary"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+        </DialogHeader>
 
-        <CardContent className="space-y-4">
+        <div className="space-y-4 p-5">
           {/* Success banner */}
           {submitted && (
-            <div className="flex items-center gap-2 rounded-md bg-accent-green/10 px-3 py-2 text-body text-accent-green">
+            <div className="flex items-center gap-2 rounded-md bg-accent-green/10 px-3 py-2 text-body text-accent-green" role="status">
               <Check className="h-4 w-4 flex-shrink-0" />
               Order submitted
             </div>
@@ -144,7 +114,7 @@ export function TradeTicketDialog({
 
           {/* Error banner */}
           {trade.isError && (
-            <div className="flex items-center gap-2 rounded-md bg-accent-red/10 px-3 py-2 text-body text-accent-red">
+            <div className="flex items-center gap-2 rounded-md bg-accent-red/10 px-3 py-2 text-body text-accent-red" role="alert">
               <AlertTriangle className="h-4 w-4 flex-shrink-0" />
               {trade.error instanceof Error
                 ? trade.error.message
@@ -154,10 +124,11 @@ export function TradeTicketDialog({
 
           {/* Symbol */}
           <div className="space-y-1.5">
-            <label className="text-caption font-medium text-text-secondary">
+            <label htmlFor="trade-symbol" className="text-caption font-medium text-text-secondary">
               Symbol
             </label>
             <input
+              id="trade-symbol"
               type="text"
               value={symbol}
               onChange={(e) => setSymbol(e.target.value.toUpperCase())}
@@ -168,14 +139,13 @@ export function TradeTicketDialog({
           </div>
 
           {/* Side */}
-          <div className="space-y-1.5">
-            <label className="text-caption font-medium text-text-secondary">
-              Side
-            </label>
+          <fieldset className="space-y-1.5">
+            <legend className="text-caption font-medium text-text-secondary">Side</legend>
             <div className="flex gap-2">
               <button
                 onClick={() => setSide('buy')}
                 disabled={submitted}
+                aria-pressed={side === 'buy'}
                 className={cn(
                   'flex-1 rounded-md px-4 py-2 text-body font-medium transition-colors',
                   side === 'buy'
@@ -188,6 +158,7 @@ export function TradeTicketDialog({
               <button
                 onClick={() => setSide('sell')}
                 disabled={submitted}
+                aria-pressed={side === 'sell'}
                 className={cn(
                   'flex-1 rounded-md px-4 py-2 text-body font-medium transition-colors',
                   side === 'sell'
@@ -198,14 +169,15 @@ export function TradeTicketDialog({
                 Sell
               </button>
             </div>
-          </div>
+          </fieldset>
 
           {/* Quantity */}
           <div className="space-y-1.5">
-            <label className="text-caption font-medium text-text-secondary">
+            <label htmlFor="trade-quantity" className="text-caption font-medium text-text-secondary">
               Quantity
             </label>
             <input
+              id="trade-quantity"
               type="number"
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
@@ -217,14 +189,13 @@ export function TradeTicketDialog({
           </div>
 
           {/* Order Type */}
-          <div className="space-y-1.5">
-            <label className="text-caption font-medium text-text-secondary">
-              Order Type
-            </label>
+          <fieldset className="space-y-1.5">
+            <legend className="text-caption font-medium text-text-secondary">Order Type</legend>
             <div className="flex gap-2">
               <button
                 onClick={() => setOrderType('market')}
                 disabled={submitted}
+                aria-pressed={orderType === 'market'}
                 className={cn(
                   'flex-1 rounded-md px-4 py-2 text-body font-medium transition-colors',
                   orderType === 'market'
@@ -237,6 +208,7 @@ export function TradeTicketDialog({
               <button
                 onClick={() => setOrderType('limit')}
                 disabled={submitted}
+                aria-pressed={orderType === 'limit'}
                 className={cn(
                   'flex-1 rounded-md px-4 py-2 text-body font-medium transition-colors',
                   orderType === 'limit'
@@ -247,15 +219,16 @@ export function TradeTicketDialog({
                 Limit
               </button>
             </div>
-          </div>
+          </fieldset>
 
           {/* Limit Price (conditional) */}
           {orderType === 'limit' && (
             <div className="space-y-1.5">
-              <label className="text-caption font-medium text-text-secondary">
+              <label htmlFor="trade-limit-price" className="text-caption font-medium text-text-secondary">
                 Limit Price
               </label>
               <input
+                id="trade-limit-price"
                 type="number"
                 value={limitPrice}
                 onChange={(e) => setLimitPrice(e.target.value)}
@@ -299,8 +272,8 @@ export function TradeTicketDialog({
           >
             {trade.isPending ? 'Submitting...' : 'Submit Order'}
           </button>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }

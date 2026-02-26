@@ -7,6 +7,7 @@ type SkeletonProps = {
 export function Skeleton({ className }: SkeletonProps) {
   return (
     <div
+      aria-hidden="true"
       className={cn(
         'animate-skeleton-shimmer rounded-md bg-gradient-to-r from-surface-tertiary via-border-primary to-surface-tertiary bg-[length:200%_100%]',
         className,

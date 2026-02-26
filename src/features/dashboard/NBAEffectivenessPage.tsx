@@ -27,7 +27,7 @@ export function NBAEffectivenessPage() {
     )
   }
 
-  if (!metrics) return null
+  if (!metrics) return <div className="py-12 text-center text-caption text-text-tertiary">Unable to load NBA effectiveness data</div>
 
   return (
     <div className="space-y-6">
