@@ -1,0 +1,6 @@
+{
+  "enabledPlugins": {
+    "wealth-management@finance-skills": true,
+    "advisory-practice@finance-skills": true
+  }
+}
