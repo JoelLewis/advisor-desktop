@@ -5,6 +5,7 @@ import { activities } from '../data/activities'
 import { notes } from '../data/notes'
 import { heldAwayAssets } from '../data/held-away'
 import { clientComms } from '../data/client-comms'
+import { notFound } from './utils'
 
 export const crmHandlers = [
   http.get('/api/crm/clients', ({ request }) => {
@@ -37,7 +38,7 @@ export const crmHandlers = [
 
   http.get('/api/crm/clients/:clientId', ({ params }) => {
     const client = clients.find((c) => c.id === params.clientId)
-    if (!client) return new HttpResponse(null, { status: 404 })
+    if (!client) return notFound()
     return HttpResponse.json(client)
   }),
 
@@ -52,7 +53,7 @@ export const crmHandlers = [
 
   http.get('/api/crm/households/:householdId', ({ params }) => {
     const household = households.find((h) => h.id === params.householdId)
-    if (!household) return new HttpResponse(null, { status: 404 })
+    if (!household) return notFound()
     return HttpResponse.json(household)
   }),
 

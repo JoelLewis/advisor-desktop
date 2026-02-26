@@ -8,6 +8,7 @@ import {
 import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
+import type { StressScenario } from '@/types/risk'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useRiskMetrics, useSensitivity, useStressScenarios } from '@/hooks/use-portfolio'
 import { formatCurrency, formatPercent, cn } from '@/lib/utils'
@@ -30,6 +31,12 @@ function formatShockLabel(tab: SensitivityTab, shock: number): string {
 }
 
 const KEY_PERCENTILES = [5, 25, 50, 75, 95] as const
+
+function percentileColor(percentile: number): string {
+  if (percentile <= 25) return 'text-accent-red'
+  if (percentile >= 75) return 'text-accent-green'
+  return 'text-text-primary'
+}
 
 export function RiskAnalyticsPage() {
   const { data: accounts, isLoading: accountsLoading } = useAccounts({})
@@ -113,48 +120,12 @@ export function RiskAnalyticsPage() {
         </div>
       ) : risk ? (
         <div className="grid grid-cols-3 gap-4">
-          <Card>
-            <CardContent>
-              <p className="text-caption text-text-secondary">Beta</p>
-              <p className="font-mono text-section-header">{risk.beta.toFixed(2)}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent>
-              <p className="text-caption text-text-secondary">Sharpe Ratio</p>
-              <p className="font-mono text-section-header">{risk.sharpe.toFixed(2)}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent>
-              <p className="text-caption text-text-secondary">Sortino Ratio</p>
-              <p className="font-mono text-section-header">{risk.sortino.toFixed(2)}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent>
-              <p className="text-caption text-text-secondary">Max Drawdown</p>
-              <p className="font-mono text-section-header text-accent-red">
-                {(risk.maxDrawdown * 100).toFixed(1)}%
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent>
-              <p className="text-caption text-text-secondary">Std Deviation</p>
-              <p className="font-mono text-section-header">
-                {(risk.standardDeviation * 100).toFixed(1)}%
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent>
-              <p className="text-caption text-text-secondary">VaR (95%)</p>
-              <p className="font-mono text-section-header text-accent-red">
-                {formatCurrency(risk.var95, true)}
-              </p>
-            </CardContent>
-          </Card>
+          <RiskMetricCard label="Beta" value={risk.beta.toFixed(2)} />
+          <RiskMetricCard label="Sharpe Ratio" value={risk.sharpe.toFixed(2)} />
+          <RiskMetricCard label="Sortino Ratio" value={risk.sortino.toFixed(2)} />
+          <RiskMetricCard label="Max Drawdown" value={`${(risk.maxDrawdown * 100).toFixed(1)}%`} negative />
+          <RiskMetricCard label="Std Deviation" value={`${(risk.standardDeviation * 100).toFixed(1)}%`} />
+          <RiskMetricCard label="VaR (95%)" value={formatCurrency(risk.var95, true)} negative />
         </div>
       ) : null}
 
@@ -297,7 +268,7 @@ export function RiskAnalyticsPage() {
                               key={p.percentile}
                               className={cn(
                                 'px-4 py-3 text-center font-mono text-body-strong',
-                                p.percentile <= 25 ? 'text-accent-red' : p.percentile >= 75 ? 'text-accent-green' : 'text-text-primary',
+                                percentileColor(p.percentile),
                               )}
                             >
                               {formatCurrency(p.value, true)}
@@ -322,31 +293,48 @@ export function RiskAnalyticsPage() {
           <CardHeader>Stress Scenarios</CardHeader>
           <CardContent className="space-y-4">
             {stress.map((scenario) => (
-              <div key={scenario.id} className="rounded-md border border-border-primary p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-body-strong">{scenario.name}</p>
-                    <p className="text-caption text-text-secondary">{scenario.description}</p>
-                  </div>
-                  <p className="font-mono text-section-header text-accent-red">
-                    {(scenario.portfolioImpact * 100).toFixed(0)}%
-                  </p>
-                </div>
-                <div className="mt-3 space-y-1">
-                  {scenario.positionImpacts.map((pi) => (
-                    <div key={pi.positionId} className="flex items-center justify-between text-caption">
-                      <span className="font-mono text-text-secondary">{pi.symbol}</span>
-                      <span className={cn('font-mono', pi.impactPercent >= 0 ? 'text-accent-green' : 'text-accent-red')}>
-                        {formatPercent(pi.impactPercent * 100)} ({formatCurrency(pi.impact, true)})
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <StressScenarioRow key={scenario.id} scenario={scenario} />
             ))}
           </CardContent>
         </Card>
       )}
+    </div>
+  )
+}
+
+function RiskMetricCard({ label, value, negative }: { label: string; value: string; negative?: boolean }) {
+  return (
+    <Card>
+      <CardContent>
+        <p className="text-caption text-text-secondary">{label}</p>
+        <p className={cn('font-mono text-section-header', negative && 'text-accent-red')}>{value}</p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function StressScenarioRow({ scenario }: { scenario: StressScenario }) {
+  return (
+    <div className="rounded-md border border-border-primary p-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-body-strong">{scenario.name}</p>
+          <p className="text-caption text-text-secondary">{scenario.description}</p>
+        </div>
+        <p className="font-mono text-section-header text-accent-red">
+          {(scenario.portfolioImpact * 100).toFixed(0)}%
+        </p>
+      </div>
+      <div className="mt-3 space-y-1">
+        {scenario.positionImpacts.map((pi) => (
+          <div key={pi.positionId} className="flex items-center justify-between text-caption">
+            <span className="font-mono text-text-secondary">{pi.symbol}</span>
+            <span className={cn('font-mono', pi.impactPercent >= 0 ? 'text-accent-green' : 'text-accent-red')}>
+              {formatPercent(pi.impactPercent * 100)} ({formatCurrency(pi.impact, true)})
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

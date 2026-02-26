@@ -166,11 +166,12 @@ function checkTradesForAccount(req: TradeComplianceRequest): TradeComplianceResu
     })
   }
 
-  const overallStatus: TradeComplianceResult['overallStatus'] = checks.some((c) => c.status === 'fail')
-    ? 'fail'
-    : checks.some((c) => c.status === 'warning')
-      ? 'warning'
-      : 'pass'
+  let overallStatus: TradeComplianceResult['overallStatus'] = 'pass'
+  if (checks.some((c) => c.status === 'fail')) {
+    overallStatus = 'fail'
+  } else if (checks.some((c) => c.status === 'warning')) {
+    overallStatus = 'warning'
+  }
 
   return { accountId: req.accountId, checks, overallStatus }
 }

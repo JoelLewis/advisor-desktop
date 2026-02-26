@@ -3,7 +3,63 @@ import { ChevronDown, ChevronUp, Check, Loader2, Clock } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useExecuteTemplate } from '@/hooks/use-ai'
 import { cn } from '@/lib/utils'
-import type { ActionTemplate } from '@/types/ai'
+import type { ActionTemplate, ActionTemplateParam } from '@/types/ai'
+
+const INPUT_CLASS = 'w-full rounded-md border border-border-primary bg-surface-primary px-2.5 py-1.5 text-caption text-text-primary focus:border-accent-purple/50 focus:outline-none focus:ring-1 focus:ring-accent-purple/20'
+
+function TemplateField({ param, value, onChange }: {
+  param: ActionTemplateParam
+  value: string
+  onChange: (value: string) => void
+}) {
+  function renderInput(): JSX.Element {
+    if (param.type === 'select' && param.options) {
+      return (
+        <select value={value} onChange={(e) => onChange(e.target.value)} className={INPUT_CLASS}>
+          <option value="">Select...</option>
+          {param.options.map((opt) => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+        </select>
+      )
+    }
+
+    if (param.type === 'number') {
+      return (
+        <input
+          type="number"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={cn(INPUT_CLASS, 'font-mono')}
+          placeholder={param.defaultValue ?? ''}
+        />
+      )
+    }
+
+    const inputType = param.type === 'date' ? 'date' : 'text'
+    const placeholder = param.type === 'entity' ? `Search ${param.entityType ?? 'entity'}...` : ''
+
+    return (
+      <input
+        type={inputType}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={INPUT_CLASS}
+        placeholder={placeholder}
+      />
+    )
+  }
+
+  return (
+    <div>
+      <label className="mb-1 block text-[11px] font-medium text-text-secondary">
+        {param.label}
+        {param.required && <span className="text-accent-red"> *</span>}
+      </label>
+      {renderInput()}
+    </div>
+  )
+}
 
 type ActionTemplateCardProps = {
   template: ActionTemplate
@@ -87,47 +143,12 @@ export function ActionTemplateCard({ template }: ActionTemplateCardProps) {
         <div className="border-t border-accent-purple/10 px-3 pb-3 pt-2">
           <div className="space-y-2.5">
             {template.params.map((param) => (
-              <div key={param.key}>
-                <label className="mb-1 block text-[11px] font-medium text-text-secondary">
-                  {param.label}
-                  {param.required && <span className="text-accent-red"> *</span>}
-                </label>
-                {param.type === 'select' && param.options ? (
-                  <select
-                    value={formValues[param.key] ?? ''}
-                    onChange={(e) => updateField(param.key, e.target.value)}
-                    className="w-full rounded-md border border-border-primary bg-surface-primary px-2.5 py-1.5 text-caption text-text-primary focus:border-accent-purple/50 focus:outline-none focus:ring-1 focus:ring-accent-purple/20"
-                  >
-                    <option value="">Select...</option>
-                    {param.options.map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
-                ) : param.type === 'number' ? (
-                  <input
-                    type="number"
-                    value={formValues[param.key] ?? ''}
-                    onChange={(e) => updateField(param.key, e.target.value)}
-                    className="w-full rounded-md border border-border-primary bg-surface-primary px-2.5 py-1.5 font-mono text-caption text-text-primary focus:border-accent-purple/50 focus:outline-none focus:ring-1 focus:ring-accent-purple/20"
-                    placeholder={param.defaultValue ?? ''}
-                  />
-                ) : param.type === 'date' ? (
-                  <input
-                    type="date"
-                    value={formValues[param.key] ?? ''}
-                    onChange={(e) => updateField(param.key, e.target.value)}
-                    className="w-full rounded-md border border-border-primary bg-surface-primary px-2.5 py-1.5 text-caption text-text-primary focus:border-accent-purple/50 focus:outline-none focus:ring-1 focus:ring-accent-purple/20"
-                  />
-                ) : (
-                  <input
-                    type="text"
-                    value={formValues[param.key] ?? ''}
-                    onChange={(e) => updateField(param.key, e.target.value)}
-                    className="w-full rounded-md border border-border-primary bg-surface-primary px-2.5 py-1.5 text-caption text-text-primary focus:border-accent-purple/50 focus:outline-none focus:ring-1 focus:ring-accent-purple/20"
-                    placeholder={param.type === 'entity' ? `Search ${param.entityType ?? 'entity'}...` : ''}
-                  />
-                )}
-              </div>
+              <TemplateField
+                key={param.key}
+                param={param}
+                value={formValues[param.key] ?? ''}
+                onChange={(value) => updateField(param.key, value)}
+              />
             ))}
           </div>
 

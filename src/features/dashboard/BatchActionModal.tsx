@@ -43,31 +43,32 @@ export function BatchActionModal({ groupId, title, category, nbas, onClose }: Ba
     setSelectedIds(new Set())
   }
 
-  function handleExecute() {
-    const action = category === 'rebalancing' ? 'rebalance' as const
-      : category === 'client_service' || category === 'compliance' ? 'create_tasks' as const
-      : 'contact' as const
+  function getBatchAction(): 'rebalance' | 'create_tasks' | 'contact' {
+    if (category === 'rebalancing') return 'rebalance'
+    if (category === 'client_service' || category === 'compliance') return 'create_tasks'
+    return 'contact'
+  }
 
+  function handleExecute() {
     batchAction.mutate(
-      { groupId, nbaIds: [...selectedIds], action },
+      { groupId, nbaIds: [...selectedIds], action: getBatchAction() },
       {
         onSuccess: () => {
-          if (category === 'rebalancing') {
-            onClose()
-            navigate('/portfolios/rebalance')
-          } else {
-            onClose()
-          }
+          onClose()
+          if (category === 'rebalancing') navigate('/portfolios/rebalance')
         },
       },
     )
   }
 
-  const actionLabel = category === 'rebalancing'
-    ? `Rebalance Selected (${selectedIds.size})`
-    : category === 'tax_management'
-    ? `Review Tax Lots (${selectedIds.size})`
-    : `Create Tasks (${selectedIds.size})`
+  function getActionLabel(): string {
+    const count = selectedIds.size
+    if (category === 'rebalancing') return `Rebalance Selected (${count})`
+    if (category === 'tax_management') return `Review Tax Lots (${count})`
+    return `Create Tasks (${count})`
+  }
+
+  const actionLabel = getActionLabel()
 
   return (
     <>

@@ -4,6 +4,7 @@ import { useMeetingPrep } from '@/hooks/use-schedule'
 import { useUIStore } from '@/store/ui-store'
 import { cn } from '@/lib/utils'
 import type { MeetingType } from '@/types/calendar'
+import type { LucideIcon } from 'lucide-react'
 
 const MEETING_TYPE_LABELS: Record<MeetingType, string> = {
   annual_review: 'Annual Review',
@@ -17,6 +18,20 @@ const MEETING_TYPE_LABELS: Record<MeetingType, string> = {
 type MeetingPrepModalProps = {
   eventId: string
   onClose: () => void
+}
+
+function SectionHeader({ icon: Icon, children }: { icon: LucideIcon; children: string }) {
+  return (
+    <h4 className="mb-3 flex items-center gap-2 text-caption font-medium uppercase tracking-wider text-text-tertiary">
+      <Icon className="h-3.5 w-3.5" /> {children}
+    </h4>
+  )
+}
+
+function sentimentColor(sentiment?: string): string {
+  if (sentiment === 'positive') return 'text-accent-green'
+  if (sentiment === 'negative') return 'text-accent-red'
+  return 'text-text-primary'
 }
 
 export function MeetingPrepModal({ eventId, onClose }: MeetingPrepModalProps) {
@@ -44,13 +59,10 @@ export function MeetingPrepModal({ eventId, onClose }: MeetingPrepModalProps) {
 
   return (
     <>
-      {/* Backdrop */}
       <div className="fixed inset-0 z-50 bg-black/40 animate-fade-in" onClick={onClose} />
 
-      {/* Modal */}
       <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-[640px] -translate-x-1/2 -translate-y-1/2 animate-scale-in">
         <div className="max-h-[80vh] overflow-hidden rounded-xl border border-border-primary bg-surface-primary shadow-2xl">
-          {/* Header */}
           <div className="flex items-center justify-between border-b border-border-primary bg-accent-purple/5 px-5 py-4">
             <div className="flex items-center gap-3">
               <Sparkles className="h-5 w-5 text-accent-purple" />
@@ -72,7 +84,6 @@ export function MeetingPrepModal({ eventId, onClose }: MeetingPrepModalProps) {
             </button>
           </div>
 
-          {/* Content */}
           <div className="max-h-[calc(80vh-120px)] overflow-y-auto scrollbar-thin">
             {isLoading ? (
               <div className="flex items-center justify-center gap-2 py-16">
@@ -81,21 +92,13 @@ export function MeetingPrepModal({ eventId, onClose }: MeetingPrepModalProps) {
               </div>
             ) : prep ? (
               <div className="divide-y divide-border-primary">
-                {/* Portfolio Summary */}
                 <div className="px-5 py-4">
-                  <h4 className="mb-3 flex items-center gap-2 text-caption font-medium uppercase tracking-wider text-text-tertiary">
-                    <Activity className="h-3.5 w-3.5" /> Portfolio Summary
-                  </h4>
+                  <SectionHeader icon={Activity}>Portfolio Summary</SectionHeader>
                   <div className="grid grid-cols-3 gap-3">
                     {prep.portfolioSummary.map((item) => (
                       <div key={item.label} className="rounded-md bg-surface-secondary px-3 py-2">
                         <p className="text-[10px] uppercase text-text-tertiary">{item.label}</p>
-                        <p className={cn(
-                          'font-mono text-caption font-medium',
-                          item.sentiment === 'positive' && 'text-accent-green',
-                          item.sentiment === 'negative' && 'text-accent-red',
-                          !item.sentiment && 'text-text-primary',
-                        )}>
+                        <p className={cn('font-mono text-caption font-medium', sentimentColor(item.sentiment))}>
                           {item.value}
                         </p>
                       </div>
@@ -103,11 +106,8 @@ export function MeetingPrepModal({ eventId, onClose }: MeetingPrepModalProps) {
                   </div>
                 </div>
 
-                {/* Talking Points */}
                 <div className="px-5 py-4">
-                  <h4 className="mb-3 flex items-center gap-2 text-caption font-medium uppercase tracking-wider text-text-tertiary">
-                    <MessageSquare className="h-3.5 w-3.5" /> Talking Points
-                  </h4>
+                  <SectionHeader icon={MessageSquare}>Talking Points</SectionHeader>
                   <ul className="space-y-2">
                     {prep.talkingPoints.map((point, i) => (
                       <li key={i} className="flex items-start gap-2 text-caption text-text-secondary">
@@ -120,11 +120,8 @@ export function MeetingPrepModal({ eventId, onClose }: MeetingPrepModalProps) {
                   </ul>
                 </div>
 
-                {/* Action Items */}
                 <div className="px-5 py-4">
-                  <h4 className="mb-3 flex items-center gap-2 text-caption font-medium uppercase tracking-wider text-text-tertiary">
-                    <ClipboardList className="h-3.5 w-3.5" /> Post-Meeting Action Items
-                  </h4>
+                  <SectionHeader icon={ClipboardList}>Post-Meeting Action Items</SectionHeader>
                   <ul className="space-y-1.5">
                     {prep.actionItems.map((item, i) => (
                       <li key={i} className="flex items-center gap-2 text-caption text-text-secondary">
@@ -135,11 +132,8 @@ export function MeetingPrepModal({ eventId, onClose }: MeetingPrepModalProps) {
                   </ul>
                 </div>
 
-                {/* Recent Activity */}
                 <div className="px-5 py-4">
-                  <h4 className="mb-3 flex items-center gap-2 text-caption font-medium uppercase tracking-wider text-text-tertiary">
-                    <Activity className="h-3.5 w-3.5" /> Recent Activity
-                  </h4>
+                  <SectionHeader icon={Activity}>Recent Activity</SectionHeader>
                   <ul className="space-y-1.5">
                     {prep.recentActivity.map((item, i) => (
                       <li key={i} className="text-caption text-text-tertiary">
@@ -156,7 +150,6 @@ export function MeetingPrepModal({ eventId, onClose }: MeetingPrepModalProps) {
             )}
           </div>
 
-          {/* Footer */}
           {prep && (
             <div className="flex items-center justify-between border-t border-border-primary bg-surface-secondary px-5 py-3">
               <span className="flex items-center gap-1 text-caption text-text-tertiary">

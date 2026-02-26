@@ -5,22 +5,25 @@ import { households } from '../data/households'
 import { accounts } from '../data/accounts'
 import { nbas } from '../data/nbas'
 import type { ChatMessage, ActionConfirmation, DocumentGeneration, ContextBriefingData, BriefingMetric, AIInsight, ActionTemplate } from '@/types/ai'
+import { formatAUM, computeTotalAUM } from './utils'
 
-function formatAUM(v: number): string {
-  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`
-  if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}K`
-  return `$${v}`
+function makeBriefing(
+  title: string,
+  entityType: string,
+  metrics: BriefingMetric[],
+  highlights: string[],
+): ContextBriefingData {
+  return { title, entityType, metrics, highlights, asOf: new Date().toISOString() }
 }
 
 export const aiHandlers = [
-  // POST /api/ai/message — context-aware chat response
   http.post('/api/ai/message', async ({ request }) => {
     const body = (await request.json()) as {
       message: string
       context: { screenType: string; entityType?: string; entityId?: string; entityName?: string }
     }
 
-    await delay(600) // Simulate AI thinking time
+    await delay(600)
 
     const template = getAIResponse(body.message, body.context.screenType, body.context.entityType)
 
@@ -39,16 +42,12 @@ export const aiHandlers = [
     return HttpResponse.json(response)
   }),
 
-  // GET /api/ai/suggestions — suggested prompts for current screen
   http.get('/api/ai/suggestions', ({ request }) => {
     const url = new URL(request.url)
     const screenType = url.searchParams.get('screenType') ?? 'dashboard'
-
-    const filtered = suggestedPrompts.filter((p) => p.screenType === screenType)
-    return HttpResponse.json(filtered)
+    return HttpResponse.json(suggestedPrompts.filter((p) => p.screenType === screenType))
   }),
 
-  // POST /api/ai/actions/:actionId/execute — execute an AI-suggested action
   http.post('/api/ai/actions/:actionId/execute', async ({ params }) => {
     await delay(400)
 
@@ -63,7 +62,6 @@ export const aiHandlers = [
     return HttpResponse.json(confirmation)
   }),
 
-  // POST /api/ai/generate-document — generate AI document
   http.post('/api/ai/generate-document', async ({ request }) => {
     const body = (await request.json()) as {
       templateType: string
@@ -84,7 +82,6 @@ export const aiHandlers = [
     return HttpResponse.json(doc)
   }),
 
-  // GET /api/ai/context — assembled context briefing for current entity
   http.get('/api/ai/context', ({ request }) => {
     const url = new URL(request.url)
     const screenType = url.searchParams.get('screenType') ?? 'dashboard'
@@ -95,23 +92,21 @@ export const aiHandlers = [
       if (client) {
         const hh = households.find((h) => h.members.some((m) => m.clientId === client.id))
         const clientAccounts = accounts.filter((a) => a.clientId === client.id)
-        const briefing: ContextBriefingData = {
-          title: client.fullName,
-          entityType: 'client',
-          metrics: [
+        return HttpResponse.json(makeBriefing(
+          client.fullName,
+          'client',
+          [
             { label: 'Total AUM', value: formatAUM(client.totalAUM) },
             { label: 'Segment', value: client.segment.charAt(0).toUpperCase() + client.segment.slice(1) },
             { label: 'Risk Profile', value: client.riskProfile.tolerance },
             { label: 'Accounts', value: String(clientAccounts.length) },
             { label: 'Household', value: hh?.name ?? 'N/A' },
           ],
-          highlights: [
+          [
             `Last updated ${client.updatedAt}`,
             `Risk score: ${client.riskProfile.score}/100 (assessed ${client.riskProfile.lastAssessed})`,
           ],
-          asOf: new Date().toISOString(),
-        }
-        return HttpResponse.json(briefing)
+        ))
       }
     }
 
@@ -127,17 +122,15 @@ export const aiHandlers = [
         if (account.isUMA && account.sleeves) {
           metrics.push({ label: 'Sleeves', value: String(account.sleeves.length) })
         }
-        const briefing: ContextBriefingData = {
-          title: account.name,
-          entityType: 'account',
+        return HttpResponse.json(makeBriefing(
+          account.name,
+          'account',
           metrics,
-          highlights: [
+          [
             `Last rebalanced ${account.lastRebalance}`,
             account.modelId ? `Model: ${account.modelId}` : 'No model assigned',
           ],
-          asOf: new Date().toISOString(),
-        }
-        return HttpResponse.json(briefing)
+        ))
       }
     }
 
@@ -145,86 +138,74 @@ export const aiHandlers = [
       const hh = households.find((h) => h.id === entityId)
       if (hh) {
         const hhAccounts = accounts.filter((a) => hh.accountIds.includes(a.id))
-        const briefing: ContextBriefingData = {
-          title: hh.name,
-          entityType: 'household',
-          metrics: [
+        return HttpResponse.json(makeBriefing(
+          hh.name,
+          'household',
+          [
             { label: 'Total AUM', value: formatAUM(hh.totalAUM) },
             { label: 'Managed', value: formatAUM(hh.managedAUM) },
             { label: 'Held-Away', value: formatAUM(hh.heldAwayAUM) },
             { label: 'Members', value: String(hh.members.length) },
             { label: 'Accounts', value: String(hhAccounts.length) },
           ],
-          highlights: [
+          [
             `Primary contact: ${hh.members.find((m) => m.clientId === hh.primaryContactId)?.name ?? 'N/A'}`,
             `Segment: ${hh.segment}`,
           ],
-          asOf: new Date().toISOString(),
-        }
-        return HttpResponse.json(briefing)
+        ))
       }
     }
 
     if (screenType === 'trading') {
-      const totalAUM = accounts.reduce((sum, a) => sum + a.totalValue, 0)
-      const briefing: ContextBriefingData = {
-        title: 'Trading Desk',
-        entityType: 'trading',
-        metrics: [
-          { label: 'Book AUM', value: formatAUM(totalAUM) },
+      return HttpResponse.json(makeBriefing(
+        'Trading Desk',
+        'trading',
+        [
+          { label: 'Book AUM', value: formatAUM(computeTotalAUM()) },
           { label: 'Open Orders', value: '3' },
           { label: "Today's Trades", value: '7' },
           { label: 'Wash Sale Restricted', value: '2 securities' },
         ],
-        highlights: [
+        [
           'VIX at 14.2 — low volatility environment',
           '2 limit orders approaching trigger price',
         ],
-        asOf: new Date().toISOString(),
-      }
-      return HttpResponse.json(briefing)
+      ))
     }
 
     if (screenType === 'portfolios') {
-      const totalAUM = accounts.reduce((sum, a) => sum + a.totalValue, 0)
-      const briefing: ContextBriefingData = {
-        title: 'Portfolio Overview',
-        entityType: 'portfolio',
-        metrics: [
-          { label: 'Total AUM', value: formatAUM(totalAUM) },
+      return HttpResponse.json(makeBriefing(
+        'Portfolio Overview',
+        'portfolio',
+        [
+          { label: 'Total AUM', value: formatAUM(computeTotalAUM()) },
           { label: 'Accounts', value: String(accounts.length) },
           { label: 'Households', value: String(households.length) },
         ],
-        highlights: [
+        [
           `${accounts.filter((a) => a.isUMA).length} UMA accounts`,
           `${accounts.filter((a) => a.status === 'active').length} active accounts`,
         ],
-        asOf: new Date().toISOString(),
-      }
-      return HttpResponse.json(briefing)
+      ))
     }
 
     if (screenType === 'dashboard') {
-      const totalAUM = accounts.reduce((sum, a) => sum + a.totalValue, 0)
-      const briefing: ContextBriefingData = {
-        title: 'Practice Summary',
-        entityType: 'dashboard',
-        metrics: [
-          { label: 'AUM', value: formatAUM(totalAUM) },
+      return HttpResponse.json(makeBriefing(
+        'Practice Summary',
+        'dashboard',
+        [
+          { label: 'AUM', value: formatAUM(computeTotalAUM()) },
           { label: 'Clients', value: String(clients.length) },
           { label: 'Households', value: String(households.length) },
           { label: 'Accounts', value: String(accounts.length) },
         ],
-        highlights: [],
-        asOf: new Date().toISOString(),
-      }
-      return HttpResponse.json(briefing)
+        [],
+      ))
     }
 
     return HttpResponse.json(null)
   }),
 
-  // GET /api/ai/insights — proactive AI insights per page/entity
   http.get('/api/ai/insights', ({ request }) => {
     const url = new URL(request.url)
     const screenType = url.searchParams.get('screenType') ?? 'dashboard'
@@ -233,7 +214,6 @@ export const aiHandlers = [
     const insights: AIInsight[] = []
 
     if (screenType === 'dashboard') {
-      const totalAUM = accounts.reduce((sum, a) => sum + a.totalValue, 0)
       const activeNBAs = nbas.filter((n) => !n.dismissed)
       const criticalCount = activeNBAs.filter((n) => n.priority === 'critical').length
       const urgentCount = activeNBAs.filter((n) => n.scoring.urgency > 80).length
@@ -242,7 +222,7 @@ export const aiHandlers = [
         id: 'dash-1',
         severity: 'info',
         title: 'Portfolio Health Summary',
-        body: `Managing ${formatAUM(totalAUM)} across ${accounts.length} accounts. ${activeNBAs.length} pending actions identified.`,
+        body: `Managing ${formatAUM(computeTotalAUM())} across ${accounts.length} accounts. ${activeNBAs.length} pending actions identified.`,
         metric: { label: 'Net inflows this month', value: '+$420K' },
       })
       if (criticalCount > 0) {
@@ -387,7 +367,6 @@ export const aiHandlers = [
     return HttpResponse.json(insights)
   }),
 
-  // GET /api/ai/templates — action templates filtered by screen type
   http.get('/api/ai/templates', ({ request }) => {
     const url = new URL(request.url)
     const screenType = url.searchParams.get('screenType')
@@ -410,7 +389,6 @@ export const aiHandlers = [
     return HttpResponse.json(filtered)
   }),
 
-  // POST /api/ai/templates/:templateId/execute — execute a parameterized template
   http.post('/api/ai/templates/:templateId/execute', async ({ params, request }) => {
     const body = (await request.json()) as Record<string, unknown>
     await delay(500)

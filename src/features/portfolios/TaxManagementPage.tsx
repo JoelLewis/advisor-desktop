@@ -14,6 +14,12 @@ type ViewMode = 'lots' | 'harvest' | 'calendar'
 
 const HOLDING_LABELS: Record<string, string> = { short: 'Short-Term', long: 'Long-Term' }
 
+const VIEW_TABS: { id: ViewMode; label: string }[] = [
+  { id: 'lots', label: 'All Tax Lots' },
+  { id: 'harvest', label: 'Harvest Scanner' },
+  { id: 'calendar', label: 'Wash Sale Calendar' },
+]
+
 function getWashSaleEndDate(purchaseDate: string): string {
   const d = new Date(purchaseDate)
   d.setDate(d.getDate() + 30)
@@ -158,11 +164,7 @@ export function TaxManagementPage() {
 
       {/* View toggle */}
       <div className="flex items-center gap-1 rounded-lg border border-border-primary bg-surface-primary p-1">
-        {([
-          { id: 'lots' as const, label: 'All Tax Lots' },
-          { id: 'harvest' as const, label: 'Harvest Scanner' },
-          { id: 'calendar' as const, label: 'Wash Sale Calendar' },
-        ]).map((tab) => (
+        {VIEW_TABS.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setView(tab.id)}
@@ -187,14 +189,14 @@ export function TaxManagementPage() {
               <table className="w-full">
                 <thead className="sticky top-0 bg-surface-primary">
                   <tr className="border-b border-border-primary">
-                    <th className="px-4 py-2.5 text-left text-caption font-medium text-text-secondary">Symbol</th>
-                    <th className="px-4 py-2.5 text-left text-caption font-medium text-text-secondary">Purchase Date</th>
-                    <th className="px-4 py-2.5 text-left text-caption font-medium text-text-secondary">Holding</th>
-                    <th className="px-4 py-2.5 text-right text-caption font-medium text-text-secondary">Qty</th>
-                    <th className="px-4 py-2.5 text-right text-caption font-medium text-text-secondary">Cost Basis</th>
-                    <th className="px-4 py-2.5 text-right text-caption font-medium text-text-secondary">Current Value</th>
-                    <th className="px-4 py-2.5 text-right text-caption font-medium text-text-secondary">Gain/Loss</th>
-                    <th className="px-4 py-2.5 text-center text-caption font-medium text-text-secondary">Wash Sale</th>
+                    <Th>Symbol</Th>
+                    <Th>Purchase Date</Th>
+                    <Th>Holding</Th>
+                    <Th align="right">Qty</Th>
+                    <Th align="right">Cost Basis</Th>
+                    <Th align="right">Current Value</Th>
+                    <Th align="right">Gain/Loss</Th>
+                    <Th align="center">Wash Sale</Th>
                   </tr>
                 </thead>
                 <tbody>
@@ -246,13 +248,13 @@ export function TaxManagementPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-border-primary">
-                      <th className="px-4 py-2.5 text-left text-caption font-medium text-text-secondary">Select</th>
-                      <th className="px-4 py-2.5 text-left text-caption font-medium text-text-secondary">Symbol</th>
-                      <th className="px-4 py-2.5 text-left text-caption font-medium text-text-secondary">Holding</th>
-                      <th className="px-4 py-2.5 text-right text-caption font-medium text-text-secondary">Qty</th>
-                      <th className="px-4 py-2.5 text-right text-caption font-medium text-text-secondary">Unrealized Loss</th>
-                      <th className="px-4 py-2.5 text-right text-caption font-medium text-text-secondary">Est. Tax Savings</th>
-                      <th className="px-4 py-2.5 text-center text-caption font-medium text-text-secondary">Wash Sale Risk</th>
+                      <Th>Select</Th>
+                      <Th>Symbol</Th>
+                      <Th>Holding</Th>
+                      <Th align="right">Qty</Th>
+                      <Th align="right">Unrealized Loss</Th>
+                      <Th align="right">Est. Tax Savings</Th>
+                      <Th align="center">Wash Sale Risk</Th>
                     </tr>
                   </thead>
                   <tbody>
@@ -353,6 +355,20 @@ export function TaxManagementPage() {
         </Card>
       )}
     </div>
+  )
+}
+
+const TH_ALIGN = {
+  left: 'text-left',
+  right: 'text-right',
+  center: 'text-center',
+} as const
+
+function Th({ children, align = 'left' }: { children: React.ReactNode; align?: 'left' | 'right' | 'center' }) {
+  return (
+    <th className={cn('px-4 py-2.5 text-caption font-medium text-text-secondary', TH_ALIGN[align])}>
+      {children}
+    </th>
   )
 }
 

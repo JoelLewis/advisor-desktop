@@ -8,6 +8,7 @@ import { AllocationChart } from '@/components/ui/AllocationChart'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useHouseholds } from '@/hooks/use-households'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
+import { capitalize } from '@/lib/labels'
 import type { Household } from '@/types/household'
 import type { ClientSegment } from '@/types/client'
 
@@ -80,6 +81,18 @@ function sortHouseholds(households: Household[], sortKey: SortKey): Household[] 
   return sorted
 }
 
+function pluralize(count: number, singular: string): string {
+  return `${count} ${count === 1 ? singular : `${singular}s`}`
+}
+
+function SectionHeading({ children }: { children: string }) {
+  return (
+    <h4 className="mb-2 text-caption font-medium uppercase tracking-wide text-text-tertiary">
+      {children}
+    </h4>
+  )
+}
+
 export function HouseholdListView() {
   const { data, isLoading } = useHouseholds()
   const navigate = useNavigate()
@@ -128,7 +141,6 @@ export function HouseholdListView() {
 
   return (
     <div className="space-y-6">
-      {/* Summary Metrics */}
       <div className="grid grid-cols-4 gap-4">
         <MetricCard label="Total Households" value={String(households.length)} />
         <MetricCard label="Total AUM" value={formatCurrency(totalAUM, true)} />
@@ -136,7 +148,6 @@ export function HouseholdListView() {
         <MetricCard label="Segments" value={segmentBreakdownText(households)} />
       </div>
 
-      {/* Search + Sort Controls */}
       <div className="flex items-center gap-4">
         <div className="relative max-w-md flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
@@ -159,7 +170,6 @@ export function HouseholdListView() {
         </select>
       </div>
 
-      {/* Household Cards */}
       {filtered.length === 0 ? (
         <Card className="p-8 text-center">
           <Building2 className="mx-auto h-8 w-8 text-text-tertiary" />
@@ -171,7 +181,6 @@ export function HouseholdListView() {
             const isExpanded = expandedIds.has(hh.id)
             return (
               <Card key={hh.id}>
-                {/* Header row */}
                 <div className="flex items-center gap-4 p-4">
                   <button
                     onClick={() => toggleExpanded(hh.id)}
@@ -192,29 +201,25 @@ export function HouseholdListView() {
                     {hh.name}
                   </button>
                   <Badge variant={SEGMENT_BADGE_VARIANT[hh.segment]}>
-                    {hh.segment.charAt(0).toUpperCase() + hh.segment.slice(1)}
+                    {capitalize(hh.segment)}
                   </Badge>
                   <span className="flex items-center gap-1 rounded-full bg-surface-tertiary px-2 py-0.5 text-caption text-text-secondary">
                     <Users className="h-3 w-3" />
-                    {hh.members.length} {hh.members.length === 1 ? 'member' : 'members'}
+                    {pluralize(hh.members.length, 'member')}
                   </span>
                   <span className="rounded-full bg-surface-tertiary px-2 py-0.5 text-caption text-text-secondary">
-                    {hh.accountIds.length} {hh.accountIds.length === 1 ? 'account' : 'accounts'}
+                    {pluralize(hh.accountIds.length, 'account')}
                   </span>
                   <span className="ml-auto font-mono text-body font-medium text-text-primary">
                     {formatCurrency(hh.totalAUM, true)}
                   </span>
                 </div>
 
-                {/* Expanded content */}
                 {isExpanded && (
                   <div className="border-t border-border-primary p-4 animate-fade-in">
                     <div className="grid grid-cols-[1fr_1fr_auto] gap-6">
-                      {/* Members */}
                       <div>
-                        <h4 className="mb-2 text-caption font-medium uppercase tracking-wide text-text-tertiary">
-                          Members
-                        </h4>
+                        <SectionHeading>Members</SectionHeading>
                         <div className="space-y-2">
                           {hh.members.map((member) => (
                             <div key={member.clientId} className="flex items-center gap-3">
@@ -225,7 +230,7 @@ export function HouseholdListView() {
                                 {member.name}
                               </Link>
                               <Badge variant="default">
-                                {member.relationship.charAt(0).toUpperCase() + member.relationship.slice(1)}
+                                {capitalize(member.relationship)}
                               </Badge>
                               <span className="text-caption text-text-tertiary">
                                 {formatDate(member.dateOfBirth)}
@@ -235,11 +240,8 @@ export function HouseholdListView() {
                         </div>
                       </div>
 
-                      {/* Account summary */}
                       <div>
-                        <h4 className="mb-2 text-caption font-medium uppercase tracking-wide text-text-tertiary">
-                          Accounts
-                        </h4>
+                        <SectionHeading>Accounts</SectionHeading>
                         <div className="space-y-1">
                           {hh.accountIds.map((accId) => (
                             <div key={accId} className="flex items-center gap-2">
@@ -252,11 +254,8 @@ export function HouseholdListView() {
                         </p>
                       </div>
 
-                      {/* Mini Allocation Chart */}
                       <div>
-                        <h4 className="mb-2 text-caption font-medium uppercase tracking-wide text-text-tertiary">
-                          Allocation
-                        </h4>
+                        <SectionHeading>Allocation</SectionHeading>
                         <AllocationChart
                           data={ALLOCATION_TEMPLATES[hh.segment]}
                           size="sm"

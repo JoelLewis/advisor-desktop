@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Search, User, Building2, Briefcase, FileText,
@@ -15,6 +15,14 @@ const TYPE_CONFIG: Record<SearchResultType, { icon: typeof User; label: string }
   account: { icon: Briefcase, label: 'Account' },
   page: { icon: FileText, label: 'Page' },
   action: { icon: Zap, label: 'Action' },
+}
+
+function ResultsPlaceholder({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex h-20 items-center justify-center text-caption text-text-tertiary">
+      {children}
+    </div>
+  )
 }
 
 export function CommandPalette() {
@@ -50,23 +58,26 @@ export function CommandPalette() {
     }
   }, [close, navigate, setInitialMessage])
 
-  // Keyboard navigation
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Escape') {
-      e.preventDefault()
-      close()
-    }
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      setActiveIndex((i) => Math.min(i + 1, results.length - 1))
-    }
-    if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      setActiveIndex((i) => Math.max(i - 1, 0))
-    }
-    if (e.key === 'Enter' && results[activeIndex]) {
-      e.preventDefault()
-      handleSelect(results[activeIndex].route)
+    switch (e.key) {
+      case 'Escape':
+        e.preventDefault()
+        close()
+        break
+      case 'ArrowDown':
+        e.preventDefault()
+        setActiveIndex((i) => Math.min(i + 1, results.length - 1))
+        break
+      case 'ArrowUp':
+        e.preventDefault()
+        setActiveIndex((i) => Math.max(i - 1, 0))
+        break
+      case 'Enter':
+        if (results[activeIndex]) {
+          e.preventDefault()
+          handleSelect(results[activeIndex].route)
+        }
+        break
     }
   }
 
@@ -106,23 +117,21 @@ export function CommandPalette() {
 
           {/* Results */}
           <div className="max-h-[360px] overflow-y-auto scrollbar-thin">
-            {query.length < 2 ? (
-              <div className="flex h-20 items-center justify-center text-caption text-text-tertiary">
-                Type to search clients, accounts, or actions...
-              </div>
-            ) : isLoading ? (
-              <div className="flex h-20 items-center justify-center text-caption text-text-tertiary">
-                Searching...
-              </div>
-            ) : results.length === 0 ? (
-              <div className="flex h-20 items-center justify-center text-caption text-text-tertiary">
-                No results found for &ldquo;{query}&rdquo;
-              </div>
-            ) : (
+            {query.length < 2 && (
+              <ResultsPlaceholder>Type to search clients, accounts, or actions...</ResultsPlaceholder>
+            )}
+            {query.length >= 2 && isLoading && (
+              <ResultsPlaceholder>Searching...</ResultsPlaceholder>
+            )}
+            {query.length >= 2 && !isLoading && results.length === 0 && (
+              <ResultsPlaceholder>No results found for &ldquo;{query}&rdquo;</ResultsPlaceholder>
+            )}
+            {query.length >= 2 && !isLoading && results.length > 0 && (
               <div className="py-2">
                 {results.map((result, index) => {
                   const config = TYPE_CONFIG[result.type]
                   const Icon = config.icon
+                  const isActive = index === activeIndex
                   return (
                     <button
                       key={result.id}
@@ -130,14 +139,12 @@ export function CommandPalette() {
                       onMouseEnter={() => setActiveIndex(index)}
                       className={cn(
                         'flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors',
-                        index === activeIndex
-                          ? 'bg-accent-blue/10 text-accent-blue'
-                          : 'text-text-primary hover:bg-surface-tertiary',
+                        isActive ? 'bg-accent-blue/10 text-accent-blue' : 'text-text-primary hover:bg-surface-tertiary',
                       )}
                     >
                       <div className={cn(
                         'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
-                        index === activeIndex ? 'bg-accent-blue/20' : 'bg-surface-tertiary',
+                        isActive ? 'bg-accent-blue/20' : 'bg-surface-tertiary',
                       )}>
                         <Icon className="h-4 w-4" />
                       </div>
@@ -147,7 +154,7 @@ export function CommandPalette() {
                       </div>
                       <span className={cn(
                         'shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium',
-                        index === activeIndex ? 'bg-accent-blue/20 text-accent-blue' : 'bg-surface-tertiary text-text-tertiary',
+                        isActive ? 'bg-accent-blue/20 text-accent-blue' : 'bg-surface-tertiary text-text-tertiary',
                       )}>
                         {config.label}
                       </span>

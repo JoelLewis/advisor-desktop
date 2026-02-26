@@ -7,8 +7,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useDriftSummary } from '@/hooks/use-portfolio'
 import { useRebalancePreview, useExecuteRebalance, useTradeComplianceCheck } from '@/hooks/use-orders'
-import { formatCurrency } from '@/lib/utils'
-import { cn } from '@/lib/utils'
+import { formatCurrency, cn } from '@/lib/utils'
 import type { RebalancePreview } from '@/services/oms'
 import type { TradeComplianceResult, TradeComplianceCheck } from '@/types/compliance'
 
@@ -20,6 +19,12 @@ const STEPS: { id: WizardStep; label: string }[] = [
   { id: 'review', label: 'Compliance Review' },
   { id: 'execute', label: 'Execute' },
 ]
+
+const COMPLIANCE_STATUS_BADGE: Record<string, 'green' | 'yellow' | 'red'> = {
+  pass: 'green',
+  warning: 'yellow',
+  fail: 'red',
+}
 
 export function RebalancePage() {
   const navigate = useNavigate()
@@ -117,25 +122,7 @@ export function RebalancePage() {
         </div>
       </div>
 
-      {/* Step indicator */}
-      <div className="flex items-center gap-2">
-        {STEPS.map((s, i) => (
-          <div key={s.id} className="flex items-center gap-2">
-            <div className={cn(
-              'flex h-7 w-7 items-center justify-center rounded-full text-caption font-medium',
-              i < stepIndex ? 'bg-accent-green text-white' :
-              i === stepIndex ? 'bg-accent-blue text-white' :
-              'bg-surface-tertiary text-text-tertiary',
-            )}>
-              {i < stepIndex ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
-            </div>
-            <span className={cn('text-caption', i === stepIndex ? 'font-medium text-text-primary' : 'text-text-tertiary')}>
-              {s.label}
-            </span>
-            {i < STEPS.length - 1 && <div className="mx-2 h-px w-8 bg-border-primary" />}
-          </div>
-        ))}
-      </div>
+      <StepIndicator steps={STEPS.map((s) => s.label)} currentIndex={stepIndex} />
 
       {/* Step content */}
       {step === 'select' && (
@@ -309,13 +296,10 @@ export function RebalancePage() {
           {/* Per-account compliance results */}
           {complianceResults.map((result) => {
             const acc = accounts?.find((a) => a.id === result.accountId)
-            const statusBadge = result.overallStatus === 'pass' ? 'green' as const
-              : result.overallStatus === 'warning' ? 'yellow' as const
-              : 'red' as const
             return (
               <Card key={result.accountId}>
                 <CardHeader action={
-                  <Badge variant={statusBadge}>{result.overallStatus}</Badge>
+                  <Badge variant={COMPLIANCE_STATUS_BADGE[result.overallStatus]}>{result.overallStatus}</Badge>
                 }>
                   <div className="flex items-center gap-2">
                     <Shield className="h-4 w-4 text-text-tertiary" />
@@ -339,27 +323,7 @@ export function RebalancePage() {
             </Card>
           )}
 
-          {/* Summary banner */}
-          {hasComplianceFailure && (
-            <div className="flex items-center gap-2 rounded-lg border border-accent-red/30 bg-accent-red/5 p-4 text-body text-accent-red">
-              <XCircle className="h-5 w-5 shrink-0" />
-              <span>One or more compliance checks failed. Resolve failures before executing.</span>
-            </div>
-          )}
-
-          {!hasComplianceFailure && allComplianceChecks.some((c) => c.status === 'warning') && (
-            <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 p-4 text-body text-amber-700">
-              <AlertTriangle className="h-5 w-5 shrink-0" />
-              <span>Compliance warnings detected. Review before proceeding.</span>
-            </div>
-          )}
-
-          {!hasComplianceFailure && !allComplianceChecks.some((c) => c.status === 'warning') && (
-            <div className="flex items-center gap-2 rounded-lg border border-accent-green/30 bg-accent-green/5 p-4 text-body text-accent-green">
-              <CheckCircle2 className="h-5 w-5 shrink-0" />
-              <span>All compliance checks passed. Ready to execute.</span>
-            </div>
-          )}
+          <ComplianceSummaryBanner checks={allComplianceChecks} />
 
           <div className="flex justify-between">
             <button onClick={() => setStep('preview')} className="rounded border border-border-secondary px-4 py-2 text-body text-text-secondary hover:bg-surface-tertiary">
@@ -425,26 +389,91 @@ const CATEGORY_LABELS: Record<TradeComplianceCheck['category'], string> = {
   position_limit: 'Position Limit',
 }
 
-function ComplianceCheckRow({ check }: { check: TradeComplianceCheck }) {
-  const icons = {
-    pass: <CheckCircle2 className="h-4 w-4 text-accent-green" />,
-    warning: <AlertTriangle className="h-4 w-4 text-amber-500" />,
-    fail: <XCircle className="h-4 w-4 text-accent-red" />,
+function StepIndicator({ steps, currentIndex }: { steps: string[]; currentIndex: number }) {
+  return (
+    <div className="flex items-center gap-2">
+      {steps.map((label, i) => {
+        let circleClass = 'bg-surface-tertiary text-text-tertiary'
+        if (i < currentIndex) circleClass = 'bg-accent-green text-white'
+        else if (i === currentIndex) circleClass = 'bg-accent-blue text-white'
+
+        return (
+          <div key={label} className="flex items-center gap-2">
+            <div className={cn('flex h-7 w-7 items-center justify-center rounded-full text-caption font-medium', circleClass)}>
+              {i < currentIndex ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
+            </div>
+            <span className={cn('text-caption', i === currentIndex ? 'font-medium text-text-primary' : 'text-text-tertiary')}>
+              {label}
+            </span>
+            {i < steps.length - 1 && <div className="mx-2 h-px w-8 bg-border-primary" />}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function ComplianceSummaryBanner({ checks }: { checks: TradeComplianceCheck[] }) {
+  const hasFailure = checks.some((c) => c.status === 'fail')
+  const hasWarning = checks.some((c) => c.status === 'warning')
+
+  if (hasFailure) {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-accent-red/30 bg-accent-red/5 p-4 text-body text-accent-red">
+        <XCircle className="h-5 w-5 shrink-0" />
+        <span>One or more compliance checks failed. Resolve failures before executing.</span>
+      </div>
+    )
   }
-  const variants = { pass: 'green' as const, warning: 'yellow' as const, fail: 'red' as const }
+
+  if (hasWarning) {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 p-4 text-body text-amber-700">
+        <AlertTriangle className="h-5 w-5 shrink-0" />
+        <span>Compliance warnings detected. Review before proceeding.</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-accent-green/30 bg-accent-green/5 p-4 text-body text-accent-green">
+      <CheckCircle2 className="h-5 w-5 shrink-0" />
+      <span>All compliance checks passed. Ready to execute.</span>
+    </div>
+  )
+}
+
+const CHECK_BORDER_STYLES: Record<string, string> = {
+  fail: 'border-accent-red/30 bg-accent-red/5',
+  warning: 'border-amber-200 bg-amber-50/50',
+  pass: 'border-border-primary',
+}
+
+const CHECK_ICONS: Record<string, typeof CheckCircle2> = {
+  pass: CheckCircle2,
+  warning: AlertTriangle,
+  fail: XCircle,
+}
+
+const CHECK_ICON_COLORS: Record<string, string> = {
+  pass: 'text-accent-green',
+  warning: 'text-amber-500',
+  fail: 'text-accent-red',
+}
+
+function ComplianceCheckRow({ check }: { check: TradeComplianceCheck }) {
+  const StatusIcon = CHECK_ICONS[check.status] ?? AlertTriangle
 
   return (
     <div className={cn(
       'flex items-start gap-3 rounded-md border p-3',
-      check.status === 'fail' ? 'border-accent-red/30 bg-accent-red/5' :
-      check.status === 'warning' ? 'border-amber-200 bg-amber-50/50' :
-      'border-border-primary',
+      CHECK_BORDER_STYLES[check.status],
     )}>
-      {icons[check.status]}
+      <StatusIcon className={cn('h-4 w-4', CHECK_ICON_COLORS[check.status])} />
       <div className="flex-1">
         <div className="flex items-center gap-2">
           <span className="text-body-strong">{check.rule}</span>
-          <Badge variant={variants[check.status]}>{check.status}</Badge>
+          <Badge variant={COMPLIANCE_STATUS_BADGE[check.status]}>{check.status}</Badge>
           <Badge variant="default">{CATEGORY_LABELS[check.category]}</Badge>
         </div>
         <p className="mt-0.5 text-caption text-text-secondary">{check.message}</p>

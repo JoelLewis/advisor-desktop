@@ -5,6 +5,7 @@ import type { RiskMetrics, FactorExposure, StressScenario } from '@/types/risk'
 import type { BenchmarkComparison, PerformanceSeries, AttributionResult } from '@/types/performance'
 import { getPositionsForAccount } from '../data/positions'
 import { accounts } from '../data/accounts'
+import { notFound, roundTo } from './utils'
 
 const metricsSummary: MetricsSummary = {
   totalAUM: 101_855_000,
@@ -27,47 +28,107 @@ function generatePerformanceSeries(months: number): PerformanceSeries[] {
     benchmarkValue *= 1 + (Math.random() * 0.055 - 0.02)
     series.push({
       date: date.toISOString().slice(0, 10),
-      value: Math.round(portfolioValue * 100) / 100,
-      benchmark: Math.round(benchmarkValue * 100) / 100,
+      value: roundTo(portfolioValue, 2),
+      benchmark: roundTo(benchmarkValue, 2),
     })
   }
   return series
 }
 
-// Model target allocations by model ID
-const MODEL_TARGETS: Record<string, Record<string, number>> = {
-  'mod-001': { us_equity: 0.40, intl_equity: 0.12, emerging_markets: 0.03, fixed_income: 0.30, alternatives: 0.05, real_estate: 0.03, commodities: 0.02, cash: 0.05 },
-  'mod-002': { us_equity: 0.55, intl_equity: 0.15, emerging_markets: 0.05, fixed_income: 0.15, alternatives: 0.05, commodities: 0.02, cash: 0.03 },
-  'mod-003': { us_equity: 0.20, intl_equity: 0.05, fixed_income: 0.55, alternatives: 0.05, real_estate: 0.05, cash: 0.10 },
-  'mod-004': { us_equity: 0.50, intl_equity: 0.20, emerging_markets: 0.10, fixed_income: 0.10, alternatives: 0.05, cash: 0.05 },
-  'mod-005': { us_equity: 0.35, intl_equity: 0.15, emerging_markets: 0.05, fixed_income: 0.20, alternatives: 0.15, real_estate: 0.05, cash: 0.05 },
-  'mod-006': { us_equity: 0.45, intl_equity: 0.10, fixed_income: 0.35, cash: 0.10 },
-  'mod-007': { us_equity: 0.35, intl_equity: 0.10, emerging_markets: 0.05, fixed_income: 0.35, alternatives: 0.05, real_estate: 0.03, commodities: 0.02, cash: 0.05 },
+type AssetClassAllocation = { assetClass: string; targetWeight: number }
+
+type ModelDefinition = {
+  id: string
+  name: string
+  benchmark: string
+  description: string
+  assetClasses: AssetClassAllocation[]
+}
+
+const MODELS: ModelDefinition[] = [
+  { id: 'mod-001', name: 'Balanced Growth', benchmark: 'S&P 500 / Agg 60/40', description: 'Core 60/40 model with growth tilt', assetClasses: [
+    { assetClass: 'us_equity', targetWeight: 0.40 }, { assetClass: 'intl_equity', targetWeight: 0.12 },
+    { assetClass: 'emerging_markets', targetWeight: 0.03 }, { assetClass: 'fixed_income', targetWeight: 0.30 },
+    { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'real_estate', targetWeight: 0.03 },
+    { assetClass: 'commodities', targetWeight: 0.02 }, { assetClass: 'cash', targetWeight: 0.05 },
+  ]},
+  { id: 'mod-002', name: 'Growth', benchmark: 'S&P 500', description: 'Equity-focused growth model', assetClasses: [
+    { assetClass: 'us_equity', targetWeight: 0.55 }, { assetClass: 'intl_equity', targetWeight: 0.15 },
+    { assetClass: 'emerging_markets', targetWeight: 0.05 }, { assetClass: 'fixed_income', targetWeight: 0.15 },
+    { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'commodities', targetWeight: 0.02 },
+    { assetClass: 'cash', targetWeight: 0.03 },
+  ]},
+  { id: 'mod-003', name: 'Conservative Income', benchmark: 'Barclays Agg', description: 'Income-focused with capital preservation', assetClasses: [
+    { assetClass: 'us_equity', targetWeight: 0.20 }, { assetClass: 'intl_equity', targetWeight: 0.05 },
+    { assetClass: 'fixed_income', targetWeight: 0.55 }, { assetClass: 'alternatives', targetWeight: 0.05 },
+    { assetClass: 'real_estate', targetWeight: 0.05 }, { assetClass: 'cash', targetWeight: 0.10 },
+  ]},
+  { id: 'mod-004', name: 'Aggressive Growth', benchmark: 'MSCI ACWI', description: 'High-growth equity allocation', assetClasses: [
+    { assetClass: 'us_equity', targetWeight: 0.50 }, { assetClass: 'intl_equity', targetWeight: 0.20 },
+    { assetClass: 'emerging_markets', targetWeight: 0.10 }, { assetClass: 'fixed_income', targetWeight: 0.10 },
+    { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'cash', targetWeight: 0.05 },
+  ]},
+  { id: 'mod-005', name: 'Ultra-HNW Multi-Strategy', benchmark: 'Custom Blended', description: 'Multi-strategy for large accounts', assetClasses: [
+    { assetClass: 'us_equity', targetWeight: 0.35 }, { assetClass: 'intl_equity', targetWeight: 0.15 },
+    { assetClass: 'emerging_markets', targetWeight: 0.05 }, { assetClass: 'fixed_income', targetWeight: 0.20 },
+    { assetClass: 'alternatives', targetWeight: 0.15 }, { assetClass: 'real_estate', targetWeight: 0.05 },
+    { assetClass: 'cash', targetWeight: 0.05 },
+  ]},
+  { id: 'mod-006', name: 'Education 529', benchmark: 'Age-Based Glide', description: 'Age-based education savings glide path', assetClasses: [
+    { assetClass: 'us_equity', targetWeight: 0.45 }, { assetClass: 'intl_equity', targetWeight: 0.10 },
+    { assetClass: 'fixed_income', targetWeight: 0.35 }, { assetClass: 'cash', targetWeight: 0.10 },
+  ]},
+  { id: 'mod-007', name: 'Moderate Balanced', benchmark: 'S&P 500 / Agg 50/50', description: 'Balanced 50/50 equity-bond split', assetClasses: [
+    { assetClass: 'us_equity', targetWeight: 0.35 }, { assetClass: 'intl_equity', targetWeight: 0.10 },
+    { assetClass: 'emerging_markets', targetWeight: 0.05 }, { assetClass: 'fixed_income', targetWeight: 0.35 },
+    { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'real_estate', targetWeight: 0.03 },
+    { assetClass: 'commodities', targetWeight: 0.02 }, { assetClass: 'cash', targetWeight: 0.05 },
+  ]},
+]
+
+function getModelByIndex(index: number): ModelDefinition {
+  const model = MODELS[index]
+  if (!model) throw new Error(`Model at index ${index} not found`)
+  return model
+}
+
+function getModelTargets(modelId: string): Record<string, number> {
+  const model = MODELS.find((m) => m.id === modelId) ?? getModelByIndex(0)
+  const targets: Record<string, number> = {}
+  for (const ac of model.assetClasses) {
+    targets[ac.assetClass] = ac.targetWeight
+  }
+  return targets
+}
+
+function findAccount(accountId: string | readonly string[] | undefined): typeof accounts[0] | undefined {
+  return accounts.find((a) => a.id === accountId)
+}
+
+function getAccountValueById(accountId: string | readonly string[] | undefined): number {
+  return findAccount(accountId)?.totalValue ?? 1_000_000
 }
 
 function computeDriftForAccount(account: typeof accounts[0]): DriftStatus {
   const positions = getPositionsForAccount(account.id, account.totalValue)
-  const modelId = account.modelId ?? 'mod-001'
-  const targets: Record<string, number> = MODEL_TARGETS[modelId] ?? MODEL_TARGETS['mod-001'] ?? {}
+  const targets = getModelTargets(account.modelId ?? 'mod-001')
 
-  // Aggregate actual weights by asset class
   const actualWeights = new Map<string, number>()
   for (const pos of positions) {
     actualWeights.set(pos.assetClass, (actualWeights.get(pos.assetClass) ?? 0) + pos.weight)
   }
 
-  // Compute per-class drift
   const allClasses = new Set([...Object.keys(targets), ...actualWeights.keys()])
   const assetClassDrifts: DriftStatus['assetClassDrifts'] = [...allClasses]
     .map((ac) => ({
       assetClass: ac as DriftStatus['assetClassDrifts'][0]['assetClass'],
       target: targets[ac] ?? 0,
       actual: actualWeights.get(ac) ?? 0,
-      drift: Math.round(Math.abs((actualWeights.get(ac) ?? 0) - (targets[ac] ?? 0)) * 1000) / 1000,
+      drift: roundTo(Math.abs((actualWeights.get(ac) ?? 0) - (targets[ac] ?? 0)), 3),
     }))
     .filter((d) => d.target > 0 || d.actual > 0)
 
-  const totalDrift = Math.round(assetClassDrifts.reduce((sum, d) => sum + d.drift, 0) * 1000 / 2) / 1000
+  const totalDrift = roundTo(assetClassDrifts.reduce((sum, d) => sum + d.drift, 0) / 2, 3)
 
   return {
     accountId: account.id,
@@ -78,34 +139,58 @@ function computeDriftForAccount(account: typeof accounts[0]): DriftStatus {
   }
 }
 
+function aggregateByAssetClass(positions: ReturnType<typeof getPositionsForAccount>): Map<string, number> {
+  const byClass = new Map<string, number>()
+  for (const pos of positions) {
+    byClass.set(pos.assetClass, (byClass.get(pos.assetClass) ?? 0) + pos.marketValue)
+  }
+  return byClass
+}
+
+
+function buildStressPositionImpact(
+  symbol: string, name: string, positionId: string,
+  value: number, weight: number, impactPct: number,
+) {
+  const currentValue = value * weight
+  return {
+    positionId,
+    symbol,
+    name,
+    currentValue,
+    projectedValue: currentValue * (1 + impactPct),
+    impact: currentValue * impactPct,
+    impactPercent: impactPct,
+  }
+}
+
 export const pmsHandlers = [
   http.get('/api/pms/metrics', () => {
     return HttpResponse.json(metricsSummary)
   }),
 
   http.get('/api/pms/drift/summary', () => {
-    const summaries = accounts.map(computeDriftForAccount)
-    return HttpResponse.json(summaries)
+    return HttpResponse.json(accounts.map(computeDriftForAccount))
   }),
 
   http.get('/api/pms/accounts/:accountId/positions', ({ params }) => {
-    const account = accounts.find((a) => a.id === params.accountId)
-    if (!account) return new HttpResponse(null, { status: 404 })
+    const account = findAccount(params.accountId)
+    if (!account) return notFound()
     return HttpResponse.json(getPositionsForAccount(account.id, account.totalValue))
   }),
 
   http.get('/api/pms/accounts/:accountId/holdings', ({ params }) => {
-    const account = accounts.find((a) => a.id === params.accountId)
-    if (!account) return new HttpResponse(null, { status: 404 })
+    const account = findAccount(params.accountId)
+    if (!account) return notFound()
     const positions = getPositionsForAccount(account.id, account.totalValue)
 
-    const groups = new Map<string, { targetWeight: number; actualWeight: number; positions: typeof positions }>()
     const targets: Record<string, number> = {
       us_equity: 0.45, intl_equity: 0.12, emerging_markets: 0.03,
       fixed_income: 0.30, alternatives: 0.05, real_estate: 0.03,
       commodities: 0.02, cash: 0.05,
     }
 
+    const groups = new Map<string, { targetWeight: number; actualWeight: number; positions: typeof positions }>()
     for (const pos of positions) {
       const existing = groups.get(pos.assetClass)
       if (existing) {
@@ -124,16 +209,16 @@ export const pmsHandlers = [
       [...groups.entries()].map(([assetClass, data]) => ({
         assetClass,
         targetWeight: data.targetWeight,
-        actualWeight: Math.round(data.actualWeight * 1000) / 1000,
-        drift: Math.round(Math.abs(data.actualWeight - data.targetWeight) * 1000) / 1000,
+        actualWeight: roundTo(data.actualWeight, 3),
+        drift: roundTo(Math.abs(data.actualWeight - data.targetWeight), 3),
         positions: data.positions,
       })),
     )
   }),
 
   http.get('/api/pms/accounts/:accountId/drift', ({ params }) => {
-    const account = accounts.find((a) => a.id === params.accountId)
-    if (!account) return new HttpResponse(null, { status: 404 })
+    const account = findAccount(params.accountId)
+    if (!account) return notFound()
     return HttpResponse.json(computeDriftForAccount(account))
   }),
 
@@ -157,10 +242,9 @@ export const pmsHandlers = [
   http.get('/api/pms/accounts/:accountId/attribution', ({ request }) => {
     const url = new URL(request.url)
     const period = url.searchParams.get('period') ?? 'ytd'
-    // Scale attribution values by period length
-    const scale: Record<string, number> = { mtd: 0.15, qtd: 0.35, ytd: 1.0, '1y': 1.8 }
-    const s = scale[period] ?? 1.0
-    const round = (v: number) => Math.round(v * s * 10000) / 10000
+    const scaleFactors: Record<string, number> = { mtd: 0.15, qtd: 0.35, ytd: 1.0, '1y': 1.8 }
+    const s = scaleFactors[period] ?? 1.0
+    const scale = (v: number) => roundTo(v * s, 4)
 
     const base: AttributionResult[] = [
       { assetClass: 'us_equity', allocation: 0.012, selection: 0.008, interaction: 0.001, total: 0.021 },
@@ -173,14 +257,13 @@ export const pmsHandlers = [
       { assetClass: 'cash', allocation: -0.002, selection: 0.000, interaction: 0.000, total: -0.002 },
     ]
 
-    const attribution = base.map((a) => ({
+    return HttpResponse.json(base.map((a) => ({
       ...a,
-      allocation: round(a.allocation),
-      selection: round(a.selection),
-      interaction: round(a.interaction),
-      total: round(a.total),
-    }))
-    return HttpResponse.json(attribution)
+      allocation: scale(a.allocation),
+      selection: scale(a.selection),
+      interaction: scale(a.interaction),
+      total: scale(a.total),
+    })))
   }),
 
   http.get('/api/pms/accounts/:accountId/risk', () => {
@@ -209,20 +292,18 @@ export const pmsHandlers = [
   }),
 
   http.get('/api/pms/accounts/:accountId/stress', ({ params }) => {
-    const accountId = String(params.accountId)
-    const account = accounts.find((a) => a.id === accountId)
-    const value = account?.totalValue ?? 1_000_000
+    const value = getAccountValueById(params.accountId)
 
     const scenarios: StressScenario[] = [
       {
         id: 'stress-001',
         name: '2008 Financial Crisis',
-        description: 'Replay of Sept 2008 – Mar 2009 market conditions',
+        description: 'Replay of Sept 2008 - Mar 2009 market conditions',
         portfolioImpact: -0.38,
         positionImpacts: [
-          { positionId: 'p1', symbol: 'VTI', name: 'Vanguard Total Stock Market ETF', currentValue: value * 0.35, projectedValue: value * 0.35 * 0.55, impact: -(value * 0.35 * 0.45), impactPercent: -0.45 },
-          { positionId: 'p2', symbol: 'AGG', name: 'iShares Core US Aggregate Bond ETF', currentValue: value * 0.21, projectedValue: value * 0.21 * 0.95, impact: -(value * 0.21 * 0.05), impactPercent: -0.05 },
-          { positionId: 'p3', symbol: 'EFA', name: 'iShares MSCI EAFE ETF', currentValue: value * 0.15, projectedValue: value * 0.15 * 0.50, impact: -(value * 0.15 * 0.50), impactPercent: -0.50 },
+          buildStressPositionImpact('VTI', 'Vanguard Total Stock Market ETF', 'p1', value, 0.35, -0.45),
+          buildStressPositionImpact('AGG', 'iShares Core US Aggregate Bond ETF', 'p2', value, 0.21, -0.05),
+          buildStressPositionImpact('EFA', 'iShares MSCI EAFE ETF', 'p3', value, 0.15, -0.50),
         ],
       },
       {
@@ -231,32 +312,30 @@ export const pmsHandlers = [
         description: 'Sudden 300 basis-point increase in interest rates',
         portfolioImpact: -0.14,
         positionImpacts: [
-          { positionId: 'p1', symbol: 'VTI', name: 'Vanguard Total Stock Market ETF', currentValue: value * 0.35, projectedValue: value * 0.35 * 0.90, impact: -(value * 0.35 * 0.10), impactPercent: -0.10 },
-          { positionId: 'p2', symbol: 'AGG', name: 'iShares Core US Aggregate Bond ETF', currentValue: value * 0.21, projectedValue: value * 0.21 * 0.82, impact: -(value * 0.21 * 0.18), impactPercent: -0.18 },
-          { positionId: 'p3', symbol: 'TLT', name: 'iShares 20+ Year Treasury', currentValue: value * 0.06, projectedValue: value * 0.06 * 0.65, impact: -(value * 0.06 * 0.35), impactPercent: -0.35 },
+          buildStressPositionImpact('VTI', 'Vanguard Total Stock Market ETF', 'p1', value, 0.35, -0.10),
+          buildStressPositionImpact('AGG', 'iShares Core US Aggregate Bond ETF', 'p2', value, 0.21, -0.18),
+          buildStressPositionImpact('TLT', 'iShares 20+ Year Treasury', 'p3', value, 0.06, -0.35),
         ],
       },
       {
         id: 'stress-003',
         name: 'Pandemic Selloff (Mar 2020)',
-        description: 'Replay of Feb – Mar 2020 COVID-driven selloff',
+        description: 'Replay of Feb - Mar 2020 COVID-driven selloff',
         portfolioImpact: -0.25,
         positionImpacts: [
-          { positionId: 'p1', symbol: 'VTI', name: 'Vanguard Total Stock Market ETF', currentValue: value * 0.35, projectedValue: value * 0.35 * 0.66, impact: -(value * 0.35 * 0.34), impactPercent: -0.34 },
-          { positionId: 'p2', symbol: 'AGG', name: 'iShares Core US Aggregate Bond ETF', currentValue: value * 0.21, projectedValue: value * 0.21 * 0.97, impact: -(value * 0.21 * 0.03), impactPercent: -0.03 },
-          { positionId: 'p3', symbol: 'GLD', name: 'SPDR Gold Shares', currentValue: value * 0.05, projectedValue: value * 0.05 * 1.08, impact: value * 0.05 * 0.08, impactPercent: 0.08 },
+          buildStressPositionImpact('VTI', 'Vanguard Total Stock Market ETF', 'p1', value, 0.35, -0.34),
+          buildStressPositionImpact('AGG', 'iShares Core US Aggregate Bond ETF', 'p2', value, 0.21, -0.03),
+          buildStressPositionImpact('GLD', 'SPDR Gold Shares', 'p3', value, 0.05, 0.08),
         ],
       },
     ]
     return HttpResponse.json(scenarios)
   }),
 
-  // ── Sensitivity analysis ──
   http.get('/api/pms/accounts/:accountId/sensitivity', ({ params }) => {
-    const account = accounts.find((a) => a.id === params.accountId)
-    const value = account?.totalValue ?? 1_000_000
+    const value = getAccountValueById(params.accountId)
 
-    const sensitivity = {
+    return HttpResponse.json({
       interestRate: [
         { shock: -100, impact: value * 0.025 },
         { shock: -50, impact: value * 0.012 },
@@ -299,40 +378,40 @@ export const pmsHandlers = [
           const center = 0.06
           const sigma = 0.12
           const freq = Math.exp(-0.5 * ((returnPct - center) / sigma) ** 2)
-          return { returnBucket: Math.round(returnPct * 100) / 100, frequency: Math.round(freq * 800 + Math.random() * 40) }
+          return { returnBucket: roundTo(returnPct, 2), frequency: Math.round(freq * 800 + Math.random() * 40) }
         }),
       },
-    }
-    return HttpResponse.json(sensitivity)
+    })
   }),
 
-  // ── Concentration analysis ──
   http.get('/api/pms/accounts/:accountId/concentration', ({ params }) => {
-    const account = accounts.find((a) => a.id === params.accountId)
-    if (!account) return new HttpResponse(null, { status: 404 })
+    const account = findAccount(params.accountId)
+    if (!account) return notFound()
     const positions = getPositionsForAccount(account.id, account.totalValue)
 
-    const concentrationMetrics = positions
-      .sort((a, b) => b.weight - a.weight)
-      .map((pos) => ({
+    const sorted = [...positions].sort((a, b) => b.weight - a.weight)
+    const concentrationMetrics = sorted.map((pos) => {
+      const limit = pos.assetClass === 'cash' ? 0.15 : 0.05
+      return {
         positionId: pos.id,
         symbol: pos.symbol,
         name: pos.name,
         assetClass: pos.assetClass,
         marketValue: pos.marketValue,
         weight: pos.weight,
-        limit: pos.assetClass === 'cash' ? 0.15 : 0.05,
-        breached: pos.weight > (pos.assetClass === 'cash' ? 0.15 : 0.05),
-      }))
+        limit,
+        breached: pos.weight > limit,
+      }
+    })
 
-    const top10Weight = positions.sort((a, b) => b.weight - a.weight).slice(0, 10).reduce((s, p) => s + p.weight, 0)
+    const top10Weight = sorted.slice(0, 10).reduce((s, p) => s + p.weight, 0)
     const herfindahl = positions.reduce((s, p) => s + p.weight ** 2, 0)
 
     return HttpResponse.json({
       positions: concentrationMetrics,
       summary: {
-        top10Weight: Math.round(top10Weight * 1000) / 1000,
-        herfindahlIndex: Math.round(herfindahl * 10000) / 10000,
+        top10Weight: roundTo(top10Weight, 3),
+        herfindahlIndex: roundTo(herfindahl, 4),
         breachCount: concentrationMetrics.filter((c) => c.breached).length,
         totalPositions: positions.length,
       },
@@ -340,98 +419,43 @@ export const pmsHandlers = [
   }),
 
   http.get('/api/pms/models', () => {
-    return HttpResponse.json([
-      { id: 'mod-001', name: 'Balanced Growth', benchmark: 'S&P 500 / Agg 60/40', description: 'Core 60/40 model with growth tilt', assetClasses: [
-        { assetClass: 'us_equity', targetWeight: 0.40 }, { assetClass: 'intl_equity', targetWeight: 0.12 },
-        { assetClass: 'emerging_markets', targetWeight: 0.03 }, { assetClass: 'fixed_income', targetWeight: 0.30 },
-        { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'real_estate', targetWeight: 0.03 },
-        { assetClass: 'commodities', targetWeight: 0.02 }, { assetClass: 'cash', targetWeight: 0.05 },
-      ]},
-      { id: 'mod-002', name: 'Growth', benchmark: 'S&P 500', description: 'Equity-focused growth model', assetClasses: [
-        { assetClass: 'us_equity', targetWeight: 0.55 }, { assetClass: 'intl_equity', targetWeight: 0.15 },
-        { assetClass: 'emerging_markets', targetWeight: 0.05 }, { assetClass: 'fixed_income', targetWeight: 0.15 },
-        { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'commodities', targetWeight: 0.02 },
-        { assetClass: 'cash', targetWeight: 0.03 },
-      ]},
-      { id: 'mod-003', name: 'Conservative Income', benchmark: 'Barclays Agg', description: 'Income-focused with capital preservation', assetClasses: [
-        { assetClass: 'us_equity', targetWeight: 0.20 }, { assetClass: 'intl_equity', targetWeight: 0.05 },
-        { assetClass: 'fixed_income', targetWeight: 0.55 }, { assetClass: 'alternatives', targetWeight: 0.05 },
-        { assetClass: 'real_estate', targetWeight: 0.05 }, { assetClass: 'cash', targetWeight: 0.10 },
-      ]},
-      { id: 'mod-004', name: 'Aggressive Growth', benchmark: 'MSCI ACWI', description: 'High-growth equity allocation', assetClasses: [
-        { assetClass: 'us_equity', targetWeight: 0.50 }, { assetClass: 'intl_equity', targetWeight: 0.20 },
-        { assetClass: 'emerging_markets', targetWeight: 0.10 }, { assetClass: 'fixed_income', targetWeight: 0.10 },
-        { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'cash', targetWeight: 0.05 },
-      ]},
-      { id: 'mod-005', name: 'Ultra-HNW Multi-Strategy', benchmark: 'Custom Blended', description: 'Multi-strategy for large accounts', assetClasses: [
-        { assetClass: 'us_equity', targetWeight: 0.35 }, { assetClass: 'intl_equity', targetWeight: 0.15 },
-        { assetClass: 'emerging_markets', targetWeight: 0.05 }, { assetClass: 'fixed_income', targetWeight: 0.20 },
-        { assetClass: 'alternatives', targetWeight: 0.15 }, { assetClass: 'real_estate', targetWeight: 0.05 },
-        { assetClass: 'cash', targetWeight: 0.05 },
-      ]},
-      { id: 'mod-006', name: 'Education 529', benchmark: 'Age-Based Glide', description: 'Age-based education savings glide path', assetClasses: [
-        { assetClass: 'us_equity', targetWeight: 0.45 }, { assetClass: 'intl_equity', targetWeight: 0.10 },
-        { assetClass: 'fixed_income', targetWeight: 0.35 }, { assetClass: 'cash', targetWeight: 0.10 },
-      ]},
-      { id: 'mod-007', name: 'Moderate Balanced', benchmark: 'S&P 500 / Agg 50/50', description: 'Balanced 50/50 equity-bond split', assetClasses: [
-        { assetClass: 'us_equity', targetWeight: 0.35 }, { assetClass: 'intl_equity', targetWeight: 0.10 },
-        { assetClass: 'emerging_markets', targetWeight: 0.05 }, { assetClass: 'fixed_income', targetWeight: 0.35 },
-        { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'real_estate', targetWeight: 0.03 },
-        { assetClass: 'commodities', targetWeight: 0.02 }, { assetClass: 'cash', targetWeight: 0.05 },
-      ]},
-    ])
+    return HttpResponse.json(MODELS)
   }),
 
-  // ── Household-level endpoints ──
   http.get('/api/pms/households/:householdId/positions', ({ params }) => {
     const hhAccounts = accounts.filter((a) => a.householdId === params.householdId)
-    if (hhAccounts.length === 0) return new HttpResponse(null, { status: 404 })
-    const allPositions = hhAccounts.flatMap((a) => getPositionsForAccount(a.id, a.totalValue))
-    return HttpResponse.json(allPositions)
+    if (hhAccounts.length === 0) return notFound()
+    return HttpResponse.json(hhAccounts.flatMap((a) => getPositionsForAccount(a.id, a.totalValue)))
   }),
 
   http.get('/api/pms/households/:householdId/drift', ({ params }) => {
     const hhAccounts = accounts.filter((a) => a.householdId === params.householdId)
-    if (hhAccounts.length === 0) return new HttpResponse(null, { status: 404 })
-    const drifts = hhAccounts.map(computeDriftForAccount)
-    return HttpResponse.json(drifts)
+    if (hhAccounts.length === 0) return notFound()
+    return HttpResponse.json(hhAccounts.map(computeDriftForAccount))
   }),
 
   http.get('/api/pms/households/:householdId/allocation', ({ params }) => {
     const hhAccounts = accounts.filter((a) => a.householdId === params.householdId)
-    if (hhAccounts.length === 0) return new HttpResponse(null, { status: 404 })
+    if (hhAccounts.length === 0) return notFound()
     const allPositions = hhAccounts.flatMap((a) => getPositionsForAccount(a.id, a.totalValue))
     const totalValue = allPositions.reduce((sum, p) => sum + p.marketValue, 0)
+    const byClass = aggregateByAssetClass(allPositions)
 
-    // Aggregate by asset class
-    const byClass = new Map<string, number>()
-    for (const pos of allPositions) {
-      byClass.set(pos.assetClass, (byClass.get(pos.assetClass) ?? 0) + pos.marketValue)
-    }
-
-    const allocation = [...byClass.entries()].map(([assetClass, value]) => ({
-      assetClass,
-      weight: Math.round((value / totalValue) * 1000) / 1000,
-      value: Math.round(value),
-    }))
-    return HttpResponse.json(allocation)
+    return HttpResponse.json(
+      [...byClass.entries()].map(([assetClass, value]) => ({
+        assetClass,
+        weight: roundTo(value / totalValue, 3),
+        value: Math.round(value),
+      })),
+    )
   }),
 
   http.get('/api/pms/models/:modelId', ({ params }) => {
-    const models = [
-      { id: 'mod-001', name: 'Balanced Growth', benchmark: 'S&P 500 / Agg 60/40', description: 'Core 60/40 model with growth tilt', assetClasses: [
-        { assetClass: 'us_equity', targetWeight: 0.40 }, { assetClass: 'intl_equity', targetWeight: 0.12 },
-        { assetClass: 'emerging_markets', targetWeight: 0.03 }, { assetClass: 'fixed_income', targetWeight: 0.30 },
-        { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'real_estate', targetWeight: 0.03 },
-        { assetClass: 'commodities', targetWeight: 0.02 }, { assetClass: 'cash', targetWeight: 0.05 },
-      ]},
-    ]
-    const model = models.find((m) => m.id === params.modelId)
-    if (!model) return new HttpResponse(null, { status: 404 })
+    const model = MODELS.find((m) => m.id === params.modelId)
+    if (!model) return notFound()
     return HttpResponse.json(model)
   }),
 
-  // ── Model Governance ──
   http.get('/api/pms/models/governance', () => {
     const modelGovernance = [
       {
@@ -439,12 +463,7 @@ export const pmsHandlers = [
         description: 'Core 60/40 model with growth tilt',
         riskProfile: 'moderate', currentVersion: 3, assignedAccounts: 14, totalAUM: 42_350_000,
         lastRebalanceDate: '2026-02-10', driftTolerance: 0.05, rebalanceFrequency: 'quarterly',
-        assetClasses: [
-          { assetClass: 'us_equity', targetWeight: 0.40 }, { assetClass: 'intl_equity', targetWeight: 0.12 },
-          { assetClass: 'emerging_markets', targetWeight: 0.03 }, { assetClass: 'fixed_income', targetWeight: 0.30 },
-          { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'real_estate', targetWeight: 0.03 },
-          { assetClass: 'commodities', targetWeight: 0.02 }, { assetClass: 'cash', targetWeight: 0.05 },
-        ],
+        assetClasses: getModelByIndex(0).assetClasses,
         versions: [
           {
             version: 3, effectiveDate: '2026-01-15', author: 'Sarah Kim, CIO', status: 'approved',
@@ -453,12 +472,7 @@ export const pmsHandlers = [
               { id: 'chg-001', type: 'weight_change', description: 'Reduced emerging markets from 5% to 3%', assetClass: 'emerging_markets', oldValue: 0.05, newValue: 0.03 },
               { id: 'chg-002', type: 'weight_change', description: 'Increased fixed income from 28% to 30%', assetClass: 'fixed_income', oldValue: 0.28, newValue: 0.30 },
             ],
-            assetClasses: [
-              { assetClass: 'us_equity', targetWeight: 0.40 }, { assetClass: 'intl_equity', targetWeight: 0.12 },
-              { assetClass: 'emerging_markets', targetWeight: 0.03 }, { assetClass: 'fixed_income', targetWeight: 0.30 },
-              { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'real_estate', targetWeight: 0.03 },
-              { assetClass: 'commodities', targetWeight: 0.02 }, { assetClass: 'cash', targetWeight: 0.05 },
-            ],
+            assetClasses: getModelByIndex(0).assetClasses,
           },
           {
             version: 2, effectiveDate: '2025-07-01', author: 'Sarah Kim, CIO', status: 'approved',
@@ -477,9 +491,7 @@ export const pmsHandlers = [
           {
             version: 1, effectiveDate: '2025-01-01', author: 'Sarah Kim, CIO', status: 'approved',
             approvedBy: 'Investment Committee', approvedDate: '2024-12-18',
-            changes: [
-              { id: 'chg-005', type: 'description_change', description: 'Initial model creation' },
-            ],
+            changes: [{ id: 'chg-005', type: 'description_change', description: 'Initial model creation' }],
             assetClasses: [
               { assetClass: 'us_equity', targetWeight: 0.38 }, { assetClass: 'intl_equity', targetWeight: 0.12 },
               { assetClass: 'emerging_markets', targetWeight: 0.05 }, { assetClass: 'fixed_income', targetWeight: 0.28 },
@@ -494,12 +506,7 @@ export const pmsHandlers = [
         description: 'Equity-focused growth model',
         riskProfile: 'moderate_aggressive', currentVersion: 2, assignedAccounts: 8, totalAUM: 28_120_000,
         lastRebalanceDate: '2026-02-12', driftTolerance: 0.05, rebalanceFrequency: 'quarterly',
-        assetClasses: [
-          { assetClass: 'us_equity', targetWeight: 0.55 }, { assetClass: 'intl_equity', targetWeight: 0.15 },
-          { assetClass: 'emerging_markets', targetWeight: 0.05 }, { assetClass: 'fixed_income', targetWeight: 0.15 },
-          { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'commodities', targetWeight: 0.02 },
-          { assetClass: 'cash', targetWeight: 0.03 },
-        ],
+        assetClasses: getModelByIndex(1).assetClasses,
         versions: [
           {
             version: 2, effectiveDate: '2025-10-01', author: 'David Park, PM', status: 'approved',
@@ -508,12 +515,7 @@ export const pmsHandlers = [
               { id: 'chg-006', type: 'weight_change', description: 'Increased intl equity from 12% to 15%', assetClass: 'intl_equity', oldValue: 0.12, newValue: 0.15 },
               { id: 'chg-007', type: 'weight_change', description: 'Reduced US equity from 58% to 55%', assetClass: 'us_equity', oldValue: 0.58, newValue: 0.55 },
             ],
-            assetClasses: [
-              { assetClass: 'us_equity', targetWeight: 0.55 }, { assetClass: 'intl_equity', targetWeight: 0.15 },
-              { assetClass: 'emerging_markets', targetWeight: 0.05 }, { assetClass: 'fixed_income', targetWeight: 0.15 },
-              { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'commodities', targetWeight: 0.02 },
-              { assetClass: 'cash', targetWeight: 0.03 },
-            ],
+            assetClasses: getModelByIndex(1).assetClasses,
           },
           {
             version: 1, effectiveDate: '2025-01-01', author: 'David Park, PM', status: 'approved',
@@ -533,11 +535,7 @@ export const pmsHandlers = [
         description: 'Income-focused with capital preservation',
         riskProfile: 'conservative', currentVersion: 2, assignedAccounts: 6, totalAUM: 15_800_000,
         lastRebalanceDate: '2026-01-28', driftTolerance: 0.03, rebalanceFrequency: 'quarterly',
-        assetClasses: [
-          { assetClass: 'us_equity', targetWeight: 0.20 }, { assetClass: 'intl_equity', targetWeight: 0.05 },
-          { assetClass: 'fixed_income', targetWeight: 0.55 }, { assetClass: 'alternatives', targetWeight: 0.05 },
-          { assetClass: 'real_estate', targetWeight: 0.05 }, { assetClass: 'cash', targetWeight: 0.10 },
-        ],
+        assetClasses: getModelByIndex(2).assetClasses,
         versions: [
           {
             version: 2, effectiveDate: '2025-09-01', author: 'Sarah Kim, CIO', status: 'approved',
@@ -546,11 +544,7 @@ export const pmsHandlers = [
               { id: 'chg-009', type: 'weight_change', description: 'Increased fixed income from 50% to 55%', assetClass: 'fixed_income', oldValue: 0.50, newValue: 0.55 },
               { id: 'chg-010', type: 'weight_change', description: 'Reduced US equity from 25% to 20%', assetClass: 'us_equity', oldValue: 0.25, newValue: 0.20 },
             ],
-            assetClasses: [
-              { assetClass: 'us_equity', targetWeight: 0.20 }, { assetClass: 'intl_equity', targetWeight: 0.05 },
-              { assetClass: 'fixed_income', targetWeight: 0.55 }, { assetClass: 'alternatives', targetWeight: 0.05 },
-              { assetClass: 'real_estate', targetWeight: 0.05 }, { assetClass: 'cash', targetWeight: 0.10 },
-            ],
+            assetClasses: getModelByIndex(2).assetClasses,
           },
           {
             version: 1, effectiveDate: '2025-01-01', author: 'Sarah Kim, CIO', status: 'approved',
@@ -569,21 +563,13 @@ export const pmsHandlers = [
         description: 'High-growth equity allocation',
         riskProfile: 'aggressive', currentVersion: 1, assignedAccounts: 4, totalAUM: 8_450_000,
         lastRebalanceDate: '2026-02-05', driftTolerance: 0.07, rebalanceFrequency: 'threshold_only',
-        assetClasses: [
-          { assetClass: 'us_equity', targetWeight: 0.50 }, { assetClass: 'intl_equity', targetWeight: 0.20 },
-          { assetClass: 'emerging_markets', targetWeight: 0.10 }, { assetClass: 'fixed_income', targetWeight: 0.10 },
-          { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'cash', targetWeight: 0.05 },
-        ],
+        assetClasses: getModelByIndex(3).assetClasses,
         versions: [
           {
             version: 1, effectiveDate: '2025-01-01', author: 'David Park, PM', status: 'approved',
             approvedBy: 'Investment Committee', approvedDate: '2024-12-18',
             changes: [{ id: 'chg-012', type: 'description_change', description: 'Initial model creation' }],
-            assetClasses: [
-              { assetClass: 'us_equity', targetWeight: 0.50 }, { assetClass: 'intl_equity', targetWeight: 0.20 },
-              { assetClass: 'emerging_markets', targetWeight: 0.10 }, { assetClass: 'fixed_income', targetWeight: 0.10 },
-              { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'cash', targetWeight: 0.05 },
-            ],
+            assetClasses: getModelByIndex(3).assetClasses,
           },
         ],
       },
@@ -592,12 +578,7 @@ export const pmsHandlers = [
         description: 'Multi-strategy for large accounts',
         riskProfile: 'moderate_aggressive', currentVersion: 3, assignedAccounts: 3, totalAUM: 18_900_000,
         lastRebalanceDate: '2026-01-20', driftTolerance: 0.05, rebalanceFrequency: 'monthly',
-        assetClasses: [
-          { assetClass: 'us_equity', targetWeight: 0.35 }, { assetClass: 'intl_equity', targetWeight: 0.15 },
-          { assetClass: 'emerging_markets', targetWeight: 0.05 }, { assetClass: 'fixed_income', targetWeight: 0.20 },
-          { assetClass: 'alternatives', targetWeight: 0.15 }, { assetClass: 'real_estate', targetWeight: 0.05 },
-          { assetClass: 'cash', targetWeight: 0.05 },
-        ],
+        assetClasses: getModelByIndex(4).assetClasses,
         versions: [
           {
             version: 3, effectiveDate: '2026-02-01', author: 'Sarah Kim, CIO', status: 'pending_approval',
@@ -619,12 +600,7 @@ export const pmsHandlers = [
               { id: 'chg-015', type: 'security_add', description: 'Added private equity sleeve (BXPE)', assetClass: 'alternatives' },
               { id: 'chg-016', type: 'weight_change', description: 'Increased alternatives from 10% to 15%', assetClass: 'alternatives', oldValue: 0.10, newValue: 0.15 },
             ],
-            assetClasses: [
-              { assetClass: 'us_equity', targetWeight: 0.35 }, { assetClass: 'intl_equity', targetWeight: 0.15 },
-              { assetClass: 'emerging_markets', targetWeight: 0.05 }, { assetClass: 'fixed_income', targetWeight: 0.20 },
-              { assetClass: 'alternatives', targetWeight: 0.15 }, { assetClass: 'real_estate', targetWeight: 0.05 },
-              { assetClass: 'cash', targetWeight: 0.05 },
-            ],
+            assetClasses: getModelByIndex(4).assetClasses,
           },
           {
             version: 1, effectiveDate: '2025-01-01', author: 'Sarah Kim, CIO', status: 'approved',
@@ -644,19 +620,13 @@ export const pmsHandlers = [
         description: 'Age-based education savings glide path',
         riskProfile: 'moderate', currentVersion: 1, assignedAccounts: 3, totalAUM: 1_850_000,
         lastRebalanceDate: '2026-01-15', driftTolerance: 0.05, rebalanceFrequency: 'semi_annual',
-        assetClasses: [
-          { assetClass: 'us_equity', targetWeight: 0.45 }, { assetClass: 'intl_equity', targetWeight: 0.10 },
-          { assetClass: 'fixed_income', targetWeight: 0.35 }, { assetClass: 'cash', targetWeight: 0.10 },
-        ],
+        assetClasses: getModelByIndex(5).assetClasses,
         versions: [
           {
             version: 1, effectiveDate: '2025-01-01', author: 'David Park, PM', status: 'approved',
             approvedBy: 'Investment Committee', approvedDate: '2024-12-18',
             changes: [{ id: 'chg-018', type: 'description_change', description: 'Initial model creation' }],
-            assetClasses: [
-              { assetClass: 'us_equity', targetWeight: 0.45 }, { assetClass: 'intl_equity', targetWeight: 0.10 },
-              { assetClass: 'fixed_income', targetWeight: 0.35 }, { assetClass: 'cash', targetWeight: 0.10 },
-            ],
+            assetClasses: getModelByIndex(5).assetClasses,
           },
         ],
       },
@@ -665,12 +635,7 @@ export const pmsHandlers = [
         description: 'Balanced 50/50 equity-bond split',
         riskProfile: 'moderate_conservative', currentVersion: 2, assignedAccounts: 2, totalAUM: 3_200_000,
         lastRebalanceDate: '2026-02-01', driftTolerance: 0.05, rebalanceFrequency: 'quarterly',
-        assetClasses: [
-          { assetClass: 'us_equity', targetWeight: 0.35 }, { assetClass: 'intl_equity', targetWeight: 0.10 },
-          { assetClass: 'emerging_markets', targetWeight: 0.05 }, { assetClass: 'fixed_income', targetWeight: 0.35 },
-          { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'real_estate', targetWeight: 0.03 },
-          { assetClass: 'commodities', targetWeight: 0.02 }, { assetClass: 'cash', targetWeight: 0.05 },
-        ],
+        assetClasses: getModelByIndex(6).assetClasses,
         versions: [
           {
             version: 2, effectiveDate: '2025-11-01', author: 'Sarah Kim, CIO', status: 'approved',
@@ -679,12 +644,7 @@ export const pmsHandlers = [
               { id: 'chg-019', type: 'weight_change', description: 'Increased fixed income from 30% to 35%', assetClass: 'fixed_income', oldValue: 0.30, newValue: 0.35 },
               { id: 'chg-020', type: 'weight_change', description: 'Reduced US equity from 40% to 35%', assetClass: 'us_equity', oldValue: 0.40, newValue: 0.35 },
             ],
-            assetClasses: [
-              { assetClass: 'us_equity', targetWeight: 0.35 }, { assetClass: 'intl_equity', targetWeight: 0.10 },
-              { assetClass: 'emerging_markets', targetWeight: 0.05 }, { assetClass: 'fixed_income', targetWeight: 0.35 },
-              { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'real_estate', targetWeight: 0.03 },
-              { assetClass: 'commodities', targetWeight: 0.02 }, { assetClass: 'cash', targetWeight: 0.05 },
-            ],
+            assetClasses: getModelByIndex(6).assetClasses,
           },
           {
             version: 1, effectiveDate: '2025-01-01', author: 'David Park, PM', status: 'approved',

@@ -19,23 +19,23 @@ import { useClientDocuments } from '@/hooks/use-documents'
 import { useClientActivities } from '@/hooks/use-client-activity'
 import { useClientNotes, useCreateNote } from '@/hooks/use-notes'
 import { useAIInsights } from '@/hooks/use-ai'
-import { formatCurrency, formatDate } from '@/lib/utils'
-import { cn } from '@/lib/utils'
-import type { Account, AccountType } from '@/types/account'
+import { formatCurrency, formatDate, cn } from '@/lib/utils'
+import { ACCOUNT_TYPE_LABELS, taxTreatmentBadgeVariant } from '@/lib/labels'
+import type { Account } from '@/types/account'
 import type { Document, DocumentType } from '@/types/document'
 import type { ColumnDef } from '@tanstack/react-table'
-
-const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
-  individual: 'Individual', joint: 'Joint', traditional_ira: 'Traditional IRA',
-  roth_ira: 'Roth IRA', sep_ira: 'SEP IRA', '401k': '401(k)',
-  roth_401k: 'Roth 401(k)', '529': '529 Plan', trust_revocable: 'Revocable Trust',
-  trust_irrevocable: 'Irrevocable Trust', ugma_utma: 'UGMA/UTMA', entity: 'Entity',
-}
 
 const DOC_TYPE_LABELS: Record<DocumentType, string> = {
   ips: 'IPS', proposal: 'Proposal', agreement: 'Agreement', statement: 'Statement',
   tax_report: 'Tax Report', correspondence: 'Correspondence', compliance: 'Compliance',
   meeting_notes: 'Meeting Notes', other: 'Other',
+}
+
+const SIGNATURE_BADGE_VARIANT = {
+  not_required: 'default' as const,
+  pending: 'yellow' as const,
+  signed: 'green' as const,
+  expired: 'red' as const,
 }
 
 const accountColumns: ColumnDef<Account, unknown>[] = [
@@ -61,7 +61,7 @@ const accountColumns: ColumnDef<Account, unknown>[] = [
   {
     accessorKey: 'taxTreatment', header: 'Tax',
     cell: ({ row }) => (
-      <Badge variant={row.original.taxTreatment === 'tax_free' ? 'green' : row.original.taxTreatment === 'tax_deferred' ? 'yellow' : 'default'}>
+      <Badge variant={taxTreatmentBadgeVariant(row.original.taxTreatment)}>
         {row.original.taxTreatment.replace('_', ' ')}
       </Badge>
     ),
@@ -104,10 +104,11 @@ const documentColumns: ColumnDef<Document, unknown>[] = [
   },
   {
     accessorKey: 'signatureStatus', header: 'Signature',
-    cell: ({ row }) => {
-      const v = { not_required: 'default' as const, pending: 'yellow' as const, signed: 'green' as const, expired: 'red' as const }
-      return <Badge variant={v[row.original.signatureStatus]}>{row.original.signatureStatus.replace('_', ' ')}</Badge>
-    },
+    cell: ({ row }) => (
+      <Badge variant={SIGNATURE_BADGE_VARIANT[row.original.signatureStatus]}>
+        {row.original.signatureStatus.replace('_', ' ')}
+      </Badge>
+    ),
     size: 120,
   },
   {
@@ -120,6 +121,14 @@ const documentColumns: ColumnDef<Document, unknown>[] = [
     cell: ({ row }) => <span className="text-caption text-text-secondary">{row.original.createdBy}</span>,
     size: 130,
   },
+]
+
+const CLIENT_ALLOCATION = [
+  { assetClass: 'us_equity', weight: 0.42 },
+  { assetClass: 'intl_equity', weight: 0.12 },
+  { assetClass: 'fixed_income', weight: 0.28 },
+  { assetClass: 'alternatives', weight: 0.10 },
+  { assetClass: 'cash', weight: 0.08 },
 ]
 
 export function ClientDetailPage() {
@@ -143,15 +152,6 @@ export function ClientDetailPage() {
   if (!client) {
     return <div className="py-12 text-center text-text-tertiary">Client not found</div>
   }
-
-  // Derive allocation from accounts (simplified)
-  const allocation = [
-    { assetClass: 'us_equity', weight: 0.42 },
-    { assetClass: 'intl_equity', weight: 0.12 },
-    { assetClass: 'fixed_income', weight: 0.28 },
-    { assetClass: 'alternatives', weight: 0.10 },
-    { assetClass: 'cash', weight: 0.08 },
-  ]
 
   function handleAddNote() {
     if (!noteText.trim()) return
@@ -185,7 +185,7 @@ export function ClientDetailPage() {
             <Card>
               <CardHeader>Asset Allocation</CardHeader>
               <CardContent>
-                <AllocationChart data={allocation} />
+                <AllocationChart data={CLIENT_ALLOCATION} />
               </CardContent>
             </Card>
             <Card>
@@ -291,7 +291,6 @@ export function ClientDetailPage() {
       id: 'notes', label: 'Notes', count: notes?.length,
       content: (
         <div className="space-y-4">
-          {/* Add note form */}
           <Card>
             <CardContent>
               <div className="flex gap-3">
@@ -313,7 +312,6 @@ export function ClientDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Notes list */}
           {notes && notes.length > 0 ? (
             <div className="space-y-3">
               {notes.map((note) => (
@@ -354,21 +352,19 @@ export function ClientDetailPage() {
     },
   ]
 
-  const clientShareCard = {
-    variant: 'client_summary' as const,
-    entityId: client.id,
-    entityName: client.fullName,
-    tier: client.tier.label,
-    metrics: [{ label: 'AUM', value: formatCurrency(client.totalAUM, true) }],
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-2">
         <div className="flex-1">
           <ClientHeader client={client} />
         </div>
-        <ShareButton card={clientShareCard} />
+        <ShareButton card={{
+          variant: 'client_summary',
+          entityId: client.id,
+          entityName: client.fullName,
+          tier: client.tier.label,
+          metrics: [{ label: 'AUM', value: formatCurrency(client.totalAUM, true) }],
+        }} />
       </div>
       <TabLayout tabs={tabs} />
     </div>

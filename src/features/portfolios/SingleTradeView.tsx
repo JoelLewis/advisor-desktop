@@ -6,8 +6,7 @@ import { DataTable } from '@/components/ui/DataTable'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useOrders, useSubmitTrade } from '@/hooks/use-orders'
 import { useSymbolSearch } from '@/hooks/use-trading'
-import { formatCurrency, formatDate } from '@/lib/utils'
-import { cn } from '@/lib/utils'
+import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import type { Order } from '@/services/oms'
 import type { SymbolSearchResult } from '@/types/trading'
 
@@ -136,8 +135,7 @@ export function SingleTradeView() {
             )}
 
             {/* Account selector */}
-            <div>
-              <label className="mb-1 block text-caption font-semibold text-text-secondary">Account</label>
+            <FieldGroup label="Account">
               <select
                 value={accountId}
                 onChange={(e) => setAccountId(e.target.value)}
@@ -150,7 +148,7 @@ export function SingleTradeView() {
                   </option>
                 ))}
               </select>
-            </div>
+            </FieldGroup>
 
             {/* Symbol search */}
             <div ref={dropdownRef} className="relative">
@@ -204,37 +202,24 @@ export function SingleTradeView() {
             )}
 
             {/* Side toggle */}
-            <div>
-              <label className="mb-1 block text-caption font-semibold text-text-secondary">Side</label>
+            <FieldGroup label="Side">
               <div className="flex gap-2">
-                <button
+                <ToggleButton
+                  label="Buy"
+                  active={side === 'buy'}
+                  activeClass="border-accent-green bg-accent-green/10 text-accent-green"
                   onClick={() => setSide('buy')}
-                  className={cn(
-                    'flex-1 rounded-md border px-4 py-2 text-body font-medium transition-colors',
-                    side === 'buy'
-                      ? 'border-accent-green bg-accent-green/10 text-accent-green'
-                      : 'border-border-secondary text-text-secondary hover:bg-surface-tertiary',
-                  )}
-                >
-                  Buy
-                </button>
-                <button
+                />
+                <ToggleButton
+                  label="Sell"
+                  active={side === 'sell'}
+                  activeClass="border-accent-red bg-accent-red/10 text-accent-red"
                   onClick={() => setSide('sell')}
-                  className={cn(
-                    'flex-1 rounded-md border px-4 py-2 text-body font-medium transition-colors',
-                    side === 'sell'
-                      ? 'border-accent-red bg-accent-red/10 text-accent-red'
-                      : 'border-border-secondary text-text-secondary hover:bg-surface-tertiary',
-                  )}
-                >
-                  Sell
-                </button>
+                />
               </div>
-            </div>
+            </FieldGroup>
 
-            {/* Quantity */}
-            <div>
-              <label className="mb-1 block text-caption font-semibold text-text-secondary">Quantity</label>
+            <FieldGroup label="Quantity">
               <input
                 type="number"
                 min="1"
@@ -243,41 +228,29 @@ export function SingleTradeView() {
                 placeholder="0"
                 className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 font-mono text-mono-sm text-text-primary outline-none placeholder:text-text-tertiary focus:border-accent-blue focus:ring-1 focus:ring-accent-blue"
               />
-            </div>
+            </FieldGroup>
 
             {/* Order type toggle */}
-            <div>
-              <label className="mb-1 block text-caption font-semibold text-text-secondary">Order Type</label>
+            <FieldGroup label="Order Type">
               <div className="flex gap-2">
-                <button
+                <ToggleButton
+                  label="Market"
+                  active={orderType === 'market'}
+                  activeClass="border-accent-blue bg-accent-blue/10 text-accent-blue"
                   onClick={() => setOrderType('market')}
-                  className={cn(
-                    'flex-1 rounded-md border px-4 py-2 text-body font-medium transition-colors',
-                    orderType === 'market'
-                      ? 'border-accent-blue bg-accent-blue/10 text-accent-blue'
-                      : 'border-border-secondary text-text-secondary hover:bg-surface-tertiary',
-                  )}
-                >
-                  Market
-                </button>
-                <button
+                />
+                <ToggleButton
+                  label="Limit"
+                  active={orderType === 'limit'}
+                  activeClass="border-accent-blue bg-accent-blue/10 text-accent-blue"
                   onClick={() => setOrderType('limit')}
-                  className={cn(
-                    'flex-1 rounded-md border px-4 py-2 text-body font-medium transition-colors',
-                    orderType === 'limit'
-                      ? 'border-accent-blue bg-accent-blue/10 text-accent-blue'
-                      : 'border-border-secondary text-text-secondary hover:bg-surface-tertiary',
-                  )}
-                >
-                  Limit
-                </button>
+                />
               </div>
-            </div>
+            </FieldGroup>
 
             {/* Limit price (conditional) */}
             {orderType === 'limit' && (
-              <div>
-                <label className="mb-1 block text-caption font-semibold text-text-secondary">Limit Price</label>
+              <FieldGroup label="Limit Price">
                 <input
                   type="number"
                   min="0.01"
@@ -287,7 +260,7 @@ export function SingleTradeView() {
                   placeholder="$0.00"
                   className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 font-mono text-mono-sm text-text-primary outline-none placeholder:text-text-tertiary focus:border-accent-blue focus:ring-1 focus:ring-accent-blue"
                 />
-              </div>
+              </FieldGroup>
             )}
 
             {/* Order summary */}
@@ -317,12 +290,7 @@ export function SingleTradeView() {
             <button
               onClick={handleSubmit}
               disabled={!canSubmit || submitTrade.isPending}
-              className={cn(
-                'w-full rounded-md px-4 py-2.5 text-body font-semibold text-white transition-colors',
-                canSubmit && !submitTrade.isPending
-                  ? 'bg-accent-blue hover:bg-accent-blue/90'
-                  : 'cursor-not-allowed bg-accent-blue/40',
-              )}
+              className="w-full rounded-md bg-accent-blue px-4 py-2.5 text-body font-semibold text-white transition-colors hover:bg-accent-blue/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {submitTrade.isPending ? 'Submitting...' : `Submit ${side.toUpperCase()} Order`}
             </button>
@@ -345,5 +313,35 @@ export function SingleTradeView() {
         </Card>
       </div>
     </div>
+  )
+}
+
+function FieldGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="mb-1 block text-caption font-semibold text-text-secondary">{label}</label>
+      {children}
+    </div>
+  )
+}
+
+type ToggleButtonProps = {
+  label: string
+  active: boolean
+  activeClass: string
+  onClick: () => void
+}
+
+function ToggleButton({ label, active, activeClass, onClick }: ToggleButtonProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'flex-1 rounded-md border px-4 py-2 text-body font-medium transition-colors',
+        active ? activeClass : 'border-border-secondary text-text-secondary hover:bg-surface-tertiary',
+      )}
+    >
+      {label}
+    </button>
   )
 }

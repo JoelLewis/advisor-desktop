@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { tasks, processTrackers, workflowTemplates } from '../data/workflows'
+import { notFound } from './utils'
 
 export const workflowHandlers = [
   http.get('/api/workflows/my-actions', ({ request }) => {
@@ -29,14 +30,14 @@ export const workflowHandlers = [
   http.put('/api/workflows/tasks/:taskId', async ({ params, request }) => {
     const body = await request.json() as Partial<typeof tasks[0]>
     const task = tasks.find((t) => t.id === params.taskId)
-    if (!task) return new HttpResponse(null, { status: 404 })
+    if (!task) return notFound()
     return HttpResponse.json({ ...task, ...body })
   }),
 
   http.post('/api/workflows/tasks/:taskId/delegate', async ({ params, request }) => {
     const body = await request.json() as { delegateTo: string; delegationType: string }
     const task = tasks.find((t) => t.id === params.taskId)
-    if (!task) return new HttpResponse(null, { status: 404 })
+    if (!task) return notFound()
     return HttpResponse.json({ ...task, assignee: body.delegateTo, delegationType: body.delegationType })
   }),
 ]

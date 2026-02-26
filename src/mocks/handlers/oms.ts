@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import type { Order, RebalancePreview, ProposedTrade, ComplianceCheck } from '@/services/oms'
+import { notFound } from './utils'
 
 const orders: Order[] = [
   // ── Recent orders for Johnson Family Trust (acc-001) ──
@@ -64,7 +65,7 @@ export const omsHandlers = [
 
   http.get('/api/oms/orders/:orderId', ({ params }) => {
     const order = orders.find((o) => o.id === params.orderId)
-    if (!order) return new HttpResponse(null, { status: 404 })
+    if (!order) return notFound()
     return HttpResponse.json(order)
   }),
 

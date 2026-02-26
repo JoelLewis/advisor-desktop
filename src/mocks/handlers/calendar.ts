@@ -3,6 +3,7 @@ import { calendarEvents } from '../data/calendar'
 import { clients } from '../data/clients'
 import { accounts } from '../data/accounts'
 import type { MeetingPrep, MeetingPrepItem } from '@/types/calendar'
+import { formatAUM, notFound } from './utils'
 
 export const calendarHandlers = [
   http.get('/api/calendar/events', ({ request }) => {
@@ -31,21 +32,15 @@ export const calendarHandlers = [
   http.get('/api/calendar/events/:eventId/prep', async ({ params }) => {
     await delay(500)
     const event = calendarEvents.find((e) => e.id === params.eventId)
-    if (!event) return new HttpResponse(null, { status: 404 })
+    if (!event) return notFound()
 
     const client = event.clientId ? clients.find((c) => c.id === event.clientId) : undefined
     const clientAccounts = client ? accounts.filter((a) => a.clientId === client.id) : []
     const totalAUM = clientAccounts.reduce((sum, a) => sum + a.totalValue, 0)
 
-    function fmtAUM(v: number): string {
-      if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`
-      if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}K`
-      return `$${v}`
-    }
-
     const portfolioSummary: MeetingPrepItem[] = client
       ? [
-          { label: 'Total AUM', value: fmtAUM(totalAUM) },
+          { label: 'Total AUM', value: formatAUM(totalAUM) },
           { label: 'Segment', value: client.segment.charAt(0).toUpperCase() + client.segment.slice(1) },
           { label: 'Risk Profile', value: `${client.riskProfile.tolerance} (${client.riskProfile.score}/100)` },
           { label: 'Accounts', value: String(clientAccounts.length) },
@@ -130,7 +125,7 @@ export const calendarHandlers = [
     const recentActivity: string[] = client
       ? [
           'Portfolio rebalanced 18 days ago — added international equity exposure',
-          `Last advisory fee: ${fmtAUM(totalAUM * 0.0085 / 4)} (Q4 billing)`,
+          `Last advisory fee: ${formatAUM(totalAUM * 0.0085 / 4)} (Q4 billing)`,
           'Document signed: Updated advisory agreement (Jan 15)',
           'AI insight generated: Tax-loss harvesting opportunity identified',
         ]

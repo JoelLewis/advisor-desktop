@@ -80,12 +80,14 @@ function filterAndSortNBAs(
   )
 }
 
+type BatchGroup = { groupId: string; title: string; category: NBACategory; nbas: NBA[] }
+
 export function NBAFeed() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [selectedPriorities, setSelectedPriorities] = useState<string[]>([])
   const [selectedUrgency, setSelectedUrgency] = useState<string[]>([])
   const [sortMode, setSortMode] = useState<SortMode>('priority')
-  const [batchGroup, setBatchGroup] = useState<{ groupId: string; title: string; category: NBACategory; nbas: NBA[] } | null>(null)
+  const [batchGroup, setBatchGroup] = useState<BatchGroup | null>(null)
 
   const navigate = useNavigate()
   const { data: nbas, isLoading } = useNBAs({ dismissed: 'false' })
@@ -117,9 +119,8 @@ export function NBAFeed() {
     [nbas, selectedCategories, selectedPriorities, selectedUrgency, sortMode],
   )
 
-  // Detect groups for batch action banners
   const groups = useMemo(() => {
-    const groupMap = new Map<string, { groupId: string; title: string; category: NBACategory; nbas: NBA[] }>()
+    const groupMap = new Map<string, BatchGroup>()
     for (const nba of filteredNBAs) {
       if (nba.groupId) {
         const existing = groupMap.get(nba.groupId)
@@ -130,11 +131,9 @@ export function NBAFeed() {
         }
       }
     }
-    // Only show groups with 2+ items
     return new Map([...groupMap.entries()].filter(([, g]) => g.nbas.length >= 2))
   }, [filteredNBAs])
 
-  // Track which group IDs have had their banner rendered
   const renderedGroupBanners = new Set<string>()
 
   return (
@@ -194,7 +193,6 @@ export function NBAFeed() {
               const showBanner = group && !renderedGroupBanners.has(nba.groupId!)
               if (showBanner) renderedGroupBanners.add(nba.groupId!)
 
-              const categoryConfig = CATEGORY_CONFIG[nba.category]
               return (
                 <div key={nba.id}>
                   {showBanner && group && (
@@ -203,7 +201,7 @@ export function NBAFeed() {
                       className="mb-2 flex w-full items-center justify-between rounded-lg border border-accent-blue/30 bg-accent-blue/5 px-4 py-2 text-left transition-colors hover:bg-accent-blue/10"
                     >
                       <span className="text-caption font-medium text-accent-blue">
-                        {group.nbas.length} clients — {categoryConfig.label}
+                        {group.nbas.length} clients — {CATEGORY_CONFIG[nba.category].label}
                       </span>
                       <span className="rounded-md bg-accent-blue px-2.5 py-0.5 text-[10px] font-medium text-white">
                         Batch Action
@@ -226,7 +224,6 @@ export function NBAFeed() {
         )}
       </div>
 
-      {/* Batch action modal */}
       {batchGroup && (
         <BatchActionModal
           groupId={batchGroup.groupId}

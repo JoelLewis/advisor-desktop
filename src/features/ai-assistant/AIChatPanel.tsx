@@ -13,6 +13,14 @@ import { useSendMessage } from '@/hooks/use-ai'
 import { cn } from '@/lib/utils'
 import type { ChatMessage, ChatContext, TradeSuggestion } from '@/types/ai'
 
+type PanelTab = 'ai' | 'messages' | 'client'
+
+const TAB_CONFIG: { id: PanelTab; icon: typeof Sparkles; label: string; activeColor: string }[] = [
+  { id: 'ai', icon: Sparkles, label: 'AI', activeColor: 'bg-accent-purple/10 text-accent-purple' },
+  { id: 'messages', icon: MessageSquare, label: 'Messages', activeColor: 'bg-accent-blue/10 text-accent-blue' },
+  { id: 'client', icon: Mail, label: 'Client', activeColor: 'bg-accent-green/10 text-accent-green' },
+]
+
 function deriveScreenType(pathname: string): string {
   if (pathname.startsWith('/clients/') && pathname.includes('/')) return 'client_detail'
   if (pathname.startsWith('/clients')) return 'clients'
@@ -135,42 +143,24 @@ export function AIChatPanel() {
       <div className="shrink-0 border-b border-border-primary">
         <div className="flex h-topbar items-center justify-between px-4">
           <div className="flex items-center gap-1">
-            <button
-              onClick={() => setPanelTab('ai')}
-              className={cn(
-                'flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-caption font-medium transition-colors',
-                panelTab === 'ai'
-                  ? 'bg-accent-purple/10 text-accent-purple'
-                  : 'text-text-tertiary hover:bg-surface-tertiary hover:text-text-secondary',
-              )}
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              AI
-            </button>
-            <button
-              onClick={() => setPanelTab('messages')}
-              className={cn(
-                'flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-caption font-medium transition-colors',
-                panelTab === 'messages'
-                  ? 'bg-accent-blue/10 text-accent-blue'
-                  : 'text-text-tertiary hover:bg-surface-tertiary hover:text-text-secondary',
-              )}
-            >
-              <MessageSquare className="h-3.5 w-3.5" />
-              Messages
-            </button>
-            <button
-              onClick={() => setPanelTab('client')}
-              className={cn(
-                'flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-caption font-medium transition-colors',
-                panelTab === 'client'
-                  ? 'bg-accent-green/10 text-accent-green'
-                  : 'text-text-tertiary hover:bg-surface-tertiary hover:text-text-secondary',
-              )}
-            >
-              <Mail className="h-3.5 w-3.5" />
-              Client
-            </button>
+            {TAB_CONFIG.map((tab) => {
+              const TabIcon = tab.icon
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setPanelTab(tab.id)}
+                  className={cn(
+                    'flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-caption font-medium transition-colors',
+                    panelTab === tab.id
+                      ? tab.activeColor
+                      : 'text-text-tertiary hover:bg-surface-tertiary hover:text-text-secondary',
+                  )}
+                >
+                  <TabIcon className="h-3.5 w-3.5" />
+                  {tab.label}
+                </button>
+              )
+            })}
           </div>
           <div className="flex items-center gap-1">
             <button
@@ -192,7 +182,7 @@ export function AIChatPanel() {
       </div>
 
       {/* Tab content */}
-      {panelTab === 'ai' ? (
+      {panelTab === 'ai' && (
         <>
           {/* Context chip */}
           <div className="flex shrink-0 items-center gap-2 border-b border-border-primary px-4 py-2">
@@ -243,10 +233,7 @@ export function AIChatPanel() {
                 onKeyDown={handleKeyDown}
                 placeholder="Ask AI anything..."
                 rows={1}
-                className={cn(
-                  'flex-1 resize-none bg-transparent text-caption text-text-primary placeholder:text-text-tertiary focus:outline-none',
-                  'max-h-24 scrollbar-thin',
-                )}
+                className="flex-1 resize-none bg-transparent text-caption text-text-primary placeholder:text-text-tertiary focus:outline-none max-h-24 scrollbar-thin"
               />
               <button
                 onClick={() => handleSend(input)}
@@ -262,9 +249,11 @@ export function AIChatPanel() {
             </p>
           </div>
         </>
-      ) : panelTab === 'messages' ? (
-        <MessagingContent />
-      ) : (
+      )}
+
+      {panelTab === 'messages' && <MessagingContent />}
+
+      {panelTab === 'client' && (
         <ClientCommsTab
           clientId={entityContext.id ?? undefined}
           clientName={entityContext.name ?? undefined}

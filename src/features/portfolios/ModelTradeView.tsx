@@ -7,8 +7,7 @@ import { DataTable } from '@/components/ui/DataTable'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useModelGovernance } from '@/hooks/use-portfolio'
 import { useModelTradePreview, useExecuteModelTrades } from '@/hooks/use-trading'
-import { formatCurrency } from '@/lib/utils'
-import { cn } from '@/lib/utils'
+import { formatCurrency, cn } from '@/lib/utils'
 import type { Account } from '@/types/account'
 import type { ModelGovernanceDetail } from '@/types/portfolio'
 import type { ModelTradePreview } from '@/types/trading'
@@ -46,11 +45,6 @@ export function ModelTradeView() {
     if (!allAccounts || !selectedModel) return []
     return allAccounts.filter((a) => a.modelId === selectedModel.id)
   }, [allAccounts, selectedModel])
-
-  // Step 1 handlers
-  function handleSelectModel(model: ModelGovernanceDetail) {
-    setSelectedModel(model)
-  }
 
   function handleNextToAccounts() {
     if (!selectedModel) return
@@ -174,41 +168,11 @@ export function ModelTradeView() {
     },
   ]
 
-  // Step indicator
-  const steps = ['Select Model', 'Select Accounts', 'Preview Trades', 'Complete']
+  const STEP_LABELS = ['Select Model', 'Select Accounts', 'Preview Trades', 'Complete']
 
   return (
     <div className="space-y-6">
-      {/* Step indicator */}
-      <div className="flex items-center gap-2">
-        {steps.map((label, idx) => (
-          <div key={label} className="flex items-center gap-2">
-            <div
-              className={cn(
-                'flex h-7 w-7 items-center justify-center rounded-full text-caption font-semibold',
-                idx < step
-                  ? 'bg-accent-green text-white'
-                  : idx === step
-                    ? 'bg-accent-blue text-white'
-                    : 'bg-surface-tertiary text-text-tertiary',
-              )}
-            >
-              {idx < step ? '\u2713' : idx + 1}
-            </div>
-            <span
-              className={cn(
-                'text-caption font-medium',
-                idx === step ? 'text-text-primary' : 'text-text-tertiary',
-              )}
-            >
-              {label}
-            </span>
-            {idx < steps.length - 1 && (
-              <div className="mx-2 h-px w-8 bg-border-primary" />
-            )}
-          </div>
-        ))}
-      </div>
+      <ModelTradeStepIndicator steps={STEP_LABELS} currentStep={step} />
 
       {/* Step 1: Select Model */}
       {step === 0 && (
@@ -222,8 +186,8 @@ export function ModelTradeView() {
                 key={model.id}
                 role="button"
                 tabIndex={0}
-                onClick={() => handleSelectModel(model)}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSelectModel(model) }}
+                onClick={() => setSelectedModel(model)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelectedModel(model) }}
               >
                 <Card
                   className={cn(
@@ -260,12 +224,7 @@ export function ModelTradeView() {
             <button
               onClick={handleNextToAccounts}
               disabled={!selectedModel}
-              className={cn(
-                'rounded-md px-6 py-2 text-body font-semibold text-white transition-colors',
-                selectedModel
-                  ? 'bg-accent-blue hover:bg-accent-blue/90'
-                  : 'cursor-not-allowed bg-accent-blue/40',
-              )}
+              className="rounded-md bg-accent-blue px-6 py-2 text-body font-semibold text-white transition-colors hover:bg-accent-blue/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Next
             </button>
@@ -305,12 +264,7 @@ export function ModelTradeView() {
             <button
               onClick={handlePreview}
               disabled={selectedAccountIds.size === 0 || previewMutation.isPending}
-              className={cn(
-                'rounded-md px-6 py-2 text-body font-semibold text-white transition-colors',
-                selectedAccountIds.size > 0 && !previewMutation.isPending
-                  ? 'bg-accent-blue hover:bg-accent-blue/90'
-                  : 'cursor-not-allowed bg-accent-blue/40',
-              )}
+              className="rounded-md bg-accent-blue px-6 py-2 text-body font-semibold text-white transition-colors hover:bg-accent-blue/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {previewMutation.isPending ? 'Generating...' : 'Preview Trades'}
             </button>
@@ -426,12 +380,7 @@ export function ModelTradeView() {
             <button
               onClick={handleExecute}
               disabled={executeMutation.isPending}
-              className={cn(
-                'rounded-md px-6 py-2 text-body font-semibold text-white transition-colors',
-                !executeMutation.isPending
-                  ? 'bg-accent-blue hover:bg-accent-blue/90'
-                  : 'cursor-not-allowed bg-accent-blue/40',
-              )}
+              className="rounded-md bg-accent-blue px-6 py-2 text-body font-semibold text-white transition-colors hover:bg-accent-blue/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {executeMutation.isPending ? 'Executing...' : 'Execute All Trades'}
             </button>
@@ -455,6 +404,30 @@ export function ModelTradeView() {
           </button>
         </div>
       )}
+    </div>
+  )
+}
+
+function ModelTradeStepIndicator({ steps, currentStep }: { steps: string[]; currentStep: number }) {
+  return (
+    <div className="flex items-center gap-2">
+      {steps.map((label, idx) => {
+        let circleClass = 'bg-surface-tertiary text-text-tertiary'
+        if (idx < currentStep) circleClass = 'bg-accent-green text-white'
+        else if (idx === currentStep) circleClass = 'bg-accent-blue text-white'
+
+        return (
+          <div key={label} className="flex items-center gap-2">
+            <div className={cn('flex h-7 w-7 items-center justify-center rounded-full text-caption font-semibold', circleClass)}>
+              {idx < currentStep ? '\u2713' : idx + 1}
+            </div>
+            <span className={cn('text-caption font-medium', idx === currentStep ? 'text-text-primary' : 'text-text-tertiary')}>
+              {label}
+            </span>
+            {idx < steps.length - 1 && <div className="mx-2 h-px w-8 bg-border-primary" />}
+          </div>
+        )
+      })}
     </div>
   )
 }
