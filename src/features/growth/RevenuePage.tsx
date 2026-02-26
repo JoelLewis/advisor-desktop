@@ -7,8 +7,11 @@ import { DataTable } from '@/components/ui/DataTable'
 import { Badge } from '@/components/ui/Badge'
 import { MetricCard } from '@/components/ui/MetricCard'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { TabLayout } from '@/components/ui/TabLayout'
 import { useRevenueMetrics, useFeeSchedules, useRevenueTrend, useRevenueBySegment } from '@/hooks/use-revenue'
 import { formatCurrency, formatPercent } from '@/lib/utils'
+import { TeamActivityView } from './TeamActivityView'
+import { BookAnalyticsView } from './BookAnalyticsView'
 import type { FeeSchedule, RevenueBySegment } from '@/types/revenue'
 import type { ColumnDef } from '@tanstack/react-table'
 
@@ -74,7 +77,7 @@ const segmentColumns: ColumnDef<RevenueBySegment, unknown>[] = [
   },
 ]
 
-export function RevenuePage() {
+function RevenueContent() {
   const { data: metrics, isLoading } = useRevenueMetrics()
   const { data: fees } = useFeeSchedules()
   const { data: trend } = useRevenueTrend()
@@ -83,7 +86,6 @@ export function RevenuePage() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <Skeleton className="h-8 w-48" />
         <div className="grid grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
         </div>
@@ -94,8 +96,6 @@ export function RevenuePage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-page-title">Revenue Analytics</h1>
-
       {metrics && (
         <div className="grid grid-cols-4 gap-4">
           <MetricCard label="Total Recurring Revenue" value={formatCurrency(metrics.totalRecurringRevenue, true)} />
@@ -172,6 +172,21 @@ export function RevenuePage() {
         </CardHeader>
         <DataTable data={fees ?? []} columns={feeColumns} compact />
       </Card>
+    </div>
+  )
+}
+
+export function RevenuePage() {
+  const tabs = [
+    { id: 'revenue', label: 'Revenue', content: <RevenueContent /> },
+    { id: 'team', label: 'Team Activity', content: <TeamActivityView /> },
+    { id: 'book', label: 'Book Analytics', content: <BookAnalyticsView /> },
+  ]
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-page-title">Practice Management</h1>
+      <TabLayout tabs={tabs} defaultTab="revenue" />
     </div>
   )
 }
