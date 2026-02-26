@@ -128,7 +128,7 @@ export function HouseholdListView() {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-20" />
           ))}
@@ -141,7 +141,7 @@ export function HouseholdListView() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-4 gap-4">
         <MetricCard label="Total Households" value={String(households.length)} />
         <MetricCard label="Total AUM" value={formatCurrency(totalAUM, true)} />
         <MetricCard label="Avg AUM / HH" value={formatCurrency(avgAUM, true)} />
@@ -217,7 +217,7 @@ export function HouseholdListView() {
 
                 {isExpanded && (
                   <div className="border-t border-border-primary p-4 animate-fade-in">
-                    <div className="grid grid-cols-[1fr_1fr_auto] gap-6">
+                    <div className="grid grid-cols-1 xl:grid-cols-[1fr_1fr_auto] gap-6">
                       <div>
                         <SectionHeading>Members</SectionHeading>
                         <div className="space-y-2">

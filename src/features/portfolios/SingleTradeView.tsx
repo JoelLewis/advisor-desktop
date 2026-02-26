@@ -121,9 +121,9 @@ export function SingleTradeView() {
   }
 
   return (
-    <div className="grid grid-cols-5 gap-6">
+    <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
       {/* Left column — Trade form */}
-      <div className="col-span-3 space-y-4">
+      <div className="xl:col-span-3 space-y-4">
         <Card>
           <CardHeader>New Order</CardHeader>
           <CardContent className="space-y-4">
@@ -303,7 +303,7 @@ export function SingleTradeView() {
       </div>
 
       {/* Right column — Recent orders */}
-      <div className="col-span-2">
+      <div className="xl:col-span-2">
         <Card>
           <CardHeader>Recent Orders</CardHeader>
           <CardContent className="p-0">

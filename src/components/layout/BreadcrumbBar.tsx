@@ -2,6 +2,7 @@ import { Link, useMatches } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/store/ui-store'
+import { useBreakpoint } from '@/hooks/use-breakpoint'
 
 type RouteHandle = {
   breadcrumb?: string
@@ -12,6 +13,7 @@ export function BreadcrumbBar() {
   const sidebarExpanded = useUIStore((s) => s.sidebarExpanded)
   const aiPanelOpen = useUIStore((s) => s.aiPanelOpen)
   const aiPanelWidth = useUIStore((s) => s.aiPanelWidth)
+  const { isBase } = useBreakpoint()
 
   const crumbs = matches
     .filter((m) => (m.handle as RouteHandle | undefined)?.breadcrumb)
@@ -42,7 +44,7 @@ export function BreadcrumbBar() {
         'fixed z-10 flex h-breadcrumb items-center border-b border-border-primary bg-surface-secondary px-4 transition-[left,right] duration-200 ease-in-out',
         sidebarExpanded ? 'left-sidebar-expanded' : 'left-sidebar-collapsed',
       )}
-      style={{ top: 'var(--spacing-topbar, 56px)', right: aiPanelOpen ? aiPanelWidth : 0 }}
+      style={{ top: 'var(--spacing-topbar, 56px)', right: aiPanelOpen && !isBase ? aiPanelWidth : 0 }}
     >
       <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-caption">
         {crumbs.map((crumb, i) => {

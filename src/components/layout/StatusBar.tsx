@@ -1,10 +1,12 @@
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/store/ui-store'
+import { useBreakpoint } from '@/hooks/use-breakpoint'
 
 export function StatusBar() {
   const sidebarExpanded = useUIStore((s) => s.sidebarExpanded)
   const aiPanelOpen = useUIStore((s) => s.aiPanelOpen)
   const aiPanelWidth = useUIStore((s) => s.aiPanelWidth)
+  const { isBase } = useBreakpoint()
 
   return (
     <footer
@@ -12,7 +14,7 @@ export function StatusBar() {
         'fixed bottom-0 z-10 flex h-statusbar items-center justify-between border-t border-border-primary bg-surface-primary px-4 text-mono-sm text-text-tertiary transition-[left,right] duration-200 ease-in-out',
         sidebarExpanded ? 'left-sidebar-expanded' : 'left-sidebar-collapsed',
       )}
-      style={{ right: aiPanelOpen ? aiPanelWidth : 0 }}
+      style={{ right: aiPanelOpen && !isBase ? aiPanelWidth : 0 }}
     >
       <div className="flex items-center gap-4" aria-live="polite">
         <span className="flex items-center gap-1.5">

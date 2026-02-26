@@ -6,8 +6,8 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { WaterfallChart } from '@/components/ui/WaterfallChart'
 import { useAttribution } from '@/hooks/use-portfolio'
 import { useAccount } from '@/hooks/use-accounts'
-import { formatPercent } from '@/lib/utils'
-import { cn } from '@/lib/utils'
+import { useContainerWidth } from '@/hooks/use-container-width'
+import { formatPercent, cn } from '@/lib/utils'
 import type { AttributionResult } from '@/types/performance'
 
 const ASSET_CLASS_LABELS: Record<string, string> = {
@@ -36,6 +36,7 @@ export function AttributionPage() {
 
   const { data: account, isLoading: accountLoading } = useAccount(id)
   const { data: attribution, isLoading: attributionLoading } = useAttribution(id, period)
+  const { containerRef: chartContainerRef, width: chartWidth } = useContainerWidth(720)
 
   const isLoading = accountLoading || attributionLoading
 
@@ -45,7 +46,7 @@ export function AttributionPage() {
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-10 w-48" />
         <Skeleton className="h-80" />
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
           <Skeleton className="h-24" />
           <Skeleton className="h-24" />
           <Skeleton className="h-24" />
@@ -106,16 +107,18 @@ export function AttributionPage() {
       <Card>
         <CardHeader>Attribution by Asset Class</CardHeader>
         <CardContent>
-          {waterfallData.length > 0 ? (
-            <WaterfallChart data={waterfallData} />
-          ) : (
-            <p className="py-8 text-center text-text-tertiary">No attribution data available</p>
-          )}
+          <div ref={chartContainerRef}>
+            {waterfallData.length > 0 ? (
+              <WaterfallChart data={waterfallData} width={chartWidth} height={Math.round(chartWidth * 0.5)} />
+            ) : (
+              <p className="py-8 text-center text-text-tertiary">No attribution data available</p>
+            )}
+          </div>
         </CardContent>
       </Card>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <SummaryCard label="Total Allocation Effect" value={totalAllocation} />
         <SummaryCard label="Total Selection Effect" value={totalSelection} />
         <SummaryCard label="Total Active Return" value={totalActive} />

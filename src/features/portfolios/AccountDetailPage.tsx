@@ -223,9 +223,9 @@ export function AccountDetailPage() {
     {
       id: 'overview', label: 'Overview',
       content: (
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Left: Allocation + Key Stats */}
-          <div className="col-span-2 space-y-6">
+          <div className="xl:col-span-2 space-y-6">
             <Card>
               <CardHeader>Asset Allocation</CardHeader>
               <CardContent className="flex items-start gap-8">
@@ -445,7 +445,7 @@ export function AccountDetailPage() {
       content: (
         <div className="space-y-6">
           {risk && (
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
               <RiskMetricCard label="Beta" value={risk.beta.toFixed(2)} />
               <RiskMetricCard label="Sharpe Ratio" value={risk.sharpe.toFixed(2)} />
               <RiskMetricCard label="Sortino Ratio" value={risk.sortino.toFixed(2)} />

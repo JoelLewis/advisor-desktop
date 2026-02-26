@@ -1,33 +1,35 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { X, Maximize2, Minimize2, Send, Sparkles, MessageSquare, Mail } from 'lucide-react'
+import { X, Maximize2, Minimize2, Send, Sparkles, MessageSquare } from 'lucide-react'
 import { ChatBubble } from './ChatBubble'
 import { SuggestedPrompts } from './SuggestedPrompts'
 import { ActionTemplateGrid } from './ActionTemplateGrid'
 import { ContextBriefing } from './ContextBriefing'
-import { ClientCommsTab } from './ClientCommsTab'
 import { TradeTicketDialog } from '@/features/portfolios/TradeTicketDialog'
 import { MessagingContent } from '@/features/messaging/MessagingContent'
 import { useUIStore } from '@/store/ui-store'
 import { useNavigationStore } from '@/store/navigation-store'
 import { useSendMessage } from '@/hooks/use-ai'
+import { useBreakpoint } from '@/hooks/use-breakpoint'
 import { cn } from '@/lib/utils'
 import type { ChatMessage, ChatContext, TradeSuggestion } from '@/types/ai'
 
-type PanelTab = 'ai' | 'messages' | 'client'
+type PanelTab = 'ai' | 'messages'
 
 const TAB_CONFIG: { id: PanelTab; icon: typeof Sparkles; label: string; activeColor: string }[] = [
   { id: 'ai', icon: Sparkles, label: 'AI', activeColor: 'bg-accent-purple/10 text-accent-purple' },
   { id: 'messages', icon: MessageSquare, label: 'Messages', activeColor: 'bg-accent-blue/10 text-accent-blue' },
-  { id: 'client', icon: Mail, label: 'Client', activeColor: 'bg-accent-green/10 text-accent-green' },
 ]
 
 function deriveScreenType(pathname: string): string {
+  if (pathname.startsWith('/actions')) return 'actions'
   if (pathname.startsWith('/clients/') && pathname.includes('/')) return 'client_detail'
   if (pathname.startsWith('/clients')) return 'clients'
   if (pathname.startsWith('/portfolios/trading')) return 'trading'
   if (pathname.startsWith('/portfolios/accounts/')) return 'account_detail'
   if (pathname.startsWith('/portfolios')) return 'portfolios'
-  if (pathname.startsWith('/households/')) return 'household_detail'
+  if (pathname.match(/^\/households\/[^/]+/)) return 'household_detail'
+  if (pathname.startsWith('/households')) return 'households'
+  if (pathname.startsWith('/engage')) return 'engage'
   if (pathname.startsWith('/workflows')) return 'workflows'
   if (pathname.startsWith('/settings')) return 'settings'
   return 'dashboard'
@@ -75,6 +77,10 @@ export function AIChatPanel() {
   const setPanelTab = useUIStore((s) => s.setPanelTab)
   const entityContext = useNavigationStore((s) => s.entityContext)
   const { isDragging, handleMouseDown } = useDragResize(setPanelWidth)
+  const { isBase } = useBreakpoint()
+
+  // At base breakpoint, panel overlays full-width minus collapsed sidebar
+  const effectiveWidth = isBase ? 'calc(100vw - 64px)' : panelWidth
 
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -168,24 +174,35 @@ export function AIChatPanel() {
     : screenType.replace('_', ' ')
 
   return (
-    <aside
-      className="fixed right-0 top-0 bottom-0 z-40 flex flex-col border-l border-border-primary bg-surface-primary shadow-lg animate-slide-in-right"
-      style={{ width: panelWidth }}
-    >
-      {/* Drag handle for resizing */}
-      <div
-        onMouseDown={handleMouseDown}
-        className={cn(
-          'absolute left-0 top-0 bottom-0 w-1 cursor-col-resize transition-colors hover:bg-accent-blue/30',
-          isDragging && 'bg-accent-blue/40',
+    <>
+      {/* Backdrop for overlay mode at base breakpoint */}
+      {isBase && (
+        <div
+          className="fixed inset-0 z-30 bg-black/30 animate-fade-in"
+          onClick={togglePanel}
+          aria-hidden="true"
+        />
+      )}
+      <aside
+        className="fixed right-0 top-0 bottom-0 z-40 flex flex-col border-l border-border-primary bg-surface-primary shadow-lg animate-slide-in-right"
+        style={{ width: effectiveWidth }}
+      >
+        {/* Drag handle for resizing — hidden at base (full-width overlay) */}
+        {!isBase && (
+          <div
+            onMouseDown={handleMouseDown}
+            className={cn(
+              'absolute left-0 top-0 bottom-0 w-1 cursor-col-resize transition-colors hover:bg-accent-blue/30',
+              isDragging && 'bg-accent-blue/40',
+            )}
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize panel"
+            aria-valuenow={panelWidth}
+            aria-valuemin={MIN_PANEL_WIDTH}
+            aria-valuemax={MAX_PANEL_WIDTH}
+          />
         )}
-        role="separator"
-        aria-orientation="vertical"
-        aria-label="Resize panel"
-        aria-valuenow={panelWidth}
-        aria-valuemin={MIN_PANEL_WIDTH}
-        aria-valuemax={MAX_PANEL_WIDTH}
-      />
       {/* Header with tabs */}
       <div className="shrink-0 border-b border-border-primary">
         <div className="flex h-topbar items-center justify-between px-4">
@@ -301,13 +318,6 @@ export function AIChatPanel() {
 
       {panelTab === 'messages' && <MessagingContent />}
 
-      {panelTab === 'client' && (
-        <ClientCommsTab
-          clientId={entityContext.id ?? undefined}
-          clientName={entityContext.name ?? undefined}
-        />
-      )}
-
       {/* Trade ticket dialog triggered by AI trade suggestions */}
       {tradePrefill && (
         <TradeTicketDialog
@@ -323,5 +333,6 @@ export function AIChatPanel() {
         />
       )}
     </aside>
+    </>
   )
 }

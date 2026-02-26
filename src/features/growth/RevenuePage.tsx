@@ -86,7 +86,7 @@ function RevenueContent() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
         </div>
         <Skeleton className="h-80" />
@@ -97,7 +97,7 @@ function RevenueContent() {
   return (
     <div className="space-y-6">
       {metrics && (
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
           <MetricCard label="Total Recurring Revenue" value={formatCurrency(metrics.totalRecurringRevenue, true)} />
           <MetricCard label="MTD Revenue" value={formatCurrency(metrics.mtdRevenue, true)} />
           <MetricCard label="YTD Revenue" value={formatCurrency(metrics.ytdRevenue, true)} />
@@ -112,9 +112,9 @@ function RevenueContent() {
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Revenue trend chart */}
-        <div className="col-span-2">
+        <div className="xl:col-span-2">
           <Card>
             <CardHeader>Revenue Trend (Monthly)</CardHeader>
             <CardContent>

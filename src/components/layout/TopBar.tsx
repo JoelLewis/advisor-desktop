@@ -1,6 +1,7 @@
 import { Search, Bell, Sparkles, User, MessageSquare } from 'lucide-react'
 import { useUIStore } from '@/store/ui-store'
 import { usePlatform } from '@/hooks/use-platform'
+import { useBreakpoint } from '@/hooks/use-breakpoint'
 import { cn } from '@/lib/utils'
 
 export function TopBar() {
@@ -11,6 +12,7 @@ export function TopBar() {
   const toggleAI = useUIStore((s) => s.toggleAIPanel)
   const toggleMessaging = useUIStore((s) => s.toggleMessaging)
   const { shortcut } = usePlatform()
+  const { isBase } = useBreakpoint()
 
   return (
     <header
@@ -18,7 +20,7 @@ export function TopBar() {
         'fixed top-0 z-20 flex h-topbar items-center justify-between border-b border-border-primary bg-surface-primary px-4 transition-[left,right] duration-200 ease-in-out',
         sidebarExpanded ? 'left-sidebar-expanded' : 'left-sidebar-collapsed',
       )}
-      style={{ right: aiPanelOpen ? aiPanelWidth : 0 }}
+      style={{ right: aiPanelOpen && !isBase ? aiPanelWidth : 0 }}
     >
       {/* Left: Search trigger */}
       <button
@@ -26,7 +28,7 @@ export function TopBar() {
         className="flex items-center gap-2 rounded-md border border-border-primary bg-surface-secondary px-3 py-1.5 text-caption text-text-tertiary transition-colors hover:border-border-secondary hover:text-text-secondary"
       >
         <Search className="h-4 w-4" />
-        <span>Search clients, accounts...</span>
+        <span className="hidden xl:inline">Search clients, accounts...</span>
         <kbd className="ml-4 rounded border border-border-primary bg-surface-primary px-1.5 py-0.5 text-mono-sm">
           {shortcut('K')}
         </kbd>

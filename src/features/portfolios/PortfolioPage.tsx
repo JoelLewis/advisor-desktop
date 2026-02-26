@@ -156,7 +156,7 @@ export function PortfolioPage() {
     return (
       <div className="space-y-6">
         <Skeleton className="h-8 w-48" />
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
         </div>
         <Skeleton className="h-96" />
@@ -207,7 +207,7 @@ export function PortfolioPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         <MetricCard label="Total AUM" value={formatCurrency(totalAUM, true)} />
         <MetricCard label="Accounts" value={String(allAccounts.length)} />
         <MetricCard label="UMA Accounts" value={String(umaCount)} />

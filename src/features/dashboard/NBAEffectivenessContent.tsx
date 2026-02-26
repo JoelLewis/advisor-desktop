@@ -1,5 +1,3 @@
-import { Link } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip as RechartsTooltip, ResponsiveContainer, Legend,
@@ -10,15 +8,14 @@ import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { CATEGORY_CONFIG } from '@/components/ui/NBACard'
 import { useNBAEffectiveness } from '@/hooks/use-nbas'
-import { formatCurrency } from '@/lib/utils'
-import { cn } from '@/lib/utils'
-export function NBAEffectivenessPage() {
+import { formatCurrency, cn } from '@/lib/utils'
+
+export function NBAEffectivenessContent() {
   const { data: metrics, isLoading } = useNBAEffectiveness()
 
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-8 w-64" />
         <div className="grid grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-4">
           {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-24" />)}
         </div>
@@ -31,17 +28,6 @@ export function NBAEffectivenessPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Link to="/dashboard" className="rounded-md p-1 text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-secondary">
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <div>
-          <h1 className="text-page-title text-text-primary">NBA Effectiveness</h1>
-          <p className="text-caption text-text-secondary">Performance metrics for the Next Best Action system</p>
-        </div>
-      </div>
-
       {/* Top-level metrics */}
       <div className="grid grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-4">
         <MetricCard
@@ -152,7 +138,7 @@ export function NBAEffectivenessPage() {
                     <span className="font-mono text-caption">{acceptRate.toFixed(0)}%</span>
                   </div>
                   <span className="text-right font-mono text-caption text-text-secondary">
-                    {cat.revenueImpact > 0 ? formatCurrency(cat.revenueImpact, true) : '—'}
+                    {cat.revenueImpact > 0 ? formatCurrency(cat.revenueImpact, true) : '\u2014'}
                   </span>
                 </div>
               )

@@ -182,7 +182,7 @@ export function ClientDetailPage() {
               </div>
             </CardContent>
           </Card>
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <Card>
               <CardHeader>Asset Allocation</CardHeader>
               <CardContent>
