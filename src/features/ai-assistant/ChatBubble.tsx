@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronUp, FileText, Sparkles } from 'lucide-react'
 import { ActionCard } from './ActionCard'
+import { RichCard } from '@/components/ui/RichCard'
 import { cn } from '@/lib/utils'
 import type { ChatMessage } from '@/types/ai'
 
@@ -34,6 +35,11 @@ export function ChatBubble({ message }: ChatBubbleProps) {
         <p className={cn('text-caption leading-relaxed', isUser ? 'text-white' : 'text-text-primary')}>
           {message.content}
         </p>
+
+        {/* Rich cards */}
+        {message.richCards?.map((card, i) => (
+          <RichCard key={i} data={card} isAIContext={!isUser} />
+        ))}
 
         {/* Citations */}
         {message.citations && message.citations.length > 0 && (

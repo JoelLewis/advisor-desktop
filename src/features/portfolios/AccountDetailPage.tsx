@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/Badge'
 import { AllocationChart } from '@/components/ui/AllocationChart'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { ActionMenu } from '@/components/ui/ActionMenu'
+import { ShareButton } from '@/components/ui/ShareButton'
 import { ConcentrationView } from './ConcentrationView'
 import { TradeTicketDialog } from './TradeTicketDialog'
 import { useAccount } from '@/hooks/use-accounts'
@@ -595,6 +596,12 @@ export function AccountDetailPage() {
           </Badge>
           {account.isUMA && <Badge variant="purple">UMA</Badge>}
           <Badge variant={account.status === 'active' ? 'green' : 'default'}>{account.status}</Badge>
+          <ShareButton card={{
+            variant: 'account_summary',
+            entityId: account.id,
+            entityName: account.name,
+            metrics: [{ label: 'Value', value: formatCurrency(account.totalValue, true) }],
+          }} />
         </div>
       </div>
 

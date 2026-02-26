@@ -1,4 +1,5 @@
 import type { ChatMessage, SuggestedPrompt, ActionConfirmation, DocumentPreview } from '@/types/ai'
+import type { RichCardData } from '@/types/rich-card'
 
 // ── Context-aware AI responses keyed by screenType + entityType ──
 
@@ -7,6 +8,7 @@ type ResponseTemplate = {
   citations?: ChatMessage['citations']
   actions?: ActionConfirmation[]
   documentPreview?: DocumentPreview
+  richCards?: RichCardData[]
 }
 
 const responsesByContext: Record<string, ResponseTemplate[]> = {
@@ -141,6 +143,18 @@ const keywordResponses: Array<{ keywords: string[]; response: ResponseTemplate }
       ],
       actions: [
         { id: 'act-010', action: 'Generate Rebalance Proposals', description: 'Create proposals for top 3 drifted accounts', impact: '~25 trades across 3 accounts', status: 'pending' },
+      ],
+      richCards: [
+        {
+          variant: 'rebalance_workflow' as const,
+          entityId: 'acc-001',
+          entityName: 'Johnson Family Trust',
+          driftPercent: 4.2,
+          needsRebalance: true,
+          accountCount: 6,
+          actionLabel: 'Start Batch Rebalance',
+          actionRoute: '/portfolios/rebalance',
+        },
       ],
     },
   },

@@ -1,3 +1,5 @@
+import type { RichCardData } from '@/types/rich-card'
+
 export type ChatRole = 'user' | 'assistant'
 
 export type Citation = {
@@ -13,6 +15,7 @@ export type ChatMessage = {
   citations?: Citation[]
   actions?: ActionConfirmation[]
   documentPreview?: DocumentPreview
+  richCards?: RichCardData[]
 }
 
 export type DocumentPreview = {

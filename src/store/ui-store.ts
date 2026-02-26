@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { RichCardData } from '@/types/rich-card'
 
 type PanelTab = 'ai' | 'messages'
 
@@ -10,6 +11,7 @@ type UIStore = {
   panelTab: PanelTab
   globalSearchOpen: boolean
   messagingPanelOpen: boolean
+  pendingShareCard: RichCardData | null
   toggleSidebar: () => void
   toggleAIPanel: () => void
   setAIPanelWidth: (width: 400 | 600) => void
@@ -19,6 +21,9 @@ type UIStore = {
   openGlobalSearch: () => void
   closeGlobalSearch: () => void
   toggleMessaging: () => void
+  setPendingShareCard: (card: RichCardData | null) => void
+  shareWithAI: (card: RichCardData) => void
+  shareWithTeam: (card: RichCardData) => void
 }
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -29,6 +34,7 @@ export const useUIStore = create<UIStore>((set) => ({
   panelTab: 'ai',
   globalSearchOpen: false,
   messagingPanelOpen: false,
+  pendingShareCard: null,
 
   toggleSidebar: () => set((s) => ({ sidebarExpanded: !s.sidebarExpanded })),
   toggleAIPanel: () => set((s) => ({ aiPanelOpen: !s.aiPanelOpen, panelTab: s.aiPanelOpen ? s.panelTab : 'ai' })),
@@ -44,4 +50,7 @@ export const useUIStore = create<UIStore>((set) => ({
     }
     return { aiPanelOpen: true, panelTab: 'messages' }
   }),
+  setPendingShareCard: (card) => set({ pendingShareCard: card }),
+  shareWithAI: (card) => set({ pendingShareCard: card, aiPanelOpen: true, panelTab: 'ai' }),
+  shareWithTeam: (card) => set({ pendingShareCard: card, aiPanelOpen: true, panelTab: 'messages' }),
 }))

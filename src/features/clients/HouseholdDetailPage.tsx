@@ -8,6 +8,7 @@ import { DataTable } from '@/components/ui/DataTable'
 import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { TabLayout } from '@/components/ui/TabLayout'
+import { ShareButton } from '@/components/ui/ShareButton'
 import { useHousehold } from '@/hooks/use-households'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useHeldAway } from '@/hooks/use-held-away'
@@ -363,6 +364,15 @@ export function HouseholdDetailPage() {
           <p className="text-caption text-text-secondary">Total AUM</p>
           <p className="font-mono text-page-title">{formatCurrency(household.totalAUM, true)}</p>
         </div>
+        <ShareButton card={{
+          variant: 'household_summary',
+          entityId: household.id,
+          entityName: household.name,
+          tier: household.segment,
+          memberCount: household.members.length,
+          accountCount: household.accountIds.length,
+          metrics: [{ label: 'AUM', value: formatCurrency(household.totalAUM, true) }],
+        }} />
       </div>
 
       <TabLayout tabs={tabs} />
