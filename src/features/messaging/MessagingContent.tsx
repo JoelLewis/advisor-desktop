@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, MessageSquare, ArrowLeft, User, Bot } from 'lucide-react'
+import { Send, MessageSquare, ArrowLeft, User, Bot, X } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
+import { RichCard } from '@/components/ui/RichCard'
 import { useThreads, useMessages, useSendMessage as useSendTeamMessage } from '@/hooks/use-messaging'
+import { useUIStore } from '@/store/ui-store'
 import { cn } from '@/lib/utils'
 import type { Thread, Message } from '@/types/messaging'
 
@@ -76,6 +78,14 @@ function MessageBubble({ message, currentUserId }: { message: Message; currentUs
         isOwn ? 'bg-accent-blue text-white' : 'bg-surface-tertiary text-text-primary',
       )}>
         <p className="text-caption">{message.content}</p>
+        {message.attachments?.map((att, i) => (
+          att.richData ? <RichCard key={i} data={att.richData} /> : (
+            <div key={i} className="mt-1.5 rounded bg-surface-secondary px-2 py-1.5">
+              <p className="text-[11px] font-medium">{att.entityName}</p>
+              {att.preview && <p className="text-[11px] text-text-tertiary">{att.preview}</p>}
+            </div>
+          )
+        ))}
         <p className={cn('mt-1 text-caption', isOwn ? 'text-white/60' : 'text-text-tertiary')} style={{ fontSize: '10px' }}>
           {formatTime(message.timestamp)}
         </p>
@@ -95,6 +105,8 @@ export function MessagingContent({ headerSlot }: MessagingContentProps) {
   const sendMutation = useSendTeamMessage()
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const pendingShareCard = useUIStore((s) => s.pendingShareCard)
+  const setPendingShareCard = useUIStore((s) => s.setPendingShareCard)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -107,7 +119,10 @@ export function MessagingContent({ headerSlot }: MessagingContentProps) {
     if (!trimmed || !selectedThreadId) return
     sendMutation.mutate(
       { threadId: selectedThreadId, content: trimmed },
-      { onSuccess: () => setInput('') },
+      { onSuccess: () => {
+        setInput('')
+        setPendingShareCard(null)
+      }},
     )
   }
 
@@ -168,12 +183,26 @@ export function MessagingContent({ headerSlot }: MessagingContentProps) {
           </div>
 
           <div className="shrink-0 border-t border-border-primary p-3">
+            {pendingShareCard && (
+              <div className="mb-2 flex items-center gap-2 rounded-md border border-accent-blue/30 bg-accent-blue/5 px-3 py-1.5">
+                <span className="flex-1 truncate text-caption text-accent-blue">
+                  Sharing: {pendingShareCard.entityName}
+                </span>
+                <button
+                  onClick={() => setPendingShareCard(null)}
+                  className="shrink-0 rounded p-0.5 text-accent-blue/60 hover:text-accent-blue"
+                  aria-label="Cancel share"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
             <div className="flex items-end gap-2 rounded-lg border border-border-primary bg-surface-secondary px-3 py-2 focus-within:border-accent-blue/50 focus-within:ring-1 focus-within:ring-accent-blue/20">
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Type a message..."
+                placeholder={pendingShareCard ? `Add a message about ${pendingShareCard.entityName}...` : 'Type a message...'}
                 rows={1}
                 className="flex-1 resize-none bg-transparent text-caption text-text-primary placeholder:text-text-tertiary focus:outline-none max-h-24 scrollbar-thin"
               />

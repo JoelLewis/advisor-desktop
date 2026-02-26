@@ -1,3 +1,5 @@
+import type { RichCardData } from '@/types/rich-card'
+
 type Participant = {
   id: string
   name: string
@@ -6,10 +8,11 @@ type Participant = {
 }
 
 type MessageAttachment = {
-  type: 'client_card' | 'account_card' | 'nba_card' | 'document' | 'link'
+  type: 'client_card' | 'account_card' | 'nba_card' | 'document' | 'link' | 'portfolio_card' | 'rebalance_card' | 'household_card'
   entityId: string
   entityName: string
   preview?: string
+  richData?: RichCardData
 }
 
 type Message = {

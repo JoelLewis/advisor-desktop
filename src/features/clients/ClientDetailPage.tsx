@@ -11,6 +11,7 @@ import { DataTable } from '@/components/ui/DataTable'
 import { Badge } from '@/components/ui/Badge'
 import { ActivityItemRow } from '@/components/ui/ActivityItem'
 import { AIInsightStack } from '@/components/ui/AIInsightCard'
+import { ShareButton } from '@/components/ui/ShareButton'
 import { useClient } from '@/hooks/use-clients'
 import { useAccounts } from '@/hooks/use-accounts'
 import { usePlan } from '@/hooks/use-planning'
@@ -353,9 +354,22 @@ export function ClientDetailPage() {
     },
   ]
 
+  const clientShareCard = {
+    variant: 'client_summary' as const,
+    entityId: client.id,
+    entityName: client.fullName,
+    tier: client.tier.label,
+    metrics: [{ label: 'AUM', value: formatCurrency(client.totalAUM, true) }],
+  }
+
   return (
     <div className="space-y-6">
-      <ClientHeader client={client} />
+      <div className="flex items-start gap-2">
+        <div className="flex-1">
+          <ClientHeader client={client} />
+        </div>
+        <ShareButton card={clientShareCard} />
+      </div>
       <TabLayout tabs={tabs} />
     </div>
   )

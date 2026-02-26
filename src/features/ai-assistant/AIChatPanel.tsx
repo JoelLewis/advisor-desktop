@@ -70,6 +70,9 @@ export function AIChatPanel() {
     )
   }, [sendMutation, buildContext])
 
+  const pendingShareCard = useUIStore((s) => s.pendingShareCard)
+  const setPendingShareCard = useUIStore((s) => s.setPendingShareCard)
+
   // Consume initial message when panel opens with one
   useEffect(() => {
     if (initialMessage) {
@@ -77,6 +80,25 @@ export function AIChatPanel() {
       clearInitialMessage()
     }
   }, [initialMessage, handleSend, clearInitialMessage])
+
+  // Consume pending share card — send as a user message with richCards attached
+  useEffect(() => {
+    if (pendingShareCard && panelTab === 'ai') {
+      const userMessage: ChatMessage = {
+        id: `msg-share-${Date.now()}`,
+        role: 'user',
+        content: `Analyze ${pendingShareCard.entityName}`,
+        timestamp: new Date().toISOString(),
+        richCards: [pendingShareCard],
+      }
+      setMessages((prev) => [...prev, userMessage])
+      sendMutation.mutate(
+        { message: `Analyze ${pendingShareCard.entityName}`, context: buildContext() },
+        { onSuccess: (response) => setMessages((prev) => [...prev, response]) },
+      )
+      setPendingShareCard(null)
+    }
+  }, [pendingShareCard, panelTab, setPendingShareCard, buildContext, sendMutation])
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {

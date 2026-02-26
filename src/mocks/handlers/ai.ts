@@ -32,6 +32,7 @@ export const aiHandlers = [
       citations: template.citations,
       actions: template.actions,
       documentPreview: template.documentPreview,
+      richCards: template.richCards,
     }
 
     return HttpResponse.json(response)
