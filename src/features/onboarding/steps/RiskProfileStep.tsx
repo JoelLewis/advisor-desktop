@@ -24,7 +24,7 @@ export function RiskProfileStep({ answers, result, onAnswer }: RiskProfileStepPr
     return <div className="space-y-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32" />)}</div>
   }
 
-  if (!questions) return null
+  if (!questions) return <div className="py-8 text-center text-caption text-text-tertiary">Unable to load risk assessment questions</div>
 
   return (
     <div className="space-y-6">

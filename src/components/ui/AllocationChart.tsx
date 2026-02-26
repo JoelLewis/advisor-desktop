@@ -1,32 +1,7 @@
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import type { TooltipProps } from 'recharts'
 import { cn } from '@/lib/utils'
-
-const COLORS: Record<string, string> = {
-  us_equity: '#2563EB',
-  intl_equity: '#3B82F6',
-  emerging_markets: '#60A5FA',
-  fixed_income: '#059669',
-  alternatives: '#7C3AED',
-  real_estate: '#D97706',
-  commodities: '#DC2626',
-  cash: '#94A3B8',
-  digital_assets: '#F59E0B',
-  private_equity: '#0891B2',
-}
-
-const LABELS: Record<string, string> = {
-  us_equity: 'US Equity',
-  intl_equity: 'Intl Equity',
-  emerging_markets: 'Emerging Markets',
-  fixed_income: 'Fixed Income',
-  alternatives: 'Alternatives',
-  real_estate: 'Real Estate',
-  commodities: 'Commodities',
-  cash: 'Cash',
-  digital_assets: 'Digital Assets',
-  private_equity: 'Private Equity',
-}
+import { ASSET_CLASS_COLORS as COLORS, ASSET_CLASS_LABELS as LABELS } from '@/lib/chart-colors'
 
 type AllocationSlice = {
   assetClass: string

@@ -13,9 +13,11 @@ function TemplateField({ param, value, onChange }: {
   onChange: (value: string) => void
 }) {
   function renderInput(): JSX.Element {
+    const fieldId = `tmpl-${param.key}`
+
     if (param.type === 'select' && param.options) {
       return (
-        <select value={value} onChange={(e) => onChange(e.target.value)} className={INPUT_CLASS}>
+        <select id={fieldId} value={value} onChange={(e) => onChange(e.target.value)} className={INPUT_CLASS}>
           <option value="">Select...</option>
           {param.options.map((opt) => (
             <option key={opt} value={opt}>{opt}</option>
@@ -27,6 +29,7 @@ function TemplateField({ param, value, onChange }: {
     if (param.type === 'number') {
       return (
         <input
+          id={fieldId}
           type="number"
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -41,6 +44,7 @@ function TemplateField({ param, value, onChange }: {
 
     return (
       <input
+        id={fieldId}
         type={inputType}
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -50,9 +54,11 @@ function TemplateField({ param, value, onChange }: {
     )
   }
 
+  const fieldId = `tmpl-${param.key}`
+
   return (
     <div>
-      <label className="mb-1 block text-[11px] font-medium text-text-secondary">
+      <label htmlFor={fieldId} className="mb-1 block text-[11px] font-medium text-text-secondary">
         {param.label}
         {param.required && <span className="text-accent-red"> *</span>}
       </label>

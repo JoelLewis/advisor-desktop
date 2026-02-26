@@ -24,8 +24,13 @@ export function BreadcrumbBar() {
   if (crumbs.length === 0) {
     const segments = matches[matches.length - 1]?.pathname.split('/').filter(Boolean) ?? []
     segments.forEach((seg, i) => {
+      // Format dynamic IDs more readably
+      const isDynamicId = /^(client|acc|hh|prospect)-/.test(seg)
+      const label = isDynamicId
+        ? seg
+        : seg.charAt(0).toUpperCase() + seg.slice(1).replace(/-/g, ' ')
       crumbs.push({
-        label: seg.charAt(0).toUpperCase() + seg.slice(1).replace(/-/g, ' '),
+        label,
         path: '/' + segments.slice(0, i + 1).join('/'),
       })
     })

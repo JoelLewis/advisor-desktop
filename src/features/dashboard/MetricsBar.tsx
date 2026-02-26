@@ -16,7 +16,7 @@ export function MetricsBar() {
     )
   }
 
-  if (!data) return null
+  if (!data) return <div className="py-4 text-center text-caption text-text-tertiary">Unable to load metrics</div>
 
   return (
     <div className="grid grid-cols-5 gap-4">

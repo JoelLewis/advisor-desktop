@@ -15,10 +15,11 @@ export function ContextBriefing({ screenType, entityId }: ContextBriefingProps) 
   if (isLoading || !briefing) return null
 
   return (
-    <div className="mx-4 mb-3 overflow-hidden rounded-lg border-l-2 border-l-accent-purple bg-accent-purple/5">
+    <div className="mx-4 mb-3 overflow-hidden rounded-lg border-l-2 border-l-accent-purple bg-accent-purple/5" aria-live="polite">
       {/* Header */}
       <button
         onClick={() => setCollapsed(!collapsed)}
+        aria-expanded={!collapsed}
         className="flex w-full items-center justify-between px-3 py-2 text-left transition-colors hover:bg-accent-purple/10"
       >
         <div className="flex items-center gap-2">

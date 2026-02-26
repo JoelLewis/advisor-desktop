@@ -14,9 +14,9 @@ export function StatusBar() {
       )}
       style={{ right: aiPanelOpen ? aiPanelWidth : 0 }}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4" aria-live="polite">
         <span className="flex items-center gap-1.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-accent-green" />
+          <span className="h-1.5 w-1.5 rounded-full bg-accent-green" aria-hidden="true" />
           Connected
         </span>
         <span>Last sync: just now</span>

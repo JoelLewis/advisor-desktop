@@ -6,7 +6,7 @@ type PanelTab = 'ai' | 'messages' | 'client'
 type UIStore = {
   sidebarExpanded: boolean
   aiPanelOpen: boolean
-  aiPanelWidth: 400 | 600
+  aiPanelWidth: number
   aiInitialMessage: string | null
   panelTab: PanelTab
   globalSearchOpen: boolean
@@ -14,7 +14,7 @@ type UIStore = {
   pendingShareCard: RichCardData | null
   toggleSidebar: () => void
   toggleAIPanel: () => void
-  setAIPanelWidth: (width: 400 | 600) => void
+  setAIPanelWidth: (width: number) => void
   setInitialMessage: (msg: string) => void
   clearInitialMessage: () => void
   setPanelTab: (tab: PanelTab) => void

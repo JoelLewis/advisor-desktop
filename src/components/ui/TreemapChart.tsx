@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react'
 import * as d3 from 'd3'
+import { ASSET_CLASS_COLORS, contrastTextColor } from '@/lib/chart-colors'
 
 type TreemapDatum = {
   id: string
@@ -15,19 +16,6 @@ type TreemapChartProps = {
   width?: number
   height?: number
   onNodeClick?: (id: string) => void
-}
-
-const ASSET_COLORS: Record<string, string> = {
-  us_equity: '#2563EB',
-  intl_equity: '#7C3AED',
-  emerging_markets: '#DB2777',
-  fixed_income: '#059669',
-  alternatives: '#D97706',
-  real_estate: '#0891B2',
-  commodities: '#65A30D',
-  cash: '#94A3B8',
-  digital_assets: '#F59E0B',
-  private_equity: '#0E7490',
 }
 
 type TreeNode = d3.HierarchyRectangularNode<TreemapDatum>
@@ -70,7 +58,7 @@ export function TreemapChart({ data, width = 720, height = 440, onNodeClick }: T
       .attr('width', (d) => d.x1 - d.x0)
       .attr('height', (d) => d.y1 - d.y0)
       .attr('rx', 4)
-      .attr('fill', (d) => ASSET_COLORS[d.data.sublabel ?? ''] ?? '#94A3B8')
+      .attr('fill', (d) => ASSET_CLASS_COLORS[d.data.sublabel ?? ''] ?? '#94A3B8')
       .attr('opacity', (d) => d.data.breached ? 1 : 0.75)
       .attr('stroke', (d) => d.data.breached ? 'var(--accent-red)' : 'transparent')
       .attr('stroke-width', 2)
@@ -79,7 +67,7 @@ export function TreemapChart({ data, width = 720, height = 440, onNodeClick }: T
     nodes.append('text')
       .attr('x', 8)
       .attr('y', 20)
-      .attr('fill', '#fff')
+      .attr('fill', (d) => contrastTextColor(ASSET_CLASS_COLORS[d.data.sublabel ?? ''] ?? '#94A3B8'))
       .attr('font-size', (d) => {
         const w = d.x1 - d.x0
         return w > 80 ? 13 : w > 50 ? 11 : 9
@@ -92,7 +80,10 @@ export function TreemapChart({ data, width = 720, height = 440, onNodeClick }: T
     nodes.append('text')
       .attr('x', 8)
       .attr('y', 36)
-      .attr('fill', 'rgba(255,255,255,0.8)')
+      .attr('fill', (d) => {
+        const base = contrastTextColor(ASSET_CLASS_COLORS[d.data.sublabel ?? ''] ?? '#94A3B8')
+        return base === '#FFFFFF' ? 'rgba(255,255,255,0.8)' : 'rgba(15,23,42,0.7)'
+      })
       .attr('font-size', 11)
       .attr('font-family', '"JetBrains Mono", monospace')
       .text((d) => {
@@ -107,7 +98,7 @@ export function TreemapChart({ data, width = 720, height = 440, onNodeClick }: T
       .attr('x', (d) => d.x1 - d.x0 - 8)
       .attr('y', 18)
       .attr('text-anchor', 'end')
-      .attr('fill', '#fff')
+      .attr('fill', (d) => contrastTextColor(ASSET_CLASS_COLORS[d.data.sublabel ?? ''] ?? '#94A3B8'))
       .attr('font-size', 14)
       .text('\u26A0')
   }, [data, width, height, onNodeClick])

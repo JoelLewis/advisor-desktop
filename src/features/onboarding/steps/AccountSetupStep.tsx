@@ -18,7 +18,7 @@ export function AccountSetupStep({ selectedType, fields, onSelectType, onFieldCh
     return <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20" />)}</div>
   }
 
-  if (!requirements) return null
+  if (!requirements) return <div className="py-8 text-center text-caption text-text-tertiary">Unable to load account requirements</div>
 
   const selectedReq = requirements.find((r) => r.accountType === selectedType)
 
@@ -57,11 +57,12 @@ export function AccountSetupStep({ selectedType, fields, onSelectType, onFieldCh
           <div className="grid grid-cols-2 gap-4">
             {selectedReq.additionalFields.map((field) => (
               <div key={field.name}>
-                <label className="mb-1 block text-caption font-medium text-text-secondary">
+                <label htmlFor={`acct-field-${field.name}`} className="mb-1 block text-caption font-medium text-text-secondary">
                   {field.label} {field.required && '*'}
                 </label>
                 {field.type === 'select' ? (
                   <select
+                    id={`acct-field-${field.name}`}
                     value={fields[field.name] ?? ''}
                     onChange={(e) => onFieldChange(field.name, e.target.value)}
                     className="w-full rounded-md border border-border-primary bg-surface-primary px-3 py-2 text-body text-text-primary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
@@ -73,6 +74,7 @@ export function AccountSetupStep({ selectedType, fields, onSelectType, onFieldCh
                   </select>
                 ) : (
                   <input
+                    id={`acct-field-${field.name}`}
                     type={field.type}
                     value={fields[field.name] ?? ''}
                     onChange={(e) => onFieldChange(field.name, e.target.value)}

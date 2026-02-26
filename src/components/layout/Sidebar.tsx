@@ -49,7 +49,7 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-2">
+      <nav className="flex-1 overflow-y-auto py-2" aria-label="Main navigation">
         {NAV_ITEMS.map((item) => (
           <NavLink
             key={item.to}
@@ -82,6 +82,7 @@ export function Sidebar() {
         onClick={toggle}
         className="flex h-10 items-center justify-center border-t border-border-primary text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-secondary"
         aria-label={expanded ? 'Collapse sidebar' : 'Expand sidebar'}
+        aria-expanded={expanded}
       >
         {expanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
       </button>
