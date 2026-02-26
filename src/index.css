@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --surface-primary: #FFFFFF;
+    --surface-secondary: #F8FAFC;
+    --surface-tertiary: #F1F5F9;
+    --border-primary: #E2E8F0;
+    --border-secondary: #CBD5E1;
+    --text-primary: #0F172A;
+    --text-secondary: #475569;
+    --text-tertiary: #94A3B8;
+    --accent-blue: #2563EB;
+    --accent-green: #059669;
+    --accent-red: #DC2626;
+    --accent-purple: #7C3AED;
+  }
+
+  * {
+    border-color: var(--border-primary);
+  }
+
+  body {
+    color: var(--text-primary);
+    background: var(--surface-secondary);
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-secondary) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--border-secondary);
+    border-radius: 3px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
