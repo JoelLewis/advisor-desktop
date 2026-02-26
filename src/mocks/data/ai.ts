@@ -1,4 +1,4 @@
-import type { ChatMessage, SuggestedPrompt, ActionConfirmation, DocumentPreview } from '@/types/ai'
+import type { ChatMessage, SuggestedPrompt, ActionConfirmation, DocumentPreview, ActionTemplate, TradeSuggestion } from '@/types/ai'
 import type { RichCardData } from '@/types/rich-card'
 
 // ── Context-aware AI responses keyed by screenType + entityType ──
@@ -9,6 +9,7 @@ type ResponseTemplate = {
   actions?: ActionConfirmation[]
   documentPreview?: DocumentPreview
   richCards?: RichCardData[]
+  tradeSuggestions?: TradeSuggestion[]
 }
 
 const responsesByContext: Record<string, ResponseTemplate[]> = {
@@ -117,6 +118,24 @@ const responsesByContext: Record<string, ResponseTemplate[]> = {
         'Your AI assistant settings are configured for balanced automation. Currently, I auto-generate meeting prep notes and flag rebalancing opportunities, but require approval before executing trades or sending client communications. Would you like to adjust these thresholds?',
     },
   ],
+  'trading:': [
+    {
+      content:
+        'Your trading desk is ready. You have 3 open orders pending execution and 2 accounts with wash sale restrictions active through March 15. The S&P 500 is up 0.4% today with low volatility (VIX 14.2). I can help with pre-trade compliance checks, tax impact analysis, or suggest replacement securities.',
+      citations: [
+        { source: 'OMS — Open Orders', text: '3 orders pending: 2 limit orders, 1 market order' },
+        { source: 'Tax — Wash Sale Calendar', text: '2 securities restricted through March 15, 2026' },
+      ],
+    },
+    {
+      content:
+        'I see some opportunities across your book today: 4 accounts have drifted beyond their rebalancing thresholds, and there are $18,600 in harvestable losses in the Chen-Wong taxable account. Want me to generate trade suggestions for any of these?',
+      citations: [
+        { source: 'PMS — Drift Report', text: '4 accounts beyond rebalancing threshold' },
+        { source: 'Tax Analysis', text: 'Chen-Wong taxable: $18,600 harvestable losses' },
+      ],
+    },
+  ],
 }
 
 // Fallback for unknown contexts
@@ -137,7 +156,7 @@ const keywordResponses: Array<{ keywords: string[]; response: ResponseTemplate }
     keywords: ['rebalance', 'drift', 'allocation'],
     response: {
       content:
-        'I found 6 accounts exceeding their drift thresholds. The most urgent is the Johnson Family Trust with 4.2% total drift. Would you like me to generate rebalance proposals? I can prioritize by drift severity or by account size.',
+        'I found 6 accounts exceeding their drift thresholds. The most urgent is the Johnson Family Trust with 4.2% total drift. Would you like me to generate rebalance proposals? I can prioritize by drift severity or by account size. Here are specific trade suggestions for the most drifted account:',
       citations: [
         { source: 'PMS — Drift Report', text: '6 accounts beyond IPS drift thresholds' },
       ],
@@ -154,6 +173,28 @@ const keywordResponses: Array<{ keywords: string[]; response: ResponseTemplate }
           accountCount: 6,
           actionLabel: 'Start Batch Rebalance',
           actionRoute: '/portfolios/rebalance',
+        },
+      ],
+      tradeSuggestions: [
+        {
+          symbol: 'VTI',
+          name: 'Vanguard Total Stock Market ETF',
+          side: 'sell',
+          quantity: 45,
+          rationale: 'Reduce US equity overweight by 2.1% to restore target allocation',
+          estimatedValue: 11_250,
+          accountId: 'acc-001',
+          accountName: 'Johnson Family Trust',
+        },
+        {
+          symbol: 'BND',
+          name: 'Vanguard Total Bond Market ETF',
+          side: 'buy',
+          quantity: 150,
+          rationale: 'Increase fixed income to target weight, funded by US equity reduction',
+          estimatedValue: 11_100,
+          accountId: 'acc-001',
+          accountName: 'Johnson Family Trust',
         },
       ],
     },
@@ -187,6 +228,49 @@ const keywordResponses: Array<{ keywords: string[]; response: ResponseTemplate }
     response: {
       content:
         'I can prepare a meeting brief for your next client meeting. The brief will include portfolio performance summary, any outstanding action items, recent market context relevant to their holdings, and suggested discussion topics based on their financial plan. Which client are you meeting with?',
+    },
+  },
+  {
+    keywords: ['concentration', 'concentrated', 'overweight'],
+    response: {
+      content:
+        'I detected a concentrated position in AAPL at 8.2% — above the 5% single-stock IPS limit. I recommend a phased liquidation over 90 days paired with tax-loss harvesting in correlated positions to offset gains. Here are the suggested trades:',
+      citations: [
+        { source: 'PMS — Concentration Analysis', text: 'AAPL: 8.2% weight vs 5% IPS single-stock limit' },
+        { source: 'Tax Lots', text: '3 positions with harvestable short-term losses totaling $12,400' },
+      ],
+      tradeSuggestions: [
+        {
+          symbol: 'AAPL',
+          name: 'Apple Inc.',
+          side: 'sell',
+          quantity: 35,
+          rationale: 'Phase 1: Reduce concentration from 8.2% to ~6.5%. Sell highest cost-basis lots first to minimize gains.',
+          estimatedValue: 6_125,
+          accountId: 'acc-001',
+          accountName: 'Johnson Family Trust',
+        },
+        {
+          symbol: 'QQQ',
+          name: 'Invesco QQQ Trust',
+          side: 'buy',
+          quantity: 12,
+          rationale: 'Replace single-stock exposure with diversified tech ETF to maintain sector allocation',
+          estimatedValue: 5_880,
+          accountId: 'acc-001',
+          accountName: 'Johnson Family Trust',
+        },
+        {
+          symbol: 'VXUS',
+          name: 'Vanguard Total Intl Stock ETF',
+          side: 'sell',
+          quantity: 20,
+          rationale: 'Harvest $4,200 short-term loss to offset AAPL gains. Replace with IXUS after 31-day wash sale window.',
+          estimatedValue: 1_140,
+          accountId: 'acc-001',
+          accountName: 'Johnson Family Trust',
+        },
+      ],
     },
   },
   {
@@ -259,4 +343,122 @@ export const suggestedPrompts: SuggestedPrompt[] = [
   // Settings
   { text: 'What automation rules are active?', category: 'settings', screenType: 'settings' },
   { text: 'Explain my current AI delegation thresholds', category: 'settings', screenType: 'settings' },
+
+  // Trading
+  { text: 'Check for wash sale risks on pending trades', category: 'compliance', screenType: 'trading' },
+  { text: 'Estimate tax impact of today\'s trades', category: 'tax', screenType: 'trading' },
+  { text: 'Suggest replacement securities for harvested positions', category: 'portfolio', screenType: 'trading' },
+  { text: 'Run pre-trade compliance check', category: 'compliance', screenType: 'trading' },
+]
+
+// ── AI Action Templates ──
+
+export const actionTemplates: ActionTemplate[] = [
+  {
+    id: 'tpl-001',
+    name: 'Rebalance Account',
+    description: 'Generate a rebalancing proposal to restore target allocation',
+    category: 'portfolio',
+    icon: 'RefreshCw',
+    params: [
+      { key: 'account', label: 'Account', type: 'entity', required: true, entityType: 'account' },
+      { key: 'method', label: 'Method', type: 'select', required: true, options: ['Minimum Trades', 'Tax-Optimized', 'Cash-Neutral'], defaultValue: 'Tax-Optimized' },
+      { key: 'threshold', label: 'Drift Threshold (%)', type: 'number', required: false, defaultValue: '3' },
+    ],
+    estimatedTime: '2 min',
+    executionRoute: '/portfolios/rebalance',
+  },
+  {
+    id: 'tpl-002',
+    name: 'Tax-Loss Harvest',
+    description: 'Scan for harvestable losses and suggest replacement securities',
+    category: 'portfolio',
+    icon: 'Scissors',
+    params: [
+      { key: 'account', label: 'Account', type: 'entity', required: true, entityType: 'account' },
+      { key: 'minLoss', label: 'Minimum Loss ($)', type: 'number', required: false, defaultValue: '1000' },
+      { key: 'includeShortTerm', label: 'Include Short-Term', type: 'select', required: false, options: ['Yes', 'No'], defaultValue: 'Yes' },
+    ],
+    estimatedTime: '1 min',
+  },
+  {
+    id: 'tpl-003',
+    name: 'Draft Client Email',
+    description: 'AI-draft a professional email to a client on any topic',
+    category: 'communication',
+    icon: 'Mail',
+    params: [
+      { key: 'client', label: 'Client', type: 'entity', required: true, entityType: 'client' },
+      { key: 'topic', label: 'Topic', type: 'select', required: true, options: ['Quarterly Review', 'Rebalancing Proposal', 'Market Update', 'Meeting Follow-Up', 'RMD Reminder', 'Custom'] },
+      { key: 'customTopic', label: 'Custom Topic', type: 'text', required: false },
+      { key: 'tone', label: 'Tone', type: 'select', required: false, options: ['Professional', 'Warm', 'Urgent'], defaultValue: 'Professional' },
+    ],
+    estimatedTime: '30 sec',
+  },
+  {
+    id: 'tpl-004',
+    name: 'Schedule Meeting',
+    description: 'Find optimal meeting time and generate agenda',
+    category: 'planning',
+    icon: 'Calendar',
+    params: [
+      { key: 'client', label: 'Client', type: 'entity', required: true, entityType: 'client' },
+      { key: 'type', label: 'Meeting Type', type: 'select', required: true, options: ['Annual Review', 'Quarterly Review', 'Planning', 'Ad Hoc'] },
+      { key: 'preferredDate', label: 'Preferred Date', type: 'date', required: false },
+    ],
+    estimatedTime: '1 min',
+  },
+  {
+    id: 'tpl-005',
+    name: 'Generate Report',
+    description: 'Create a client-ready performance or planning report',
+    category: 'communication',
+    icon: 'FileText',
+    params: [
+      { key: 'client', label: 'Client', type: 'entity', required: true, entityType: 'client' },
+      { key: 'reportType', label: 'Report Type', type: 'select', required: true, options: ['Performance Summary', 'Tax Report', 'Estate Summary', 'Financial Plan Update'] },
+      { key: 'period', label: 'Period', type: 'select', required: false, options: ['MTD', 'QTD', 'YTD', '1Y', 'Inception'], defaultValue: 'QTD' },
+    ],
+    estimatedTime: '2 min',
+  },
+  {
+    id: 'tpl-006',
+    name: 'Update Risk Profile',
+    description: 'Re-assess client risk tolerance and update IPS alignment',
+    category: 'compliance',
+    icon: 'Shield',
+    params: [
+      { key: 'client', label: 'Client', type: 'entity', required: true, entityType: 'client' },
+      { key: 'reason', label: 'Reason for Update', type: 'select', required: true, options: ['Life Event', 'Market Conditions', 'Scheduled Review', 'Client Request'] },
+    ],
+    estimatedTime: '3 min',
+  },
+  {
+    id: 'tpl-007',
+    name: 'Submit Trade',
+    description: 'Pre-fill a trade ticket with AI-validated parameters',
+    category: 'trading',
+    icon: 'ArrowRightLeft',
+    params: [
+      { key: 'account', label: 'Account', type: 'entity', required: true, entityType: 'account' },
+      { key: 'symbol', label: 'Symbol', type: 'text', required: true },
+      { key: 'side', label: 'Side', type: 'select', required: true, options: ['Buy', 'Sell'] },
+      { key: 'quantity', label: 'Quantity', type: 'number', required: true },
+    ],
+    estimatedTime: '30 sec',
+    executionRoute: '/portfolios/trading',
+  },
+  {
+    id: 'tpl-008',
+    name: 'Create Compliance Note',
+    description: 'Document a compliance observation or exception',
+    category: 'compliance',
+    icon: 'ClipboardCheck',
+    params: [
+      { key: 'account', label: 'Account', type: 'entity', required: true, entityType: 'account' },
+      { key: 'noteType', label: 'Type', type: 'select', required: true, options: ['Suitability Review', 'Exception Approval', 'Trade Rationale', 'Client Instruction'] },
+      { key: 'details', label: 'Details', type: 'text', required: true },
+    ],
+    estimatedTime: '1 min',
+  },
 ]

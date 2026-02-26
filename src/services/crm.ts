@@ -3,6 +3,7 @@ import type { Client } from '@/types/client'
 import type { Household } from '@/types/household'
 import type { ActivityItem } from '@/types/activity'
 import type { PaginatedResponse } from '@/types/common'
+import type { ClientComm } from '@/types/client-comms'
 
 export function getClients(params?: Record<string, string>) {
   return get<PaginatedResponse<Client>>('/crm/clients', params)
@@ -26,4 +27,8 @@ export function getActivities(params?: Record<string, string>) {
 
 export function getClientActivities(clientId: string) {
   return get<ActivityItem[]>(`/crm/clients/${clientId}/activities`)
+}
+
+export function getClientCommunications(clientId: string) {
+  return get<ClientComm[]>(`/crm/clients/${clientId}/communications`)
 }

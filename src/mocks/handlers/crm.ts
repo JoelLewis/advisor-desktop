@@ -4,6 +4,7 @@ import { households } from '../data/households'
 import { activities } from '../data/activities'
 import { notes } from '../data/notes'
 import { heldAwayAssets } from '../data/held-away'
+import { clientComms } from '../data/client-comms'
 
 export const crmHandlers = [
   http.get('/api/crm/clients', ({ request }) => {
@@ -104,5 +105,12 @@ export const crmHandlers = [
   http.get('/api/crm/households/:householdId/held-away', ({ params }) => {
     const assets = heldAwayAssets.filter((ha) => ha.householdId === params.householdId)
     return HttpResponse.json(assets)
+  }),
+
+  http.get('/api/crm/clients/:clientId/communications', ({ params }) => {
+    const comms = clientComms
+      .filter((c) => c.clientId === params.clientId)
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    return HttpResponse.json(comms)
   }),
 ]

@@ -13,11 +13,13 @@ import { AllocationChart } from '@/components/ui/AllocationChart'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { ActionMenu } from '@/components/ui/ActionMenu'
 import { ShareButton } from '@/components/ui/ShareButton'
+import { AIInsightStack } from '@/components/ui/AIInsightCard'
 import { ConcentrationView } from './ConcentrationView'
 import { TradeTicketDialog } from './TradeTicketDialog'
 import { useAccount } from '@/hooks/use-accounts'
 import { usePositions, useDrift, usePerformance, useBenchmark, useRiskMetrics, useFactorExposures, useStressScenarios } from '@/hooks/use-portfolio'
 import { useAccountOrders } from '@/hooks/use-orders'
+import { useAIInsights } from '@/hooks/use-ai'
 import { formatCurrency, formatPercent, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import type { Position } from '@/types/portfolio'
@@ -197,6 +199,7 @@ export function AccountDetailPage() {
   const { data: factors } = useFactorExposures(id)
   const { data: stress } = useStressScenarios(id)
   const { data: orders } = useAccountOrders(id)
+  const { data: insights } = useAIInsights('account_detail', id)
 
   if (isLoading) {
     return (
@@ -294,6 +297,11 @@ export function AccountDetailPage() {
                   </div>
                 </CardContent>
               </Card>
+            )}
+
+            {/* AI Insights */}
+            {insights && insights.length > 0 && (
+              <AIInsightStack insights={insights} />
             )}
           </div>
 
