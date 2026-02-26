@@ -21,6 +21,7 @@ const SettingsPage = lazy(() => import('@/features/settings/SettingsPage').then(
 const OnboardingWizard = lazy(() => import('@/features/onboarding/OnboardingWizard').then((m) => ({ default: m.OnboardingWizard })))
 const NBAEffectivenessPage = lazy(() => import('@/features/dashboard/NBAEffectivenessPage').then((m) => ({ default: m.NBAEffectivenessPage })))
 const ModelGovernancePage = lazy(() => import('@/features/portfolios/ModelGovernancePage').then((m) => ({ default: m.ModelGovernancePage })))
+const TradingPage = lazy(() => import('@/features/portfolios/TradingPage').then((m) => ({ default: m.TradingPage })))
 
 const suspense = (node: React.ReactNode) => <Suspense fallback={<PageSkeleton />}>{node}</Suspense>
 
@@ -54,6 +55,7 @@ export const router = createBrowserRouter([
           { path: 'rebalance', element: suspense(<RebalancePage />) },
           { path: 'risk', element: suspense(<RiskAnalyticsPage />) },
           { path: 'models', element: suspense(<ModelGovernancePage />) },
+          { path: 'trading', element: suspense(<TradingPage />) },
         ],
       },
       {
