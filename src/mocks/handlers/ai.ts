@@ -1,10 +1,10 @@
 import { http, HttpResponse, delay } from 'msw'
-import { getAIResponse, suggestedPrompts } from '../data/ai'
+import { getAIResponse, suggestedPrompts, actionTemplates } from '../data/ai'
 import { clients } from '../data/clients'
 import { households } from '../data/households'
 import { accounts } from '../data/accounts'
 import { nbas } from '../data/nbas'
-import type { ChatMessage, ActionConfirmation, DocumentGeneration, ContextBriefingData, BriefingMetric, AIInsight } from '@/types/ai'
+import type { ChatMessage, ActionConfirmation, DocumentGeneration, ContextBriefingData, BriefingMetric, AIInsight, ActionTemplate } from '@/types/ai'
 
 function formatAUM(v: number): string {
   if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`
@@ -33,6 +33,7 @@ export const aiHandlers = [
       actions: template.actions,
       documentPreview: template.documentPreview,
       richCards: template.richCards,
+      tradeSuggestions: template.tradeSuggestions,
     }
 
     return HttpResponse.json(response)
@@ -162,6 +163,26 @@ export const aiHandlers = [
         }
         return HttpResponse.json(briefing)
       }
+    }
+
+    if (screenType === 'trading') {
+      const totalAUM = accounts.reduce((sum, a) => sum + a.totalValue, 0)
+      const briefing: ContextBriefingData = {
+        title: 'Trading Desk',
+        entityType: 'trading',
+        metrics: [
+          { label: 'Book AUM', value: formatAUM(totalAUM) },
+          { label: 'Open Orders', value: '3' },
+          { label: "Today's Trades", value: '7' },
+          { label: 'Wash Sale Restricted', value: '2 securities' },
+        ],
+        highlights: [
+          'VIX at 14.2 — low volatility environment',
+          '2 limit orders approaching trigger price',
+        ],
+        asOf: new Date().toISOString(),
+      }
+      return HttpResponse.json(briefing)
     }
 
     if (screenType === 'portfolios') {
@@ -300,6 +321,108 @@ export const aiHandlers = [
       }
     }
 
+    if (screenType === 'account_detail' && entityId) {
+      const account = accounts.find((a) => a.id === entityId)
+      if (account) {
+        insights.push({
+          id: `acc-${entityId}-1`,
+          severity: 'warning',
+          title: 'Position Concentration Alert',
+          body: `This account has a position exceeding the 5% single-stock IPS limit. Review and consider a phased reduction plan.`,
+          metric: { label: 'Largest position weight', value: '8.2%' },
+          actionLabel: 'View Concentration',
+          actionAI: `Analyze concentration risk in ${account.name} and suggest trades to reduce single-stock exposure`,
+        })
+        insights.push({
+          id: `acc-${entityId}-2`,
+          severity: 'opportunity',
+          title: 'Tax-Loss Harvesting Opportunity',
+          body: 'Short-term losses available in 3 positions could offset recent gains. Wash sale window clear for all candidates.',
+          metric: { label: 'Harvestable losses', value: '$12,400' },
+          actionLabel: 'Review Harvest',
+          actionRoute: `/portfolios/accounts/${entityId}/tax`,
+        })
+      }
+    }
+
+    if (screenType === 'household_detail' && entityId) {
+      const hh = households.find((h) => h.id === entityId)
+      if (hh) {
+        insights.push({
+          id: `hh-${entityId}-1`,
+          severity: 'opportunity',
+          title: 'Asset Location Optimization',
+          body: 'Municipal bonds in the taxable account could swap with corporate bonds in the IRA for better after-tax yield.',
+          metric: { label: 'After-tax yield improvement', value: '+0.3%' },
+          actionLabel: 'Generate Swap Proposal',
+          actionAI: `Generate an asset location optimization proposal for the ${hh.name} household`,
+        })
+        insights.push({
+          id: `hh-${entityId}-2`,
+          severity: 'info',
+          title: 'Household Snapshot',
+          body: `${hh.members.length} members, ${hh.accountIds.length} accounts. Aggregate allocation within IPS bands. Next scheduled review in 45 days.`,
+        })
+      }
+    }
+
+    if (screenType === 'trading') {
+      insights.push({
+        id: 'trade-1',
+        severity: 'info',
+        title: 'Market Conditions',
+        body: 'S&P 500 +0.4% today, VIX 14.2 (low vol). Treasury yields stable. No significant earnings announcements affecting your book positions.',
+        metric: { label: 'Book beta-adjusted exposure', value: '1.02x' },
+      })
+      insights.push({
+        id: 'trade-2',
+        severity: 'warning',
+        title: 'Wash Sale Window Active',
+        body: '2 securities (VXUS, EFA) have active wash sale restrictions through March 15. Any buy orders in these or substantially identical securities will trigger wash sale rules.',
+        actionLabel: 'View Restricted Securities',
+        actionAI: 'Show me all securities with active wash sale restrictions and their expiration dates',
+      })
+    }
+
     return HttpResponse.json(insights)
+  }),
+
+  // GET /api/ai/templates — action templates filtered by screen type
+  http.get('/api/ai/templates', ({ request }) => {
+    const url = new URL(request.url)
+    const screenType = url.searchParams.get('screenType')
+
+    const screenCategoryMap: Record<string, ActionTemplate['category'][]> = {
+      dashboard: ['portfolio', 'communication', 'planning'],
+      client_detail: ['communication', 'planning', 'compliance'],
+      account_detail: ['portfolio', 'trading', 'compliance'],
+      household_detail: ['portfolio', 'planning', 'communication'],
+      portfolios: ['portfolio', 'trading'],
+      trading: ['trading', 'portfolio'],
+      workflows: ['compliance', 'communication'],
+    }
+
+    const allowedCategories = screenType ? screenCategoryMap[screenType] : undefined
+    const filtered = allowedCategories
+      ? actionTemplates.filter((t) => allowedCategories.includes(t.category))
+      : actionTemplates
+
+    return HttpResponse.json(filtered)
+  }),
+
+  // POST /api/ai/templates/:templateId/execute — execute a parameterized template
+  http.post('/api/ai/templates/:templateId/execute', async ({ params, request }) => {
+    const body = (await request.json()) as Record<string, unknown>
+    await delay(500)
+
+    const template = actionTemplates.find((t) => t.id === params.templateId)
+    const templateName = template?.name ?? 'Action'
+
+    return HttpResponse.json({
+      success: true,
+      message: `${templateName} executed successfully.`,
+      details: `Processed with parameters: ${Object.entries(body).map(([k, v]) => `${k}=${v}`).join(', ')}`,
+      executionRoute: template?.executionRoute,
+    })
   }),
 ]

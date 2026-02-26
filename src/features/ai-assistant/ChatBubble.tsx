@@ -1,15 +1,17 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronUp, FileText, Sparkles } from 'lucide-react'
 import { ActionCard } from './ActionCard'
+import { TradeSuggestionCard } from './TradeSuggestionCard'
 import { RichCard } from '@/components/ui/RichCard'
 import { cn } from '@/lib/utils'
-import type { ChatMessage } from '@/types/ai'
+import type { ChatMessage, TradeSuggestion } from '@/types/ai'
 
 type ChatBubbleProps = {
   message: ChatMessage
+  onExecuteTrade?: (s: TradeSuggestion) => void
 }
 
-export function ChatBubble({ message }: ChatBubbleProps) {
+export function ChatBubble({ message, onExecuteTrade }: ChatBubbleProps) {
   const [citationsExpanded, setCitationsExpanded] = useState(false)
   const isUser = message.role === 'user'
 
@@ -68,6 +70,15 @@ export function ChatBubble({ message }: ChatBubbleProps) {
         {message.actions?.map((action) => (
           <ActionCard key={action.id} action={action} />
         ))}
+
+        {/* Trade suggestions */}
+        {message.tradeSuggestions && message.tradeSuggestions.length > 0 && onExecuteTrade && (
+          <div className="mt-2">
+            {message.tradeSuggestions.map((suggestion, i) => (
+              <TradeSuggestionCard key={i} suggestion={suggestion} onExecute={onExecuteTrade} />
+            ))}
+          </div>
+        )}
 
         {/* Document preview */}
         {message.documentPreview && (

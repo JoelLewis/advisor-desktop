@@ -16,6 +16,7 @@ export type ChatMessage = {
   actions?: ActionConfirmation[]
   documentPreview?: DocumentPreview
   richCards?: RichCardData[]
+  tradeSuggestions?: TradeSuggestion[]
 }
 
 export type DocumentPreview = {
@@ -78,4 +79,36 @@ export type AIInsight = {
   actionLabel?: string
   actionRoute?: string
   actionAI?: string
+}
+
+export type TradeSuggestion = {
+  symbol: string
+  name: string
+  side: 'buy' | 'sell'
+  quantity: number
+  rationale: string
+  estimatedValue: number
+  accountId: string
+  accountName: string
+}
+
+export type ActionTemplateParam = {
+  key: string
+  label: string
+  type: 'text' | 'select' | 'number' | 'date' | 'entity'
+  required: boolean
+  options?: string[]
+  defaultValue?: string
+  entityType?: 'client' | 'account' | 'household'
+}
+
+export type ActionTemplate = {
+  id: string
+  name: string
+  description: string
+  category: 'portfolio' | 'communication' | 'compliance' | 'planning' | 'trading'
+  icon: string
+  params: ActionTemplateParam[]
+  estimatedTime: string
+  executionRoute?: string
 }

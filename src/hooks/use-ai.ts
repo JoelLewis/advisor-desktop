@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { sendMessage, getSuggestedPrompts, executeAction, getAIInsights } from '@/services/ai'
+import { sendMessage, getSuggestedPrompts, executeAction, getAIInsights, getActionTemplates, executeTemplate } from '@/services/ai'
 import type { ChatContext } from '@/types/ai'
 
 export function useSuggestedPrompts(screenType: string) {
@@ -27,5 +27,20 @@ export function useAIInsights(screenType: string, entityId?: string) {
     queryKey: ['ai', 'insights', screenType, entityId],
     queryFn: () => getAIInsights(screenType, entityId),
     staleTime: 60_000,
+  })
+}
+
+export function useActionTemplates(screenType: string) {
+  return useQuery({
+    queryKey: ['ai', 'templates', screenType],
+    queryFn: () => getActionTemplates(screenType),
+    staleTime: 120_000,
+  })
+}
+
+export function useExecuteTemplate() {
+  return useMutation({
+    mutationFn: ({ templateId, params }: { templateId: string; params: Record<string, unknown> }) =>
+      executeTemplate(templateId, params),
   })
 }

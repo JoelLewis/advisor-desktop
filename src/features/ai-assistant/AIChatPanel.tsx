@@ -1,18 +1,22 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { X, Maximize2, Minimize2, Send, Sparkles, MessageSquare } from 'lucide-react'
+import { X, Maximize2, Minimize2, Send, Sparkles, MessageSquare, Mail } from 'lucide-react'
 import { ChatBubble } from './ChatBubble'
 import { SuggestedPrompts } from './SuggestedPrompts'
+import { ActionTemplateGrid } from './ActionTemplateGrid'
 import { ContextBriefing } from './ContextBriefing'
+import { ClientCommsTab } from './ClientCommsTab'
+import { TradeTicketDialog } from '@/features/portfolios/TradeTicketDialog'
 import { MessagingContent } from '@/features/messaging/MessagingContent'
 import { useUIStore } from '@/store/ui-store'
 import { useNavigationStore } from '@/store/navigation-store'
 import { useSendMessage } from '@/hooks/use-ai'
 import { cn } from '@/lib/utils'
-import type { ChatMessage, ChatContext } from '@/types/ai'
+import type { ChatMessage, ChatContext, TradeSuggestion } from '@/types/ai'
 
 function deriveScreenType(pathname: string): string {
   if (pathname.startsWith('/clients/') && pathname.includes('/')) return 'client_detail'
   if (pathname.startsWith('/clients')) return 'clients'
+  if (pathname.startsWith('/portfolios/trading')) return 'trading'
   if (pathname.startsWith('/portfolios/accounts/')) return 'account_detail'
   if (pathname.startsWith('/portfolios')) return 'portfolios'
   if (pathname.startsWith('/households/')) return 'household_detail'
@@ -33,6 +37,7 @@ export function AIChatPanel() {
 
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
+  const [tradePrefill, setTradePrefill] = useState<TradeSuggestion | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const sendMutation = useSendMessage()
@@ -154,6 +159,18 @@ export function AIChatPanel() {
               <MessageSquare className="h-3.5 w-3.5" />
               Messages
             </button>
+            <button
+              onClick={() => setPanelTab('client')}
+              className={cn(
+                'flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-caption font-medium transition-colors',
+                panelTab === 'client'
+                  ? 'bg-accent-green/10 text-accent-green'
+                  : 'text-text-tertiary hover:bg-surface-tertiary hover:text-text-secondary',
+              )}
+            >
+              <Mail className="h-3.5 w-3.5" />
+              Client
+            </button>
           </div>
           <div className="flex items-center gap-1">
             <button
@@ -190,11 +207,14 @@ export function AIChatPanel() {
           {/* Messages area */}
           <div className="flex-1 overflow-y-auto scrollbar-thin p-4">
             {messages.length === 0 ? (
-              <SuggestedPrompts screenType={screenType} onSelect={handleSend} />
+              <div>
+                <ActionTemplateGrid screenType={screenType} />
+                <SuggestedPrompts screenType={screenType} onSelect={handleSend} />
+              </div>
             ) : (
               <div className="space-y-4">
                 {messages.map((msg) => (
-                  <ChatBubble key={msg.id} message={msg} />
+                  <ChatBubble key={msg.id} message={msg} onExecuteTrade={setTradePrefill} />
                 ))}
                 {sendMutation.isPending && (
                   <div className="flex justify-start">
@@ -242,8 +262,28 @@ export function AIChatPanel() {
             </p>
           </div>
         </>
-      ) : (
+      ) : panelTab === 'messages' ? (
         <MessagingContent />
+      ) : (
+        <ClientCommsTab
+          clientId={entityContext.id ?? undefined}
+          clientName={entityContext.name ?? undefined}
+        />
+      )}
+
+      {/* Trade ticket dialog triggered by AI trade suggestions */}
+      {tradePrefill && (
+        <TradeTicketDialog
+          open={true}
+          onClose={() => setTradePrefill(null)}
+          accountId={tradePrefill.accountId}
+          accountName={tradePrefill.accountName}
+          prefill={{
+            symbol: tradePrefill.symbol,
+            side: tradePrefill.side,
+            quantity: tradePrefill.quantity,
+          }}
+        />
       )}
     </aside>
   )

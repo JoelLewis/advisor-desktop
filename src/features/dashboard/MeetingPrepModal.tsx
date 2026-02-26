@@ -1,6 +1,7 @@
-import { X, Sparkles, Loader2, CheckCircle, MessageSquare, ClipboardList, Activity } from 'lucide-react'
+import { X, Sparkles, Loader2, CheckCircle, MessageSquare, ClipboardList, Activity, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { useMeetingPrep } from '@/hooks/use-schedule'
+import { useUIStore } from '@/store/ui-store'
 import { cn } from '@/lib/utils'
 import type { MeetingType } from '@/types/calendar'
 
@@ -20,6 +21,26 @@ type MeetingPrepModalProps = {
 
 export function MeetingPrepModal({ eventId, onClose }: MeetingPrepModalProps) {
   const { data: prep, isLoading } = useMeetingPrep(eventId)
+  const setInitialMessage = useUIStore((s) => s.setInitialMessage)
+  const shareWithTeam = useUIStore((s) => s.shareWithTeam)
+
+  function handleDiscussWithAI() {
+    if (!prep) return
+    const context = `I'm preparing for a ${MEETING_TYPE_LABELS[prep.meetingType]} with ${prep.clientName}. Key talking points: ${prep.talkingPoints.slice(0, 3).join('; ')}. Help me prepare.`
+    setInitialMessage(context)
+    onClose()
+  }
+
+  function handleShareWithTeam() {
+    if (!prep) return
+    shareWithTeam({
+      variant: 'client_summary',
+      entityId: prep.eventId,
+      entityName: prep.clientName,
+      actionLabel: `Meeting Prep — ${MEETING_TYPE_LABELS[prep.meetingType]}`,
+    })
+    onClose()
+  }
 
   return (
     <>
@@ -142,12 +163,28 @@ export function MeetingPrepModal({ eventId, onClose }: MeetingPrepModalProps) {
                 <Sparkles className="h-3 w-3 text-accent-purple" />
                 AI-generated • {new Date(prep.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </span>
-              <button
-                onClick={onClose}
-                className="rounded-md bg-accent-purple px-4 py-1.5 text-caption font-medium text-white transition-colors hover:bg-accent-purple/90"
-              >
-                Done
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleDiscussWithAI}
+                  className="flex items-center gap-1.5 rounded-md border border-accent-purple px-3 py-1.5 text-caption font-medium text-accent-purple transition-colors hover:bg-accent-purple/10"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Discuss with AI
+                </button>
+                <button
+                  onClick={handleShareWithTeam}
+                  className="flex items-center gap-1.5 rounded-md border border-accent-blue px-3 py-1.5 text-caption font-medium text-accent-blue transition-colors hover:bg-accent-blue/10"
+                >
+                  <Users className="h-3.5 w-3.5" />
+                  Share with Team
+                </button>
+                <button
+                  onClick={onClose}
+                  className="rounded-md bg-accent-purple px-4 py-1.5 text-caption font-medium text-white transition-colors hover:bg-accent-purple/90"
+                >
+                  Done
+                </button>
+              </div>
             </div>
           )}
         </div>

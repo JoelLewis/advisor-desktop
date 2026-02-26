@@ -9,11 +9,13 @@ import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { TabLayout } from '@/components/ui/TabLayout'
 import { ShareButton } from '@/components/ui/ShareButton'
+import { AIInsightStack } from '@/components/ui/AIInsightCard'
 import { useHousehold } from '@/hooks/use-households'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useHeldAway } from '@/hooks/use-held-away'
 import { useHouseholdPlan } from '@/hooks/use-planning'
 import { useHouseholdPositions, useHouseholdDrift, useHouseholdAllocation } from '@/hooks/use-portfolio'
+import { useAIInsights } from '@/hooks/use-ai'
 import { formatCurrency } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import type { Account, AccountType } from '@/types/account'
@@ -111,6 +113,7 @@ export function HouseholdDetailPage() {
   const { data: hhPositions } = useHouseholdPositions(id)
   const { data: hhDrift } = useHouseholdDrift(id)
   const { data: hhAllocation } = useHouseholdAllocation(id)
+  const { data: insights } = useAIInsights('household_detail', id)
 
   if (isLoading) {
     return <div className="space-y-4"><Skeleton className="h-24" /><Skeleton className="h-96" /></div>
@@ -190,6 +193,11 @@ export function HouseholdDetailPage() {
               />
             </CardContent>
           </Card>
+
+          {/* AI Insights */}
+          {insights && insights.length > 0 && (
+            <AIInsightStack insights={insights} />
+          )}
 
           {/* Financial summary row */}
           <div className="grid grid-cols-3 gap-4">
