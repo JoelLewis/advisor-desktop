@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw'
 import { clients } from '../data/clients'
 import { households } from '../data/households'
 import { accounts } from '../data/accounts'
+import { formatAUM } from './utils'
 
 type SearchResult = {
   id: string
@@ -29,12 +30,6 @@ const ACTIONS: SearchResult[] = [
   { id: 'action-new-client', type: 'action', title: 'Onboard New Client', subtitle: 'Start onboarding wizard', route: '/clients/onboard' },
   { id: 'action-open-ai', type: 'action', title: 'Open AI Assistant', subtitle: 'Ask AI anything', route: '__ai__' },
 ]
-
-function formatAUM(value: number): string {
-  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`
-  if (value >= 1_000) return `$${(value / 1_000).toFixed(0)}K`
-  return `$${value}`
-}
 
 function matchScore(text: string, query: string): number {
   const lower = text.toLowerCase()

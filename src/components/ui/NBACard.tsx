@@ -10,6 +10,9 @@ import { Badge } from './Badge'
 import { useNBATemplates } from '@/hooks/use-nbas'
 import type { NBA, NBACategory, NBAEscalationLevel, NBAPriority } from '@/types/nba'
 
+const MS_PER_HOUR = 1000 * 60 * 60
+const MS_PER_DAY = MS_PER_HOUR * 24
+
 const CATEGORY_CONFIG: Record<NBACategory, { icon: typeof RefreshCw; label: string; variant: 'blue' | 'green' | 'red' | 'purple' | 'yellow' | 'default'; actionLabel: string }> = {
   rebalancing: { icon: RefreshCw, label: 'Rebalancing', variant: 'blue', actionLabel: 'Rebalance' },
   tax_management: { icon: DollarSign, label: 'Tax Management', variant: 'green', actionLabel: 'Review Tax Lots' },
@@ -52,27 +55,51 @@ function getUrgencyBucket(urgency: number): UrgencyBucket {
   return 'when_convenient'
 }
 
+const MOCK_NOW = new Date('2026-02-25T12:00:00Z')
+
+function daysBetween(from: Date, to: Date): number {
+  return Math.floor((to.getTime() - from.getTime()) / MS_PER_DAY)
+}
+
 function formatComplianceDeadline(deadline: string): { text: string; urgent: boolean } {
-  const now = new Date('2026-02-25T12:00:00Z')
-  const dl = new Date(deadline)
-  const diffMs = dl.getTime() - now.getTime()
-  if (diffMs <= 0) return { text: 'Past deadline', urgent: true }
-  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  const days = daysBetween(MOCK_NOW, new Date(deadline))
+  if (days < 0) return { text: 'Past deadline', urgent: true }
   if (days <= 3) return { text: `${days}d remaining — action required`, urgent: true }
-  if (days <= 7) return { text: `${days}d until deadline`, urgent: true }
-  return { text: `${days}d until deadline`, urgent: false }
+  return { text: `${days}d until deadline`, urgent: days <= 7 }
 }
 
 function formatCountdown(expiresAt: string): string | null {
-  const now = new Date('2026-02-25T12:00:00Z')
-  const expires = new Date(expiresAt)
-  const diffMs = expires.getTime() - now.getTime()
+  const diffMs = new Date(expiresAt).getTime() - MOCK_NOW.getTime()
   if (diffMs <= 0) return 'Expired'
-  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-  const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+  const days = Math.floor(diffMs / MS_PER_DAY)
+  const hours = Math.floor((diffMs % MS_PER_DAY) / MS_PER_HOUR)
   if (days > 7) return `${days}d remaining`
   if (days > 0) return `${days}d ${hours}h remaining`
   return `${hours}h remaining`
+}
+
+function CopyButton({ text, field, copiedField, onCopy }: {
+  text: string
+  field: string
+  copiedField: string | null
+  onCopy: (text: string, field: string) => void
+}) {
+  const isCopied = copiedField === field
+  return (
+    <button
+      onClick={() => onCopy(text, field)}
+      className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-secondary"
+    >
+      {isCopied
+        ? <><Check className="h-2.5 w-2.5 text-accent-green" /> Copied</>
+        : <><Copy className="h-2.5 w-2.5" /> Copy</>}
+    </button>
+  )
+}
+
+function countdownColor(countdown: string | null, urgencyBucket: UrgencyBucket): string {
+  if (countdown === 'Expired' || urgencyBucket === 'time_critical') return 'text-accent-red'
+  return 'text-amber-600'
 }
 
 type NBACardProps = {
@@ -143,10 +170,7 @@ export function NBACard({ nba, onDismiss, onSnooze, onAction }: NBACardProps) {
 
         {/* Countdown timer */}
         {countdown && (
-          <div className={cn(
-            'mt-2 flex items-center gap-1.5 text-caption font-medium',
-            countdown === 'Expired' ? 'text-accent-red' : urgencyBucket === 'time_critical' ? 'text-accent-red' : 'text-amber-600',
-          )}>
+          <div className={cn('mt-2 flex items-center gap-1.5 text-caption font-medium', countdownColor(countdown, urgencyBucket))}>
             <Timer className="h-3 w-3" />
             <span>{countdown}</span>
           </div>
@@ -231,12 +255,12 @@ export function NBACard({ nba, onDismiss, onSnooze, onAction }: NBACardProps) {
                     <div className="flex items-center gap-1.5 text-caption font-medium text-text-secondary">
                       <Mail className="h-3 w-3" /> Email Draft
                     </div>
-                    <button
-                      onClick={() => handleCopy(`Subject: ${templates.emailDraft.subject}\n\n${templates.emailDraft.body}`, 'email')}
-                      className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-secondary"
-                    >
-                      {copiedField === 'email' ? <><Check className="h-2.5 w-2.5 text-accent-green" /> Copied</> : <><Copy className="h-2.5 w-2.5" /> Copy</>}
-                    </button>
+                    <CopyButton
+                      text={`Subject: ${templates.emailDraft.subject}\n\n${templates.emailDraft.body}`}
+                      field="email"
+                      copiedField={copiedField}
+                      onCopy={handleCopy}
+                    />
                   </div>
                   <div className="mt-1.5 rounded-md border border-border-primary bg-surface-primary p-2.5">
                     <p className="text-caption font-medium text-text-primary">
@@ -254,12 +278,12 @@ export function NBACard({ nba, onDismiss, onSnooze, onAction }: NBACardProps) {
                     <div className="flex items-center gap-1.5 text-caption font-medium text-text-secondary">
                       <FileText className="h-3 w-3" /> Analysis Summary
                     </div>
-                    <button
-                      onClick={() => handleCopy(templates.analysisSummary, 'analysis')}
-                      className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-secondary"
-                    >
-                      {copiedField === 'analysis' ? <><Check className="h-2.5 w-2.5 text-accent-green" /> Copied</> : <><Copy className="h-2.5 w-2.5" /> Copy</>}
-                    </button>
+                    <CopyButton
+                      text={templates.analysisSummary}
+                      field="analysis"
+                      copiedField={copiedField}
+                      onCopy={handleCopy}
+                    />
                   </div>
                   <p className="mt-1.5 text-caption text-text-secondary leading-relaxed">
                     {templates.analysisSummary}

@@ -20,26 +20,13 @@ import { useAccount } from '@/hooks/use-accounts'
 import { usePositions, useDrift, usePerformance, useBenchmark, useRiskMetrics, useFactorExposures, useStressScenarios } from '@/hooks/use-portfolio'
 import { useAccountOrders } from '@/hooks/use-orders'
 import { useAIInsights } from '@/hooks/use-ai'
-import { formatCurrency, formatPercent, formatDate } from '@/lib/utils'
-import { cn } from '@/lib/utils'
+import { formatCurrency, formatPercent, formatDate, cn } from '@/lib/utils'
+import { ASSET_CLASS_LABELS, ACCOUNT_TYPE_LABELS, taxTreatmentBadgeVariant } from '@/lib/labels'
 import type { Position } from '@/types/portfolio'
+import type { StressScenario } from '@/types/risk'
 import type { BenchmarkComparison } from '@/types/performance'
 import type { Order } from '@/services/oms'
 import type { ColumnDef } from '@tanstack/react-table'
-
-const ASSET_CLASS_LABELS: Record<string, string> = {
-  us_equity: 'US Equity', intl_equity: 'Intl Equity', emerging_markets: 'EM',
-  fixed_income: 'Fixed Income', alternatives: 'Alts', real_estate: 'Real Estate',
-  commodities: 'Commodities', cash: 'Cash', digital_assets: 'Digital Assets',
-  private_equity: 'Private Equity',
-}
-
-const ACCOUNT_TYPE_LABELS: Record<string, string> = {
-  individual: 'Individual', joint: 'Joint', traditional_ira: 'Traditional IRA',
-  roth_ira: 'Roth IRA', sep_ira: 'SEP IRA', '401k': '401(k)',
-  roth_401k: 'Roth 401(k)', '529': '529 Plan', trust_revocable: 'Revocable Trust',
-  trust_irrevocable: 'Irrevocable Trust', ugma_utma: 'UGMA/UTMA', entity: 'Entity',
-}
 
 const COST_BASIS_LABELS: Record<string, string> = {
   specific_id: 'Specific Identification',
@@ -243,26 +230,16 @@ export function AccountDetailPage() {
               <CardHeader>Asset Allocation</CardHeader>
               <CardContent className="flex items-start gap-8">
                 <AllocationChart data={allocation} size="lg" />
-                <div className="flex-1 space-y-3">
+                <div className="flex-1">
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-caption text-text-secondary">Total Value</p>
-                      <p className="font-mono text-section-header">{formatCurrency(account.totalValue, true)}</p>
-                    </div>
-                    <div>
-                      <p className="text-caption text-text-secondary">Cash Balance</p>
-                      <p className="font-mono text-section-header">{formatCurrency(account.cashBalance, true)}</p>
-                    </div>
-                    <div>
-                      <p className="text-caption text-text-secondary">Unrealized G/L</p>
-                      <p className={cn('font-mono text-section-header', totalGainLoss >= 0 ? 'text-accent-green' : 'text-accent-red')}>
-                        {formatCurrency(totalGainLoss, true)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-caption text-text-secondary">Positions</p>
-                      <p className="font-mono text-section-header">{positions?.length ?? 0}</p>
-                    </div>
+                    <StatCell label="Total Value" value={formatCurrency(account.totalValue, true)} />
+                    <StatCell label="Cash Balance" value={formatCurrency(account.cashBalance, true)} />
+                    <StatCell
+                      label="Unrealized G/L"
+                      value={formatCurrency(totalGainLoss, true)}
+                      colorClass={totalGainLoss >= 0 ? 'text-accent-green' : 'text-accent-red'}
+                    />
+                    <StatCell label="Positions" value={String(positions?.length ?? 0)} />
                   </div>
                 </div>
               </CardContent>
@@ -469,42 +446,12 @@ export function AccountDetailPage() {
         <div className="space-y-6">
           {risk && (
             <div className="grid grid-cols-3 gap-4">
-              <Card>
-                <CardContent>
-                  <p className="text-caption text-text-secondary">Beta</p>
-                  <p className="font-mono text-section-header">{risk.beta.toFixed(2)}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent>
-                  <p className="text-caption text-text-secondary">Sharpe Ratio</p>
-                  <p className="font-mono text-section-header">{risk.sharpe.toFixed(2)}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent>
-                  <p className="text-caption text-text-secondary">Sortino Ratio</p>
-                  <p className="font-mono text-section-header">{risk.sortino.toFixed(2)}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent>
-                  <p className="text-caption text-text-secondary">Max Drawdown</p>
-                  <p className="font-mono text-section-header text-accent-red">{(risk.maxDrawdown * 100).toFixed(1)}%</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent>
-                  <p className="text-caption text-text-secondary">Std Deviation</p>
-                  <p className="font-mono text-section-header">{(risk.standardDeviation * 100).toFixed(1)}%</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent>
-                  <p className="text-caption text-text-secondary">VaR (95%)</p>
-                  <p className="font-mono text-section-header text-accent-red">{formatCurrency(risk.var95, true)}</p>
-                </CardContent>
-              </Card>
+              <RiskMetricCard label="Beta" value={risk.beta.toFixed(2)} />
+              <RiskMetricCard label="Sharpe Ratio" value={risk.sharpe.toFixed(2)} />
+              <RiskMetricCard label="Sortino Ratio" value={risk.sortino.toFixed(2)} />
+              <RiskMetricCard label="Max Drawdown" value={`${(risk.maxDrawdown * 100).toFixed(1)}%`} negative />
+              <RiskMetricCard label="Std Deviation" value={`${(risk.standardDeviation * 100).toFixed(1)}%`} />
+              <RiskMetricCard label="VaR (95%)" value={formatCurrency(risk.var95, true)} negative />
             </div>
           )}
 
@@ -536,27 +483,7 @@ export function AccountDetailPage() {
               <CardHeader>Stress Scenarios</CardHeader>
               <CardContent className="space-y-4">
                 {stress.map((scenario) => (
-                  <div key={scenario.id} className="rounded-md border border-border-primary p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-body-strong">{scenario.name}</p>
-                        <p className="text-caption text-text-secondary">{scenario.description}</p>
-                      </div>
-                      <p className="font-mono text-section-header text-accent-red">
-                        {(scenario.portfolioImpact * 100).toFixed(0)}%
-                      </p>
-                    </div>
-                    <div className="mt-3 space-y-1">
-                      {scenario.positionImpacts.map((pi) => (
-                        <div key={pi.positionId} className="flex items-center justify-between text-caption">
-                          <span className="font-mono text-text-secondary">{pi.symbol}</span>
-                          <span className={cn('font-mono', pi.impactPercent >= 0 ? 'text-accent-green' : 'text-accent-red')}>
-                            {formatPercent(pi.impactPercent * 100)} ({formatCurrency(pi.impact, true)})
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <StressScenarioRow key={scenario.id} scenario={scenario} />
                 ))}
               </CardContent>
             </Card>
@@ -599,7 +526,7 @@ export function AccountDetailPage() {
           <p className="font-mono text-caption text-text-tertiary">{account.accountNumber}</p>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <Badge variant={account.taxTreatment === 'tax_free' ? 'green' : account.taxTreatment === 'tax_deferred' ? 'yellow' : 'default'}>
+          <Badge variant={taxTreatmentBadgeVariant(account.taxTreatment)}>
             {account.taxTreatment.replace('_', ' ')}
           </Badge>
           {account.isUMA && <Badge variant="purple">UMA</Badge>}
@@ -623,6 +550,52 @@ function InfoRow({ label, value }: { label: string; value: string }) {
     <div className="flex items-center justify-between py-1">
       <span className="text-caption text-text-secondary">{label}</span>
       <span className="text-caption font-medium">{value}</span>
+    </div>
+  )
+}
+
+function RiskMetricCard({ label, value, negative }: { label: string; value: string; negative?: boolean }) {
+  return (
+    <Card>
+      <CardContent>
+        <p className="text-caption text-text-secondary">{label}</p>
+        <p className={cn('font-mono text-section-header', negative && 'text-accent-red')}>{value}</p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function StatCell({ label, value, colorClass }: { label: string; value: string; colorClass?: string }) {
+  return (
+    <div>
+      <p className="text-caption text-text-secondary">{label}</p>
+      <p className={cn('font-mono text-section-header', colorClass)}>{value}</p>
+    </div>
+  )
+}
+
+function StressScenarioRow({ scenario }: { scenario: StressScenario }) {
+  return (
+    <div className="rounded-md border border-border-primary p-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-body-strong">{scenario.name}</p>
+          <p className="text-caption text-text-secondary">{scenario.description}</p>
+        </div>
+        <p className="font-mono text-section-header text-accent-red">
+          {(scenario.portfolioImpact * 100).toFixed(0)}%
+        </p>
+      </div>
+      <div className="mt-3 space-y-1">
+        {scenario.positionImpacts.map((pi) => (
+          <div key={pi.positionId} className="flex items-center justify-between text-caption">
+            <span className="font-mono text-text-secondary">{pi.symbol}</span>
+            <span className={cn('font-mono', pi.impactPercent >= 0 ? 'text-accent-green' : 'text-accent-red')}>
+              {formatPercent(pi.impactPercent * 100)} ({formatCurrency(pi.impact, true)})
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

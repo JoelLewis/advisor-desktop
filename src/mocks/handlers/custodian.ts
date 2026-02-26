@@ -3,6 +3,7 @@ import type { Transaction } from '@/services/custodian'
 import type { TaxLot } from '@/types/portfolio'
 import { accounts } from '../data/accounts'
 import { getPositionsForAccount } from '../data/positions'
+import { notFound } from './utils'
 
 function generateTransactions(accountId: string, totalValue: number): Transaction[] {
   const baseDate = new Date('2026-02-25')
@@ -114,13 +115,13 @@ export const custodianHandlers = [
 
   http.get('/api/custodian/accounts/:accountId', ({ params }) => {
     const account = accounts.find((a) => a.id === params.accountId)
-    if (!account) return new HttpResponse(null, { status: 404 })
+    if (!account) return notFound()
     return HttpResponse.json(account)
   }),
 
   http.get('/api/custodian/accounts/:accountId/balances', ({ params }) => {
     const account = accounts.find((a) => a.id === params.accountId)
-    if (!account) return new HttpResponse(null, { status: 404 })
+    if (!account) return notFound()
     return HttpResponse.json({
       totalValue: account.totalValue,
       cashBalance: account.cashBalance,
@@ -130,13 +131,13 @@ export const custodianHandlers = [
 
   http.get('/api/custodian/accounts/:accountId/transactions', ({ params }) => {
     const account = accounts.find((a) => a.id === params.accountId)
-    if (!account) return new HttpResponse(null, { status: 404 })
+    if (!account) return notFound()
     return HttpResponse.json(generateTransactions(account.id, account.totalValue))
   }),
 
   http.get('/api/custodian/accounts/:accountId/tax-lots', ({ params }) => {
     const account = accounts.find((a) => a.id === params.accountId)
-    if (!account) return new HttpResponse(null, { status: 404 })
+    if (!account) return notFound()
     return HttpResponse.json(generateTaxLots(account.id, account.totalValue))
   }),
 ]

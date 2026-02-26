@@ -16,9 +16,9 @@ import { useHeldAway } from '@/hooks/use-held-away'
 import { useHouseholdPlan } from '@/hooks/use-planning'
 import { useHouseholdPositions, useHouseholdDrift, useHouseholdAllocation } from '@/hooks/use-portfolio'
 import { useAIInsights } from '@/hooks/use-ai'
-import { formatCurrency } from '@/lib/utils'
-import { cn } from '@/lib/utils'
-import type { Account, AccountType } from '@/types/account'
+import { formatCurrency, cn } from '@/lib/utils'
+import { ACCOUNT_TYPE_LABELS, taxTreatmentBadgeVariant } from '@/lib/labels'
+import type { Account } from '@/types/account'
 import type { Position } from '@/types/portfolio'
 import type { HeldAwayAsset } from '@/types/held-away'
 import type { ColumnDef } from '@tanstack/react-table'
@@ -30,12 +30,14 @@ const ASSET_CLASS_LABELS: Record<string, string> = {
   private_equity: 'Private Equity',
 }
 
-const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
-  individual: 'Individual', joint: 'Joint', traditional_ira: 'Traditional IRA',
-  roth_ira: 'Roth IRA', sep_ira: 'SEP IRA', '401k': '401(k)',
-  roth_401k: 'Roth 401(k)', '529': '529 Plan', trust_revocable: 'Revocable Trust',
-  trust_irrevocable: 'Irrevocable Trust', ugma_utma: 'UGMA/UTMA', entity: 'Entity',
-}
+const DEFAULT_ALLOCATION = [
+  { assetClass: 'us_equity', weight: 0.44 },
+  { assetClass: 'intl_equity', weight: 0.11 },
+  { assetClass: 'fixed_income', weight: 0.27 },
+  { assetClass: 'alternatives', weight: 0.08 },
+  { assetClass: 'real_estate', weight: 0.05 },
+  { assetClass: 'cash', weight: 0.05 },
+]
 
 const accountColumns: ColumnDef<Account, unknown>[] = [
   {
@@ -60,7 +62,7 @@ const accountColumns: ColumnDef<Account, unknown>[] = [
   {
     accessorKey: 'taxTreatment', header: 'Tax Treatment',
     cell: ({ row }) => (
-      <Badge variant={row.original.taxTreatment === 'tax_free' ? 'green' : row.original.taxTreatment === 'tax_deferred' ? 'yellow' : 'default'}>
+      <Badge variant={taxTreatmentBadgeVariant(row.original.taxTreatment)}>
         {row.original.taxTreatment.replace('_', ' ')}
       </Badge>
     ),
@@ -102,6 +104,17 @@ const heldAwayColumns: ColumnDef<HeldAwayAsset, unknown>[] = [
   },
 ]
 
+function MetricSummaryCard({ label, value }: { label: string; value: string }) {
+  return (
+    <Card>
+      <CardContent className="py-3">
+        <p className="text-caption text-text-secondary">{label}</p>
+        <p className="mt-1 font-mono text-section-header">{value}</p>
+      </CardContent>
+    </Card>
+  )
+}
+
 export function HouseholdDetailPage() {
   const { householdId } = useParams()
   const navigate = useNavigate()
@@ -123,17 +136,8 @@ export function HouseholdDetailPage() {
     return <div className="py-12 text-center text-text-tertiary">Household not found</div>
   }
 
-  // Use real household allocation from PMS, fall back to static data
-  const consolidationAllocation = hhAllocation ?? [
-    { assetClass: 'us_equity', weight: 0.44 },
-    { assetClass: 'intl_equity', weight: 0.11 },
-    { assetClass: 'fixed_income', weight: 0.27 },
-    { assetClass: 'alternatives', weight: 0.08 },
-    { assetClass: 'real_estate', weight: 0.05 },
-    { assetClass: 'cash', weight: 0.05 },
-  ]
+  const consolidationAllocation = hhAllocation ?? DEFAULT_ALLOCATION
 
-  // Household position columns (with account attribution)
   const hhPositionColumns: ColumnDef<Position, unknown>[] = [
     {
       accessorKey: 'symbol', header: 'Symbol',
@@ -174,16 +178,13 @@ export function HouseholdDetailPage() {
     },
   ]
 
-  // Drift summary across all accounts
-  const driftedAccountCount = hhDrift?.filter((d) => d.needsRebalance).length ?? 0
-  const driftedAccountIds = hhDrift?.filter((d) => d.needsRebalance).map((d) => d.accountId) ?? []
+  const driftedAccounts = hhDrift?.filter((d) => d.needsRebalance) ?? []
 
   const tabs = [
     {
       id: 'overview', label: 'Overview',
       content: (
         <div className="space-y-6">
-          {/* Family tree */}
           <Card>
             <CardHeader>Family</CardHeader>
             <CardContent>
@@ -194,34 +195,16 @@ export function HouseholdDetailPage() {
             </CardContent>
           </Card>
 
-          {/* AI Insights */}
           {insights && insights.length > 0 && (
             <AIInsightStack insights={insights} />
           )}
 
-          {/* Financial summary row */}
           <div className="grid grid-cols-3 gap-4">
-            <Card>
-              <CardContent className="py-3">
-                <p className="text-caption text-text-secondary">Total AUM</p>
-                <p className="mt-1 font-mono text-section-header">{formatCurrency(household.totalAUM, true)}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="py-3">
-                <p className="text-caption text-text-secondary">Managed</p>
-                <p className="mt-1 font-mono text-section-header">{formatCurrency(household.managedAUM, true)}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="py-3">
-                <p className="text-caption text-text-secondary">Held Away</p>
-                <p className="mt-1 font-mono text-section-header">{formatCurrency(household.heldAwayAUM, true)}</p>
-              </CardContent>
-            </Card>
+            <MetricSummaryCard label="Total AUM" value={formatCurrency(household.totalAUM, true)} />
+            <MetricSummaryCard label="Managed" value={formatCurrency(household.managedAUM, true)} />
+            <MetricSummaryCard label="Held Away" value={formatCurrency(household.heldAwayAUM, true)} />
           </div>
 
-          {/* Allocation + Goals */}
           <div className="grid grid-cols-2 gap-6">
             <Card>
               <CardHeader>Consolidated Allocation</CardHeader>
@@ -260,7 +243,6 @@ export function HouseholdDetailPage() {
       id: 'portfolio', label: 'Portfolio',
       content: (
         <div className="space-y-6">
-          {/* Allocation chart from real data */}
           <Card>
             <CardHeader>Consolidated Allocation</CardHeader>
             <CardContent>
@@ -268,12 +250,11 @@ export function HouseholdDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Drift summary */}
           <Card>
             <CardHeader action={
-              driftedAccountCount > 0 ? (
+              driftedAccounts.length > 0 ? (
                 <button
-                  onClick={() => navigate(`/portfolios/rebalance?accounts=${driftedAccountIds.join(',')}`)}
+                  onClick={() => navigate(`/portfolios/rebalance?accounts=${driftedAccounts.map((d) => d.accountId).join(',')}`)}
                   className="rounded bg-accent-blue px-3 py-1.5 text-caption font-medium text-white hover:bg-accent-blue/90"
                 >
                   Rebalance Household
@@ -287,6 +268,7 @@ export function HouseholdDetailPage() {
                 <div className="space-y-2">
                   {hhDrift.map((drift) => {
                     const acc = accounts?.find((a) => a.id === drift.accountId)
+                    const overThreshold = drift.assetClassDrifts.filter((d) => d.drift > 0.02).length
                     return (
                       <div
                         key={drift.accountId}
@@ -300,7 +282,7 @@ export function HouseholdDetailPage() {
                           <div>
                             <p className="text-body-strong">{acc?.name ?? drift.accountId}</p>
                             <p className="text-caption text-text-tertiary">
-                              {drift.assetClassDrifts.filter((d) => d.drift > 0.02).length} asset classes over threshold
+                              {overThreshold} asset classes over threshold
                             </p>
                           </div>
                         </div>
@@ -320,7 +302,6 @@ export function HouseholdDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Positions with account attribution */}
           <Card>
             <CardHeader action={
               <span className="text-caption text-text-secondary">{hhPositions?.length ?? 0} positions</span>
@@ -354,7 +335,6 @@ export function HouseholdDetailPage() {
 
   return (
     <div className="space-y-6">
-      {/* Household header */}
       <div className="flex items-center gap-4 rounded-lg border border-border-primary bg-surface-primary p-4">
         <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent-blue/10">
           <Home className="h-6 w-6 text-accent-blue" />

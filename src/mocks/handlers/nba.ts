@@ -1,6 +1,7 @@
 import { http, HttpResponse, delay } from 'msw'
 import { nbas } from '../data/nbas'
 import type { BatchActionRequest, NBAActionTemplate, NBAEffectivenessMetrics, NBACategory } from '@/types/nba'
+import { notFound } from './utils'
 
 export const nbaHandlers = [
   // GET /api/nba/effectiveness — NBA system effectiveness metrics
@@ -98,7 +99,7 @@ export const nbaHandlers = [
 
   http.post('/api/nba/:id/dismiss', async ({ params, request }) => {
     const nba = nbas.find((n) => n.id === params.id)
-    if (!nba) return new HttpResponse(null, { status: 404 })
+    if (!nba) return notFound()
 
     // Compliance enforcement: non-dismissible without supervisor override
     if (nba.complianceInfo?.nonDismissible && !nba.complianceInfo.supervisorOverride) {
@@ -145,7 +146,7 @@ export const nbaHandlers = [
   http.get('/api/nba/:id/templates', async ({ params }) => {
     await delay(500)
     const nba = nbas.find((n) => n.id === params.id)
-    if (!nba) return new HttpResponse(null, { status: 404 })
+    if (!nba) return notFound()
 
     const clientNames = nba.clients.map((c) => c.name).join(', ')
     const firstClient = nba.clients[0]?.name ?? 'the client'

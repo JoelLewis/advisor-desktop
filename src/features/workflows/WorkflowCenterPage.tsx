@@ -6,17 +6,10 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { DataTable } from '@/components/ui/DataTable'
 import { useMyActions, useInProcess, useDelegated, useWorkflowTemplates } from '@/hooks/use-workflows'
 import { useUIStore } from '@/store/ui-store'
-import { formatDate } from '@/lib/utils'
-import { cn } from '@/lib/utils'
+import { formatDate, cn } from '@/lib/utils'
+import { PRIORITY_VARIANTS } from '@/lib/labels'
 import type { Task, TaskStatus, ProcessTracker, WorkflowTemplate } from '@/types/workflow'
 import type { ColumnDef } from '@tanstack/react-table'
-
-const PRIORITY_VARIANTS = {
-  critical: 'red' as const,
-  high: 'yellow' as const,
-  medium: 'blue' as const,
-  low: 'default' as const,
-}
 
 const STATUS_ICON: Record<TaskStatus, typeof Circle> = {
   pending: Circle,
@@ -32,6 +25,22 @@ const STATUS_COLOR: Record<TaskStatus, string> = {
   completed: 'text-accent-green',
   blocked: 'text-accent-red',
   cancelled: 'text-text-tertiary',
+}
+
+const STATUS_BADGE_VARIANT: Record<TaskStatus, 'default' | 'blue' | 'green' | 'red'> = {
+  pending: 'default',
+  in_progress: 'blue',
+  completed: 'green',
+  blocked: 'red',
+  cancelled: 'default',
+}
+
+const PROCESS_TYPE_LABELS: Record<string, string> = {
+  account_opening: 'Account Opening',
+  acat_transfer: 'ACAT Transfer',
+  document_signature: 'Document Signature',
+  compliance_review: 'Compliance Review',
+  trade_order: 'Trade Order',
 }
 
 const taskColumns: ColumnDef<Task, unknown>[] = [
@@ -80,11 +89,18 @@ const taskColumns: ColumnDef<Task, unknown>[] = [
       const today = new Date('2026-02-25')
       const isOverdue = due < today && row.original.status !== 'completed'
       const isDueToday = due.toDateString() === today.toDateString()
-      return (
-        <span className={cn('font-mono text-caption', isOverdue && 'text-accent-red font-medium', isDueToday && 'text-accent-blue font-medium')}>
-          {isOverdue ? 'Overdue' : isDueToday ? 'Today' : formatDate(row.original.dueDate)}
-        </span>
-      )
+
+      let label = formatDate(row.original.dueDate)
+      let colorClass = ''
+      if (isOverdue) {
+        label = 'Overdue'
+        colorClass = 'text-accent-red font-medium'
+      } else if (isDueToday) {
+        label = 'Today'
+        colorClass = 'text-accent-blue font-medium'
+      }
+
+      return <span className={cn('font-mono text-caption', colorClass)}>{label}</span>
     },
     size: 100,
   },
@@ -114,17 +130,20 @@ const taskColumns: ColumnDef<Task, unknown>[] = [
 const delegatedColumns: ColumnDef<Task, unknown>[] = [
   {
     accessorKey: 'assignee', header: 'Assigned To',
-    cell: ({ row }) => (
-      <div className="flex items-center gap-2">
-        {row.original.delegationType === 'ai_agent'
-          ? <Bot className="h-4 w-4 text-accent-purple" />
-          : <User className="h-4 w-4 text-text-secondary" />
-        }
-        <span className={cn('text-caption', row.original.delegationType === 'ai_agent' && 'text-accent-purple')}>
-          {row.original.assignee}
-        </span>
-      </div>
-    ),
+    cell: ({ row }) => {
+      const isAI = row.original.delegationType === 'ai_agent'
+      return (
+        <div className="flex items-center gap-2">
+          {isAI
+            ? <Bot className="h-4 w-4 text-accent-purple" />
+            : <User className="h-4 w-4 text-text-secondary" />
+          }
+          <span className={cn('text-caption', isAI && 'text-accent-purple')}>
+            {row.original.assignee}
+          </span>
+        </div>
+      )
+    },
     size: 160,
   },
   {
@@ -141,10 +160,11 @@ const delegatedColumns: ColumnDef<Task, unknown>[] = [
   },
   {
     accessorKey: 'status', header: 'Status',
-    cell: ({ row }) => {
-      const variants = { pending: 'default' as const, in_progress: 'blue' as const, completed: 'green' as const, blocked: 'red' as const, cancelled: 'default' as const }
-      return <Badge variant={variants[row.original.status]}>{row.original.status.replace('_', ' ')}</Badge>
-    },
+    cell: ({ row }) => (
+      <Badge variant={STATUS_BADGE_VARIANT[row.original.status]}>
+        {row.original.status.replace('_', ' ')}
+      </Badge>
+    ),
     size: 110,
   },
   {
@@ -206,14 +226,6 @@ const templateColumns: ColumnDef<WorkflowTemplate, unknown>[] = [
 ]
 
 function ProcessCard({ tracker }: { tracker: ProcessTracker }) {
-  const typeLabels: Record<string, string> = {
-    account_opening: 'Account Opening',
-    acat_transfer: 'ACAT Transfer',
-    document_signature: 'Document Signature',
-    compliance_review: 'Compliance Review',
-    trade_order: 'Trade Order',
-  }
-
   return (
     <Card className={cn(tracker.isNigo && 'border-l-[3px] border-l-accent-red')}>
       <CardContent className="space-y-3">
@@ -223,7 +235,7 @@ function ProcessCard({ tracker }: { tracker: ProcessTracker }) {
               <p className="text-body-strong">{tracker.entityName}</p>
               {tracker.isNigo && <Badge variant="red">NIGO</Badge>}
             </div>
-            <p className="text-caption text-text-secondary">{typeLabels[tracker.type] ?? tracker.type}</p>
+            <p className="text-caption text-text-secondary">{PROCESS_TYPE_LABELS[tracker.type] ?? tracker.type}</p>
           </div>
           {tracker.estimatedCompletion && (
             <span className="font-mono text-caption text-text-tertiary">
@@ -232,7 +244,6 @@ function ProcessCard({ tracker }: { tracker: ProcessTracker }) {
           )}
         </div>
 
-        {/* Stage pipeline */}
         <div className="flex items-center gap-1">
           {tracker.stages.map((stage, i) => {
             const isActive = i + 1 === tracker.currentStage
@@ -290,6 +301,7 @@ export function WorkflowCenterPage() {
   const activeProcesses = processes ?? []
   const delegatedTasks = delegated ?? []
   const nigoCount = activeProcesses.filter((p) => p.isNigo).length
+  const activeAICount = delegatedTasks.filter((t) => t.delegationType === 'ai_agent' && t.status === 'in_progress').length
 
   const tabs = [
     {
@@ -317,10 +329,11 @@ export function WorkflowCenterPage() {
               </span>
             </div>
           )}
-          {activeProcesses.map((proc) => (
-            <ProcessCard key={proc.id} tracker={proc} />
-          ))}
-          {activeProcesses.length === 0 && (
+          {activeProcesses.length > 0 ? (
+            activeProcesses.map((proc) => (
+              <ProcessCard key={proc.id} tracker={proc} />
+            ))
+          ) : (
             <Card><CardContent className="py-12 text-center text-text-tertiary">No active processes</CardContent></Card>
           )}
         </div>
@@ -365,7 +378,7 @@ export function WorkflowCenterPage() {
           <div className="flex items-center gap-1.5">
             <Sparkles className="h-4 w-4 text-accent-purple" />
             <span className="text-caption text-accent-purple">
-              {delegatedTasks.filter((t) => t.delegationType === 'ai_agent' && t.status === 'in_progress').length} AI tasks active
+              {activeAICount} AI tasks active
             </span>
           </div>
         </div>

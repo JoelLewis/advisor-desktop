@@ -9,8 +9,8 @@ import { Badge } from '@/components/ui/Badge'
 import { MetricCard } from '@/components/ui/MetricCard'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useModelGovernance } from '@/hooks/use-portfolio'
-import { formatCurrency } from '@/lib/utils'
-import { cn } from '@/lib/utils'
+import { formatCurrency, cn } from '@/lib/utils'
+import { ASSET_CLASS_LABELS } from '@/lib/labels'
 import type { ModelGovernanceDetail, ModelVersion } from '@/types/portfolio'
 
 const RISK_PROFILE_LABELS: Record<string, string> = {
@@ -37,17 +37,23 @@ const REBALANCE_FREQ_LABELS: Record<string, string> = {
   threshold_only: 'Threshold Only',
 }
 
-const ASSET_CLASS_LABELS: Record<string, string> = {
-  us_equity: 'US Equity',
-  intl_equity: 'Intl Equity',
-  emerging_markets: 'Emerging Mkts',
-  fixed_income: 'Fixed Income',
-  alternatives: 'Alternatives',
-  real_estate: 'Real Estate',
-  commodities: 'Commodities',
-  cash: 'Cash',
-  digital_assets: 'Digital Assets',
-  private_equity: 'Private Equity',
+const ASSET_CLASS_COLORS: Record<string, string> = {
+  us_equity: 'bg-blue-500',
+  intl_equity: 'bg-indigo-500',
+  emerging_markets: 'bg-violet-500',
+  fixed_income: 'bg-emerald-500',
+  alternatives: 'bg-amber-500',
+  real_estate: 'bg-orange-500',
+  commodities: 'bg-yellow-500',
+  cash: 'bg-gray-400',
+  digital_assets: 'bg-purple-500',
+  private_equity: 'bg-purple-500',
+}
+
+const CHANGE_TYPE_COLORS: Record<string, string> = {
+  weight_change: 'bg-accent-blue',
+  security_add: 'bg-accent-green',
+  security_remove: 'bg-accent-red',
 }
 
 const VERSION_STATUS_FALLBACK = { label: 'Draft', icon: AlertCircle, className: 'text-text-tertiary' } as const
@@ -99,10 +105,7 @@ function VersionTimeline({ versions }: { versions: ModelVersion[] }) {
                       <div key={change.id} className="flex items-center gap-2 text-caption">
                         <span className={cn(
                           'inline-block h-1.5 w-1.5 rounded-full',
-                          change.type === 'weight_change' ? 'bg-accent-blue' :
-                          change.type === 'security_add' ? 'bg-accent-green' :
-                          change.type === 'security_remove' ? 'bg-accent-red' :
-                          'bg-text-tertiary',
+                          CHANGE_TYPE_COLORS[change.type] ?? 'bg-text-tertiary',
                         )} />
                         <span className="text-text-primary">{change.description}</span>
                         {change.oldValue !== undefined && change.newValue !== undefined && (
@@ -124,18 +127,7 @@ function VersionTimeline({ versions }: { versions: ModelVersion[] }) {
                     {v.assetClasses.map((ac) => (
                       <div
                         key={ac.assetClass}
-                        className={cn(
-                          'relative group',
-                          ac.assetClass === 'us_equity' ? 'bg-blue-500' :
-                          ac.assetClass === 'intl_equity' ? 'bg-indigo-500' :
-                          ac.assetClass === 'emerging_markets' ? 'bg-violet-500' :
-                          ac.assetClass === 'fixed_income' ? 'bg-emerald-500' :
-                          ac.assetClass === 'alternatives' ? 'bg-amber-500' :
-                          ac.assetClass === 'real_estate' ? 'bg-orange-500' :
-                          ac.assetClass === 'commodities' ? 'bg-yellow-500' :
-                          ac.assetClass === 'cash' ? 'bg-gray-400' :
-                          'bg-purple-500',
-                        )}
+                        className={cn('relative group', ASSET_CLASS_COLORS[ac.assetClass] ?? 'bg-purple-500')}
                         style={{ width: `${ac.targetWeight * 100}%` }}
                         title={`${ASSET_CLASS_LABELS[ac.assetClass] ?? ac.assetClass}: ${(ac.targetWeight * 100).toFixed(0)}%`}
                       />
@@ -243,15 +235,7 @@ function ModelCard({ model }: { model: ModelGovernanceDetail }) {
                   key={ac.assetClass}
                   className={cn(
                     'flex items-center justify-center text-[10px] font-medium text-white',
-                    ac.assetClass === 'us_equity' ? 'bg-blue-500' :
-                    ac.assetClass === 'intl_equity' ? 'bg-indigo-500' :
-                    ac.assetClass === 'emerging_markets' ? 'bg-violet-500' :
-                    ac.assetClass === 'fixed_income' ? 'bg-emerald-500' :
-                    ac.assetClass === 'alternatives' ? 'bg-amber-500' :
-                    ac.assetClass === 'real_estate' ? 'bg-orange-500' :
-                    ac.assetClass === 'commodities' ? 'bg-yellow-500' :
-                    ac.assetClass === 'cash' ? 'bg-gray-400' :
-                    'bg-purple-500',
+                    ASSET_CLASS_COLORS[ac.assetClass] ?? 'bg-purple-500',
                   )}
                   style={{ width: `${ac.targetWeight * 100}%` }}
                   title={`${ASSET_CLASS_LABELS[ac.assetClass] ?? ac.assetClass}: ${(ac.targetWeight * 100).toFixed(0)}%`}

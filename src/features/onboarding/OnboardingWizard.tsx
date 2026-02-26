@@ -33,6 +33,12 @@ function createEmptyApplication(prospectId?: string): OnboardingApplication {
   }
 }
 
+function stepIndicatorStyle(stepIndex: number, currentIndex: number): string {
+  if (stepIndex < currentIndex) return 'bg-accent-green text-white'
+  if (stepIndex === currentIndex) return 'bg-accent-blue text-white'
+  return 'bg-surface-tertiary text-text-tertiary'
+}
+
 export function OnboardingWizard() {
   const { prospectId } = useParams<{ prospectId?: string }>()
   const navigate = useNavigate()
@@ -70,7 +76,6 @@ export function OnboardingWizard() {
       const answers = prev.riskAnswers.filter((a) => a.questionId !== questionId)
       const newAnswers: RiskAnswer[] = [...answers, { questionId, selectedOption }]
 
-      // Auto-calculate when all 8 questions answered
       if (newAnswers.length >= 8) {
         calculateRisk.mutate(newAnswers, {
           onSuccess: (result) => {
@@ -114,19 +119,13 @@ export function OnboardingWizard() {
   }, [])
 
   function goNext() {
-    const idx = currentStepIndex
-    const nextStep = STEPS[idx + 1]
-    if (idx < STEPS.length - 1 && nextStep) {
-      setStep(nextStep.id)
-    }
+    const nextStep = STEPS[currentStepIndex + 1]
+    if (nextStep) setStep(nextStep.id)
   }
 
   function goPrev() {
-    const idx = currentStepIndex
-    const prevStep = STEPS[idx - 1]
-    if (idx > 0 && prevStep) {
-      setStep(prevStep.id)
-    }
+    const prevStep = STEPS[currentStepIndex - 1]
+    if (prevStep) setStep(prevStep.id)
   }
 
   function handleSubmit() {
@@ -138,7 +137,6 @@ export function OnboardingWizard() {
     })
   }
 
-  // Success screen
   if (submitted && submissionResult) {
     return (
       <div className="mx-auto max-w-2xl">
@@ -168,18 +166,37 @@ export function OnboardingWizard() {
     )
   }
 
+  function renderStepContent(): React.ReactNode {
+    switch (step) {
+      case 'client_info':
+        return <ClientInfoStep data={data} onChange={setData} />
+      case 'risk_profile':
+        return <RiskProfileStep answers={data.riskAnswers} result={data.riskProfile} onAnswer={handleRiskAnswer} />
+      case 'account_setup':
+        return (
+          <AccountSetupStep
+            selectedType={data.accountType}
+            fields={data.accountFields}
+            onSelectType={handleSelectAccountType}
+            onFieldChange={(name, value) => setData((prev) => ({ ...prev, accountFields: { ...prev.accountFields, [name]: value } }))}
+          />
+        )
+      case 'documents':
+        return <DocumentsStep documents={data.documents} onToggle={handleToggleDocument} />
+      case 'review':
+        return <ReviewStep data={data} onComplianceToggle={handleComplianceToggle} />
+    }
+  }
+
   return (
     <div className="mx-auto max-w-3xl">
-      {/* Step indicator */}
       <div className="mb-8 flex items-center justify-between">
         {STEPS.map((s, i) => (
           <div key={s.id} className="flex items-center">
             <div className="flex flex-col items-center">
               <div className={cn(
                 'flex h-8 w-8 items-center justify-center rounded-full text-caption font-medium transition-colors',
-                i < currentStepIndex ? 'bg-accent-green text-white'
-                  : i === currentStepIndex ? 'bg-accent-blue text-white'
-                  : 'bg-surface-tertiary text-text-tertiary',
+                stepIndicatorStyle(i, currentStepIndex),
               )}>
                 {i < currentStepIndex ? <Check className="h-4 w-4" /> : i + 1}
               </div>
@@ -200,35 +217,10 @@ export function OnboardingWizard() {
         ))}
       </div>
 
-      {/* Step content */}
       <div className="rounded-xl border border-border-primary bg-surface-primary p-6">
-        {step === 'client_info' && (
-          <ClientInfoStep data={data} onChange={setData} />
-        )}
-        {step === 'risk_profile' && (
-          <RiskProfileStep
-            answers={data.riskAnswers}
-            result={data.riskProfile}
-            onAnswer={handleRiskAnswer}
-          />
-        )}
-        {step === 'account_setup' && (
-          <AccountSetupStep
-            selectedType={data.accountType}
-            fields={data.accountFields}
-            onSelectType={handleSelectAccountType}
-            onFieldChange={(name, value) => setData((prev) => ({ ...prev, accountFields: { ...prev.accountFields, [name]: value } }))}
-          />
-        )}
-        {step === 'documents' && (
-          <DocumentsStep documents={data.documents} onToggle={handleToggleDocument} />
-        )}
-        {step === 'review' && (
-          <ReviewStep data={data} onComplianceToggle={handleComplianceToggle} />
-        )}
+        {renderStepContent()}
       </div>
 
-      {/* Navigation buttons */}
       <div className="mt-6 flex items-center justify-between">
         <button
           onClick={goPrev}

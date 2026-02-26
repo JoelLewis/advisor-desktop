@@ -10,9 +10,15 @@ import {
   type ExpandedState,
   type Row,
 } from '@tanstack/react-table'
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { ArrowUpDown, ArrowUp, ArrowDown, ChevronRight, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+function SortIcon({ direction }: { direction: false | 'asc' | 'desc' }) {
+  if (direction === 'asc') return <ArrowUp className="h-3 w-3" />
+  if (direction === 'desc') return <ArrowDown className="h-3 w-3" />
+  return <ArrowUpDown className="h-3 w-3" />
+}
 
 type DataTableProps<T> = {
   data: T[]
@@ -81,13 +87,7 @@ export function DataTable<T>({
                     {flexRender(header.column.columnDef.header, header.getContext())}
                     {header.column.getCanSort() && (
                       <span className="text-text-tertiary">
-                        {header.column.getIsSorted() === 'asc' ? (
-                          <ArrowUp className="h-3 w-3" />
-                        ) : header.column.getIsSorted() === 'desc' ? (
-                          <ArrowDown className="h-3 w-3" />
-                        ) : (
-                          <ArrowUpDown className="h-3 w-3" />
-                        )}
+                        <SortIcon direction={header.column.getIsSorted()} />
                       </span>
                     )}
                   </div>
@@ -108,9 +108,8 @@ export function DataTable<T>({
             </tr>
           ) : (
             table.getRowModel().rows.map((row) => (
-              <>
+              <Fragment key={row.id}>
                 <tr
-                  key={row.id}
                   className={cn(
                     'border-b border-border-primary transition-colors',
                     onRowClick && 'cursor-pointer hover:bg-surface-tertiary',
@@ -141,13 +140,13 @@ export function DataTable<T>({
                   ))}
                 </tr>
                 {expandedContent && row.getIsExpanded() && (
-                  <tr key={`${row.id}-expanded`}>
+                  <tr>
                     <td colSpan={columns.length + 1} className="border-b border-border-primary bg-surface-secondary p-4">
                       {expandedContent(row)}
                     </td>
                   </tr>
                 )}
-              </>
+              </Fragment>
             ))
           )}
         </tbody>

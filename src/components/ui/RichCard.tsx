@@ -16,6 +16,18 @@ function getDriftColor(drift: number): 'green' | 'yellow' | 'red' {
   return 'red'
 }
 
+const DRIFT_TEXT_CLASSES: Record<'green' | 'yellow' | 'red', string> = {
+  green: 'text-accent-green',
+  yellow: 'text-amber-600',
+  red: 'text-accent-red',
+}
+
+const DRIFT_BG_CLASSES: Record<'green' | 'yellow' | 'red', string> = {
+  green: 'bg-accent-green',
+  yellow: 'bg-amber-500',
+  red: 'bg-accent-red',
+}
+
 function getNavigationPath(data: RichCardData): string {
   switch (data.variant) {
     case 'portfolio_overview':
@@ -59,16 +71,7 @@ function RebalanceWorkflow({ data }: { data: RichCardData }) {
       <div className="flex items-center justify-between">
         <span className="text-caption font-medium text-text-secondary">Rebalance</span>
         {data.driftPercent !== undefined && (
-          <span
-            className={cn(
-              'font-mono text-lg font-semibold',
-              data.driftPercent < 2
-                ? 'text-accent-green'
-                : data.driftPercent <= 4
-                  ? 'text-amber-600'
-                  : 'text-accent-red',
-            )}
-          >
+          <span className={cn('font-mono text-lg font-semibold', DRIFT_TEXT_CLASSES[getDriftColor(data.driftPercent)])}>
             {data.driftPercent.toFixed(1)}%
           </span>
         )}
@@ -101,14 +104,7 @@ function AccountSummary({ data }: { data: RichCardData }) {
       ))}
       {data.driftPercent !== undefined && (
         <span
-          className={cn(
-            'h-2 w-2 shrink-0 rounded-full',
-            data.driftPercent < 2
-              ? 'bg-accent-green'
-              : data.driftPercent <= 4
-                ? 'bg-amber-500'
-                : 'bg-accent-red',
-          )}
+          className={cn('h-2 w-2 shrink-0 rounded-full', DRIFT_BG_CLASSES[getDriftColor(data.driftPercent)])}
           title={`${data.driftPercent.toFixed(1)}% drift`}
         />
       )}
@@ -170,6 +166,19 @@ function HouseholdSummary({ data }: { data: RichCardData }) {
   )
 }
 
+const VARIANT_COMPONENTS = {
+  portfolio_overview: PortfolioOverview,
+  rebalance_workflow: RebalanceWorkflow,
+  account_summary: AccountSummary,
+  client_summary: ClientSummary,
+  household_summary: HouseholdSummary,
+} as const satisfies Record<RichCardData['variant'], (props: { data: RichCardData }) => JSX.Element>
+
+function renderVariant(data: RichCardData): JSX.Element {
+  const Component = VARIANT_COMPONENTS[data.variant]
+  return <Component data={data} />
+}
+
 export function RichCard({ data, isAIContext, className }: RichCardProps) {
   const navigate = useNavigate()
 
@@ -187,11 +196,7 @@ export function RichCard({ data, isAIContext, className }: RichCardProps) {
         className,
       )}
     >
-      {data.variant === 'portfolio_overview' && <PortfolioOverview data={data} />}
-      {data.variant === 'rebalance_workflow' && <RebalanceWorkflow data={data} />}
-      {data.variant === 'account_summary' && <AccountSummary data={data} />}
-      {data.variant === 'client_summary' && <ClientSummary data={data} />}
-      {data.variant === 'household_summary' && <HouseholdSummary data={data} />}
+      {renderVariant(data)}
     </button>
   )
 }

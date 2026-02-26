@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import { threads, threadMessages, teamMembers } from '../data/messages'
 import type { MessageAttachment } from '@/types/messaging'
+import { notFound } from './utils'
 
 export const messagingHandlers = [
   http.get('/api/messaging/threads', () => {
@@ -9,7 +10,7 @@ export const messagingHandlers = [
 
   http.get('/api/messaging/threads/:threadId/messages', ({ params }) => {
     const messages = threadMessages[String(params.threadId)]
-    if (!messages) return new HttpResponse(null, { status: 404 })
+    if (!messages) return notFound()
     return HttpResponse.json(messages)
   }),
 

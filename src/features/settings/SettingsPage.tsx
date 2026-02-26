@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useAISettings, useUpdateAISettings, useNBASettings, useUpdateNBASettings, useNotificationSettings, useUpdateNotificationSettings } from '@/hooks/use-settings'
 import { cn } from '@/lib/utils'
+import { PRIORITY_VARIANTS } from '@/lib/labels'
 import type { AISettings, AITone, AIVerbosity, NBASettings, NotificationSettings } from '@/types/settings'
 import type { NBACategory } from '@/types/nba'
 
@@ -18,6 +19,16 @@ const NBA_CATEGORIES: { value: NBACategory; label: string }[] = [
   { value: 'compliance', label: 'Compliance' },
   { value: 'growth', label: 'Growth' },
 ]
+
+const SAVE_BUTTON_CLASS = 'flex items-center gap-1.5 rounded-md bg-accent-blue px-3 py-1.5 text-caption font-medium text-white hover:bg-accent-blue/90 disabled:opacity-50'
+
+function SaveButton({ onClick, disabled }: { onClick: () => void; disabled: boolean }) {
+  return (
+    <button onClick={onClick} disabled={disabled} className={SAVE_BUTTON_CLASS}>
+      <Save className="h-3.5 w-3.5" /> Save
+    </button>
+  )
+}
 
 function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
@@ -91,14 +102,15 @@ function AISettingsPanel() {
     if (settings) update.mutate(settings)
   }
 
+  function updatePermission(key: string, value: boolean) {
+    if (!settings) return
+    setSettings({ ...settings, permissions: { ...settings.permissions, [key]: value } })
+  }
+
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader action={
-          <button onClick={save} disabled={update.isPending} className="flex items-center gap-1.5 rounded-md bg-accent-blue px-3 py-1.5 text-caption font-medium text-white hover:bg-accent-blue/90 disabled:opacity-50">
-            <Save className="h-3.5 w-3.5" /> Save
-          </button>
-        }>
+        <CardHeader action={<SaveButton onClick={save} disabled={update.isPending} />}>
           AI Assistant
         </CardHeader>
         <CardContent className="divide-y divide-border-primary">
@@ -134,7 +146,7 @@ function AISettingsPanel() {
               key={key}
               label={key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase())}
               checked={enabled}
-              onChange={(v) => setSettings({ ...settings, permissions: { ...settings.permissions, [key]: v } })}
+              onChange={(v) => updatePermission(key, v)}
             />
           ))}
         </CardContent>
@@ -156,6 +168,11 @@ function NBASettingsPanel() {
     if (settings) update.mutate(settings)
   }
 
+  function updateWeight(key: string, value: number) {
+    if (!settings) return
+    setSettings({ ...settings, weights: { ...settings.weights, [key]: value } })
+  }
+
   function toggleCategory(cat: NBACategory) {
     if (!settings) return
     const cats = settings.enabledCategories.includes(cat)
@@ -164,29 +181,27 @@ function NBASettingsPanel() {
     setSettings({ ...settings, enabledCategories: cats })
   }
 
+  const weightsTotal = Object.values(settings.weights).reduce((a, b) => a + b, 0)
+
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader action={
-          <button onClick={save} disabled={update.isPending} className="flex items-center gap-1.5 rounded-md bg-accent-blue px-3 py-1.5 text-caption font-medium text-white hover:bg-accent-blue/90 disabled:opacity-50">
-            <Save className="h-3.5 w-3.5" /> Save
-          </button>
-        }>
+        <CardHeader action={<SaveButton onClick={save} disabled={update.isPending} />}>
           Scoring Weights
         </CardHeader>
         <CardContent className="divide-y divide-border-primary">
-          <SliderField label="Urgency" value={settings.weights.urgency} onChange={(v) => setSettings({ ...settings, weights: { ...settings.weights, urgency: v } })} />
-          <SliderField label="Impact" value={settings.weights.impact} onChange={(v) => setSettings({ ...settings, weights: { ...settings.weights, impact: v } })} />
-          <SliderField label="Efficiency" value={settings.weights.efficiency} onChange={(v) => setSettings({ ...settings, weights: { ...settings.weights, efficiency: v } })} />
-          <SliderField label="Relationship" value={settings.weights.relationship} onChange={(v) => setSettings({ ...settings, weights: { ...settings.weights, relationship: v } })} />
-          <SliderField label="Confidence" value={settings.weights.confidence} onChange={(v) => setSettings({ ...settings, weights: { ...settings.weights, confidence: v } })} />
+          <SliderField label="Urgency" value={settings.weights.urgency} onChange={(v) => updateWeight('urgency', v)} />
+          <SliderField label="Impact" value={settings.weights.impact} onChange={(v) => updateWeight('impact', v)} />
+          <SliderField label="Efficiency" value={settings.weights.efficiency} onChange={(v) => updateWeight('efficiency', v)} />
+          <SliderField label="Relationship" value={settings.weights.relationship} onChange={(v) => updateWeight('relationship', v)} />
+          <SliderField label="Confidence" value={settings.weights.confidence} onChange={(v) => updateWeight('confidence', v)} />
           <div className="flex items-center justify-between py-2">
             <span className="text-caption text-text-secondary">Total</span>
             <span className={cn(
               'font-mono text-caption font-medium',
-              Object.values(settings.weights).reduce((a, b) => a + b, 0) === 100 ? 'text-accent-green' : 'text-accent-red',
+              weightsTotal === 100 ? 'text-accent-green' : 'text-accent-red',
             )}>
-              {Object.values(settings.weights).reduce((a, b) => a + b, 0)} / 100
+              {weightsTotal} / 100
             </span>
           </div>
         </CardContent>
@@ -253,13 +268,6 @@ function NBASettingsPanel() {
   )
 }
 
-const PRIORITY_VARIANTS = {
-  critical: 'red' as const,
-  high: 'yellow' as const,
-  medium: 'blue' as const,
-  low: 'default' as const,
-}
-
 function NotificationSettingsPanel() {
   const { data, isLoading } = useNotificationSettings()
   const update = useUpdateNotificationSettings()
@@ -273,27 +281,33 @@ function NotificationSettingsPanel() {
     if (settings) update.mutate(settings)
   }
 
+  function updateChannel(key: string, value: boolean) {
+    if (!settings) return
+    setSettings({ ...settings, channels: { ...settings.channels, [key]: value } })
+  }
+
+  function updateQuietHours(patch: Partial<NotificationSettings['quietHours']>) {
+    if (!settings) return
+    setSettings({ ...settings, quietHours: { ...settings.quietHours, ...patch } })
+  }
+
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader action={
-          <button onClick={save} disabled={update.isPending} className="flex items-center gap-1.5 rounded-md bg-accent-blue px-3 py-1.5 text-caption font-medium text-white hover:bg-accent-blue/90 disabled:opacity-50">
-            <Save className="h-3.5 w-3.5" /> Save
-          </button>
-        }>
+        <CardHeader action={<SaveButton onClick={save} disabled={update.isPending} />}>
           Notification Channels
         </CardHeader>
         <CardContent className="divide-y divide-border-primary">
-          <Toggle label="Email notifications" checked={settings.channels.email} onChange={(v) => setSettings({ ...settings, channels: { ...settings.channels, email: v } })} />
-          <Toggle label="In-app notifications" checked={settings.channels.inApp} onChange={(v) => setSettings({ ...settings, channels: { ...settings.channels, inApp: v } })} />
-          <Toggle label="Desktop notifications" checked={settings.channels.desktop} onChange={(v) => setSettings({ ...settings, channels: { ...settings.channels, desktop: v } })} />
+          <Toggle label="Email notifications" checked={settings.channels.email} onChange={(v) => updateChannel('email', v)} />
+          <Toggle label="In-app notifications" checked={settings.channels.inApp} onChange={(v) => updateChannel('inApp', v)} />
+          <Toggle label="Desktop notifications" checked={settings.channels.desktop} onChange={(v) => updateChannel('desktop', v)} />
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>Quiet Hours</CardHeader>
         <CardContent className="space-y-3">
-          <Toggle label="Enable quiet hours" checked={settings.quietHours.enabled} onChange={(v) => setSettings({ ...settings, quietHours: { ...settings.quietHours, enabled: v } })} />
+          <Toggle label="Enable quiet hours" checked={settings.quietHours.enabled} onChange={(v) => updateQuietHours({ enabled: v })} />
           {settings.quietHours.enabled && (
             <div className="flex items-center gap-4 pl-1">
               <div className="flex items-center gap-2">
@@ -301,7 +315,7 @@ function NotificationSettingsPanel() {
                 <input
                   type="time"
                   value={settings.quietHours.start}
-                  onChange={(e) => setSettings({ ...settings, quietHours: { ...settings.quietHours, start: e.target.value } })}
+                  onChange={(e) => updateQuietHours({ start: e.target.value })}
                   className="rounded-md border border-border-secondary bg-surface-primary px-2 py-1 font-mono text-caption"
                 />
               </div>
@@ -310,7 +324,7 @@ function NotificationSettingsPanel() {
                 <input
                   type="time"
                   value={settings.quietHours.end}
-                  onChange={(e) => setSettings({ ...settings, quietHours: { ...settings.quietHours, end: e.target.value } })}
+                  onChange={(e) => updateQuietHours({ end: e.target.value })}
                   className="rounded-md border border-border-secondary bg-surface-primary px-2 py-1 font-mono text-caption"
                 />
               </div>
