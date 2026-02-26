@@ -162,42 +162,41 @@ export function ClientDetailPage() {
     {
       id: 'overview', label: 'Overview',
       content: (
-        <div className="grid grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>Asset Allocation</CardHeader>
-            <CardContent>
-              <AllocationChart data={allocation} />
+        <div className="space-y-6">
+          <Card className="border-l-[3px] border-l-accent-purple">
+            <CardContent className="flex items-start gap-3">
+              <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-accent-purple" />
+              <div>
+                <p className="text-body-strong text-accent-purple">AI Summary</p>
+                <p className="mt-1 text-body text-text-secondary">
+                  {client.fullName} is a {client.tier.label} client with {formatCurrency(client.totalAUM, true)} under management.
+                  Risk profile is {client.riskProfile.tolerance} (score: {client.riskProfile.score}/100).
+                  {plan && ` Aggregate goal probability is ${Math.round(plan.aggregateProbability * 100)}%.`}
+                  {plan?.goals.some((g) => g.status === 'at_risk') && ' Some goals are at risk — review recommended.'}
+                </p>
+              </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader>Financial Goals</CardHeader>
-            <CardContent className="space-y-3">
-              {plan?.goals.map((goal) => (
-                <GoalProgressCard key={goal.id} goal={goal} compact />
-              )) ?? (
-                <p className="py-8 text-center text-caption text-text-tertiary">No plan on file</p>
-              )}
-            </CardContent>
-          </Card>
-          {/* AI Insights */}
-          <div className="col-span-2 space-y-2">
-            <Card className="border-l-[3px] border-l-accent-purple">
-              <CardContent className="flex items-start gap-3">
-                <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-accent-purple" />
-                <div>
-                  <p className="text-body-strong text-accent-purple">AI Summary</p>
-                  <p className="mt-1 text-body text-text-secondary">
-                    {client.fullName} is a {client.tier.label} client with {formatCurrency(client.totalAUM, true)} under management.
-                    Risk profile is {client.riskProfile.tolerance} (score: {client.riskProfile.score}/100).
-                    {plan && ` Aggregate goal probability is ${Math.round(plan.aggregateProbability * 100)}%.`}
-                    {plan?.goals.some((g) => g.status === 'at_risk') && ' Some goals are at risk — review recommended.'}
-                  </p>
-                </div>
+          {insights && insights.length > 0 && (
+            <AIInsightStack insights={insights} />
+          )}
+          <div className="grid grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>Asset Allocation</CardHeader>
+              <CardContent>
+                <AllocationChart data={allocation} />
               </CardContent>
             </Card>
-            {insights && insights.length > 0 && (
-              <AIInsightStack insights={insights} />
-            )}
+            <Card>
+              <CardHeader>Financial Goals</CardHeader>
+              <CardContent className="space-y-3">
+                {plan?.goals.map((goal) => (
+                  <GoalProgressCard key={goal.id} goal={goal} compact />
+                )) ?? (
+                  <p className="py-8 text-center text-caption text-text-tertiary">No plan on file</p>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       ),
