@@ -16,8 +16,8 @@ const validModelIds = new Set([
 ])
 
 describe('Account Invariants', () => {
-  it('has exactly 40 accounts', () => {
-    expect(accounts).toHaveLength(40)
+  it('has exactly 45 accounts', () => {
+    expect(accounts).toHaveLength(45)
   })
 
   describe('Tax treatment mapping', () => {

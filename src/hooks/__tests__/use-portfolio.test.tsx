@@ -61,7 +61,7 @@ describe('useDriftSummary', () => {
   it('fetches drift for all accounts', async () => {
     const { result } = renderHook(() => useDriftSummary(), { wrapper: createWrapper() })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(result.current.data!.length).toBe(40)
+    expect(result.current.data!.length).toBe(45)
   })
 })
 

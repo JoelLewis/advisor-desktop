@@ -14,10 +14,10 @@ function createWrapper() {
 }
 
 describe('useClients', () => {
-  it('fetches all 20 clients', async () => {
+  it('fetches all 22 clients', async () => {
     const { result } = renderHook(() => useClients(), { wrapper: createWrapper() })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(result.current.data!.items).toHaveLength(20)
+    expect(result.current.data!.items).toHaveLength(22)
   })
 })
 

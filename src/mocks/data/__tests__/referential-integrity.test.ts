@@ -11,16 +11,16 @@ const householdIdSet = new Set(households.map((h) => h.id))
 
 describe('Referential Integrity — Cross-Entity Validation', () => {
   describe('Data counts', () => {
-    it('has 20 clients', () => {
-      expect(clients).toHaveLength(20)
+    it('has 22 clients', () => {
+      expect(clients).toHaveLength(22)
     })
 
-    it('has 40 accounts', () => {
-      expect(accounts).toHaveLength(40)
+    it('has 45 accounts', () => {
+      expect(accounts).toHaveLength(45)
     })
 
-    it('has 12 households', () => {
-      expect(households).toHaveLength(12)
+    it('has 13 households', () => {
+      expect(households).toHaveLength(13)
     })
 
     it('has 20 NBAs', () => {

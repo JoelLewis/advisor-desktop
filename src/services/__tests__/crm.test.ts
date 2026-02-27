@@ -3,13 +3,13 @@ import { getClients, getClient, getHouseholds, getHousehold } from '../crm'
 
 describe('CRM service', () => {
   describe('getClients', () => {
-    it('returns a paginated response with 20 clients', async () => {
+    it('returns a paginated response with 22 clients', async () => {
       const result = await getClients()
       expect(result).toBeTruthy()
       expect(result.items).toBeTruthy()
       expect(Array.isArray(result.items)).toBe(true)
-      expect(result.items.length).toBe(20)
-      expect(result.total).toBe(20)
+      expect(result.items.length).toBe(22)
+      expect(result.total).toBe(22)
     })
   })
 
@@ -30,13 +30,13 @@ describe('CRM service', () => {
   })
 
   describe('getHouseholds', () => {
-    it('returns a paginated response with 12 households', async () => {
+    it('returns a paginated response with 13 households', async () => {
       const result = await getHouseholds()
       expect(result).toBeTruthy()
       expect(result.items).toBeTruthy()
       expect(Array.isArray(result.items)).toBe(true)
-      expect(result.items.length).toBe(12)
-      expect(result.total).toBe(12)
+      expect(result.items.length).toBe(13)
+      expect(result.total).toBe(13)
     })
   })
 

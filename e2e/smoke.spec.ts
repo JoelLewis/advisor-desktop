@@ -10,6 +10,13 @@ const topLevelRoutes = [
   { path: '/workflows', title: 'Workflows' },
   { path: '/settings', title: 'Settings' },
   { path: '/portfolios/trading', title: 'Trading' },
+  { path: '/actions', title: 'Actions' },
+  { path: '/engage', title: 'Engage' },
+  { path: '/growth/book', title: 'Book of Business' },
+  { path: '/growth/billing', title: 'Billing' },
+  { path: '/workflows/reconciliation', title: 'Reconciliation' },
+  { path: '/workflows/archive', title: 'Archive' },
+  { path: '/portfolios/risk', title: 'Risk Analytics' },
 ]
 
 test.describe('Smoke tests — all top-level routes render', () => {

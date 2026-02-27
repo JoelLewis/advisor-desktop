@@ -13,7 +13,7 @@ export const crmHandlers = [
     const search = url.searchParams.get('search')?.toLowerCase()
     const segment = url.searchParams.get('segment')
     const page = Number(url.searchParams.get('page') ?? '1')
-    const pageSize = Number(url.searchParams.get('pageSize') ?? '20')
+    const pageSize = Number(url.searchParams.get('pageSize') ?? '50')
 
     let filtered = [...clients]
     if (search) {
