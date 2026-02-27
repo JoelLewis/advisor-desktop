@@ -93,7 +93,7 @@ export function BookAnalyticsView() {
   return (
     <div className="space-y-6">
       {/* AUM by Segment */}
-      <Card>
+      <Card data-annotation="book-segments">
         <CardHeader>AUM by Segment</CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={250}>
@@ -142,7 +142,7 @@ export function BookAnalyticsView() {
       </Card>
 
       {/* Growth Trend */}
-      <Card>
+      <Card data-annotation="book-growth">
         <CardHeader>Client Growth Trend (12 Months)</CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>

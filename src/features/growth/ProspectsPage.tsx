@@ -79,7 +79,7 @@ function ProspectCard({ prospect }: { prospect: Prospect }) {
         </div>
       </div>
 
-      <div className="mt-2 flex items-center gap-2">
+      <div className="mt-2 flex items-center gap-2" data-annotation="prospects-actions">
         <button
           onClick={() => window.open(`tel:${prospect.phone}`)}
           className="rounded p-1 text-text-tertiary hover:bg-surface-tertiary hover:text-text-secondary"
@@ -286,26 +286,30 @@ export function ProspectsPage() {
       ] satisfies DenseMetric[]} />
 
       {prospects && prospects.length > 0 && (
-        <PipelineMetrics prospects={prospects} />
+        <div data-annotation="prospects-metrics">
+          <PipelineMetrics prospects={prospects} />
+        </div>
       )}
 
-      {view === 'board' ? (
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {STAGES.map((stage) => (
-            <BoardColumn
-              key={stage.id}
-              stage={stage}
-              prospects={pipeline.get(stage.id) ?? []}
-            />
-          ))}
-        </div>
-      ) : (
-        <Card>
-          <CardContent className="p-0">
-            <ProspectListView prospects={prospects ?? []} />
-          </CardContent>
-        </Card>
-      )}
+      <div data-annotation="prospects-board">
+        {view === 'board' ? (
+          <div className="flex gap-4 overflow-x-auto pb-4">
+            {STAGES.map((stage) => (
+              <BoardColumn
+                key={stage.id}
+                stage={stage}
+                prospects={pipeline.get(stage.id) ?? []}
+              />
+            ))}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="p-0">
+              <ProspectListView prospects={prospects ?? []} />
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   )
 }
