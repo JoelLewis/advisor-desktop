@@ -106,6 +106,7 @@ type NBA = {
   snoozedUntil?: string;
   actionRoute?: NBAActionRoute;
   complianceInfo?: NBAComplianceInfo;
+  contextRelevance?: 'all' | 'portfolio' | 'trading' | 'dashboard';
 };
 
 type NBAActionTemplate = {

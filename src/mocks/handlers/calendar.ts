@@ -2,8 +2,11 @@ import { http, HttpResponse, delay } from 'msw'
 import { calendarEvents } from '../data/calendar'
 import { clients } from '../data/clients'
 import { accounts } from '../data/accounts'
-import type { MeetingPrep, MeetingPrepItem } from '@/types/calendar'
+import type { MeetingPrep, MeetingPrepItem, MeetingNote, MeetingFollowUp } from '@/types/calendar'
 import { formatAUM, notFound } from './utils'
+
+const meetingNotesStore = new Map<string, MeetingNote>()
+const meetingFollowUpsStore = new Map<string, MeetingFollowUp[]>()
 
 export const calendarHandlers = [
   http.get('/api/calendar/events', ({ request }) => {
@@ -143,5 +146,75 @@ export const calendarHandlers = [
     }
 
     return HttpResponse.json(prep)
+  }),
+
+  // GET /api/calendar/events/:eventId/notes — retrieve meeting notes
+  http.get('/api/calendar/events/:eventId/notes', async ({ params }) => {
+    await delay(200)
+    const eventId = params.eventId as string
+    const event = calendarEvents.find((e) => e.id === eventId)
+    if (!event) return notFound()
+
+    const note = meetingNotesStore.get(eventId) ?? null
+    return HttpResponse.json(note)
+  }),
+
+  // POST /api/calendar/events/:eventId/notes — save/update meeting notes
+  http.post('/api/calendar/events/:eventId/notes', async ({ params, request }) => {
+    await delay(300)
+    const eventId = params.eventId as string
+    const event = calendarEvents.find((e) => e.id === eventId)
+    if (!event) return notFound()
+
+    const body = (await request.json()) as { sections: MeetingNote['sections'] }
+    const now = new Date().toISOString()
+    const existing = meetingNotesStore.get(eventId)
+
+    const note: MeetingNote = {
+      id: existing?.id ?? `note-${eventId}`,
+      eventId,
+      sections: body.sections,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    }
+
+    meetingNotesStore.set(eventId, note)
+    return HttpResponse.json(note)
+  }),
+
+  // GET /api/calendar/events/:eventId/follow-ups — list follow-ups
+  http.get('/api/calendar/events/:eventId/follow-ups', async ({ params }) => {
+    await delay(200)
+    const eventId = params.eventId as string
+    const event = calendarEvents.find((e) => e.id === eventId)
+    if (!event) return notFound()
+
+    const followUps = meetingFollowUpsStore.get(eventId) ?? []
+    return HttpResponse.json(followUps)
+  }),
+
+  // POST /api/calendar/events/:eventId/follow-ups — create follow-up
+  http.post('/api/calendar/events/:eventId/follow-ups', async ({ params, request }) => {
+    await delay(300)
+    const eventId = params.eventId as string
+    const event = calendarEvents.find((e) => e.id === eventId)
+    if (!event) return notFound()
+
+    const body = (await request.json()) as Pick<MeetingFollowUp, 'title' | 'assignee' | 'dueDate'>
+    const existing = meetingFollowUpsStore.get(eventId) ?? []
+
+    const followUp: MeetingFollowUp = {
+      id: `fu-${eventId}-${existing.length + 1}`,
+      eventId,
+      title: body.title,
+      assignee: body.assignee,
+      dueDate: body.dueDate,
+      completed: false,
+      createdAt: new Date().toISOString(),
+    }
+
+    existing.push(followUp)
+    meetingFollowUpsStore.set(eventId, existing)
+    return HttpResponse.json(followUp)
   }),
 ]

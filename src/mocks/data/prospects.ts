@@ -19,6 +19,7 @@ export const prospects: Prospect[] = [
       { id: 'act-001', type: 'email', description: 'Introduction email sent by referring client Robert Johnson', date: '2026-02-20T09:00:00Z' },
     ],
     createdAt: '2026-02-19T14:30:00Z',
+    stageChangedAt: '2026-02-19T14:30:00Z',
     notes: 'Referred by Robert Johnson (cli-001). Recently sold a business and looking for comprehensive wealth management.',
   },
   {
@@ -37,6 +38,7 @@ export const prospects: Prospect[] = [
       { id: 'act-002', type: 'note', description: 'Submitted website inquiry form — interested in retirement planning', date: '2026-02-22T11:15:00Z' },
     ],
     createdAt: '2026-02-22T11:15:00Z',
+    stageChangedAt: '2026-02-22T11:15:00Z',
   },
   {
     id: 'prsp-003',
@@ -56,10 +58,11 @@ export const prospects: Prospect[] = [
       { id: 'act-004', type: 'note', description: 'Expressed interest in estate planning and charitable giving strategies', date: '2026-02-16T08:30:00Z' },
     ],
     createdAt: '2026-02-16T08:30:00Z',
+    stageChangedAt: '2026-02-16T08:30:00Z',
     notes: 'Partner at mid-size law firm. Interested in estate planning and donor-advised funds.',
   },
 
-  // ── Qualified Stage ──
+  // ── Discovery Stage ──
   {
     id: 'prsp-004',
     name: 'Alan Prescott',
@@ -68,7 +71,7 @@ export const prospects: Prospect[] = [
     company: 'Prescott Ventures',
     estimatedAUM: 15000000,
     source: 'referral',
-    stage: 'qualified',
+    stage: 'discovery',
     probability: 0.35,
     assignedAdvisor: 'Sarah Mitchell',
     nextAction: 'Prepare needs assessment presentation',
@@ -79,6 +82,7 @@ export const prospects: Prospect[] = [
       { id: 'act-007', type: 'meeting', description: 'In-person meeting at Dallas office — reviewed current holdings and goals', date: '2026-02-18T14:00:00Z' },
     ],
     createdAt: '2026-02-08T10:00:00Z',
+    stageChangedAt: '2026-02-10T15:00:00Z',
     notes: 'High-net-worth prospect. Unhappy with current advisor responsiveness. Wants consolidated view across 4 accounts.',
   },
   {
@@ -89,7 +93,7 @@ export const prospects: Prospect[] = [
     company: 'TechStart Inc.',
     estimatedAUM: 2800000,
     source: 'existing_client',
-    stage: 'qualified',
+    stage: 'discovery',
     probability: 0.4,
     assignedAdvisor: 'Sarah Mitchell',
     nextAction: 'Schedule meeting to review concentrated stock position',
@@ -99,6 +103,7 @@ export const prospects: Prospect[] = [
       { id: 'act-009', type: 'email', description: 'Received brokerage statements for review — heavy NVDA concentration', date: '2026-02-14T10:30:00Z' },
     ],
     createdAt: '2026-02-12T16:00:00Z',
+    stageChangedAt: '2026-02-12T16:00:00Z',
     notes: 'Tech executive with concentrated stock position in NVDA. Needs diversification strategy and RSU planning.',
   },
 
@@ -122,6 +127,7 @@ export const prospects: Prospect[] = [
       { id: 'act-012', type: 'meeting', description: 'Full financial review meeting — gathered all account data', date: '2026-02-07T10:00:00Z' },
     ],
     createdAt: '2026-01-20T09:00:00Z',
+    stageChangedAt: '2026-02-07T10:00:00Z',
     notes: 'Manufacturing business owner, 62. Planning to sell business in 2-3 years. Needs comprehensive wealth transition plan.',
   },
   {
@@ -142,10 +148,11 @@ export const prospects: Prospect[] = [
       { id: 'act-015', type: 'email', description: 'Sent initial proposal with fee comparison vs. current Edward Jones advisor', date: '2026-02-17T09:00:00Z' },
     ],
     createdAt: '2026-01-26T08:00:00Z',
+    stageChangedAt: '2026-02-17T09:00:00Z',
     notes: 'Recently widowed. Has accounts at Edward Jones and Fidelity. Looking for someone to consolidate and simplify.',
   },
 
-  // ── Negotiation Stage ──
+  // ── Decision Stage ──
   {
     id: 'prsp-008',
     name: 'Victor Okonkwo',
@@ -154,7 +161,7 @@ export const prospects: Prospect[] = [
     company: 'Okonkwo Capital Partners',
     estimatedAUM: 11200000,
     source: 'referral',
-    stage: 'negotiation',
+    stage: 'decision',
     probability: 0.75,
     assignedAdvisor: 'Sarah Mitchell',
     nextAction: 'Finalize fee schedule and sign advisory agreement',
@@ -166,6 +173,7 @@ export const prospects: Prospect[] = [
       { id: 'act-019', type: 'call', description: 'Fee negotiation call — requested volume discount on >$10M', date: '2026-02-20T16:00:00Z' },
     ],
     createdAt: '2026-01-15T10:00:00Z',
+    stageChangedAt: '2026-02-10T08:00:00Z',
     notes: 'Private equity fund manager. Wants UMA structure for personal wealth. Negotiating fee breakpoints on $11.2M.',
   },
   {
@@ -176,7 +184,7 @@ export const prospects: Prospect[] = [
     company: 'Whitfield Dental Group',
     estimatedAUM: 4100000,
     source: 'website',
-    stage: 'negotiation',
+    stage: 'decision',
     probability: 0.7,
     assignedAdvisor: 'Sarah Mitchell',
     nextAction: 'Send revised IPS incorporating 401(k) plan review',
@@ -187,6 +195,7 @@ export const prospects: Prospect[] = [
       { id: 'act-022', type: 'email', description: 'Proposal sent with integrated personal + practice 401(k) advisory', date: '2026-02-14T09:00:00Z' },
     ],
     createdAt: '2026-01-22T12:00:00Z',
+    stageChangedAt: '2026-02-14T09:00:00Z',
     notes: 'Dentist with group practice (12 employees). Wants both personal wealth management and 401(k) plan advisory.',
   },
 
@@ -211,6 +220,7 @@ export const prospects: Prospect[] = [
       { id: 'act-026', type: 'note', description: 'Account opening paperwork submitted — awaiting ACAT initiation', date: '2026-02-24T11:00:00Z' },
     ],
     createdAt: '2026-01-08T10:00:00Z',
+    stageChangedAt: '2026-02-12T08:00:00Z',
     notes: 'DC-area consultant. Transferring $5.7M from Merrill Lynch. Advisory agreement signed, ACAT pending.',
   },
 ]

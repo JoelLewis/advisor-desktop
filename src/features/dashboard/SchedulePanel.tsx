@@ -24,9 +24,14 @@ function addDays(dateStr: string, days: number): string {
   return d.toISOString().slice(0, 10)
 }
 
+type ModalState = {
+  eventId: string
+  tab: 'prep' | 'notes' | 'wrapup'
+} | null
+
 export function SchedulePanel() {
   const [selectedDate, setSelectedDate] = useState('2026-02-25')
-  const [prepEventId, setPrepEventId] = useState<string | null>(null)
+  const [modalState, setModalState] = useState<ModalState>(null)
   const { data: events, isLoading } = useSchedule(selectedDate)
 
   return (
@@ -66,7 +71,12 @@ export function SchedulePanel() {
         ) : events && events.length > 0 ? (
           <div className="space-y-3">
             {events.map((event) => (
-              <MeetingCard key={event.id} event={event} onPrep={setPrepEventId} />
+              <MeetingCard
+                key={event.id}
+                event={event}
+                onPrep={(id) => setModalState({ eventId: id, tab: 'prep' })}
+                onNotes={(id) => setModalState({ eventId: id, tab: 'notes' })}
+              />
             ))}
           </div>
         ) : (
@@ -76,8 +86,12 @@ export function SchedulePanel() {
         )}
       </div>
 
-      {prepEventId && (
-        <MeetingPrepModal eventId={prepEventId} onClose={() => setPrepEventId(null)} />
+      {modalState && (
+        <MeetingPrepModal
+          eventId={modalState.eventId}
+          initialTab={modalState.tab}
+          onClose={() => setModalState(null)}
+        />
       )}
     </Card>
   )

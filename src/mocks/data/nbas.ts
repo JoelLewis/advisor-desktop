@@ -22,17 +22,17 @@ export const nbas: NBA[] = [
   // ── Tax Management ──
   {
     id: 'nba-002', title: 'Tax-loss harvesting opportunity — INTC position',
-    description: 'Intel (INTC) is down 18% from cost basis across 4 client accounts. Harvesting losses could offset $32K in realized gains from Q4.',
+    description: 'Intel (INTC) is down 18% from cost basis across 3 client accounts ($78.6K + $52.4K + $93.3K = $224K harvestable losses). Harvesting could offset realized gains from Q4.',
     category: 'tax_management', priority: 'high',
     scoring: { urgency: 85, impact: 75, efficiency: 70, relationship: 40, confidence: 92, composite: 76 },
     clients: [
       { id: 'cli-001', name: 'Robert Johnson' }, { id: 'cli-004', name: 'David Williams' },
-      { id: 'cli-009', name: 'Richard Anderson' }, { id: 'cli-013', name: "Brian O'Brien" },
+      { id: 'cli-006', name: 'Michael Martinez' },
     ],
     groupId: 'grp-002',
-    trigger: { source: 'pms', condition: 'unrealized_loss_threshold', value: '-18.2%', detectedAt: '2026-02-24T09:30:00Z' },
+    trigger: { source: 'pms', condition: 'unrealized_loss_threshold', value: '-18.7%', detectedAt: '2026-02-24T09:30:00Z' },
     suggestedAction: 'Sell INTC, replace with semiconductor ETF (SMH) to maintain sector exposure',
-    estimatedImpact: 32_000, createdAt: '2026-02-24T09:45:00Z', dismissed: false,
+    estimatedImpact: 224_000, createdAt: '2026-02-24T09:45:00Z', dismissed: false,
     actionRoute: { path: '/portfolios/accounts/acc-002/tax' },
   },
   {
@@ -45,6 +45,7 @@ export const nbas: NBA[] = [
     suggestedAction: 'Block NVDA purchases until Mar 13; use QQQ as temporary substitute',
     estimatedImpact: 8_500, createdAt: '2026-02-24T06:15:00Z', expiresAt: '2026-03-12T23:59:00Z', dismissed: false,
     actionRoute: { path: '/portfolios/accounts/acc-007/tax' },
+    contextRelevance: 'portfolio',
   },
   // ── Planning ──
   {

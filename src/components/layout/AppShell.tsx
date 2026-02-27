@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
 import { useUIStore } from '@/store/ui-store'
 import { useBreakpoint } from '@/hooks/use-breakpoint'
 
-const NAV_ROUTES = ['/dashboard', '/actions', '/clients', '/households', '/portfolios', '/growth', '/engage', '/workflows', '/settings'] as const
+const NAV_ROUTES = ['/dashboard', '/actions', '/clients', '/households', '/portfolios', '/portfolios/trading', '/growth', '/engage', '/workflows', '/settings'] as const
 
 export function AppShell() {
   const sidebarExpanded = useUIStore((s) => s.sidebarExpanded)
@@ -48,9 +48,9 @@ export function AppShell() {
         toggleMessaging()
       }
 
-      // Alt+1..5 navigation shortcuts
+      // Alt+1..9,0 navigation shortcuts
       if (e.altKey && !meta && !e.shiftKey) {
-        const idx = Number(e.key) - 1
+        const idx = e.key === '0' ? 9 : Number(e.key) - 1
         const route = NAV_ROUTES[idx]
         if (route) {
           e.preventDefault()

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { RichCardData } from '@/types/rich-card'
 
-type PanelTab = 'ai' | 'messages' | 'client'
+type PanelTab = 'ai' | 'messages'
 
 type UIStore = {
   sidebarExpanded: boolean

@@ -1,8 +1,16 @@
 import { get, post } from './api-client'
-import type { SymbolSearchResult, ModelTradePreview } from '@/types/trading'
+import type { SymbolSearchResult, ModelTradePreview, OptionChain, TradableAssetClass } from '@/types/trading'
 
-export function searchSymbols(q: string) {
-  return get<SymbolSearchResult[]>('/oms/symbols', { q })
+export function searchSymbols(q: string, assetClass?: TradableAssetClass) {
+  const params: Record<string, string> = { q }
+  if (assetClass) params.assetClass = assetClass
+  return get<SymbolSearchResult[]>('/oms/symbols', params)
+}
+
+export function getOptionChain(underlying: string, expiration?: string) {
+  const params: Record<string, string> = {}
+  if (expiration) params.expiration = expiration
+  return get<OptionChain>(`/oms/options/chain/${underlying}`, params)
 }
 
 export function previewModelTrades(modelId: string, accountIds: string[]) {

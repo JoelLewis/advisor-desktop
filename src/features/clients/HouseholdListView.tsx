@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { Search, ChevronDown, Users, Building2 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { MetricCard } from '@/components/ui/MetricCard'
+import { DenseMetricsBar } from '@/components/ui/DenseMetricsBar'
 import { AllocationChart } from '@/components/ui/AllocationChart'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useHouseholds } from '@/hooks/use-households'
@@ -128,11 +128,7 @@ export function HouseholdListView() {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-20" />
-          ))}
-        </div>
+        <Skeleton className="h-[52px] w-full rounded-lg" />
         <Skeleton className="h-10 max-w-md" />
         <Skeleton className="h-96" />
       </div>
@@ -141,12 +137,12 @@ export function HouseholdListView() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-4 gap-4">
-        <MetricCard label="Total Households" value={String(households.length)} />
-        <MetricCard label="Total AUM" value={formatCurrency(totalAUM, true)} />
-        <MetricCard label="Avg AUM / HH" value={formatCurrency(avgAUM, true)} />
-        <MetricCard label="Segments" value={segmentBreakdownText(households)} />
-      </div>
+      <DenseMetricsBar metrics={[
+        { label: 'Total Households', value: String(households.length) },
+        { label: 'Total AUM', value: formatCurrency(totalAUM, true) },
+        { label: 'Avg AUM / HH', value: formatCurrency(avgAUM, true) },
+        { label: 'Segments', value: segmentBreakdownText(households) },
+      ]} />
 
       <div className="flex items-center gap-4">
         <div className="relative max-w-md flex-1">

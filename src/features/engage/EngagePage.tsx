@@ -2,16 +2,23 @@ import { useState, useMemo } from 'react'
 import {
   Megaphone, Mail, Phone, Video, Users2, FileText,
   ArrowUpRight, ArrowDownLeft, Sparkles, Globe, Hash,
-  Calendar, Send, Shield, ShieldAlert,
+  Calendar, Send, Shield, ShieldAlert, Plus, Pause, Play,
+  Edit3, XCircle,
 } from 'lucide-react'
 import { TabLayout } from '@/components/ui/TabLayout'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { AIInsightStack } from '@/components/ui/AIInsightCard'
-import { useAllClientComms, useCampaigns, useSocialOpportunities, useNewsletters } from '@/hooks/use-engage'
+import {
+  useAllClientComms, useCampaigns, useSocialOpportunities, useNewsletters,
+  useUpdateCampaignStatus, useScheduleSocialPost, useRequestSocialApproval,
+} from '@/hooks/use-engage'
 import { useAIInsights } from '@/hooks/use-ai'
 import { formatDate } from '@/lib/utils'
+import { ComposeEmailDialog } from './ComposeEmailDialog'
+import { LogCallDialog } from './LogCallDialog'
+import { CampaignDialog } from './CampaignDialog'
 import type { CommChannel, CommDirection } from '@/types/client-comms'
 import type { CampaignStatus, ComplianceStatus, NewsletterStatus, SocialPlatform, SocialType } from '@/types/engage'
 
@@ -63,6 +70,8 @@ function ClientCommsTab() {
   const { data, isLoading } = useAllClientComms()
   const [channelFilter, setChannelFilter] = useState<CommChannel | 'all'>('all')
   const [directionFilter, setDirectionFilter] = useState<CommDirection | 'all'>('all')
+  const [composeOpen, setComposeOpen] = useState(false)
+  const [logCallOpen, setLogCallOpen] = useState(false)
 
   const filtered = useMemo(() => {
     let items = data?.items ?? []
@@ -75,6 +84,24 @@ function ClientCommsTab() {
 
   return (
     <div className="space-y-4">
+      {/* Action buttons */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setComposeOpen(true)}
+          className="flex items-center gap-1.5 rounded-md bg-accent-blue px-3 py-1.5 text-caption font-medium text-white transition-colors hover:bg-accent-blue/90"
+        >
+          <Mail className="h-3.5 w-3.5" />
+          Compose Email
+        </button>
+        <button
+          onClick={() => setLogCallOpen(true)}
+          className="flex items-center gap-1.5 rounded-md border border-border-secondary px-3 py-1.5 text-caption font-medium text-text-primary transition-colors hover:bg-surface-tertiary"
+        >
+          <Phone className="h-3.5 w-3.5" />
+          Log Call
+        </button>
+      </div>
+
       {/* Filters */}
       <div className="flex items-center gap-2">
         <span className="text-caption text-text-tertiary">Channel:</span>
@@ -150,76 +177,133 @@ function ClientCommsTab() {
           <div className="py-8 text-center text-caption text-text-tertiary">No communications match your filters</div>
         )}
       </Card>
+
+      <ComposeEmailDialog open={composeOpen} onClose={() => setComposeOpen(false)} />
+      <LogCallDialog open={logCallOpen} onClose={() => setLogCallOpen(false)} />
     </div>
   )
 }
 
 function CampaignsTab() {
   const { data, isLoading } = useCampaigns()
+  const updateStatus = useUpdateCampaignStatus()
+  const [campaignDialogOpen, setCampaignDialogOpen] = useState(false)
+
   if (isLoading) return <Skeleton className="h-96" />
 
   const items = data?.items ?? []
 
   return (
-    <div className="grid grid-cols-2 gap-4">
-      {items.map((camp) => (
-        <Card key={camp.id}>
-          <CardContent className="space-y-3">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <h3 className="text-body-strong text-text-primary">{camp.name}</h3>
-                <div className="mt-1 flex items-center gap-2">
-                  <Badge variant={CAMPAIGN_STATUS_BADGE[camp.status]}>{camp.status}</Badge>
-                  <span className="text-caption text-text-tertiary">{camp.channel}</span>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div />
+        <button
+          onClick={() => setCampaignDialogOpen(true)}
+          className="flex items-center gap-1.5 rounded-md bg-accent-blue px-3 py-1.5 text-caption font-medium text-white transition-colors hover:bg-accent-blue/90"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Create Campaign
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        {items.map((camp) => (
+          <Card key={camp.id}>
+            <CardContent className="space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h3 className="text-body-strong text-text-primary">{camp.name}</h3>
+                  <div className="mt-1 flex items-center gap-2">
+                    <Badge variant={CAMPAIGN_STATUS_BADGE[camp.status]}>{camp.status}</Badge>
+                    <span className="text-caption text-text-tertiary">{camp.channel}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {camp.nbaTriggered && (
+                    <Badge variant="purple">
+                      <Sparkles className="mr-1 h-3 w-3" />
+                      NBA
+                    </Badge>
+                  )}
+                  {camp.complianceApproved ? (
+                    <Shield className="h-4 w-4 text-accent-green" />
+                  ) : (
+                    <ShieldAlert className="h-4 w-4 text-text-tertiary" />
+                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                {camp.nbaTriggered && (
-                  <Badge variant="purple">
-                    <Sparkles className="mr-1 h-3 w-3" />
-                    NBA
-                  </Badge>
-                )}
-                {camp.complianceApproved ? (
-                  <Shield className="h-4 w-4 text-accent-green" />
-                ) : (
-                  <ShieldAlert className="h-4 w-4 text-text-tertiary" />
-                )}
+              <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+                <div>
+                  <p className="text-[10px] font-medium uppercase text-text-tertiary">Audience</p>
+                  <p className="font-mono text-body">{camp.audienceCount}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-medium uppercase text-text-tertiary">Sent</p>
+                  <p className="font-mono text-body">{camp.sentCount}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-medium uppercase text-text-tertiary">Open Rate</p>
+                  <p className="font-mono text-body">{camp.openRate > 0 ? `${camp.openRate}%` : '\u2014'}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-medium uppercase text-text-tertiary">Click Rate</p>
+                  <p className="font-mono text-body">{camp.clickRate > 0 ? `${camp.clickRate}%` : '\u2014'}</p>
+                </div>
               </div>
-            </div>
-            <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-              <div>
-                <p className="text-[10px] font-medium uppercase text-text-tertiary">Audience</p>
-                <p className="font-mono text-body">{camp.audienceCount}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-medium uppercase text-text-tertiary">Sent</p>
-                <p className="font-mono text-body">{camp.sentCount}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-medium uppercase text-text-tertiary">Open Rate</p>
-                <p className="font-mono text-body">{camp.openRate > 0 ? `${camp.openRate}%` : '\u2014'}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-medium uppercase text-text-tertiary">Click Rate</p>
-                <p className="font-mono text-body">{camp.clickRate > 0 ? `${camp.clickRate}%` : '\u2014'}</p>
-              </div>
-            </div>
-            {camp.scheduledDate && (
-              <div className="flex items-center gap-1 text-caption text-text-tertiary">
-                <Calendar className="h-3 w-3" />
-                Scheduled: {formatDate(camp.scheduledDate)}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      ))}
+              {camp.scheduledDate && (
+                <div className="flex items-center gap-1 text-caption text-text-tertiary">
+                  <Calendar className="h-3 w-3" />
+                  Scheduled: {formatDate(camp.scheduledDate)}
+                </div>
+              )}
+              {/* Action buttons based on status */}
+              {camp.status !== 'completed' && (
+                <div className="flex items-center gap-2 border-t border-border-primary pt-3">
+                  {camp.status === 'draft' && (
+                    <>
+                      <button
+                        className="flex items-center gap-1 rounded px-2 py-1 text-caption font-medium text-text-secondary transition-colors hover:bg-surface-tertiary"
+                      >
+                        <Edit3 className="h-3 w-3" />
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => updateStatus.mutate({ id: camp.id, status: 'scheduled' })}
+                        disabled={updateStatus.isPending}
+                        className="flex items-center gap-1 rounded px-2 py-1 text-caption font-medium text-accent-blue transition-colors hover:bg-accent-blue/10"
+                      >
+                        <Send className="h-3 w-3" />
+                        Send
+                      </button>
+                    </>
+                  )}
+                  {(camp.status === 'scheduled' || camp.status === 'active') && (
+                    <button
+                      onClick={() => updateStatus.mutate({ id: camp.id, status: 'draft' })}
+                      disabled={updateStatus.isPending}
+                      className="flex items-center gap-1 rounded px-2 py-1 text-caption font-medium text-text-secondary transition-colors hover:bg-surface-tertiary"
+                    >
+                      <Pause className="h-3 w-3" />
+                      Pause
+                    </button>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <CampaignDialog open={campaignDialogOpen} onClose={() => setCampaignDialogOpen(false)} />
     </div>
   )
 }
 
 function SocialTab() {
   const { data, isLoading } = useSocialOpportunities()
+  const schedulePost = useScheduleSocialPost()
+  const requestApproval = useRequestSocialApproval()
+
   if (isLoading) return <Skeleton className="h-96" />
 
   const items = data?.items ?? []
@@ -245,12 +329,38 @@ function SocialTab() {
                     </div>
                   </div>
                   <p className="text-caption text-text-secondary">{opp.suggestedContent}</p>
-                  {opp.scheduledDate && (
-                    <div className="flex items-center gap-1 text-caption text-text-tertiary">
-                      <Calendar className="h-3 w-3" />
-                      Scheduled: {formatDate(opp.scheduledDate)}
+                  <div className="flex items-center justify-between">
+                    {opp.scheduledDate ? (
+                      <div className="flex items-center gap-1 text-caption text-text-tertiary">
+                        <Calendar className="h-3 w-3" />
+                        Scheduled: {formatDate(opp.scheduledDate)}
+                      </div>
+                    ) : (
+                      <div />
+                    )}
+                    <div className="flex items-center gap-2">
+                      {opp.complianceStatus === 'approved' && !opp.scheduledDate && (
+                        <button
+                          onClick={() => schedulePost.mutate(opp.id)}
+                          disabled={schedulePost.isPending}
+                          className="flex items-center gap-1 rounded px-2 py-1 text-caption font-medium text-accent-blue transition-colors hover:bg-accent-blue/10"
+                        >
+                          <Calendar className="h-3 w-3" />
+                          Schedule Post
+                        </button>
+                      )}
+                      {opp.complianceStatus !== 'approved' && opp.complianceStatus !== 'pending' && (
+                        <button
+                          onClick={() => requestApproval.mutate(opp.id)}
+                          disabled={requestApproval.isPending}
+                          className="flex items-center gap-1 rounded px-2 py-1 text-caption font-medium text-text-secondary transition-colors hover:bg-surface-tertiary"
+                        >
+                          <Shield className="h-3 w-3" />
+                          Request Approval
+                        </button>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -302,6 +412,29 @@ function NewslettersTab() {
                   <div className="text-right">
                     <p className="text-[10px] font-medium uppercase text-text-tertiary">Sent</p>
                     <p className="text-caption text-text-secondary">{formatDate(nl.sentDate)}</p>
+                  </div>
+                )}
+                {/* Action buttons */}
+                {nl.status !== 'sent' && (
+                  <div className="flex items-center gap-2">
+                    {nl.status === 'draft' && (
+                      <>
+                        <button className="flex items-center gap-1 rounded px-2 py-1 text-caption font-medium text-text-secondary transition-colors hover:bg-surface-tertiary">
+                          <Edit3 className="h-3 w-3" />
+                          Edit
+                        </button>
+                        <button className="flex items-center gap-1 rounded px-2 py-1 text-caption font-medium text-accent-blue transition-colors hover:bg-accent-blue/10">
+                          <Play className="h-3 w-3" />
+                          Schedule
+                        </button>
+                      </>
+                    )}
+                    {nl.status === 'scheduled' && (
+                      <button className="flex items-center gap-1 rounded px-2 py-1 text-caption font-medium text-text-secondary transition-colors hover:bg-surface-tertiary">
+                        <XCircle className="h-3 w-3" />
+                        Cancel
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

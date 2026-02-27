@@ -1,17 +1,19 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, AlertTriangle, XCircle, RefreshCw, Loader2, Shield } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, AlertTriangle, XCircle, RefreshCw, Loader2, Shield, Layers } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useAccounts } from '@/hooks/use-accounts'
-import { useDriftSummary } from '@/hooks/use-portfolio'
+import { useDriftSummary, useModels } from '@/hooks/use-portfolio'
 import { useRebalancePreview, useExecuteRebalance, useTradeComplianceCheck } from '@/hooks/use-orders'
 import { formatCurrency, cn } from '@/lib/utils'
 import type { RebalancePreview } from '@/services/oms'
 import type { TradeComplianceResult, TradeComplianceCheck } from '@/types/compliance'
+import type { ModelAssignment } from '@/types/portfolio'
 
 type WizardStep = 'select' | 'preview' | 'review' | 'execute'
+type SelectionMode = 'accounts' | 'model'
 
 const STEPS: { id: WizardStep; label: string }[] = [
   { id: 'select', label: 'Select Accounts' },
@@ -26,35 +28,70 @@ const COMPLIANCE_STATUS_BADGE: Record<string, 'green' | 'yellow' | 'red'> = {
   fail: 'red',
 }
 
+const SELECTION_MODE_OPTIONS: { id: SelectionMode; label: string }[] = [
+  { id: 'accounts', label: 'Accounts' },
+  { id: 'model', label: 'Model' },
+]
+
 export function RebalancePage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const preselected = searchParams.get('accounts')?.split(',').filter(Boolean) ?? []
+  const preselectedAccounts = searchParams.get('accounts')?.split(',').filter(Boolean) ?? []
+  const preselectedModel = searchParams.get('model')
 
   const { data: accounts } = useAccounts({})
   const { data: driftSummary } = useDriftSummary()
+  const { data: models } = useModels()
   const previewMutation = useRebalancePreview()
   const executeMutation = useExecuteRebalance()
   const complianceMutation = useTradeComplianceCheck()
 
   const [step, setStep] = useState<WizardStep>('select')
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(preselected))
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(preselectedAccounts))
   const [taxAware, setTaxAware] = useState(true)
   const [driftThreshold, setDriftThreshold] = useState(3.0)
   const [previews, setPreviews] = useState<RebalancePreview[]>([])
   const [complianceResults, setComplianceResults] = useState<TradeComplianceResult[]>([])
+  const [selectionMode, setSelectionMode] = useState<SelectionMode>(preselectedModel ? 'model' : 'accounts')
+  const [selectedModelId, setSelectedModelId] = useState<string | null>(preselectedModel)
 
-  // Auto-advance to preview if accounts were pre-selected
+  const driftMap = useMemo(() => new Map(driftSummary?.map((d) => [d.accountId, d]) ?? []), [driftSummary])
+  const driftedAccounts = useMemo(() => accounts?.filter((a) => driftMap.get(a.id)?.needsRebalance) ?? [], [accounts, driftMap])
+
+  // Build model -> drifted account mapping
+  const driftedAccountsByModel = useMemo(() => {
+    const map = new Map<string, string[]>()
+    if (driftedAccounts.length > 0) {
+      for (const acc of driftedAccounts) {
+        const existing = map.get(acc.modelId)
+        if (existing) {
+          existing.push(acc.id)
+        } else {
+          map.set(acc.modelId, [acc.id])
+        }
+      }
+    }
+    return map
+  }, [driftedAccounts])
+
+  // Auto-select model accounts when preselectedModel is present
   useEffect(() => {
-    if (preselected.length > 0 && accounts && driftSummary) {
+    if (preselectedModel && accounts && driftSummary) {
+      const modelDriftedIds = driftedAccountsByModel.get(preselectedModel) ?? []
+      if (modelDriftedIds.length > 0) {
+        setSelectedIds(new Set(modelDriftedIds))
+      }
+    }
+  }, [preselectedModel, accounts, driftSummary, driftedAccountsByModel])
+
+  // Auto-advance to preview if accounts were pre-selected (not model mode)
+  useEffect(() => {
+    if (preselectedAccounts.length > 0 && !preselectedModel && accounts && driftSummary) {
       handlePreview()
     }
     // Only run on initial mount with preselected accounts
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accounts, driftSummary])
-
-  const driftMap = new Map(driftSummary?.map((d) => [d.accountId, d]) ?? [])
-  const driftedAccounts = accounts?.filter((a) => driftMap.get(a.id)?.needsRebalance) ?? []
 
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {
@@ -63,6 +100,18 @@ export function RebalancePage() {
       else next.add(id)
       return next
     })
+  }
+
+  function handleSelectModel(modelId: string) {
+    if (selectedModelId === modelId) {
+      // Deselect model
+      setSelectedModelId(null)
+      setSelectedIds(new Set())
+    } else {
+      setSelectedModelId(modelId)
+      const modelDriftedIds = driftedAccountsByModel.get(modelId) ?? []
+      setSelectedIds(new Set(modelDriftedIds))
+    }
   }
 
   function handlePreview() {
@@ -130,6 +179,31 @@ export function RebalancePage() {
           <Card>
             <CardHeader action={
               <div className="flex items-center gap-4">
+                {/* Selection mode toggle */}
+                <div className="flex items-center gap-2 text-caption text-text-secondary">
+                  <span>Select by:</span>
+                  <div className="inline-flex rounded-lg border border-border-primary">
+                    {SELECTION_MODE_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.id}
+                        onClick={() => {
+                          setSelectionMode(opt.id)
+                          if (opt.id === 'accounts') {
+                            setSelectedModelId(null)
+                          }
+                        }}
+                        className={cn(
+                          'px-2.5 py-1 text-caption font-medium transition-colors first:rounded-l-[7px] last:rounded-r-[7px]',
+                          selectionMode === opt.id
+                            ? 'bg-accent-blue text-white'
+                            : 'text-text-secondary hover:bg-surface-tertiary',
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <label className="flex items-center gap-2 text-caption text-text-secondary">
                   Drift threshold
                   <input
@@ -154,11 +228,22 @@ export function RebalancePage() {
                 </label>
               </div>
             }>
-              Accounts Exceeding Drift Threshold
+              {selectionMode === 'accounts' ? 'Accounts Exceeding Drift Threshold' : 'Select Model to Rebalance'}
             </CardHeader>
             <CardContent>
               {!accounts ? (
                 <Skeleton className="h-40" />
+              ) : selectionMode === 'model' ? (
+                <ModelSelectionView
+                  models={models ?? []}
+                  driftedAccountsByModel={driftedAccountsByModel}
+                  accounts={accounts}
+                  driftMap={driftMap}
+                  selectedModelId={selectedModelId}
+                  selectedIds={selectedIds}
+                  onSelectModel={handleSelectModel}
+                  onToggleAccount={toggleSelect}
+                />
               ) : (
                 <div className="space-y-2">
                   {driftedAccounts.map((acc) => {
@@ -380,6 +465,150 @@ export function RebalancePage() {
     </div>
   )
 }
+
+// ── Model Selection View ──
+
+function ModelSelectionView({
+  models,
+  driftedAccountsByModel,
+  accounts,
+  driftMap,
+  selectedModelId,
+  selectedIds,
+  onSelectModel,
+  onToggleAccount,
+}: {
+  models: ModelAssignment[]
+  driftedAccountsByModel: Map<string, string[]>
+  accounts: { id: string; name: string; accountNumber: string; totalValue: number; modelId: string }[]
+  driftMap: Map<string, { totalDrift: number; needsRebalance: boolean }>
+  selectedModelId: string | null
+  selectedIds: Set<string>
+  onSelectModel: (modelId: string) => void
+  onToggleAccount: (accountId: string) => void
+}) {
+  // Only show models that have drifted accounts
+  const modelsWithDrift = models.filter((m) => (driftedAccountsByModel.get(m.id)?.length ?? 0) > 0)
+  const modelsWithoutDrift = models.filter((m) => (driftedAccountsByModel.get(m.id)?.length ?? 0) === 0)
+
+  const selectedModelAccounts = selectedModelId
+    ? accounts.filter((a) => a.modelId === selectedModelId && driftMap.get(a.id)?.needsRebalance)
+    : []
+
+  return (
+    <div className="space-y-4">
+      {/* Model cards */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+        {modelsWithDrift.map((model) => {
+          const driftedCount = driftedAccountsByModel.get(model.id)?.length ?? 0
+          const modelAccounts = accounts.filter((a) => a.modelId === model.id)
+          const totalAUM = modelAccounts.reduce((sum, a) => sum + a.totalValue, 0)
+          const isSelected = selectedModelId === model.id
+
+          return (
+            <button
+              key={model.id}
+              onClick={() => onSelectModel(model.id)}
+              className={cn(
+                'rounded-lg border p-4 text-left transition-colors',
+                isSelected
+                  ? 'border-accent-blue bg-accent-blue/5 ring-1 ring-accent-blue'
+                  : 'border-border-primary hover:bg-surface-tertiary',
+              )}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2">
+                  <Layers className="h-4 w-4 text-accent-blue" />
+                  <span className="text-body-strong">{model.name}</span>
+                </div>
+                {isSelected && (
+                  <Badge variant="blue">Selected</Badge>
+                )}
+              </div>
+              <p className="mt-1 text-caption text-text-secondary">{model.description}</p>
+              <div className="mt-2 flex gap-4 text-caption">
+                <span className="text-text-secondary">{modelAccounts.length} accounts</span>
+                <span className="font-mono text-text-secondary">{formatCurrency(totalAUM, true)}</span>
+                <span className="text-accent-red">
+                  <AlertTriangle className="mr-0.5 inline h-3 w-3" />
+                  {driftedCount} drifted
+                </span>
+              </div>
+            </button>
+          )
+        })}
+        {modelsWithoutDrift.map((model) => {
+          const modelAccounts = accounts.filter((a) => a.modelId === model.id)
+          const totalAUM = modelAccounts.reduce((sum, a) => sum + a.totalValue, 0)
+
+          return (
+            <div
+              key={model.id}
+              className="rounded-lg border border-border-primary p-4 opacity-50"
+            >
+              <div className="flex items-center gap-2">
+                <Layers className="h-4 w-4 text-text-tertiary" />
+                <span className="text-body-strong text-text-secondary">{model.name}</span>
+              </div>
+              <p className="mt-1 text-caption text-text-tertiary">{model.description}</p>
+              <div className="mt-2 flex gap-4 text-caption">
+                <span className="text-text-tertiary">{modelAccounts.length} accounts</span>
+                <span className="font-mono text-text-tertiary">{formatCurrency(totalAUM, true)}</span>
+                <span className="text-accent-green">No drift</span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Individual account selection under selected model */}
+      {selectedModelId && selectedModelAccounts.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-caption font-medium text-text-secondary">
+            Drifted accounts in {models.find((m) => m.id === selectedModelId)?.name} - deselect individual accounts if needed:
+          </p>
+          {selectedModelAccounts.map((acc) => {
+            const drift = driftMap.get(acc.id)
+            return (
+              <label
+                key={acc.id}
+                className={cn(
+                  'flex cursor-pointer items-center justify-between rounded-md border px-4 py-3',
+                  selectedIds.has(acc.id) ? 'border-accent-blue bg-accent-blue/5' : 'border-border-primary hover:bg-surface-tertiary',
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(acc.id)}
+                    onChange={() => onToggleAccount(acc.id)}
+                    className="h-4 w-4 rounded accent-accent-blue"
+                  />
+                  <div>
+                    <p className="text-body-strong">{acc.name}</p>
+                    <p className="font-mono text-caption text-text-tertiary">{acc.accountNumber}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-6">
+                  <span className="font-mono text-body">{formatCurrency(acc.totalValue, true)}</span>
+                  <span className="font-mono text-caption text-accent-red">
+                    {drift ? `${(drift.totalDrift * 100).toFixed(1)}% drift` : ''}
+                  </span>
+                </div>
+              </label>
+            )
+          })}
+        </div>
+      )}
+
+      {models.length === 0 && (
+        <p className="py-8 text-center text-caption text-text-tertiary">No models available</p>
+      )}
+    </div>
+  )
+}
+
+// ── Helper Components ──
 
 const CATEGORY_LABELS: Record<TradeComplianceCheck['category'], string> = {
   restricted_securities: 'Restricted',

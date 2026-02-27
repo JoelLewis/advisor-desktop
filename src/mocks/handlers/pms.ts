@@ -16,7 +16,25 @@ const metricsSummary: MetricsSummary = {
   netFlowsMTD: 1_250_000,
 }
 
-function generatePerformanceSeries(months: number): PerformanceSeries[] {
+// Seeded PRNG (LCG) for deterministic performance series per account
+function hashSeed(str: string): number {
+  let h = 0
+  for (let i = 0; i < str.length; i++) {
+    h = (h * 31 + str.charCodeAt(i)) | 0
+  }
+  return Math.abs(h) || 1
+}
+
+function createSeededRandom(seed: number) {
+  let state = seed
+  return () => {
+    state = (state * 1664525 + 1013904223) | 0
+    return ((state >>> 0) / 0xFFFFFFFF)
+  }
+}
+
+function generatePerformanceSeries(months: number, accountId = 'default'): PerformanceSeries[] {
+  const rand = createSeededRandom(hashSeed(accountId))
   const series: PerformanceSeries[] = []
   let portfolioValue = 100
   let benchmarkValue = 100
@@ -24,8 +42,8 @@ function generatePerformanceSeries(months: number): PerformanceSeries[] {
   for (let i = months; i >= 0; i--) {
     const date = new Date(now)
     date.setMonth(date.getMonth() - i)
-    portfolioValue *= 1 + (Math.random() * 0.06 - 0.02)
-    benchmarkValue *= 1 + (Math.random() * 0.055 - 0.02)
+    portfolioValue *= 1 + (rand() * 0.06 - 0.02)
+    benchmarkValue *= 1 + (rand() * 0.055 - 0.02)
     series.push({
       date: date.toISOString().slice(0, 10),
       value: roundTo(portfolioValue, 2),
@@ -222,8 +240,9 @@ export const pmsHandlers = [
     return HttpResponse.json(computeDriftForAccount(account))
   }),
 
-  http.get('/api/pms/accounts/:accountId/performance', () => {
-    return HttpResponse.json(generatePerformanceSeries(24))
+  http.get('/api/pms/accounts/:accountId/performance', ({ params }) => {
+    const accountId = Array.isArray(params.accountId) ? params.accountId[0] : params.accountId
+    return HttpResponse.json(generatePerformanceSeries(24, accountId ?? 'default'))
   }),
 
   http.get('/api/pms/accounts/:accountId/benchmark', () => {
@@ -373,13 +392,17 @@ export const pmsHandlers = [
           { percentile: 95, value: value * 1.28 },
           { percentile: 99, value: value * 1.38 },
         ],
-        histogram: Array.from({ length: 30 }, (_, i) => {
-          const returnPct = -0.30 + i * 0.025
-          const center = 0.06
-          const sigma = 0.12
-          const freq = Math.exp(-0.5 * ((returnPct - center) / sigma) ** 2)
-          return { returnBucket: roundTo(returnPct, 2), frequency: Math.round(freq * 800 + Math.random() * 40) }
-        }),
+        histogram: (() => {
+          const accountId = Array.isArray(params.accountId) ? params.accountId[0] : params.accountId
+          const rand = createSeededRandom(hashSeed(accountId ?? 'mc'))
+          return Array.from({ length: 30 }, (_, i) => {
+            const returnPct = -0.30 + i * 0.025
+            const center = 0.06
+            const sigma = 0.12
+            const freq = Math.exp(-0.5 * ((returnPct - center) / sigma) ** 2)
+            return { returnBucket: roundTo(returnPct, 2), frequency: Math.round(freq * 800 + rand() * 40) }
+          })
+        })(),
       },
     })
   }),
@@ -448,12 +471,6 @@ export const pmsHandlers = [
         value: Math.round(value),
       })),
     )
-  }),
-
-  http.get('/api/pms/models/:modelId', ({ params }) => {
-    const model = MODELS.find((m) => m.id === params.modelId)
-    if (!model) return notFound()
-    return HttpResponse.json(model)
   }),
 
   http.get('/api/pms/models/governance', () => {
@@ -661,5 +678,11 @@ export const pmsHandlers = [
       },
     ]
     return HttpResponse.json(modelGovernance)
+  }),
+
+  http.get('/api/pms/models/:modelId', ({ params }) => {
+    const model = MODELS.find((m) => m.id === params.modelId)
+    if (!model) return notFound()
+    return HttpResponse.json(model)
   }),
 ]

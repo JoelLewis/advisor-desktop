@@ -1,16 +1,43 @@
 import { http, HttpResponse } from 'msw'
-import { symbols } from '../data/trading'
+import { symbols, getOptionChainData } from '../data/trading'
 
 export const tradingHandlers = [
-  // Symbol search
+  // Symbol search — supports optional ?assetClass= filter
   http.get('/api/oms/symbols', ({ request }) => {
     const url = new URL(request.url)
     const q = url.searchParams.get('q')?.toUpperCase() ?? ''
+    const assetClass = url.searchParams.get('assetClass')
     if (!q) return HttpResponse.json([])
-    const matches = symbols
-      .filter((s) => s.symbol.includes(q) || s.name.toUpperCase().includes(q))
+
+    let pool = symbols
+    if (assetClass) {
+      pool = pool.filter((s) => s.assetClass === assetClass)
+    }
+
+    const matches = pool
+      .filter((s) => s.symbol.toUpperCase().includes(q) || s.name.toUpperCase().includes(q))
       .slice(0, 10)
     return HttpResponse.json(matches)
+  }),
+
+  // Option chain
+  http.get('/api/oms/options/chain/:underlying', ({ params, request }) => {
+    const underlying = (params.underlying as string).toUpperCase()
+    const url = new URL(request.url)
+    const expiration = url.searchParams.get('expiration')
+
+    const chain = getOptionChainData(underlying)
+    if (!chain) return HttpResponse.json({ error: 'No options available for this underlying' }, { status: 404 })
+
+    if (expiration) {
+      const filtered = {
+        ...chain,
+        expirations: chain.expirations.filter((e) => e.expirationDate === expiration),
+      }
+      return HttpResponse.json(filtered)
+    }
+
+    return HttpResponse.json(chain)
   }),
 
   // Model trade preview
@@ -26,7 +53,7 @@ export const tradingHandlers = [
         {
           symbol: 'AAPL',
           name: 'Apple Inc.',
-          assetClass: 'us_equity',
+          assetClass: 'equity',
           side: 'sell' as const,
           quantity: 15,
           estimatedValue: 2775,

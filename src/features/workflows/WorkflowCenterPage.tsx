@@ -1,4 +1,5 @@
-import { CheckCircle2, Circle, Clock, AlertTriangle, Sparkles, User, Bot, ChevronRight } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { CheckCircle2, Circle, Clock, AlertTriangle, Sparkles, User, Bot, ChevronRight, Plus, Play } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { TabLayout } from '@/components/ui/TabLayout'
 import { Badge } from '@/components/ui/Badge'
@@ -8,6 +9,8 @@ import { useMyActions, useInProcess, useDelegated, useWorkflowTemplates } from '
 import { useUIStore } from '@/store/ui-store'
 import { formatDate, cn } from '@/lib/utils'
 import { PRIORITY_VARIANTS } from '@/lib/labels'
+import { StartWorkflowDialog } from './StartWorkflowDialog'
+import { QuickTaskDialog } from './QuickTaskDialog'
 import type { Task, TaskStatus, ProcessTracker, WorkflowTemplate } from '@/types/workflow'
 import type { ColumnDef } from '@tanstack/react-table'
 
@@ -192,39 +195,6 @@ const delegatedColumns: ColumnDef<Task, unknown>[] = [
   },
 ]
 
-const templateColumns: ColumnDef<WorkflowTemplate, unknown>[] = [
-  {
-    accessorKey: 'name', header: 'Template',
-    cell: ({ row }) => (
-      <div>
-        <p className="text-body-strong">{row.original.name}</p>
-        <p className="text-caption text-text-secondary">{row.original.description}</p>
-      </div>
-    ),
-    size: 360,
-  },
-  {
-    accessorKey: 'category', header: 'Category',
-    cell: ({ row }) => <Badge variant="default">{row.original.category}</Badge>,
-    size: 130,
-  },
-  {
-    accessorKey: 'steps', header: 'Steps',
-    cell: ({ row }) => <span className="font-mono text-caption">{row.original.steps.length} steps</span>,
-    size: 80,
-  },
-  {
-    id: 'estTime', header: 'Est. Time',
-    cell: ({ row }) => {
-      const totalMin = row.original.steps.reduce((sum, s) => sum + s.estimatedMinutes, 0)
-      const hours = Math.floor(totalMin / 60)
-      const mins = totalMin % 60
-      return <span className="font-mono text-caption text-text-secondary">{hours > 0 ? `${hours}h ` : ''}{mins > 0 ? `${mins}m` : ''}</span>
-    },
-    size: 100,
-  },
-]
-
 function ProcessCard({ tracker }: { tracker: ProcessTracker }) {
   return (
     <Card className={cn(tracker.isNigo && 'border-l-[3px] border-l-accent-red')}>
@@ -288,6 +258,60 @@ export function WorkflowCenterPage() {
   const { data: delegated, isLoading: loadingDeleg } = useDelegated()
   const { data: templates } = useWorkflowTemplates()
 
+  const [startWorkflowOpen, setStartWorkflowOpen] = useState(false)
+  const [quickTaskOpen, setQuickTaskOpen] = useState(false)
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | undefined>()
+
+  const templateColumnsWithAction: ColumnDef<WorkflowTemplate, unknown>[] = useMemo(() => [
+    {
+      accessorKey: 'name', header: 'Template',
+      cell: ({ row }) => (
+        <div>
+          <p className="text-body-strong">{row.original.name}</p>
+          <p className="text-caption text-text-secondary">{row.original.description}</p>
+        </div>
+      ),
+      size: 360,
+    },
+    {
+      accessorKey: 'category', header: 'Category',
+      cell: ({ row }) => <Badge variant="default">{row.original.category}</Badge>,
+      size: 130,
+    },
+    {
+      accessorKey: 'steps', header: 'Steps',
+      cell: ({ row }) => <span className="font-mono text-caption">{row.original.steps.length} steps</span>,
+      size: 80,
+    },
+    {
+      id: 'estTime', header: 'Est. Time',
+      cell: ({ row }) => {
+        const totalMin = row.original.steps.reduce((sum, s) => sum + s.estimatedMinutes, 0)
+        const hours = Math.floor(totalMin / 60)
+        const mins = totalMin % 60
+        return <span className="font-mono text-caption text-text-secondary">{hours > 0 ? `${hours}h ` : ''}{mins > 0 ? `${mins}m` : ''}</span>
+      },
+      size: 100,
+    },
+    {
+      id: 'actions', header: '',
+      cell: ({ row }) => (
+        <button
+          onClick={() => {
+            setSelectedTemplateId(row.original.id)
+            setStartWorkflowOpen(true)
+          }}
+          className="flex items-center gap-1 rounded px-2 py-1 text-caption font-medium text-accent-blue transition-colors hover:bg-accent-blue/10"
+        >
+          <Play className="h-3 w-3" />
+          Start
+        </button>
+      ),
+      size: 80,
+      enableSorting: false,
+    },
+  ], [])
+
   if (loadingActions || loadingProc || loadingDeleg) {
     return (
       <div className="space-y-6">
@@ -307,14 +331,25 @@ export function WorkflowCenterPage() {
     {
       id: 'my-actions', label: 'My Actions', count: pendingActions.length,
       content: (
-        <Card>
-          <DataTable
-            data={myActions ?? []}
-            columns={taskColumns}
-            compact
-            emptyMessage="No actions pending"
-          />
-        </Card>
+        <div className="space-y-3">
+          <div className="flex items-center justify-end">
+            <button
+              onClick={() => setQuickTaskOpen(true)}
+              className="flex items-center gap-1.5 rounded-md border border-border-secondary px-3 py-1.5 text-caption font-medium text-text-primary transition-colors hover:bg-surface-tertiary"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              New Task
+            </button>
+          </div>
+          <Card>
+            <DataTable
+              data={myActions ?? []}
+              columns={taskColumns}
+              compact
+              emptyMessage="No actions pending"
+            />
+          </Card>
+        </div>
       ),
     },
     {
@@ -358,7 +393,7 @@ export function WorkflowCenterPage() {
         <Card>
           <DataTable
             data={templates ?? []}
-            columns={templateColumns}
+            columns={templateColumnsWithAction}
             compact
             emptyMessage="No templates"
           />
@@ -385,6 +420,16 @@ export function WorkflowCenterPage() {
       </div>
 
       <TabLayout tabs={tabs} />
+
+      <StartWorkflowDialog
+        open={startWorkflowOpen}
+        onClose={() => { setStartWorkflowOpen(false); setSelectedTemplateId(undefined) }}
+        prefilledTemplateId={selectedTemplateId}
+      />
+      <QuickTaskDialog
+        open={quickTaskOpen}
+        onClose={() => setQuickTaskOpen(false)}
+      />
     </div>
   )
 }

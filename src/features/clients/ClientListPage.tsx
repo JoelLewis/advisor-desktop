@@ -7,11 +7,8 @@ import { DataTable } from '@/components/ui/DataTable'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { TabLayout } from '@/components/ui/TabLayout'
 import { useClients } from '@/hooks/use-clients'
-import { useHouseholds } from '@/hooks/use-households'
 import { formatCurrency } from '@/lib/utils'
-import { HouseholdListView } from './HouseholdListView'
 import type { Client, ClientSegment } from '@/types/client'
 
 const SEGMENT_VARIANT: Record<ClientSegment, 'blue' | 'yellow' | 'default'> = {
@@ -78,13 +75,25 @@ const columns: ColumnDef<Client, unknown>[] = [
   },
 ]
 
-function ClientsTabContent() {
+export function ClientListPage() {
   const [search, setSearch] = useState('')
   const { data, isLoading } = useClients()
   const navigate = useNavigate()
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Users className="h-6 w-6 text-text-secondary" />
+          <h1 className="text-page-title">Clients</h1>
+          {data && (
+            <span className="rounded-full bg-surface-tertiary px-2 py-0.5 text-caption text-text-secondary">
+              {data.total}
+            </span>
+          )}
+        </div>
+      </div>
+
       {/* Search bar */}
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
@@ -112,45 +121,6 @@ function ClientsTabContent() {
           />
         </Card>
       )}
-    </div>
-  )
-}
-
-export function ClientListPage() {
-  const { data: clientData } = useClients()
-  const { data: householdData } = useHouseholds()
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Users className="h-6 w-6 text-text-secondary" />
-          <h1 className="text-page-title">Clients</h1>
-          {clientData && (
-            <span className="rounded-full bg-surface-tertiary px-2 py-0.5 text-caption text-text-secondary">
-              {clientData.total}
-            </span>
-          )}
-        </div>
-      </div>
-
-      <TabLayout
-        tabs={[
-          {
-            id: 'clients',
-            label: 'Clients',
-            count: clientData?.total,
-            content: <ClientsTabContent />,
-          },
-          {
-            id: 'households',
-            label: 'Households',
-            count: householdData?.total,
-            content: <HouseholdListView />,
-          },
-        ]}
-        defaultTab="clients"
-      />
     </div>
   )
 }

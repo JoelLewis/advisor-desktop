@@ -90,6 +90,7 @@ export type TradeSuggestion = {
   estimatedValue: number
   accountId: string
   accountName: string
+  assetClass?: string
 }
 
 export type ActionTemplateParam = {

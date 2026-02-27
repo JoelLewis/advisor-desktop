@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import {
   RefreshCw, DollarSign, Target, AlertTriangle,
   Heart, Shield, TrendingUp, AlertCircle, ChevronUp,
-  ArrowUp, Minus, Timer, ArrowUpDown, BarChart3,
+  ArrowUp, Minus, Timer, ArrowUpDown,
 } from 'lucide-react'
 import { NBACard, CATEGORY_CONFIG } from '@/components/ui/NBACard'
 import { MultiSelect } from '@/components/ui/MultiSelect'
@@ -167,13 +167,6 @@ export function NBAFeed() {
               <ArrowUpDown className="h-3.5 w-3.5" />
               {sortMode === 'priority' ? 'Priority' : 'Urgency'}
             </button>
-            <Link
-              to="/dashboard/nba-effectiveness"
-              className="flex items-center gap-1 rounded-md border border-border-primary px-2 py-1.5 text-caption text-text-secondary hover:bg-surface-tertiary"
-              title="NBA Effectiveness Dashboard"
-            >
-              <BarChart3 className="h-3.5 w-3.5" />
-            </Link>
           </div>
         }
       >
