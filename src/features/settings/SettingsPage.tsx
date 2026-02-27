@@ -574,7 +574,7 @@ function CustomAlertRulesCard({
   }
 
   return (
-    <Card data-annotation="settings-alert-rules">
+    <Card>
       <CardHeader
         action={
           <div className="flex items-center gap-2">
@@ -1082,8 +1082,8 @@ function TemplatesPromptsPanel() {
 export function SettingsPage() {
   const tabs = [
     { id: 'ai', label: 'AI Behavior', content: <AISettingsPanel /> },
-    { id: 'autonomy', label: 'Automation', content: <div data-annotation="settings-autonomy"><AIAutonomyTab /></div> },
-    { id: 'templates', label: 'Templates & Prompts', content: <div data-annotation="settings-templates"><TemplatesPromptsPanel /></div> },
+    { id: 'autonomy', label: 'Automation', content: <AIAutonomyTab /> },
+    { id: 'templates', label: 'Templates & Prompts', content: <TemplatesPromptsPanel /> },
     { id: 'nba', label: 'NBA Settings', content: <NBASettingsPanel /> },
     { id: 'notifications', label: 'Notifications', content: <NotificationSettingsPanel /> },
     { id: 'display', label: 'Display', content: <DisplaySettingsPanel /> },
