@@ -1,5 +1,6 @@
 import { Sparkles } from 'lucide-react'
 import { useSuggestedPrompts } from '@/hooks/use-ai'
+import { cn } from '@/lib/utils'
 
 type SuggestedPromptsProps = {
   screenType: string
@@ -24,15 +25,24 @@ export function SuggestedPrompts({ screenType, onSelect }: SuggestedPromptsProps
       </div>
 
       <div className="grid w-full grid-cols-2 gap-2">
-        {prompts.map((prompt) => (
-          <button
-            key={prompt.text}
-            onClick={() => onSelect(prompt.text)}
-            className="rounded-lg border border-border-primary bg-surface-primary px-3 py-2.5 text-left text-caption text-text-secondary transition-colors hover:border-accent-purple/30 hover:bg-accent-purple/5 hover:text-text-primary"
-          >
-            {prompt.text}
-          </button>
-        ))}
+        {prompts.map((prompt) => {
+          const isCustom = prompt.source === 'custom'
+          return (
+            <button
+              key={prompt.text}
+              onClick={() => onSelect(prompt.text)}
+              className={cn(
+                'rounded-lg border bg-surface-primary px-3 py-2.5 text-left text-caption text-text-secondary transition-colors hover:border-accent-purple/30 hover:bg-accent-purple/5 hover:text-text-primary',
+                isCustom ? 'border-l-2 border-accent-purple/40 border-t-border-primary border-r-border-primary border-b-border-primary' : 'border-border-primary',
+              )}
+            >
+              {isCustom && (
+                <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-accent-purple">Custom</span>
+              )}
+              {prompt.text}
+            </button>
+          )
+        })}
       </div>
     </div>
   )
