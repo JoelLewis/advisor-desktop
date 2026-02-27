@@ -10,7 +10,9 @@ import type { DenseMetric } from '@/components/ui/DenseMetricsBar'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { TabLayout } from '@/components/ui/TabLayout'
 import { useRevenueMetrics, useFeeSchedules, useRevenueTrend, useRevenueBySegment } from '@/hooks/use-revenue'
-import { formatCurrency, formatPercent } from '@/lib/utils'
+import { useFormatCurrency } from '@/hooks/use-format-currency'
+import { CurrencyValue } from '@/components/ui/CurrencyValue'
+import { formatPercent } from '@/lib/utils'
 import { TeamActivityView } from './TeamActivityView'
 import { BookAnalyticsView } from './BookAnalyticsView'
 import type { FeeSchedule, RevenueBySegment } from '@/types/revenue'
@@ -49,13 +51,13 @@ const feeColumns: ColumnDef<FeeSchedule, unknown>[] = [
   {
     accessorKey: 'rate', header: 'Rate',
     cell: ({ row }) => (
-      <span className="font-mono">{row.original.feeType === 'aum_based' ? `${(row.original.rate * 100).toFixed(2)}%` : formatCurrency(row.original.rate)}</span>
+      <span className="font-mono">{row.original.feeType === 'aum_based' ? `${(row.original.rate * 100).toFixed(2)}%` : <CurrencyValue value={row.original.rate} className="font-mono" />}</span>
     ),
     size: 80,
   },
   {
     accessorKey: 'annualRevenue', header: 'Annual Revenue',
-    cell: ({ row }) => <span className="font-mono font-medium">{formatCurrency(row.original.annualRevenue, true)}</span>,
+    cell: ({ row }) => <CurrencyValue value={row.original.annualRevenue} compact className="font-mono font-medium" />,
     size: 120,
   },
 ]
@@ -68,7 +70,7 @@ const segmentColumns: ColumnDef<RevenueBySegment, unknown>[] = [
   },
   {
     accessorKey: 'revenue', header: 'Revenue',
-    cell: ({ row }) => <span className="font-mono font-medium">{formatCurrency(row.original.revenue, true)}</span>,
+    cell: ({ row }) => <CurrencyValue value={row.original.revenue} compact className="font-mono font-medium" />,
     size: 120,
   },
   {
@@ -79,6 +81,7 @@ const segmentColumns: ColumnDef<RevenueBySegment, unknown>[] = [
 ]
 
 function RevenueContent() {
+  const { formatWithConversion } = useFormatCurrency()
   const { data: metrics, isLoading } = useRevenueMetrics()
   const { data: fees } = useFeeSchedules()
   const { data: trend } = useRevenueTrend()
@@ -97,9 +100,9 @@ function RevenueContent() {
     <div className="space-y-6">
       {metrics && (
         <DenseMetricsBar metrics={[
-          { label: 'Total Recurring Revenue', value: formatCurrency(metrics.totalRecurringRevenue, true) },
-          { label: 'MTD Revenue', value: formatCurrency(metrics.mtdRevenue, true) },
-          { label: 'YTD Revenue', value: formatCurrency(metrics.ytdRevenue, true) },
+          { label: 'Total Recurring Revenue', value: formatWithConversion(metrics.totalRecurringRevenue, 'USD', { compact: true }) },
+          { label: 'MTD Revenue', value: formatWithConversion(metrics.mtdRevenue, 'USD', { compact: true }) },
+          { label: 'YTD Revenue', value: formatWithConversion(metrics.ytdRevenue, 'USD', { compact: true }) },
           {
             label: 'Revenue Growth (YoY)',
             value: formatPercent(metrics.revenueGrowthYoY),
@@ -123,7 +126,7 @@ function RevenueContent() {
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" />
                     <XAxis dataKey="period" tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} tickFormatter={(v: string) => v.slice(5)} />
                     <YAxis tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}K`} />
-                    <RechartsTooltip formatter={(value: number) => formatCurrency(value)} />
+                    <RechartsTooltip formatter={(value: number) => formatWithConversion(value, 'USD')} />
                     <Line type="monotone" dataKey="revenue" stroke="var(--accent-blue)" strokeWidth={2} dot={false} name="Revenue" />
                     <Line type="monotone" dataKey="projected" stroke="var(--accent-purple)" strokeWidth={1.5} dot={false} strokeDasharray="4 4" name="Projected" />
                     <Legend />
@@ -145,7 +148,7 @@ function RevenueContent() {
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" />
                     <XAxis dataKey="segment" tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} />
                     <YAxis tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}K`} />
-                    <RechartsTooltip formatter={(value: number) => formatCurrency(value)} />
+                    <RechartsTooltip formatter={(value: number) => formatWithConversion(value, 'USD')} />
                     <Bar dataKey="revenue" radius={[4, 4, 0, 0]}>
                       {bySegment.map((entry) => (
                         <Cell key={entry.segment} fill={SEGMENT_COLORS[entry.segment] ?? '#94A3B8'} />

@@ -8,7 +8,8 @@ import { TabLayout } from '@/components/ui/TabLayout'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useBillingCycles, useHouseholdFees, useBillingExceptions, useBreakpointAnalyses } from '@/hooks/use-billing'
 import { useUIStore } from '@/store/ui-store'
-import { formatCurrency, formatPercent } from '@/lib/utils'
+import { useFormatCurrency } from '@/hooks/use-format-currency'
+import { formatPercent } from '@/lib/utils'
 import type { BillingCycle, HouseholdFee, BillingException, BreakpointAnalysis, BillingStage } from '@/types/billing'
 
 const STAGE_CONFIG: Record<BillingStage, { label: string; color: string }> = {
@@ -21,6 +22,7 @@ const STAGE_CONFIG: Record<BillingStage, { label: string; color: string }> = {
 const STAGES: BillingStage[] = ['valuation', 'calculation', 'review', 'collection']
 
 function CycleTracker({ cycle }: { cycle: BillingCycle }) {
+  const { formatWithConversion } = useFormatCurrency()
   const currentIdx = STAGES.indexOf(cycle.stage)
   return (
     <div className="rounded-lg border border-border-primary p-4">
@@ -28,7 +30,7 @@ function CycleTracker({ cycle }: { cycle: BillingCycle }) {
         <span className="text-body-strong text-text-primary">{cycle.period}</span>
         <div className="flex items-center gap-2">
           <span className="font-mono text-caption text-text-secondary">
-            {formatCurrency(cycle.totalBilled, true)} billed
+            {formatWithConversion(cycle.totalBilled, 'USD', { compact: true })} billed
           </span>
           {cycle.exceptionsCount > 0 && (
             <Badge variant="yellow">{cycle.exceptionsCount} exceptions</Badge>
@@ -70,6 +72,7 @@ function CycleTracker({ cycle }: { cycle: BillingCycle }) {
 }
 
 function FeeDetailTable({ fees }: { fees: HouseholdFee[] }) {
+  const { formatWithConversion } = useFormatCurrency()
   const sorted = [...fees].sort((a, b) => b.aumBasis - a.aumBasis)
   return (
     <div className="overflow-x-auto">
@@ -89,10 +92,10 @@ function FeeDetailTable({ fees }: { fees: HouseholdFee[] }) {
           {sorted.map((fee) => (
             <tr key={fee.householdId} className="border-b border-border-primary last:border-0 hover:bg-surface-tertiary/50">
               <td className="px-3 py-2 font-medium text-text-primary">{fee.householdName}</td>
-              <td className="px-3 py-2 text-right font-mono text-text-primary">{formatCurrency(fee.aumBasis, true)}</td>
+              <td className="px-3 py-2 text-right font-mono text-text-primary">{formatWithConversion(fee.aumBasis, 'USD', { compact: true })}</td>
               <td className="px-3 py-2 capitalize text-text-secondary">{fee.feeType}</td>
               <td className="px-3 py-2 text-right font-mono text-text-primary">{(fee.annualRate * 10000).toFixed(0)}</td>
-              <td className="px-3 py-2 text-right font-mono text-text-primary">{formatCurrency(fee.quarterlyAmount)}</td>
+              <td className="px-3 py-2 text-right font-mono text-text-primary">{formatWithConversion(fee.quarterlyAmount, 'USD')}</td>
               <td className="px-3 py-2 capitalize text-text-secondary">{fee.method}</td>
               <td className="px-3 py-2">
                 {fee.waiver ? (
@@ -154,6 +157,7 @@ function ExceptionQueue({ exceptions }: { exceptions: BillingException[] }) {
 }
 
 function BreakpointTable({ analyses }: { analyses: BreakpointAnalysis[] }) {
+  const { formatWithConversion } = useFormatCurrency()
   const setInitialMessage = useUIStore((s) => s.setInitialMessage)
 
   return (
@@ -165,19 +169,19 @@ function BreakpointTable({ analyses }: { analyses: BreakpointAnalysis[] }) {
             <div className="flex items-center gap-2">
               <TrendingDown className="h-3.5 w-3.5 text-accent-green" />
               <span className="font-mono text-caption font-medium text-accent-green">
-                Save {formatCurrency(bp.annualSavings)}/yr
+                Save {formatWithConversion(bp.annualSavings, 'USD')}/yr
               </span>
             </div>
           </div>
           <div className="mt-2 flex gap-6 text-caption text-text-secondary">
             <div>
-              Current: <span className="font-mono text-text-primary">{formatCurrency(bp.currentAUM, true)}</span>
+              Current: <span className="font-mono text-text-primary">{formatWithConversion(bp.currentAUM, 'USD', { compact: true })}</span>
             </div>
             <div>
-              Next breakpoint: <span className="font-mono text-text-primary">{formatCurrency(bp.nextBreakpoint, true)}</span>
+              Next breakpoint: <span className="font-mono text-text-primary">{formatWithConversion(bp.nextBreakpoint, 'USD', { compact: true })}</span>
             </div>
             <div>
-              Gap: <span className="font-mono text-accent-blue">{formatCurrency(bp.gapToBreakpoint, true)}</span>
+              Gap: <span className="font-mono text-accent-blue">{formatWithConversion(bp.gapToBreakpoint, 'USD', { compact: true })}</span>
             </div>
           </div>
           <div className="mt-2 flex gap-6 text-caption text-text-secondary">
@@ -189,7 +193,7 @@ function BreakpointTable({ analyses }: { analyses: BreakpointAnalysis[] }) {
             </div>
           </div>
           <button
-            onClick={() => setInitialMessage(`Create a consolidation NBA for ${bp.householdName} — they need ${formatCurrency(bp.gapToBreakpoint, true)} more to reach the ${formatCurrency(bp.nextBreakpoint, true)} breakpoint and save ${formatCurrency(bp.annualSavings)}/yr in fees.`)}
+            onClick={() => setInitialMessage(`Create a consolidation NBA for ${bp.householdName} — they need ${formatWithConversion(bp.gapToBreakpoint, 'USD', { compact: true })} more to reach the ${formatWithConversion(bp.nextBreakpoint, 'USD', { compact: true })} breakpoint and save ${formatWithConversion(bp.annualSavings, 'USD')}/yr in fees.`)}
             className="mt-2 flex items-center gap-1 rounded-md bg-accent-purple/10 px-2.5 py-1 text-caption font-medium text-accent-purple hover:bg-accent-purple/20"
           >
             <Sparkles className="h-3 w-3" />
@@ -241,6 +245,7 @@ export function BillingPage() {
   const { data: fees, isLoading: feesLoading } = useHouseholdFees()
   const { data: exceptions } = useBillingExceptions({ resolved: 'false' })
   const { data: breakpoints } = useBreakpointAnalyses()
+  const { formatWithConversion } = useFormatCurrency()
 
   const isLoading = cyclesLoading || feesLoading
 
@@ -292,7 +297,7 @@ export function BillingPage() {
         <Card>
           <CardContent className="p-3">
             <div className="text-caption text-text-tertiary">Quarterly Revenue</div>
-            <div className="font-mono text-heading text-text-primary">{formatCurrency(totalQuarterly, true)}</div>
+            <div className="font-mono text-heading text-text-primary">{formatWithConversion(totalQuarterly, 'USD', { compact: true })}</div>
           </CardContent>
         </Card>
         <Card>

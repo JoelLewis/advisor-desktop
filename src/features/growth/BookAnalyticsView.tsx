@@ -7,7 +7,9 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { DataTable } from '@/components/ui/DataTable'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useBookAnalytics } from '@/hooks/use-practice'
-import { formatCurrency, formatPercent } from '@/lib/utils'
+import { useFormatCurrency } from '@/hooks/use-format-currency'
+import { CurrencyValue } from '@/components/ui/CurrencyValue'
+import { formatPercent } from '@/lib/utils'
 import type { ColumnDef } from '@tanstack/react-table'
 
 const SEGMENT_COLORS: Record<string, string> = {
@@ -33,7 +35,7 @@ const segmentColumns: ColumnDef<SegmentRow, unknown>[] = [
     accessorKey: 'aum',
     header: 'AUM',
     cell: ({ row }) => (
-      <span className="font-mono">{formatCurrency(row.original.aum, true)}</span>
+      <CurrencyValue value={row.original.aum} compact className="font-mono" />
     ),
     size: 120,
   },
@@ -63,7 +65,7 @@ const growthColumns: ColumnDef<GrowthRow, unknown>[] = [
     accessorKey: 'aumGrowth',
     header: 'AUM Growth',
     cell: ({ row }) => (
-      <span className="font-mono text-accent-green">{formatCurrency(row.original.aumGrowth, true)}</span>
+      <CurrencyValue value={row.original.aumGrowth} compact className="font-mono text-accent-green" />
     ),
     size: 120,
   },
@@ -79,6 +81,7 @@ const growthColumns: ColumnDef<GrowthRow, unknown>[] = [
 
 export function BookAnalyticsView() {
   const { data: analytics, isLoading } = useBookAnalytics()
+  const { formatWithConversion } = useFormatCurrency()
 
   if (isLoading || !analytics) {
     return (
@@ -93,7 +96,7 @@ export function BookAnalyticsView() {
   return (
     <div className="space-y-6">
       {/* AUM by Segment */}
-      <Card data-annotation="book-segments">
+      <Card>
         <CardHeader>AUM by Segment</CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={250}>
@@ -108,7 +111,7 @@ export function BookAnalyticsView() {
                 tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }}
                 tickFormatter={(v: number) => `$${(v / 1_000_000).toFixed(0)}M`}
               />
-              <RechartsTooltip formatter={(value: number) => formatCurrency(value, true)} />
+              <RechartsTooltip formatter={(value: number) => formatWithConversion(value, 'USD', { compact: true })} />
               <Bar dataKey="aum" radius={[4, 4, 0, 0]} name="AUM">
                 {analytics.aumBySegment.map((entry) => (
                   <Cell key={entry.segment} fill={SEGMENT_COLORS[entry.segment] ?? '#94A3B8'} />
@@ -142,7 +145,7 @@ export function BookAnalyticsView() {
       </Card>
 
       {/* Growth Trend */}
-      <Card data-annotation="book-growth">
+      <Card>
         <CardHeader>Client Growth Trend (12 Months)</CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>

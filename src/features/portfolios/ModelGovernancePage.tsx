@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/Badge'
 import { MetricCard } from '@/components/ui/MetricCard'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useModelGovernance } from '@/hooks/use-portfolio'
-import { formatCurrency, cn } from '@/lib/utils'
+import { useFormatCurrency } from '@/hooks/use-format-currency'
+import { cn } from '@/lib/utils'
 import { ASSET_CLASS_LABELS } from '@/lib/labels'
 import type { ModelGovernanceDetail, ModelVersion } from '@/types/portfolio'
 
@@ -158,6 +159,7 @@ function VersionTimeline({ versions }: { versions: ModelVersion[] }) {
 }
 
 function ModelCard({ model }: { model: ModelGovernanceDetail }) {
+  const { formatWithConversion } = useFormatCurrency()
   const [expanded, setExpanded] = useState(false)
   const hasPending = model.versions.some((v) => v.status === 'pending_approval')
 
@@ -190,7 +192,7 @@ function ModelCard({ model }: { model: ModelGovernanceDetail }) {
           </div>
           <div className="text-right">
             <div className="text-caption text-text-tertiary">AUM</div>
-            <div className="font-mono text-body font-medium">{formatCurrency(model.totalAUM, true)}</div>
+            <div className="font-mono text-body font-medium">{formatWithConversion(model.totalAUM, 'USD', { compact: true })}</div>
           </div>
           <div className="text-right">
             <div className="text-caption text-text-tertiary">Version</div>
@@ -265,6 +267,7 @@ function ModelCard({ model }: { model: ModelGovernanceDetail }) {
 }
 
 export function ModelGovernancePage() {
+  const { formatWithConversion } = useFormatCurrency()
   const { data: models, isLoading } = useModelGovernance()
 
   if (isLoading) {
@@ -313,7 +316,7 @@ export function ModelGovernancePage() {
         />
         <MetricCard
           label="Total Model AUM"
-          value={formatCurrency(totalAUM, true)}
+          value={formatWithConversion(totalAUM, 'USD', { compact: true })}
           change={{ value: 'Under model management', direction: 'neutral' }}
         />
         <MetricCard

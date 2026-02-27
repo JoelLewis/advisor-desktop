@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useClients } from '@/hooks/use-clients'
 import { useHouseholds } from '@/hooks/use-households'
-import { formatCurrency } from '@/lib/utils'
+import { CurrencyValue } from '@/components/ui/CurrencyValue'
 import type { Client, ClientSegment } from '@/types/client'
 
 const SEGMENT_VARIANT: Record<ClientSegment, 'blue' | 'yellow' | 'default'> = {
@@ -56,7 +56,7 @@ function makeColumns(householdNames: Map<string, string>): ColumnDef<Client, unk
       accessorKey: 'totalAUM',
       header: 'AUM',
       cell: ({ row }) => (
-        <span className="font-mono text-body">{formatCurrency(row.original.totalAUM, true)}</span>
+        <CurrencyValue value={row.original.totalAUM} compact className="font-mono text-body" />
       ),
       size: 120,
     },

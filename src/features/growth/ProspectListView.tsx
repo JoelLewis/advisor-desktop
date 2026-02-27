@@ -2,7 +2,7 @@ import { Phone, Mail } from 'lucide-react'
 import { type ColumnDef } from '@tanstack/react-table'
 import { DataTable } from '@/components/ui/DataTable'
 import { Badge } from '@/components/ui/Badge'
-import { formatCurrency } from '@/lib/utils'
+import { CurrencyValue } from '@/components/ui/CurrencyValue'
 import { cn } from '@/lib/utils'
 import type { Prospect, ProspectStage } from '@/types/prospect'
 
@@ -52,7 +52,7 @@ const columns: ColumnDef<Prospect, unknown>[] = [
     accessorKey: 'estimatedAUM',
     header: 'Est. AUM',
     cell: ({ row }) => (
-      <span className="font-mono text-body">{formatCurrency(row.original.estimatedAUM, true)}</span>
+      <CurrencyValue value={row.original.estimatedAUM} compact className="font-mono text-body" />
     ),
     size: 130,
   },

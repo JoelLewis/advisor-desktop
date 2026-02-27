@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils'
-import { formatCurrency } from '@/lib/utils'
+import { useFormatCurrency } from '@/hooks/use-format-currency'
 import type { Goal } from '@/types/planning'
 
 const STATUS_CONFIG = {
@@ -15,6 +15,7 @@ type GoalProgressCardProps = {
 }
 
 export function GoalProgressCard({ goal, compact = false }: GoalProgressCardProps) {
+  const { formatWithConversion } = useFormatCurrency()
   const config = STATUS_CONFIG[goal.status]
   const progressPercent = goal.targetAmount > 0
     ? Math.min((goal.currentFunding / goal.targetAmount) * 100, 100)
@@ -40,8 +41,8 @@ export function GoalProgressCard({ goal, compact = false }: GoalProgressCardProp
       {/* Progress bar */}
       <div className="mt-3">
         <div className="flex justify-between text-caption text-text-secondary">
-          <span>{formatCurrency(goal.currentFunding, true)} funded</span>
-          <span>{formatCurrency(goal.targetAmount, true)} target</span>
+          <span>{formatWithConversion(goal.currentFunding, 'USD', { compact: true })} funded</span>
+          <span>{formatWithConversion(goal.targetAmount, 'USD', { compact: true })} target</span>
         </div>
         <div className="mt-1 h-1.5 rounded-full bg-surface-tertiary">
           <div

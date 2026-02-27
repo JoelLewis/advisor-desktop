@@ -1,5 +1,6 @@
 import { FileText, TrendingUp, Target, Users, Check } from 'lucide-react'
-import { cn, formatCurrency } from '@/lib/utils'
+import { useFormatCurrency } from '@/hooks/use-format-currency'
+import { cn } from '@/lib/utils'
 import { useProposalTemplates } from '@/hooks/use-proposals'
 import { useClient } from '@/hooks/use-clients'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -18,6 +19,7 @@ type TemplateDataStepProps = {
 }
 
 export function TemplateDataStep({ clientId, selectedTemplateId, onSelectTemplate }: TemplateDataStepProps) {
+  const { formatWithConversion } = useFormatCurrency()
   const { data: templates, isLoading: templatesLoading } = useProposalTemplates()
   const { data: client } = useClient(clientId)
 
@@ -44,7 +46,7 @@ export function TemplateDataStep({ clientId, selectedTemplateId, onSelectTemplat
           </div>
           <p className="text-body font-semibold text-text-primary">{client.fullName}</p>
           <div className="mt-1 flex items-center gap-4 text-caption text-text-secondary">
-            <span>AUM: {formatCurrency(client.totalAUM, true)}</span>
+            <span>AUM: {formatWithConversion(client.totalAUM, 'USD', { compact: true })}</span>
             <span>Risk: {client.riskProfile.tolerance} ({client.riskProfile.score})</span>
           </div>
         </div>

@@ -7,7 +7,8 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useDriftSummary, useModels } from '@/hooks/use-portfolio'
 import { useRebalancePreview, useExecuteRebalance, useTradeComplianceCheck } from '@/hooks/use-orders'
-import { formatCurrency, cn } from '@/lib/utils'
+import { useFormatCurrency } from '@/hooks/use-format-currency'
+import { cn } from '@/lib/utils'
 import type { RebalancePreview } from '@/services/oms'
 import type { TradeComplianceResult, TradeComplianceCheck } from '@/types/compliance'
 import type { ModelAssignment } from '@/types/portfolio'
@@ -34,6 +35,7 @@ const SELECTION_MODE_OPTIONS: { id: SelectionMode; label: string }[] = [
 ]
 
 export function RebalancePage() {
+  const { formatWithConversion } = useFormatCurrency()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const preselectedAccounts = searchParams.get('accounts')?.split(',').filter(Boolean) ?? []
@@ -269,7 +271,7 @@ export function RebalancePage() {
                           </div>
                         </div>
                         <div className="flex items-center gap-6">
-                          <span className="font-mono text-body">{formatCurrency(acc.totalValue, true)}</span>
+                          <span className="font-mono text-body">{formatWithConversion(acc.totalValue, 'USD', { compact: true })}</span>
                           <span className="font-mono text-caption text-accent-red">
                             {drift ? `${(drift.totalDrift * 100).toFixed(1)}% drift` : ''}
                           </span>
@@ -307,7 +309,7 @@ export function RebalancePage() {
               <Card key={preview.accountId}>
                 <CardHeader action={
                   <span className="font-mono text-caption text-text-secondary">
-                    {preview.trades.length} trades &middot; Tax impact: {formatCurrency(preview.estimatedTaxImpact, true)}
+                    {preview.trades.length} trades &middot; Tax impact: {formatWithConversion(preview.estimatedTaxImpact, 'USD', { compact: true })}
                   </span>
                 }>
                   {acc?.name ?? preview.accountId}
@@ -334,9 +336,9 @@ export function RebalancePage() {
                             <Badge variant={trade.side === 'buy' ? 'green' : 'red'}>{trade.side}</Badge>
                           </td>
                           <td className="py-2 text-right font-mono">{trade.quantity.toLocaleString()}</td>
-                          <td className="py-2 text-right font-mono">{formatCurrency(trade.estimatedValue, true)}</td>
+                          <td className="py-2 text-right font-mono">{formatWithConversion(trade.estimatedValue, 'USD', { compact: true })}</td>
                           <td className={cn('py-2 text-right font-mono', trade.taxImpact > 0 ? 'text-accent-red' : 'text-text-secondary')}>
-                            {trade.taxImpact > 0 ? formatCurrency(trade.taxImpact, true) : '\u2014'}
+                            {trade.taxImpact > 0 ? formatWithConversion(trade.taxImpact, 'USD', { compact: true }) : '\u2014'}
                           </td>
                           <td className="py-2">
                             {trade.washSaleRisk && (
@@ -355,7 +357,7 @@ export function RebalancePage() {
           <div className="flex items-center justify-between rounded-lg border border-border-primary bg-surface-tertiary p-4">
             <div className="flex items-center gap-6 text-body">
               <span><strong>{totalTrades}</strong> total trades</span>
-              <span>Tax impact: <strong className="font-mono text-accent-red">{formatCurrency(totalTaxImpact, true)}</strong></span>
+              <span>Tax impact: <strong className="font-mono text-accent-red">{formatWithConversion(totalTaxImpact, 'USD', { compact: true })}</strong></span>
             </div>
           </div>
 
@@ -487,6 +489,7 @@ function ModelSelectionView({
   onSelectModel: (modelId: string) => void
   onToggleAccount: (accountId: string) => void
 }) {
+  const { formatWithConversion } = useFormatCurrency()
   // Only show models that have drifted accounts
   const modelsWithDrift = models.filter((m) => (driftedAccountsByModel.get(m.id)?.length ?? 0) > 0)
   const modelsWithoutDrift = models.filter((m) => (driftedAccountsByModel.get(m.id)?.length ?? 0) === 0)
@@ -528,7 +531,7 @@ function ModelSelectionView({
               <p className="mt-1 text-caption text-text-secondary">{model.description}</p>
               <div className="mt-2 flex gap-4 text-caption">
                 <span className="text-text-secondary">{modelAccounts.length} accounts</span>
-                <span className="font-mono text-text-secondary">{formatCurrency(totalAUM, true)}</span>
+                <span className="font-mono text-text-secondary">{formatWithConversion(totalAUM, 'USD', { compact: true })}</span>
                 <span className="text-accent-red">
                   <AlertTriangle className="mr-0.5 inline h-3 w-3" />
                   {driftedCount} drifted
@@ -553,7 +556,7 @@ function ModelSelectionView({
               <p className="mt-1 text-caption text-text-tertiary">{model.description}</p>
               <div className="mt-2 flex gap-4 text-caption">
                 <span className="text-text-tertiary">{modelAccounts.length} accounts</span>
-                <span className="font-mono text-text-tertiary">{formatCurrency(totalAUM, true)}</span>
+                <span className="font-mono text-text-tertiary">{formatWithConversion(totalAUM, 'USD', { compact: true })}</span>
                 <span className="text-accent-green">No drift</span>
               </div>
             </div>
@@ -590,7 +593,7 @@ function ModelSelectionView({
                   </div>
                 </div>
                 <div className="flex items-center gap-6">
-                  <span className="font-mono text-body">{formatCurrency(acc.totalValue, true)}</span>
+                  <span className="font-mono text-body">{formatWithConversion(acc.totalValue, 'USD', { compact: true })}</span>
                   <span className="font-mono text-caption text-accent-red">
                     {drift ? `${(drift.totalDrift * 100).toFixed(1)}% drift` : ''}
                   </span>
@@ -691,6 +694,7 @@ const CHECK_ICON_COLORS: Record<string, string> = {
 }
 
 function ComplianceCheckRow({ check }: { check: TradeComplianceCheck }) {
+  const { formatWithConversion } = useFormatCurrency()
   const StatusIcon = CHECK_ICONS[check.status] ?? AlertTriangle
 
   return (
@@ -719,10 +723,10 @@ function ComplianceCheckRow({ check }: { check: TradeComplianceCheck }) {
               <span>Limit: <span className="font-mono font-medium">{(check.details.limit * 100).toFixed(0)}%</span></span>
             )}
             {check.details.cashBalance !== undefined && (
-              <span>Cash: <span className="font-mono font-medium">{formatCurrency(check.details.cashBalance)}</span></span>
+              <span>Cash: <span className="font-mono font-medium">{formatWithConversion(check.details.cashBalance, 'USD')}</span></span>
             )}
             {check.details.minimumCash !== undefined && (
-              <span>Min: <span className="font-mono font-medium">{formatCurrency(check.details.minimumCash)}</span></span>
+              <span>Min: <span className="font-mono font-medium">{formatWithConversion(check.details.minimumCash, 'USD')}</span></span>
             )}
           </div>
         )}
