@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { Compass, ArrowRight } from 'lucide-react'
 import { useUIStore } from '@/store/ui-store'
 
@@ -60,7 +61,7 @@ export function WelcomeOverlay({ forceOpen, onDismiss }: WelcomeOverlayProps = {
 
   if (!visible) return null
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 animate-fade-in"
       role="dialog"
@@ -125,6 +126,7 @@ export function WelcomeOverlay({ forceOpen, onDismiss }: WelcomeOverlayProps = {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
