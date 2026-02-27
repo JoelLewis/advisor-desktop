@@ -1,20 +1,24 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { TrendingUp, User, Phone, Mail, Calendar, UserPlus } from 'lucide-react'
+import { TrendingUp, User, Phone, Mail, Calendar, UserPlus, LayoutGrid, List } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { MetricCard } from '@/components/ui/MetricCard'
+import { DenseMetricsBar } from '@/components/ui/DenseMetricsBar'
+import type { DenseMetric } from '@/components/ui/DenseMetricsBar'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { ProspectListView } from '@/features/growth/ProspectListView'
 import { useProspects } from '@/hooks/use-prospects'
 import { formatCurrency } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import type { Prospect, ProspectStage } from '@/types/prospect'
 
+type ViewMode = 'board' | 'list'
+
 const STAGES: { id: ProspectStage; label: string; color: string }[] = [
   { id: 'lead', label: 'Lead', color: 'bg-text-tertiary' },
-  { id: 'qualified', label: 'Qualified', color: 'bg-accent-blue' },
+  { id: 'discovery', label: 'Discovery', color: 'bg-accent-blue' },
   { id: 'proposal', label: 'Proposal', color: 'bg-accent-purple' },
-  { id: 'negotiation', label: 'Negotiation', color: 'bg-amber-500' },
+  { id: 'decision', label: 'Decision', color: 'bg-amber-500' },
   { id: 'onboarding', label: 'Onboarding', color: 'bg-accent-green' },
 ]
 
@@ -24,6 +28,14 @@ const SOURCE_LABELS: Record<string, string> = {
   website: 'Website',
   cold_outreach: 'Cold Outreach',
   existing_client: 'Existing Client',
+}
+
+const BOARD_VISIBLE_LIMIT = 5
+
+function daysInStage(prospect: Prospect): number {
+  const changed = new Date(prospect.stageChangedAt).getTime()
+  const now = Date.now()
+  return Math.max(0, Math.round((now - changed) / (1000 * 60 * 60 * 24)))
 }
 
 function ProspectCard({ prospect }: { prospect: Prospect }) {
@@ -68,10 +80,18 @@ function ProspectCard({ prospect }: { prospect: Prospect }) {
       </div>
 
       <div className="mt-2 flex items-center gap-2">
-        <button className="rounded p-1 text-text-tertiary hover:bg-surface-tertiary hover:text-text-secondary" title={prospect.phone}>
+        <button
+          onClick={() => window.open(`tel:${prospect.phone}`)}
+          className="rounded p-1 text-text-tertiary hover:bg-surface-tertiary hover:text-text-secondary"
+          title={`Call ${prospect.phone}`}
+        >
           <Phone className="h-3.5 w-3.5" />
         </button>
-        <button className="rounded p-1 text-text-tertiary hover:bg-surface-tertiary hover:text-text-secondary" title={prospect.email}>
+        <button
+          onClick={() => window.open(`mailto:${prospect.email}`)}
+          className="rounded p-1 text-text-tertiary hover:bg-surface-tertiary hover:text-text-secondary"
+          title={`Email ${prospect.email}`}
+        >
           <Mail className="h-3.5 w-3.5" />
         </button>
         {prospect.stage === 'onboarding' && (
@@ -87,8 +107,133 @@ function ProspectCard({ prospect }: { prospect: Prospect }) {
   )
 }
 
+function PipelineMetrics({ prospects }: { prospects: Prospect[] }) {
+  const metrics = useMemo(() => {
+    const total = prospects.length
+    const onboardingCount = prospects.filter((p) => p.stage === 'onboarding').length
+    const winRate = total > 0 ? (onboardingCount / total) * 100 : 0
+
+    const nonLeadProspects = prospects.filter((p) => p.stage !== 'lead')
+    const avgDaysInStage = nonLeadProspects.length > 0
+      ? Math.round(nonLeadProspects.reduce((sum, p) => sum + daysInStage(p), 0) / nonLeadProspects.length)
+      : 0
+
+    const weightedAUM = prospects.reduce((sum, p) => sum + p.estimatedAUM * p.probability, 0)
+    const allDays = prospects.map((p) => {
+      const created = new Date(p.createdAt).getTime()
+      const now = Date.now()
+      return Math.max(1, Math.round((now - created) / (1000 * 60 * 60 * 24)))
+    })
+    const avgDaysInPipeline = allDays.length > 0
+      ? Math.round(allDays.reduce((a, b) => a + b, 0) / allDays.length)
+      : 1
+    const velocity = avgDaysInPipeline > 0 ? weightedAUM / avgDaysInPipeline : 0
+
+    return { avgDaysInStage, winRate, velocity }
+  }, [prospects])
+
+  return (
+    <div className="flex items-center gap-6 rounded-lg border border-border-primary bg-surface-primary px-5 py-3">
+      <div>
+        <p className="text-caption text-text-tertiary">Avg Days in Stage</p>
+        <p className="font-mono text-body-strong">{metrics.avgDaysInStage}d</p>
+      </div>
+      <div className="h-8 w-px bg-border-primary" />
+      <div>
+        <p className="text-caption text-text-tertiary">Win Rate</p>
+        <p className="font-mono text-body-strong">{metrics.winRate.toFixed(0)}%</p>
+      </div>
+      <div className="h-8 w-px bg-border-primary" />
+      <div>
+        <p className="text-caption text-text-tertiary">Pipeline Velocity</p>
+        <p className="font-mono text-body-strong">{formatCurrency(metrics.velocity, true)}/day</p>
+      </div>
+    </div>
+  )
+}
+
+function ViewToggle({ view, onViewChange }: { view: ViewMode; onViewChange: (v: ViewMode) => void }) {
+  return (
+    <div className="flex rounded-lg border border-border-primary bg-surface-primary">
+      <button
+        onClick={() => onViewChange('board')}
+        className={cn(
+          'flex items-center gap-1.5 rounded-l-lg px-3 py-1.5 text-caption font-medium transition-colors',
+          view === 'board' ? 'bg-accent-blue text-white' : 'text-text-secondary hover:text-text-primary',
+        )}
+      >
+        <LayoutGrid className="h-3.5 w-3.5" />
+        Board
+      </button>
+      <button
+        onClick={() => onViewChange('list')}
+        className={cn(
+          'flex items-center gap-1.5 rounded-r-lg px-3 py-1.5 text-caption font-medium transition-colors',
+          view === 'list' ? 'bg-accent-blue text-white' : 'text-text-secondary hover:text-text-primary',
+        )}
+      >
+        <List className="h-3.5 w-3.5" />
+        List
+      </button>
+    </div>
+  )
+}
+
+function BoardColumn({ stage, prospects: stageProspects }: { stage: typeof STAGES[number]; prospects: Prospect[] }) {
+  const [showAll, setShowAll] = useState(false)
+  const stageAUM = stageProspects.reduce((sum, p) => sum + p.estimatedAUM, 0)
+  const hasMore = stageProspects.length > BOARD_VISIBLE_LIMIT
+  const visible = showAll ? stageProspects : stageProspects.slice(0, BOARD_VISIBLE_LIMIT)
+  const hiddenCount = stageProspects.length - BOARD_VISIBLE_LIMIT
+
+  return (
+    <div className="flex w-72 shrink-0 flex-col">
+      <Card className="flex-1">
+        <CardHeader className="py-3">
+          <div className="flex items-center gap-2">
+            <div className={cn('h-2.5 w-2.5 rounded-full', stage.color)} />
+            <span className="text-body-strong">{stage.label}</span>
+            <Badge variant="default">{stageProspects.length}</Badge>
+          </div>
+        </CardHeader>
+        <div className="px-3 py-1 text-caption text-text-tertiary">
+          {formatCurrency(stageAUM, true)} pipeline
+        </div>
+        <CardContent className="space-y-3 pt-2">
+          {visible.length > 0 ? (
+            <>
+              {visible.map((prospect) => (
+                <ProspectCard key={prospect.id} prospect={prospect} />
+              ))}
+              {hasMore && !showAll && (
+                <button
+                  onClick={() => setShowAll(true)}
+                  className="w-full rounded-md border border-border-primary bg-surface-secondary py-2 text-caption font-medium text-text-secondary transition-colors hover:bg-surface-tertiary"
+                >
+                  Show {hiddenCount} more
+                </button>
+              )}
+              {hasMore && showAll && (
+                <button
+                  onClick={() => setShowAll(false)}
+                  className="w-full rounded-md border border-border-primary bg-surface-secondary py-2 text-caption font-medium text-text-secondary transition-colors hover:bg-surface-tertiary"
+                >
+                  Show less
+                </button>
+              )}
+            </>
+          ) : (
+            <p className="py-8 text-center text-caption text-text-tertiary">No prospects</p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 export function ProspectsPage() {
   const { data: prospects, isLoading } = useProspects()
+  const [view, setView] = useState<ViewMode>('board')
 
   const pipeline = useMemo(() => {
     if (!prospects) return new Map<ProspectStage, Prospect[]>()
@@ -106,9 +251,7 @@ export function ProspectsPage() {
     return (
       <div className="space-y-6">
         <Skeleton className="h-8 w-48" />
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
-        </div>
+        <Skeleton className="h-[52px] w-full rounded-lg" />
         <Skeleton className="h-96" />
       </div>
     )
@@ -116,53 +259,45 @@ export function ProspectsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <TrendingUp className="h-6 w-6 text-accent-green" />
-        <h1 className="text-page-title">Growth Pipeline</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <TrendingUp className="h-6 w-6 text-accent-green" />
+          <h1 className="text-page-title">Growth Pipeline</h1>
+        </div>
+        <ViewToggle view={view} onViewChange={setView} />
       </div>
 
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        <MetricCard label="Total Prospects" value={String(prospects?.length ?? 0)} />
-        <MetricCard label="Pipeline AUM" value={formatCurrency(totalEstimatedAUM, true)} />
-        <MetricCard label="Weighted Pipeline" value={formatCurrency(weightedPipeline, true)} />
-        <MetricCard label="Avg. Probability" value={prospects && prospects.length > 0
+      <DenseMetricsBar metrics={[
+        { label: 'Total Prospects', value: String(prospects?.length ?? 0) },
+        { label: 'Pipeline AUM', value: formatCurrency(totalEstimatedAUM, true) },
+        { label: 'Weighted Pipeline', value: formatCurrency(weightedPipeline, true) },
+        { label: 'Avg. Probability', value: prospects && prospects.length > 0
           ? `${Math.round(prospects.reduce((sum, p) => sum + p.probability, 0) / prospects.length * 100)}%`
           : '0%'
-        } />
-      </div>
+        },
+      ] satisfies DenseMetric[]} />
 
-      {/* Kanban board */}
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {STAGES.map((stage) => {
-          const stageProspects = pipeline.get(stage.id) ?? []
-          const stageAUM = stageProspects.reduce((sum, p) => sum + p.estimatedAUM, 0)
-          return (
-            <div key={stage.id} className="flex w-72 shrink-0 flex-col">
-              <Card className="flex-1">
-                <CardHeader className="py-3">
-                  <div className="flex items-center gap-2">
-                    <div className={cn('h-2.5 w-2.5 rounded-full', stage.color)} />
-                    <span className="text-body-strong">{stage.label}</span>
-                    <Badge variant="default">{stageProspects.length}</Badge>
-                  </div>
-                </CardHeader>
-                <div className="px-3 py-1 text-caption text-text-tertiary">
-                  {formatCurrency(stageAUM, true)} pipeline
-                </div>
-                <CardContent className="space-y-3 pt-2">
-                  {stageProspects.length > 0 ? (
-                    stageProspects.map((prospect) => (
-                      <ProspectCard key={prospect.id} prospect={prospect} />
-                    ))
-                  ) : (
-                    <p className="py-8 text-center text-caption text-text-tertiary">No prospects</p>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          )
-        })}
-      </div>
+      {prospects && prospects.length > 0 && (
+        <PipelineMetrics prospects={prospects} />
+      )}
+
+      {view === 'board' ? (
+        <div className="flex gap-4 overflow-x-auto pb-4">
+          {STAGES.map((stage) => (
+            <BoardColumn
+              key={stage.id}
+              stage={stage}
+              prospects={pipeline.get(stage.id) ?? []}
+            />
+          ))}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="p-0">
+            <ProspectListView prospects={prospects ?? []} />
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

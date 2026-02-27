@@ -15,5 +15,9 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     css: true,
+    include: ['src/**/__tests__/**/*.test.{ts,tsx}'],
+    coverage: {
+      exclude: ['src/mocks/**', 'src/types/**', 'src/test/**'],
+    },
   },
 })

@@ -4,6 +4,10 @@ import { useSubmitTrade } from '@/hooks/use-orders'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/Dialog'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'
+import type { TradableAssetClass, EquitySide, EquityOrderType, TimeInForce } from '@/types/trading'
+import { AssetClassSelector } from './trade-fields/shared'
+import { EquityTradeFields } from './trade-fields/EquityTradeFields'
+import { validateTrade } from './trade-fields/validation'
 
 type TradeTicketDialogProps = {
   open: boolean
@@ -14,7 +18,23 @@ type TradeTicketDialogProps = {
     symbol?: string
     side?: 'buy' | 'sell'
     quantity?: number
+    assetClass?: TradableAssetClass
+    price?: number
   }
+}
+
+/**
+ * Auto-detect asset class from position asset class string.
+ * Maps domain AssetClass values to TradableAssetClass.
+ */
+function detectAssetClass(ac?: string): TradableAssetClass {
+  if (!ac) return 'equity'
+  const lower = ac.toLowerCase()
+  if (lower.includes('option')) return 'option'
+  if (lower.includes('mutual') || lower.includes('fund')) return 'mutual_fund'
+  if (lower.includes('fixed') || lower.includes('bond') || lower.includes('treasury')) return 'fixed_income'
+  if (lower.includes('digital') || lower.includes('crypto')) return 'digital_asset'
+  return 'equity'
 }
 
 export function TradeTicketDialog({
@@ -24,11 +44,15 @@ export function TradeTicketDialog({
   accountName,
   prefill,
 }: TradeTicketDialogProps) {
+  const [assetClass, setAssetClass] = useState<TradableAssetClass>(prefill?.assetClass ?? 'equity')
   const [symbol, setSymbol] = useState(prefill?.symbol ?? '')
-  const [side, setSide] = useState<'buy' | 'sell'>(prefill?.side ?? 'buy')
+  const [side, setSide] = useState<EquitySide>((prefill?.side as EquitySide) ?? 'buy')
   const [quantity, setQuantity] = useState(prefill?.quantity?.toString() ?? '')
-  const [orderType, setOrderType] = useState<'market' | 'limit'>('market')
+  const [orderType, setOrderType] = useState<EquityOrderType>('market')
   const [limitPrice, setLimitPrice] = useState('')
+  const [stopPrice, setStopPrice] = useState('')
+  const [timeInForce, setTimeInForce] = useState<TimeInForce>('day')
+  const [extendedHours, setExtendedHours] = useState(false)
   const [submitted, setSubmitted] = useState(false)
 
   const trade = useSubmitTrade()
@@ -36,35 +60,40 @@ export function TradeTicketDialog({
   // Sync prefill when dialog opens
   useEffect(() => {
     if (open) {
+      setAssetClass(prefill?.assetClass ?? detectAssetClass(prefill?.assetClass))
       setSymbol(prefill?.symbol ?? '')
-      setSide(prefill?.side ?? 'buy')
+      setSide((prefill?.side as EquitySide) ?? 'buy')
       setQuantity(prefill?.quantity?.toString() ?? '')
       setOrderType('market')
       setLimitPrice('')
+      setStopPrice('')
+      setTimeInForce('day')
+      setExtendedHours(false)
       setSubmitted(false)
       trade.reset()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- trade.reset is stable, including trade object would cause infinite loop
-  }, [open, prefill?.symbol, prefill?.side, prefill?.quantity])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, prefill?.symbol, prefill?.side, prefill?.quantity, prefill?.assetClass])
 
   // Auto-close after successful submission
   useEffect(() => {
     if (!submitted) return
-
-    const timer = setTimeout(() => {
-      onClose()
-    }, 1500)
-
+    const timer = setTimeout(onClose, 1500)
     return () => clearTimeout(timer)
   }, [submitted, onClose])
 
   const parsedQuantity = Number(quantity)
-  const parsedLimitPrice = Number(limitPrice)
 
-  const isValid =
-    symbol.trim().length > 0 &&
-    parsedQuantity > 0 &&
-    (orderType === 'market' || parsedLimitPrice > 0)
+  const isValid = validateTrade({
+    assetClass,
+    accountId,
+    symbol: symbol.trim(),
+    side,
+    quantity: parsedQuantity,
+    orderType,
+    limitPrice: Number(limitPrice) || undefined,
+    stopPrice: Number(stopPrice) || undefined,
+  })
 
   const handleSubmit = useCallback(() => {
     if (!isValid || trade.isPending) return
@@ -76,26 +105,21 @@ export function TradeTicketDialog({
         side,
         quantity: parsedQuantity,
         orderType,
-        limitPrice: orderType === 'limit' ? parsedLimitPrice : undefined,
+        limitPrice: (orderType === 'limit' || orderType === 'stop_limit') ? Number(limitPrice) : undefined,
+        stopPrice: (orderType === 'stop' || orderType === 'stop_limit') ? Number(stopPrice) : undefined,
+        assetClass,
+        timeInForce,
+        extendedHours,
       },
       {
         onSuccess: () => setSubmitted(true),
       },
     )
-  }, [
-    isValid,
-    trade,
-    accountId,
-    symbol,
-    side,
-    parsedQuantity,
-    orderType,
-    parsedLimitPrice,
-  ])
+  }, [isValid, trade, accountId, symbol, side, parsedQuantity, orderType, limitPrice, stopPrice, assetClass, timeInForce, extendedHours])
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <div>
             <DialogTitle className="text-section-header">Trade Ticket</DialogTitle>
@@ -116,11 +140,12 @@ export function TradeTicketDialog({
           {trade.isError && (
             <div className="flex items-center gap-2 rounded-md bg-accent-red/10 px-3 py-2 text-body text-accent-red" role="alert">
               <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-              {trade.error instanceof Error
-                ? trade.error.message
-                : 'Failed to submit order'}
+              {trade.error instanceof Error ? trade.error.message : 'Failed to submit order'}
             </div>
           )}
+
+          {/* Asset class selector (compact) */}
+          <AssetClassSelector value={assetClass} onChange={setAssetClass} compact />
 
           {/* Symbol */}
           <div className="space-y-1.5">
@@ -138,124 +163,79 @@ export function TradeTicketDialog({
             />
           </div>
 
-          {/* Side */}
-          <fieldset className="space-y-1.5">
-            <legend className="text-caption font-medium text-text-secondary">Side</legend>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setSide('buy')}
-                disabled={submitted}
-                aria-pressed={side === 'buy'}
-                className={cn(
-                  'flex-1 rounded-md px-4 py-2 text-body font-medium transition-colors',
-                  side === 'buy'
-                    ? 'bg-accent-green text-white'
-                    : 'bg-surface-tertiary text-text-secondary hover:bg-surface-tertiary/80',
-                )}
-              >
-                Buy
-              </button>
-              <button
-                onClick={() => setSide('sell')}
-                disabled={submitted}
-                aria-pressed={side === 'sell'}
-                className={cn(
-                  'flex-1 rounded-md px-4 py-2 text-body font-medium transition-colors',
-                  side === 'sell'
-                    ? 'bg-accent-red text-white'
-                    : 'bg-surface-tertiary text-text-secondary hover:bg-surface-tertiary/80',
-                )}
-              >
-                Sell
-              </button>
-            </div>
-          </fieldset>
-
-          {/* Quantity */}
-          <div className="space-y-1.5">
-            <label htmlFor="trade-quantity" className="text-caption font-medium text-text-secondary">
-              Quantity
-            </label>
-            <input
-              id="trade-quantity"
-              type="number"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              placeholder="0"
-              min={1}
-              className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 font-mono text-body text-text-primary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+          {/* Equity fields — reuse the component for the full experience */}
+          {assetClass === 'equity' && (
+            <EquityTradeFields
+              side={side} onSideChange={setSide}
+              quantity={quantity} onQuantityChange={setQuantity}
+              orderType={orderType} onOrderTypeChange={setOrderType}
+              limitPrice={limitPrice} onLimitPriceChange={setLimitPrice}
+              stopPrice={stopPrice} onStopPriceChange={setStopPrice}
+              timeInForce={timeInForce} onTimeInForceChange={setTimeInForce}
+              extendedHours={extendedHours} onExtendedHoursChange={setExtendedHours}
               disabled={submitted}
             />
-          </div>
+          )}
 
-          {/* Order Type */}
-          <fieldset className="space-y-1.5">
-            <legend className="text-caption font-medium text-text-secondary">Order Type</legend>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setOrderType('market')}
-                disabled={submitted}
-                aria-pressed={orderType === 'market'}
-                className={cn(
-                  'flex-1 rounded-md px-4 py-2 text-body font-medium transition-colors',
-                  orderType === 'market'
-                    ? 'bg-accent-blue text-white'
-                    : 'bg-surface-tertiary text-text-secondary hover:bg-surface-tertiary/80',
-                )}
-              >
-                Market
-              </button>
-              <button
-                onClick={() => setOrderType('limit')}
-                disabled={submitted}
-                aria-pressed={orderType === 'limit'}
-                className={cn(
-                  'flex-1 rounded-md px-4 py-2 text-body font-medium transition-colors',
-                  orderType === 'limit'
-                    ? 'bg-accent-blue text-white'
-                    : 'bg-surface-tertiary text-text-secondary hover:bg-surface-tertiary/80',
-                )}
-              >
-                Limit
-              </button>
-            </div>
-          </fieldset>
+          {/* Non-equity: simplified inline fields (dialog is a quick-trade surface) */}
+          {assetClass !== 'equity' && (
+            <>
+              <fieldset className="space-y-1.5">
+                <legend className="text-caption font-medium text-text-secondary">Side</legend>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSide('buy')}
+                    disabled={submitted}
+                    aria-pressed={side === 'buy'}
+                    className={cn(
+                      'flex-1 rounded-md px-4 py-2 text-body font-medium transition-colors',
+                      side === 'buy' ? 'bg-accent-green text-white' : 'bg-surface-tertiary text-text-secondary hover:bg-surface-tertiary/80',
+                    )}
+                  >
+                    Buy
+                  </button>
+                  <button
+                    onClick={() => setSide('sell')}
+                    disabled={submitted}
+                    aria-pressed={side === 'sell'}
+                    className={cn(
+                      'flex-1 rounded-md px-4 py-2 text-body font-medium transition-colors',
+                      side === 'sell' ? 'bg-accent-red text-white' : 'bg-surface-tertiary text-text-secondary hover:bg-surface-tertiary/80',
+                    )}
+                  >
+                    Sell
+                  </button>
+                </div>
+              </fieldset>
 
-          {/* Limit Price (conditional) */}
-          {orderType === 'limit' && (
-            <div className="space-y-1.5">
-              <label htmlFor="trade-limit-price" className="text-caption font-medium text-text-secondary">
-                Limit Price
-              </label>
-              <input
-                id="trade-limit-price"
-                type="number"
-                value={limitPrice}
-                onChange={(e) => setLimitPrice(e.target.value)}
-                placeholder="0.00"
-                min={0.01}
-                step={0.01}
-                className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 font-mono text-body text-text-primary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
-                disabled={submitted}
-              />
-            </div>
+              <div className="space-y-1.5">
+                <label htmlFor="trade-quantity" className="text-caption font-medium text-text-secondary">
+                  Quantity
+                </label>
+                <input
+                  id="trade-quantity"
+                  type="number"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  placeholder="0"
+                  min={assetClass === 'digital_asset' ? 0.000001 : 1}
+                  step={assetClass === 'digital_asset' ? 0.000001 : 1}
+                  className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 font-mono text-body text-text-primary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+                  disabled={submitted}
+                />
+              </div>
+            </>
           )}
 
           {/* Summary badge */}
           {symbol.trim() && parsedQuantity > 0 && (
             <div className="flex items-center gap-2 rounded-md bg-surface-secondary px-3 py-2">
-              <Badge variant={side === 'buy' ? 'green' : 'red'}>
-                {side.toUpperCase()}
+              <Badge variant={['buy', 'buy_to_open', 'buy_to_cover', 'purchase'].includes(side) ? 'green' : 'red'}>
+                {side.replace(/_/g, ' ').toUpperCase()}
               </Badge>
-              <span className="font-mono text-body text-text-primary">
-                {parsedQuantity}
-              </span>
-              <span className="font-mono text-body font-medium text-text-primary">
-                {symbol.trim().toUpperCase()}
-              </span>
-              <span className="text-caption text-text-tertiary">
-                @ {orderType === 'limit' ? `Limit $${limitPrice || '—'}` : 'Market'}
-              </span>
+              <span className="font-mono text-body text-text-primary">{parsedQuantity}</span>
+              <span className="font-mono text-body font-medium text-text-primary">{symbol.trim().toUpperCase()}</span>
+              <span className="text-caption text-text-tertiary">@ {orderType === 'limit' ? `Limit $${limitPrice || '—'}` : 'Market'}</span>
             </div>
           )}
 

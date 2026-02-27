@@ -5,7 +5,8 @@ import {
 import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { DataTable } from '@/components/ui/DataTable'
 import { Badge } from '@/components/ui/Badge'
-import { MetricCard } from '@/components/ui/MetricCard'
+import { DenseMetricsBar } from '@/components/ui/DenseMetricsBar'
+import type { DenseMetric } from '@/components/ui/DenseMetricsBar'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { TabLayout } from '@/components/ui/TabLayout'
 import { useRevenueMetrics, useFeeSchedules, useRevenueTrend, useRevenueBySegment } from '@/hooks/use-revenue'
@@ -86,9 +87,7 @@ function RevenueContent() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
-        </div>
+        <Skeleton className="h-[52px] w-full rounded-lg" />
         <Skeleton className="h-80" />
       </div>
     )
@@ -97,19 +96,19 @@ function RevenueContent() {
   return (
     <div className="space-y-6">
       {metrics && (
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-          <MetricCard label="Total Recurring Revenue" value={formatCurrency(metrics.totalRecurringRevenue, true)} />
-          <MetricCard label="MTD Revenue" value={formatCurrency(metrics.mtdRevenue, true)} />
-          <MetricCard label="YTD Revenue" value={formatCurrency(metrics.ytdRevenue, true)} />
-          <MetricCard
-            label="Revenue Growth (YoY)"
-            value={formatPercent(metrics.revenueGrowthYoY)}
-            change={{
+        <DenseMetricsBar metrics={[
+          { label: 'Total Recurring Revenue', value: formatCurrency(metrics.totalRecurringRevenue, true) },
+          { label: 'MTD Revenue', value: formatCurrency(metrics.mtdRevenue, true) },
+          { label: 'YTD Revenue', value: formatCurrency(metrics.ytdRevenue, true) },
+          {
+            label: 'Revenue Growth (YoY)',
+            value: formatPercent(metrics.revenueGrowthYoY),
+            change: {
               value: formatPercent(metrics.revenueGrowthYoY),
               direction: metrics.revenueGrowthYoY >= 0 ? 'up' : 'down',
-            }}
-          />
-        </div>
+            },
+          },
+        ] satisfies DenseMetric[]} />
       )}
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">

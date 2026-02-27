@@ -5,7 +5,8 @@ import {
   Tooltip as RechartsTooltip, ResponsiveContainer, Legend,
 } from 'recharts'
 import { Card, CardHeader, CardContent } from '@/components/ui/Card'
-import { MetricCard } from '@/components/ui/MetricCard'
+import { DenseMetricsBar } from '@/components/ui/DenseMetricsBar'
+import type { DenseMetric } from '@/components/ui/DenseMetricsBar'
 import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { CATEGORY_CONFIG } from '@/components/ui/NBACard'
@@ -19,9 +20,7 @@ export function NBAEffectivenessPage() {
     return (
       <div className="space-y-4">
         <Skeleton className="h-8 w-64" />
-        <div className="grid grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-4">
-          {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-24" />)}
-        </div>
+        <Skeleton className="h-[52px] w-full rounded-lg" />
         <Skeleton className="h-80" />
       </div>
     )
@@ -43,33 +42,33 @@ export function NBAEffectivenessPage() {
       </div>
 
       {/* Top-level metrics */}
-      <div className="grid grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-4">
-        <MetricCard
-          label="Total Actions Generated"
-          value={metrics.totalActions.toString()}
-          change={{ value: 'Last 6 months', direction: 'neutral' }}
-        />
-        <MetricCard
-          label="Acceptance Rate"
-          value={`${metrics.acceptanceRate}%`}
-          change={{ value: metrics.acceptanceRate >= 65 ? 'Above target' : 'Below 65% target', direction: metrics.acceptanceRate >= 65 ? 'up' : 'down' }}
-        />
-        <MetricCard
-          label="Avg Time-to-Action"
-          value={`${metrics.avgTimeToAction.toFixed(0)}h`}
-          change={{ value: metrics.avgTimeToAction <= 48 ? 'Within SLA' : 'Above 48h SLA', direction: metrics.avgTimeToAction <= 48 ? 'up' : 'down' }}
-        />
-        <MetricCard
-          label="Compliance Completion"
-          value={`${metrics.complianceCompletionRate}%`}
-          change={{ value: metrics.complianceCompletionRate >= 95 ? 'Meeting target' : 'Below 95% target', direction: metrics.complianceCompletionRate >= 95 ? 'up' : 'down' }}
-        />
-        <MetricCard
-          label="Est. Revenue Impact"
-          value={formatCurrency(metrics.estimatedRevenueImpact, true)}
-          change={{ value: 'From accepted actions', direction: 'up' }}
-        />
-      </div>
+      <DenseMetricsBar metrics={[
+        {
+          label: 'Total Actions',
+          value: metrics.totalActions.toString(),
+          change: { value: 'Last 6 months', direction: 'neutral' },
+        },
+        {
+          label: 'Acceptance Rate',
+          value: `${metrics.acceptanceRate}%`,
+          change: { value: metrics.acceptanceRate >= 65 ? 'Above target' : 'Below 65% target', direction: metrics.acceptanceRate >= 65 ? 'up' : 'down' },
+        },
+        {
+          label: 'Avg Time-to-Action',
+          value: `${metrics.avgTimeToAction.toFixed(0)}h`,
+          change: { value: metrics.avgTimeToAction <= 48 ? 'Within SLA' : 'Above 48h SLA', direction: metrics.avgTimeToAction <= 48 ? 'up' : 'down' },
+        },
+        {
+          label: 'Compliance',
+          value: `${metrics.complianceCompletionRate}%`,
+          change: { value: metrics.complianceCompletionRate >= 95 ? 'Meeting target' : 'Below 95% target', direction: metrics.complianceCompletionRate >= 95 ? 'up' : 'down' },
+        },
+        {
+          label: 'Revenue Impact',
+          value: formatCurrency(metrics.estimatedRevenueImpact, true),
+          change: { value: 'From accepted actions', direction: 'up' },
+        },
+      ] satisfies DenseMetric[]} />
 
       {/* Charts row */}
       <div className="grid grid-cols-2 gap-6">

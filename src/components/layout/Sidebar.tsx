@@ -1,11 +1,15 @@
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard,
+  Zap,
   Users,
+  Home,
   PieChart,
+  ArrowRightLeft,
+  TrendingUp,
+  Megaphone,
   CheckSquare,
   Settings,
-  TrendingUp,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
@@ -15,11 +19,18 @@ import { usePlatform } from '@/hooks/use-platform'
 
 const NAV_ITEMS = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', key: '1' },
-  { to: '/clients', icon: Users, label: 'Clients', key: '2' },
-  { to: '/portfolios', icon: PieChart, label: 'Portfolios', key: '3' },
-  { to: '/growth', icon: TrendingUp, label: 'Growth', key: '4' },
-  { to: '/workflows', icon: CheckSquare, label: 'Workflows', key: '5' },
-  { to: '/settings', icon: Settings, label: 'Settings', key: '6' },
+  { to: '/actions', icon: Zap, label: 'Actions', key: '2' },
+  { to: '/clients', icon: Users, label: 'Clients', key: '3' },
+  { to: '/households', icon: Home, label: 'Households', key: '4' },
+  { to: '/portfolios', icon: PieChart, label: 'Portfolios', key: '5' },
+  { to: '/portfolios/trading', icon: ArrowRightLeft, label: 'Trading', key: '6' },
+  { to: '/growth', icon: TrendingUp, label: 'Growth', key: '7' },
+  { to: '/engage', icon: Megaphone, label: 'Engage', key: '8' },
+] as const
+
+const UTILITY_ITEMS = [
+  { to: '/workflows', icon: CheckSquare, label: 'Workflows', key: '9' },
+  { to: '/settings', icon: Settings, label: 'Settings', key: '0' },
 ] as const
 
 export function Sidebar() {
@@ -51,6 +62,35 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-2" aria-label="Main navigation">
         {NAV_ITEMS.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) =>
+              cn(
+                'group flex items-center gap-3 mx-2 rounded-md px-3 py-2.5 text-body transition-colors duration-150',
+                isActive
+                  ? 'bg-accent-blue/10 text-accent-blue font-semibold'
+                  : 'text-text-secondary hover:bg-surface-tertiary hover:text-text-primary',
+              )
+            }
+            title={expanded ? undefined : item.label}
+          >
+            <item.icon className="h-5 w-5 shrink-0" />
+            {expanded && (
+              <>
+                <span className="flex-1 truncate">{item.label}</span>
+                <kbd className="hidden text-caption text-text-tertiary group-hover:inline">
+                  {alt}+{item.key}
+                </kbd>
+              </>
+            )}
+          </NavLink>
+        ))}
+
+        {/* Divider */}
+        <div className="mx-4 my-2 border-t border-border-primary" />
+
+        {UTILITY_ITEMS.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}

@@ -1,29 +1,35 @@
 import { http, HttpResponse } from 'msw'
-import type { Order, RebalancePreview, ProposedTrade, ComplianceCheck } from '@/services/oms'
+import type { Order, RebalancePreview, ProposedTrade, ComplianceCheck, TradeRequest } from '@/services/oms'
 import { notFound } from './utils'
 
 const orders: Order[] = [
   // ── Recent orders for Johnson Family Trust (acc-001) ──
-  { id: 'ord-001', accountId: 'acc-001', symbol: 'VTI', side: 'buy', quantity: 150, orderType: 'market', status: 'filled', filledQuantity: 150, filledPrice: 268.35, submittedAt: '2026-02-24T14:30:00Z', filledAt: '2026-02-24T14:30:02Z' },
-  { id: 'ord-002', accountId: 'acc-001', symbol: 'AGG', side: 'buy', quantity: 500, orderType: 'market', status: 'filled', filledQuantity: 500, filledPrice: 98.42, submittedAt: '2026-02-24T14:30:00Z', filledAt: '2026-02-24T14:30:01Z' },
-  { id: 'ord-003', accountId: 'acc-001', symbol: 'NVDA', side: 'sell', quantity: 25, orderType: 'limit', limitPrice: 785.00, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-25T09:31:00Z' },
+  { id: 'ord-001', accountId: 'acc-001', symbol: 'VTI', side: 'buy', quantity: 150, orderType: 'market', status: 'filled', filledQuantity: 150, filledPrice: 268.35, submittedAt: '2026-02-24T14:30:00Z', filledAt: '2026-02-24T14:30:02Z', assetClass: 'equity' },
+  { id: 'ord-002', accountId: 'acc-001', symbol: 'AGG', side: 'buy', quantity: 500, orderType: 'market', status: 'filled', filledQuantity: 500, filledPrice: 98.42, submittedAt: '2026-02-24T14:30:00Z', filledAt: '2026-02-24T14:30:01Z', assetClass: 'equity' },
+  { id: 'ord-003', accountId: 'acc-001', symbol: 'NVDA', side: 'sell', quantity: 25, orderType: 'limit', limitPrice: 785.00, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-25T09:31:00Z', assetClass: 'equity' },
 
   // ── Robert Johnson Individual (acc-002) ──
-  { id: 'ord-004', accountId: 'acc-002', symbol: 'INTC', side: 'sell', quantity: 5000, orderType: 'market', status: 'filled', filledQuantity: 5000, filledPrice: 28.52, submittedAt: '2026-02-21T10:15:00Z', filledAt: '2026-02-21T10:15:03Z' },
-  { id: 'ord-005', accountId: 'acc-002', symbol: 'QQQ', side: 'buy', quantity: 200, orderType: 'limit', limitPrice: 480.00, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-25T09:35:00Z' },
+  { id: 'ord-004', accountId: 'acc-002', symbol: 'INTC', side: 'sell', quantity: 5000, orderType: 'market', status: 'filled', filledQuantity: 5000, filledPrice: 28.52, submittedAt: '2026-02-21T10:15:00Z', filledAt: '2026-02-21T10:15:03Z', assetClass: 'equity' },
+  { id: 'ord-005', accountId: 'acc-002', symbol: 'QQQ', side: 'buy', quantity: 200, orderType: 'limit', limitPrice: 480.00, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-25T09:35:00Z', assetClass: 'equity' },
 
   // ── Chen Irrevocable Trust (acc-006) ──
-  { id: 'ord-006', accountId: 'acc-006', symbol: 'VTI', side: 'buy', quantity: 800, orderType: 'market', status: 'filled', filledQuantity: 800, filledPrice: 268.40, submittedAt: '2026-02-20T11:00:00Z', filledAt: '2026-02-20T11:00:04Z' },
-  { id: 'ord-007', accountId: 'acc-006', symbol: 'TLT', side: 'sell', quantity: 300, orderType: 'market', status: 'filled', filledQuantity: 300, filledPrice: 95.65, submittedAt: '2026-02-20T11:00:00Z', filledAt: '2026-02-20T11:00:02Z' },
+  { id: 'ord-006', accountId: 'acc-006', symbol: 'VTI', side: 'buy', quantity: 800, orderType: 'market', status: 'filled', filledQuantity: 800, filledPrice: 268.40, submittedAt: '2026-02-20T11:00:00Z', filledAt: '2026-02-20T11:00:04Z', assetClass: 'equity' },
+  { id: 'ord-007', accountId: 'acc-006', symbol: 'TLT', side: 'sell', quantity: 300, orderType: 'market', status: 'filled', filledQuantity: 300, filledPrice: 95.65, submittedAt: '2026-02-20T11:00:00Z', filledAt: '2026-02-20T11:00:02Z', assetClass: 'equity' },
 
   // ── David Williams Individual (acc-011) ──
-  { id: 'ord-008', accountId: 'acc-011', symbol: 'SPY', side: 'buy', quantity: 100, orderType: 'market', status: 'submitted', filledQuantity: 0, submittedAt: '2026-02-25T10:00:00Z' },
-  { id: 'ord-009', accountId: 'acc-011', symbol: 'BND', side: 'sell', quantity: 200, orderType: 'market', status: 'cancelled', filledQuantity: 0, submittedAt: '2026-02-24T15:45:00Z' },
+  { id: 'ord-008', accountId: 'acc-011', symbol: 'SPY', side: 'buy', quantity: 100, orderType: 'market', status: 'submitted', filledQuantity: 0, submittedAt: '2026-02-25T10:00:00Z', assetClass: 'equity' },
+  { id: 'ord-009', accountId: 'acc-011', symbol: 'BND', side: 'sell', quantity: 200, orderType: 'market', status: 'cancelled', filledQuantity: 0, submittedAt: '2026-02-24T15:45:00Z', assetClass: 'equity' },
 
   // ── Michael Martinez Individual (acc-015) ──
-  { id: 'ord-010', accountId: 'acc-015', symbol: 'EFA', side: 'buy', quantity: 350, orderType: 'limit', limitPrice: 81.50, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-25T09:45:00Z' },
-  { id: 'ord-011', accountId: 'acc-015', symbol: 'GLD', side: 'sell', quantity: 50, orderType: 'market', status: 'filled', filledQuantity: 50, filledPrice: 215.80, submittedAt: '2026-02-24T13:20:00Z', filledAt: '2026-02-24T13:20:01Z' },
-  { id: 'ord-012', accountId: 'acc-015', symbol: 'VNQ', side: 'buy', quantity: 200, orderType: 'market', status: 'filled', filledQuantity: 200, filledPrice: 89.15, submittedAt: '2026-02-24T13:20:00Z', filledAt: '2026-02-24T13:20:02Z' },
+  { id: 'ord-010', accountId: 'acc-015', symbol: 'EFA', side: 'buy', quantity: 350, orderType: 'limit', limitPrice: 81.50, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-25T09:45:00Z', assetClass: 'equity' },
+  { id: 'ord-011', accountId: 'acc-015', symbol: 'GLD', side: 'sell', quantity: 50, orderType: 'market', status: 'filled', filledQuantity: 50, filledPrice: 215.80, submittedAt: '2026-02-24T13:20:00Z', filledAt: '2026-02-24T13:20:01Z', assetClass: 'equity' },
+  { id: 'ord-012', accountId: 'acc-015', symbol: 'VNQ', side: 'buy', quantity: 200, orderType: 'market', status: 'filled', filledQuantity: 200, filledPrice: 89.15, submittedAt: '2026-02-24T13:20:00Z', filledAt: '2026-02-24T13:20:02Z', assetClass: 'equity' },
+
+  // ── Multi-asset orders ──
+  { id: 'ord-013', accountId: 'acc-001', symbol: 'VFIAX', side: 'purchase', quantity: 1, orderType: 'market', status: 'filled', filledQuantity: 1, filledPrice: 465.32, submittedAt: '2026-02-23T15:00:00Z', filledAt: '2026-02-23T16:00:00Z', assetClass: 'mutual_fund', dollarAmount: 25000, amountType: 'dollars' },
+  { id: 'ord-014', accountId: 'acc-002', symbol: 'UST-10Y', side: 'buy', quantity: 50, orderType: 'limit', limitPrice: 95.25, status: 'filled', filledQuantity: 50, filledPrice: 95.20, submittedAt: '2026-02-22T10:30:00Z', filledAt: '2026-02-22T10:30:05Z', assetClass: 'fixed_income', parAmount: 50000, bondPriceType: 'price', priceOrYield: 95.25 },
+  { id: 'ord-015', accountId: 'acc-002', symbol: 'BTC', side: 'buy', quantity: 0.25, orderType: 'market', status: 'filled', filledQuantity: 0.25, filledPrice: 86200.00, submittedAt: '2026-02-21T14:15:00Z', filledAt: '2026-02-21T14:15:01Z', assetClass: 'digital_asset', fractionalQuantity: true },
+  { id: 'ord-016', accountId: 'acc-006', symbol: 'AAPLC185', side: 'buy_to_open', quantity: 5, orderType: 'limit', limitPrice: 8.50, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-25T11:00:00Z', assetClass: 'option', underlying: 'AAPL', optionType: 'call', strikePrice: 185, expirationDate: '2026-03-21', contractMultiplier: 100 },
 ]
 
 function generateRebalanceTrades(accountId: string, taxAware: boolean): ProposedTrade[] {
@@ -34,7 +40,6 @@ function generateRebalanceTrades(accountId: string, taxAware: boolean): Proposed
     { symbol: 'CASH', name: 'Money Market Fund', side: 'sell', quantity: 1, estimatedValue: 7_219, taxImpact: 0, washSaleRisk: false },
   ]
 
-  // Scale by account (larger accounts = larger trade sizes)
   if (accountId.includes('006') || accountId.includes('001')) {
     return trades.map((t) => ({ ...t, quantity: t.quantity * 5, estimatedValue: t.estimatedValue * 5, taxImpact: t.taxImpact * 5 }))
   }
@@ -55,10 +60,12 @@ export const omsHandlers = [
     const url = new URL(request.url)
     const accountId = url.searchParams.get('accountId')
     const status = url.searchParams.get('status')
+    const assetClass = url.searchParams.get('assetClass')
 
     let filtered = orders
     if (accountId) filtered = filtered.filter((o) => o.accountId === accountId)
     if (status) filtered = filtered.filter((o) => o.status === status)
+    if (assetClass) filtered = filtered.filter((o) => o.assetClass === assetClass)
 
     return HttpResponse.json(filtered)
   }),
@@ -70,14 +77,7 @@ export const omsHandlers = [
   }),
 
   http.post('/api/oms/orders', async ({ request }) => {
-    const body = await request.json() as {
-      accountId: string
-      symbol: string
-      side: 'buy' | 'sell'
-      quantity: number
-      orderType: 'market' | 'limit'
-      limitPrice?: number
-    }
+    const body = await request.json() as TradeRequest
     const newOrder: Order = {
       id: `ord-${Date.now()}`,
       accountId: body.accountId,
@@ -86,9 +86,27 @@ export const omsHandlers = [
       quantity: body.quantity,
       orderType: body.orderType,
       limitPrice: body.limitPrice,
+      stopPrice: body.stopPrice,
       status: 'submitted',
       filledQuantity: 0,
       submittedAt: new Date().toISOString(),
+      assetClass: body.assetClass,
+      timeInForce: body.timeInForce,
+      extendedHours: body.extendedHours,
+      underlying: body.underlying,
+      optionType: body.optionType,
+      strikePrice: body.strikePrice,
+      expirationDate: body.expirationDate,
+      contractMultiplier: body.contractMultiplier,
+      amountType: body.amountType,
+      dollarAmount: body.dollarAmount,
+      exchangeTargetSymbol: body.exchangeTargetSymbol,
+      parAmount: body.parAmount,
+      bondPriceType: body.bondPriceType,
+      priceOrYield: body.priceOrYield,
+      fractionalQuantity: body.fractionalQuantity,
+      estimatedValue: body.estimatedValue,
+      commission: body.commission,
     }
     orders.push(newOrder)
     return HttpResponse.json(newOrder, { status: 201 })

@@ -1,4 +1,4 @@
-import { Clock, MapPin, Video, Sparkles } from 'lucide-react'
+import { Clock, MapPin, Video, Sparkles, PenLine } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from './Badge'
 import type { CalendarEvent, MeetingType } from '@/types/calendar'
@@ -16,9 +16,10 @@ const MEETING_TYPE_LABELS: Record<MeetingType, string> = {
 type MeetingCardProps = {
   event: CalendarEvent
   onPrep?: (eventId: string) => void
+  onNotes?: (eventId: string) => void
 }
 
-export function MeetingCard({ event, onPrep }: MeetingCardProps) {
+export function MeetingCard({ event, onPrep, onNotes }: MeetingCardProps) {
   const isZoom = event.location?.toLowerCase().includes('zoom')
   const isPast = new Date(event.endTime) < new Date()
 
@@ -53,18 +54,28 @@ export function MeetingCard({ event, onPrep }: MeetingCardProps) {
             {MEETING_TYPE_LABELS[event.meetingType]}
           </Badge>
           {event.clientId && !isPast && (
-            <button
-              onClick={() => onPrep?.(event.id)}
-              className={cn(
-                'flex items-center gap-1 rounded px-2 py-0.5 text-caption font-medium transition-colors',
-                event.prepCompleted
-                  ? 'text-accent-green'
-                  : 'text-accent-purple hover:bg-accent-purple/10',
-              )}
-            >
-              <Sparkles className="h-3 w-3" />
-              {event.prepCompleted ? 'Prepped' : 'Prep'}
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => onNotes?.(event.id)}
+                className="flex items-center gap-1 rounded px-2 py-0.5 text-caption font-medium text-accent-blue transition-colors hover:bg-accent-blue/10"
+                aria-label="Meeting notes"
+              >
+                <PenLine className="h-3 w-3" />
+                Notes
+              </button>
+              <button
+                onClick={() => onPrep?.(event.id)}
+                className={cn(
+                  'flex items-center gap-1 rounded px-2 py-0.5 text-caption font-medium transition-colors',
+                  event.prepCompleted
+                    ? 'text-accent-green'
+                    : 'text-accent-purple hover:bg-accent-purple/10',
+                )}
+              >
+                <Sparkles className="h-3 w-3" />
+                {event.prepCompleted ? 'Prepped' : 'Prep'}
+              </button>
+            </div>
           )}
         </div>
       </div>

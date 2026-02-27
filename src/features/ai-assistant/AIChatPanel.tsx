@@ -329,6 +329,7 @@ export function AIChatPanel() {
             symbol: tradePrefill.symbol,
             side: tradePrefill.side,
             quantity: tradePrefill.quantity,
+            assetClass: tradePrefill.assetClass as 'equity' | 'option' | 'mutual_fund' | 'fixed_income' | 'digital_asset' | undefined,
           }}
         />
       )}

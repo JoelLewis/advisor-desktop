@@ -37,3 +37,27 @@ export type MeetingPrep = {
   recentActivity: string[]
   generatedAt: string
 }
+
+export type MeetingNoteSection = {
+  key: 'discussion' | 'decisions' | 'requests' | 'followups'
+  label: string
+  content: string
+}
+
+export type MeetingNote = {
+  id: string
+  eventId: string
+  sections: MeetingNoteSection[]
+  createdAt: string
+  updatedAt: string
+}
+
+export type MeetingFollowUp = {
+  id: string
+  eventId: string
+  title: string
+  assignee: 'advisor' | 'csa' | 'ai'
+  dueDate: string
+  completed: boolean
+  createdAt: string
+}

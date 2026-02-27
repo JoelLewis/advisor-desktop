@@ -349,6 +349,23 @@ export const suggestedPrompts: SuggestedPrompt[] = [
   { text: 'Estimate tax impact of today\'s trades', category: 'tax', screenType: 'trading' },
   { text: 'Suggest replacement securities for harvested positions', category: 'portfolio', screenType: 'trading' },
   { text: 'Run pre-trade compliance check', category: 'compliance', screenType: 'trading' },
+
+  // Actions
+  { text: 'Prioritize my actions for today', category: 'workflow', screenType: 'actions' },
+  { text: 'Which critical actions are past due?', category: 'compliance', screenType: 'actions' },
+  { text: 'Show batch rebalancing opportunities', category: 'portfolio', screenType: 'actions' },
+  { text: 'Summarize NBA acceptance trends', category: 'overview', screenType: 'actions' },
+
+  // Engage
+  { text: 'Draft a market update email for platinum clients', category: 'communication', screenType: 'engage' },
+  { text: 'Which campaigns had the best open rates?', category: 'overview', screenType: 'engage' },
+  { text: 'Suggest social media content for this week', category: 'communication', screenType: 'engage' },
+  { text: 'Review compliance status of pending posts', category: 'compliance', screenType: 'engage' },
+
+  // Households (list)
+  { text: 'Which households have the most drift?', category: 'portfolio', screenType: 'households' },
+  { text: 'Identify households needing annual review', category: 'planning', screenType: 'households' },
+  { text: 'Compare household segment performance', category: 'overview', screenType: 'households' },
 ]
 
 // ── AI Action Templates ──

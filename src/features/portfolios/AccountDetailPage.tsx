@@ -13,6 +13,7 @@ import { AllocationChart } from '@/components/ui/AllocationChart'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { ActionMenu } from '@/components/ui/ActionMenu'
 import { ShareButton } from '@/components/ui/ShareButton'
+import { WorkflowLaunchButton } from '@/components/ui/WorkflowLaunchButton'
 import { AIInsightStack } from '@/components/ui/AIInsightCard'
 import { ConcentrationView } from './ConcentrationView'
 import { TradeTicketDialog } from './TradeTicketDialog'
@@ -34,7 +35,7 @@ const COST_BASIS_LABELS: Record<string, string> = {
   average_cost: 'Average Cost',
 }
 
-function makePositionColumns(onTrade?: (symbol: string, side: 'buy' | 'sell') => void): ColumnDef<Position, unknown>[] {
+function makePositionColumns(onTrade?: (symbol: string, side: 'buy' | 'sell', assetClass?: string) => void): ColumnDef<Position, unknown>[] {
   const cols: ColumnDef<Position, unknown>[] = [
     {
       accessorKey: 'symbol', header: 'Symbol',
@@ -90,13 +91,13 @@ function makePositionColumns(onTrade?: (symbol: string, side: 'buy' | 'sell') =>
       cell: ({ row }) => (
         <div className="flex justify-end gap-1">
           <button
-            onClick={() => onTrade(row.original.symbol, 'buy')}
+            onClick={() => onTrade(row.original.symbol, 'buy', row.original.assetClass)}
             className="rounded px-2 py-0.5 text-[11px] font-medium text-accent-green transition-colors hover:bg-accent-green/10"
           >
             Buy
           </button>
           <button
-            onClick={() => onTrade(row.original.symbol, 'sell')}
+            onClick={() => onTrade(row.original.symbol, 'sell', row.original.assetClass)}
             className="rounded px-2 py-0.5 text-[11px] font-medium text-accent-red transition-colors hover:bg-accent-red/10"
           >
             Sell
@@ -177,7 +178,7 @@ export function AccountDetailPage() {
   const id = accountId ?? ''
   const { data: account, isLoading } = useAccount(id)
   const [tradeDialogOpen, setTradeDialogOpen] = useState(false)
-  const [tradePrefill, setTradePrefill] = useState<{ symbol?: string; side?: 'buy' | 'sell' }>({})
+  const [tradePrefill, setTradePrefill] = useState<{ symbol?: string; side?: 'buy' | 'sell'; assetClass?: 'equity' | 'option' | 'mutual_fund' | 'fixed_income' | 'digital_asset' }>({})
   const { data: positions } = usePositions(id)
   const { data: drift } = useDrift(id)
   const { data: performance } = usePerformance(id)
@@ -214,8 +215,15 @@ export function AccountDetailPage() {
 
   const totalGainLoss = positions?.reduce((sum, p) => sum + p.gainLoss, 0) ?? 0
 
-  function handlePositionTrade(symbol: string, side: 'buy' | 'sell') {
-    setTradePrefill({ symbol, side })
+  function handlePositionTrade(symbol: string, side: 'buy' | 'sell', positionAssetClass?: string) {
+    // Map portfolio AssetClass to TradableAssetClass
+    const acMap: Record<string, 'equity' | 'option' | 'mutual_fund' | 'fixed_income' | 'digital_asset'> = {
+      us_equity: 'equity', intl_equity: 'equity', emerging_markets: 'equity',
+      fixed_income: 'fixed_income',
+      digital_assets: 'digital_asset',
+    }
+    const tradableAc = positionAssetClass ? acMap[positionAssetClass] : undefined
+    setTradePrefill({ symbol, side, assetClass: tradableAc })
     setTradeDialogOpen(true)
   }
 
@@ -531,6 +539,7 @@ export function AccountDetailPage() {
           </Badge>
           {account.isUMA && <Badge variant="purple">UMA</Badge>}
           <Badge variant={account.status === 'active' ? 'green' : 'default'}>{account.status}</Badge>
+          <WorkflowLaunchButton />
           <ShareButton card={{
             variant: 'account_summary',
             entityId: account.id,

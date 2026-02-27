@@ -34,7 +34,7 @@ export function DashboardPage() {
         <div className="xl:col-span-2">
           <NBAQuickView />
         </div>
-        <SchedulePanel />
+        <div id="schedule-panel"><SchedulePanel /></div>
       </div>
 
       <ActivityStream />

@@ -54,9 +54,9 @@ const config: Config = {
         'slide-in-right': 'slideInRight 250ms ease-in-out',
         'slide-out-right': 'slideOutRight 200ms ease-in',
         'fade-in': 'fadeIn 200ms ease-out',
-        'scale-in': 'scaleIn 150ms ease-out',
+        'scale-in': 'scaleIn 200ms cubic-bezier(0.16, 1, 0.3, 1)',
         'fade-out': 'fadeOut 150ms ease-in',
-        'scale-out': 'scaleOut 100ms ease-in',
+        'scale-out': 'scaleOut 120ms ease-in',
       },
       keyframes: {
         shimmer: {
@@ -76,16 +76,16 @@ const config: Config = {
           '100%': { opacity: '1' },
         },
         scaleIn: {
-          '0%': { opacity: '0', transform: 'scale(0.95)' },
-          '100%': { opacity: '1', transform: 'scale(1)' },
+          '0%': { opacity: '0', transform: 'translate(var(--tw-translate-x), var(--tw-translate-y)) scale(0.96)' },
+          '100%': { opacity: '1', transform: 'translate(var(--tw-translate-x), var(--tw-translate-y)) scale(1)' },
         },
         fadeOut: {
           '0%': { opacity: '1' },
           '100%': { opacity: '0' },
         },
         scaleOut: {
-          '0%': { opacity: '1', transform: 'scale(1)' },
-          '100%': { opacity: '0', transform: 'scale(0.95)' },
+          '0%': { opacity: '1', transform: 'translate(var(--tw-translate-x), var(--tw-translate-y)) scale(1)' },
+          '100%': { opacity: '0', transform: 'translate(var(--tw-translate-x), var(--tw-translate-y)) scale(0.96)' },
         },
       },
     },

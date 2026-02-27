@@ -24,3 +24,11 @@ export function updateTask(id: string, updates: Partial<Task>) {
 export function delegateTask(id: string, delegateTo: string, delegationType: string) {
   return post<Task>(`/workflows/tasks/${id}/delegate`, { delegateTo, delegationType })
 }
+
+export function createTask(data: Pick<Task, 'title' | 'priority' | 'dueDate'> & { clientId?: string; clientName?: string }) {
+  return post<Task>('/workflows/tasks', data)
+}
+
+export function startWorkflow(data: { templateId: string; clientId?: string; clientName?: string; priority: string }) {
+  return post<Task>('/workflows/start', data)
+}

@@ -189,6 +189,60 @@ export const aiHandlers = [
       ))
     }
 
+    if (screenType === 'actions') {
+      const activeNBAs = nbas.filter((n) => !n.dismissed)
+      const criticalCount = activeNBAs.filter((n) => n.priority === 'critical').length
+      const highCount = activeNBAs.filter((n) => n.priority === 'high').length
+      const urgentCount = activeNBAs.filter((n) => n.scoring.urgency > 80).length
+      return HttpResponse.json(makeBriefing(
+        'Actions Overview',
+        'actions',
+        [
+          { label: 'Pending Actions', value: String(activeNBAs.length) },
+          { label: 'Critical', value: String(criticalCount) },
+          { label: 'High Priority', value: String(highCount) },
+          { label: 'Time-Sensitive', value: String(urgentCount) },
+        ],
+        [
+          `${criticalCount + highCount} actions require prompt attention`,
+          'Acceptance rate trending at 72% this month',
+        ],
+      ))
+    }
+
+    if (screenType === 'engage') {
+      return HttpResponse.json(makeBriefing(
+        'Engage Overview',
+        'engage',
+        [
+          { label: 'Recent Comms', value: '17' },
+          { label: 'Active Campaigns', value: '1' },
+          { label: 'Scheduled', value: '2' },
+          { label: 'Avg Open Rate', value: '68%' },
+        ],
+        [
+          '3 AI-generated emails sent this week',
+          'RMD Reminder campaign completed with 82% open rate',
+        ],
+      ))
+    }
+
+    if (screenType === 'households') {
+      return HttpResponse.json(makeBriefing(
+        'Households Overview',
+        'households',
+        [
+          { label: 'Households', value: String(households.length) },
+          { label: 'Total AUM', value: formatAUM(households.reduce((s, h) => s + h.totalAUM, 0)) },
+          { label: 'Avg Members', value: (households.reduce((s, h) => s + h.members.length, 0) / households.length).toFixed(1) },
+        ],
+        [
+          `${households.filter((h) => h.segment === 'platinum').length} platinum households`,
+          'Asset location optimization available for 4 households',
+        ],
+      ))
+    }
+
     if (screenType === 'dashboard') {
       return HttpResponse.json(makeBriefing(
         'Practice Summary',
@@ -346,6 +400,46 @@ export const aiHandlers = [
       }
     }
 
+    if (screenType === 'actions') {
+      const activeNBAs = nbas.filter((n) => !n.dismissed)
+      const criticalCount = activeNBAs.filter((n) => n.priority === 'critical').length
+      insights.push({
+        id: 'act-1',
+        severity: 'info',
+        title: 'Action Queue Summary',
+        body: `${activeNBAs.length} pending actions across ${new Set(activeNBAs.map((n) => n.category)).size} categories. ${criticalCount} marked critical.`,
+        metric: { label: 'Batch opportunities', value: '3 groups' },
+      })
+      if (criticalCount > 0) {
+        insights.push({
+          id: 'act-2',
+          severity: 'warning',
+          title: 'Compliance Actions Approaching Deadline',
+          body: 'Several compliance-related actions have hard regulatory deadlines. Prioritize these to avoid escalation.',
+          actionLabel: 'Filter Critical',
+          actionAI: 'Show me all critical priority actions with upcoming deadlines',
+        })
+      }
+    }
+
+    if (screenType === 'engage') {
+      insights.push({
+        id: 'eng-1',
+        severity: 'opportunity',
+        title: 'Campaign Performance Highlight',
+        body: 'The RMD Reminder Wave achieved 82% open rate — significantly above the 68% average. Consider replicating this approach for upcoming tax-related outreach.',
+        metric: { label: 'Best performing channel', value: 'Email + SMS' },
+      })
+      insights.push({
+        id: 'eng-2',
+        severity: 'info',
+        title: 'Content Calendar Gap',
+        body: 'No social media posts scheduled for the next 7 days. 3 AI-drafted posts are pending compliance review.',
+        actionLabel: 'Review Pending Posts',
+        actionAI: 'Show me all social media content pending compliance approval',
+      })
+    }
+
     if (screenType === 'trading') {
       insights.push({
         id: 'trade-1',
@@ -373,11 +467,14 @@ export const aiHandlers = [
 
     const screenCategoryMap: Record<string, ActionTemplate['category'][]> = {
       dashboard: ['portfolio', 'communication', 'planning'],
+      actions: ['portfolio', 'compliance', 'communication'],
       client_detail: ['communication', 'planning', 'compliance'],
       account_detail: ['portfolio', 'trading', 'compliance'],
       household_detail: ['portfolio', 'planning', 'communication'],
+      households: ['portfolio', 'planning'],
       portfolios: ['portfolio', 'trading'],
       trading: ['trading', 'portfolio'],
+      engage: ['communication', 'planning'],
       workflows: ['compliance', 'communication'],
     }
 

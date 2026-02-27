@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { TabLayout } from '@/components/ui/TabLayout'
 import { ShareButton } from '@/components/ui/ShareButton'
+import { WorkflowLaunchButton } from '@/components/ui/WorkflowLaunchButton'
 import { AIInsightStack } from '@/components/ui/AIInsightCard'
 import { useHousehold } from '@/hooks/use-households'
 import { useAccounts } from '@/hooks/use-accounts'
@@ -352,6 +353,7 @@ export function HouseholdDetailPage() {
           <p className="text-caption text-text-secondary">Total AUM</p>
           <p className="font-mono text-page-title">{formatCurrency(household.totalAUM, true)}</p>
         </div>
+        <WorkflowLaunchButton clientId={household.primaryContactId} clientName={household.name} />
         <ShareButton card={{
           variant: 'household_summary',
           entityId: household.id,

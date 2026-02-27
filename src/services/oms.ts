@@ -1,18 +1,73 @@
 import { get, post } from './api-client'
+import type { TradableAssetClass, TradeSide, TradeOrderType, TimeInForce, BondPriceType, MutualFundAmountType } from '@/types/trading'
 
 export type Order = {
   id: string
   accountId: string
   symbol: string
-  side: 'buy' | 'sell'
+  side: string
   quantity: number
-  orderType: 'market' | 'limit'
+  orderType: string
   limitPrice?: number
+  stopPrice?: number
   status: 'pending' | 'submitted' | 'filled' | 'cancelled'
   filledQuantity: number
   filledPrice?: number
   submittedAt: string
   filledAt?: string
+  assetClass?: TradableAssetClass
+  timeInForce?: TimeInForce
+  extendedHours?: boolean
+  // Option fields
+  underlying?: string
+  optionType?: 'call' | 'put'
+  strikePrice?: number
+  expirationDate?: string
+  contractMultiplier?: number
+  // Mutual fund fields
+  amountType?: MutualFundAmountType
+  dollarAmount?: number
+  exchangeTargetSymbol?: string
+  // Fixed income fields
+  parAmount?: number
+  bondPriceType?: BondPriceType
+  priceOrYield?: number
+  // Digital asset
+  fractionalQuantity?: boolean
+  // Computed
+  estimatedValue?: number
+  commission?: number
+}
+
+export type TradeRequest = {
+  accountId: string
+  symbol: string
+  side: TradeSide | string
+  quantity: number
+  orderType: TradeOrderType | string
+  limitPrice?: number
+  stopPrice?: number
+  assetClass?: TradableAssetClass
+  timeInForce?: TimeInForce
+  extendedHours?: boolean
+  // Option fields
+  underlying?: string
+  optionType?: 'call' | 'put'
+  strikePrice?: number
+  expirationDate?: string
+  contractMultiplier?: number
+  // Mutual fund fields
+  amountType?: MutualFundAmountType
+  dollarAmount?: number
+  exchangeTargetSymbol?: string
+  // Fixed income fields
+  parAmount?: number
+  bondPriceType?: BondPriceType
+  priceOrYield?: number
+  // Digital asset
+  fractionalQuantity?: boolean
+  estimatedValue?: number
+  commission?: number
 }
 
 export type RebalanceRequest = {
@@ -44,13 +99,11 @@ export type ComplianceCheck = {
   message: string
 }
 
-export type TradeRequest = {
+export type RebalanceExecution = {
   accountId: string
-  symbol: string
-  side: 'buy' | 'sell'
-  quantity: number
-  orderType: 'market' | 'limit'
-  limitPrice?: number
+  status: 'submitted' | 'completed' | 'failed'
+  ordersCreated: number
+  estimatedCompletion: string
 }
 
 export function submitTrade(request: TradeRequest) {
@@ -67,13 +120,6 @@ export function submitRebalance(request: RebalanceRequest) {
 
 export function getExecutionStatus(orderId: string) {
   return get<Order>(`/oms/orders/${orderId}`)
-}
-
-export type RebalanceExecution = {
-  accountId: string
-  status: 'submitted' | 'completed' | 'failed'
-  ordersCreated: number
-  estimatedCompletion: string
 }
 
 export function executeRebalance(request: { accountIds: string[]; taxAware: boolean }) {

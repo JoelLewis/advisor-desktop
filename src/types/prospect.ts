@@ -1,4 +1,4 @@
-type ProspectStage = 'lead' | 'qualified' | 'proposal' | 'negotiation' | 'onboarding'
+type ProspectStage = 'lead' | 'discovery' | 'proposal' | 'decision' | 'onboarding'
 
 type ProspectActivity = {
   id: string
@@ -22,6 +22,7 @@ type Prospect = {
   nextActionDate: string
   activities: ProspectActivity[]
   createdAt: string
+  stageChangedAt: string
   notes?: string
 }
 

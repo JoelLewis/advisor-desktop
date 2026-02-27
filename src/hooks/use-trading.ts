@@ -1,11 +1,20 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { searchSymbols, previewModelTrades, executeModelTrades } from '@/services/trading'
+import { searchSymbols, getOptionChain, previewModelTrades, executeModelTrades } from '@/services/trading'
+import type { TradableAssetClass } from '@/types/trading'
 
-export function useSymbolSearch(q: string) {
+export function useSymbolSearch(q: string, assetClass?: TradableAssetClass) {
   return useQuery({
-    queryKey: ['symbols', q],
-    queryFn: () => searchSymbols(q),
+    queryKey: ['symbols', q, assetClass],
+    queryFn: () => searchSymbols(q, assetClass),
     enabled: q.length >= 1,
+  })
+}
+
+export function useOptionChain(underlying: string, expiration?: string) {
+  return useQuery({
+    queryKey: ['optionChain', underlying, expiration],
+    queryFn: () => getOptionChain(underlying, expiration),
+    enabled: underlying.length >= 1,
   })
 }
 

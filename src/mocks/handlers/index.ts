@@ -18,6 +18,7 @@ import { searchHandlers } from './search'
 import { onboardingHandlers } from './onboarding'
 import { practiceHandlers } from './practice'
 import { tradingHandlers } from './trading'
+import { engageHandlers } from './engage'
 
 export const handlers = [
   ...crmHandlers,
@@ -40,4 +41,5 @@ export const handlers = [
   ...onboardingHandlers,
   ...practiceHandlers,
   ...tradingHandlers,
+  ...engageHandlers,
 ]

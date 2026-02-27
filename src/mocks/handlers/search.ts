@@ -13,13 +13,16 @@ type SearchResult = {
 }
 
 const PAGES: SearchResult[] = [
-  { id: 'page-dashboard', type: 'page', title: 'Dashboard', subtitle: 'Overview & NBAs', route: '/dashboard' },
+  { id: 'page-dashboard', type: 'page', title: 'Dashboard', subtitle: 'Overview & quick view', route: '/dashboard' },
+  { id: 'page-actions', type: 'page', title: 'Actions', subtitle: 'Next Best Actions & effectiveness', route: '/actions' },
   { id: 'page-clients', type: 'page', title: 'Client List', subtitle: 'All clients', route: '/clients' },
+  { id: 'page-households', type: 'page', title: 'Households', subtitle: 'Household management', route: '/households' },
   { id: 'page-portfolios', type: 'page', title: 'Portfolios', subtitle: 'Accounts & positions', route: '/portfolios' },
   { id: 'page-rebalance', type: 'page', title: 'Rebalance', subtitle: 'Portfolio rebalancing wizard', route: '/portfolios/rebalance' },
   { id: 'page-risk', type: 'page', title: 'Risk Analytics', subtitle: 'Risk metrics & scenarios', route: '/portfolios/risk' },
   { id: 'page-prospects', type: 'page', title: 'Prospects', subtitle: 'Pipeline & growth', route: '/growth' },
   { id: 'page-revenue', type: 'page', title: 'Revenue', subtitle: 'Fees & AUM tracking', route: '/growth/revenue' },
+  { id: 'page-engage', type: 'page', title: 'Engage', subtitle: 'Client communications & campaigns', route: '/engage' },
   { id: 'page-workflows', type: 'page', title: 'Workflow Center', subtitle: 'Tasks & processes', route: '/workflows' },
   { id: 'page-settings', type: 'page', title: 'Settings', subtitle: 'AI & notification preferences', route: '/settings' },
   { id: 'page-onboard', type: 'page', title: 'Client Onboarding', subtitle: 'New client wizard', route: '/clients/onboard' },

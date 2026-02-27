@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/Badge'
 import { ActivityItemRow } from '@/components/ui/ActivityItem'
 import { AIInsightStack } from '@/components/ui/AIInsightCard'
 import { ShareButton } from '@/components/ui/ShareButton'
+import { WorkflowLaunchButton } from '@/components/ui/WorkflowLaunchButton'
 import { useClient } from '@/hooks/use-clients'
 import { useAccounts } from '@/hooks/use-accounts'
 import { usePlan } from '@/hooks/use-planning'
@@ -359,6 +360,7 @@ export function ClientDetailPage() {
         <div className="flex-1">
           <ClientHeader client={client} />
         </div>
+        <WorkflowLaunchButton clientId={client.id} clientName={client.fullName} />
         <ShareButton card={{
           variant: 'client_summary',
           entityId: client.id,
