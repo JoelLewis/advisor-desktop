@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { Search, Bell, Sparkles, User, MessageSquare, Info } from 'lucide-react'
+import { Search, Bell, Sparkles, User, MessageSquare, Info, SquarePen } from 'lucide-react'
 import { useUIStore } from '@/store/ui-store'
 import { usePlatform } from '@/hooks/use-platform'
 import { useBreakpoint } from '@/hooks/use-breakpoint'
@@ -13,6 +13,7 @@ export function TopBar() {
   const aiPanelOpen = useUIStore((s) => s.aiPanelOpen)
   const aiPanelWidth = useUIStore((s) => s.aiPanelWidth)
   const openSearch = useUIStore((s) => s.openGlobalSearch)
+  const openCapture = useUIStore((s) => s.openQuickCapture)
   const toggleAI = useUIStore((s) => s.toggleAIPanel)
   const toggleMessaging = useUIStore((s) => s.toggleMessaging)
   const { shortcut } = usePlatform()
@@ -32,18 +33,32 @@ export function TopBar() {
       )}
       style={{ right: aiPanelOpen && !isBase ? aiPanelWidth : 0 }}
     >
-      {/* Left: Search trigger */}
-      <button
-        onClick={openSearch}
-        data-annotation="dash-search"
-        className="flex items-center gap-2 rounded-md border border-border-primary bg-surface-secondary px-3 py-1.5 text-caption text-text-tertiary transition-colors hover:border-border-secondary hover:text-text-secondary"
-      >
-        <Search className="h-4 w-4" />
-        <span className="hidden xl:inline">Search clients, accounts...</span>
-        <kbd className="ml-4 rounded border border-border-primary bg-surface-primary px-1.5 py-0.5 text-mono-sm">
-          {shortcut('K')}
-        </kbd>
-      </button>
+      {/* Left: Search + Quick Capture */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={openSearch}
+          data-annotation="dash-search"
+          className="flex items-center gap-2 rounded-md border border-border-primary bg-surface-secondary px-3 py-1.5 text-caption text-text-tertiary transition-colors hover:border-border-secondary hover:text-text-secondary"
+        >
+          <Search className="h-4 w-4" />
+          <span className="hidden xl:inline">Search clients, accounts...</span>
+          <kbd className="ml-4 rounded border border-border-primary bg-surface-primary px-1.5 py-0.5 text-mono-sm">
+            {shortcut('K')}
+          </kbd>
+        </button>
+        <button
+          onClick={openCapture}
+          className="flex items-center gap-1.5 rounded-md border border-border-primary bg-surface-secondary px-3 py-1.5 text-caption text-text-tertiary transition-colors hover:border-border-secondary hover:text-text-secondary"
+          aria-label="Quick Capture"
+          title="Quick Capture (Ctrl+/)"
+        >
+          <SquarePen className="h-4 w-4" />
+          <span className="hidden xl:inline">Capture</span>
+          <kbd className="rounded border border-border-primary bg-surface-primary px-1.5 py-0.5 text-mono-sm">
+            Ctrl+/
+          </kbd>
+        </button>
+      </div>
 
       {/* Right: Actions */}
       <div className="flex items-center gap-1">

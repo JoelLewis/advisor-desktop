@@ -1,15 +1,19 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { toast } from 'sonner'
-import { Save, Plus, Pencil, Trash2 } from 'lucide-react'
+import { Save, Plus, Pencil, Trash2, Zap } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { TabLayout } from '@/components/ui/TabLayout'
 import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useAISettings, useUpdateAISettings, useNBASettings, useUpdateNBASettings, useNotificationSettings, useUpdateNotificationSettings, useDisplaySettings, useUpdateDisplaySettings, useCustomPrompts, useCreateCustomPrompt, useUpdateCustomPrompt, useDeleteCustomPrompt } from '@/hooks/use-settings'
+import { useNBAs } from '@/hooks/use-nbas'
+import { AIAutonomyTab, PermissionMatrixCard } from './AIAutonomyTab'
+import { TemplateLibraryEditor } from './TemplateLibraryEditor'
+import { useUIStore } from '@/store/ui-store'
 import { cn } from '@/lib/utils'
 import { PRIORITY_VARIANTS } from '@/lib/labels'
 import { CURRENCY_REGISTRY } from '@/lib/currency'
-import type { AISettings, AITone, AIVerbosity, NBASettings, NotificationSettings, DisplaySettings, CommunicationChannel, FollowUpCadence, CustomPromptCategory } from '@/types/settings'
+import type { AISettings, AITone, AIVerbosity, NBASettings, NotificationSettings, DisplaySettings, CommunicationChannel, FollowUpCadence, CustomPromptCategory, CustomAlertRule } from '@/types/settings'
 import type { NBACategory } from '@/types/nba'
 import type { CurrencyCode } from '@/types/currency'
 
@@ -311,11 +315,6 @@ function AISettingsPanel() {
     })
   }
 
-  function updatePermission(key: string, value: boolean) {
-    if (!settings) return
-    setSettings({ ...settings, permissions: { ...settings.permissions, [key]: value } })
-  }
-
   function updatePersona(patch: Partial<AISettings['persona']>) {
     if (!settings) return
     setSettings({ ...settings, persona: { ...settings.persona, ...patch } })
@@ -488,35 +487,260 @@ function AISettingsPanel() {
         </CardContent>
       </Card>
 
-      {/* Card 4: Custom Prompts — separate CRUD resource */}
-      <CustomPromptsCard />
-
-      {/* Card 5: AI Permissions */}
-      <Card>
-        <CardHeader action={<SaveButton onClick={save} disabled={update.isPending} />}>
-          AI Permissions
-        </CardHeader>
-        <CardContent className="divide-y divide-border-primary">
-          {Object.entries(settings.permissions).map(([key, enabled]) => (
-            <Toggle
-              key={key}
-              label={key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase())}
-              checked={enabled}
-              onChange={(v) => updatePermission(key, v)}
-            />
-          ))}
-        </CardContent>
-      </Card>
+      {/* Card 4: AI Permission Matrix — granular per-action controls */}
+      <PermissionMatrixCard />
     </div>
   )
+}
+
+const ALERT_METRICS = [
+  { value: 'drift', label: 'Portfolio drift' },
+  { value: 'account_value', label: 'Account value' },
+  { value: 'concentration', label: 'Single-security concentration' },
+  { value: 'cash_balance', label: 'Cash balance' },
+  { value: 'ytd_return', label: 'YTD return' },
+  { value: 'days_since_contact', label: 'Days since last contact' },
+  { value: 'days_to_rmd', label: 'Days until RMD deadline' },
+  { value: 'unrealized_loss', label: 'Unrealized loss' },
+]
+
+const ALERT_OPERATORS = [
+  { value: '>', label: 'exceeds' },
+  { value: '<', label: 'falls below' },
+  { value: '>=', label: 'is at least' },
+  { value: '<=', label: 'is at most' },
+  { value: '=', label: 'equals' },
+]
+
+const ALERT_SCOPES = [
+  { value: 'any_client', label: 'any client' },
+  { value: 'platinum_clients', label: 'platinum tier clients' },
+  { value: 'gold_clients', label: 'gold tier clients' },
+  { value: 'accounts_over_1m', label: 'accounts over $1M' },
+  { value: 'accounts_over_5m', label: 'accounts over $5M' },
+]
+
+const ALERT_PRIORITIES: { value: CustomAlertRule['priority']; label: string }[] = [
+  { value: 'critical', label: 'Critical' },
+  { value: 'high', label: 'High' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'low', label: 'Low' },
+]
+
+function CustomAlertRulesCard({
+  rules,
+  onChange,
+  onSave,
+  isSaving,
+}: {
+  rules: CustomAlertRule[]
+  onChange: (rules: CustomAlertRule[]) => void
+  onSave: () => void
+  isSaving: boolean
+}) {
+  const [adding, setAdding] = useState(false)
+  const [metric, setMetric] = useState(ALERT_METRICS[0]!.value)
+  const [operator, setOperator] = useState(ALERT_OPERATORS[0]!.value)
+  const [threshold, setThreshold] = useState('')
+  const [scope, setScope] = useState(ALERT_SCOPES[0]!.value)
+  const [priority, setPriority] = useState<CustomAlertRule['priority']>('high')
+
+  function buildCondition(): string {
+    const metricLabel = ALERT_METRICS.find((m) => m.value === metric)?.label ?? metric
+    const opLabel = ALERT_OPERATORS.find((o) => o.value === operator)?.label ?? operator
+    const scopeLabel = ALERT_SCOPES.find((s) => s.value === scope)?.label ?? scope
+    return `${metricLabel} ${opLabel} ${threshold} for ${scopeLabel}`
+  }
+
+  function buildName(): string {
+    const metricLabel = ALERT_METRICS.find((m) => m.value === metric)?.label ?? metric
+    return `${metricLabel} alert`
+  }
+
+  function handleAdd() {
+    if (!threshold.trim()) return
+    const newRule: CustomAlertRule = {
+      name: buildName(),
+      condition: buildCondition(),
+      priority,
+    }
+    onChange([...rules, newRule])
+    setAdding(false)
+    setThreshold('')
+  }
+
+  function handleRemove(index: number) {
+    onChange(rules.filter((_, i) => i !== index))
+  }
+
+  return (
+    <Card>
+      <CardHeader
+        action={
+          <div className="flex items-center gap-2">
+            {rules.length > 0 && <SaveButton onClick={onSave} disabled={isSaving} />}
+            <button
+              onClick={() => setAdding(true)}
+              className={SAVE_BUTTON_CLASS}
+            >
+              <Plus className="h-3.5 w-3.5" /> Add Rule
+            </button>
+          </div>
+        }
+      >
+        Custom Alert Rules
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {adding && (
+          <div className="space-y-3 rounded-lg border border-accent-blue/30 bg-accent-blue/5 p-3">
+            <p className="text-caption font-medium text-text-secondary">Build alert rule</p>
+            <div className="flex flex-wrap items-center gap-2 text-body text-text-primary">
+              <span className="text-caption text-text-secondary">When</span>
+              <select
+                value={metric}
+                onChange={(e) => setMetric(e.target.value)}
+                className="rounded-md border border-border-secondary bg-surface-primary px-2 py-1 text-caption focus:border-accent-blue focus:outline-none"
+              >
+                {ALERT_METRICS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+              </select>
+              <select
+                value={operator}
+                onChange={(e) => setOperator(e.target.value)}
+                className="rounded-md border border-border-secondary bg-surface-primary px-2 py-1 text-caption focus:border-accent-blue focus:outline-none"
+              >
+                {ALERT_OPERATORS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              <input
+                type="text"
+                placeholder="value"
+                value={threshold}
+                onChange={(e) => setThreshold(e.target.value)}
+                className="w-24 rounded-md border border-border-secondary bg-surface-primary px-2 py-1 font-mono text-caption focus:border-accent-blue focus:outline-none"
+              />
+              <span className="text-caption text-text-secondary">for</span>
+              <select
+                value={scope}
+                onChange={(e) => setScope(e.target.value)}
+                className="rounded-md border border-border-secondary bg-surface-primary px-2 py-1 text-caption focus:border-accent-blue focus:outline-none"
+              >
+                {ALERT_SCOPES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+              <span className="text-caption text-text-secondary">generate</span>
+              <select
+                value={priority}
+                onChange={(e) => setPriority(e.target.value as CustomAlertRule['priority'])}
+                className="rounded-md border border-border-secondary bg-surface-primary px-2 py-1 text-caption focus:border-accent-blue focus:outline-none"
+              >
+                {ALERT_PRIORITIES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+              </select>
+              <span className="text-caption text-text-secondary">NBA</span>
+            </div>
+            {threshold.trim() && (
+              <p className="rounded bg-surface-tertiary px-2 py-1 font-mono text-caption text-text-secondary">
+                Preview: {buildCondition()} → {priority} priority NBA
+              </p>
+            )}
+            <div className="flex items-center justify-end gap-2">
+              <button onClick={() => setAdding(false)} className="rounded-md px-3 py-1 text-caption font-medium text-text-secondary hover:text-text-primary">
+                Cancel
+              </button>
+              <button
+                onClick={handleAdd}
+                disabled={!threshold.trim()}
+                className={SAVE_BUTTON_CLASS}
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        )}
+
+        {rules.length === 0 && !adding && (
+          <p className="py-4 text-center text-caption text-text-tertiary">
+            No custom alert rules. Add rules to generate NBAs based on specific conditions.
+          </p>
+        )}
+
+        {rules.map((rule, i) => (
+          <div key={i} className="flex items-center justify-between rounded-md border border-border-primary px-3 py-2">
+            <div>
+              <p className="text-body-strong">{rule.name}</p>
+              <p className="font-mono text-caption text-text-tertiary">{rule.condition}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant={PRIORITY_VARIANTS[rule.priority]}>{rule.priority}</Badge>
+              <button
+                onClick={() => handleRemove(i)}
+                className="rounded p-1 text-text-tertiary hover:bg-red-50 hover:text-accent-red"
+                aria-label={`Delete ${rule.name}`}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  )
+}
+
+const WEIGHT_PRESETS: Record<string, { label: string; description: string; weights: NBASettings['weights'] }> = {
+  balanced: {
+    label: 'Balanced',
+    description: 'Equal emphasis across all dimensions',
+    weights: { urgency: 20, impact: 20, efficiency: 20, relationship: 20, confidence: 20 },
+  },
+  revenue: {
+    label: 'Revenue',
+    description: 'Prioritize high-impact, high-confidence actions',
+    weights: { urgency: 10, impact: 35, efficiency: 15, relationship: 10, confidence: 30 },
+  },
+  compliance: {
+    label: 'Compliance',
+    description: 'Prioritize urgent compliance items',
+    weights: { urgency: 35, impact: 15, efficiency: 10, relationship: 10, confidence: 30 },
+  },
+  relationship: {
+    label: 'Relationship',
+    description: 'Prioritize client relationship actions',
+    weights: { urgency: 10, impact: 15, efficiency: 15, relationship: 40, confidence: 20 },
+  },
+}
+
+function computeComposite(scoring: { urgency: number; impact: number; efficiency: number; relationship: number; confidence: number }, weights: NBASettings['weights']): number {
+  const totalWeight = weights.urgency + weights.impact + weights.efficiency + weights.relationship + weights.confidence
+  if (totalWeight === 0) return 0
+  return (
+    scoring.urgency * weights.urgency +
+    scoring.impact * weights.impact +
+    scoring.efficiency * weights.efficiency +
+    scoring.relationship * weights.relationship +
+    scoring.confidence * weights.confidence
+  ) / totalWeight
 }
 
 function NBASettingsPanel() {
   const { data, isLoading } = useNBASettings()
   const update = useUpdateNBASettings()
   const [settings, setSettings] = useState<NBASettings | null>(null)
+  const { data: nbas } = useNBAs({ dismissed: 'false' })
 
   useEffect(() => { if (data) setSettings(data) }, [data])
+
+  // Live re-rank preview: recompute composite scores with current weights
+  const rankedPreview = useMemo(() => {
+    if (!nbas || !settings) return []
+    return [...nbas]
+      .map((nba) => ({
+        id: nba.id,
+        title: nba.title,
+        category: nba.category,
+        originalComposite: nba.scoring.composite,
+        newComposite: Math.round(computeComposite(nba.scoring, settings.weights)),
+      }))
+      .sort((a, b) => b.newComposite - a.newComposite)
+      .slice(0, 10)
+  }, [nbas, settings])
 
   if (isLoading || !settings) return <Skeleton className="h-64" />
 
@@ -530,6 +754,14 @@ function NBASettingsPanel() {
   function updateWeight(key: string, value: number) {
     if (!settings) return
     setSettings({ ...settings, weights: { ...settings.weights, [key]: value } })
+  }
+
+  function applyPreset(presetKey: string) {
+    if (!settings) return
+    const preset = WEIGHT_PRESETS[presetKey]
+    if (preset) {
+      setSettings({ ...settings, weights: { ...preset.weights } })
+    }
   }
 
   function toggleCategory(cat: NBACategory) {
@@ -548,21 +780,71 @@ function NBASettingsPanel() {
         <CardHeader action={<SaveButton onClick={save} disabled={update.isPending} />}>
           Scoring Weights
         </CardHeader>
-        <CardContent className="divide-y divide-border-primary">
-          <SliderField label="Urgency" value={settings.weights.urgency} onChange={(v) => updateWeight('urgency', v)} />
-          <SliderField label="Impact" value={settings.weights.impact} onChange={(v) => updateWeight('impact', v)} />
-          <SliderField label="Efficiency" value={settings.weights.efficiency} onChange={(v) => updateWeight('efficiency', v)} />
-          <SliderField label="Relationship" value={settings.weights.relationship} onChange={(v) => updateWeight('relationship', v)} />
-          <SliderField label="Confidence" value={settings.weights.confidence} onChange={(v) => updateWeight('confidence', v)} />
-          <div className="flex items-center justify-between py-2">
-            <span className="text-caption text-text-secondary">Total</span>
-            <span className={cn(
-              'font-mono text-caption font-medium',
-              weightsTotal === 100 ? 'text-accent-green' : 'text-accent-red',
-            )}>
-              {weightsTotal} / 100
-            </span>
+        <CardContent className="space-y-4">
+          {/* Preset buttons */}
+          <div className="space-y-2">
+            <span className="text-caption font-medium text-text-secondary">Presets</span>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(WEIGHT_PRESETS).map(([key, preset]) => (
+                <button
+                  key={key}
+                  onClick={() => applyPreset(key)}
+                  className="rounded-md border border-border-primary bg-surface-secondary px-3 py-1.5 text-caption font-medium text-text-secondary transition-colors hover:border-accent-blue hover:text-accent-blue"
+                  title={preset.description}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
           </div>
+
+          {/* Sliders */}
+          <div className="divide-y divide-border-primary">
+            <SliderField label="Urgency" value={settings.weights.urgency} onChange={(v) => updateWeight('urgency', v)} />
+            <SliderField label="Impact" value={settings.weights.impact} onChange={(v) => updateWeight('impact', v)} />
+            <SliderField label="Efficiency" value={settings.weights.efficiency} onChange={(v) => updateWeight('efficiency', v)} />
+            <SliderField label="Relationship" value={settings.weights.relationship} onChange={(v) => updateWeight('relationship', v)} />
+            <SliderField label="Confidence" value={settings.weights.confidence} onChange={(v) => updateWeight('confidence', v)} />
+            <div className="flex items-center justify-between py-2">
+              <span className="text-caption text-text-secondary">Total</span>
+              <span className={cn(
+                'font-mono text-caption font-medium',
+                weightsTotal === 100 ? 'text-accent-green' : 'text-accent-red',
+              )}>
+                {weightsTotal} / 100
+              </span>
+            </div>
+          </div>
+
+          {/* Live ranking preview */}
+          {rankedPreview.length > 0 && (
+            <div className="space-y-2 rounded-lg border border-border-primary bg-surface-secondary p-3">
+              <div className="flex items-center gap-2">
+                <Zap className="h-3.5 w-3.5 text-amber-500" />
+                <span className="text-caption font-medium text-text-secondary">Live Ranking Preview (Top 10)</span>
+              </div>
+              <div className="space-y-1">
+                {rankedPreview.map((item, i) => {
+                  const delta = item.newComposite - item.originalComposite
+                  return (
+                    <div key={item.id} className="flex items-center gap-2 text-caption">
+                      <span className="w-5 text-right font-mono text-text-tertiary">{i + 1}.</span>
+                      <span className="min-w-0 flex-1 truncate text-text-primary">{item.title}</span>
+                      <span className="font-mono text-text-secondary">{item.newComposite}</span>
+                      {delta !== 0 && (
+                        <span className={cn(
+                          'font-mono text-[11px]',
+                          delta > 0 ? 'text-accent-green' : 'text-accent-red',
+                        )}>
+                          {delta > 0 ? '+' : ''}{delta}
+                        </span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -607,22 +889,12 @@ function NBASettingsPanel() {
         </CardContent>
       </Card>
 
-      {settings.customAlertRules.length > 0 && (
-        <Card>
-          <CardHeader>Custom Alert Rules</CardHeader>
-          <CardContent className="space-y-2">
-            {settings.customAlertRules.map((rule, i) => (
-              <div key={i} className="flex items-center justify-between rounded-md border border-border-primary px-3 py-2">
-                <div>
-                  <p className="text-body-strong">{rule.name}</p>
-                  <p className="font-mono text-caption text-text-tertiary">{rule.condition}</p>
-                </div>
-                <Badge variant={PRIORITY_VARIANTS[rule.priority]}>{rule.priority}</Badge>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+      <CustomAlertRulesCard
+        rules={settings.customAlertRules}
+        onChange={(rules) => setSettings({ ...settings, customAlertRules: rules })}
+        onSave={save}
+        isSaving={update.isPending}
+      />
     </div>
   )
 }
@@ -710,6 +982,42 @@ const DATE_FORMATS: { value: DisplaySettings['dateFormat']; label: string }[] = 
   { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD (ISO)' },
 ]
 
+function ThemeCard() {
+  const themeMode = useUIStore((s) => s.themeMode)
+  const setThemeMode = useUIStore((s) => s.setThemeMode)
+
+  const options: { value: 'light' | 'dark' | 'system'; label: string; description: string }[] = [
+    { value: 'light', label: 'Light', description: 'Always use light theme' },
+    { value: 'dark', label: 'Dark', description: 'Always use dark theme' },
+    { value: 'system', label: 'System', description: 'Follow OS preference' },
+  ]
+
+  return (
+    <Card>
+      <CardHeader>Appearance</CardHeader>
+      <CardContent>
+        <div className="flex gap-3">
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setThemeMode(opt.value)}
+              className={cn(
+                'flex-1 rounded-lg border-2 px-4 py-3 text-left transition-colors',
+                themeMode === opt.value
+                  ? 'border-accent-blue bg-accent-blue/5'
+                  : 'border-border-primary hover:border-border-secondary',
+              )}
+            >
+              <p className="text-body-strong text-text-primary">{opt.label}</p>
+              <p className="mt-0.5 text-caption text-text-secondary">{opt.description}</p>
+            </button>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 function DisplaySettingsPanel() {
   const { data, isLoading } = useDisplaySettings()
   const update = useUpdateDisplaySettings()
@@ -728,6 +1036,7 @@ function DisplaySettingsPanel() {
 
   return (
     <div className="space-y-6">
+      <ThemeCard />
       <Card>
         <CardHeader action={<SaveButton onClick={save} disabled={update.isPending} />}>
           Currency & Formatting
@@ -761,9 +1070,20 @@ function DisplaySettingsPanel() {
   )
 }
 
+function TemplatesPromptsPanel() {
+  return (
+    <div className="space-y-6">
+      <TemplateLibraryEditor />
+      <CustomPromptsCard />
+    </div>
+  )
+}
+
 export function SettingsPage() {
   const tabs = [
-    { id: 'ai', label: 'AI Assistant', content: <AISettingsPanel /> },
+    { id: 'ai', label: 'AI Behavior', content: <AISettingsPanel /> },
+    { id: 'autonomy', label: 'Automation', content: <AIAutonomyTab /> },
+    { id: 'templates', label: 'Templates & Prompts', content: <TemplatesPromptsPanel /> },
     { id: 'nba', label: 'NBA Settings', content: <NBASettingsPanel /> },
     { id: 'notifications', label: 'Notifications', content: <NotificationSettingsPanel /> },
     { id: 'display', label: 'Display', content: <DisplaySettingsPanel /> },
