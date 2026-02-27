@@ -7,7 +7,8 @@ import { DenseMetricsBar } from '@/components/ui/DenseMetricsBar'
 import { AllocationChart } from '@/components/ui/AllocationChart'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useHouseholds } from '@/hooks/use-households'
-import { formatCurrency, formatDate, cn } from '@/lib/utils'
+import { formatDate, cn } from '@/lib/utils'
+import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { capitalize } from '@/lib/labels'
 import type { Household } from '@/types/household'
 import type { ClientSegment } from '@/types/client'
@@ -96,6 +97,7 @@ function SectionHeading({ children }: { children: string }) {
 export function HouseholdListView() {
   const { data, isLoading } = useHouseholds()
   const navigate = useNavigate()
+  const { formatWithConversion } = useFormatCurrency()
   const [search, setSearch] = useState('')
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
   const [sortKey, setSortKey] = useState<SortKey>('aum')
@@ -139,8 +141,8 @@ export function HouseholdListView() {
     <div className="space-y-6">
       <DenseMetricsBar metrics={[
         { label: 'Total Households', value: String(households.length) },
-        { label: 'Total AUM', value: formatCurrency(totalAUM, true) },
-        { label: 'Avg AUM / HH', value: formatCurrency(avgAUM, true) },
+        { label: 'Total AUM', value: formatWithConversion(totalAUM, 'USD', { compact: true }) },
+        { label: 'Avg AUM / HH', value: formatWithConversion(avgAUM, 'USD', { compact: true }) },
         { label: 'Segments', value: segmentBreakdownText(households) },
       ]} />
 
@@ -207,7 +209,7 @@ export function HouseholdListView() {
                     {pluralize(hh.accountIds.length, 'account')}
                   </span>
                   <span className="ml-auto font-mono text-body font-medium text-text-primary">
-                    {formatCurrency(hh.totalAUM, true)}
+                    {formatWithConversion(hh.totalAUM, 'USD', { compact: true })}
                   </span>
                 </div>
 
@@ -246,7 +248,7 @@ export function HouseholdListView() {
                           ))}
                         </div>
                         <p className="mt-2 text-caption text-text-tertiary">
-                          Managed: {formatCurrency(hh.managedAUM, true)} | Held Away: {formatCurrency(hh.heldAwayAUM, true)}
+                          Managed: {formatWithConversion(hh.managedAUM, 'USD', { compact: true })} | Held Away: {formatWithConversion(hh.heldAwayAUM, 'USD', { compact: true })}
                         </p>
                       </div>
 

@@ -22,7 +22,9 @@ import { useClientDocuments } from '@/hooks/use-documents'
 import { useClientActivities } from '@/hooks/use-client-activity'
 import { useClientNotes, useCreateNote } from '@/hooks/use-notes'
 import { useAIInsights } from '@/hooks/use-ai'
-import { formatCurrency, formatDate, cn } from '@/lib/utils'
+import { formatDate, cn } from '@/lib/utils'
+import { useFormatCurrency } from '@/hooks/use-format-currency'
+import { CurrencyValue } from '@/components/ui/CurrencyValue'
 import { ACCOUNT_TYPE_LABELS, taxTreatmentBadgeVariant } from '@/lib/labels'
 import type { Account } from '@/types/account'
 import type { Document, DocumentType } from '@/types/document'
@@ -58,17 +60,9 @@ const accountColumns: ColumnDef<Account, unknown>[] = [
   },
   {
     accessorKey: 'totalValue', header: 'Value',
-    cell: ({ row }) => {
-      const currency = row.original.baseCurrency
-      return (
-        <span className="font-mono">
-          {formatCurrency(row.original.totalValue, { compact: true, currency })}
-          {currency && currency !== 'USD' && (
-            <span className="ml-1 text-[10px] text-text-tertiary">{currency}</span>
-          )}
-        </span>
-      )
-    },
+    cell: ({ row }) => (
+      <CurrencyValue value={row.original.totalValue} from={row.original.baseCurrency ?? 'USD'} compact className="font-mono" />
+    ),
     size: 120,
   },
   {
@@ -156,6 +150,7 @@ export function ClientDetailPage() {
   const { data: notes } = useClientNotes(id)
   const createNote = useCreateNote(id)
   const { data: insights } = useAIInsights('client_detail', id || undefined)
+  const { formatWithConversion } = useFormatCurrency()
   const [noteText, setNoteText] = useState('')
   const [reportOpen, setReportOpen] = useState(false)
 
@@ -187,7 +182,7 @@ export function ClientDetailPage() {
               <div>
                 <p className="text-body-strong text-accent-purple">AI Summary</p>
                 <p className="mt-1 text-body text-text-secondary">
-                  {client.fullName} is a {client.tier.label} client with {formatCurrency(client.totalAUM, true)} under management.
+                  {client.fullName} is a {client.tier.label} client with {formatWithConversion(client.totalAUM, 'USD', { compact: true })} under management.
                   Risk profile is {client.riskProfile.tolerance} (score: {client.riskProfile.score}/100).
                   {plan && ` Aggregate goal probability is ${Math.round(plan.aggregateProbability * 100)}%.`}
                   {plan?.goals.some((g) => g.status === 'at_risk') && ' Some goals are at risk — review recommended.'}
@@ -390,7 +385,7 @@ export function ClientDetailPage() {
           entityId: client.id,
           entityName: client.fullName,
           tier: client.tier.label,
-          metrics: [{ label: 'AUM', value: formatCurrency(client.totalAUM, true) }],
+          metrics: [{ label: 'AUM', value: formatWithConversion(client.totalAUM, 'USD', { compact: true }) }],
         }} /></span>
       </div>
       {insights && insights.length > 0 && (

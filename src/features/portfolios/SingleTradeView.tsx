@@ -6,6 +6,7 @@ import { DataTable } from '@/components/ui/DataTable'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useOrders, useSubmitTrade } from '@/hooks/use-orders'
 import { useSymbolSearch } from '@/hooks/use-trading'
+import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import type { Order } from '@/services/oms'
 import type { SymbolSearchResult, TradableAssetClass, EquitySide, EquityOrderType, OptionSide, MutualFundAction, MutualFundAmountType, BondSide, BondOrderType, BondPriceType, DigitalAssetSide, DigitalAssetOrderType, TimeInForce } from '@/types/trading'
@@ -72,6 +73,7 @@ export function SingleTradeView() {
   const { data: accounts } = useAccounts({})
   const { data: orders } = useOrders()
   const submitTrade = useSubmitTrade()
+  const { formatWithConversion } = useFormatCurrency()
 
   // ── Asset class ──
   const [assetClass, setAssetClass] = useState<TradableAssetClass>('equity')
@@ -283,7 +285,7 @@ export function SingleTradeView() {
                 <option value="">Select an account...</option>
                 {accounts?.map((acc) => (
                   <option key={acc.id} value={acc.id}>
-                    {acc.name} ({acc.accountNumber}) - {formatCurrency(acc.totalValue, true)}
+                    {acc.name} ({acc.accountNumber}) - {formatWithConversion(acc.totalValue, acc.baseCurrency ?? 'USD', { compact: true })}
                   </option>
                 ))}
               </select>

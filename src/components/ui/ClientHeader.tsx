@@ -3,7 +3,7 @@ import { Users } from 'lucide-react'
 import { Avatar } from './Avatar'
 import { Badge } from './Badge'
 import { cn } from '@/lib/utils'
-import { formatCurrency } from '@/lib/utils'
+import { useFormatCurrency } from '@/hooks/use-format-currency'
 import type { Client } from '@/types/client'
 
 const SEGMENT_VARIANT = {
@@ -19,6 +19,7 @@ type ClientHeaderProps = {
 }
 
 export function ClientHeader({ client, className }: ClientHeaderProps) {
+  const { formatWithConversion } = useFormatCurrency()
   return (
     <div className={cn('flex items-center gap-4 rounded-lg border border-border-primary bg-surface-primary p-4', className)}>
       <Avatar name={client.fullName} src={client.photo} size="lg" />
@@ -49,7 +50,7 @@ export function ClientHeader({ client, className }: ClientHeaderProps) {
       </div>
       <div className="text-right">
         <p className="text-caption text-text-secondary">Total AUM</p>
-        <p className="font-mono text-page-title">{formatCurrency(client.totalAUM, true)}</p>
+        <p className="font-mono text-page-title">{formatWithConversion(client.totalAUM, 'USD', { compact: true })}</p>
       </div>
     </div>
   )

@@ -19,7 +19,9 @@ import { useHeldAway } from '@/hooks/use-held-away'
 import { useHouseholdPlan } from '@/hooks/use-planning'
 import { useHouseholdPositions, useHouseholdDrift, useHouseholdAllocation } from '@/hooks/use-portfolio'
 import { useAIInsights } from '@/hooks/use-ai'
-import { formatCurrency, cn } from '@/lib/utils'
+import { cn } from '@/lib/utils'
+import { useFormatCurrency } from '@/hooks/use-format-currency'
+import { CurrencyValue } from '@/components/ui/CurrencyValue'
 import { ACCOUNT_TYPE_LABELS, taxTreatmentBadgeVariant } from '@/lib/labels'
 import type { Account } from '@/types/account'
 import type { Position } from '@/types/portfolio'
@@ -59,17 +61,9 @@ const accountColumns: ColumnDef<Account, unknown>[] = [
   },
   {
     accessorKey: 'totalValue', header: 'Value',
-    cell: ({ row }) => {
-      const currency = row.original.baseCurrency
-      return (
-        <span className="font-mono">
-          {formatCurrency(row.original.totalValue, { compact: true, currency })}
-          {currency && currency !== 'USD' && (
-            <span className="ml-1 text-[10px] text-text-tertiary">{currency}</span>
-          )}
-        </span>
-      )
-    },
+    cell: ({ row }) => (
+      <CurrencyValue value={row.original.totalValue} from={row.original.baseCurrency ?? 'USD'} compact className="font-mono" />
+    ),
     size: 120,
   },
   {
@@ -100,7 +94,7 @@ const heldAwayColumns: ColumnDef<HeldAwayAsset, unknown>[] = [
   },
   {
     accessorKey: 'estimatedValue', header: 'Est. Value',
-    cell: ({ row }) => <span className="font-mono">{formatCurrency(row.original.estimatedValue, true)}</span>,
+    cell: ({ row }) => <CurrencyValue value={row.original.estimatedValue} compact className="font-mono" />,
     size: 120,
   },
   {
@@ -140,6 +134,7 @@ export function HouseholdDetailPage() {
   const { data: hhDrift } = useHouseholdDrift(id)
   const { data: hhAllocation } = useHouseholdAllocation(id)
   const { data: insights } = useAIInsights('household_detail', id)
+  const { formatWithConversion } = useFormatCurrency()
   const [reportOpen, setReportOpen] = useState(false)
 
   if (isLoading) {
@@ -180,14 +175,8 @@ export function HouseholdDetailPage() {
       accessorKey: 'marketValue', header: 'Mkt Value',
       cell: ({ row }) => {
         const acc = accounts?.find((a) => a.id === row.original.accountId)
-        const currency = acc?.baseCurrency
         return (
-          <span className="font-mono">
-            {formatCurrency(row.original.marketValue, { compact: true, currency })}
-            {currency && currency !== 'USD' && (
-              <span className="ml-1 text-[10px] text-text-tertiary">{currency}</span>
-            )}
-          </span>
+          <CurrencyValue value={row.original.marketValue} from={acc?.baseCurrency ?? 'USD'} compact className="font-mono" />
         )
       },
       size: 100,
@@ -196,7 +185,7 @@ export function HouseholdDetailPage() {
       accessorKey: 'gainLoss', header: 'Gain/Loss',
       cell: ({ row }) => (
         <span className={cn('font-mono', row.original.gainLoss >= 0 ? 'text-accent-green' : 'text-accent-red')}>
-          {formatCurrency(row.original.gainLoss, true)}
+          {formatWithConversion(row.original.gainLoss, 'USD', { compact: true })}
         </span>
       ),
       size: 110,
@@ -210,7 +199,7 @@ export function HouseholdDetailPage() {
       id: 'overview', label: 'Overview',
       content: (
         <div className="space-y-6">
-          <Card data-annotation="household-family-tree">
+          <Card>
             <CardHeader>Family</CardHeader>
             <CardContent>
               <FamilyTree
@@ -225,12 +214,12 @@ export function HouseholdDetailPage() {
           )}
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-            <MetricSummaryCard label="Total AUM" value={formatCurrency(household.totalAUM, true)} />
-            <MetricSummaryCard label="Managed" value={formatCurrency(household.managedAUM, true)} />
-            <MetricSummaryCard label="Held Away" value={formatCurrency(household.heldAwayAUM, true)} />
+            <MetricSummaryCard label="Total AUM" value={formatWithConversion(household.totalAUM, 'USD', { compact: true })} />
+            <MetricSummaryCard label="Managed" value={formatWithConversion(household.managedAUM, 'USD', { compact: true })} />
+            <MetricSummaryCard label="Held Away" value={formatWithConversion(household.heldAwayAUM, 'USD', { compact: true })} />
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6" data-annotation="household-goals">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <Card>
               <CardHeader>Consolidated Allocation</CardHeader>
               <CardContent>
@@ -275,7 +264,7 @@ export function HouseholdDetailPage() {
             </CardContent>
           </Card>
 
-          <Card data-annotation="household-drift">
+          <Card>
             <CardHeader action={
               driftedAccounts.length > 0 ? (
                 <button
@@ -375,7 +364,7 @@ export function HouseholdDetailPage() {
         </div>
         <div className="text-right">
           <p className="text-caption text-text-secondary">Total AUM</p>
-          <p className="font-mono text-page-title">{formatCurrency(household.totalAUM, true)}</p>
+          <p className="font-mono text-page-title">{formatWithConversion(household.totalAUM, 'USD', { compact: true })}</p>
         </div>
         <button
           onClick={() => setReportOpen(true)}
@@ -391,7 +380,7 @@ export function HouseholdDetailPage() {
           tier: household.segment,
           memberCount: household.members.length,
           accountCount: household.accountIds.length,
-          metrics: [{ label: 'AUM', value: formatCurrency(household.totalAUM, true) }],
+          metrics: [{ label: 'AUM', value: formatWithConversion(household.totalAUM, 'USD', { compact: true }) }],
         }} />
       </div>
 

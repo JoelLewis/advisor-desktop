@@ -11,10 +11,11 @@ import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { CATEGORY_CONFIG } from '@/components/ui/NBACard'
 import { useNBAEffectiveness } from '@/hooks/use-nbas'
-import { formatCurrency } from '@/lib/utils'
 import { cn } from '@/lib/utils'
+import { useFormatCurrency } from '@/hooks/use-format-currency'
 export function NBAEffectivenessPage() {
   const { data: metrics, isLoading } = useNBAEffectiveness()
+  const { formatWithConversion } = useFormatCurrency()
 
   if (isLoading) {
     return (
@@ -65,7 +66,7 @@ export function NBAEffectivenessPage() {
         },
         {
           label: 'Revenue Impact',
-          value: formatCurrency(metrics.estimatedRevenueImpact, true),
+          value: formatWithConversion(metrics.estimatedRevenueImpact, 'USD', { compact: true }),
           change: { value: 'From accepted actions', direction: 'up' },
         },
       ] satisfies DenseMetric[]} />
@@ -100,7 +101,7 @@ export function NBAEffectivenessPage() {
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} />
                 <YAxis yAxisId="left" tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} domain={[0, 100]} unit="%" />
                 <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}K`} />
-                <RechartsTooltip formatter={(value: number, name: string) => name === 'Revenue Impact' ? formatCurrency(value, true) : `${value}%`} />
+                <RechartsTooltip formatter={(value: number, name: string) => name === 'Revenue Impact' ? formatWithConversion(value, 'USD', { compact: true }) : `${value}%`} />
                 <Legend />
                 <Line yAxisId="left" type="monotone" dataKey="completionRate" stroke="#2563EB" strokeWidth={2} dot={{ r: 3 }} name="Completion Rate" />
                 <Line yAxisId="right" type="monotone" dataKey="revenueImpact" stroke="#7C3AED" strokeWidth={2} dot={{ r: 3 }} name="Revenue Impact" />
@@ -151,7 +152,7 @@ export function NBAEffectivenessPage() {
                     <span className="font-mono text-caption">{acceptRate.toFixed(0)}%</span>
                   </div>
                   <span className="text-right font-mono text-caption text-text-secondary">
-                    {cat.revenueImpact > 0 ? formatCurrency(cat.revenueImpact, true) : '—'}
+                    {cat.revenueImpact > 0 ? formatWithConversion(cat.revenueImpact, 'USD', { compact: true }) : '—'}
                   </span>
                 </div>
               )

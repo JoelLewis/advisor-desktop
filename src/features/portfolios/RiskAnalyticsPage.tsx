@@ -11,7 +11,8 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import type { StressScenario } from '@/types/risk'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useRiskMetrics, useSensitivity, useStressScenarios } from '@/hooks/use-portfolio'
-import { formatCurrency, formatPercent, cn } from '@/lib/utils'
+import { useFormatCurrency } from '@/hooks/use-format-currency'
+import { formatPercent, cn } from '@/lib/utils'
 
 type SensitivityTab = 'interestRate' | 'equity' | 'credit'
 
@@ -39,6 +40,7 @@ function percentileColor(percentile: number): string {
 }
 
 export function RiskAnalyticsPage() {
+  const { formatWithConversion } = useFormatCurrency()
   const { data: accounts, isLoading: accountsLoading } = useAccounts({})
   const [searchParams] = useSearchParams()
 
@@ -105,7 +107,7 @@ export function RiskAnalyticsPage() {
         >
           {accounts.map((acc) => (
             <option key={acc.id} value={acc.id}>
-              {acc.name} ({formatCurrency(acc.totalValue, true)})
+              {acc.name} ({formatWithConversion(acc.totalValue, 'USD', { compact: true })})
             </option>
           ))}
         </select>
@@ -125,7 +127,7 @@ export function RiskAnalyticsPage() {
           <RiskMetricCard label="Sortino Ratio" value={risk.sortino.toFixed(2)} />
           <RiskMetricCard label="Max Drawdown" value={`${(risk.maxDrawdown * 100).toFixed(1)}%`} negative />
           <RiskMetricCard label="Std Deviation" value={`${(risk.standardDeviation * 100).toFixed(1)}%`} />
-          <RiskMetricCard label="VaR (95%)" value={formatCurrency(risk.var95, true)} negative />
+          <RiskMetricCard label="VaR (95%)" value={formatWithConversion(risk.var95, 'USD', { compact: true })} negative />
         </div>
       ) : null}
 
@@ -170,10 +172,10 @@ export function RiskAnalyticsPage() {
                 />
                 <YAxis
                   tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }}
-                  tickFormatter={(v: number) => formatCurrency(v, true)}
+                  tickFormatter={(v: number) => formatWithConversion(v, 'USD', { compact: true })}
                 />
                 <RechartsTooltip
-                  formatter={(value: number) => [formatCurrency(value), 'Impact']}
+                  formatter={(value: number) => [formatWithConversion(value, 'USD'), 'Impact']}
                   labelFormatter={(label: number) => `Shock: ${formatShockLabel(sensitivityTab, label)}`}
                 />
                 <Bar dataKey="impact" name="Impact" radius={[4, 4, 0, 0]}>
@@ -271,7 +273,7 @@ export function RiskAnalyticsPage() {
                                 percentileColor(p.percentile),
                               )}
                             >
-                              {formatCurrency(p.value, true)}
+                              {formatWithConversion(p.value, 'USD', { compact: true })}
                             </td>
                           ))}
                         </tr>
@@ -314,6 +316,7 @@ function RiskMetricCard({ label, value, negative }: { label: string; value: stri
 }
 
 function StressScenarioRow({ scenario }: { scenario: StressScenario }) {
+  const { formatWithConversion } = useFormatCurrency()
   return (
     <div className="rounded-md border border-border-primary p-4">
       <div className="flex items-center justify-between">
@@ -330,7 +333,7 @@ function StressScenarioRow({ scenario }: { scenario: StressScenario }) {
           <div key={pi.positionId} className="flex items-center justify-between text-caption">
             <span className="font-mono text-text-secondary">{pi.symbol}</span>
             <span className={cn('font-mono', pi.impactPercent >= 0 ? 'text-accent-green' : 'text-accent-red')}>
-              {formatPercent(pi.impactPercent * 100)} ({formatCurrency(pi.impact, true)})
+              {formatPercent(pi.impactPercent * 100)} ({formatWithConversion(pi.impact, 'USD', { compact: true })})
             </span>
           </div>
         ))}

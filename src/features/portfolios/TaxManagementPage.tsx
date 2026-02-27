@@ -7,8 +7,11 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { useAccount } from '@/hooks/use-accounts'
 import { useTaxLots } from '@/hooks/use-tax-lots'
 import { usePositions } from '@/hooks/use-portfolio'
-import { formatCurrency, formatDate, cn } from '@/lib/utils'
+import { useFormatCurrency } from '@/hooks/use-format-currency'
+import { CurrencyValue } from '@/components/ui/CurrencyValue'
+import { formatDate, cn } from '@/lib/utils'
 import type { TaxLot } from '@/types/portfolio'
+import type { CurrencyCode } from '@/types/currency'
 
 type ViewMode = 'lots' | 'harvest' | 'calendar'
 
@@ -48,6 +51,7 @@ export function TaxManagementPage() {
   const { data: account, isLoading: accountLoading } = useAccount(id)
   const { data: taxLots, isLoading: lotsLoading } = useTaxLots(id)
   const { data: positions } = usePositions(id)
+  const { formatWithConversion } = useFormatCurrency()
 
   const isLoading = accountLoading || lotsLoading
 
@@ -188,23 +192,23 @@ export function TaxManagementPage() {
           <Card>
             <CardContent>
               <p className="text-caption text-text-secondary">Unrealized Gains</p>
-              <p className="font-mono text-section-header text-accent-green">{formatCurrency(stats.totalUnrealizedGain, true)}</p>
+              <p className="font-mono text-section-header text-accent-green">{formatWithConversion(stats.totalUnrealizedGain, account.baseCurrency ?? 'USD', { compact: true })}</p>
               <div className="mt-1 flex gap-3 text-caption">
-                <span className="text-text-tertiary">ST: {formatCurrency(stats.shortTermGain, true)}</span>
-                <span className="text-text-tertiary">LT: {formatCurrency(stats.longTermGain, true)}</span>
+                <span className="text-text-tertiary">ST: {formatWithConversion(stats.shortTermGain, account.baseCurrency ?? 'USD', { compact: true })}</span>
+                <span className="text-text-tertiary">LT: {formatWithConversion(stats.longTermGain, account.baseCurrency ?? 'USD', { compact: true })}</span>
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent>
               <p className="text-caption text-text-secondary">Unrealized Losses</p>
-              <p className="font-mono text-section-header text-accent-red">{formatCurrency(stats.totalUnrealizedLoss, true)}</p>
+              <p className="font-mono text-section-header text-accent-red">{formatWithConversion(stats.totalUnrealizedLoss, account.baseCurrency ?? 'USD', { compact: true })}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent>
               <p className="text-caption text-text-secondary">Harvestable Losses</p>
-              <p className="font-mono text-section-header text-accent-blue">{formatCurrency(stats.harvestableAmount, true)}</p>
+              <p className="font-mono text-section-header text-accent-blue">{formatWithConversion(stats.harvestableAmount, account.baseCurrency ?? 'USD', { compact: true })}</p>
               <p className="mt-1 text-caption text-text-tertiary">{harvestOpportunities.length} lot{harvestOpportunities.length !== 1 ? 's' : ''}</p>
             </CardContent>
           </Card>
@@ -269,13 +273,13 @@ export function TaxManagementPage() {
                         )}
                       </td>
                       <td className={cn('px-3 py-2 text-right font-mono', row.realizedGain >= 0 ? 'text-accent-green' : 'text-accent-red')}>
-                        {formatCurrency(row.realizedGain, true)}
+                        {formatWithConversion(row.realizedGain, account.baseCurrency ?? 'USD', { compact: true })}
                       </td>
                       <td className={cn('px-3 py-2 text-right font-mono', row.shortTermGain >= 0 ? 'text-accent-green' : 'text-accent-red')}>
-                        {formatCurrency(row.shortTermGain, true)}
+                        {formatWithConversion(row.shortTermGain, account.baseCurrency ?? 'USD', { compact: true })}
                       </td>
                       <td className={cn('px-3 py-2 text-right font-mono', row.longTermGain >= 0 ? 'text-accent-green' : 'text-accent-red')}>
-                        {formatCurrency(row.longTermGain, true)}
+                        {formatWithConversion(row.longTermGain, account.baseCurrency ?? 'USD', { compact: true })}
                       </td>
                     </tr>
                   ))}
@@ -328,7 +332,7 @@ export function TaxManagementPage() {
                 </thead>
                 <tbody>
                   {(taxLots ?? []).map((lot) => (
-                    <TaxLotRow key={lot.id} lot={lot} positionMap={positionMap} />
+                    <TaxLotRow key={lot.id} lot={lot} positionMap={positionMap} baseCurrency={account.baseCurrency ?? 'USD'} />
                   ))}
                 </tbody>
               </table>
@@ -346,7 +350,7 @@ export function TaxManagementPage() {
                 <div>
                   <p className="text-body-strong">{selectedLots.size} lot{selectedLots.size !== 1 ? 's' : ''} selected</p>
                   <p className="text-caption text-text-secondary">
-                    Estimated tax savings: <span className="font-mono font-medium text-accent-green">{formatCurrency(selectedHarvestAmount * 0.37, true)}</span>
+                    Estimated tax savings: <span className="font-mono font-medium text-accent-green">{formatWithConversion(selectedHarvestAmount * 0.37, account.baseCurrency ?? 'USD', { compact: true })}</span>
                     {' '}(at 37% rate)
                   </p>
                 </div>
@@ -407,8 +411,8 @@ export function TaxManagementPage() {
                             </Badge>
                           </td>
                           <td className="px-4 py-2.5 text-right font-mono">{lot.quantity.toLocaleString()}</td>
-                          <td className="px-4 py-2.5 text-right font-mono text-accent-red">{formatCurrency(lot.gainLoss)}</td>
-                          <td className="px-4 py-2.5 text-right font-mono text-accent-green">{formatCurrency(Math.abs(lot.gainLoss) * 0.37)}</td>
+                          <td className="px-4 py-2.5 text-right font-mono text-accent-red"><CurrencyValue value={lot.gainLoss} from={account.baseCurrency ?? 'USD'} /></td>
+                          <td className="px-4 py-2.5 text-right font-mono text-accent-green"><CurrencyValue value={Math.abs(lot.gainLoss) * 0.37} from={account.baseCurrency ?? 'USD'} /></td>
                           <td className="px-4 py-2.5 text-center">
                             {lot.washSaleRestricted ? (
                               <Badge variant="red">Restricted</Badge>
@@ -502,9 +506,11 @@ function Th({ children, align = 'left' }: { children: React.ReactNode; align?: '
 function TaxLotRow({
   lot,
   positionMap,
+  baseCurrency,
 }: {
   lot: TaxLot
   positionMap: Map<string, { symbol: string; name: string }>
+  baseCurrency: CurrencyCode
 }) {
   const pos = positionMap.get(lot.positionId)
   return (
@@ -520,10 +526,10 @@ function TaxLotRow({
         </Badge>
       </td>
       <td className="px-4 py-2.5 text-right font-mono">{lot.quantity.toLocaleString()}</td>
-      <td className="px-4 py-2.5 text-right font-mono">{formatCurrency(lot.costBasis, true)}</td>
-      <td className="px-4 py-2.5 text-right font-mono">{formatCurrency(lot.currentValue, true)}</td>
+      <td className="px-4 py-2.5 text-right font-mono"><CurrencyValue value={lot.costBasis} from={baseCurrency} compact /></td>
+      <td className="px-4 py-2.5 text-right font-mono"><CurrencyValue value={lot.currentValue} from={baseCurrency} compact /></td>
       <td className={cn('px-4 py-2.5 text-right font-mono', lot.gainLoss >= 0 ? 'text-accent-green' : 'text-accent-red')}>
-        {formatCurrency(lot.gainLoss, true)}
+        <CurrencyValue value={lot.gainLoss} from={baseCurrency} compact />
       </td>
       <td className="px-4 py-2.5 text-center">
         {lot.washSaleRestricted ? (

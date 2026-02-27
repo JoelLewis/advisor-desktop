@@ -5,7 +5,8 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { TreemapChart } from '@/components/ui/TreemapChart'
 import { useConcentration } from '@/hooks/use-portfolio'
 import { useContainerWidth } from '@/hooks/use-container-width'
-import { formatCurrency, cn } from '@/lib/utils'
+import { useFormatCurrency } from '@/hooks/use-format-currency'
+import { cn } from '@/lib/utils'
 
 const ASSET_CLASS_LABELS: Record<string, string> = {
   us_equity: 'US Equity',
@@ -25,6 +26,7 @@ type ConcentrationViewProps = {
 }
 
 export function ConcentrationView({ accountId }: ConcentrationViewProps) {
+  const { formatWithConversion } = useFormatCurrency()
   const { data, isLoading } = useConcentration(accountId)
   const { containerRef: treemapContainerRef, width: treemapWidth } = useContainerWidth(720)
 
@@ -155,7 +157,7 @@ export function ConcentrationView({ accountId }: ConcentrationViewProps) {
                   <td className="px-4 py-2.5 text-caption text-text-secondary">
                     {ASSET_CLASS_LABELS[p.assetClass] ?? p.assetClass}
                   </td>
-                  <td className="px-4 py-2.5 text-right font-mono">{formatCurrency(p.marketValue, true)}</td>
+                  <td className="px-4 py-2.5 text-right font-mono">{formatWithConversion(p.marketValue, 'USD', { compact: true })}</td>
                   <td className="px-4 py-2.5 text-right font-mono">{(p.weight * 100).toFixed(1)}%</td>
                   <td className="px-4 py-2.5 text-right font-mono">{(p.limit * 100).toFixed(1)}%</td>
                   <td className="px-4 py-2.5 text-center">

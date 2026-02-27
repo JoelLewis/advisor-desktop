@@ -21,6 +21,8 @@ import { useAccount } from '@/hooks/use-accounts'
 import { usePositions, useDrift, usePerformance, useBenchmark, useRiskMetrics, useFactorExposures, useStressScenarios } from '@/hooks/use-portfolio'
 import { useAccountOrders } from '@/hooks/use-orders'
 import { useAIInsights } from '@/hooks/use-ai'
+import { useFormatCurrency } from '@/hooks/use-format-currency'
+import { CurrencyValue } from '@/components/ui/CurrencyValue'
 import { formatCurrency, formatPercent, formatDate, cn } from '@/lib/utils'
 import { ASSET_CLASS_LABELS, ACCOUNT_TYPE_LABELS, taxTreatmentBadgeVariant } from '@/lib/labels'
 import type { Position } from '@/types/portfolio'
@@ -36,7 +38,7 @@ const COST_BASIS_LABELS: Record<string, string> = {
   average_cost: 'Average Cost',
 }
 
-function makePositionColumns(onTrade?: (symbol: string, side: 'buy' | 'sell', assetClass?: string) => void, currencyCode?: string): ColumnDef<Position, unknown>[] {
+function makePositionColumns(onTrade?: (symbol: string, side: 'buy' | 'sell', assetClass?: string) => void, currencyCode?: CurrencyCode): ColumnDef<Position, unknown>[] {
   const cols: ColumnDef<Position, unknown>[] = [
     {
       accessorKey: 'symbol', header: 'Symbol',
@@ -60,12 +62,12 @@ function makePositionColumns(onTrade?: (symbol: string, side: 'buy' | 'sell', as
     },
     {
       accessorKey: 'price', header: 'Price',
-      cell: ({ row }) => <span className="font-mono">{formatCurrency(row.original.price, { currency: currencyCode as CurrencyCode | undefined })}</span>,
+      cell: ({ row }) => <CurrencyValue value={row.original.price} from={currencyCode ?? 'USD'} className="font-mono" />,
       size: 100,
     },
     {
       accessorKey: 'marketValue', header: 'Mkt Value',
-      cell: ({ row }) => <span className="font-mono">{formatCurrency(row.original.marketValue, { compact: true, currency: currencyCode as CurrencyCode | undefined })}</span>,
+      cell: ({ row }) => <CurrencyValue value={row.original.marketValue} from={currencyCode ?? 'USD'} compact className="font-mono" />,
       size: 100,
     },
     {
@@ -77,7 +79,7 @@ function makePositionColumns(onTrade?: (symbol: string, side: 'buy' | 'sell', as
       accessorKey: 'gainLoss', header: 'Gain/Loss',
       cell: ({ row }) => (
         <div className={cn('font-mono', row.original.gainLoss >= 0 ? 'text-accent-green' : 'text-accent-red')}>
-          <p>{formatCurrency(row.original.gainLoss, true)}</p>
+          <p><CurrencyValue value={row.original.gainLoss} from={currencyCode ?? 'USD'} compact /></p>
           <p className="text-caption">{formatPercent(row.original.gainLossPercent * 100)}</p>
         </div>
       ),
@@ -189,6 +191,7 @@ export function AccountDetailPage() {
   const { data: stress } = useStressScenarios(id)
   const { data: orders } = useAccountOrders(id)
   const { data: insights } = useAIInsights('account_detail', id)
+  const { formatWithConversion } = useFormatCurrency()
 
   if (isLoading) {
     return (
@@ -241,11 +244,11 @@ export function AccountDetailPage() {
                 <AllocationChart data={allocation} size="lg" />
                 <div className="flex-1">
                   <div className="grid grid-cols-2 gap-3">
-                    <StatCell label="Total Value" value={formatCurrency(account.totalValue, { compact: true, currency: account.baseCurrency })} badge={account.baseCurrency && account.baseCurrency !== 'USD' ? account.baseCurrency : undefined} />
-                    <StatCell label="Cash Balance" value={formatCurrency(account.cashBalance, { compact: true, currency: account.baseCurrency })} />
+                    <StatCell label="Total Value" value={formatWithConversion(account.totalValue, account.baseCurrency ?? 'USD', { compact: true })} />
+                    <StatCell label="Cash Balance" value={formatWithConversion(account.cashBalance, account.baseCurrency ?? 'USD', { compact: true })} />
                     <StatCell
                       label="Unrealized G/L"
-                      value={formatCurrency(totalGainLoss, true)}
+                      value={formatWithConversion(totalGainLoss, account.baseCurrency ?? 'USD', { compact: true })}
                       colorClass={totalGainLoss >= 0 ? 'text-accent-green' : 'text-accent-red'}
                     />
                     <StatCell label="Positions" value={String(positions?.length ?? 0)} />
@@ -267,7 +270,7 @@ export function AccountDetailPage() {
                           <p className="text-caption text-text-secondary">{sleeve.strategy} — {sleeve.manager}</p>
                         </div>
                         <div className="text-right">
-                          <p className="font-mono">{formatCurrency(sleeve.value, true)}</p>
+                          <p className="font-mono">{formatWithConversion(sleeve.value, account.baseCurrency ?? 'USD', { compact: true })}</p>
                           <div className="flex items-center gap-2 text-caption">
                             <span className="text-text-secondary">Target {(sleeve.targetAllocation * 100).toFixed(0)}%</span>
                             <span className={cn(
@@ -307,7 +310,7 @@ export function AccountDetailPage() {
             </Card>
 
             {drift && (
-              <Card data-annotation="account-drift" className={drift.needsRebalance ? 'border-l-[3px] border-l-accent-red' : ''}>
+              <Card className={drift.needsRebalance ? 'border-l-[3px] border-l-accent-red' : ''}>
                 <CardHeader
                   action={
                     <ActionMenu
@@ -369,7 +372,7 @@ export function AccountDetailPage() {
                   <p className="text-body-strong text-accent-purple">AI Insight</p>
                   <p className="mt-1 text-caption text-text-secondary">
                     This account has {drift?.needsRebalance ? 'drifted beyond threshold and should be rebalanced' : 'acceptable drift levels'}.
-                    {totalGainLoss > 0 && ` Unrealized gains of ${formatCurrency(totalGainLoss, true)} — consider tax-loss harvesting opportunities in underperforming positions.`}
+                    {totalGainLoss > 0 && ` Unrealized gains of ${formatWithConversion(totalGainLoss, account.baseCurrency ?? 'USD', { compact: true })} — consider tax-loss harvesting opportunities in underperforming positions.`}
                     {risk && ` Sharpe ratio of ${risk.sharpe.toFixed(2)} indicates ${risk.sharpe > 1.2 ? 'strong' : 'moderate'} risk-adjusted returns.`}
                   </p>
                   <div className="mt-2">
@@ -460,7 +463,7 @@ export function AccountDetailPage() {
               <RiskMetricCard label="Sortino Ratio" value={risk.sortino.toFixed(2)} />
               <RiskMetricCard label="Max Drawdown" value={`${(risk.maxDrawdown * 100).toFixed(1)}%`} negative />
               <RiskMetricCard label="Std Deviation" value={`${(risk.standardDeviation * 100).toFixed(1)}%`} />
-              <RiskMetricCard label="VaR (95%)" value={formatCurrency(risk.var95, true)} negative />
+              <RiskMetricCard label="VaR (95%)" value={formatWithConversion(risk.var95, account.baseCurrency ?? 'USD', { compact: true })} negative />
             </div>
           )}
 
@@ -502,7 +505,7 @@ export function AccountDetailPage() {
     },
     {
       id: 'concentration', label: 'Concentration',
-      content: <div data-annotation="account-concentration"><ConcentrationView accountId={id} /></div>,
+      content: <ConcentrationView accountId={id} />,
     },
     {
       id: 'orders', label: 'Orders', count: orders?.length,
@@ -545,14 +548,12 @@ export function AccountDetailPage() {
             variant: 'account_summary',
             entityId: account.id,
             entityName: account.name,
-            metrics: [{ label: 'Value', value: formatCurrency(account.totalValue, { compact: true, currency: account.baseCurrency }) }],
+            metrics: [{ label: 'Value', value: formatWithConversion(account.totalValue, account.baseCurrency ?? 'USD', { compact: true }) }],
           }} />
         </div>
       </div>
 
-      <div data-annotation="account-tabs">
-        <TabLayout tabs={tabs} />
-      </div>
+      <TabLayout tabs={tabs} />
     </div>
   )
 }
@@ -606,7 +607,7 @@ function StressScenarioRow({ scenario }: { scenario: StressScenario }) {
           <div key={pi.positionId} className="flex items-center justify-between text-caption">
             <span className="font-mono text-text-secondary">{pi.symbol}</span>
             <span className={cn('font-mono', pi.impactPercent >= 0 ? 'text-accent-green' : 'text-accent-red')}>
-              {formatPercent(pi.impactPercent * 100)} ({formatCurrency(pi.impact, true)})
+              {formatPercent(pi.impactPercent * 100)} (<CurrencyValue value={pi.impact} compact />)
             </span>
           </div>
         ))}

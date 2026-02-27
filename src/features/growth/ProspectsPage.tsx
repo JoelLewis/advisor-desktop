@@ -8,7 +8,7 @@ import type { DenseMetric } from '@/components/ui/DenseMetricsBar'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { ProspectListView } from '@/features/growth/ProspectListView'
 import { useProspects } from '@/hooks/use-prospects'
-import { formatCurrency } from '@/lib/utils'
+import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { cn } from '@/lib/utils'
 import type { Prospect, ProspectStage } from '@/types/prospect'
 
@@ -40,6 +40,7 @@ function daysInStage(prospect: Prospect): number {
 
 function ProspectCard({ prospect }: { prospect: Prospect }) {
   const navigate = useNavigate()
+  const { formatWithConversion } = useFormatCurrency()
   return (
     <div className="rounded-md border border-border-primary bg-surface-primary p-3 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between">
@@ -60,7 +61,7 @@ function ProspectCard({ prospect }: { prospect: Prospect }) {
       <div className="mt-3 space-y-1.5 text-caption">
         <div className="flex items-center justify-between">
           <span className="text-text-secondary">Est. AUM</span>
-          <span className="font-mono font-medium">{formatCurrency(prospect.estimatedAUM, true)}</span>
+          <span className="font-mono font-medium">{formatWithConversion(prospect.estimatedAUM, 'USD', { compact: true })}</span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-text-secondary">Probability</span>
@@ -79,7 +80,7 @@ function ProspectCard({ prospect }: { prospect: Prospect }) {
         </div>
       </div>
 
-      <div className="mt-2 flex items-center gap-2" data-annotation="prospects-actions">
+      <div className="mt-2 flex items-center gap-2">
         <button
           onClick={() => window.open(`tel:${prospect.phone}`)}
           className="rounded p-1 text-text-tertiary hover:bg-surface-tertiary hover:text-text-secondary"
@@ -116,6 +117,7 @@ function ProspectCard({ prospect }: { prospect: Prospect }) {
 }
 
 function PipelineMetrics({ prospects }: { prospects: Prospect[] }) {
+  const { formatWithConversion } = useFormatCurrency()
   const metrics = useMemo(() => {
     const total = prospects.length
     const onboardingCount = prospects.filter((p) => p.stage === 'onboarding').length
@@ -154,7 +156,7 @@ function PipelineMetrics({ prospects }: { prospects: Prospect[] }) {
       <div className="h-8 w-px bg-border-primary" />
       <div>
         <p className="text-caption text-text-tertiary">Pipeline Velocity</p>
-        <p className="font-mono text-body-strong">{formatCurrency(metrics.velocity, true)}/day</p>
+        <p className="font-mono text-body-strong">{formatWithConversion(metrics.velocity, 'USD', { compact: true })}/day</p>
       </div>
     </div>
   )
@@ -189,6 +191,7 @@ function ViewToggle({ view, onViewChange }: { view: ViewMode; onViewChange: (v: 
 
 function BoardColumn({ stage, prospects: stageProspects }: { stage: typeof STAGES[number]; prospects: Prospect[] }) {
   const [showAll, setShowAll] = useState(false)
+  const { formatWithConversion } = useFormatCurrency()
   const stageAUM = stageProspects.reduce((sum, p) => sum + p.estimatedAUM, 0)
   const hasMore = stageProspects.length > BOARD_VISIBLE_LIMIT
   const visible = showAll ? stageProspects : stageProspects.slice(0, BOARD_VISIBLE_LIMIT)
@@ -205,7 +208,7 @@ function BoardColumn({ stage, prospects: stageProspects }: { stage: typeof STAGE
           </div>
         </CardHeader>
         <div className="px-3 py-1 text-caption text-text-tertiary">
-          {formatCurrency(stageAUM, true)} pipeline
+          {formatWithConversion(stageAUM, 'USD', { compact: true })} pipeline
         </div>
         <CardContent className="space-y-3 pt-2">
           {visible.length > 0 ? (
@@ -242,6 +245,7 @@ function BoardColumn({ stage, prospects: stageProspects }: { stage: typeof STAGE
 export function ProspectsPage() {
   const { data: prospects, isLoading } = useProspects()
   const [view, setView] = useState<ViewMode>('board')
+  const { formatWithConversion } = useFormatCurrency()
 
   const pipeline = useMemo(() => {
     if (!prospects) return new Map<ProspectStage, Prospect[]>()
@@ -277,8 +281,8 @@ export function ProspectsPage() {
 
       <DenseMetricsBar metrics={[
         { label: 'Total Prospects', value: String(prospects?.length ?? 0) },
-        { label: 'Pipeline AUM', value: formatCurrency(totalEstimatedAUM, true) },
-        { label: 'Weighted Pipeline', value: formatCurrency(weightedPipeline, true) },
+        { label: 'Pipeline AUM', value: formatWithConversion(totalEstimatedAUM, 'USD', { compact: true }) },
+        { label: 'Weighted Pipeline', value: formatWithConversion(weightedPipeline, 'USD', { compact: true }) },
         { label: 'Avg. Probability', value: prospects && prospects.length > 0
           ? `${Math.round(prospects.reduce((sum, p) => sum + p.probability, 0) / prospects.length * 100)}%`
           : '0%'
@@ -286,30 +290,26 @@ export function ProspectsPage() {
       ] satisfies DenseMetric[]} />
 
       {prospects && prospects.length > 0 && (
-        <div data-annotation="prospects-metrics">
-          <PipelineMetrics prospects={prospects} />
-        </div>
+        <PipelineMetrics prospects={prospects} />
       )}
 
-      <div data-annotation="prospects-board">
-        {view === 'board' ? (
-          <div className="flex gap-4 overflow-x-auto pb-4">
-            {STAGES.map((stage) => (
-              <BoardColumn
-                key={stage.id}
-                stage={stage}
-                prospects={pipeline.get(stage.id) ?? []}
-              />
-            ))}
-          </div>
-        ) : (
-          <Card>
-            <CardContent className="p-0">
-              <ProspectListView prospects={prospects ?? []} />
-            </CardContent>
-          </Card>
-        )}
-      </div>
+      {view === 'board' ? (
+        <div className="flex gap-4 overflow-x-auto pb-4">
+          {STAGES.map((stage) => (
+            <BoardColumn
+              key={stage.id}
+              stage={stage}
+              prospects={pipeline.get(stage.id) ?? []}
+            />
+          ))}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="p-0">
+            <ProspectListView prospects={prospects ?? []} />
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/Badge'
 import { CATEGORY_CONFIG } from '@/components/ui/NBACard'
 import { useBatchAction } from '@/hooks/use-batch-nba'
-import { formatCurrency } from '@/lib/utils'
+import { useFormatCurrency } from '@/hooks/use-format-currency'
 import type { NBA, NBACategory } from '@/types/nba'
 
 type BatchActionModalProps = {
@@ -22,6 +22,7 @@ export function BatchActionModal({ groupId, title, category, nbas, onClose }: Ba
   const batchAction = useBatchAction()
   const navigate = useNavigate()
   const config = CATEGORY_CONFIG[category]
+  const { formatWithConversion } = useFormatCurrency()
 
   const totalImpact = nbas
     .filter((n) => selectedIds.has(n.id))
@@ -126,7 +127,7 @@ export function BatchActionModal({ groupId, title, category, nbas, onClose }: Ba
                 </div>
                 {nba.estimatedImpact > 0 && (
                   <span className="shrink-0 font-mono text-caption text-text-secondary">
-                    {formatCurrency(nba.estimatedImpact, true)}
+                    {formatWithConversion(nba.estimatedImpact, 'USD', { compact: true })}
                   </span>
                 )}
               </button>
@@ -137,7 +138,7 @@ export function BatchActionModal({ groupId, title, category, nbas, onClose }: Ba
         <DialogFooter className="justify-between">
           {totalImpact > 0 && (
             <span className="text-caption text-text-secondary">
-              Total impact: <span className="font-medium font-mono">{formatCurrency(totalImpact, true)}</span> across {selectedIds.size} items
+              Total impact: <span className="font-medium font-mono">{formatWithConversion(totalImpact, 'USD', { compact: true })}</span> across {selectedIds.size} items
             </span>
           )}
           <div className="ml-auto flex items-center gap-2">

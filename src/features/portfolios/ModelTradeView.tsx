@@ -7,7 +7,9 @@ import { DataTable } from '@/components/ui/DataTable'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useModelGovernance } from '@/hooks/use-portfolio'
 import { useModelTradePreview, useExecuteModelTrades } from '@/hooks/use-trading'
-import { formatCurrency, cn } from '@/lib/utils'
+import { useFormatCurrency } from '@/hooks/use-format-currency'
+import { CurrencyValue } from '@/components/ui/CurrencyValue'
+import { cn } from '@/lib/utils'
 import type { Account } from '@/types/account'
 import type { ModelGovernanceDetail } from '@/types/portfolio'
 import type { ModelTradePreview } from '@/types/trading'
@@ -28,6 +30,7 @@ function formatRiskLabel(riskProfile: string): string {
 }
 
 export function ModelTradeView() {
+  const { formatWithConversion } = useFormatCurrency()
   const { data: models } = useModelGovernance()
   const { data: allAccounts } = useAccounts({})
   const previewMutation = useModelTradePreview()
@@ -155,7 +158,7 @@ export function ModelTradeView() {
     {
       accessorKey: 'totalValue',
       header: 'Value',
-      cell: ({ getValue }) => <span className="font-mono text-mono-sm">{formatCurrency(getValue<number>())}</span>,
+      cell: ({ getValue }) => <CurrencyValue value={getValue<number>()} className="font-mono text-mono-sm" />,
     },
     {
       id: 'drift',
@@ -212,7 +215,7 @@ export function ModelTradeView() {
                       </div>
                       <div>
                         <span className="text-caption text-text-tertiary">AUM</span>
-                        <span className="ml-1 font-mono text-mono-sm font-semibold">{formatCurrency(model.totalAUM, true)}</span>
+                        <span className="ml-1 font-mono text-mono-sm font-semibold">{formatWithConversion(model.totalAUM, 'USD', { compact: true })}</span>
                       </div>
                     </div>
                   </CardContent>
@@ -301,13 +304,13 @@ export function ModelTradeView() {
             <Card>
               <CardContent className="p-4 text-center">
                 <p className="text-caption text-text-secondary">Total Value</p>
-                <p className="mt-1 font-mono text-page-title text-text-primary">{formatCurrency(totalValue)}</p>
+                <p className="mt-1 font-mono text-page-title text-text-primary">{formatWithConversion(totalValue, 'USD')}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4 text-center">
                 <p className="text-caption text-text-secondary">Est. Tax Impact</p>
-                <p className="mt-1 font-mono text-page-title text-accent-red">{formatCurrency(totalTaxImpact)}</p>
+                <p className="mt-1 font-mono text-page-title text-accent-red">{formatWithConversion(totalTaxImpact, 'USD')}</p>
               </CardContent>
             </Card>
           </div>
@@ -338,7 +341,7 @@ export function ModelTradeView() {
                       {preview.trades.length} trades
                     </span>
                     <span className="font-mono text-mono-sm text-text-secondary">
-                      Tax: {formatCurrency(preview.estimatedTaxImpact)}
+                      Tax: {formatWithConversion(preview.estimatedTaxImpact, 'USD')}
                     </span>
                   </div>
                 </button>
@@ -364,7 +367,7 @@ export function ModelTradeView() {
                               </Badge>
                             </td>
                             <td className="py-2 font-mono text-mono-sm">{trade.quantity}</td>
-                            <td className="py-2 font-mono text-mono-sm">{formatCurrency(trade.estimatedValue)}</td>
+                            <td className="py-2 font-mono text-mono-sm">{formatWithConversion(trade.estimatedValue, 'USD')}</td>
                             <td className="py-2 text-caption text-text-secondary">{trade.reason}</td>
                           </tr>
                         ))}

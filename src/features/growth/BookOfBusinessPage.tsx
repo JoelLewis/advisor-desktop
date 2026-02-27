@@ -6,7 +6,8 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { DenseMetricsBar } from '@/components/ui/DenseMetricsBar'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useBookOfBusiness } from '@/hooks/use-portfolio'
-import { formatCurrency, formatPercent } from '@/lib/utils'
+import { useFormatCurrency } from '@/hooks/use-format-currency'
+import { formatPercent } from '@/lib/utils'
 import type { DenseMetric } from '@/components/ui/DenseMetricsBar'
 import type { BookSegment, CapacityMetrics, AUMWaterfallItem } from '@/services/pms'
 
@@ -21,6 +22,7 @@ const SEGMENT_COLORS: Record<string, string> = {
 const SEGMENT_ORDER = ['platinum', 'gold', 'silver', 'bronze', 'unclassified']
 
 function WaterfallTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: { label: string; value: number; displayValue: number } }> }) {
+  const { formatWithConversion } = useFormatCurrency()
   if (!active || !payload?.[0]) return null
   const d = payload[0].payload
   const isPositive = d.value >= 0
@@ -28,13 +30,15 @@ function WaterfallTooltip({ active, payload }: { active?: boolean; payload?: Arr
     <div className="rounded-md border border-border-primary bg-white px-3 py-2 shadow-lg">
       <div className="text-caption font-medium text-text-primary">{d.label}</div>
       <div className={`font-mono text-caption font-medium ${isPositive ? 'text-accent-green' : 'text-accent-red'}`}>
-        {isPositive ? '+' : ''}{formatCurrency(d.value, true)}
+        {isPositive ? '+' : ''}{formatWithConversion(d.value, 'USD', { compact: true })}
       </div>
     </div>
   )
 }
 
 function AUMWaterfall({ data }: { data: AUMWaterfallItem[] }) {
+  const { formatWithConversion } = useFormatCurrency()
+
   // Build cumulative waterfall bars for Recharts stacked bar
   type WaterfallBar = { label: string; value: number; start: number; end: number; displayValue: number }
   const bars: WaterfallBar[] = []
@@ -69,7 +73,7 @@ function AUMWaterfall({ data }: { data: AUMWaterfallItem[] }) {
         />
         <YAxis
           tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }}
-          tickFormatter={(v: number) => formatCurrency(v, true)}
+          tickFormatter={(v: number) => formatWithConversion(v, 'USD', { compact: true })}
           width={60}
         />
         <RechartsTooltip content={<WaterfallTooltip />} />
@@ -89,6 +93,7 @@ function AUMWaterfall({ data }: { data: AUMWaterfallItem[] }) {
 }
 
 function SegmentTable({ segments }: { segments: BookSegment[] }) {
+  const { formatWithConversion } = useFormatCurrency()
   const sorted = [...segments].sort((a, b) => {
     const ai = SEGMENT_ORDER.indexOf(a.segment)
     const bi = SEGMENT_ORDER.indexOf(b.segment)
@@ -119,7 +124,7 @@ function SegmentTable({ segments }: { segments: BookSegment[] }) {
                 </div>
               </td>
               <td className="px-3 py-2 text-right font-mono text-text-primary">{seg.householdCount}</td>
-              <td className="px-3 py-2 text-right font-mono text-text-primary">{formatCurrency(seg.aum, true)}</td>
+              <td className="px-3 py-2 text-right font-mono text-text-primary">{formatWithConversion(seg.aum, 'USD', { compact: true })}</td>
               <td className="px-3 py-2 text-right font-mono text-text-primary">{formatPercent(seg.pctOfAUM * 100, 1)}</td>
             </tr>
           ))}
@@ -172,6 +177,7 @@ function CapacityCard({ capacity }: { capacity: CapacityMetrics }) {
 
 export function BookOfBusinessPage() {
   const { data, isLoading } = useBookOfBusiness()
+  const { formatWithConversion } = useFormatCurrency()
 
   if (isLoading || !data) {
     return (
@@ -186,10 +192,10 @@ export function BookOfBusinessPage() {
   }
 
   const metrics: DenseMetric[] = [
-    { label: 'Total AUM', value: formatCurrency(data.totalAUM, true), change: { value: `${data.organicGrowthRate}%`, direction: 'up' } },
+    { label: 'Total AUM', value: formatWithConversion(data.totalAUM, 'USD', { compact: true }), change: { value: `${data.organicGrowthRate}%`, direction: 'up' } },
     { label: 'Households', value: String(data.householdCount) },
     { label: 'Clients', value: String(data.clientCount) },
-    { label: 'Annual Revenue', value: formatCurrency(data.annualRevenue, true), change: { value: '4.2%', direction: 'up' } },
+    { label: 'Annual Revenue', value: formatWithConversion(data.annualRevenue, 'USD', { compact: true }), change: { value: '4.2%', direction: 'up' } },
     { label: 'Effective Fee', value: `${data.effectiveFee} bps` },
     { label: 'Organic Growth', value: `${data.organicGrowthRate}%`, change: { value: '0.3%', direction: 'up' } },
     { label: 'Retention', value: `${data.retentionRate}%` },
