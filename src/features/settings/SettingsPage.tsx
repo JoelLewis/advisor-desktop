@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
-import { Save } from 'lucide-react'
+import { Save, Plus, Pencil, Trash2 } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { TabLayout } from '@/components/ui/TabLayout'
 import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { useAISettings, useUpdateAISettings, useNBASettings, useUpdateNBASettings, useNotificationSettings, useUpdateNotificationSettings } from '@/hooks/use-settings'
+import { useAISettings, useUpdateAISettings, useNBASettings, useUpdateNBASettings, useNotificationSettings, useUpdateNotificationSettings, useDisplaySettings, useUpdateDisplaySettings, useCustomPrompts, useCreateCustomPrompt, useUpdateCustomPrompt, useDeleteCustomPrompt } from '@/hooks/use-settings'
 import { cn } from '@/lib/utils'
 import { PRIORITY_VARIANTS } from '@/lib/labels'
-import type { AISettings, AITone, AIVerbosity, NBASettings, NotificationSettings } from '@/types/settings'
+import { CURRENCY_REGISTRY } from '@/lib/currency'
+import type { AISettings, AITone, AIVerbosity, NBASettings, NotificationSettings, DisplaySettings, CommunicationChannel, FollowUpCadence, CustomPromptCategory } from '@/types/settings'
 import type { NBACategory } from '@/types/nba'
+import type { CurrencyCode } from '@/types/currency'
 
 const NBA_CATEGORIES: { value: NBACategory; label: string }[] = [
   { value: 'rebalancing', label: 'Rebalancing' },
@@ -90,6 +92,209 @@ function SliderField({ value, onChange, label, min = 0, max = 100 }: { value: nu
   )
 }
 
+const COMMUNICATION_CHANNELS: { value: CommunicationChannel; label: string }[] = [
+  { value: 'email', label: 'Email' },
+  { value: 'phone', label: 'Phone' },
+  { value: 'video', label: 'Video' },
+  { value: 'in_person', label: 'In-Person' },
+]
+
+const FOLLOW_UP_CADENCES: { value: FollowUpCadence; label: string }[] = [
+  { value: '1_day', label: '1 Day' },
+  { value: '3_days', label: '3 Days' },
+  { value: '1_week', label: '1 Week' },
+  { value: '2_weeks', label: '2 Weeks' },
+  { value: 'monthly', label: 'Monthly' },
+]
+
+const PROPOSAL_TEMPLATES = [
+  { value: 'comprehensive-wealth', label: 'Comprehensive Wealth Management' },
+  { value: 'retirement-transition', label: 'Retirement Transition' },
+  { value: 'growth-portfolio', label: 'Growth Portfolio' },
+]
+
+const PROPOSAL_SECTIONS = [
+  { value: 'cover', label: 'Cover Page' },
+  { value: 'executive_summary', label: 'Executive Summary' },
+  { value: 'current_situation', label: 'Current Situation' },
+  { value: 'recommended_portfolio', label: 'Recommended Portfolio' },
+  { value: 'fee_schedule', label: 'Fee Schedule' },
+  { value: 'disclosures', label: 'Disclosures' },
+]
+
+const PROMPT_CATEGORIES: { value: CustomPromptCategory; label: string }[] = [
+  { value: 'portfolio', label: 'Portfolio' },
+  { value: 'communication', label: 'Communication' },
+  { value: 'compliance', label: 'Compliance' },
+  { value: 'planning', label: 'Planning' },
+  { value: 'trading', label: 'Trading' },
+]
+
+const CATEGORY_COLORS: Record<CustomPromptCategory, string> = {
+  portfolio: 'bg-accent-blue/10 text-accent-blue',
+  communication: 'bg-accent-green/10 text-accent-green',
+  compliance: 'bg-accent-red/10 text-accent-red',
+  planning: 'bg-accent-purple/10 text-accent-purple',
+  trading: 'bg-amber-100 text-amber-700',
+}
+
+type PromptFormData = {
+  name: string
+  text: string
+  category: CustomPromptCategory
+}
+
+const EMPTY_PROMPT_FORM: PromptFormData = { name: '', text: '', category: 'portfolio' }
+
+function PromptForm({ initial, onSave, onCancel, isPending }: {
+  initial: PromptFormData
+  onSave: (data: PromptFormData) => void
+  onCancel: () => void
+  isPending: boolean
+}) {
+  const [form, setForm] = useState<PromptFormData>(initial)
+
+  return (
+    <div className="space-y-3 rounded-lg border border-accent-purple/30 bg-accent-purple/5 p-3">
+      <input
+        type="text"
+        placeholder="Prompt name"
+        value={form.name}
+        onChange={(e) => setForm({ ...form, name: e.target.value })}
+        className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none"
+      />
+      <textarea
+        placeholder="Prompt text — this will appear as a suggestion in the AI panel"
+        value={form.text}
+        onChange={(e) => setForm({ ...form, text: e.target.value })}
+        rows={2}
+        className="w-full resize-none rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none"
+      />
+      <div className="flex items-center justify-between">
+        <select
+          value={form.category}
+          onChange={(e) => setForm({ ...form, category: e.target.value as CustomPromptCategory })}
+          className="rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-none"
+        >
+          {PROMPT_CATEGORIES.map((c) => (
+            <option key={c.value} value={c.value}>{c.label}</option>
+          ))}
+        </select>
+        <div className="flex items-center gap-2">
+          <button onClick={onCancel} className="rounded-md px-3 py-1.5 text-caption font-medium text-text-secondary hover:text-text-primary">
+            Cancel
+          </button>
+          <button
+            onClick={() => onSave(form)}
+            disabled={isPending || !form.name.trim() || !form.text.trim()}
+            className={SAVE_BUTTON_CLASS}
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function CustomPromptsCard() {
+  const { data: prompts, isLoading } = useCustomPrompts()
+  const createMutation = useCreateCustomPrompt()
+  const updateMutation = useUpdateCustomPrompt()
+  const deleteMutation = useDeleteCustomPrompt()
+  const [adding, setAdding] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+
+  if (isLoading) return <Skeleton className="h-48" />
+
+  function handleCreate(data: PromptFormData) {
+    createMutation.mutate(data, {
+      onSuccess: () => { setAdding(false); toast.success('Custom prompt created') },
+      onError: () => toast.error('Failed to create prompt'),
+    })
+  }
+
+  function handleUpdate(id: string, data: PromptFormData) {
+    updateMutation.mutate({ id, ...data }, {
+      onSuccess: () => { setEditingId(null); toast.success('Custom prompt updated') },
+      onError: () => toast.error('Failed to update prompt'),
+    })
+  }
+
+  function handleDelete(id: string) {
+    deleteMutation.mutate(id, {
+      onSuccess: () => toast.success('Custom prompt deleted'),
+      onError: () => toast.error('Failed to delete prompt'),
+    })
+  }
+
+  const addButton = (
+    <button onClick={() => { setAdding(true); setEditingId(null) }} className={SAVE_BUTTON_CLASS}>
+      <Plus className="h-3.5 w-3.5" /> Add Prompt
+    </button>
+  )
+
+  return (
+    <Card>
+      <CardHeader action={addButton}>Custom Prompts</CardHeader>
+      <CardContent className="space-y-3">
+        {adding && (
+          <PromptForm
+            initial={EMPTY_PROMPT_FORM}
+            onSave={handleCreate}
+            onCancel={() => setAdding(false)}
+            isPending={createMutation.isPending}
+          />
+        )}
+
+        {(!prompts || prompts.length === 0) && !adding && (
+          <p className="py-4 text-center text-caption text-text-tertiary">
+            No custom prompts yet. Add prompts that will appear alongside AI suggestions.
+          </p>
+        )}
+
+        {prompts?.map((p) => (
+          editingId === p.id ? (
+            <PromptForm
+              key={p.id}
+              initial={{ name: p.name, text: p.text, category: p.category }}
+              onSave={(data) => handleUpdate(p.id, data)}
+              onCancel={() => setEditingId(null)}
+              isPending={updateMutation.isPending}
+            />
+          ) : (
+            <div key={p.id} className="flex items-start gap-3 rounded-lg border-l-2 border-accent-purple bg-surface-primary p-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-body-strong text-text-primary">{p.name}</span>
+                  <Badge className={cn('text-[10px]', CATEGORY_COLORS[p.category])}>{p.category}</Badge>
+                </div>
+                <p className="mt-0.5 truncate text-caption text-text-secondary">{p.text}</p>
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                <button
+                  onClick={() => { setEditingId(p.id); setAdding(false) }}
+                  className="rounded p-1 text-text-tertiary hover:bg-surface-tertiary hover:text-text-secondary"
+                  aria-label={`Edit ${p.name}`}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => handleDelete(p.id)}
+                  className="rounded p-1 text-text-tertiary hover:bg-red-50 hover:text-accent-red"
+                  aria-label={`Delete ${p.name}`}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          )
+        ))}
+      </CardContent>
+    </Card>
+  )
+}
+
 function AISettingsPanel() {
   const { data, isLoading } = useAISettings()
   const update = useUpdateAISettings()
@@ -111,11 +316,38 @@ function AISettingsPanel() {
     setSettings({ ...settings, permissions: { ...settings.permissions, [key]: value } })
   }
 
+  function updatePersona(patch: Partial<AISettings['persona']>) {
+    if (!settings) return
+    setSettings({ ...settings, persona: { ...settings.persona, ...patch } })
+  }
+
+  function toggleChannel(ch: CommunicationChannel) {
+    if (!settings) return
+    const channels = settings.persona.preferredChannels.includes(ch)
+      ? settings.persona.preferredChannels.filter((c) => c !== ch)
+      : [...settings.persona.preferredChannels, ch]
+    updatePersona({ preferredChannels: channels })
+  }
+
+  function updateDocDefaults(patch: Partial<AISettings['documentDefaults']>) {
+    if (!settings) return
+    setSettings({ ...settings, documentDefaults: { ...settings.documentDefaults, ...patch } })
+  }
+
+  function toggleSection(section: string) {
+    if (!settings) return
+    const sections = settings.documentDefaults.defaultSections.includes(section)
+      ? settings.documentDefaults.defaultSections.filter((s) => s !== section)
+      : [...settings.documentDefaults.defaultSections, section]
+    updateDocDefaults({ defaultSections: sections })
+  }
+
   return (
     <div className="space-y-6">
+      {/* Card 1: Communication Style */}
       <Card>
         <CardHeader action={<SaveButton onClick={save} disabled={update.isPending} />}>
-          AI Assistant
+          Communication Style
         </CardHeader>
         <CardContent className="divide-y divide-border-primary">
           <SelectField
@@ -142,8 +374,128 @@ function AISettingsPanel() {
         </CardContent>
       </Card>
 
+      {/* Card 2: AI Persona & Defaults */}
       <Card>
-        <CardHeader>AI Permissions</CardHeader>
+        <CardHeader action={<SaveButton onClick={save} disabled={update.isPending} />}>
+          AI Persona &amp; Defaults
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-caption font-medium text-text-secondary">Default Greeting</label>
+            <input
+              type="text"
+              value={settings.persona.defaultGreeting}
+              onChange={(e) => updatePersona({ defaultGreeting: e.target.value })}
+              className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-none"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-caption font-medium text-text-secondary">Email Signature</label>
+            <textarea
+              value={settings.persona.emailSignature}
+              onChange={(e) => updatePersona({ emailSignature: e.target.value })}
+              rows={3}
+              className="w-full resize-none rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 font-mono text-body text-text-primary focus:border-accent-blue focus:outline-none"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-caption font-medium text-text-secondary">Preferred Channels</label>
+            <div className="flex flex-wrap gap-2">
+              {COMMUNICATION_CHANNELS.map((ch) => {
+                const active = settings.persona.preferredChannels.includes(ch.value)
+                return (
+                  <button
+                    key={ch.value}
+                    onClick={() => toggleChannel(ch.value)}
+                    className={cn(
+                      'rounded-full border px-3 py-1.5 text-caption font-medium transition-colors',
+                      active
+                        ? 'border-accent-blue bg-accent-blue/10 text-accent-blue'
+                        : 'border-border-secondary bg-surface-primary text-text-tertiary hover:text-text-secondary',
+                    )}
+                  >
+                    {ch.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          <SelectField
+            label="Follow-up Cadence"
+            value={settings.persona.followUpCadence}
+            onChange={(v) => updatePersona({ followUpCadence: v as FollowUpCadence })}
+            options={FOLLOW_UP_CADENCES}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Card 3: Document Templates */}
+      <Card>
+        <CardHeader action={<SaveButton onClick={save} disabled={update.isPending} />}>
+          Document Templates
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <SelectField
+            label="Preferred Proposal Template"
+            value={settings.documentDefaults.preferredTemplate}
+            onChange={(v) => updateDocDefaults({ preferredTemplate: v })}
+            options={PROPOSAL_TEMPLATES}
+          />
+          <div className="space-y-1.5">
+            <label className="text-caption font-medium text-text-secondary">Default Sections</label>
+            <div className="flex flex-wrap gap-2">
+              {PROPOSAL_SECTIONS.map((sec) => {
+                const active = settings.documentDefaults.defaultSections.includes(sec.value)
+                return (
+                  <button
+                    key={sec.value}
+                    onClick={() => toggleSection(sec.value)}
+                    className={cn(
+                      'rounded-full border px-3 py-1.5 text-caption font-medium transition-colors',
+                      active
+                        ? 'border-accent-blue bg-accent-blue/10 text-accent-blue'
+                        : 'border-border-secondary bg-surface-primary text-text-tertiary hover:text-text-secondary',
+                    )}
+                  >
+                    {sec.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-caption font-medium text-text-secondary">Custom Disclaimer</label>
+            <textarea
+              value={settings.documentDefaults.customDisclaimer}
+              onChange={(e) => updateDocDefaults({ customDisclaimer: e.target.value })}
+              rows={2}
+              placeholder="Enter custom disclaimer text to include in generated proposals..."
+              className="w-full resize-none rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none"
+            />
+          </div>
+          <div className="flex items-center justify-between py-2">
+            <span className="text-body text-text-primary">Default Fee Rate</span>
+            <div className="flex items-center gap-1">
+              <input
+                type="text"
+                value={settings.documentDefaults.defaultFeeRate}
+                onChange={(e) => updateDocDefaults({ defaultFeeRate: e.target.value })}
+                className="w-16 rounded-md border border-border-secondary bg-surface-primary px-2 py-1.5 text-right font-mono text-body text-text-primary focus:border-accent-blue focus:outline-none"
+              />
+              <span className="text-body text-text-secondary">%</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Card 4: Custom Prompts — separate CRUD resource */}
+      <CustomPromptsCard />
+
+      {/* Card 5: AI Permissions */}
+      <Card>
+        <CardHeader action={<SaveButton onClick={save} disabled={update.isPending} />}>
+          AI Permissions
+        </CardHeader>
         <CardContent className="divide-y divide-border-primary">
           {Object.entries(settings.permissions).map(([key, enabled]) => (
             <Toggle
@@ -346,11 +698,75 @@ function NotificationSettingsPanel() {
   )
 }
 
+const REPORTING_CURRENCIES: { value: CurrencyCode; label: string }[] = (
+  Object.values(CURRENCY_REGISTRY) as { code: CurrencyCode; name: string; flag: string; isFiat: boolean }[]
+)
+  .filter((c) => c.isFiat)
+  .map((c) => ({ value: c.code, label: `${c.flag} ${c.code} — ${c.name}` }))
+
+const DATE_FORMATS: { value: DisplaySettings['dateFormat']; label: string }[] = [
+  { value: 'MM/DD/YYYY', label: 'MM/DD/YYYY (US)' },
+  { value: 'DD/MM/YYYY', label: 'DD/MM/YYYY (International)' },
+  { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD (ISO)' },
+]
+
+function DisplaySettingsPanel() {
+  const { data, isLoading } = useDisplaySettings()
+  const update = useUpdateDisplaySettings()
+  const [settings, setSettings] = useState<DisplaySettings | null>(null)
+
+  useEffect(() => { if (data) setSettings(data) }, [data])
+
+  if (isLoading || !settings) return <Skeleton className="h-64" />
+
+  function save() {
+    if (settings) update.mutate(settings, {
+      onSuccess: () => toast.success('Display settings saved'),
+      onError: () => toast.error('Failed to save display settings'),
+    })
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader action={<SaveButton onClick={save} disabled={update.isPending} />}>
+          Currency & Formatting
+        </CardHeader>
+        <CardContent className="divide-y divide-border-primary">
+          <SelectField
+            label="Reporting Currency"
+            value={settings.reportingCurrency}
+            onChange={(v) => setSettings({ ...settings, reportingCurrency: v as CurrencyCode })}
+            options={REPORTING_CURRENCIES}
+          />
+          <Toggle
+            label="Show original currency alongside converted values"
+            checked={settings.showOriginalCurrency}
+            onChange={(v) => setSettings({ ...settings, showOriginalCurrency: v })}
+          />
+          <Toggle
+            label="Use compact number format (e.g. $1.2M instead of $1,200,000)"
+            checked={settings.compactNumbers}
+            onChange={(v) => setSettings({ ...settings, compactNumbers: v })}
+          />
+          <SelectField
+            label="Date Format"
+            value={settings.dateFormat}
+            onChange={(v) => setSettings({ ...settings, dateFormat: v as DisplaySettings['dateFormat'] })}
+            options={DATE_FORMATS}
+          />
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 export function SettingsPage() {
   const tabs = [
     { id: 'ai', label: 'AI Assistant', content: <AISettingsPanel /> },
     { id: 'nba', label: 'NBA Settings', content: <NBASettingsPanel /> },
     { id: 'notifications', label: 'Notifications', content: <NotificationSettingsPanel /> },
+    { id: 'display', label: 'Display', content: <DisplaySettingsPanel /> },
   ]
 
   return (

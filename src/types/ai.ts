@@ -53,6 +53,7 @@ export type SuggestedPrompt = {
   text: string
   category: string
   screenType: string
+  source?: 'built_in' | 'custom'
 }
 
 export type BriefingMetric = {

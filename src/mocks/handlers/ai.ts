@@ -4,7 +4,9 @@ import { clients } from '../data/clients'
 import { households } from '../data/households'
 import { accounts } from '../data/accounts'
 import { nbas } from '../data/nbas'
-import type { ChatMessage, ActionConfirmation, DocumentGeneration, ContextBriefingData, BriefingMetric, AIInsight, ActionTemplate } from '@/types/ai'
+import { customPrompts } from './settings'
+import type { ChatMessage, ActionConfirmation, DocumentGeneration, ContextBriefingData, BriefingMetric, AIInsight, ActionTemplate, SuggestedPrompt } from '@/types/ai'
+import type { CustomPromptCategory } from '@/types/settings'
 import { formatAUM, computeTotalAUM } from './utils'
 
 function makeBriefing(
@@ -45,7 +47,36 @@ export const aiHandlers = [
   http.get('/api/ai/suggestions', ({ request }) => {
     const url = new URL(request.url)
     const screenType = url.searchParams.get('screenType') ?? 'dashboard'
-    return HttpResponse.json(suggestedPrompts.filter((p) => p.screenType === screenType))
+
+    const screenCategoryMap: Record<string, CustomPromptCategory[]> = {
+      dashboard: ['portfolio', 'communication', 'planning'],
+      actions: ['portfolio', 'compliance', 'communication'],
+      client_detail: ['communication', 'planning', 'compliance'],
+      account_detail: ['portfolio', 'trading', 'compliance'],
+      household_detail: ['portfolio', 'planning', 'communication'],
+      households: ['portfolio', 'planning'],
+      portfolios: ['portfolio', 'trading'],
+      trading: ['trading', 'portfolio'],
+      engage: ['communication', 'planning'],
+      workflows: ['compliance', 'communication'],
+    }
+
+    const builtIn: SuggestedPrompt[] = suggestedPrompts
+      .filter((p) => p.screenType === screenType)
+      .map((p) => ({ ...p, source: 'built_in' as const }))
+
+    const allowedCategories = screenCategoryMap[screenType] ?? []
+    const custom: SuggestedPrompt[] = Array.from(customPrompts.values())
+      .filter((cp) => allowedCategories.includes(cp.category))
+      .map((cp) => ({
+        text: cp.text,
+        category: cp.category,
+        screenType,
+        source: 'custom' as const,
+      }))
+
+    const merged = [...builtIn, ...custom].slice(0, 8)
+    return HttpResponse.json(merged)
   }),
 
   http.post('/api/ai/actions/:actionId/execute', async ({ params }) => {
