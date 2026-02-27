@@ -195,7 +195,7 @@ export const aiHandlers = [
           { label: 'Book AUM', value: formatAUM(computeTotalAUM()) },
           { label: 'Open Orders', value: '3' },
           { label: "Today's Trades", value: '7' },
-          { label: 'Wash Sale Restricted', value: '2 securities' },
+          { label: 'Trade Restrictions', value: '2 securities' },
         ],
         [
           'VIX at 14.2 — low volatility environment',
@@ -482,10 +482,10 @@ export const aiHandlers = [
       insights.push({
         id: 'trade-2',
         severity: 'warning',
-        title: 'Wash Sale Window Active',
-        body: '2 securities (VXUS, EFA) have active wash sale restrictions through March 15. Any buy orders in these or substantially identical securities will trigger wash sale rules.',
+        title: 'Trade Restrictions Active',
+        body: '2 securities have active trade restrictions. VXUS — wash sale window in Johnson IRA (sold Jan 14, restricted through Feb 13). EFA — compliance hold pending quarterly certification. Check restrictions before placing orders in these or substantially identical securities.',
         actionLabel: 'View Restricted Securities',
-        actionAI: 'Show me all securities with active wash sale restrictions and their expiration dates',
+        actionAI: 'Show me all securities with active trade restrictions and their details',
       })
     }
 
