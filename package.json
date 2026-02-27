@@ -14,7 +14,8 @@
     "test:domain": "vitest run --reporter=verbose src/mocks/data/__tests__/ src/mocks/handlers/__tests__/",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "npx playwright test",
-    "test:e2e:headed": "npx playwright test --headed"
+    "test:e2e:headed": "npx playwright test --headed",
+    "deploy": "npm run build && npx wrangler deploy"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.3",

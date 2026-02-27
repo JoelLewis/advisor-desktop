@@ -75,35 +75,36 @@ export function WelcomeOverlay({ forceOpen, onDismiss }: WelcomeOverlayProps = {
           </div>
           <div>
             <h1 className="text-xl font-semibold text-text-primary">iDeal</h1>
-            <p className="text-caption text-text-secondary">A reference design by Joel Lewis</p>
+            <p className="text-caption text-text-secondary">by Joel Lewis</p>
           </div>
         </div>
 
         {/* Thesis */}
         <p className="text-body text-text-secondary leading-relaxed">
-          What if you could design an advisor desktop unconstrained by legacy back-office systems?
+          Fifteen years of opinions about what wealth management software gets wrong, distilled into a clickable prototype. Built in seven days, about ten hours of effort, and less than $100 in AI tokens.
         </p>
 
-        {/* Stats */}
-        <div className="mt-5 flex flex-wrap gap-2">
+        {/* Three product opinions */}
+        <div className="mt-4 space-y-2">
           {[
-            '25 pages',
-            '175+ API endpoints',
-            '5 asset classes',
-            'Multi-currency',
-          ].map((stat) => (
-            <span
-              key={stat}
-              className="rounded-full border border-border-primary bg-surface-secondary px-3 py-1 text-caption font-medium text-text-secondary"
-            >
-              {stat}
-            </span>
+            { label: 'Collaboration as default', desc: 'Team servicing is visible, not bolted on' },
+            { label: 'AI as teammate', desc: 'Same workflows for humans and agents' },
+            { label: 'Modern asset coverage', desc: 'Equities to crypto, multi-currency, global' },
+          ].map((opinion) => (
+            <div key={opinion.label} className="flex items-baseline gap-2">
+              <span className="shrink-0 text-accent-purple text-body leading-none">&bull;</span>
+              <p className="text-caption text-text-secondary">
+                <span className="font-medium text-text-primary">{opinion.label}</span>
+                {' \u2014 '}
+                {opinion.desc}
+              </p>
+            </div>
           ))}
         </div>
 
         {/* Build context */}
         <p className="mt-4 text-caption text-text-tertiary">
-          Built in 1 week &middot; React + TypeScript &middot; Claude Code
+          Best on desktop and tablet &middot; React + TypeScript &middot; Claude Code
         </p>
 
         {/* CTAs */}
