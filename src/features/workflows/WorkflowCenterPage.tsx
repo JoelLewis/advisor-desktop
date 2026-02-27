@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { CheckCircle2, Circle, Clock, AlertTriangle, Sparkles, User, Bot, ChevronRight, Plus, Play } from 'lucide-react'
+import { CheckCircle2, Circle, Clock, AlertTriangle, Sparkles, User, Bot, ChevronRight, Plus, Play, Pencil } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { TabLayout } from '@/components/ui/TabLayout'
 import { Badge } from '@/components/ui/Badge'
@@ -11,6 +11,7 @@ import { formatDate, cn } from '@/lib/utils'
 import { PRIORITY_VARIANTS } from '@/lib/labels'
 import { StartWorkflowDialog } from './StartWorkflowDialog'
 import { QuickTaskDialog } from './QuickTaskDialog'
+import { WorkflowStepEditor } from './WorkflowStepEditor'
 import type { Task, TaskStatus, ProcessTracker, WorkflowTemplate } from '@/types/workflow'
 import type { ColumnDef } from '@tanstack/react-table'
 
@@ -261,6 +262,8 @@ export function WorkflowCenterPage() {
   const [startWorkflowOpen, setStartWorkflowOpen] = useState(false)
   const [quickTaskOpen, setQuickTaskOpen] = useState(false)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | undefined>()
+  const [editingTemplate, setEditingTemplate] = useState<WorkflowTemplate | null>(null)
+  const [stepEditorOpen, setStepEditorOpen] = useState(false)
 
   const templateColumnsWithAction: ColumnDef<WorkflowTemplate, unknown>[] = useMemo(() => [
     {
@@ -296,18 +299,30 @@ export function WorkflowCenterPage() {
     {
       id: 'actions', header: '',
       cell: ({ row }) => (
-        <button
-          onClick={() => {
-            setSelectedTemplateId(row.original.id)
-            setStartWorkflowOpen(true)
-          }}
-          className="flex items-center gap-1 rounded px-2 py-1 text-caption font-medium text-accent-blue transition-colors hover:bg-accent-blue/10"
-        >
-          <Play className="h-3 w-3" />
-          Start
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => {
+              setEditingTemplate(row.original)
+              setStepEditorOpen(true)
+            }}
+            className="flex items-center gap-1 rounded px-2 py-1 text-caption font-medium text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary"
+          >
+            <Pencil className="h-3 w-3" />
+            Edit
+          </button>
+          <button
+            onClick={() => {
+              setSelectedTemplateId(row.original.id)
+              setStartWorkflowOpen(true)
+            }}
+            className="flex items-center gap-1 rounded px-2 py-1 text-caption font-medium text-accent-blue transition-colors hover:bg-accent-blue/10"
+          >
+            <Play className="h-3 w-3" />
+            Start
+          </button>
+        </div>
       ),
-      size: 80,
+      size: 140,
       enableSorting: false,
     },
   ], [])
@@ -390,14 +405,25 @@ export function WorkflowCenterPage() {
     {
       id: 'templates', label: 'Templates', count: templates?.length,
       content: (
-        <Card>
-          <DataTable
-            data={templates ?? []}
-            columns={templateColumnsWithAction}
-            compact
-            emptyMessage="No templates"
-          />
-        </Card>
+        <div className="space-y-3">
+          <div className="flex items-center justify-end">
+            <button
+              onClick={() => { setEditingTemplate(null); setStepEditorOpen(true) }}
+              className="flex items-center gap-1.5 rounded-md border border-border-secondary px-3 py-1.5 text-caption font-medium text-text-primary transition-colors hover:bg-surface-tertiary"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              New Template
+            </button>
+          </div>
+          <Card>
+            <DataTable
+              data={templates ?? []}
+              columns={templateColumnsWithAction}
+              compact
+              emptyMessage="No templates"
+            />
+          </Card>
+        </div>
       ),
     },
   ]
@@ -429,6 +455,11 @@ export function WorkflowCenterPage() {
       <QuickTaskDialog
         open={quickTaskOpen}
         onClose={() => setQuickTaskOpen(false)}
+      />
+      <WorkflowStepEditor
+        template={editingTemplate}
+        open={stepEditorOpen}
+        onClose={() => { setStepEditorOpen(false); setEditingTemplate(null) }}
       />
     </div>
   )

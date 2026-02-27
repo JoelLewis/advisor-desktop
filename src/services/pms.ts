@@ -129,3 +129,43 @@ export function getHouseholdAllocation(householdId: string) {
 export function getModelGovernance() {
   return get<ModelGovernanceDetail[]>('/pms/models/governance')
 }
+
+export type BookSegment = {
+  segment: string
+  householdCount: number
+  aum: number
+  pctOfAUM: number
+}
+
+export type CapacityMetrics = {
+  currentClients: number
+  targetClients: number
+  utilizationPct: number
+  avgMeetingsPerClient: number
+  meetingsPerWeek: number
+  meetingCapacityPct: number
+}
+
+export type AUMWaterfallItem = {
+  label: string
+  value: number
+}
+
+export type BookOfBusiness = {
+  totalAUM: number
+  householdCount: number
+  clientCount: number
+  annualRevenue: number
+  effectiveFee: number
+  organicGrowthRate: number
+  retentionRate: number
+  attritionCount: number
+  revenueConcentrationHHI: number
+  segments: BookSegment[]
+  aumWaterfall: AUMWaterfallItem[]
+  capacity: CapacityMetrics
+}
+
+export function getBookOfBusiness() {
+  return get<BookOfBusiness>('/pms/book-of-business')
+}

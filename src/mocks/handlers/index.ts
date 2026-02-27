@@ -22,6 +22,10 @@ import { engageHandlers } from './engage'
 import { proposalHandlers } from './proposals'
 import { fxHandlers } from './fx'
 import { notificationHandlers } from './notifications'
+import { billingHandlers } from './billing'
+import { reportHandlers } from './reports'
+import { archiveHandlers } from './archives'
+import { emailTemplateHandlers } from './email-templates'
 
 export const handlers = [
   ...crmHandlers,
@@ -48,4 +52,8 @@ export const handlers = [
   ...proposalHandlers,
   ...fxHandlers,
   ...notificationHandlers,
+  ...billingHandlers,
+  ...reportHandlers,
+  ...archiveHandlers,
+  ...emailTemplateHandlers,
 ]

@@ -60,6 +60,7 @@ const config: Config = {
         'scale-out': 'scaleOut 120ms ease-in',
         'hotspot-pulse': 'hotspotPulse 2s ease-in-out infinite',
         'fab-pulse': 'fabPulse 2s ease-in-out infinite',
+        'slide-up': 'slideUpFromBottom 200ms ease-out',
       },
       keyframes: {
         shimmer: {
@@ -99,6 +100,10 @@ const config: Config = {
           '0%': { boxShadow: '0 0 0 0 #D9770666' },
           '70%': { boxShadow: '0 0 0 12px #D9770600' },
           '100%': { boxShadow: '0 0 0 0 #D9770600' },
+        },
+        slideUpFromBottom: {
+          '0%': { transform: 'translateY(100%)' },
+          '100%': { transform: 'translateY(0)' },
         },
       },
     },

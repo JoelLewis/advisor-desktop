@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { Home, AlertTriangle } from 'lucide-react'
+import { useState } from 'react'
+import { Home, AlertTriangle, BarChart3 } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { FamilyTree } from '@/components/ui/FamilyTree'
 import { AllocationChart } from '@/components/ui/AllocationChart'
@@ -10,6 +11,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { TabLayout } from '@/components/ui/TabLayout'
 import { ShareButton } from '@/components/ui/ShareButton'
 import { WorkflowLaunchButton } from '@/components/ui/WorkflowLaunchButton'
+import { ReportGenerator } from './ReportGenerator'
 import { AIInsightStack } from '@/components/ui/AIInsightCard'
 import { useHousehold } from '@/hooks/use-households'
 import { useAccounts } from '@/hooks/use-accounts'
@@ -138,6 +140,7 @@ export function HouseholdDetailPage() {
   const { data: hhDrift } = useHouseholdDrift(id)
   const { data: hhAllocation } = useHouseholdAllocation(id)
   const { data: insights } = useAIInsights('household_detail', id)
+  const [reportOpen, setReportOpen] = useState(false)
 
   if (isLoading) {
     return <div className="space-y-4"><Skeleton className="h-24" /><Skeleton className="h-96" /></div>
@@ -374,6 +377,12 @@ export function HouseholdDetailPage() {
           <p className="text-caption text-text-secondary">Total AUM</p>
           <p className="font-mono text-page-title">{formatCurrency(household.totalAUM, true)}</p>
         </div>
+        <button
+          onClick={() => setReportOpen(true)}
+          className="flex items-center gap-1.5 rounded-md border border-accent-blue/30 bg-accent-blue/5 px-3 py-1.5 text-caption font-medium text-accent-blue transition-colors hover:bg-accent-blue/10"
+        >
+          <BarChart3 className="h-3.5 w-3.5" /> Generate Report
+        </button>
         <WorkflowLaunchButton clientId={household.primaryContactId} clientName={household.name} />
         <ShareButton card={{
           variant: 'household_summary',
@@ -387,6 +396,13 @@ export function HouseholdDetailPage() {
       </div>
 
       <TabLayout tabs={tabs} />
+      {reportOpen && (
+        <ReportGenerator
+          householdId={household.id}
+          entityName={household.name}
+          onClose={() => setReportOpen(false)}
+        />
+      )}
     </div>
   )
 }

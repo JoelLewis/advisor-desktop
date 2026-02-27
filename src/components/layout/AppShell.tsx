@@ -6,9 +6,10 @@ import { BreadcrumbBar } from './BreadcrumbBar'
 import { StatusBar } from './StatusBar'
 import { AIChatPanel } from '@/features/ai-assistant/AIChatPanel'
 import { CommandPalette } from '@/features/command-palette/CommandPalette'
+import { QuickCaptureDialog } from '@/features/quick-capture/QuickCaptureDialog'
 import { AnnotationFAB } from '@/features/annotations/AnnotationFAB'
 import { AnnotationOverlay } from '@/features/annotations/AnnotationOverlay'
-import { AnnotationPanel, PANEL_WIDTH as ANNOTATION_PANEL_WIDTH } from '@/features/annotations/AnnotationPanel'
+import { AnnotationPanel } from '@/features/annotations/AnnotationPanel'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/store/ui-store'
 import { useBreakpoint } from '@/hooks/use-breakpoint'
@@ -25,6 +26,7 @@ export function AppShell() {
   const toggleAI = useUIStore((s) => s.toggleAIPanel)
   const toggleMessaging = useUIStore((s) => s.toggleMessaging)
   const toggleAnnotations = useUIStore((s) => s.toggleAnnotations)
+  const openQuickCapture = useUIStore((s) => s.openQuickCapture)
   const navigate = useNavigate()
   const { isBase } = useBreakpoint()
 
@@ -57,6 +59,10 @@ export function AppShell() {
         e.preventDefault()
         toggleAnnotations()
       }
+      if (meta && e.key === '/') {
+        e.preventDefault()
+        openQuickCapture()
+      }
 
       // Alt+1..9,0 navigation shortcuts
       if (e.altKey && !meta && !e.shiftKey) {
@@ -71,7 +77,7 @@ export function AppShell() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [openSearch, toggleAI, toggleMessaging, toggleAnnotations, navigate])
+  }, [openSearch, toggleAI, toggleMessaging, toggleAnnotations, openQuickCapture, navigate])
 
   return (
     <div className="min-h-screen bg-surface-secondary">
@@ -96,11 +102,8 @@ export function AppShell() {
           sidebarExpanded ? 'ml-sidebar-expanded' : 'ml-sidebar-collapsed',
         )}
         style={{
-          marginRight: aiPanelOpen && !isBase
-            ? aiPanelWidth
-            : annotationPanelOpen && !isBase
-              ? ANNOTATION_PANEL_WIDTH
-              : 0,
+          marginRight: aiPanelOpen && !isBase ? aiPanelWidth : 0,
+          paddingBottom: annotationPanelOpen ? 'var(--drawer-height, 0px)' : undefined,
         }}
       >
         <div className="p-6 animate-fade-in">
@@ -118,6 +121,9 @@ export function AppShell() {
 
       {/* Command Palette (Ctrl+K) */}
       <CommandPalette />
+
+      {/* Quick Capture (Ctrl+/) */}
+      <QuickCaptureDialog />
 
       <StatusBar />
     </div>
