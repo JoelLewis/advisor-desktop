@@ -8,3 +8,4 @@ dist
 .playwright-mcp/
 test-results/
 *.png
+.wrangler/
