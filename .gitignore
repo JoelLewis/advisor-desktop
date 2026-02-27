@@ -8,4 +8,5 @@ dist
 .playwright-mcp/
 test-results/
 *.png
+!public/og-image.png
 .wrangler/
