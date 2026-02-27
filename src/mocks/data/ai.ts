@@ -318,6 +318,7 @@ export const suggestedPrompts: SuggestedPrompt[] = [
   { text: 'Draft a meeting prep brief', category: 'planning', screenType: 'client_detail' },
   { text: 'What life events should I prepare for?', category: 'planning', screenType: 'client_detail' },
   { text: 'Generate a quarterly review report', category: 'reporting', screenType: 'client_detail' },
+  { text: 'Generate an investment proposal for this client', category: 'action', screenType: 'client_detail' },
 
   // Account Detail
   { text: 'Analyze this account\'s drift', category: 'portfolio', screenType: 'account_detail' },
