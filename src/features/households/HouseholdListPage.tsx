@@ -10,7 +10,7 @@ export function HouseholdListPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3" data-annotation="hh-nav">
         <Home className="h-6 w-6 text-text-secondary" />
         <h1 className="text-page-title">Households</h1>
         {data && (
@@ -21,10 +21,14 @@ export function HouseholdListPage() {
       </div>
 
       {insights && insights.length > 0 && (
-        <AIInsightStack insights={insights} />
+        <div data-annotation="hh-ai-insights">
+          <AIInsightStack insights={insights} />
+        </div>
       )}
 
-      <HouseholdListView />
+      <div data-annotation="hh-table">
+        <HouseholdListView />
+      </div>
     </div>
   )
 }

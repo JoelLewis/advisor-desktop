@@ -99,24 +99,26 @@ function RevenueContent() {
   return (
     <div className="space-y-6">
       {metrics && (
-        <DenseMetricsBar metrics={[
-          { label: 'Total Recurring Revenue', value: formatWithConversion(metrics.totalRecurringRevenue, 'USD', { compact: true }) },
-          { label: 'MTD Revenue', value: formatWithConversion(metrics.mtdRevenue, 'USD', { compact: true }) },
-          { label: 'YTD Revenue', value: formatWithConversion(metrics.ytdRevenue, 'USD', { compact: true }) },
-          {
-            label: 'Revenue Growth (YoY)',
-            value: formatPercent(metrics.revenueGrowthYoY),
-            change: {
+        <div data-annotation="revenue-metrics">
+          <DenseMetricsBar metrics={[
+            { label: 'Total Recurring Revenue', value: formatWithConversion(metrics.totalRecurringRevenue, 'USD', { compact: true }) },
+            { label: 'MTD Revenue', value: formatWithConversion(metrics.mtdRevenue, 'USD', { compact: true }) },
+            { label: 'YTD Revenue', value: formatWithConversion(metrics.ytdRevenue, 'USD', { compact: true }) },
+            {
+              label: 'Revenue Growth (YoY)',
               value: formatPercent(metrics.revenueGrowthYoY),
-              direction: metrics.revenueGrowthYoY >= 0 ? 'up' : 'down',
+              change: {
+                value: formatPercent(metrics.revenueGrowthYoY),
+                direction: metrics.revenueGrowthYoY >= 0 ? 'up' : 'down',
+              },
             },
-          },
-        ] satisfies DenseMetric[]} />
+          ] satisfies DenseMetric[]} />
+        </div>
       )}
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Revenue trend chart */}
-        <div className="xl:col-span-2">
+        <div className="xl:col-span-2" data-annotation="revenue-trend">
           <Card>
             <CardHeader>Revenue Trend (Monthly)</CardHeader>
             <CardContent>
@@ -138,31 +140,33 @@ function RevenueContent() {
         </div>
 
         {/* Revenue by segment */}
-        <Card>
-          <CardHeader>By Segment</CardHeader>
-          <CardContent>
-            {bySegment && (
-              <>
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={bySegment}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" />
-                    <XAxis dataKey="segment" tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} />
-                    <YAxis tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}K`} />
-                    <RechartsTooltip formatter={(value: number) => formatWithConversion(value, 'USD')} />
-                    <Bar dataKey="revenue" radius={[4, 4, 0, 0]}>
-                      {bySegment.map((entry) => (
-                        <Cell key={entry.segment} fill={SEGMENT_COLORS[entry.segment] ?? '#94A3B8'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-                <div className="mt-4">
-                  <DataTable data={bySegment} columns={segmentColumns} compact />
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+        <div data-annotation="revenue-segment">
+          <Card>
+            <CardHeader>By Segment</CardHeader>
+            <CardContent>
+              {bySegment && (
+                <>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={bySegment}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" />
+                      <XAxis dataKey="segment" tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} />
+                      <YAxis tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}K`} />
+                      <RechartsTooltip formatter={(value: number) => formatWithConversion(value, 'USD')} />
+                      <Bar dataKey="revenue" radius={[4, 4, 0, 0]}>
+                        {bySegment.map((entry) => (
+                          <Cell key={entry.segment} fill={SEGMENT_COLORS[entry.segment] ?? '#94A3B8'} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <div className="mt-4">
+                    <DataTable data={bySegment} columns={segmentColumns} compact />
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Fee schedule table */}

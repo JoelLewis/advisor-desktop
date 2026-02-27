@@ -85,7 +85,7 @@ function ClientCommsTab() {
   return (
     <div className="space-y-4">
       {/* Action buttons */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2" data-annotation="engage-actions">
         <button
           onClick={() => setComposeOpen(true)}
           className="flex items-center gap-1.5 rounded-md bg-accent-blue px-3 py-1.5 text-caption font-medium text-white transition-colors hover:bg-accent-blue/90"
@@ -136,47 +136,49 @@ function ClientCommsTab() {
       </div>
 
       {/* Table */}
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-border-primary text-caption font-medium text-text-tertiary">
-                <th className="px-4 py-3">Client</th>
-                <th className="px-4 py-3 w-16">Ch.</th>
-                <th className="px-4 py-3 w-12">Dir.</th>
-                <th className="px-4 py-3">Subject</th>
-                <th className="px-4 py-3 max-w-xs">Summary</th>
-                <th className="px-4 py-3 w-28">Date</th>
-                <th className="px-4 py-3 w-10">AI</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((comm) => {
-                const ChannelIcon = CHANNEL_ICONS[comm.channel]
-                const DirIcon = DIRECTION_ICON[comm.direction]
-                return (
-                  <tr key={comm.id} className="border-b border-border-primary last:border-b-0 transition-colors hover:bg-surface-tertiary">
-                    <td className="px-4 py-3 text-body font-medium text-text-primary whitespace-nowrap">{comm.clientName}</td>
-                    <td className="px-4 py-3"><ChannelIcon className="h-4 w-4 text-text-tertiary" /></td>
-                    <td className="px-4 py-3">
-                      <DirIcon className={`h-4 w-4 ${comm.direction === 'inbound' ? 'text-accent-blue' : 'text-accent-green'}`} />
-                    </td>
-                    <td className="px-4 py-3 text-body text-text-primary">{comm.subject}</td>
-                    <td className="px-4 py-3 text-caption text-text-secondary max-w-xs truncate">{comm.summary}</td>
-                    <td className="px-4 py-3 text-caption text-text-tertiary whitespace-nowrap">{formatDate(comm.timestamp)}</td>
-                    <td className="px-4 py-3">
-                      {comm.aiGenerated && <Sparkles className="h-3.5 w-3.5 text-accent-purple" />}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-        {filtered.length === 0 && (
-          <div className="py-8 text-center text-caption text-text-tertiary">No communications match your filters</div>
-        )}
-      </Card>
+      <div data-annotation="engage-ai-drafted">
+        <Card>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-border-primary text-caption font-medium text-text-tertiary">
+                  <th className="px-4 py-3">Client</th>
+                  <th className="px-4 py-3 w-16">Ch.</th>
+                  <th className="px-4 py-3 w-12">Dir.</th>
+                  <th className="px-4 py-3">Subject</th>
+                  <th className="px-4 py-3 max-w-xs">Summary</th>
+                  <th className="px-4 py-3 w-28">Date</th>
+                  <th className="px-4 py-3 w-10">AI</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((comm) => {
+                  const ChannelIcon = CHANNEL_ICONS[comm.channel]
+                  const DirIcon = DIRECTION_ICON[comm.direction]
+                  return (
+                    <tr key={comm.id} className="border-b border-border-primary last:border-b-0 transition-colors hover:bg-surface-tertiary">
+                      <td className="px-4 py-3 text-body font-medium text-text-primary whitespace-nowrap">{comm.clientName}</td>
+                      <td className="px-4 py-3"><ChannelIcon className="h-4 w-4 text-text-tertiary" /></td>
+                      <td className="px-4 py-3">
+                        <DirIcon className={`h-4 w-4 ${comm.direction === 'inbound' ? 'text-accent-blue' : 'text-accent-green'}`} />
+                      </td>
+                      <td className="px-4 py-3 text-body text-text-primary">{comm.subject}</td>
+                      <td className="px-4 py-3 text-caption text-text-secondary max-w-xs truncate">{comm.summary}</td>
+                      <td className="px-4 py-3 text-caption text-text-tertiary whitespace-nowrap">{formatDate(comm.timestamp)}</td>
+                      <td className="px-4 py-3">
+                        {comm.aiGenerated && <Sparkles className="h-3.5 w-3.5 text-accent-purple" />}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          {filtered.length === 0 && (
+            <div className="py-8 text-center text-caption text-text-tertiary">No communications match your filters</div>
+          )}
+        </Card>
+      </div>
 
       <ComposeEmailDialog open={composeOpen} onClose={() => setComposeOpen(false)} />
       <LogCallDialog open={logCallOpen} onClose={() => setLogCallOpen(false)} />
@@ -206,7 +208,7 @@ function CampaignsTab() {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4" data-annotation="engage-campaigns">
         {items.map((camp) => (
           <Card key={camp.id}>
             <CardContent className="space-y-3">
@@ -464,35 +466,37 @@ export function EngagePage() {
         <AIInsightStack insights={insights} />
       )}
 
-      <TabLayout
-        tabs={[
-          {
-            id: 'comms',
-            label: 'Client Comms',
-            count: commsData?.total,
-            content: <ClientCommsTab />,
-          },
-          {
-            id: 'campaigns',
-            label: 'Campaigns',
-            count: campaignsData?.total,
-            content: <CampaignsTab />,
-          },
-          {
-            id: 'social',
-            label: 'Social',
-            count: socialData?.total,
-            content: <SocialTab />,
-          },
-          {
-            id: 'newsletters',
-            label: 'Newsletters',
-            count: newsletterData?.total,
-            content: <NewslettersTab />,
-          },
-        ]}
-        defaultTab="comms"
-      />
+      <div data-annotation="engage-tabs">
+        <TabLayout
+          tabs={[
+            {
+              id: 'comms',
+              label: 'Client Comms',
+              count: commsData?.total,
+              content: <ClientCommsTab />,
+            },
+            {
+              id: 'campaigns',
+              label: 'Campaigns',
+              count: campaignsData?.total,
+              content: <CampaignsTab />,
+            },
+            {
+              id: 'social',
+              label: 'Social',
+              count: socialData?.total,
+              content: <SocialTab />,
+            },
+            {
+              id: 'newsletters',
+              label: 'Newsletters',
+              count: newsletterData?.total,
+              content: <NewslettersTab />,
+            },
+          ]}
+          defaultTab="comms"
+        />
+      </div>
     </div>
   )
 }
