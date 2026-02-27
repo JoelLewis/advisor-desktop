@@ -25,6 +25,7 @@ const TradingPage = lazy(() => import('@/features/portfolios/TradingPage').then(
 const ActionsPage = lazy(() => import('@/features/actions/ActionsPage').then((m) => ({ default: m.ActionsPage })))
 const HouseholdListPage = lazy(() => import('@/features/households/HouseholdListPage').then((m) => ({ default: m.HouseholdListPage })))
 const EngagePage = lazy(() => import('@/features/engage/EngagePage').then((m) => ({ default: m.EngagePage })))
+const ProposalWizard = lazy(() => import('@/features/proposals/ProposalWizard').then((m) => ({ default: m.ProposalWizard })))
 
 const suspense = (node: React.ReactNode) => <Suspense fallback={<PageSkeleton />}>{node}</Suspense>
 
@@ -44,6 +45,8 @@ export const router = createBrowserRouter([
           { index: true, element: suspense(<ClientListPage />) },
           { path: ':clientId', element: suspense(<ClientDetailPage />), handle: { breadcrumb: 'Client' } },
           { path: 'onboard/:prospectId?', element: suspense(<OnboardingWizard />), handle: { breadcrumb: 'Onboarding' } },
+          { path: ':clientId/proposal', element: suspense(<ProposalWizard />), handle: { breadcrumb: 'Proposal' } },
+          { path: 'prospect/proposal', element: suspense(<ProposalWizard />), handle: { breadcrumb: 'Proposal' } },
         ],
       },
       {

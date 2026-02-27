@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { TrendingUp, User, Phone, Mail, Calendar, UserPlus, LayoutGrid, List } from 'lucide-react'
+import { TrendingUp, User, Phone, Mail, Calendar, UserPlus, LayoutGrid, List, FileText } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { DenseMetricsBar } from '@/components/ui/DenseMetricsBar'
@@ -94,6 +94,14 @@ function ProspectCard({ prospect }: { prospect: Prospect }) {
         >
           <Mail className="h-3.5 w-3.5" />
         </button>
+        {prospect.stage === 'proposal' && (
+          <button
+            onClick={() => navigate(`/clients/prospect/proposal?prospectId=${prospect.id}`)}
+            className="ml-auto flex items-center gap-1 rounded-md border border-accent-purple/30 bg-accent-purple/5 px-2 py-1 text-[10px] font-medium text-accent-purple transition-colors hover:bg-accent-purple/10"
+          >
+            <FileText className="h-3 w-3" /> Generate Proposal
+          </button>
+        )}
         {prospect.stage === 'onboarding' && (
           <button
             onClick={() => navigate(`/clients/onboard/${prospect.id}`)}
