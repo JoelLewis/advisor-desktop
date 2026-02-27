@@ -274,6 +274,9 @@ export function AnnotationPanel() {
             <p className="text-caption text-text-tertiary">
               Dashboard &middot; Actions &middot; Client Detail &middot; Trading &middot; Workflows &middot; Portfolios
             </p>
+            <p className="text-caption text-text-tertiary">
+              Settings &middot; Household &middot; Account &middot; Engage &middot; Prospects &middot; Practice Mgmt
+            </p>
           </div>
         </div>
       )}
