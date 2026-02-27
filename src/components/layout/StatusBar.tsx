@@ -49,12 +49,12 @@ export function StatusBar() {
         </div>
         <div className="flex items-center gap-3">
           <a
-            href="https://joellewis.com"
+            href="https://joelelewis.com"
             target="_blank"
             rel="noopener noreferrer"
             className="text-text-tertiary transition-colors hover:text-accent-blue"
           >
-            joellewis.com
+            joelelewis.com
           </a>
           <span className="text-border-secondary">&middot;</span>
           <span>Concept v1</span>
