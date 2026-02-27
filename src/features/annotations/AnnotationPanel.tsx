@@ -49,7 +49,7 @@ export function AnnotationPanel() {
       )}
       <aside
         className="fixed right-0 top-0 bottom-0 z-40 flex flex-col border-l border-border-primary bg-surface-primary shadow-lg animate-slide-in-right"
-        style={{ width: isBase ? '100vw' : PANEL_WIDTH }}
+        style={{ width: PANEL_WIDTH }}
         role="complementary"
         aria-label="iDeal Demo Guide"
       >
