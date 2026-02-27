@@ -3,17 +3,29 @@ import type { MetricsSummary } from '@/services/pms'
 import type { DriftStatus } from '@/types/portfolio'
 import type { RiskMetrics, FactorExposure, StressScenario } from '@/types/risk'
 import type { BenchmarkComparison, PerformanceSeries, AttributionResult } from '@/types/performance'
+import type { CurrencyCode } from '@/types/currency'
+import { convertToBase } from '@/lib/currency'
+import { FX_RATES_USD_BASE } from '../data/currencies'
 import { getPositionsForAccount } from '../data/positions'
 import { accounts } from '../data/accounts'
 import { notFound, roundTo } from './utils'
 
-const metricsSummary: MetricsSummary = {
-  totalAUM: 101_855_000,
-  totalClients: 20,
-  pendingTasks: 14,
-  meetingsToday: 4,
-  alertCount: 3,
-  netFlowsMTD: 1_250_000,
+/** Convert an account's value from its base currency to USD using static FX rates */
+function toUSD(value: number, baseCurrency?: CurrencyCode): number {
+  if (!baseCurrency || baseCurrency === 'USD') return value
+  return convertToBase(value, baseCurrency, FX_RATES_USD_BASE)
+}
+
+function computeMetrics(): MetricsSummary {
+  const totalAUM = accounts.reduce((sum, a) => sum + toUSD(a.totalValue, a.baseCurrency), 0)
+  return {
+    totalAUM: Math.round(totalAUM),
+    totalClients: new Set(accounts.map((a) => a.clientId)).size,
+    pendingTasks: 14,
+    meetingsToday: 4,
+    alertCount: 3,
+    netFlowsMTD: 1_250_000,
+  }
 }
 
 // Seeded PRNG (LCG) for deterministic performance series per account
@@ -157,14 +169,6 @@ function computeDriftForAccount(account: typeof accounts[0]): DriftStatus {
   }
 }
 
-function aggregateByAssetClass(positions: ReturnType<typeof getPositionsForAccount>): Map<string, number> {
-  const byClass = new Map<string, number>()
-  for (const pos of positions) {
-    byClass.set(pos.assetClass, (byClass.get(pos.assetClass) ?? 0) + pos.marketValue)
-  }
-  return byClass
-}
-
 
 function buildStressPositionImpact(
   symbol: string, name: string, positionId: string,
@@ -184,7 +188,7 @@ function buildStressPositionImpact(
 
 export const pmsHandlers = [
   http.get('/api/pms/metrics', () => {
-    return HttpResponse.json(metricsSummary)
+    return HttpResponse.json(computeMetrics())
   }),
 
   http.get('/api/pms/drift/summary', () => {
@@ -460,9 +464,17 @@ export const pmsHandlers = [
   http.get('/api/pms/households/:householdId/allocation', ({ params }) => {
     const hhAccounts = accounts.filter((a) => a.householdId === params.householdId)
     if (hhAccounts.length === 0) return notFound()
-    const allPositions = hhAccounts.flatMap((a) => getPositionsForAccount(a.id, a.totalValue))
-    const totalValue = allPositions.reduce((sum, p) => sum + p.marketValue, 0)
-    const byClass = aggregateByAssetClass(allPositions)
+
+    // FX-aware aggregation: convert each account's positions to USD before combining
+    const byClass = new Map<string, number>()
+    for (const acc of hhAccounts) {
+      const positions = getPositionsForAccount(acc.id, acc.totalValue)
+      for (const pos of positions) {
+        const usdValue = toUSD(pos.marketValue, acc.baseCurrency)
+        byClass.set(pos.assetClass, (byClass.get(pos.assetClass) ?? 0) + usdValue)
+      }
+    }
+    const totalValue = [...byClass.values()].reduce((sum, v) => sum + v, 0)
 
     return HttpResponse.json(
       [...byClass.entries()].map(([assetClass, value]) => ({

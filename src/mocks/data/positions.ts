@@ -145,6 +145,66 @@ const lindaGarciaIRAPositions: Position[] = [
   { id: 'pos-145', accountId: 'acc-035', symbol: 'CASH', name: 'Money Market Fund', assetClass: 'cash', quantity: 1, price: 43_420, costBasis: 43_420, marketValue: 43_420, weight: 0.084, gainLoss: 0, gainLossPercent: 0 },
 ]
 
+// ── acc-041: Chen-Wong HK Equity (HK$12.5M) ──────────────────────────────────
+// HK-listed equities and Asia-focused ETFs, denominated in HKD
+const chenHKPositions: Position[] = [
+  { id: 'pos-200', accountId: 'acc-041', symbol: '0700.HK', name: 'Tencent Holdings', assetClass: 'intl_equity', quantity: 12000, price: 380.00, costBasis: 3_800_000, marketValue: 4_560_000, weight: 0.365, gainLoss: 760_000, gainLossPercent: 0.200 },
+  { id: 'pos-201', accountId: 'acc-041', symbol: '9988.HK', name: 'Alibaba Group', assetClass: 'intl_equity', quantity: 18000, price: 88.50, costBasis: 1_400_000, marketValue: 1_593_000, weight: 0.127, gainLoss: 193_000, gainLossPercent: 0.138 },
+  { id: 'pos-202', accountId: 'acc-041', symbol: '0005.HK', name: 'HSBC Holdings', assetClass: 'intl_equity', quantity: 25000, price: 68.20, costBasis: 1_500_000, marketValue: 1_705_000, weight: 0.136, gainLoss: 205_000, gainLossPercent: 0.137 },
+  { id: 'pos-203', accountId: 'acc-041', symbol: '2800.HK', name: 'Tracker Fund of Hong Kong', assetClass: 'intl_equity', quantity: 80000, price: 22.15, costBasis: 1_600_000, marketValue: 1_772_000, weight: 0.142, gainLoss: 172_000, gainLossPercent: 0.108 },
+  { id: 'pos-204', accountId: 'acc-041', symbol: '1299.HK', name: 'AIA Group', assetClass: 'intl_equity', quantity: 15000, price: 72.80, costBasis: 1_000_000, marketValue: 1_092_000, weight: 0.087, gainLoss: 92_000, gainLossPercent: 0.092 },
+  { id: 'pos-205', accountId: 'acc-041', symbol: '2388.HK', name: 'BOC Hong Kong', assetClass: 'intl_equity', quantity: 40000, price: 26.95, costBasis: 1_000_000, marketValue: 1_078_000, weight: 0.086, gainLoss: 78_000, gainLossPercent: 0.078 },
+  { id: 'pos-206', accountId: 'acc-041', symbol: 'CASH', name: 'HKD Money Market', assetClass: 'cash', quantity: 1, price: 700_000, costBasis: 700_000, marketValue: 700_000, weight: 0.056, gainLoss: 0, gainLossPercent: 0 },
+]
+
+// ── acc-042: Chen-Wong SG Growth (S$2.8M) ─────────────────────────────────────
+// Singapore-listed ETFs and equities, denominated in SGD
+const chenSGPositions: Position[] = [
+  { id: 'pos-210', accountId: 'acc-042', symbol: 'ES3.SI', name: 'SPDR Straits Times Index ETF', assetClass: 'intl_equity', quantity: 150000, price: 3.52, costBasis: 480_000, marketValue: 528_000, weight: 0.189, gainLoss: 48_000, gainLossPercent: 0.100 },
+  { id: 'pos-211', accountId: 'acc-042', symbol: 'D05.SI', name: 'DBS Group Holdings', assetClass: 'intl_equity', quantity: 12000, price: 39.80, costBasis: 420_000, marketValue: 477_600, weight: 0.171, gainLoss: 57_600, gainLossPercent: 0.137 },
+  { id: 'pos-212', accountId: 'acc-042', symbol: 'O39.SI', name: 'OCBC Bank', assetClass: 'intl_equity', quantity: 25000, price: 14.85, costBasis: 340_000, marketValue: 371_250, weight: 0.133, gainLoss: 31_250, gainLossPercent: 0.092 },
+  { id: 'pos-213', accountId: 'acc-042', symbol: 'A17U.SI', name: 'CapitaLand Ascendas REIT', assetClass: 'real_estate', quantity: 100000, price: 2.92, costBasis: 275_000, marketValue: 292_000, weight: 0.104, gainLoss: 17_000, gainLossPercent: 0.062 },
+  { id: 'pos-214', accountId: 'acc-042', symbol: 'CLR.SI', name: 'Nikko AM Singapore STI ETF', assetClass: 'intl_equity', quantity: 80000, price: 3.95, costBasis: 290_000, marketValue: 316_000, weight: 0.113, gainLoss: 26_000, gainLossPercent: 0.090 },
+  { id: 'pos-215', accountId: 'acc-042', symbol: 'MBH.SI', name: 'ABF Singapore Bond Index Fund', assetClass: 'fixed_income', quantity: 200000, price: 1.18, costBasis: 230_000, marketValue: 236_000, weight: 0.084, gainLoss: 6_000, gainLossPercent: 0.026 },
+  { id: 'pos-216', accountId: 'acc-042', symbol: 'CASH', name: 'SGD Money Market', assetClass: 'cash', quantity: 1, price: 579_150, costBasis: 579_150, marketValue: 579_150, weight: 0.207, gainLoss: 0, gainLossPercent: 0 },
+]
+
+// ── acc-043: Mueller EUR Balanced (€3.2M) ─────────────────────────────────────
+// European equities and bonds, denominated in EUR
+const muellerEURPositions: Position[] = [
+  { id: 'pos-220', accountId: 'acc-043', symbol: 'SIE.DE', name: 'Siemens AG', assetClass: 'intl_equity', quantity: 3500, price: 185.40, costBasis: 580_000, marketValue: 648_900, weight: 0.203, gainLoss: 68_900, gainLossPercent: 0.119 },
+  { id: 'pos-221', accountId: 'acc-043', symbol: 'ASML.AS', name: 'ASML Holding NV', assetClass: 'intl_equity', quantity: 800, price: 690.50, costBasis: 480_000, marketValue: 552_400, weight: 0.173, gainLoss: 72_400, gainLossPercent: 0.151 },
+  { id: 'pos-222', accountId: 'acc-043', symbol: 'MC.PA', name: 'LVMH Moet Hennessy', assetClass: 'intl_equity', quantity: 500, price: 720.00, costBasis: 320_000, marketValue: 360_000, weight: 0.113, gainLoss: 40_000, gainLossPercent: 0.125 },
+  { id: 'pos-223', accountId: 'acc-043', symbol: 'CSBGU0.SW', name: 'iShares Core Euro Govt Bond ETF', assetClass: 'fixed_income', quantity: 4200, price: 125.50, costBasis: 535_000, marketValue: 527_100, weight: 0.165, gainLoss: -7_900, gainLossPercent: -0.015 },
+  { id: 'pos-224', accountId: 'acc-043', symbol: 'IEAC.AS', name: 'iShares Core EUR Corp Bond ETF', assetClass: 'fixed_income', quantity: 3000, price: 108.20, costBasis: 330_000, marketValue: 324_600, weight: 0.101, gainLoss: -5_400, gainLossPercent: -0.016 },
+  { id: 'pos-225', accountId: 'acc-043', symbol: 'VWRL.AS', name: 'Vanguard FTSE All-World ETF', assetClass: 'intl_equity', quantity: 3200, price: 108.80, costBasis: 320_000, marketValue: 348_160, weight: 0.109, gainLoss: 28_160, gainLossPercent: 0.088 },
+  { id: 'pos-226', accountId: 'acc-043', symbol: 'CASH', name: 'EUR Money Market', assetClass: 'cash', quantity: 1, price: 438_840, costBasis: 438_840, marketValue: 438_840, weight: 0.137, gainLoss: 0, gainLossPercent: 0 },
+]
+
+// ── acc-044: Mueller CHF Conservative (CHF 1.5M) ──────────────────────────────
+// Swiss bonds and blue-chip equities, denominated in CHF
+const muellerCHFPositions: Position[] = [
+  { id: 'pos-230', accountId: 'acc-044', symbol: 'NESN.SW', name: 'Nestle SA', assetClass: 'intl_equity', quantity: 2500, price: 98.50, costBasis: 230_000, marketValue: 246_250, weight: 0.164, gainLoss: 16_250, gainLossPercent: 0.071 },
+  { id: 'pos-231', accountId: 'acc-044', symbol: 'NOVN.SW', name: 'Novartis AG', assetClass: 'intl_equity', quantity: 1800, price: 95.20, costBasis: 155_000, marketValue: 171_360, weight: 0.114, gainLoss: 16_360, gainLossPercent: 0.106 },
+  { id: 'pos-232', accountId: 'acc-044', symbol: 'ROG.SW', name: 'Roche Holding AG', assetClass: 'intl_equity', quantity: 600, price: 278.50, costBasis: 150_000, marketValue: 167_100, weight: 0.111, gainLoss: 17_100, gainLossPercent: 0.114 },
+  { id: 'pos-233', accountId: 'acc-044', symbol: 'CSBGC0.SW', name: 'iShares Core CHF Corp Bond ETF', assetClass: 'fixed_income', quantity: 3500, price: 102.80, costBasis: 365_000, marketValue: 359_800, weight: 0.240, gainLoss: -5_200, gainLossPercent: -0.014 },
+  { id: 'pos-234', accountId: 'acc-044', symbol: 'SRFCHA.SW', name: 'UBS ETF SBI Domestic Govt Bond', assetClass: 'fixed_income', quantity: 2000, price: 110.50, costBasis: 225_000, marketValue: 221_000, weight: 0.147, gainLoss: -4_000, gainLossPercent: -0.018 },
+  { id: 'pos-235', accountId: 'acc-044', symbol: 'CASH', name: 'CHF Money Market', assetClass: 'cash', quantity: 1, price: 334_490, costBasis: 334_490, marketValue: 334_490, weight: 0.223, gainLoss: 0, gainLossPercent: 0 },
+]
+
+// ── acc-045: Patel Digital Assets ($425K) ─────────────────────────────────────
+// Crypto portfolio in USD-denominated Coinbase account
+const patelCryptoPositions: Position[] = [
+  { id: 'pos-240', accountId: 'acc-045', symbol: 'BTC', name: 'Bitcoin', assetClass: 'digital_assets', quantity: 2.15, price: 91_000, costBasis: 145_000, marketValue: 195_650, weight: 0.460, gainLoss: 50_650, gainLossPercent: 0.349 },
+  { id: 'pos-241', accountId: 'acc-045', symbol: 'ETH', name: 'Ethereum', assetClass: 'digital_assets', quantity: 22.5, price: 3_571, costBasis: 62_000, marketValue: 80_348, weight: 0.189, gainLoss: 18_348, gainLossPercent: 0.296 },
+  { id: 'pos-242', accountId: 'acc-045', symbol: 'SOL', name: 'Solana', assetClass: 'digital_assets', quantity: 180, price: 238, costBasis: 30_000, marketValue: 42_840, weight: 0.101, gainLoss: 12_840, gainLossPercent: 0.428 },
+  { id: 'pos-243', accountId: 'acc-045', symbol: 'AVAX', name: 'Avalanche', assetClass: 'digital_assets', quantity: 800, price: 41.67, costBasis: 28_000, marketValue: 33_336, weight: 0.078, gainLoss: 5_336, gainLossPercent: 0.191 },
+  { id: 'pos-244', accountId: 'acc-045', symbol: 'LINK', name: 'Chainlink', assetClass: 'digital_assets', quantity: 1500, price: 20.41, costBasis: 25_000, marketValue: 30_615, weight: 0.072, gainLoss: 5_615, gainLossPercent: 0.225 },
+  { id: 'pos-245', accountId: 'acc-045', symbol: 'DOT', name: 'Polkadot', assetClass: 'digital_assets', quantity: 2200, price: 8.40, costBasis: 22_000, marketValue: 18_480, weight: 0.043, gainLoss: -3_520, gainLossPercent: -0.160 },
+  { id: 'pos-246', accountId: 'acc-045', symbol: 'USDC', name: 'USD Coin', assetClass: 'digital_assets', quantity: 15231, price: 1.00, costBasis: 15_231, marketValue: 15_231, weight: 0.036, gainLoss: 0, gainLossPercent: 0 },
+  { id: 'pos-247', accountId: 'acc-045', symbol: 'CASH', name: 'USD Cash', assetClass: 'cash', quantity: 1, price: 8_500, costBasis: 8_500, marketValue: 8_500, weight: 0.020, gainLoss: 0, gainLossPercent: 0 },
+]
+
 // ─── Aggregate & Export ─────────────────────────────────────────────────────
 export const allPositions: Position[] = [
   ...trustPositions,
@@ -157,6 +217,11 @@ export const allPositions: Position[] = [
   ...patel529Positions,
   ...thomasKimPositions,
   ...lindaGarciaIRAPositions,
+  ...chenHKPositions,
+  ...chenSGPositions,
+  ...muellerEURPositions,
+  ...muellerCHFPositions,
+  ...patelCryptoPositions,
 ]
 
 // Generate positions for a given account (for accounts without explicit positions)

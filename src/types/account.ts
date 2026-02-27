@@ -1,4 +1,5 @@
 import type { Currency, Percentage } from './common';
+import type { CurrencyCode } from './currency';
 
 type AccountType =
   | 'individual'
@@ -48,6 +49,7 @@ type Account = {
   openDate: string;
   lastRebalance: string | null;
   costBasisMethod: CostBasisMethod;
+  baseCurrency?: CurrencyCode;
 };
 
 export type {

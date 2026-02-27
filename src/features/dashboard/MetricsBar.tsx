@@ -2,12 +2,14 @@ import { useNavigate } from 'react-router-dom'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { DenseMetricsBar } from '@/components/ui/DenseMetricsBar'
 import { useMetrics } from '@/hooks/use-metrics'
+import { useReportingCurrency } from '@/hooks/use-settings'
 import { formatCurrency } from '@/lib/utils'
 import type { DenseMetric } from '@/components/ui/DenseMetricsBar'
 
 export function MetricsBar() {
   const { data, isLoading } = useMetrics()
   const navigate = useNavigate()
+  const reportingCurrency = useReportingCurrency()
 
   if (isLoading) {
     return <Skeleton className="h-[52px] w-full rounded-lg" />
@@ -21,10 +23,12 @@ export function MetricsBar() {
     )
   }
 
+  const currencyLabel = reportingCurrency !== 'USD' ? ` (${reportingCurrency})` : ''
+
   const metrics: DenseMetric[] = [
     {
-      label: 'Total AUM',
-      value: formatCurrency(data.totalAUM, true),
+      label: `Total AUM${currencyLabel}`,
+      value: formatCurrency(data.totalAUM, { compact: true, currency: reportingCurrency }),
       change: { value: '+2.3% MTD', direction: 'up' },
       onClick: () => navigate('/portfolios'),
     },
@@ -49,8 +53,8 @@ export function MetricsBar() {
       onClick: () => navigate('/actions'),
     },
     {
-      label: 'Net Flows MTD',
-      value: formatCurrency(data.netFlowsMTD, true),
+      label: `Net Flows MTD${currencyLabel}`,
+      value: formatCurrency(data.netFlowsMTD, { compact: true, currency: reportingCurrency }),
       change: { value: '+$1.2M', direction: 'up' },
       onClick: () => navigate('/portfolios'),
     },

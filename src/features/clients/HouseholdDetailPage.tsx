@@ -57,7 +57,17 @@ const accountColumns: ColumnDef<Account, unknown>[] = [
   },
   {
     accessorKey: 'totalValue', header: 'Value',
-    cell: ({ row }) => <span className="font-mono">{formatCurrency(row.original.totalValue, true)}</span>,
+    cell: ({ row }) => {
+      const currency = row.original.baseCurrency
+      return (
+        <span className="font-mono">
+          {formatCurrency(row.original.totalValue, { compact: true, currency })}
+          {currency && currency !== 'USD' && (
+            <span className="ml-1 text-[10px] text-text-tertiary">{currency}</span>
+          )}
+        </span>
+      )
+    },
     size: 120,
   },
   {
@@ -165,7 +175,18 @@ export function HouseholdDetailPage() {
     },
     {
       accessorKey: 'marketValue', header: 'Mkt Value',
-      cell: ({ row }) => <span className="font-mono">{formatCurrency(row.original.marketValue, true)}</span>,
+      cell: ({ row }) => {
+        const acc = accounts?.find((a) => a.id === row.original.accountId)
+        const currency = acc?.baseCurrency
+        return (
+          <span className="font-mono">
+            {formatCurrency(row.original.marketValue, { compact: true, currency })}
+            {currency && currency !== 'USD' && (
+              <span className="ml-1 text-[10px] text-text-tertiary">{currency}</span>
+            )}
+          </span>
+        )
+      },
       size: 100,
     },
     {

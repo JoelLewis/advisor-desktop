@@ -74,4 +74,15 @@ export const accounts: Account[] = [
   // ── Taylor Household (hh-012) — managed $380K ──
   { id: 'acc-039', accountNumber: 'IRA-293316', name: 'Nancy Taylor Traditional IRA', type: 'traditional_ira', status: 'active', taxTreatment: 'tax_deferred', clientId: 'cli-018', householdId: 'hh-012', totalValue: 280_000, cashBalance: 5_600, isUMA: false, modelId: 'mod-003', custodian: 'Schwab', openDate: '2023-02-01', lastRebalance: '2025-04-15', costBasisMethod: 'fifo' as const },
   { id: 'acc-040', accountNumber: 'BRK-404427', name: 'Nancy Taylor Individual', type: 'individual', status: 'active', taxTreatment: 'taxable', clientId: 'cli-018', householdId: 'hh-012', totalValue: 100_000, cashBalance: 2_000, isUMA: false, modelId: 'mod-002', custodian: 'Schwab', openDate: '2023-02-01', lastRebalance: '2025-04-15', costBasisMethod: 'specific_id' as const },
+
+  // ── Chen-Wong International (hh-002) — HK + Singapore ──
+  { id: 'acc-041', accountNumber: 'HSBC-HK-90142', name: 'Chen-Wong HK Equity Account', type: 'individual', status: 'active', taxTreatment: 'taxable', clientId: 'cli-003', householdId: 'hh-002', totalValue: 12_500_000, cashBalance: 250_000, isUMA: false, modelId: 'mod-002', custodian: 'HSBC', openDate: '2020-01-15', lastRebalance: '2025-11-20', costBasisMethod: 'specific_id' as const, baseCurrency: 'HKD' as const },
+  { id: 'acc-042', accountNumber: 'DBS-SG-20358', name: 'Chen-Wong SG Growth Account', type: 'individual', status: 'active', taxTreatment: 'taxable', clientId: 'cli-003', householdId: 'hh-002', totalValue: 2_800_000, cashBalance: 56_000, isUMA: false, modelId: 'mod-002', custodian: 'DBS', openDate: '2020-06-01', lastRebalance: '2025-10-15', costBasisMethod: 'average_cost' as const, baseCurrency: 'SGD' as const },
+
+  // ── Mueller Household (hh-013) — EUR + CHF ──
+  { id: 'acc-043', accountNumber: 'UBS-EU-40567', name: 'Mueller EUR Balanced Account', type: 'individual', status: 'active', taxTreatment: 'taxable', clientId: 'cli-021', householdId: 'hh-013', totalValue: 3_200_000, cashBalance: 64_000, isUMA: false, modelId: 'mod-003', custodian: 'UBS', openDate: '2024-04-01', lastRebalance: '2025-12-01', costBasisMethod: 'fifo' as const, baseCurrency: 'EUR' as const },
+  { id: 'acc-044', accountNumber: 'CS-CH-50789', name: 'Mueller CHF Conservative Account', type: 'individual', status: 'active', taxTreatment: 'taxable', clientId: 'cli-022', householdId: 'hh-013', totalValue: 1_500_000, cashBalance: 30_000, isUMA: false, modelId: 'mod-004', custodian: 'Credit Suisse', openDate: '2024-04-15', lastRebalance: '2025-11-15', costBasisMethod: 'fifo' as const, baseCurrency: 'CHF' as const },
+
+  // ── Patel Household (hh-007) — Crypto account ──
+  { id: 'acc-045', accountNumber: 'CB-US-60912', name: 'Patel Digital Assets Account', type: 'individual', status: 'active', taxTreatment: 'taxable', clientId: 'cli-011', householdId: 'hh-007', totalValue: 425_000, cashBalance: 8_500, isUMA: false, modelId: 'mod-002', custodian: 'Coinbase', openDate: '2023-09-01', lastRebalance: '2025-12-10', costBasisMethod: 'specific_id' as const },
 ]
