@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { Search, Users } from 'lucide-react'
 import { type ColumnDef } from '@tanstack/react-table'
 import { Card } from '@/components/ui/Card'
@@ -8,6 +8,7 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useClients } from '@/hooks/use-clients'
+import { useHouseholds } from '@/hooks/use-households'
 import { formatCurrency } from '@/lib/utils'
 import type { Client, ClientSegment } from '@/types/client'
 
@@ -18,67 +19,99 @@ const SEGMENT_VARIANT: Record<ClientSegment, 'blue' | 'yellow' | 'default'> = {
   bronze: 'default',
 }
 
-const columns: ColumnDef<Client, unknown>[] = [
-  {
-    accessorKey: 'fullName',
-    header: 'Client',
-    cell: ({ row }) => (
-      <div className="flex items-center gap-3">
-        <Avatar name={row.original.fullName} src={row.original.photo} size="sm" />
-        <div>
-          <p className="text-body-strong">{row.original.fullName}</p>
-          <p className="text-caption text-text-tertiary">{row.original.occupation}</p>
+const TIER_RANK: Record<ClientSegment, number> = {
+  platinum: 0,
+  gold: 1,
+  silver: 2,
+  bronze: 3,
+}
+
+function makeColumns(householdNames: Map<string, string>): ColumnDef<Client, unknown>[] {
+  return [
+    {
+      accessorKey: 'fullName',
+      header: 'Client',
+      cell: ({ row }) => (
+        <div className="flex items-center gap-3">
+          <Avatar name={row.original.fullName} src={row.original.photo} size="sm" />
+          <div>
+            <p className="text-body-strong">{row.original.fullName}</p>
+            <p className="text-caption text-text-tertiary">{row.original.occupation}</p>
+          </div>
         </div>
-      </div>
-    ),
-    size: 280,
-  },
-  {
-    accessorKey: 'segment',
-    header: 'Tier',
-    cell: ({ row }) => (
-      <Badge variant={SEGMENT_VARIANT[row.original.segment]}>{row.original.tier.label}</Badge>
-    ),
-    size: 100,
-  },
-  {
-    accessorKey: 'totalAUM',
-    header: 'AUM',
-    cell: ({ row }) => (
-      <span className="font-mono text-body">{formatCurrency(row.original.totalAUM, true)}</span>
-    ),
-    size: 120,
-  },
-  {
-    accessorKey: 'email',
-    header: 'Email',
-    cell: ({ row }) => (
-      <span className="text-caption text-text-secondary">{row.original.email}</span>
-    ),
-    size: 240,
-  },
-  {
-    accessorKey: 'phone',
-    header: 'Phone',
-    cell: ({ row }) => (
-      <span className="font-mono text-caption text-text-secondary">{row.original.phone}</span>
-    ),
-    size: 140,
-  },
-  {
-    accessorKey: 'householdId',
-    header: 'Household',
-    cell: ({ row }) => (
-      <span className="text-caption text-text-secondary">{row.original.householdId}</span>
-    ),
-    size: 120,
-  },
-]
+      ),
+      size: 280,
+    },
+    {
+      accessorKey: 'segment',
+      header: 'Tier',
+      cell: ({ row }) => (
+        <Badge variant={SEGMENT_VARIANT[row.original.segment]}>{row.original.tier.label}</Badge>
+      ),
+      sortingFn: (a, b) =>
+        TIER_RANK[a.original.segment] - TIER_RANK[b.original.segment],
+      size: 100,
+    },
+    {
+      accessorKey: 'totalAUM',
+      header: 'AUM',
+      cell: ({ row }) => (
+        <span className="font-mono text-body">{formatCurrency(row.original.totalAUM, true)}</span>
+      ),
+      size: 120,
+    },
+    {
+      accessorKey: 'email',
+      header: 'Email',
+      cell: ({ row }) => (
+        <span className="text-caption text-text-secondary">{row.original.email}</span>
+      ),
+      size: 240,
+    },
+    {
+      accessorKey: 'phone',
+      header: 'Phone',
+      cell: ({ row }) => (
+        <span className="font-mono text-caption text-text-secondary">{row.original.phone}</span>
+      ),
+      size: 140,
+    },
+    {
+      accessorKey: 'householdId',
+      header: 'Household',
+      cell: ({ row }) => {
+        const hhId = row.original.householdId
+        const name = householdNames.get(hhId) ?? hhId
+        return (
+          <Link
+            to={`/households/${hhId}`}
+            onClick={(e) => e.stopPropagation()}
+            className="text-caption text-accent-blue hover:underline"
+          >
+            {name}
+          </Link>
+        )
+      },
+      size: 160,
+    },
+  ]
+}
 
 export function ClientListPage() {
   const [search, setSearch] = useState('')
   const { data, isLoading } = useClients()
+  const { data: households } = useHouseholds()
   const navigate = useNavigate()
+
+  const householdNames = useMemo(() => {
+    const map = new Map<string, string>()
+    if (households?.items) {
+      for (const hh of households.items) map.set(hh.id, hh.name)
+    }
+    return map
+  }, [households])
+
+  const columns = useMemo(() => makeColumns(householdNames), [householdNames])
 
   return (
     <div className="space-y-6">

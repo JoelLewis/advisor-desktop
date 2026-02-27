@@ -27,6 +27,7 @@ import type { Position } from '@/types/portfolio'
 import type { StressScenario } from '@/types/risk'
 import type { BenchmarkComparison } from '@/types/performance'
 import type { Order } from '@/services/oms'
+import type { CurrencyCode } from '@/types/currency'
 import type { ColumnDef } from '@tanstack/react-table'
 
 const COST_BASIS_LABELS: Record<string, string> = {
@@ -35,7 +36,7 @@ const COST_BASIS_LABELS: Record<string, string> = {
   average_cost: 'Average Cost',
 }
 
-function makePositionColumns(onTrade?: (symbol: string, side: 'buy' | 'sell', assetClass?: string) => void): ColumnDef<Position, unknown>[] {
+function makePositionColumns(onTrade?: (symbol: string, side: 'buy' | 'sell', assetClass?: string) => void, currencyCode?: string): ColumnDef<Position, unknown>[] {
   const cols: ColumnDef<Position, unknown>[] = [
     {
       accessorKey: 'symbol', header: 'Symbol',
@@ -59,12 +60,12 @@ function makePositionColumns(onTrade?: (symbol: string, side: 'buy' | 'sell', as
     },
     {
       accessorKey: 'price', header: 'Price',
-      cell: ({ row }) => <span className="font-mono">{formatCurrency(row.original.price)}</span>,
+      cell: ({ row }) => <span className="font-mono">{formatCurrency(row.original.price, { currency: currencyCode as CurrencyCode | undefined })}</span>,
       size: 100,
     },
     {
       accessorKey: 'marketValue', header: 'Mkt Value',
-      cell: ({ row }) => <span className="font-mono">{formatCurrency(row.original.marketValue, true)}</span>,
+      cell: ({ row }) => <span className="font-mono">{formatCurrency(row.original.marketValue, { compact: true, currency: currencyCode as CurrencyCode | undefined })}</span>,
       size: 100,
     },
     {
@@ -240,8 +241,8 @@ export function AccountDetailPage() {
                 <AllocationChart data={allocation} size="lg" />
                 <div className="flex-1">
                   <div className="grid grid-cols-2 gap-3">
-                    <StatCell label="Total Value" value={formatCurrency(account.totalValue, true)} />
-                    <StatCell label="Cash Balance" value={formatCurrency(account.cashBalance, true)} />
+                    <StatCell label="Total Value" value={formatCurrency(account.totalValue, { compact: true, currency: account.baseCurrency })} badge={account.baseCurrency && account.baseCurrency !== 'USD' ? account.baseCurrency : undefined} />
+                    <StatCell label="Cash Balance" value={formatCurrency(account.cashBalance, { compact: true, currency: account.baseCurrency })} />
                     <StatCell
                       label="Unrealized G/L"
                       value={formatCurrency(totalGainLoss, true)}
@@ -404,7 +405,7 @@ export function AccountDetailPage() {
             </button>
           </div>
           <Card>
-            <DataTable data={positions ?? []} columns={makePositionColumns(handlePositionTrade)} compact />
+            <DataTable data={positions ?? []} columns={makePositionColumns(handlePositionTrade, account.baseCurrency)} compact />
           </Card>
         </div>
       ),
@@ -544,7 +545,7 @@ export function AccountDetailPage() {
             variant: 'account_summary',
             entityId: account.id,
             entityName: account.name,
-            metrics: [{ label: 'Value', value: formatCurrency(account.totalValue, true) }],
+            metrics: [{ label: 'Value', value: formatCurrency(account.totalValue, { compact: true, currency: account.baseCurrency }) }],
           }} />
         </div>
       </div>
@@ -574,11 +575,14 @@ function RiskMetricCard({ label, value, negative }: { label: string; value: stri
   )
 }
 
-function StatCell({ label, value, colorClass }: { label: string; value: string; colorClass?: string }) {
+function StatCell({ label, value, colorClass, badge }: { label: string; value: string; colorClass?: string; badge?: string }) {
   return (
     <div>
       <p className="text-caption text-text-secondary">{label}</p>
-      <p className={cn('font-mono text-section-header', colorClass)}>{value}</p>
+      <p className={cn('font-mono text-section-header', colorClass)}>
+        {value}
+        {badge && <span className="ml-1 text-[10px] font-normal text-text-tertiary">{badge}</span>}
+      </p>
     </div>
   )
 }
