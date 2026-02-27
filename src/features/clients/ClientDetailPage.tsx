@@ -57,7 +57,17 @@ const accountColumns: ColumnDef<Account, unknown>[] = [
   },
   {
     accessorKey: 'totalValue', header: 'Value',
-    cell: ({ row }) => <span className="font-mono">{formatCurrency(row.original.totalValue, true)}</span>,
+    cell: ({ row }) => {
+      const currency = row.original.baseCurrency
+      return (
+        <span className="font-mono">
+          {formatCurrency(row.original.totalValue, { compact: true, currency })}
+          {currency && currency !== 'USD' && (
+            <span className="ml-1 text-[10px] text-text-tertiary">{currency}</span>
+          )}
+        </span>
+      )
+    },
     size: 120,
   },
   {
@@ -169,7 +179,7 @@ export function ClientDetailPage() {
       id: 'overview', label: 'Overview',
       content: (
         <div className="space-y-6">
-          <Card className="border-l-[3px] border-l-accent-purple">
+          <div data-annotation="client-ai-summary"><Card className="border-l-[3px] border-l-accent-purple">
             <CardContent className="flex items-start gap-3">
               <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-accent-purple" />
               <div>
@@ -182,7 +192,7 @@ export function ClientDetailPage() {
                 </p>
               </div>
             </CardContent>
-          </Card>
+          </Card></div>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <Card>
               <CardHeader>Asset Allocation</CardHeader>
@@ -360,19 +370,25 @@ export function ClientDetailPage() {
         <div className="flex-1">
           <ClientHeader client={client} />
         </div>
-        <WorkflowLaunchButton clientId={client.id} clientName={client.fullName} />
-        <ShareButton card={{
+        <button
+          onClick={() => navigate(`/clients/${client.id}/proposal`)}
+          className="flex items-center gap-1.5 rounded-md border border-accent-purple/30 bg-accent-purple/5 px-3 py-1.5 text-caption font-medium text-accent-purple transition-colors hover:bg-accent-purple/10"
+        >
+          <FileText className="h-3.5 w-3.5" /> Generate Proposal
+        </button>
+        <span data-annotation="client-workflow"><WorkflowLaunchButton clientId={client.id} clientName={client.fullName} /></span>
+        <span data-annotation="client-share"><ShareButton card={{
           variant: 'client_summary',
           entityId: client.id,
           entityName: client.fullName,
           tier: client.tier.label,
           metrics: [{ label: 'AUM', value: formatCurrency(client.totalAUM, true) }],
-        }} />
+        }} /></span>
       </div>
       {insights && insights.length > 0 && (
-        <AIInsightStack insights={insights} />
+        <div data-annotation="client-insights"><AIInsightStack insights={insights} /></div>
       )}
-      <TabLayout tabs={tabs} />
+      <div data-annotation="client-notes"><TabLayout tabs={tabs} /></div>
     </div>
   )
 }

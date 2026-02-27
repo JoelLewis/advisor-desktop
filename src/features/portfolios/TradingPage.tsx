@@ -16,9 +16,9 @@ export function TradingPage() {
     <div className="space-y-6">
       <h1 className="text-page-title">Trading</h1>
       {insights && insights.length > 0 && (
-        <AIInsightStack insights={insights} />
+        <div data-annotation="trading-ai-insights"><AIInsightStack insights={insights} /></div>
       )}
-      <TabLayout tabs={tabs} />
+      <div data-annotation="trading-tabs"><TabLayout tabs={tabs} /></div>
     </div>
   )
 }

@@ -11,6 +11,7 @@ import { useAccounts } from '@/hooks/use-accounts'
 import { useHouseholds } from '@/hooks/use-households'
 import { useModels, useDriftSummary } from '@/hooks/use-portfolio'
 import { useAIInsights } from '@/hooks/use-ai'
+import { useReportingCurrency } from '@/hooks/use-settings'
 import { formatCurrency, cn } from '@/lib/utils'
 import type { Account, AccountType } from '@/types/account'
 import type { DriftStatus, ModelAssignment } from '@/types/portfolio'
@@ -73,7 +74,17 @@ function makeDriftColumns(
     },
     {
       accessorKey: 'totalValue', header: 'Value',
-      cell: ({ row }) => <span className="font-mono">{formatCurrency(row.original.totalValue, true)}</span>,
+      cell: ({ row }) => {
+        const currency = row.original.baseCurrency
+        return (
+          <span className="font-mono">
+            {formatCurrency(row.original.totalValue, { compact: true, currency })}
+            {currency && currency !== 'USD' && (
+              <span className="ml-1 text-[10px] text-text-tertiary">{currency}</span>
+            )}
+          </span>
+        )
+      },
       size: 100,
     },
     {
@@ -277,7 +288,12 @@ function HouseholdView({
                         </div>
                       </div>
                       <div className="flex items-center gap-6">
-                        <span className="font-mono text-body">{formatCurrency(acc.totalValue, true)}</span>
+                        <span className="font-mono text-body">
+                          {formatCurrency(acc.totalValue, { compact: true, currency: acc.baseCurrency })}
+                          {acc.baseCurrency && acc.baseCurrency !== 'USD' && (
+                            <span className="ml-1 text-[10px] text-text-tertiary">{acc.baseCurrency}</span>
+                          )}
+                        </span>
                         {drift && (
                           <div className="flex items-center gap-1.5">
                             {drift.needsRebalance && <AlertTriangle className="h-3.5 w-3.5 text-accent-red" />}
@@ -404,6 +420,7 @@ export function PortfolioPage() {
   const { data: driftSummary } = useDriftSummary()
   const { data: households } = useHouseholds()
   const { data: insights } = useAIInsights('portfolios')
+  const reportingCurrency = useReportingCurrency()
   const [view, setView] = useState<PortfolioView>('accounts')
   const [showDriftedOnly, setShowDriftedOnly] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -527,6 +544,7 @@ export function PortfolioPage() {
         <div className="flex items-center gap-2">
           <Link
             to="/portfolios/trading"
+            data-annotation="portfolio-rebalance"
             className="flex items-center gap-1.5 rounded-md bg-accent-blue px-3 py-1.5 text-caption font-medium text-white hover:bg-accent-blue/90"
           >
             <ArrowRightLeft className="h-3.5 w-3.5" />
@@ -543,7 +561,7 @@ export function PortfolioPage() {
       </div>
 
       <DenseMetricsBar metrics={[
-        { label: 'Total AUM', value: formatCurrency(totalAUM, true) },
+        { label: `Total AUM${reportingCurrency !== 'USD' ? ` (${reportingCurrency})` : ''}`, value: formatCurrency(totalAUM, { compact: true, currency: reportingCurrency }) },
         { label: 'Accounts', value: String(allAccounts.length) },
         { label: 'UMA Accounts', value: String(umaCount) },
         { label: 'Models', value: String(modelCount) },
@@ -555,7 +573,7 @@ export function PortfolioPage() {
       )}
 
       {/* View segmented control */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4" data-annotation="portfolio-view-toggle">
         <SegmentedControl options={VIEW_OPTIONS} value={view} onChange={setView} />
         <span className="text-caption text-text-tertiary">
           {view === 'accounts' && `${displayedAccounts.length} accounts`}
@@ -578,7 +596,7 @@ export function PortfolioPage() {
                   Rebalance {selectedIds.size} account{selectedIds.size > 1 ? 's' : ''}
                 </button>
               )}
-              <label className="flex items-center gap-2 text-caption text-text-secondary">
+              <label className="flex items-center gap-2 text-caption text-text-secondary" data-annotation="portfolio-drift">
                 <input
                   type="checkbox"
                   checked={showDriftedOnly}

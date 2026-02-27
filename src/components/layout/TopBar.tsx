@@ -25,6 +25,7 @@ export function TopBar() {
       {/* Left: Search trigger */}
       <button
         onClick={openSearch}
+        data-annotation="dash-search"
         className="flex items-center gap-2 rounded-md border border-border-primary bg-surface-secondary px-3 py-1.5 text-caption text-text-tertiary transition-colors hover:border-border-secondary hover:text-text-secondary"
       >
         <Search className="h-4 w-4" />
@@ -38,6 +39,7 @@ export function TopBar() {
       <div className="flex items-center gap-1">
         <button
           onClick={toggleAI}
+          data-annotation="dash-ai-toggle"
           className="relative flex h-9 w-9 items-center justify-center rounded-md text-accent-purple transition-colors hover:bg-accent-purple/10"
           aria-label="Toggle AI assistant"
           title={`AI Assistant (${shortcut('J')})`}

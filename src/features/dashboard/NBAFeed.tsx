@@ -140,7 +140,7 @@ export function NBAFeed() {
     <Card>
       <CardHeader
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" data-annotation="actions-filters">
             <MultiSelect
               options={CATEGORY_OPTIONS}
               selected={selectedCategories}
@@ -172,7 +172,7 @@ export function NBAFeed() {
       >
         Next Best Actions
       </CardHeader>
-      <div className="max-h-[calc(100vh-340px)] overflow-y-auto scrollbar-thin p-4">
+      <div className="max-h-[calc(100vh-340px)] overflow-y-auto scrollbar-thin p-4" data-annotation="actions-feed">
         {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -187,10 +187,11 @@ export function NBAFeed() {
               if (showBanner) renderedGroupBanners.add(nba.groupId!)
 
               return (
-                <div key={nba.id}>
+                <div key={nba.id} {...(nba === filteredNBAs[0] ? { 'data-annotation': 'actions-card' } : {})}>
                   {showBanner && group && (
                     <button
                       onClick={() => setBatchGroup(group)}
+                      data-annotation="actions-batch"
                       className="mb-2 flex w-full items-center justify-between rounded-lg border border-accent-blue/30 bg-accent-blue/5 px-4 py-2 text-left transition-colors hover:bg-accent-blue/10"
                     >
                       <span className="text-caption font-medium text-accent-blue">

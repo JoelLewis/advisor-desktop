@@ -410,7 +410,7 @@ export function WorkflowCenterPage() {
           {nigoCount > 0 && (
             <Badge variant="red">{nigoCount} NIGO</Badge>
           )}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5" data-annotation="workflows-ai-status">
             <Sparkles className="h-4 w-4 text-accent-purple" />
             <span className="text-caption text-accent-purple">
               {activeAICount} AI tasks active
@@ -419,7 +419,7 @@ export function WorkflowCenterPage() {
         </div>
       </div>
 
-      <TabLayout tabs={tabs} />
+      <div data-annotation="workflows-tabs"><TabLayout tabs={tabs} /></div>
 
       <StartWorkflowDialog
         open={startWorkflowOpen}
