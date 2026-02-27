@@ -207,7 +207,7 @@ export function HouseholdDetailPage() {
       id: 'overview', label: 'Overview',
       content: (
         <div className="space-y-6">
-          <Card>
+          <Card data-annotation="household-family-tree">
             <CardHeader>Family</CardHeader>
             <CardContent>
               <FamilyTree
@@ -227,7 +227,7 @@ export function HouseholdDetailPage() {
             <MetricSummaryCard label="Held Away" value={formatCurrency(household.heldAwayAUM, true)} />
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6" data-annotation="household-goals">
             <Card>
               <CardHeader>Consolidated Allocation</CardHeader>
               <CardContent>
@@ -272,7 +272,7 @@ export function HouseholdDetailPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card data-annotation="household-drift">
             <CardHeader action={
               driftedAccounts.length > 0 ? (
                 <button

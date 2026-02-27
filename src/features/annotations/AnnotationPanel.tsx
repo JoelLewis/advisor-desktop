@@ -116,6 +116,8 @@ export function AnnotationPanel() {
               <div className="mt-4 flex flex-col gap-1 text-caption text-accent-blue">
                 <span>Dashboard &middot; Actions &middot; Client Detail</span>
                 <span>Trading &middot; Workflows &middot; Portfolios</span>
+                <span>Settings &middot; Household &middot; Account</span>
+                <span>Engage &middot; Prospects &middot; Practice Mgmt</span>
               </div>
             </div>
           )}

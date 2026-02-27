@@ -307,7 +307,7 @@ export function AccountDetailPage() {
             </Card>
 
             {drift && (
-              <Card className={drift.needsRebalance ? 'border-l-[3px] border-l-accent-red' : ''}>
+              <Card data-annotation="account-drift" className={drift.needsRebalance ? 'border-l-[3px] border-l-accent-red' : ''}>
                 <CardHeader
                   action={
                     <ActionMenu
@@ -502,7 +502,7 @@ export function AccountDetailPage() {
     },
     {
       id: 'concentration', label: 'Concentration',
-      content: <ConcentrationView accountId={id} />,
+      content: <div data-annotation="account-concentration"><ConcentrationView accountId={id} /></div>,
     },
     {
       id: 'orders', label: 'Orders', count: orders?.length,
@@ -550,7 +550,9 @@ export function AccountDetailPage() {
         </div>
       </div>
 
-      <TabLayout tabs={tabs} />
+      <div data-annotation="account-tabs">
+        <TabLayout tabs={tabs} />
+      </div>
     </div>
   )
 }
