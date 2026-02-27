@@ -230,6 +230,154 @@ export const ROUTE_ANNOTATIONS: RouteAnnotations[] = [
     ],
   },
 
+  // ── Households ──
+  {
+    route: '/households',
+    pageTitle: 'Household Hub',
+    pageDescription: 'Family-level aggregation with AI insights, sortable household data, and click-through to 360° household views.',
+    annotations: [
+      {
+        id: 'hh-ai-insights',
+        number: 1,
+        title: 'AI Household Insights',
+        description: 'AI-generated intelligence at the household level — asset location opportunities, family-wide risk exposure, and cross-account optimization suggestions. Purple accent marks all AI-generated content.',
+        theme: 'ai_embedded',
+        anchor: 'top-right',
+      },
+      {
+        id: 'hh-table',
+        number: 2,
+        title: 'Household Table',
+        description: 'Sortable household list showing aggregated AUM, account count, member count, and household-level status. Each row is clickable, navigating to the full household detail view.',
+        theme: 'actionable_ux',
+        anchor: 'top-left',
+      },
+      {
+        id: 'hh-nav',
+        number: 3,
+        title: 'Household Detail Navigation',
+        description: 'Click through to a 360° household view with consolidated portfolio, family tree, member accounts, and household-level AI briefings.',
+        theme: 'smart_workflows',
+        anchor: 'top-right',
+      },
+    ],
+  },
+
+  // ── Growth Pipeline ──
+  {
+    route: '/growth',
+    pageTitle: 'Growth Pipeline',
+    pageDescription: 'Sales pipeline management with Kanban board, prospect metrics, and AI-powered proposal generation.',
+    annotations: [
+      {
+        id: 'growth-metrics',
+        number: 1,
+        title: 'Pipeline Metrics Strip',
+        description: 'Four KPIs at a glance: total prospects, total pipeline AUM, probability-weighted pipeline value, and average close probability. Updates dynamically as prospects move through stages.',
+        theme: 'actionable_ux',
+        anchor: 'top-right',
+      },
+      {
+        id: 'growth-health',
+        number: 2,
+        title: 'Pipeline Health KPIs',
+        description: 'Operational health metrics: average days in current stage, win rate (prospects reaching onboarding), and pipeline velocity (weighted AUM per day). Helps identify bottlenecks in the sales process.',
+        theme: 'smart_workflows',
+        anchor: 'top-left',
+      },
+      {
+        id: 'growth-view-toggle',
+        number: 3,
+        title: 'Board / List Toggle',
+        description: 'Switch between Kanban board (visual pipeline stages) and sortable list view. Board view shows cards grouped by stage; list view provides a data-dense table with 8 sortable columns.',
+        theme: 'actionable_ux',
+        anchor: 'top-right',
+      },
+      {
+        id: 'growth-prospect-actions',
+        number: 4,
+        title: 'Prospect Action Buttons',
+        description: 'Context-sensitive actions on each prospect card: "Generate Proposal" (AI-powered, purple accent) appears in the Proposal stage, "Start Onboarding" appears in the Onboarding stage. One click from pipeline to execution.',
+        theme: 'ai_embedded',
+        anchor: 'center-right',
+      },
+    ],
+  },
+
+  // ── Revenue / Practice Management ──
+  {
+    route: '/growth/revenue',
+    pageTitle: 'Revenue Analytics',
+    pageDescription: 'Practice-level revenue tracking with fee schedules, trend analysis, and tier-based client segmentation.',
+    annotations: [
+      {
+        id: 'revenue-metrics',
+        number: 1,
+        title: 'Revenue Metrics',
+        description: 'Key financials: Total Recurring Revenue, MTD and YTD revenue, and Year-over-Year growth rate. Provides an immediate health check on the advisory practice.',
+        theme: 'actionable_ux',
+        anchor: 'top-right',
+      },
+      {
+        id: 'revenue-trend',
+        number: 2,
+        title: 'Revenue Trend Chart',
+        description: 'Monthly revenue line chart with an AI-projected overlay (purple dashed line). Actual vs. projected comparison helps identify revenue trajectory and potential shortfalls before they materialize.',
+        theme: 'ai_embedded',
+        anchor: 'top-left',
+      },
+      {
+        id: 'revenue-segment',
+        number: 3,
+        title: 'Segment Breakdown',
+        description: 'Revenue broken down by client tier (Platinum, Gold, Silver, Bronze). Color-coded bar chart + data table shows revenue concentration and household count per segment — essential for capacity planning.',
+        theme: 'smart_workflows',
+        anchor: 'top-right',
+      },
+    ],
+  },
+
+  // ── Engage ──
+  {
+    route: '/engage',
+    pageTitle: 'Client Engagement',
+    pageDescription: 'Unified communication hub with email composition, call logging, campaign management, and AI-drafted content tracking.',
+    annotations: [
+      {
+        id: 'engage-actions',
+        number: 1,
+        title: 'Communication Actions',
+        description: 'One-click entry points for Compose Email and Log Call — the two most common advisor communication tasks. Each opens a focused dialog without leaving the engagement context.',
+        theme: 'actionable_ux',
+        anchor: 'top-left',
+      },
+      {
+        id: 'engage-ai-drafted',
+        number: 2,
+        title: 'AI-Drafted Indicator',
+        description: 'The purple sparkle icon marks communications drafted by the AI assistant. This visual language is consistent across the entire app — every AI-generated artifact carries the purple accent.',
+        theme: 'ai_embedded',
+        anchor: 'center-right',
+      },
+      {
+        id: 'engage-campaigns',
+        number: 3,
+        title: 'Campaign Management',
+        description: 'Status-driven campaign cards showing audience size, send count, open rate, and click rate. Campaign lifecycle flows from Draft → Scheduled → Active → Completed with appropriate action buttons at each stage.',
+        theme: 'smart_workflows',
+        anchor: 'top-right',
+      },
+      {
+        id: 'engage-tabs',
+        number: 4,
+        title: 'Multi-Channel Tabs',
+        description: 'Four communication channels in one view: Client Comms (email/phone/video history), Campaigns (bulk outreach), Social (LinkedIn/Twitter content), and Newsletters. Unified engagement without switching tools.',
+        theme: 'actionable_ux',
+        anchor: 'top-left',
+      },
+    ],
+  },
+
   // ── Portfolios ──
   {
     route: '/portfolios',

@@ -202,7 +202,7 @@ export function NBAFeed() {
             ))}
           </div>
         ) : filteredNBAs.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-3" data-annotation="actions-batch">
             {filteredNBAs.map((nba) => {
               const group = nba.groupId ? groups.get(nba.groupId) : undefined
               const showBanner = group && !renderedGroupBanners.has(nba.groupId!)
@@ -213,7 +213,6 @@ export function NBAFeed() {
                   {showBanner && group && (
                     <button
                       onClick={() => setBatchGroup(group)}
-                      data-annotation="actions-batch"
                       className="mb-2 flex w-full items-center justify-between rounded-lg border border-accent-blue/30 bg-accent-blue/5 px-4 py-2 text-left transition-colors hover:bg-accent-blue/10"
                     >
                       <span className="text-caption font-medium text-accent-blue">

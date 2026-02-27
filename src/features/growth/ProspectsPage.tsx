@@ -80,7 +80,7 @@ function ProspectCard({ prospect }: { prospect: Prospect }) {
         </div>
       </div>
 
-      <div className="mt-2 flex items-center gap-2">
+      <div className="mt-2 flex items-center gap-2" data-annotation="growth-prospect-actions">
         <button
           onClick={() => window.open(`tel:${prospect.phone}`)}
           className="rounded p-1 text-text-tertiary hover:bg-surface-tertiary hover:text-text-secondary"
@@ -276,21 +276,27 @@ export function ProspectsPage() {
           <TrendingUp className="h-6 w-6 text-accent-green" />
           <h1 className="text-page-title">Growth Pipeline</h1>
         </div>
-        <ViewToggle view={view} onViewChange={setView} />
+        <div data-annotation="growth-view-toggle">
+          <ViewToggle view={view} onViewChange={setView} />
+        </div>
       </div>
 
-      <DenseMetricsBar metrics={[
-        { label: 'Total Prospects', value: String(prospects?.length ?? 0) },
-        { label: 'Pipeline AUM', value: formatWithConversion(totalEstimatedAUM, 'USD', { compact: true }) },
-        { label: 'Weighted Pipeline', value: formatWithConversion(weightedPipeline, 'USD', { compact: true }) },
-        { label: 'Avg. Probability', value: prospects && prospects.length > 0
-          ? `${Math.round(prospects.reduce((sum, p) => sum + p.probability, 0) / prospects.length * 100)}%`
-          : '0%'
-        },
-      ] satisfies DenseMetric[]} />
+      <div data-annotation="growth-metrics">
+        <DenseMetricsBar metrics={[
+          { label: 'Total Prospects', value: String(prospects?.length ?? 0) },
+          { label: 'Pipeline AUM', value: formatWithConversion(totalEstimatedAUM, 'USD', { compact: true }) },
+          { label: 'Weighted Pipeline', value: formatWithConversion(weightedPipeline, 'USD', { compact: true }) },
+          { label: 'Avg. Probability', value: prospects && prospects.length > 0
+            ? `${Math.round(prospects.reduce((sum, p) => sum + p.probability, 0) / prospects.length * 100)}%`
+            : '0%'
+          },
+        ] satisfies DenseMetric[]} />
+      </div>
 
       {prospects && prospects.length > 0 && (
-        <PipelineMetrics prospects={prospects} />
+        <div data-annotation="growth-health">
+          <PipelineMetrics prospects={prospects} />
+        </div>
       )}
 
       {view === 'board' ? (
