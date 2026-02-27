@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Compass, ArrowRight } from 'lucide-react'
 import { useUIStore } from '@/store/ui-store'
 
-const STORAGE_KEY = 'advisor-desktop-welcomed'
+const STORAGE_KEY = 'ideal-welcomed'
 
 function hasBeenWelcomed(): boolean {
   try {
@@ -65,16 +65,16 @@ export function WelcomeOverlay({ forceOpen, onDismiss }: WelcomeOverlayProps = {
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 animate-fade-in"
       role="dialog"
       aria-modal="true"
-      aria-label="Welcome to Advisor Desktop"
+      aria-label="Welcome to iDeal"
     >
       <div className="mx-4 w-full max-w-lg rounded-xl border border-border-primary bg-surface-primary p-8 shadow-2xl animate-scale-in">
         {/* Logo mark */}
         <div className="mb-6 flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent-blue to-accent-purple text-white font-semibold text-lg">
-            AD
+            iD
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-text-primary">Advisor Desktop</h1>
+            <h1 className="text-xl font-semibold text-text-primary">iDeal</h1>
             <p className="text-caption text-text-secondary">A reference design by Joel Lewis</p>
           </div>
         </div>
@@ -87,8 +87,8 @@ export function WelcomeOverlay({ forceOpen, onDismiss }: WelcomeOverlayProps = {
         {/* Stats */}
         <div className="mt-5 flex flex-wrap gap-2">
           {[
-            '16 pages',
-            '90+ API endpoints',
+            '25 pages',
+            '175+ API endpoints',
             '5 asset classes',
             'Multi-currency',
           ].map((stat) => (

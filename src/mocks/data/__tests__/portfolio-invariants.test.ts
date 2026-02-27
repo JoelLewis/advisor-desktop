@@ -5,8 +5,8 @@ import { households } from '@/mocks/data/households'
 
 describe('Portfolio Invariants', () => {
   describe('Position-level math (explicit positions)', () => {
-    it('allPositions contains 95 explicit positions (10 accounts)', () => {
-      expect(allPositions).toHaveLength(95)
+    it('allPositions contains 130 explicit positions (15 accounts)', () => {
+      expect(allPositions).toHaveLength(130)
     })
 
     it.each(allPositions.map((p) => [p.id, p.symbol, p]))(

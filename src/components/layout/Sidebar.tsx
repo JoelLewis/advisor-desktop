@@ -49,11 +49,11 @@ export function Sidebar() {
       <div className="flex h-topbar items-center border-b border-border-primary px-4">
         <div className="flex items-center gap-2 overflow-hidden">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent-blue to-accent-purple text-white text-body-strong">
-            AD
+            iD
           </div>
           {expanded && (
             <span className="whitespace-nowrap text-body-strong text-text-primary">
-              Advisor Desktop
+              iDeal
             </span>
           )}
         </div>

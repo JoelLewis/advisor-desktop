@@ -56,15 +56,15 @@ describe('Sidebar', () => {
     expect(clientsLink.className).toContain('font-semibold')
   })
 
-  it('renders the AD logo text regardless of expanded state', () => {
+  it('renders the iD logo text regardless of expanded state', () => {
     renderWithProviders(<Sidebar />)
-    expect(screen.getByText('AD')).toBeInTheDocument()
+    expect(screen.getByText('iD')).toBeInTheDocument()
   })
 
-  it('renders the AD logo text when collapsed', () => {
+  it('renders the iD logo text when collapsed', () => {
     useUIStore.setState({ sidebarExpanded: false })
     renderWithProviders(<Sidebar />)
-    expect(screen.getByText('AD')).toBeInTheDocument()
+    expect(screen.getByText('iD')).toBeInTheDocument()
   })
 
   it('clicking collapse toggle changes sidebar state', async () => {

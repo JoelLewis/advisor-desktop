@@ -108,7 +108,7 @@ describe('NBACard', () => {
     expect(onDismiss).toHaveBeenCalledWith('nba-test-001')
   })
 
-  it('shows "Non-Dismissible" for compliance NBAs with nonDismissible=true', () => {
+  it('shows "Compliance Required" for compliance NBAs with nonDismissible=true', () => {
     const nba = createTestNBA({
       category: 'compliance',
       complianceInfo: {
@@ -122,7 +122,7 @@ describe('NBACard', () => {
     })
     renderWithProviders(<NBACard nba={nba} />)
 
-    expect(screen.getByText('Non-Dismissible')).toBeInTheDocument()
+    expect(screen.getByText('Compliance Required')).toBeInTheDocument()
     // The Dismiss button should not be present
     expect(screen.queryByRole('button', { name: /Dismiss/i })).not.toBeInTheDocument()
   })

@@ -196,7 +196,7 @@ const muellerCHFPositions: Position[] = [
 // Crypto portfolio in USD-denominated Coinbase account
 const patelCryptoPositions: Position[] = [
   { id: 'pos-240', accountId: 'acc-045', symbol: 'BTC', name: 'Bitcoin', assetClass: 'digital_assets', quantity: 2.15, price: 91_000, costBasis: 145_000, marketValue: 195_650, weight: 0.460, gainLoss: 50_650, gainLossPercent: 0.349 },
-  { id: 'pos-241', accountId: 'acc-045', symbol: 'ETH', name: 'Ethereum', assetClass: 'digital_assets', quantity: 22.5, price: 3_571, costBasis: 62_000, marketValue: 80_348, weight: 0.189, gainLoss: 18_348, gainLossPercent: 0.296 },
+  { id: 'pos-241', accountId: 'acc-045', symbol: 'ETH', name: 'Ethereum', assetClass: 'digital_assets', quantity: 22.5, price: 3_572, costBasis: 62_000, marketValue: 80_370, weight: 0.189, gainLoss: 18_370, gainLossPercent: 0.296 },
   { id: 'pos-242', accountId: 'acc-045', symbol: 'SOL', name: 'Solana', assetClass: 'digital_assets', quantity: 180, price: 238, costBasis: 30_000, marketValue: 42_840, weight: 0.101, gainLoss: 12_840, gainLossPercent: 0.428 },
   { id: 'pos-243', accountId: 'acc-045', symbol: 'AVAX', name: 'Avalanche', assetClass: 'digital_assets', quantity: 800, price: 41.67, costBasis: 28_000, marketValue: 33_336, weight: 0.078, gainLoss: 5_336, gainLossPercent: 0.191 },
   { id: 'pos-244', accountId: 'acc-045', symbol: 'LINK', name: 'Chainlink', assetClass: 'digital_assets', quantity: 1500, price: 20.41, costBasis: 25_000, marketValue: 30_615, weight: 0.072, gainLoss: 5_615, gainLossPercent: 0.225 },

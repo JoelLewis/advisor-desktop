@@ -1,4 +1,4 @@
-// Currency domain types for Advisor Desktop
+// Currency domain types for iDeal
 
 type FiatCurrencyCode =
   | 'USD' | 'EUR' | 'GBP' | 'JPY' | 'CHF'

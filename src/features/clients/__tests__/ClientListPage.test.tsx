@@ -11,8 +11,8 @@ describe('ClientListPage', () => {
 
   it('shows total client count after loading', async () => {
     renderWithProviders(<ClientListPage />, { initialEntries: ['/clients'] })
-    // MSW returns 20 clients; the count badge renders data.total
-    expect(await screen.findByText('20')).toBeInTheDocument()
+    // MSW returns 22 clients; the count badge renders data.total
+    expect(await screen.findByText('22')).toBeInTheDocument()
   })
 
   it('renders search input with correct placeholder', () => {
