@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Compass, ArrowRight, Monitor } from 'lucide-react'
+import { Compass, ArrowRight } from 'lucide-react'
 import { useUIStore } from '@/store/ui-store'
 
 const STORAGE_KEY = 'advisor-desktop-welcomed'
@@ -84,17 +84,11 @@ export function WelcomeOverlay({ forceOpen, onDismiss }: WelcomeOverlayProps = {
           What if you could design an advisor desktop unconstrained by legacy back-office systems?
         </p>
 
-        {/* Device context */}
-        <div className="mt-3 flex items-center gap-1.5 text-caption text-text-tertiary">
-          <Monitor className="h-3.5 w-3.5" />
-          <span>Designed for desktop &amp; tablet (1024px+)</span>
-        </div>
-
         {/* Stats */}
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-5 flex flex-wrap gap-2">
           {[
-            '20+ pages',
-            '130+ API endpoints',
+            '16 pages',
+            '90+ API endpoints',
             '5 asset classes',
             'Multi-currency',
           ].map((stat) => (

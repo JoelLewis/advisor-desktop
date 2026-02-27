@@ -470,13 +470,13 @@ export function EngagePage() {
             id: 'comms',
             label: 'Client Comms',
             count: commsData?.total,
-            content: <div data-annotation="engage-comms"><ClientCommsTab /></div>,
+            content: <ClientCommsTab />,
           },
           {
             id: 'campaigns',
             label: 'Campaigns',
             count: campaignsData?.total,
-            content: <div data-annotation="engage-campaigns"><CampaignsTab /></div>,
+            content: <CampaignsTab />,
           },
           {
             id: 'social',
