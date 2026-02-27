@@ -5,3 +5,6 @@ dist
 .env.*
 !.env.example
 .worktrees
+.playwright-mcp/
+test-results/
+*.png
