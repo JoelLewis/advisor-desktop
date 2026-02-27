@@ -27,22 +27,24 @@ export function ActionsPage() {
         <AIInsightStack insights={insights} />
       )}
 
-      <TabLayout
-        tabs={[
-          {
-            id: 'actions',
-            label: 'Actions',
-            count: pendingCount,
-            content: <NBAFeed />,
-          },
-          {
-            id: 'effectiveness',
-            label: 'Effectiveness',
-            content: <NBAEffectivenessContent />,
-          },
-        ]}
-        defaultTab="actions"
-      />
+      <div data-annotation="actions-tabs">
+        <TabLayout
+          tabs={[
+            {
+              id: 'actions',
+              label: 'Actions',
+              count: pendingCount,
+              content: <NBAFeed />,
+            },
+            {
+              id: 'effectiveness',
+              label: 'Effectiveness',
+              content: <NBAEffectivenessContent />,
+            },
+          ]}
+          defaultTab="actions"
+        />
+      </div>
     </div>
   )
 }

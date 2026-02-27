@@ -57,6 +57,8 @@ const config: Config = {
         'scale-in': 'scaleIn 200ms cubic-bezier(0.16, 1, 0.3, 1)',
         'fade-out': 'fadeOut 150ms ease-in',
         'scale-out': 'scaleOut 120ms ease-in',
+        'hotspot-pulse': 'hotspotPulse 2s ease-in-out infinite',
+        'fab-pulse': 'fabPulse 2s ease-in-out infinite',
       },
       keyframes: {
         shimmer: {
@@ -86,6 +88,16 @@ const config: Config = {
         scaleOut: {
           '0%': { opacity: '1', transform: 'translate(var(--tw-translate-x), var(--tw-translate-y)) scale(1)' },
           '100%': { opacity: '0', transform: 'translate(var(--tw-translate-x), var(--tw-translate-y)) scale(0.96)' },
+        },
+        hotspotPulse: {
+          '0%': { boxShadow: '0 0 0 0 var(--hotspot-color, #7C3AED)66' },
+          '70%': { boxShadow: '0 0 0 10px var(--hotspot-color, #7C3AED)00' },
+          '100%': { boxShadow: '0 0 0 0 var(--hotspot-color, #7C3AED)00' },
+        },
+        fabPulse: {
+          '0%': { boxShadow: '0 0 0 0 #D9770666' },
+          '70%': { boxShadow: '0 0 0 12px #D9770600' },
+          '100%': { boxShadow: '0 0 0 0 #D9770600' },
         },
       },
     },

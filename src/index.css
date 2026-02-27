@@ -50,6 +50,12 @@
   }
 }
 
+[data-annotation].annotation-active {
+  outline: 2px dashed var(--accent-amber);
+  outline-offset: 4px;
+  border-radius: 8px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

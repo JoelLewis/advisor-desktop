@@ -24,17 +24,17 @@ export function DashboardPage() {
         </p>
       </div>
 
-      <MetricsBar />
+      <div data-annotation="dash-metrics"><MetricsBar /></div>
 
       {insights && insights.length > 0 && (
-        <AIInsightStack insights={insights} />
+        <div data-annotation="dash-ai-insights"><AIInsightStack insights={insights} /></div>
       )}
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2">
+        <div className="xl:col-span-2" data-annotation="dash-nba">
           <NBAQuickView />
         </div>
-        <div id="schedule-panel"><SchedulePanel /></div>
+        <div id="schedule-panel" data-annotation="dash-schedule"><SchedulePanel /></div>
       </div>
 
       <ActivityStream />

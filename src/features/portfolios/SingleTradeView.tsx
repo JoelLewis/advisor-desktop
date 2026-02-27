@@ -270,7 +270,7 @@ export function SingleTradeView() {
             )}
 
             {/* Asset class selector */}
-            <AssetClassSelector value={assetClass} onChange={handleAssetClassChange} />
+            <div data-annotation="trading-asset-class"><AssetClassSelector value={assetClass} onChange={handleAssetClassChange} /></div>
 
             {/* Account selector */}
             <FieldGroup label="Account" htmlFor="single-trade-account">
@@ -406,7 +406,7 @@ export function SingleTradeView() {
 
             {/* Order summary */}
             {showSummary && (
-              <OrderSummaryCard
+              <div data-annotation="trading-summary"><OrderSummaryCard
                 assetClass={assetClass}
                 side={getCurrentSide()}
                 quantity={getCurrentQuantity()}
@@ -415,7 +415,7 @@ export function SingleTradeView() {
                 contractMultiplier={assetClass === 'option' ? 100 : undefined}
                 parAmount={assetClass === 'fixed_income' ? Number(fiParAmount) : undefined}
                 dollarAmount={assetClass === 'mutual_fund' && mfAmountType === 'dollars' ? Number(mfAmount) : undefined}
-              />
+              /></div>
             )}
 
             {/* Submit */}
@@ -431,7 +431,7 @@ export function SingleTradeView() {
       </div>
 
       {/* Right column — Recent orders */}
-      <div className="xl:col-span-2">
+      <div className="xl:col-span-2" data-annotation="trading-orders">
         <Card>
           <CardHeader>Recent Orders</CardHeader>
           <CardContent className="p-0">

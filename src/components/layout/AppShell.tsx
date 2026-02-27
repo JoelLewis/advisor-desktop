@@ -6,6 +6,9 @@ import { BreadcrumbBar } from './BreadcrumbBar'
 import { StatusBar } from './StatusBar'
 import { AIChatPanel } from '@/features/ai-assistant/AIChatPanel'
 import { CommandPalette } from '@/features/command-palette/CommandPalette'
+import { AnnotationFAB } from '@/features/annotations/AnnotationFAB'
+import { AnnotationOverlay } from '@/features/annotations/AnnotationOverlay'
+import { AnnotationPanel, PANEL_WIDTH as ANNOTATION_PANEL_WIDTH } from '@/features/annotations/AnnotationPanel'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/store/ui-store'
 import { useBreakpoint } from '@/hooks/use-breakpoint'
@@ -16,9 +19,12 @@ export function AppShell() {
   const sidebarExpanded = useUIStore((s) => s.sidebarExpanded)
   const aiPanelOpen = useUIStore((s) => s.aiPanelOpen)
   const aiPanelWidth = useUIStore((s) => s.aiPanelWidth)
+  const annotationsEnabled = useUIStore((s) => s.annotationsEnabled)
+  const annotationPanelOpen = useUIStore((s) => s.annotationPanelOpen)
   const openSearch = useUIStore((s) => s.openGlobalSearch)
   const toggleAI = useUIStore((s) => s.toggleAIPanel)
   const toggleMessaging = useUIStore((s) => s.toggleMessaging)
+  const toggleAnnotations = useUIStore((s) => s.toggleAnnotations)
   const navigate = useNavigate()
   const { isBase } = useBreakpoint()
 
@@ -47,6 +53,10 @@ export function AppShell() {
         e.preventDefault()
         toggleMessaging()
       }
+      if (meta && e.key === '.') {
+        e.preventDefault()
+        toggleAnnotations()
+      }
 
       // Alt+1..9,0 navigation shortcuts
       if (e.altKey && !meta && !e.shiftKey) {
@@ -61,7 +71,7 @@ export function AppShell() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [openSearch, toggleAI, toggleMessaging, navigate])
+  }, [openSearch, toggleAI, toggleMessaging, toggleAnnotations, navigate])
 
   return (
     <div className="min-h-screen bg-surface-secondary">
@@ -85,7 +95,13 @@ export function AppShell() {
           'pt-[calc(theme(spacing.topbar)+theme(spacing.breadcrumb))] pb-statusbar transition-[margin] duration-200 ease-in-out',
           sidebarExpanded ? 'ml-sidebar-expanded' : 'ml-sidebar-collapsed',
         )}
-        style={{ marginRight: aiPanelOpen && !isBase ? aiPanelWidth : 0 }}
+        style={{
+          marginRight: aiPanelOpen && !isBase
+            ? aiPanelWidth
+            : annotationPanelOpen && !isBase
+              ? ANNOTATION_PANEL_WIDTH
+              : 0,
+        }}
       >
         <div className="p-6 animate-fade-in">
           <Outlet />
@@ -94,6 +110,11 @@ export function AppShell() {
 
       {/* AI Chat Panel */}
       {aiPanelOpen && <AIChatPanel />}
+
+      {/* Annotation Layer */}
+      <AnnotationFAB />
+      {annotationsEnabled && <AnnotationOverlay />}
+      {annotationsEnabled && <AnnotationPanel />}
 
       {/* Command Palette (Ctrl+K) */}
       <CommandPalette />
