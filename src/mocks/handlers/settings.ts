@@ -14,7 +14,7 @@ const aiSettings: AISettings = {
   verbosity: 'standard',
   persona: {
     defaultGreeting: 'Good morning! Here\'s your daily briefing.',
-    emailSignature: 'Best regards,\n{advisor_name}\nSenior Financial Advisor\niDeal Wealth Management',
+    emailSignature: 'Best regards,\n{advisor_name}\nSenior Financial Advisor\nMitchell Wealth Advisors',
     preferredChannels: ['email', 'video'],
     followUpCadence: '1_week',
   },

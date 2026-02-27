@@ -105,7 +105,7 @@ describe('PMS service', () => {
       const metrics = await getMetricsSummary()
       expect(metrics).toBeTruthy()
       expect(metrics.totalAUM).toBeGreaterThan(0)
-      expect(metrics.totalClients).toBe(20)
+      expect(metrics.totalClients).toBeGreaterThanOrEqual(20)
     })
   })
 

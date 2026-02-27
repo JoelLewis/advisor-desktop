@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   RefreshCw, DollarSign, Target, AlertTriangle,
   Heart, Shield, TrendingUp, AlertCircle, ChevronUp,
-  ArrowUp, Minus, Timer, ArrowUpDown,
+  ArrowUp, Minus, Timer, ArrowUpDown, Lock, X,
 } from 'lucide-react'
 import { NBACard, CATEGORY_CONFIG } from '@/components/ui/NBACard'
 import { MultiSelect } from '@/components/ui/MultiSelect'
@@ -88,11 +88,33 @@ export function NBAFeed() {
   const [selectedUrgency, setSelectedUrgency] = useState<string[]>([])
   const [sortMode, setSortMode] = useState<SortMode>('priority')
   const [batchGroup, setBatchGroup] = useState<BatchGroup | null>(null)
+  const [complianceDismiss, setComplianceDismiss] = useState<{ nbaId: string; title: string } | null>(null)
+  const [dismissReason, setDismissReason] = useState('')
 
   const navigate = useNavigate()
   const { data: nbas, isLoading } = useNBAs({ dismissed: 'false' })
   const dismiss = useDismissNBA()
   const setInitialMessage = useUIStore((s) => s.setInitialMessage)
+
+  const handleDismiss = useCallback((id: string) => {
+    const nba = nbas?.find((n) => n.id === id)
+    if (nba?.complianceInfo?.nonDismissible && !nba.complianceInfo.supervisorOverride) {
+      setComplianceDismiss({ nbaId: id, title: nba.title })
+      setDismissReason('')
+      return
+    }
+    dismiss.mutate(id)
+  }, [nbas, dismiss])
+
+  const handleComplianceDismissConfirm = useCallback(() => {
+    if (!complianceDismiss || !dismissReason.trim()) return
+    dismiss.mutate(complianceDismiss.nbaId, {
+      onSuccess: () => setComplianceDismiss(null),
+    })
+    // Note: In a real implementation, the reason would be sent to the server
+    // with supervisorOverride: true. For the mock, just dismiss it.
+    setComplianceDismiss(null)
+  }, [complianceDismiss, dismissReason, dismiss])
 
   function handleAction(nbaId: string) {
     const nba = nbas?.find((n) => n.id === nbaId)
@@ -204,7 +226,7 @@ export function NBAFeed() {
                   )}
                   <NBACard
                     nba={nba}
-                    onDismiss={(id) => dismiss.mutate(id)}
+                    onDismiss={handleDismiss}
                     onAction={handleAction}
                   />
                 </div>
@@ -226,6 +248,55 @@ export function NBAFeed() {
           nbas={batchGroup.nbas}
           onClose={() => setBatchGroup(null)}
         />
+      )}
+
+      {/* Compliance dismiss reason dialog */}
+      {complianceDismiss && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setComplianceDismiss(null)} />
+          <div className="fixed left-1/2 top-1/2 z-50 w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border-primary bg-surface-primary p-5 shadow-xl">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2">
+                <Lock className="h-5 w-5 text-accent-red" />
+                <h3 className="text-body-strong text-text-primary">Compliance Action Required</h3>
+              </div>
+              <button
+                onClick={() => setComplianceDismiss(null)}
+                className="rounded p-1 text-text-tertiary hover:bg-surface-tertiary"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="mt-3 text-caption text-text-secondary">
+              &quot;{complianceDismiss.title}&quot; is a compliance-required action and cannot be dismissed without a documented reason and supervisor override.
+            </p>
+            <label className="mt-4 block text-caption font-medium text-text-secondary">
+              Reason for dismissal <span className="text-accent-red">*</span>
+            </label>
+            <textarea
+              value={dismissReason}
+              onChange={(e) => setDismissReason(e.target.value)}
+              placeholder="Provide justification for dismissing this compliance action..."
+              className="mt-1 w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+              rows={3}
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                onClick={() => setComplianceDismiss(null)}
+                className="rounded-md px-3 py-1.5 text-caption text-text-secondary hover:bg-surface-tertiary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleComplianceDismissConfirm}
+                disabled={!dismissReason.trim()}
+                className="rounded-md bg-accent-red px-3 py-1.5 text-caption font-medium text-white transition-colors hover:bg-accent-red/90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Request Override &amp; Dismiss
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </Card>
   )

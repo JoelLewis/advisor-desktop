@@ -16,19 +16,18 @@ export function StatusBar() {
       )}
       style={{ right: aiPanelOpen && !isBase ? aiPanelWidth : 0 }}
     >
-      <div className="flex items-center gap-4" aria-live="polite">
-        <span className="flex items-center gap-1.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-accent-green" aria-hidden="true" />
-          Connected
-        </span>
-        <span>Last sync: just now</span>
-      </div>
-      <div className="flex items-center gap-4">
-        <span className="flex items-center gap-1.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-accent-green" />
-          Data quality: Good
-        </span>
-        <span>v0.1.0</span>
+      <span>Reference Design by Joel Lewis</span>
+      <div className="flex items-center gap-3">
+        <a
+          href="https://joellewis.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-text-tertiary transition-colors hover:text-accent-blue"
+        >
+          joellewis.com
+        </a>
+        <span className="text-border-secondary">&middot;</span>
+        <span>Concept v1</span>
       </div>
     </footer>
   )

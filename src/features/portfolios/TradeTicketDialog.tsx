@@ -1,12 +1,14 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { AlertTriangle, Check } from 'lucide-react'
-import { useSubmitTrade } from '@/hooks/use-orders'
+import { useSubmitTrade, usePreTradeCheck } from '@/hooks/use-orders'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/Dialog'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'
 import type { TradableAssetClass, EquitySide, EquityOrderType, TimeInForce } from '@/types/trading'
+import type { PreTradeViolation } from '@/services/oms'
 import { AssetClassSelector } from './trade-fields/shared'
 import { EquityTradeFields } from './trade-fields/EquityTradeFields'
+import { PreTradeComplianceDisplay } from './trade-fields/ComplianceCheck'
 import { validateTrade } from './trade-fields/validation'
 
 type TradeTicketDialogProps = {
@@ -56,6 +58,10 @@ export function TradeTicketDialog({
   const [submitted, setSubmitted] = useState(false)
 
   const trade = useSubmitTrade()
+  const preCheck = usePreTradeCheck()
+  const [compliancePassed, setCompliancePassed] = useState<boolean | null>(null)
+  const [complianceViolations, setComplianceViolations] = useState<PreTradeViolation[]>([])
+  const checkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Sync prefill when dialog opens
   useEffect(() => {
@@ -70,10 +76,40 @@ export function TradeTicketDialog({
       setTimeInForce('day')
       setExtendedHours(false)
       setSubmitted(false)
+      setCompliancePassed(null)
+      setComplianceViolations([])
       trade.reset()
+      preCheck.reset()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, prefill?.symbol, prefill?.side, prefill?.quantity, prefill?.assetClass])
+
+  // Debounced pre-trade compliance check
+  useEffect(() => {
+    if (checkTimerRef.current) clearTimeout(checkTimerRef.current)
+    const trimmed = symbol.trim()
+    const qty = Number(quantity)
+    if (!trimmed || qty <= 0 || !accountId) {
+      setCompliancePassed(null)
+      setComplianceViolations([])
+      return
+    }
+    checkTimerRef.current = setTimeout(() => {
+      preCheck.mutate(
+        { accountId, symbol: trimmed, side, quantity: qty },
+        {
+          onSuccess: (result) => {
+            setCompliancePassed(result.passed)
+            setComplianceViolations(result.violations)
+          },
+        },
+      )
+    }, 500)
+    return () => {
+      if (checkTimerRef.current) clearTimeout(checkTimerRef.current)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [symbol, side, quantity, accountId])
 
   // Auto-close after successful submission
   useEffect(() => {
@@ -239,18 +275,25 @@ export function TradeTicketDialog({
             </div>
           )}
 
+          {/* Pre-trade compliance results */}
+          <PreTradeComplianceDisplay
+            violations={complianceViolations}
+            isChecking={preCheck.isPending}
+            passed={compliancePassed}
+          />
+
           {/* Submit button */}
           <button
             onClick={handleSubmit}
-            disabled={!isValid || trade.isPending || submitted}
+            disabled={!isValid || trade.isPending || submitted || compliancePassed === false}
             className={cn(
               'w-full rounded-md px-4 py-2 text-body font-medium text-white transition-colors',
-              isValid && !trade.isPending && !submitted
+              isValid && !trade.isPending && !submitted && compliancePassed !== false
                 ? 'bg-accent-blue hover:bg-accent-blue/90'
                 : 'cursor-not-allowed bg-accent-blue/50',
             )}
           >
-            {trade.isPending ? 'Submitting...' : 'Submit Order'}
+            {trade.isPending ? 'Submitting...' : compliancePassed === false ? 'Blocked by Compliance' : 'Submit Order'}
           </button>
         </div>
       </DialogContent>
