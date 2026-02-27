@@ -125,3 +125,30 @@ export function getExecutionStatus(orderId: string) {
 export function executeRebalance(request: { accountIds: string[]; taxAware: boolean }) {
   return post<RebalanceExecution[]>('/oms/rebalance/execute', request)
 }
+
+// Pre-trade compliance
+
+export type PreTradeViolation = {
+  constraint: string
+  severity: 'block' | 'warning'
+  currentValue: string
+  limit: string
+  message: string
+}
+
+export type PreTradeCheckResult = {
+  passed: boolean
+  violations: PreTradeViolation[]
+}
+
+export type PreTradeCheckRequest = {
+  accountId: string
+  symbol: string
+  side: string
+  quantity: number
+  estimatedValue?: number
+}
+
+export function preTradeCheck(request: PreTradeCheckRequest) {
+  return post<PreTradeCheckResult>('/oms/orders/pre-check', request)
+}

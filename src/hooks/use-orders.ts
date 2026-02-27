@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getOrders, submitRebalance, executeRebalance, submitTrade } from '@/services/oms'
+import { getOrders, submitRebalance, executeRebalance, submitTrade, preTradeCheck } from '@/services/oms'
 import { checkTradeCompliance } from '@/services/compliance'
-import type { RebalanceRequest, TradeRequest } from '@/services/oms'
+import type { RebalanceRequest, TradeRequest, PreTradeCheckRequest } from '@/services/oms'
 import type { TradeComplianceRequest } from '@/types/compliance'
 
 export function useOrders(params?: Record<string, string>) {
@@ -44,5 +44,11 @@ export function useSubmitTrade() {
 export function useTradeComplianceCheck() {
   return useMutation({
     mutationFn: (accounts: TradeComplianceRequest[]) => checkTradeCompliance(accounts),
+  })
+}
+
+export function usePreTradeCheck() {
+  return useMutation({
+    mutationFn: (request: PreTradeCheckRequest) => preTradeCheck(request),
   })
 }

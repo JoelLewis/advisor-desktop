@@ -9,8 +9,8 @@ export function AnnotationFAB() {
   return (
     <button
       onClick={toggle}
-      aria-label={enabled ? 'Close demo guide' : 'Explore iDeal'}
-      title={enabled ? 'Close demo guide' : 'Explore iDeal'}
+      aria-label={enabled ? 'Close guided tour' : 'Guided Tour'}
+      title={enabled ? 'Close guided tour' : 'Guided Tour'}
       className={cn(
         'fixed bottom-6 right-6 z-[55] flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-all duration-200',
         enabled

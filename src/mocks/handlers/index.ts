@@ -21,6 +21,7 @@ import { tradingHandlers } from './trading'
 import { engageHandlers } from './engage'
 import { proposalHandlers } from './proposals'
 import { fxHandlers } from './fx'
+import { notificationHandlers } from './notifications'
 
 export const handlers = [
   ...crmHandlers,
@@ -46,4 +47,5 @@ export const handlers = [
   ...engageHandlers,
   ...proposalHandlers,
   ...fxHandlers,
+  ...notificationHandlers,
 ]

@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw'
-import type { Order, RebalancePreview, ProposedTrade, ComplianceCheck, TradeRequest } from '@/services/oms'
+import type { Order, RebalancePreview, ProposedTrade, ComplianceCheck, TradeRequest, PreTradeCheckRequest, PreTradeViolation } from '@/services/oms'
 import { notFound } from './utils'
 
 const orders: Order[] = [
@@ -110,6 +110,79 @@ export const omsHandlers = [
     }
     orders.push(newOrder)
     return HttpResponse.json(newOrder, { status: 201 })
+  }),
+
+  // Pre-trade compliance check
+  http.post('/api/oms/orders/pre-check', async ({ request }) => {
+    const body = await request.json() as PreTradeCheckRequest
+    const violations: PreTradeViolation[] = []
+    const sym = body.symbol.toUpperCase()
+    const estValue = body.estimatedValue ?? body.quantity * 100 // rough estimate
+
+    // Concentration check: large single-name positions trigger warnings/blocks
+    if (estValue > 200_000) {
+      violations.push({
+        constraint: 'Single-security concentration limit',
+        severity: estValue > 500_000 ? 'block' : 'warning',
+        currentValue: `${((estValue / 2_500_000) * 100).toFixed(1)}%`,
+        limit: '5.0%',
+        message: `Position in ${sym} would represent ${((estValue / 2_500_000) * 100).toFixed(1)}% of portfolio (limit: 5%). ${estValue > 500_000 ? 'Exceeds IPS maximum.' : 'Approaching IPS limit.'}`,
+      })
+    }
+
+    // Restricted securities check
+    const restricted = ['GME', 'AMC', 'BBBY']
+    if (restricted.includes(sym)) {
+      violations.push({
+        constraint: 'Restricted securities list',
+        severity: 'block',
+        currentValue: sym,
+        limit: 'Not permitted',
+        message: `${sym} is on the firm restricted securities list. Trading is prohibited.`,
+      })
+    }
+
+    // Wash sale check for sells
+    if (['sell', 'sell_to_close'].includes(body.side)) {
+      const washSaleSymbols = ['VTI', 'NVDA', 'AAPL']
+      if (washSaleSymbols.includes(sym)) {
+        violations.push({
+          constraint: 'Wash sale rule (30-day window)',
+          severity: 'warning',
+          currentValue: 'Bought 15 days ago',
+          limit: '30-day window',
+          message: `${sym} was purchased within the last 30 days. Selling now may trigger a wash sale, disallowing the tax loss.`,
+        })
+      }
+    }
+
+    // Cash reserve check for buys
+    if (['buy', 'buy_to_open', 'purchase'].includes(body.side) && estValue > 100_000) {
+      violations.push({
+        constraint: 'Cash reserve minimum (2%)',
+        severity: 'warning',
+        currentValue: '2.8%',
+        limit: '2.0%',
+        message: 'Post-trade cash balance would be near the 2% minimum reserve requirement.',
+      })
+    }
+
+    // Sector concentration for known tech stocks
+    const techStocks = ['AAPL', 'MSFT', 'NVDA', 'GOOGL', 'META', 'AMZN', 'TSLA']
+    if (techStocks.includes(sym) && ['buy', 'buy_to_open'].includes(body.side) && estValue > 50_000) {
+      violations.push({
+        constraint: 'Sector concentration (Technology)',
+        severity: 'warning',
+        currentValue: '38.2%',
+        limit: '40.0%',
+        message: `Technology sector allocation is currently 38.2%. This trade would push it to ~${(38.2 + (estValue / 2_500_000) * 100).toFixed(1)}% (limit: 40%).`,
+      })
+    }
+
+    return HttpResponse.json({
+      passed: violations.every((v) => v.severity !== 'block'),
+      violations,
+    })
   }),
 
   http.post('/api/oms/rebalance', async ({ request }) => {

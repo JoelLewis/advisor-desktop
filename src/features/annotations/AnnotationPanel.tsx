@@ -48,15 +48,15 @@ export function AnnotationPanel() {
         />
       )}
       <aside
-        className="fixed right-0 top-0 bottom-0 z-40 flex flex-col border-l border-border-primary bg-surface-primary shadow-lg animate-slide-in-right"
+        className="fixed right-0 top-0 bottom-0 z-[48] flex flex-col border-l border-border-primary bg-surface-primary shadow-lg animate-slide-in-right"
         style={{ width: PANEL_WIDTH }}
         role="complementary"
-        aria-label="iDeal Demo Guide"
+        aria-label="Feature Guide"
       >
         {/* Header */}
         <div className="flex items-center gap-2 border-b border-border-primary px-4 py-3">
           <ScanSearch className="h-5 w-5 text-accent-amber" />
-          <h2 className="text-body-strong text-text-primary flex-1">iDeal Guide</h2>
+          <h2 className="text-body-strong text-text-primary flex-1">Feature Guide</h2>
           <button
             onClick={() => toggleAnnotations()}
             aria-label="Close guide"

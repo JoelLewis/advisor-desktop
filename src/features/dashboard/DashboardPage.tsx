@@ -5,11 +5,13 @@ import { ActivityStream } from './ActivityStream'
 import { AIInsightStack } from '@/components/ui/AIInsightCard'
 import { useAIInsights } from '@/hooks/use-ai'
 
-function getGreeting(): string {
-  const hour = new Date().getHours()
-  if (hour < 12) return 'Good Morning'
-  if (hour < 17) return 'Good Afternoon'
-  return 'Good Evening'
+function formatToday(): string {
+  return new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
 }
 
 export function DashboardPage() {
@@ -18,9 +20,9 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-page-title">{getGreeting()}, Sarah</h1>
+        <h1 className="text-page-title">Good Morning, Sarah</h1>
         <p className="mt-1 text-body text-text-secondary">
-          Tuesday, February 25, 2026 — 4 meetings, 14 pending actions
+          {formatToday()} — 4 meetings, 14 pending actions
         </p>
       </div>
 

@@ -3,7 +3,7 @@ import {
   RefreshCw, DollarSign, Target, AlertTriangle,
   Heart, Shield, TrendingUp, ChevronDown, ChevronUp,
   X, Clock, ArrowRight, Timer, Sparkles, Mail, FileText, MessageSquare, Loader2, Copy, Check,
-  ShieldAlert, History,
+  ShieldAlert, History, Lock,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from './Badge'
@@ -329,8 +329,8 @@ export function NBACard({ nba, onDismiss, onSnooze, onAction }: NBACardProps) {
       <div className="flex items-center justify-between border-t border-border-primary px-4 py-2">
         <div className="flex items-center gap-1">
           {compliance?.nonDismissible && !compliance.supervisorOverride ? (
-            <span className="flex items-center gap-1 rounded px-2 py-1 text-caption text-text-tertiary" title="Compliance actions require supervisor override to dismiss">
-              <ShieldAlert className="h-3 w-3" /> Non-Dismissible
+            <span className="flex items-center gap-1 rounded border border-accent-red/20 bg-accent-red/5 px-2 py-1 text-caption font-medium text-accent-red" title="Compliance-required — cannot be dismissed without supervisor override">
+              <Lock className="h-3 w-3" /> Compliance Required
             </span>
           ) : (
             <button

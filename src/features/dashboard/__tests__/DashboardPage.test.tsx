@@ -9,10 +9,11 @@ describe('DashboardPage', () => {
     expect(screen.getByText(/Sarah/)).toBeInTheDocument()
   })
 
-  it('renders the static date text', () => {
+  it('renders a dynamic date text', () => {
     renderWithProviders(<DashboardPage />, { initialEntries: ['/dashboard'] })
+    // Date is now dynamic — just verify some date-like text exists after the greeting
     expect(
-      screen.getByText(/Tuesday, February 25, 2026/),
+      screen.getByText(/\d{4}/),
     ).toBeInTheDocument()
   })
 

@@ -1,8 +1,12 @@
-import { Search, Bell, Sparkles, User, MessageSquare } from 'lucide-react'
+import { useState, useCallback } from 'react'
+import { Search, Bell, Sparkles, User, MessageSquare, Info } from 'lucide-react'
 import { useUIStore } from '@/store/ui-store'
 import { usePlatform } from '@/hooks/use-platform'
 import { useBreakpoint } from '@/hooks/use-breakpoint'
+import { useNotificationCounts } from '@/hooks/use-notifications'
 import { cn } from '@/lib/utils'
+import { WelcomeOverlay } from '@/features/welcome/WelcomeOverlay'
+import { NotificationCenter } from '@/features/notifications/NotificationCenter'
 
 export function TopBar() {
   const sidebarExpanded = useUIStore((s) => s.sidebarExpanded)
@@ -13,6 +17,12 @@ export function TopBar() {
   const toggleMessaging = useUIStore((s) => s.toggleMessaging)
   const { shortcut } = usePlatform()
   const { isBase } = useBreakpoint()
+  const [showAbout, setShowAbout] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
+  const { data: countData } = useNotificationCounts()
+  const unreadTotal = countData?.total ?? 0
+  const handleAboutDismiss = useCallback(() => setShowAbout(false), [])
+  const toggleNotifications = useCallback(() => setNotifOpen((prev) => !prev), [])
 
   return (
     <header
@@ -57,12 +67,26 @@ export function TopBar() {
         </button>
 
         <button
+          onClick={toggleNotifications}
           className="relative flex h-9 w-9 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-tertiary"
           aria-label="Notifications"
+          title="Notifications"
         >
           <Bell className="h-5 w-5" />
-          {/* Notification dot */}
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-accent-red" />
+          {unreadTotal > 0 && (
+            <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent-red px-1 text-[10px] font-medium leading-none text-white">
+              {unreadTotal > 99 ? '99+' : unreadTotal}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setShowAbout(true)}
+          className="relative flex h-9 w-9 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-tertiary"
+          aria-label="About this project"
+          title="About this project"
+        >
+          <Info className="h-5 w-5" />
         </button>
 
         <button
@@ -72,6 +96,12 @@ export function TopBar() {
           <User className="h-4 w-4" />
         </button>
       </div>
+
+      {/* Welcome / About overlay */}
+      <WelcomeOverlay forceOpen={showAbout} onDismiss={handleAboutDismiss} />
+
+      {/* Notification Center */}
+      <NotificationCenter open={notifOpen} onClose={() => setNotifOpen(false)} />
     </header>
   )
 }
