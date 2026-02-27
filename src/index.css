@@ -19,6 +19,23 @@
     --accent-amber: #D97706;
   }
 
+  [data-theme="dark"] {
+    --surface-primary: #1E293B;
+    --surface-secondary: #0F172A;
+    --surface-tertiary: #334155;
+    --border-primary: #334155;
+    --border-secondary: #475569;
+    --text-primary: #F1F5F9;
+    --text-secondary: #94A3B8;
+    --text-tertiary: #64748B;
+    --accent-blue: #3B82F6;
+    --accent-green: #10B981;
+    --accent-red: #EF4444;
+    --accent-purple: #A78BFA;
+    --accent-amber: #F59E0B;
+    color-scheme: dark;
+  }
+
   * {
     border-color: var(--border-primary);
   }
@@ -26,6 +43,18 @@
   body {
     color: var(--text-primary);
     background: var(--surface-secondary);
+  }
+
+  /* Dark mode overrides for Tailwind utility colors that don't use CSS vars */
+  [data-theme="dark"] .bg-white { background-color: var(--surface-primary); }
+  [data-theme="dark"] .bg-red-50 { background-color: rgba(239, 68, 68, 0.1); }
+  [data-theme="dark"] .bg-amber-100 { background-color: rgba(245, 158, 11, 0.15); }
+
+  /* Form controls in dark mode */
+  [data-theme="dark"] select,
+  [data-theme="dark"] input,
+  [data-theme="dark"] textarea {
+    color-scheme: dark;
   }
 }
 

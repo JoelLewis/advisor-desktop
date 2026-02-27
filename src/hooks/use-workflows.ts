@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getMyActions, getInProcess, getDelegated, getTemplates, createTask, startWorkflow } from '@/services/workflows'
-import type { Task } from '@/types/workflow'
+import { getMyActions, getInProcess, getDelegated, getTemplates, createTask, startWorkflow, createTemplate, updateTemplate, deleteTemplate } from '@/services/workflows'
+import type { Task, WorkflowTemplate } from '@/types/workflow'
 
 export function useMyActions(params?: Record<string, string>) {
   return useQuery({
@@ -46,5 +46,29 @@ export function useStartWorkflow() {
       qc.invalidateQueries({ queryKey: ['my-actions'] })
       qc.invalidateQueries({ queryKey: ['in-process'] })
     },
+  })
+}
+
+export function useCreateTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: Omit<WorkflowTemplate, 'id'>) => createTemplate(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['workflow-templates'] }),
+  })
+}
+
+export function useUpdateTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string } & Partial<WorkflowTemplate>) => updateTemplate(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['workflow-templates'] }),
+  })
+}
+
+export function useDeleteTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => deleteTemplate(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['workflow-templates'] }),
   })
 }

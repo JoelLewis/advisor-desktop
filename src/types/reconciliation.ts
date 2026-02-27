@@ -5,6 +5,8 @@ export type BreakSeverity = 'low' | 'medium' | 'high' | 'critical'
 export type ReconBreak = {
   id: string
   integrationName: string
+  accountId?: string
+  accountName?: string
   field: string
   expectedValue: string
   actualValue: string
@@ -20,4 +22,13 @@ export type IntegrationHealth = {
   breakCount: number
   /** Uptime as a percentage over the last 30 days */
   uptime: number
+}
+
+export type DataQualitySummary = {
+  positionMatchRate: number
+  cashMatchRate: number
+  transactionMatchRate: number
+  openBreaks: number
+  resolvedToday: number
+  avgResolutionMinutes: number
 }

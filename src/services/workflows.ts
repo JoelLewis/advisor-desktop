@@ -1,4 +1,4 @@
-import { get, post, put } from './api-client'
+import { get, post, put, del } from './api-client'
 import type { Task, ProcessTracker, WorkflowTemplate } from '@/types/workflow'
 
 export function getMyActions(params?: Record<string, string>) {
@@ -31,4 +31,16 @@ export function createTask(data: Pick<Task, 'title' | 'priority' | 'dueDate'> & 
 
 export function startWorkflow(data: { templateId: string; clientId?: string; clientName?: string; priority: string }) {
   return post<Task>('/workflows/start', data)
+}
+
+export function createTemplate(data: Omit<WorkflowTemplate, 'id'>) {
+  return post<WorkflowTemplate>('/workflows/templates', data)
+}
+
+export function updateTemplate(id: string, data: Partial<WorkflowTemplate>) {
+  return put<WorkflowTemplate>(`/workflows/templates/${id}`, data)
+}
+
+export function deleteTemplate(id: string) {
+  return del<void>(`/workflows/templates/${id}`)
 }

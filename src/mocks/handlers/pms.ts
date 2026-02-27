@@ -8,6 +8,7 @@ import { convertToBase } from '@/lib/currency'
 import { FX_RATES_USD_BASE } from '../data/currencies'
 import { getPositionsForAccount } from '../data/positions'
 import { accounts } from '../data/accounts'
+import { households } from '../data/households'
 import { notFound, roundTo } from './utils'
 
 /** Convert an account's value from its base currency to USD using static FX rates */
@@ -696,5 +697,79 @@ export const pmsHandlers = [
     const model = MODELS.find((m) => m.id === params.modelId)
     if (!model) return notFound()
     return HttpResponse.json(model)
+  }),
+
+  // ── Book of Business ──
+  http.get('/api/pms/book-of-business', () => {
+    const totalAUM = accounts.reduce((sum, a) => sum + toUSD(a.totalValue, a.baseCurrency), 0)
+    const hhCount = households.length
+    const clientCount = new Set(accounts.map((a) => a.clientId)).size
+    const annualRevenue = totalAUM * 0.0085 // ~85bps effective fee
+    const effectiveFee = 0.85
+
+    // Segment distribution from household segments
+    const segmentCounts: Record<string, { count: number; aum: number }> = {}
+    for (const hh of households) {
+      const seg = hh.segment ?? 'unclassified'
+      const hhAUM = hh.accountIds.reduce((s, aid) => {
+        const acc = accounts.find((a) => a.id === aid)
+        return s + (acc ? toUSD(acc.totalValue, acc.baseCurrency) : 0)
+      }, 0)
+      if (!segmentCounts[seg]) segmentCounts[seg] = { count: 0, aum: 0 }
+      segmentCounts[seg].count += 1
+      segmentCounts[seg].aum += hhAUM
+    }
+
+    const segments = Object.entries(segmentCounts).map(([segment, data]) => ({
+      segment,
+      householdCount: data.count,
+      aum: Math.round(data.aum),
+      pctOfAUM: roundTo(data.aum / totalAUM, 4),
+    }))
+
+    // AUM waterfall (decomposition for trailing 12 months)
+    const aumWaterfall = [
+      { label: 'Starting AUM', value: Math.round(totalAUM * 0.92) },
+      { label: 'Market Appreciation', value: Math.round(totalAUM * 0.065) },
+      { label: 'New Assets', value: Math.round(totalAUM * 0.032) },
+      { label: 'Withdrawals', value: -Math.round(totalAUM * 0.012) },
+      { label: 'Attrition', value: -Math.round(totalAUM * 0.005) },
+    ]
+
+    // Revenue concentration (HHI) — sum of squared shares
+    const hhAUMs = households.map((hh) => {
+      return hh.accountIds.reduce((s, aid) => {
+        const acc = accounts.find((a) => a.id === aid)
+        return s + (acc ? toUSD(acc.totalValue, acc.baseCurrency) : 0)
+      }, 0)
+    })
+    const hhi = Math.round(hhAUMs.reduce((sum, a) => sum + ((a / totalAUM) * 100) ** 2, 0))
+
+    // Capacity model
+    const targetClients = 120
+    const avgMeetingsPerClient = 2.4
+    const meetingsPerWeek = 12
+
+    return HttpResponse.json({
+      totalAUM: Math.round(totalAUM),
+      householdCount: hhCount,
+      clientCount,
+      annualRevenue: Math.round(annualRevenue),
+      effectiveFee,
+      organicGrowthRate: 3.2,
+      retentionRate: 98.5,
+      attritionCount: 1,
+      revenueConcentrationHHI: hhi,
+      segments,
+      aumWaterfall,
+      capacity: {
+        currentClients: clientCount,
+        targetClients,
+        utilizationPct: roundTo((clientCount / targetClients) * 100, 1),
+        avgMeetingsPerClient,
+        meetingsPerWeek,
+        meetingCapacityPct: roundTo((clientCount * avgMeetingsPerClient) / (meetingsPerWeek * 50) * 100, 1),
+      },
+    })
   }),
 ]

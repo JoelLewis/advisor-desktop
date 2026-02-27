@@ -1,9 +1,12 @@
 import { create } from 'zustand'
 import type { RichCardData } from '@/types/rich-card'
 
+type ThemeMode = 'light' | 'dark' | 'system'
+
 type PanelTab = 'ai' | 'messages'
 
 type UIStore = {
+  themeMode: ThemeMode
   sidebarExpanded: boolean
   aiPanelOpen: boolean
   aiPanelWidth: number
@@ -15,6 +18,7 @@ type UIStore = {
   annotationsEnabled: boolean
   activeAnnotationId: string | null
   annotationPanelOpen: boolean
+  quickCaptureOpen: boolean
   toggleSidebar: () => void
   toggleAIPanel: () => void
   setAIPanelWidth: (width: number) => void
@@ -30,10 +34,31 @@ type UIStore = {
   toggleAnnotations: () => void
   setActiveAnnotation: (id: string | null) => void
   setAnnotationPanelOpen: (open: boolean) => void
+  openQuickCapture: () => void
+  closeQuickCapture: () => void
+  setThemeMode: (mode: ThemeMode) => void
 }
 
+const isDesktop = () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1280px)').matches
+
+function getInitialTheme(): ThemeMode {
+  if (typeof window === 'undefined') return 'system'
+  return (localStorage.getItem('theme-mode') as ThemeMode | null) ?? 'system'
+}
+
+function applyTheme(mode: ThemeMode) {
+  if (typeof window === 'undefined') return
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+  const isDark = mode === 'dark' || (mode === 'system' && prefersDark)
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light')
+}
+
+// Apply theme on load
+applyTheme(getInitialTheme())
+
 export const useUIStore = create<UIStore>((set) => ({
-  sidebarExpanded: true,
+  themeMode: getInitialTheme(),
+  sidebarExpanded: isDesktop(),
   aiPanelOpen: false,
   aiPanelWidth: 400,
   aiInitialMessage: null,
@@ -44,6 +69,7 @@ export const useUIStore = create<UIStore>((set) => ({
   annotationsEnabled: false,
   activeAnnotationId: null,
   annotationPanelOpen: false,
+  quickCaptureOpen: false,
 
   toggleSidebar: () => set((s) => ({ sidebarExpanded: !s.sidebarExpanded })),
   toggleAIPanel: () => set((s) => ({
@@ -79,4 +105,11 @@ export const useUIStore = create<UIStore>((set) => ({
   }),
   setActiveAnnotation: (id) => set({ activeAnnotationId: id }),
   setAnnotationPanelOpen: (open) => set({ annotationPanelOpen: open }),
+  openQuickCapture: () => set({ quickCaptureOpen: true }),
+  closeQuickCapture: () => set({ quickCaptureOpen: false }),
+  setThemeMode: (mode) => {
+    localStorage.setItem('theme-mode', mode)
+    applyTheme(mode)
+    set({ themeMode: mode })
+  },
 }))

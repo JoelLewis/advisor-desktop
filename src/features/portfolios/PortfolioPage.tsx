@@ -12,9 +12,10 @@ import { useAccounts } from '@/hooks/use-accounts'
 import { useHouseholds } from '@/hooks/use-households'
 import { useModels, useDriftSummary } from '@/hooks/use-portfolio'
 import { useAIInsights } from '@/hooks/use-ai'
-import { useReportingCurrency } from '@/hooks/use-settings'
-import { formatCurrency, cn } from '@/lib/utils'
+import { useFormatCurrency } from '@/hooks/use-format-currency'
+import { cn } from '@/lib/utils'
 import type { Account, AccountType } from '@/types/account'
+import type { CurrencyCode } from '@/types/currency'
 import type { DriftStatus, ModelAssignment } from '@/types/portfolio'
 import type { ColumnDef } from '@tanstack/react-table'
 
@@ -38,6 +39,7 @@ function makeDriftColumns(
   selectedIds: Set<string>,
   onToggleSelect: (id: string) => void,
   onRebalance: (accountId: string) => void,
+  fmtConvert: (value: number, from: CurrencyCode, opts?: { compact?: boolean }) => string,
 ): ColumnDef<Account, unknown>[] {
   return [
     {
@@ -75,17 +77,11 @@ function makeDriftColumns(
     },
     {
       accessorKey: 'totalValue', header: 'Value',
-      cell: ({ row }) => {
-        const currency = row.original.baseCurrency
-        return (
-          <span className="font-mono">
-            {formatCurrency(row.original.totalValue, { compact: true, currency })}
-            {currency && currency !== 'USD' && (
-              <span className="ml-1 text-[10px] text-text-tertiary">{currency}</span>
-            )}
-          </span>
-        )
-      },
+      cell: ({ row }) => (
+        <span className="font-mono">
+          {fmtConvert(row.original.totalValue, row.original.baseCurrency ?? 'USD', { compact: true })}
+        </span>
+      ),
       size: 100,
     },
     {
@@ -176,6 +172,7 @@ function HouseholdView({
   onNavigateAccount: (accountId: string) => void
   onRebalanceHousehold: (accountIds: string[]) => void
 }) {
+  const { formatWithConversion: fmtConvert } = useFormatCurrency()
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
 
   function toggleExpand(id: string) {
@@ -210,7 +207,7 @@ function HouseholdView({
               </div>
               <div className="flex items-center gap-6">
                 <div className="text-right">
-                  <p className="font-mono text-body">{formatCurrency(group.totalAUM, true)}</p>
+                  <p className="font-mono text-body">{fmtConvert(group.totalAUM, 'USD', { compact: true })}</p>
                   <p className="text-caption text-text-tertiary">Total AUM</p>
                 </div>
                 <div className="text-right">
@@ -259,10 +256,7 @@ function HouseholdView({
                       </div>
                       <div className="flex items-center gap-6">
                         <span className="font-mono text-body">
-                          {formatCurrency(acc.totalValue, { compact: true, currency: acc.baseCurrency })}
-                          {acc.baseCurrency && acc.baseCurrency !== 'USD' && (
-                            <span className="ml-1 text-[10px] text-text-tertiary">{acc.baseCurrency}</span>
-                          )}
+                          {fmtConvert(acc.totalValue, acc.baseCurrency ?? 'USD', { compact: true })}
                         </span>
                         {drift && (
                           <div className="flex items-center gap-1.5">
@@ -304,6 +298,7 @@ function ModelsView({
   driftMap: Map<string, DriftStatus>
   onRebalanceModel: (modelId: string) => void
 }) {
+  const { formatWithConversion: fmtConvert } = useFormatCurrency()
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
       {models.map((model) => {
@@ -345,7 +340,7 @@ function ModelsView({
                 </div>
                 <div>
                   <p className="text-[11px] uppercase tracking-wider text-text-tertiary">Total AUM</p>
-                  <p className="font-mono text-body-strong">{formatCurrency(totalAUM, true)}</p>
+                  <p className="font-mono text-body-strong">{fmtConvert(totalAUM, 'USD', { compact: true })}</p>
                 </div>
                 <div>
                   <p className="text-[11px] uppercase tracking-wider text-text-tertiary">Avg Drift</p>
@@ -390,7 +385,7 @@ export function PortfolioPage() {
   const { data: driftSummary } = useDriftSummary()
   const { data: households } = useHouseholds()
   const { data: insights } = useAIInsights('portfolios')
-  const reportingCurrency = useReportingCurrency()
+  const { formatWithConversion, reportingCurrency } = useFormatCurrency()
   const [view, setView] = useState<PortfolioView>('accounts')
   const [showDriftedOnly, setShowDriftedOnly] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -505,7 +500,7 @@ export function PortfolioPage() {
     navigate(`/portfolios/rebalance?model=${modelId}`)
   }
 
-  const columns = makeDriftColumns(driftMap, selectedIds, toggleSelect, handleRebalanceSingle)
+  const columns = makeDriftColumns(driftMap, selectedIds, toggleSelect, handleRebalanceSingle, formatWithConversion)
 
   return (
     <div className="space-y-6">
@@ -531,7 +526,7 @@ export function PortfolioPage() {
       </div>
 
       <DenseMetricsBar metrics={[
-        { label: `Total AUM${reportingCurrency !== 'USD' ? ` (${reportingCurrency})` : ''}`, value: formatCurrency(totalAUM, { compact: true, currency: reportingCurrency }) },
+        { label: `Total AUM${reportingCurrency !== 'USD' ? ` (${reportingCurrency})` : ''}`, value: formatWithConversion(totalAUM, 'USD', { compact: true }) },
         { label: 'Accounts', value: String(allAccounts.length) },
         { label: 'UMA Accounts', value: String(umaCount) },
         { label: 'Models', value: String(modelCount) },

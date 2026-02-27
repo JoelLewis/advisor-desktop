@@ -1,6 +1,12 @@
 import { http, HttpResponse, delay } from 'msw'
 import { tasks, processTrackers, workflowTemplates } from '../data/workflows'
 import { notFound } from './utils'
+import type { WorkflowTemplate } from '@/types/workflow'
+
+// Mutable copy for CRUD
+const templateStore = new Map<string, WorkflowTemplate>(
+  workflowTemplates.map((t) => [t.id, t]),
+)
 
 export const workflowHandlers = [
   http.get('/api/workflows/my-actions', ({ request }) => {
@@ -24,7 +30,35 @@ export const workflowHandlers = [
   }),
 
   http.get('/api/workflows/templates', () => {
-    return HttpResponse.json(workflowTemplates)
+    return HttpResponse.json(Array.from(templateStore.values()))
+  }),
+
+  http.post('/api/workflows/templates', async ({ request }) => {
+    await delay(200)
+    const body = await request.json() as Omit<WorkflowTemplate, 'id'>
+    const id = `tpl-${Date.now()}`
+    const template: WorkflowTemplate = { id, ...body }
+    templateStore.set(id, template)
+    return HttpResponse.json(template, { status: 201 })
+  }),
+
+  http.put('/api/workflows/templates/:id', async ({ params, request }) => {
+    await delay(150)
+    const id = params.id as string
+    const existing = templateStore.get(id)
+    if (!existing) return notFound()
+    const body = await request.json() as Partial<WorkflowTemplate>
+    const updated = { ...existing, ...body, id }
+    templateStore.set(id, updated)
+    return HttpResponse.json(updated)
+  }),
+
+  http.delete('/api/workflows/templates/:id', async ({ params }) => {
+    await delay(100)
+    const id = params.id as string
+    if (!templateStore.has(id)) return notFound()
+    templateStore.delete(id)
+    return new HttpResponse(null, { status: 204 })
   }),
 
   http.put('/api/workflows/tasks/:taskId', async ({ params, request }) => {

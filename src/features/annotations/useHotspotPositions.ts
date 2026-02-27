@@ -1,45 +1,27 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Annotation } from '@/types/annotation'
-import { PANEL_WIDTH } from './AnnotationPanel'
 
 type Position = { top: number; left: number }
-
-const HOTSPOT_SIZE = 28
 
 function computePosition(el: Element, annotation: Annotation): Position {
   const rect = el.getBoundingClientRect()
   const ox = annotation.offset?.x ?? 0
   const oy = annotation.offset?.y ?? 0
 
-  let pos: Position
   switch (annotation.anchor) {
     case 'top-right':
-      pos = { top: rect.top + oy - 6, left: rect.right + ox + 6 }
-      break
+      return { top: rect.top + oy - 6, left: rect.right + ox + 6 }
     case 'top-left':
-      pos = { top: rect.top + oy - 6, left: rect.left + ox - 6 }
-      break
+      return { top: rect.top + oy - 6, left: rect.left + ox - 6 }
     case 'bottom-right':
-      pos = { top: rect.bottom + oy + 6, left: rect.right + ox + 6 }
-      break
+      return { top: rect.bottom + oy + 6, left: rect.right + ox + 6 }
     case 'bottom-left':
-      pos = { top: rect.bottom + oy + 6, left: rect.left + ox - 6 }
-      break
+      return { top: rect.bottom + oy + 6, left: rect.left + ox - 6 }
     case 'center-right':
-      pos = { top: rect.top + rect.height / 2 + oy, left: rect.right + ox + 6 }
-      break
+      return { top: rect.top + rect.height / 2 + oy, left: rect.right + ox + 6 }
     case 'center-left':
-      pos = { top: rect.top + rect.height / 2 + oy, left: rect.left + ox - 34 }
-      break
+      return { top: rect.top + rect.height / 2 + oy, left: rect.left + ox - 34 }
   }
-
-  // Clamp so hotspots don't overlap with the annotation panel
-  const maxLeft = window.innerWidth - PANEL_WIDTH - HOTSPOT_SIZE - 4
-  if (pos.left > maxLeft) {
-    pos.left = maxLeft
-  }
-
-  return pos
 }
 
 /**
@@ -87,9 +69,9 @@ export function useHotspotPositions(annotations: Annotation[], enabled: boolean)
       resizeObserver.observe(main)
     }
 
-    // Catch sidebar/panel transition ends
+    // Catch sidebar transition ends
     function onTransitionEnd(e: TransitionEvent) {
-      if (e.propertyName === 'margin-left' || e.propertyName === 'margin-right') {
+      if (e.propertyName === 'margin-left') {
         recalc()
       }
     }

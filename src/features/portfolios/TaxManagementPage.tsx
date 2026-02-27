@@ -12,6 +12,17 @@ import type { TaxLot } from '@/types/portfolio'
 
 type ViewMode = 'lots' | 'harvest' | 'calendar'
 
+const COST_BASIS_METHODS = ['FIFO', 'LIFO', 'HIFO', 'AvgCost', 'SpecID'] as const
+type CostBasisMethod = (typeof COST_BASIS_METHODS)[number]
+
+const COST_BASIS_DESCRIPTIONS: Record<CostBasisMethod, string> = {
+  FIFO: 'First In, First Out — sells oldest lots first',
+  LIFO: 'Last In, First Out — sells newest lots first',
+  HIFO: 'Highest In, First Out — sells highest cost lots first (minimizes gains)',
+  AvgCost: 'Average Cost — uses average cost basis across all lots',
+  SpecID: 'Specific Identification — manually select which lots to sell',
+}
+
 const HOLDING_LABELS: Record<string, string> = { short: 'Short-Term', long: 'Long-Term' }
 
 const VIEW_TABS: { id: ViewMode; label: string }[] = [
@@ -32,6 +43,7 @@ export function TaxManagementPage() {
   const id = accountId ?? ''
   const [view, setView] = useState<ViewMode>('lots')
   const [selectedLots, setSelectedLots] = useState<Set<string>>(new Set())
+  const [costBasisMethod, setCostBasisMethod] = useState<CostBasisMethod>('FIFO')
 
   const { data: account, isLoading: accountLoading } = useAccount(id)
   const { data: taxLots, isLoading: lotsLoading } = useTaxLots(id)
@@ -65,6 +77,52 @@ export function TaxManagementPage() {
     const washSaleCount = taxLots.filter((l) => l.washSaleRestricted).length
     return { totalUnrealizedGain, totalUnrealizedLoss, shortTermGain, longTermGain, harvestableAmount, washSaleCount }
   }, [taxLots, harvestOpportunities])
+
+  // Cost basis method impact simulation
+  const methodImpact = useMemo(() => {
+    if (!taxLots || taxLots.length === 0) return null
+    // Group lots by position
+    const byPosition = new Map<string, TaxLot[]>()
+    for (const lot of taxLots) {
+      const existing = byPosition.get(lot.positionId) ?? []
+      existing.push(lot)
+      byPosition.set(lot.positionId, existing)
+    }
+
+    // Simulate selling 10% of each position under each method
+    function computeImpact(method: CostBasisMethod): { realizedGain: number; shortTermGain: number; longTermGain: number } {
+      let totalGain = 0, stGain = 0, ltGain = 0
+      for (const [, lots] of byPosition) {
+        const totalQty = lots.reduce((s, l) => s + l.quantity, 0)
+        const sellQty = Math.ceil(totalQty * 0.1)
+        let sorted: TaxLot[]
+        switch (method) {
+          case 'FIFO': sorted = [...lots].sort((a, b) => a.purchaseDate.localeCompare(b.purchaseDate)); break
+          case 'LIFO': sorted = [...lots].sort((a, b) => b.purchaseDate.localeCompare(a.purchaseDate)); break
+          case 'HIFO': sorted = [...lots].sort((a, b) => (b.costBasis / b.quantity) - (a.costBasis / a.quantity)); break
+          case 'AvgCost': sorted = lots; break // all lots treated equally
+          case 'SpecID': sorted = [...lots].sort((a, b) => a.gainLoss - b.gainLoss); break // best lots first
+        }
+        let remaining = sellQty
+        for (const lot of sorted) {
+          if (remaining <= 0) break
+          const sellFromLot = Math.min(remaining, lot.quantity)
+          const fraction = sellFromLot / lot.quantity
+          const gain = lot.gainLoss * fraction
+          totalGain += gain
+          if (lot.holdingPeriod === 'short') stGain += gain
+          else ltGain += gain
+          remaining -= sellFromLot
+        }
+      }
+      return { realizedGain: totalGain, shortTermGain: stGain, longTermGain: ltGain }
+    }
+
+    return COST_BASIS_METHODS.map((method) => ({
+      method,
+      ...computeImpact(method),
+    }))
+  }, [taxLots])
 
   // Calendar: 30-day wash sale windows
   const washSaleWindows = useMemo(() => {
@@ -161,6 +219,75 @@ export function TaxManagementPage() {
           </Card>
         </div>
       )}
+
+      {/* Cost Basis Method */}
+      <Card>
+        <CardHeader>Cost Basis Method</CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-4">
+            <select
+              value={costBasisMethod}
+              onChange={(e) => setCostBasisMethod(e.target.value as CostBasisMethod)}
+              className="rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-none"
+            >
+              {COST_BASIS_METHODS.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+            <span className="text-caption text-text-secondary">
+              {COST_BASIS_DESCRIPTIONS[costBasisMethod]}
+            </span>
+          </div>
+
+          {/* Impact comparison table */}
+          {methodImpact && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-caption">
+                <thead>
+                  <tr className="border-b border-border-primary text-text-tertiary">
+                    <th className="px-3 py-2 text-left font-medium">Method</th>
+                    <th className="px-3 py-2 text-right font-medium">Realized Gain/Loss</th>
+                    <th className="px-3 py-2 text-right font-medium">Short-Term</th>
+                    <th className="px-3 py-2 text-right font-medium">Long-Term</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {methodImpact.map((row) => (
+                    <tr
+                      key={row.method}
+                      className={cn(
+                        'border-b border-border-primary transition-colors',
+                        row.method === costBasisMethod
+                          ? 'bg-accent-blue/5 font-medium'
+                          : 'hover:bg-surface-tertiary',
+                      )}
+                    >
+                      <td className="px-3 py-2 text-text-primary">
+                        {row.method}
+                        {row.method === costBasisMethod && (
+                          <Badge variant="blue" className="ml-2 text-[9px]">Active</Badge>
+                        )}
+                      </td>
+                      <td className={cn('px-3 py-2 text-right font-mono', row.realizedGain >= 0 ? 'text-accent-green' : 'text-accent-red')}>
+                        {formatCurrency(row.realizedGain, true)}
+                      </td>
+                      <td className={cn('px-3 py-2 text-right font-mono', row.shortTermGain >= 0 ? 'text-accent-green' : 'text-accent-red')}>
+                        {formatCurrency(row.shortTermGain, true)}
+                      </td>
+                      <td className={cn('px-3 py-2 text-right font-mono', row.longTermGain >= 0 ? 'text-accent-green' : 'text-accent-red')}>
+                        {formatCurrency(row.longTermGain, true)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="mt-2 text-[11px] text-text-tertiary">
+                Impact simulated on hypothetical 10% position reduction across all holdings.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* View toggle */}
       <div className="flex items-center gap-1 rounded-lg border border-border-primary bg-surface-primary p-1">

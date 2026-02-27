@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import type { TooltipProps } from 'recharts'
 import { cn } from '@/lib/utils'
@@ -14,6 +15,7 @@ type AllocationChartProps = {
   size?: 'sm' | 'md' | 'lg'
   showLegend?: boolean
   className?: string
+  onSliceClick?: (assetClass: string) => void
 }
 
 function AllocationTooltip({ active, payload }: TooltipProps<number, string>) {
@@ -44,9 +46,23 @@ function AllocationTooltip({ active, payload }: TooltipProps<number, string>) {
   )
 }
 
-export function AllocationChart({ data, size = 'md', showLegend = true, className }: AllocationChartProps) {
+export function AllocationChart({ data, size = 'md', showLegend = true, className, onSliceClick }: AllocationChartProps) {
   const dimensions = { sm: 140, md: 200, lg: 260 }
   const dim = dimensions[size]
+  const [activeSlice, setActiveSlice] = useState<string | null>(null)
+  const isClickable = !!onSliceClick
+
+  function handlePieClick(entry: AllocationSlice) {
+    if (onSliceClick) {
+      onSliceClick(entry.assetClass)
+    }
+  }
+
+  function handleLegendClick(assetClass: string) {
+    if (onSliceClick) {
+      onSliceClick(assetClass)
+    }
+  }
 
   return (
     <div className={cn('flex items-center gap-6', className)}>
@@ -62,18 +78,43 @@ export function AllocationChart({ data, size = 'md', showLegend = true, classNam
             outerRadius={dim * 0.45}
             paddingAngle={1}
             strokeWidth={0}
+            onClick={(_, index) => { const d = data[index]; if (d) handlePieClick(d) }}
+            onMouseEnter={(_, index) => { const d = data[index]; if (d) setActiveSlice(d.assetClass) }}
+            onMouseLeave={() => setActiveSlice(null)}
+            style={isClickable ? { cursor: 'pointer' } : undefined}
           >
             {data.map((entry) => (
-              <Cell key={entry.assetClass} fill={COLORS[entry.assetClass] ?? '#94A3B8'} />
+              <Cell
+                key={entry.assetClass}
+                fill={COLORS[entry.assetClass] ?? '#94A3B8'}
+                opacity={activeSlice && activeSlice !== entry.assetClass ? 0.5 : 1}
+                stroke={activeSlice === entry.assetClass ? 'var(--text-primary)' : undefined}
+                strokeWidth={activeSlice === entry.assetClass ? 2 : 0}
+              />
             ))}
           </Pie>
-          <Tooltip content={<AllocationTooltip />} />
+          <Tooltip
+            content={<AllocationTooltip />}
+            wrapperStyle={{ zIndex: 50 }}
+            allowEscapeViewBox={{ x: false, y: false }}
+          />
         </PieChart>
       </ResponsiveContainer>
       {showLegend && (
         <div className="space-y-1.5">
           {data.filter((d) => d.weight > 0).map((slice) => (
-            <div key={slice.assetClass} className="flex items-center gap-2">
+            <button
+              key={slice.assetClass}
+              onClick={() => handleLegendClick(slice.assetClass)}
+              onMouseEnter={() => setActiveSlice(slice.assetClass)}
+              onMouseLeave={() => setActiveSlice(null)}
+              disabled={!isClickable}
+              className={cn(
+                'flex items-center gap-2 rounded px-1 -mx-1 transition-opacity',
+                isClickable && 'hover:bg-surface-tertiary cursor-pointer',
+                activeSlice && activeSlice !== slice.assetClass && 'opacity-50',
+              )}
+            >
               <span
                 className="h-2.5 w-2.5 shrink-0 rounded-sm"
                 style={{ backgroundColor: COLORS[slice.assetClass] ?? '#94A3B8' }}
@@ -84,7 +125,7 @@ export function AllocationChart({ data, size = 'md', showLegend = true, classNam
               <span className="font-mono text-caption font-medium text-text-primary">
                 {(slice.weight * 100).toFixed(1)}%
               </span>
-            </div>
+            </button>
           ))}
         </div>
       )}

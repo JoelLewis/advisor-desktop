@@ -26,6 +26,10 @@ const ActionsPage = lazy(() => import('@/features/actions/ActionsPage').then((m)
 const HouseholdListPage = lazy(() => import('@/features/households/HouseholdListPage').then((m) => ({ default: m.HouseholdListPage })))
 const EngagePage = lazy(() => import('@/features/engage/EngagePage').then((m) => ({ default: m.EngagePage })))
 const ProposalWizard = lazy(() => import('@/features/proposals/ProposalWizard').then((m) => ({ default: m.ProposalWizard })))
+const BookOfBusinessPage = lazy(() => import('@/features/growth/BookOfBusinessPage').then((m) => ({ default: m.BookOfBusinessPage })))
+const BillingPage = lazy(() => import('@/features/billing/BillingPage').then((m) => ({ default: m.BillingPage })))
+const ReconciliationPage = lazy(() => import('@/features/reconciliation/ReconciliationPage').then((m) => ({ default: m.ReconciliationPage })))
+const ArchivePage = lazy(() => import('@/features/compliance/ArchivePage').then((m) => ({ default: m.ArchivePage })))
 
 const suspense = (node: React.ReactNode) => <Suspense fallback={<PageSkeleton />}>{node}</Suspense>
 
@@ -77,10 +81,20 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: suspense(<ProspectsPage />) },
           { path: 'revenue', element: suspense(<RevenuePage />), handle: { breadcrumb: 'Revenue' } },
+          { path: 'book', element: suspense(<BookOfBusinessPage />), handle: { breadcrumb: 'Book of Business' } },
+          { path: 'billing', element: suspense(<BillingPage />), handle: { breadcrumb: 'Billing' } },
         ],
       },
       { path: 'engage', element: suspense(<EngagePage />), handle: { breadcrumb: 'Engage' } },
-      { path: 'workflows', element: suspense(<WorkflowCenterPage />), handle: { breadcrumb: 'Workflows' } },
+      {
+        path: 'workflows',
+        handle: { breadcrumb: 'Workflows' },
+        children: [
+          { index: true, element: suspense(<WorkflowCenterPage />) },
+          { path: 'reconciliation', element: suspense(<ReconciliationPage />), handle: { breadcrumb: 'Reconciliation' } },
+          { path: 'archive', element: suspense(<ArchivePage />), handle: { breadcrumb: 'Archive' } },
+        ],
+      },
       { path: 'settings', element: suspense(<SettingsPage />), handle: { breadcrumb: 'Settings' } },
     ],
   },

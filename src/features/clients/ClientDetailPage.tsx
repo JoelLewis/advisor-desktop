@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { Sparkles, FileText, Pin, Send } from 'lucide-react'
+import { Sparkles, FileText, Pin, Send, BarChart3 } from 'lucide-react'
 import { ClientHeader } from '@/components/ui/ClientHeader'
 import { TabLayout } from '@/components/ui/TabLayout'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -14,6 +14,7 @@ import { ActivityItemRow } from '@/components/ui/ActivityItem'
 import { AIInsightStack } from '@/components/ui/AIInsightCard'
 import { ShareButton } from '@/components/ui/ShareButton'
 import { WorkflowLaunchButton } from '@/components/ui/WorkflowLaunchButton'
+import { ReportGenerator } from './ReportGenerator'
 import { useClient } from '@/hooks/use-clients'
 import { useAccounts } from '@/hooks/use-accounts'
 import { usePlan } from '@/hooks/use-planning'
@@ -156,6 +157,7 @@ export function ClientDetailPage() {
   const createNote = useCreateNote(id)
   const { data: insights } = useAIInsights('client_detail', id || undefined)
   const [noteText, setNoteText] = useState('')
+  const [reportOpen, setReportOpen] = useState(false)
 
   if (isLoading) {
     return <div className="space-y-4"><Skeleton className="h-24" /><Skeleton className="h-96" /></div>
@@ -376,6 +378,12 @@ export function ClientDetailPage() {
         >
           <FileText className="h-3.5 w-3.5" /> Generate Proposal
         </button>
+        <button
+          onClick={() => setReportOpen(true)}
+          className="flex items-center gap-1.5 rounded-md border border-accent-blue/30 bg-accent-blue/5 px-3 py-1.5 text-caption font-medium text-accent-blue transition-colors hover:bg-accent-blue/10"
+        >
+          <BarChart3 className="h-3.5 w-3.5" /> Generate Report
+        </button>
         <span data-annotation="client-workflow"><WorkflowLaunchButton clientId={client.id} clientName={client.fullName} /></span>
         <span data-annotation="client-share"><ShareButton card={{
           variant: 'client_summary',
@@ -389,6 +397,13 @@ export function ClientDetailPage() {
         <div data-annotation="client-insights"><AIInsightStack insights={insights} /></div>
       )}
       <div data-annotation="client-notes"><TabLayout tabs={tabs} /></div>
+      {reportOpen && (
+        <ReportGenerator
+          clientId={client.id}
+          entityName={client.fullName}
+          onClose={() => setReportOpen(false)}
+        />
+      )}
     </div>
   )
 }

@@ -1,5 +1,6 @@
-import { http, HttpResponse } from 'msw'
-import type { AISettings, NBASettings, NotificationSettings, DisplaySettings, CustomPrompt } from '@/types/settings'
+import { http, HttpResponse, delay } from 'msw'
+import type { AISettings, NBASettings, NotificationSettings, DisplaySettings, CustomPrompt, DelegationRule } from '@/types/settings'
+import type { StandingRule, AIPermissionMatrix, StandingRuleAction, TriggerType } from '@/types/standing-rule'
 
 const aiSettings: AISettings = {
   tone: 'conversational',
@@ -80,6 +81,150 @@ const displaySettings: DisplaySettings = {
   dateFormat: 'MM/DD/YYYY',
 }
 
+const standingRules = new Map<string, StandingRule>([
+  ['sr-001', {
+    id: 'sr-001',
+    name: 'Pre-meeting prep brief',
+    triggerType: 'time_based',
+    triggerCondition: '48 hours before any scheduled client meeting',
+    action: 'generate_prep_brief',
+    actionDescription: 'Generate a meeting prep brief with portfolio summary, recent activity, and talking points',
+    enabled: true,
+    lastRunAt: '2026-02-25T08:00:00Z',
+    nextRunAt: '2026-03-01T08:00:00Z',
+    createdAt: '2026-01-15T10:00:00Z',
+    runCount: 12,
+  }],
+  ['sr-002', {
+    id: 'sr-002',
+    name: 'Client birthday greeting',
+    triggerType: 'event_based',
+    triggerCondition: 'When client birthday is within 3 days',
+    action: 'draft_email',
+    actionDescription: 'Draft a personalized birthday email using client preferences and recent interactions',
+    enabled: true,
+    lastRunAt: '2026-02-20T06:00:00Z',
+    createdAt: '2026-01-15T10:00:00Z',
+    runCount: 5,
+  }],
+  ['sr-003', {
+    id: 'sr-003',
+    name: 'Monthly portfolio report',
+    triggerType: 'time_based',
+    triggerCondition: 'First business day of each month',
+    action: 'generate_report',
+    actionDescription: 'Generate monthly portfolio performance report for all managed accounts',
+    enabled: true,
+    lastRunAt: '2026-02-03T07:00:00Z',
+    nextRunAt: '2026-03-03T07:00:00Z',
+    createdAt: '2025-12-01T09:00:00Z',
+    runCount: 3,
+  }],
+  ['sr-004', {
+    id: 'sr-004',
+    name: 'Post-trade compliance review',
+    triggerType: 'event_based',
+    triggerCondition: 'When any trade is executed over $100K',
+    action: 'run_compliance_check',
+    actionDescription: 'Run post-trade compliance check against IPS constraints and concentration limits',
+    enabled: true,
+    lastRunAt: '2026-02-26T14:30:00Z',
+    createdAt: '2026-01-20T11:00:00Z',
+    runCount: 18,
+  }],
+  ['sr-005', {
+    id: 'sr-005',
+    name: 'Drift alert NBA creation',
+    triggerType: 'event_based',
+    triggerCondition: 'When account drift exceeds 3% threshold',
+    action: 'create_nba',
+    actionDescription: 'Create a rebalancing NBA with pre-calculated trade list and tax impact estimate',
+    enabled: true,
+    lastRunAt: '2026-02-24T10:00:00Z',
+    createdAt: '2026-01-10T14:00:00Z',
+    runCount: 8,
+  }],
+  ['sr-006', {
+    id: 'sr-006',
+    name: 'Quarterly review scheduling',
+    triggerType: 'time_based',
+    triggerCondition: '30 days before end of quarter',
+    action: 'schedule_meeting',
+    actionDescription: 'Auto-schedule quarterly review meetings with all platinum and gold tier clients',
+    enabled: false,
+    lastRunAt: '2025-12-01T09:00:00Z',
+    createdAt: '2025-11-15T08:00:00Z',
+    runCount: 1,
+  }],
+  ['sr-007', {
+    id: 'sr-007',
+    name: 'New account CRM update',
+    triggerType: 'event_based',
+    triggerCondition: 'When a new account is opened or transferred in',
+    action: 'update_crm',
+    actionDescription: 'Update CRM with account details, link to household, tag with service model',
+    enabled: true,
+    createdAt: '2026-02-01T10:00:00Z',
+    runCount: 0,
+  }],
+])
+
+const delegationRules = new Map<string, DelegationRule>([
+  ['dr-001', {
+    id: 'dr-001',
+    name: 'Routine rebalancing under $500K',
+    condition: 'Account value < $500K AND drift > threshold AND no wash sale conflict',
+    delegateTo: 'AI Agent',
+    delegationType: 'ai_agent',
+    isActive: true,
+  }],
+  ['dr-002', {
+    id: 'dr-002',
+    name: 'Client birthday emails',
+    condition: 'Client birthday within 3 days AND no recent complaints',
+    delegateTo: 'AI Agent',
+    delegationType: 'ai_agent',
+    isActive: true,
+  }],
+  ['dr-003', {
+    id: 'dr-003',
+    name: 'Document preparation for meetings',
+    condition: 'Meeting scheduled within 48 hours',
+    delegateTo: 'Sarah (CSA)',
+    delegationType: 'team_member',
+    isActive: true,
+  }],
+  ['dr-004', {
+    id: 'dr-004',
+    name: 'Tax-loss harvesting execution',
+    condition: 'TLH opportunity > $1,000 savings AND no wash sale window',
+    delegateTo: 'AI Agent + Advisor Review',
+    delegationType: 'both',
+    isActive: false,
+  }],
+  ['dr-005', {
+    id: 'dr-005',
+    name: 'Quarterly fee billing prep',
+    condition: 'First week of quarter',
+    delegateTo: 'Maria (Operations)',
+    delegationType: 'team_member',
+    isActive: true,
+  }],
+])
+
+const aiPermissionMatrix: AIPermissionMatrix = {
+  permissions: [
+    { actionType: 'document_generation', mode: 'auto_approve' },
+    { actionType: 'email_drafting', mode: 'queue_for_review' },
+    { actionType: 'trade_suggestion', mode: 'notify_and_hold' },
+    { actionType: 'crm_updates', mode: 'auto_approve' },
+    { actionType: 'compliance_notes', mode: 'queue_for_review' },
+    { actionType: 'meeting_scheduling', mode: 'queue_for_review' },
+  ],
+  dataScope: 'assigned_clients',
+  executionSchedule: 'business_hours',
+}
+
 export const settingsHandlers = [
   http.get('/api/settings/ai', () => HttpResponse.json(aiSettings)),
   http.put('/api/settings/ai', async ({ request }) => {
@@ -139,5 +284,89 @@ export const settingsHandlers = [
     if (!customPrompts.has(id)) return new HttpResponse(null, { status: 404 })
     customPrompts.delete(id)
     return new HttpResponse(null, { status: 204 })
+  }),
+
+  // --- Standing Rules ---
+  http.get('/api/settings/standing-rules', async () => {
+    await delay(150)
+    return HttpResponse.json(Array.from(standingRules.values()))
+  }),
+  http.post('/api/settings/standing-rules', async ({ request }) => {
+    await delay(200)
+    const body = await request.json() as { name: string; triggerType: TriggerType; triggerCondition: string; action: StandingRuleAction; actionDescription: string }
+    const id = `sr-${Date.now()}`
+    const rule: StandingRule = {
+      id,
+      name: body.name,
+      triggerType: body.triggerType,
+      triggerCondition: body.triggerCondition,
+      action: body.action,
+      actionDescription: body.actionDescription,
+      enabled: true,
+      createdAt: new Date().toISOString(),
+      runCount: 0,
+    }
+    standingRules.set(id, rule)
+    return HttpResponse.json(rule, { status: 201 })
+  }),
+  http.put('/api/settings/standing-rules/:id', async ({ params, request }) => {
+    await delay(150)
+    const id = params.id as string
+    const existing = standingRules.get(id)
+    if (!existing) return new HttpResponse(null, { status: 404 })
+    const body = await request.json() as Partial<StandingRule>
+    const updated = { ...existing, ...body, id }
+    standingRules.set(id, updated)
+    return HttpResponse.json(updated)
+  }),
+  http.delete('/api/settings/standing-rules/:id', async ({ params }) => {
+    await delay(100)
+    const id = params.id as string
+    if (!standingRules.has(id)) return new HttpResponse(null, { status: 404 })
+    standingRules.delete(id)
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  // --- Delegation Standing Rules ---
+  http.get('/api/settings/delegation-rules', async () => {
+    await delay(150)
+    return HttpResponse.json(Array.from(delegationRules.values()))
+  }),
+  http.post('/api/settings/delegation-rules', async ({ request }) => {
+    await delay(200)
+    const body = await request.json() as Omit<DelegationRule, 'id'>
+    const id = `dr-${Date.now()}`
+    const rule: DelegationRule = { id, ...body }
+    delegationRules.set(id, rule)
+    return HttpResponse.json(rule, { status: 201 })
+  }),
+  http.put('/api/settings/delegation-rules/:id', async ({ params, request }) => {
+    await delay(150)
+    const id = params.id as string
+    const existing = delegationRules.get(id)
+    if (!existing) return new HttpResponse(null, { status: 404 })
+    const body = await request.json() as Partial<DelegationRule>
+    const updated = { ...existing, ...body, id }
+    delegationRules.set(id, updated)
+    return HttpResponse.json(updated)
+  }),
+  http.delete('/api/settings/delegation-rules/:id', async ({ params }) => {
+    await delay(100)
+    const id = params.id as string
+    if (!delegationRules.has(id)) return new HttpResponse(null, { status: 404 })
+    delegationRules.delete(id)
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  // --- AI Permission Matrix ---
+  http.get('/api/settings/ai-permissions', async () => {
+    await delay(100)
+    return HttpResponse.json(aiPermissionMatrix)
+  }),
+  http.put('/api/settings/ai-permissions', async ({ request }) => {
+    await delay(150)
+    const body = await request.json() as AIPermissionMatrix
+    Object.assign(aiPermissionMatrix, body)
+    return HttpResponse.json(aiPermissionMatrix)
   }),
 ]

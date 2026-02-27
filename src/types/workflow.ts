@@ -27,11 +27,14 @@ export type ProcessTracker = {
   isNigo: boolean
 }
 
+export type WorkflowStepType = 'human_action' | 'ai_generation' | 'approval_gate' | 'notification' | 'system'
+
 export type WorkflowStep = {
   order: number
   name: string
   defaultAssignee: string
   estimatedMinutes: number
+  stepType?: WorkflowStepType
 }
 
 export type WorkflowTemplate = {
