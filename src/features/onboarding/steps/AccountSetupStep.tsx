@@ -65,7 +65,7 @@ export function AccountSetupStep({ selectedType, fields, onSelectType, onFieldCh
                     id={`acct-field-${field.name}`}
                     value={fields[field.name] ?? ''}
                     onChange={(e) => onFieldChange(field.name, e.target.value)}
-                    className="w-full rounded-md border border-border-primary bg-surface-primary px-3 py-2 text-body text-text-primary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+                    className="w-full rounded-md border border-border-primary bg-surface-primary px-3 py-2 text-body text-text-primary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
                   >
                     <option value="">Select...</option>
                     {field.options?.map((opt) => (
@@ -78,7 +78,7 @@ export function AccountSetupStep({ selectedType, fields, onSelectType, onFieldCh
                     type={field.type}
                     value={fields[field.name] ?? ''}
                     onChange={(e) => onFieldChange(field.name, e.target.value)}
-                    className="w-full rounded-md border border-border-primary bg-surface-primary px-3 py-2 text-body text-text-primary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+                    className="w-full rounded-md border border-border-primary bg-surface-primary px-3 py-2 text-body text-text-primary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
                   />
                 )}
               </div>

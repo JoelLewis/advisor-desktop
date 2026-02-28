@@ -232,7 +232,7 @@ export function TaxManagementPage() {
             <select
               value={costBasisMethod}
               onChange={(e) => setCostBasisMethod(e.target.value as CostBasisMethod)}
-              className="rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-none"
+              className="rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-hidden"
             >
               {COST_BASIS_METHODS.map((m) => (
                 <option key={m} value={m}>{m}</option>

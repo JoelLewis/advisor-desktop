@@ -128,7 +128,7 @@ export function WorkflowStepEditor({ template, open, onClose }: Props) {
               placeholder="Template name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body-strong text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none"
+              className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body-strong text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden"
             />
             <div className="flex gap-3">
               <input
@@ -136,12 +136,12 @@ export function WorkflowStepEditor({ template, open, onClose }: Props) {
                 placeholder="Description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="flex-1 rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none"
+                className="flex-1 rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden"
               />
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-none"
+                className="rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-hidden"
               >
                 <option value="Onboarding">Onboarding</option>
                 <option value="Client Service">Client Service</option>
@@ -196,14 +196,14 @@ export function WorkflowStepEditor({ template, open, onClose }: Props) {
                       placeholder="Step name"
                       value={step.name}
                       onChange={(e) => updateStep(i, { name: e.target.value })}
-                      className="w-full rounded-md border border-border-secondary bg-surface-primary px-2 py-1 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none"
+                      className="w-full rounded-md border border-border-secondary bg-surface-primary px-2 py-1 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden"
                     />
                     <div className="flex flex-wrap items-center gap-2">
                       {/* Step type badge */}
                       <select
                         value={step.stepType ?? inferStepType(step.defaultAssignee)}
                         onChange={(e) => updateStep(i, { stepType: e.target.value as WorkflowStepType })}
-                        className="rounded border border-border-secondary bg-surface-primary px-2 py-0.5 text-caption focus:border-accent-blue focus:outline-none"
+                        className="rounded border border-border-secondary bg-surface-primary px-2 py-0.5 text-caption focus:border-accent-blue focus:outline-hidden"
                       >
                         {STEP_TYPES.map((t) => (
                           <option key={t.value} value={t.value}>{t.label}</option>
@@ -214,7 +214,7 @@ export function WorkflowStepEditor({ template, open, onClose }: Props) {
                       <select
                         value={step.defaultAssignee}
                         onChange={(e) => updateStep(i, { defaultAssignee: e.target.value })}
-                        className="rounded border border-border-secondary bg-surface-primary px-2 py-0.5 text-caption focus:border-accent-blue focus:outline-none"
+                        className="rounded border border-border-secondary bg-surface-primary px-2 py-0.5 text-caption focus:border-accent-blue focus:outline-hidden"
                       >
                         {ASSIGNEE_SUGGESTIONS.map((a) => (
                           <option key={a} value={a}>{a}</option>
@@ -228,7 +228,7 @@ export function WorkflowStepEditor({ template, open, onClose }: Props) {
                           min={1}
                           value={step.estimatedMinutes}
                           onChange={(e) => updateStep(i, { estimatedMinutes: Math.max(1, Number(e.target.value)) })}
-                          className="w-16 rounded border border-border-secondary bg-surface-primary px-2 py-0.5 font-mono text-caption focus:border-accent-blue focus:outline-none"
+                          className="w-16 rounded border border-border-secondary bg-surface-primary px-2 py-0.5 font-mono text-caption focus:border-accent-blue focus:outline-hidden"
                         />
                         <span className="text-caption text-text-tertiary">min</span>
                       </div>

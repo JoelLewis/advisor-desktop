@@ -57,7 +57,7 @@ function DialogHeader({
       {...props}
     >
       <div className="flex-1">{children}</div>
-      <DialogPrimitive.Close className="rounded p-1 text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue">
+      <DialogPrimitive.Close className="rounded p-1 text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-secondary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-blue">
         <X className="h-4 w-4" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>

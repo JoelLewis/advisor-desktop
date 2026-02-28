@@ -73,7 +73,7 @@ export function LogCallDialog({ open, onClose, prefilledClientId }: LogCallDialo
                   id="call-client"
                   value={clientId}
                   onChange={(e) => setClientId(e.target.value)}
-                  className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+                  className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
                 >
                   <option value="">Select client...</option>
                   {CLIENT_OPTIONS.map((c) => (
@@ -91,7 +91,7 @@ export function LogCallDialog({ open, onClose, prefilledClientId }: LogCallDialo
                   max={300}
                   value={duration}
                   onChange={(e) => setDuration(Number(e.target.value))}
-                  className="w-32 rounded-md border border-border-secondary bg-surface-primary px-3 py-2 font-mono text-body text-text-primary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+                  className="w-32 rounded-md border border-border-secondary bg-surface-primary px-3 py-2 font-mono text-body text-text-primary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
                 />
               </div>
 
@@ -122,7 +122,7 @@ export function LogCallDialog({ open, onClose, prefilledClientId }: LogCallDialo
                   onChange={(e) => setSummary(e.target.value)}
                   placeholder="Brief summary of the call..."
                   rows={4}
-                  className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue resize-none"
+                  className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue resize-none"
                 />
               </div>
             </div>

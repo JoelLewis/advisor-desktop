@@ -70,7 +70,7 @@ export function TradeInput({
       min={min}
       step={step}
       disabled={disabled}
-      className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 font-mono text-mono-sm text-text-primary outline-none placeholder:text-text-tertiary focus:border-accent-blue focus:ring-1 focus:ring-accent-blue disabled:cursor-not-allowed disabled:opacity-50"
+      className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 font-mono text-mono-sm text-text-primary outline-hidden placeholder:text-text-tertiary focus:border-accent-blue focus:ring-1 focus:ring-accent-blue disabled:cursor-not-allowed disabled:opacity-50"
     />
   )
 }
@@ -101,7 +101,7 @@ export function AssetClassSelector({ value, onChange, compact }: AssetClassSelec
           className={cn(
             'flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-caption font-medium transition-colors',
             value === v
-              ? 'bg-surface-primary text-accent-blue shadow-sm'
+              ? 'bg-surface-primary text-accent-blue shadow-xs'
               : 'text-text-tertiary hover:text-text-secondary',
           )}
         >

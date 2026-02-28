@@ -135,7 +135,7 @@ export function ClientListPage() {
           placeholder="Search by name or email..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-md border border-border-primary bg-surface-primary py-2 pl-9 pr-3 text-body placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+          className="w-full rounded-md border border-border-primary bg-surface-primary py-2 pl-9 pr-3 text-body placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
         />
       </div>
 

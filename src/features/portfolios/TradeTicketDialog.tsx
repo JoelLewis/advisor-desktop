@@ -194,7 +194,7 @@ export function TradeTicketDialog({
               value={symbol}
               onChange={(e) => setSymbol(e.target.value.toUpperCase())}
               placeholder="e.g. AAPL"
-              className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 font-mono text-body text-text-primary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+              className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 font-mono text-body text-text-primary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
               disabled={submitted}
             />
           </div>
@@ -256,7 +256,7 @@ export function TradeTicketDialog({
                   placeholder="0"
                   min={assetClass === 'digital_asset' ? 0.000001 : 1}
                   step={assetClass === 'digital_asset' ? 0.000001 : 1}
-                  className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 font-mono text-body text-text-primary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+                  className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 font-mono text-body text-text-primary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
                   disabled={submitted}
                 />
               </div>

@@ -42,7 +42,7 @@ function ProspectCard({ prospect }: { prospect: Prospect }) {
   const navigate = useNavigate()
   const { formatWithConversion } = useFormatCurrency()
   return (
-    <div className="rounded-md border border-border-primary bg-surface-primary p-3 shadow-sm transition-shadow hover:shadow-md">
+    <div className="rounded-md border border-border-primary bg-surface-primary p-3 shadow-xs transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-tertiary text-text-secondary">

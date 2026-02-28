@@ -103,7 +103,7 @@ export function RiskAnalyticsPage() {
         <select
           value={accountId}
           onChange={(e) => setSelectedAccountId(e.target.value)}
-          className="rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body font-mono text-text-primary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+          className="rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body font-mono text-text-primary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
         >
           {accounts.map((acc) => (
             <option key={acc.id} value={acc.id}>

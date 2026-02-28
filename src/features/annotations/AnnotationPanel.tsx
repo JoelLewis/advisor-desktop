@@ -203,7 +203,7 @@ export function AnnotationPanel() {
                   className={cn(
                     'flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-caption font-medium transition-all duration-150',
                     isActive
-                      ? 'text-white shadow-sm'
+                      ? 'text-white shadow-xs'
                       : 'border border-border-primary bg-surface-primary text-text-secondary hover:bg-surface-tertiary',
                   )}
                   style={{

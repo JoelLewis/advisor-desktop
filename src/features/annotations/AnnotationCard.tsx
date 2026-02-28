@@ -31,7 +31,7 @@ export function AnnotationCard({ annotation, active, onClick }: Props) {
         'w-full text-left rounded-lg border border-l-[3px] p-3 transition-all duration-150',
         THEME_BORDER[annotation.theme],
         active
-          ? 'bg-surface-tertiary border-border-secondary shadow-sm'
+          ? 'bg-surface-tertiary border-border-secondary shadow-xs'
           : 'bg-surface-primary border-border-primary hover:bg-surface-tertiary',
       )}
     >

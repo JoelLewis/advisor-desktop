@@ -298,7 +298,7 @@ export function AIChatPanel() {
                 onKeyDown={handleKeyDown}
                 placeholder="Ask AI anything..."
                 rows={1}
-                className="flex-1 resize-none bg-transparent text-caption text-text-primary placeholder:text-text-tertiary focus:outline-none max-h-24 scrollbar-thin"
+                className="flex-1 resize-none bg-transparent text-caption text-text-primary placeholder:text-text-tertiary focus:outline-hidden max-h-24 scrollbar-thin"
               />
               <button
                 onClick={() => handleSend(input)}

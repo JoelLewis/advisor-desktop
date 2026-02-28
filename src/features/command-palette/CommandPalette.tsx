@@ -92,7 +92,7 @@ export function CommandPalette() {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search clients, accounts, or type > for actions..."
-            className="flex-1 bg-transparent text-body text-text-primary placeholder:text-text-tertiary focus:outline-none"
+            className="flex-1 bg-transparent text-body text-text-primary placeholder:text-text-tertiary focus:outline-hidden"
             autoComplete="off"
             spellCheck={false}
             role="combobox"
