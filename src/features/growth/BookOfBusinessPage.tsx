@@ -117,7 +117,7 @@ function SegmentTable({ segments }: { segments: BookSegment[] }) {
               <td className="px-3 py-2">
                 <div className="flex items-center gap-2">
                   <span
-                    className="h-2.5 w-2.5 rounded-sm"
+                    className="h-2.5 w-2.5 rounded-xs"
                     style={{ backgroundColor: SEGMENT_COLORS[seg.segment] ?? '#CBD5E1' }}
                   />
                   <span className="font-medium capitalize text-text-primary">{seg.segment}</span>

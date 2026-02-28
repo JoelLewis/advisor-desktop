@@ -67,7 +67,7 @@ function SelectField({ value, onChange, label, options }: { value: string; onCha
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-none"
+        className="rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-hidden"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>{o.label}</option>
@@ -165,20 +165,20 @@ function PromptForm({ initial, onSave, onCancel, isPending }: {
         placeholder="Prompt name"
         value={form.name}
         onChange={(e) => setForm({ ...form, name: e.target.value })}
-        className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none"
+        className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden"
       />
       <textarea
         placeholder="Prompt text — this will appear as a suggestion in the AI panel"
         value={form.text}
         onChange={(e) => setForm({ ...form, text: e.target.value })}
         rows={2}
-        className="w-full resize-none rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none"
+        className="w-full resize-none rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden"
       />
       <div className="flex items-center justify-between">
         <select
           value={form.category}
           onChange={(e) => setForm({ ...form, category: e.target.value as CustomPromptCategory })}
-          className="rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-none"
+          className="rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-hidden"
         >
           {PROMPT_CATEGORIES.map((c) => (
             <option key={c.value} value={c.value}>{c.label}</option>
@@ -385,7 +385,7 @@ function AISettingsPanel() {
               type="text"
               value={settings.persona.defaultGreeting}
               onChange={(e) => updatePersona({ defaultGreeting: e.target.value })}
-              className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-none"
+              className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-hidden"
             />
           </div>
           <div className="space-y-1.5">
@@ -394,7 +394,7 @@ function AISettingsPanel() {
               value={settings.persona.emailSignature}
               onChange={(e) => updatePersona({ emailSignature: e.target.value })}
               rows={3}
-              className="w-full resize-none rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 font-mono text-body text-text-primary focus:border-accent-blue focus:outline-none"
+              className="w-full resize-none rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 font-mono text-body text-text-primary focus:border-accent-blue focus:outline-hidden"
             />
           </div>
           <div className="space-y-1.5">
@@ -469,7 +469,7 @@ function AISettingsPanel() {
               onChange={(e) => updateDocDefaults({ customDisclaimer: e.target.value })}
               rows={2}
               placeholder="Enter custom disclaimer text to include in generated proposals..."
-              className="w-full resize-none rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none"
+              className="w-full resize-none rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden"
             />
           </div>
           <div className="flex items-center justify-between py-2">
@@ -479,7 +479,7 @@ function AISettingsPanel() {
                 type="text"
                 value={settings.documentDefaults.defaultFeeRate}
                 onChange={(e) => updateDocDefaults({ defaultFeeRate: e.target.value })}
-                className="w-16 rounded-md border border-border-secondary bg-surface-primary px-2 py-1.5 text-right font-mono text-body text-text-primary focus:border-accent-blue focus:outline-none"
+                className="w-16 rounded-md border border-border-secondary bg-surface-primary px-2 py-1.5 text-right font-mono text-body text-text-primary focus:border-accent-blue focus:outline-hidden"
               />
               <span className="text-body text-text-secondary">%</span>
             </div>
@@ -599,14 +599,14 @@ function CustomAlertRulesCard({
               <select
                 value={metric}
                 onChange={(e) => setMetric(e.target.value)}
-                className="rounded-md border border-border-secondary bg-surface-primary px-2 py-1 text-caption focus:border-accent-blue focus:outline-none"
+                className="rounded-md border border-border-secondary bg-surface-primary px-2 py-1 text-caption focus:border-accent-blue focus:outline-hidden"
               >
                 {ALERT_METRICS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
               </select>
               <select
                 value={operator}
                 onChange={(e) => setOperator(e.target.value)}
-                className="rounded-md border border-border-secondary bg-surface-primary px-2 py-1 text-caption focus:border-accent-blue focus:outline-none"
+                className="rounded-md border border-border-secondary bg-surface-primary px-2 py-1 text-caption focus:border-accent-blue focus:outline-hidden"
               >
                 {ALERT_OPERATORS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
@@ -615,13 +615,13 @@ function CustomAlertRulesCard({
                 placeholder="value"
                 value={threshold}
                 onChange={(e) => setThreshold(e.target.value)}
-                className="w-24 rounded-md border border-border-secondary bg-surface-primary px-2 py-1 font-mono text-caption focus:border-accent-blue focus:outline-none"
+                className="w-24 rounded-md border border-border-secondary bg-surface-primary px-2 py-1 font-mono text-caption focus:border-accent-blue focus:outline-hidden"
               />
               <span className="text-caption text-text-secondary">for</span>
               <select
                 value={scope}
                 onChange={(e) => setScope(e.target.value)}
-                className="rounded-md border border-border-secondary bg-surface-primary px-2 py-1 text-caption focus:border-accent-blue focus:outline-none"
+                className="rounded-md border border-border-secondary bg-surface-primary px-2 py-1 text-caption focus:border-accent-blue focus:outline-hidden"
               >
                 {ALERT_SCOPES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
@@ -629,7 +629,7 @@ function CustomAlertRulesCard({
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as CustomAlertRule['priority'])}
-                className="rounded-md border border-border-secondary bg-surface-primary px-2 py-1 text-caption focus:border-accent-blue focus:outline-none"
+                className="rounded-md border border-border-secondary bg-surface-primary px-2 py-1 text-caption focus:border-accent-blue focus:outline-hidden"
               >
                 {ALERT_PRIORITIES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
               </select>

@@ -133,7 +133,7 @@ export function MutualFundTradeFields({
               onFocus={() => { if (exchangeQuery) setShowDropdown(true) }}
               placeholder="Search fund..."
               disabled={disabled}
-              className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary outline-none placeholder:text-text-tertiary focus:border-accent-blue focus:ring-1 focus:ring-accent-blue disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary outline-hidden placeholder:text-text-tertiary focus:border-accent-blue focus:ring-1 focus:ring-accent-blue disabled:cursor-not-allowed disabled:opacity-50"
             />
           </FieldGroup>
           {showDropdown && exchangeResults && exchangeResults.length > 0 && (

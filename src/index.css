@@ -1,7 +1,165 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
+/* ── Theme: design tokens → utility classes ────────────────────────── */
+@theme {
+  /* Colors (reference runtime CSS vars for dark-mode support) */
+  --color-surface-primary: var(--surface-primary);
+  --color-surface-secondary: var(--surface-secondary);
+  --color-surface-tertiary: var(--surface-tertiary);
+  --color-border-primary: var(--border-primary);
+  --color-border-secondary: var(--border-secondary);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-accent-blue: var(--accent-blue);
+  --color-accent-green: var(--accent-green);
+  --color-accent-red: var(--accent-red);
+  --color-accent-purple: var(--accent-purple);
+  --color-accent-amber: var(--accent-amber);
+
+  /* Fonts */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Spacing */
+  --spacing-sidebar-collapsed: 64px;
+  --spacing-sidebar-expanded: 240px;
+  --spacing-topbar: 56px;
+  --spacing-breadcrumb: 40px;
+  --spacing-statusbar: 28px;
+  --spacing-ai-panel: 400px;
+  --spacing-ai-panel-wide: 600px;
+
+  /* Animations */
+  --animate-skeleton-shimmer: shimmer 1.5s linear infinite;
+  --animate-slide-in-right: slideInRight 250ms ease-in-out;
+  --animate-slide-out-right: slideOutRight 200ms ease-in;
+  --animate-fade-in: fadeIn 200ms ease-out;
+  --animate-scale-in: scaleIn 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-fade-out: fadeOut 150ms ease-in;
+  --animate-scale-out: scaleOut 120ms ease-in;
+  --animate-hotspot-pulse: hotspotPulse 2s ease-in-out infinite;
+  --animate-fab-pulse: fabPulse 2s ease-in-out infinite;
+  --animate-slide-up: slideUpFromBottom 200ms ease-out;
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  @keyframes slideInRight {
+    0% { transform: translateX(100%); }
+    100% { transform: translateX(0); }
+  }
+
+  @keyframes slideOutRight {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(100%); }
+  }
+
+  @keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+  @keyframes scaleIn {
+    0% { opacity: 0; scale: 0.96; }
+    100% { opacity: 1; scale: 1; }
+  }
+
+  @keyframes fadeOut {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  @keyframes scaleOut {
+    0% { opacity: 1; scale: 1; }
+    100% { opacity: 0; scale: 0.96; }
+  }
+
+  @keyframes hotspotPulse {
+    0% { box-shadow: 0 0 0 0 var(--hotspot-color, #7C3AED)66; }
+    70% { box-shadow: 0 0 0 10px var(--hotspot-color, #7C3AED)00; }
+    100% { box-shadow: 0 0 0 0 var(--hotspot-color, #7C3AED)00; }
+  }
+
+  @keyframes fabPulse {
+    0% { box-shadow: 0 0 0 0 #D9770666; }
+    70% { box-shadow: 0 0 0 12px #D9770600; }
+    100% { box-shadow: 0 0 0 0 #D9770600; }
+  }
+
+  @keyframes slideUpFromBottom {
+    0% { transform: translateY(100%); }
+    100% { transform: translateY(0); }
+  }
+}
+
+/* ── Custom text utilities (composite: size + line-height + weight) ── */
+@utility text-page-title {
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 600;
+}
+
+@utility text-section-header {
+  font-size: 18px;
+  line-height: 28px;
+  font-weight: 600;
+}
+
+@utility text-body {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+}
+
+@utility text-body-strong {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+@utility text-caption {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 400;
+}
+
+@utility text-mono {
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 400;
+}
+
+@utility text-mono-sm {
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 400;
+}
+
+/* ── Custom scrollbar utility ────────────────────────────────────── */
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-secondary) transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--border-secondary);
+    border-radius: 3px;
+  }
+}
+
+/* ── Base layer: CSS custom properties & resets ──────────────────── */
 @layer base {
   :root {
     --surface-primary: #FFFFFF;
@@ -55,27 +213,6 @@
   [data-theme="dark"] input,
   [data-theme="dark"] textarea {
     color-scheme: dark;
-  }
-}
-
-@layer utilities {
-  .scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: var(--border-secondary) transparent;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: var(--border-secondary);
-    border-radius: 3px;
   }
 }
 

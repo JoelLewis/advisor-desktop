@@ -72,7 +72,7 @@ export function StartWorkflowDialog({ open, onClose, prefilledContext, prefilled
                     id="wf-template"
                     value={templateId}
                     onChange={(e) => setTemplateId(e.target.value)}
-                    className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+                    className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
                   >
                     <option value="">Select template...</option>
                     {templates?.map((t) => (

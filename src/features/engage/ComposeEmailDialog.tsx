@@ -82,7 +82,7 @@ export function ComposeEmailDialog({ open, onClose, prefilledClientId }: Compose
                   id="compose-client"
                   value={clientId}
                   onChange={(e) => setClientId(e.target.value)}
-                  className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+                  className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
                 >
                   <option value="">Select client...</option>
                   {CLIENT_OPTIONS.map((c) => (
@@ -99,7 +99,7 @@ export function ComposeEmailDialog({ open, onClose, prefilledClientId }: Compose
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                   placeholder="Email subject..."
-                  className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+                  className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
                 />
               </div>
 
@@ -122,7 +122,7 @@ export function ComposeEmailDialog({ open, onClose, prefilledClientId }: Compose
                   onChange={(e) => setBody(e.target.value)}
                   placeholder="Write your email..."
                   rows={5}
-                  className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue resize-none"
+                  className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue resize-none"
                 />
               </div>
 

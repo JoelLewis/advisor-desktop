@@ -185,7 +185,7 @@ function NotesTab({ eventId }: { eventId: string }) {
             onChange={(e) => handleSectionChange(section.key, e.target.value)}
             placeholder={`Enter ${section.label.toLowerCase()}...`}
             rows={3}
-            className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-caption text-text-primary placeholder:text-text-tertiary focus:border-accent-purple focus:outline-none focus:ring-1 focus:ring-accent-purple resize-none"
+            className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-caption text-text-primary placeholder:text-text-tertiary focus:border-accent-purple focus:outline-hidden focus:ring-1 focus:ring-accent-purple resize-none"
           />
         </div>
       ))}
@@ -274,12 +274,12 @@ function WrapUpTab({ eventId, clientName, meetingType }: { eventId: string; clie
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Follow-up task title..."
-              className="flex-1 rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-caption text-text-primary placeholder:text-text-tertiary focus:border-accent-purple focus:outline-none focus:ring-1 focus:ring-accent-purple"
+              className="flex-1 rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-caption text-text-primary placeholder:text-text-tertiary focus:border-accent-purple focus:outline-hidden focus:ring-1 focus:ring-accent-purple"
             />
             <select
               value={assignee}
               onChange={(e) => setAssignee(e.target.value as 'advisor' | 'csa' | 'ai')}
-              className="rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-caption text-text-primary focus:border-accent-purple focus:outline-none focus:ring-1 focus:ring-accent-purple"
+              className="rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-caption text-text-primary focus:border-accent-purple focus:outline-hidden focus:ring-1 focus:ring-accent-purple"
             >
               <option value="advisor">Me</option>
               <option value="csa">CSA</option>
@@ -289,7 +289,7 @@ function WrapUpTab({ eventId, clientName, meetingType }: { eventId: string; clie
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-caption text-text-primary focus:border-accent-purple focus:outline-none focus:ring-1 focus:ring-accent-purple"
+              className="rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-caption text-text-primary focus:border-accent-purple focus:outline-hidden focus:ring-1 focus:ring-accent-purple"
             />
             <button
               onClick={handleAddFollowUp}

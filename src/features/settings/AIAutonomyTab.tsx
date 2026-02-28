@@ -58,7 +58,7 @@ function StandingRuleForm({ initial, onSave, onCancel, isPending }: {
         placeholder="Rule name"
         value={form.name}
         onChange={(e) => setForm({ ...form, name: e.target.value })}
-        className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none"
+        className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden"
       />
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -66,7 +66,7 @@ function StandingRuleForm({ initial, onSave, onCancel, isPending }: {
           <select
             value={form.triggerType}
             onChange={(e) => setForm({ ...form, triggerType: e.target.value as TriggerType })}
-            className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-none"
+            className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-hidden"
           >
             <option value="time_based">Time-Based</option>
             <option value="event_based">Event-Based</option>
@@ -77,7 +77,7 @@ function StandingRuleForm({ initial, onSave, onCancel, isPending }: {
           <select
             value={form.action}
             onChange={(e) => setForm({ ...form, action: e.target.value as StandingRuleAction })}
-            className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-none"
+            className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-hidden"
           >
             {STANDING_RULE_ACTIONS.map((a) => (
               <option key={a} value={a}>{STANDING_RULE_ACTION_LABELS[a]}</option>
@@ -90,14 +90,14 @@ function StandingRuleForm({ initial, onSave, onCancel, isPending }: {
         placeholder="Trigger condition (e.g., '48h before quarterly review')"
         value={form.triggerCondition}
         onChange={(e) => setForm({ ...form, triggerCondition: e.target.value })}
-        className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none"
+        className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden"
       />
       <input
         type="text"
         placeholder="Action description"
         value={form.actionDescription}
         onChange={(e) => setForm({ ...form, actionDescription: e.target.value })}
-        className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none"
+        className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden"
       />
       <div className="flex justify-end gap-2">
         <button onClick={onCancel} className="rounded-md px-3 py-1.5 text-caption font-medium text-text-secondary hover:text-text-primary">
@@ -341,7 +341,7 @@ function PermissionMatrixCard() {
             <select
               value={matrix.dataScope}
               onChange={(e) => setMatrix({ ...matrix, dataScope: e.target.value as AIPermissionMatrix['dataScope'] })}
-              className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-none"
+              className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-hidden"
             >
               {DATA_SCOPES.map((s) => (
                 <option key={s} value={s}>{DATA_SCOPE_LABELS[s]}</option>
@@ -353,7 +353,7 @@ function PermissionMatrixCard() {
             <select
               value={matrix.executionSchedule}
               onChange={(e) => setMatrix({ ...matrix, executionSchedule: e.target.value as AIPermissionMatrix['executionSchedule'] })}
-              className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-none"
+              className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-hidden"
             >
               {EXECUTION_SCHEDULES.map((s) => (
                 <option key={s} value={s}>{EXECUTION_SCHEDULE_LABELS[s]}</option>
@@ -397,14 +397,14 @@ function DelegationForm({ initial, onSave, onCancel, isPending }: {
         placeholder="Rule name"
         value={form.name}
         onChange={(e) => setForm({ ...form, name: e.target.value })}
-        className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none"
+        className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden"
       />
       <input
         type="text"
         placeholder="Condition (e.g., 'Account value < $500K AND drift > threshold')"
         value={form.condition}
         onChange={(e) => setForm({ ...form, condition: e.target.value })}
-        className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none"
+        className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden"
       />
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -414,7 +414,7 @@ function DelegationForm({ initial, onSave, onCancel, isPending }: {
             placeholder="AI Agent, team member name, etc."
             value={form.delegateTo}
             onChange={(e) => setForm({ ...form, delegateTo: e.target.value })}
-            className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none"
+            className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden"
           />
         </div>
         <div>
@@ -422,7 +422,7 @@ function DelegationForm({ initial, onSave, onCancel, isPending }: {
           <select
             value={form.delegationType}
             onChange={(e) => setForm({ ...form, delegationType: e.target.value as DelegationRule['delegationType'] })}
-            className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-none"
+            className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-hidden"
           >
             <option value="ai_agent">AI Agent</option>
             <option value="team_member">Team Member</option>

@@ -127,7 +127,7 @@ export function MultiSelect({ options, selected, onChange, placeholder, classNam
                 {opt.label}
                 <button
                   onClick={(e) => { e.stopPropagation(); toggle(opt.value) }}
-                  className="ml-0.5 rounded-sm text-text-tertiary hover:text-text-primary"
+                  className="ml-0.5 rounded-xs text-text-tertiary hover:text-text-primary"
                   aria-label={`Remove ${opt.label}`}
                 >
                   <X className="h-3 w-3" />

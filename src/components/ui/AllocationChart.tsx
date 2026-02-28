@@ -31,7 +31,7 @@ function AllocationTooltip({ active, payload }: TooltipProps<number, string>) {
   return (
     <div className="rounded-md border border-border-primary bg-white px-3 py-2 shadow-lg">
       <div className="flex items-center gap-2">
-        <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: color }} />
+        <span className="h-2.5 w-2.5 rounded-xs" style={{ backgroundColor: color }} />
         <span className="text-caption font-medium text-text-primary">{label}</span>
       </div>
       <div className="mt-1 text-caption text-text-secondary">
@@ -116,7 +116,7 @@ export function AllocationChart({ data, size = 'md', showLegend = true, classNam
               )}
             >
               <span
-                className="h-2.5 w-2.5 shrink-0 rounded-sm"
+                className="h-2.5 w-2.5 shrink-0 rounded-xs"
                 style={{ backgroundColor: COLORS[slice.assetClass] ?? '#94A3B8' }}
               />
               <span className="text-caption text-text-secondary">
