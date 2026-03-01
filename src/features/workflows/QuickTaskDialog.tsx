@@ -72,7 +72,7 @@ export function QuickTaskDialog({ open, onClose, prefilledContext }: QuickTaskDi
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Task title..."
-                  className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+                  className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
                 />
               </div>
 
@@ -84,7 +84,7 @@ export function QuickTaskDialog({ open, onClose, prefilledContext }: QuickTaskDi
                   value={clientName}
                   onChange={(e) => setClientName(e.target.value)}
                   placeholder="Client name..."
-                  className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+                  className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
                 />
               </div>
 
@@ -114,7 +114,7 @@ export function QuickTaskDialog({ open, onClose, prefilledContext }: QuickTaskDi
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
-                  className="w-48 rounded-md border border-border-secondary bg-surface-primary px-3 py-2 font-mono text-body text-text-primary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+                  className="w-48 rounded-md border border-border-secondary bg-surface-primary px-3 py-2 font-mono text-body text-text-primary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
                 />
               </div>
             </div>

@@ -154,13 +154,13 @@ export function HouseholdListView() {
             placeholder="Search households..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-md border border-border-primary bg-surface-primary py-2 pl-9 pr-3 text-body placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+            className="w-full rounded-md border border-border-primary bg-surface-primary py-2 pl-9 pr-3 text-body placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
           />
         </div>
         <select
           value={sortKey}
           onChange={(e) => setSortKey(e.target.value as SortKey)}
-          className="rounded-md border border-border-primary bg-surface-primary px-3 py-2 text-body text-text-secondary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+          className="rounded-md border border-border-primary bg-surface-primary px-3 py-2 text-body text-text-secondary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
         >
           <option value="aum">Sort by AUM</option>
           <option value="name">Sort by Name</option>

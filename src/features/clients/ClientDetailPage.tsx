@@ -307,7 +307,7 @@ export function ClientDetailPage() {
                   value={noteText}
                   onChange={(e) => setNoteText(e.target.value)}
                   placeholder="Add a note..."
-                  className="flex-1 resize-none rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none"
+                  className="flex-1 resize-none rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden"
                   rows={2}
                 />
                 <button

@@ -129,7 +129,7 @@ export function ReviewEditStep({ proposalId }: ReviewEditStepProps) {
                       value={getEditValue(section)}
                       onChange={(e) => setEditValues((prev) => ({ ...prev, [section.id]: e.target.value }))}
                       rows={12}
-                      className="w-full rounded-md border border-border-secondary bg-surface-primary p-3 font-mono text-caption text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+                      className="w-full rounded-md border border-border-secondary bg-surface-primary p-3 font-mono text-caption text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
                       placeholder="Section content..."
                     />
                     <div className="mt-3 flex items-center gap-2">

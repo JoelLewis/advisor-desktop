@@ -63,7 +63,7 @@ export function TemplateDataStep({ clientId, selectedTemplateId, onSelectTemplat
                 key={template.id}
                 onClick={() => onSelectTemplate(template.id)}
                 className={cn(
-                  'relative flex flex-col rounded-lg border p-4 text-left transition-all hover:shadow-sm',
+                  'relative flex flex-col rounded-lg border p-4 text-left transition-all hover:shadow-xs',
                   isSelected
                     ? 'border-accent-blue bg-accent-blue/5 ring-1 ring-accent-blue'
                     : 'border-border-primary hover:border-border-secondary',

@@ -5,7 +5,7 @@ import { useExecuteTemplate } from '@/hooks/use-ai'
 import { cn } from '@/lib/utils'
 import type { ActionTemplate, ActionTemplateParam } from '@/types/ai'
 
-const INPUT_CLASS = 'w-full rounded-md border border-border-primary bg-surface-primary px-2.5 py-1.5 text-caption text-text-primary focus:border-accent-purple/50 focus:outline-none focus:ring-1 focus:ring-accent-purple/20'
+const INPUT_CLASS = 'w-full rounded-md border border-border-primary bg-surface-primary px-2.5 py-1.5 text-caption text-text-primary focus:border-accent-purple/50 focus:outline-hidden focus:ring-1 focus:ring-accent-purple/20'
 
 function TemplateField({ param, value, onChange }: {
   param: ActionTemplateParam

@@ -68,7 +68,7 @@ export function OptionTradeFields({
           value={expirationDate}
           onChange={(e) => onExpirationDateChange(e.target.value)}
           disabled={disabled || isLoading}
-          className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary outline-none focus:border-accent-blue focus:ring-1 focus:ring-accent-blue disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary outline-hidden focus:border-accent-blue focus:ring-1 focus:ring-accent-blue disabled:cursor-not-allowed disabled:opacity-50"
         >
           <option value="">Select expiration...</option>
           {chain?.expirations.map((exp) => (
@@ -86,7 +86,7 @@ export function OptionTradeFields({
           value={strikePrice}
           onChange={(e) => onStrikePriceChange(e.target.value)}
           disabled={disabled || !expirationDate}
-          className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary outline-none focus:border-accent-blue focus:ring-1 focus:ring-accent-blue disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary outline-hidden focus:border-accent-blue focus:ring-1 focus:ring-accent-blue disabled:cursor-not-allowed disabled:opacity-50"
         >
           <option value="">Select strike...</option>
           {selectedExpiration?.strikes.map((s) => {

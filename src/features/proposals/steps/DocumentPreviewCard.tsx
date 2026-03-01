@@ -21,7 +21,7 @@ export function DocumentPreviewCard({ sections }: DocumentPreviewCardProps) {
     .join('\n\n---\n\n')
 
   return (
-    <div className="rounded-lg border border-border-primary bg-surface-primary shadow-sm">
+    <div className="rounded-lg border border-border-primary bg-surface-primary shadow-xs">
       <div className="px-8 py-6">
         <article
           className="prose prose-sm max-w-none

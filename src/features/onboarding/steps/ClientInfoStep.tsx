@@ -32,7 +32,7 @@ export function ClientInfoStep({ data, onChange }: ClientInfoStepProps) {
             type="text"
             value={info.firstName}
             onChange={(e) => update('firstName', e.target.value)}
-            className="w-full rounded-md border border-border-primary bg-surface-primary px-3 py-2 text-body text-text-primary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+            className="w-full rounded-md border border-border-primary bg-surface-primary px-3 py-2 text-body text-text-primary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
             placeholder="First name"
           />
         </div>
@@ -43,7 +43,7 @@ export function ClientInfoStep({ data, onChange }: ClientInfoStepProps) {
             type="text"
             value={info.lastName}
             onChange={(e) => update('lastName', e.target.value)}
-            className="w-full rounded-md border border-border-primary bg-surface-primary px-3 py-2 text-body text-text-primary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+            className="w-full rounded-md border border-border-primary bg-surface-primary px-3 py-2 text-body text-text-primary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
             placeholder="Last name"
           />
         </div>
@@ -57,7 +57,7 @@ export function ClientInfoStep({ data, onChange }: ClientInfoStepProps) {
             type="email"
             value={info.email}
             onChange={(e) => update('email', e.target.value)}
-            className="w-full rounded-md border border-border-primary bg-surface-primary px-3 py-2 text-body text-text-primary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+            className="w-full rounded-md border border-border-primary bg-surface-primary px-3 py-2 text-body text-text-primary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
             placeholder="email@example.com"
           />
         </div>
@@ -68,7 +68,7 @@ export function ClientInfoStep({ data, onChange }: ClientInfoStepProps) {
             type="tel"
             value={info.phone}
             onChange={(e) => update('phone', e.target.value)}
-            className="w-full rounded-md border border-border-primary bg-surface-primary px-3 py-2 text-body text-text-primary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+            className="w-full rounded-md border border-border-primary bg-surface-primary px-3 py-2 text-body text-text-primary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
             placeholder="(555) 123-4567"
           />
         </div>
@@ -81,7 +81,7 @@ export function ClientInfoStep({ data, onChange }: ClientInfoStepProps) {
           type="date"
           value={info.dateOfBirth}
           onChange={(e) => update('dateOfBirth', e.target.value)}
-          className="w-full max-w-xs rounded-md border border-border-primary bg-surface-primary px-3 py-2 text-body text-text-primary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+          className="w-full max-w-xs rounded-md border border-border-primary bg-surface-primary px-3 py-2 text-body text-text-primary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
         />
       </div>
 
@@ -92,7 +92,7 @@ export function ClientInfoStep({ data, onChange }: ClientInfoStepProps) {
           type="text"
           value={info.address}
           onChange={(e) => update('address', e.target.value)}
-          className="w-full rounded-md border border-border-primary bg-surface-primary px-3 py-2 text-body text-text-primary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+          className="w-full rounded-md border border-border-primary bg-surface-primary px-3 py-2 text-body text-text-primary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
           placeholder="Street address, City, State ZIP"
         />
       </div>

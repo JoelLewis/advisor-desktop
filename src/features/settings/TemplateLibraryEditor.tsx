@@ -86,12 +86,12 @@ function TemplateEditorForm({
           placeholder="Template name"
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
-          className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none"
+          className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden"
         />
         <select
           value={form.category}
           onChange={(e) => setForm({ ...form, category: e.target.value as TemplateCategory })}
-          className="rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-none"
+          className="rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-hidden"
         >
           {TEMPLATE_CATEGORIES.map((c) => (
             <option key={c.value} value={c.value}>{c.label}</option>
@@ -104,7 +104,7 @@ function TemplateEditorForm({
         placeholder="Subject line (supports {{variables}})"
         value={form.subject}
         onChange={(e) => setForm({ ...form, subject: e.target.value })}
-        className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none"
+        className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden"
       />
 
       <VariablePanel onInsert={insertVariable} />
@@ -130,7 +130,7 @@ function TemplateEditorForm({
           value={form.body}
           onChange={(e) => setForm({ ...form, body: e.target.value })}
           rows={12}
-          className="w-full resize-y rounded-md border border-border-secondary bg-surface-primary px-3 py-2 font-mono text-[13px] leading-relaxed text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none"
+          className="w-full resize-y rounded-md border border-border-secondary bg-surface-primary px-3 py-2 font-mono text-[13px] leading-relaxed text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden"
         />
       )}
 

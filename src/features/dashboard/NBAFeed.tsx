@@ -276,7 +276,7 @@ export function NBAFeed() {
               value={dismissReason}
               onChange={(e) => setDismissReason(e.target.value)}
               placeholder="Provide justification for dismissing this compliance action..."
-              className="mt-1 w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+              className="mt-1 w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
               rows={3}
             />
             <div className="mt-4 flex justify-end gap-2">

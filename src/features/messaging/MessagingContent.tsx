@@ -204,7 +204,7 @@ export function MessagingContent({ headerSlot }: MessagingContentProps) {
                 onKeyDown={handleKeyDown}
                 placeholder={pendingShareCard ? `Add a message about ${pendingShareCard.entityName}...` : 'Type a message...'}
                 rows={1}
-                className="flex-1 resize-none bg-transparent text-caption text-text-primary placeholder:text-text-tertiary focus:outline-none max-h-24 scrollbar-thin"
+                className="flex-1 resize-none bg-transparent text-caption text-text-primary placeholder:text-text-tertiary focus:outline-hidden max-h-24 scrollbar-thin"
               />
               <button
                 onClick={handleSend}

@@ -24,7 +24,7 @@ export function FilterBar({ filters, className }: FilterBarProps) {
           value={filter.value}
           onChange={(e) => filter.onChange(e.target.value)}
           aria-label={filter.name}
-          className="rounded-md border border-border-primary bg-surface-primary px-3 py-1.5 text-caption text-text-primary outline-none transition-colors hover:border-border-secondary focus:border-accent-blue focus:ring-1 focus:ring-accent-blue"
+          className="rounded-md border border-border-primary bg-surface-primary px-3 py-1.5 text-caption text-text-primary outline-hidden transition-colors hover:border-border-secondary focus:border-accent-blue focus:ring-1 focus:ring-accent-blue"
         >
           {filter.options.map((opt) => (
             <option key={opt.value} value={opt.value}>

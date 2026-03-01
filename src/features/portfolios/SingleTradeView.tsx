@@ -280,7 +280,7 @@ export function SingleTradeView() {
                 id="single-trade-account"
                 value={accountId}
                 onChange={(e) => setAccountId(e.target.value)}
-                className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary outline-none focus:border-accent-blue focus:ring-1 focus:ring-accent-blue"
+                className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary outline-hidden focus:border-accent-blue focus:ring-1 focus:ring-accent-blue"
               >
                 <option value="">Select an account...</option>
                 {accounts?.map((acc) => (
@@ -307,7 +307,7 @@ export function SingleTradeView() {
                 }}
                 onFocus={() => { if (symbolQuery) setShowDropdown(true) }}
                 placeholder={assetClass === 'option' ? 'Search underlying (e.g. AAPL)...' : 'Search by symbol or name...'}
-                className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary outline-none placeholder:text-text-tertiary focus:border-accent-blue focus:ring-1 focus:ring-accent-blue"
+                className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary outline-hidden placeholder:text-text-tertiary focus:border-accent-blue focus:ring-1 focus:ring-accent-blue"
               />
               {showDropdown && symbolResults && symbolResults.length > 0 && (
                 <div className="absolute z-20 mt-1 w-full rounded-md border border-border-primary bg-surface-primary shadow-lg max-h-64 overflow-y-auto">

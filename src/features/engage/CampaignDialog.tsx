@@ -66,7 +66,7 @@ export function CampaignDialog({ open, onClose }: CampaignDialogProps) {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Campaign name..."
-                  className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+                  className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
                 />
               </div>
 
@@ -97,7 +97,7 @@ export function CampaignDialog({ open, onClose }: CampaignDialogProps) {
                   value={audience}
                   onChange={(e) => setAudience(e.target.value)}
                   placeholder="e.g., All platinum clients, Retirees, etc."
-                  className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue"
+                  className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
                 />
               </div>
 
@@ -109,7 +109,7 @@ export function CampaignDialog({ open, onClose }: CampaignDialogProps) {
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder="Campaign message content..."
                   rows={4}
-                  className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue resize-none"
+                  className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue resize-none"
                 />
               </div>
             </div>

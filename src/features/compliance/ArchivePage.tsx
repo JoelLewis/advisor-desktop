@@ -178,7 +178,7 @@ export function ArchivePage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by title, client, advisor, or content..."
-                className="w-full rounded-md border border-border-secondary bg-surface-primary py-2 pl-9 pr-3 text-caption text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none"
+                className="w-full rounded-md border border-border-secondary bg-surface-primary py-2 pl-9 pr-3 text-caption text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden"
               />
             </div>
             <select
