@@ -112,7 +112,7 @@ export function WelcomeOverlay({ forceOpen, onDismiss }: WelcomeOverlayProps = {
         <div className="mt-6 flex items-center gap-3">
           <button
             onClick={exploreWithGuide}
-            className="flex items-center gap-2 rounded-lg bg-accent-blue px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-2"
+            className="flex items-center gap-2 rounded-lg bg-accent-blue px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-accent-blue/90 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-2"
           >
             <Compass className="h-4 w-4" />
             Explore with Guide

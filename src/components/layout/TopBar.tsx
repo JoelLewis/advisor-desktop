@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { Search, Bell, Sparkles, User, MessageSquare, Info, SquarePen } from 'lucide-react'
+import { Search, Bell, Sparkles, User, MessageSquare, Info, SquarePen, Sun, Moon, Monitor } from 'lucide-react'
 import { useUIStore } from '@/store/ui-store'
 import { usePlatform } from '@/hooks/use-platform'
 import { useBreakpoint } from '@/hooks/use-breakpoint'
@@ -18,6 +18,8 @@ export function TopBar() {
   const toggleMessaging = useUIStore((s) => s.toggleMessaging)
   const { shortcut } = usePlatform()
   const { isBase } = useBreakpoint()
+  const themeMode = useUIStore((s) => s.themeMode)
+  const setThemeMode = useUIStore((s) => s.setThemeMode)
   const [showAbout, setShowAbout] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const { data: countData } = useNotificationCounts()
@@ -92,6 +94,24 @@ export function TopBar() {
             <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent-red px-1 text-[10px] font-medium leading-none text-white">
               {unreadTotal > 99 ? '99+' : unreadTotal}
             </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => {
+            const next = themeMode === 'light' ? 'dark' : themeMode === 'dark' ? 'system' : 'light'
+            setThemeMode(next)
+          }}
+          className="relative flex h-9 w-9 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-tertiary"
+          aria-label={`Theme: ${themeMode === 'light' ? 'Light' : themeMode === 'dark' ? 'Dark' : 'System'}. Click to switch.`}
+          title={`Theme: ${themeMode === 'light' ? 'Light' : themeMode === 'dark' ? 'Dark' : 'System'}`}
+        >
+          {themeMode === 'dark' ? (
+            <Moon className="h-5 w-5" />
+          ) : themeMode === 'system' ? (
+            <Monitor className="h-5 w-5" />
+          ) : (
+            <Sun className="h-5 w-5" />
           )}
         </button>
 
