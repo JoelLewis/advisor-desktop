@@ -13,6 +13,7 @@ import { useUIStore } from '@/store/ui-store'
 import { cn } from '@/lib/utils'
 import { PRIORITY_VARIANTS } from '@/lib/labels'
 import { CURRENCY_REGISTRY } from '@/lib/currency'
+import { THEME_CONFIG } from '@/lib/theme'
 import type { AISettings, AITone, AIVerbosity, NBASettings, NotificationSettings, DisplaySettings, CommunicationChannel, FollowUpCadence, CustomPromptCategory, CustomAlertRule } from '@/types/settings'
 import type { NBACategory } from '@/types/nba'
 import type { CurrencyCode } from '@/types/currency'
@@ -982,22 +983,21 @@ const DATE_FORMATS: { value: DisplaySettings['dateFormat']; label: string }[] = 
   { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD (ISO)' },
 ]
 
+const THEME_OPTIONS = (['light', 'dark', 'system'] as const).map((value) => ({
+  value,
+  ...THEME_CONFIG[value],
+}))
+
 function ThemeCard() {
   const themeMode = useUIStore((s) => s.themeMode)
   const setThemeMode = useUIStore((s) => s.setThemeMode)
-
-  const options: { value: 'light' | 'dark' | 'system'; label: string; description: string }[] = [
-    { value: 'light', label: 'Light', description: 'Always use light theme' },
-    { value: 'dark', label: 'Dark', description: 'Always use dark theme' },
-    { value: 'system', label: 'System', description: 'Follow OS preference' },
-  ]
 
   return (
     <Card>
       <CardHeader>Appearance</CardHeader>
       <CardContent>
         <div className="flex gap-3">
-          {options.map((opt) => (
+          {THEME_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               onClick={() => setThemeMode(opt.value)}

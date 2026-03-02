@@ -1,10 +1,11 @@
-import { useState, useCallback } from 'react'
-import { Search, Bell, Sparkles, User, MessageSquare, Info, SquarePen, Sun, Moon, Monitor } from 'lucide-react'
+import { useState } from 'react'
+import { Search, Bell, Sparkles, User, MessageSquare, Info, SquarePen } from 'lucide-react'
 import { useUIStore } from '@/store/ui-store'
 import { usePlatform } from '@/hooks/use-platform'
 import { useBreakpoint } from '@/hooks/use-breakpoint'
 import { useNotificationCounts } from '@/hooks/use-notifications'
 import { cn } from '@/lib/utils'
+import { THEME_CONFIG } from '@/lib/theme'
 import { WelcomeOverlay } from '@/features/welcome/WelcomeOverlay'
 import { NotificationCenter } from '@/features/notifications/NotificationCenter'
 
@@ -24,8 +25,8 @@ export function TopBar() {
   const [notifOpen, setNotifOpen] = useState(false)
   const { data: countData } = useNotificationCounts()
   const unreadTotal = countData?.total ?? 0
-  const handleAboutDismiss = useCallback(() => setShowAbout(false), [])
-  const toggleNotifications = useCallback(() => setNotifOpen((prev) => !prev), [])
+  const theme = THEME_CONFIG[themeMode]
+  const ThemeIcon = theme.icon
 
   return (
     <header
@@ -84,7 +85,7 @@ export function TopBar() {
         </button>
 
         <button
-          onClick={toggleNotifications}
+          onClick={() => setNotifOpen((prev) => !prev)}
           className="relative flex h-9 w-9 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-tertiary"
           aria-label="Notifications"
           title="Notifications"
@@ -98,21 +99,12 @@ export function TopBar() {
         </button>
 
         <button
-          onClick={() => {
-            const next = themeMode === 'light' ? 'dark' : themeMode === 'dark' ? 'system' : 'light'
-            setThemeMode(next)
-          }}
+          onClick={() => setThemeMode(theme.next)}
           className="relative flex h-9 w-9 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-tertiary"
-          aria-label={`Theme: ${themeMode === 'light' ? 'Light' : themeMode === 'dark' ? 'Dark' : 'System'}. Click to switch.`}
-          title={`Theme: ${themeMode === 'light' ? 'Light' : themeMode === 'dark' ? 'Dark' : 'System'}`}
+          aria-label={`Theme: ${theme.label}`}
+          title={`Theme: ${theme.label}`}
         >
-          {themeMode === 'dark' ? (
-            <Moon className="h-5 w-5" />
-          ) : themeMode === 'system' ? (
-            <Monitor className="h-5 w-5" />
-          ) : (
-            <Sun className="h-5 w-5" />
-          )}
+          <ThemeIcon className="h-5 w-5" />
         </button>
 
         <button
@@ -133,7 +125,7 @@ export function TopBar() {
       </div>
 
       {/* Welcome / About overlay */}
-      <WelcomeOverlay forceOpen={showAbout} onDismiss={handleAboutDismiss} />
+      <WelcomeOverlay forceOpen={showAbout} onDismiss={() => setShowAbout(false)} />
 
       {/* Notification Center */}
       <NotificationCenter open={notifOpen} onClose={() => setNotifOpen(false)} />

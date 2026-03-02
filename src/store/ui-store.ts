@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { RichCardData } from '@/types/rich-card'
 
-type ThemeMode = 'light' | 'dark' | 'system'
+export type ThemeMode = 'light' | 'dark' | 'system'
 
 type PanelTab = 'ai' | 'messages'
 
