@@ -45,6 +45,7 @@ export const router = createBrowserRouter([
       {
         path: 'clients',
         handle: { breadcrumb: 'Clients' },
+        errorElement: <RouteErrorPage />,
         children: [
           { index: true, element: suspense(<ClientListPage />) },
           { path: ':clientId', element: suspense(<ClientDetailPage />), handle: { breadcrumb: 'Client' } },
@@ -56,6 +57,7 @@ export const router = createBrowserRouter([
       {
         path: 'households',
         handle: { breadcrumb: 'Households' },
+        errorElement: <RouteErrorPage />,
         children: [
           { index: true, element: suspense(<HouseholdListPage />) },
           { path: ':householdId', element: suspense(<HouseholdDetailPage />), handle: { breadcrumb: 'Household' } },
@@ -64,6 +66,7 @@ export const router = createBrowserRouter([
       {
         path: 'portfolios',
         handle: { breadcrumb: 'Portfolios' },
+        errorElement: <RouteErrorPage />,
         children: [
           { index: true, element: suspense(<PortfolioPage />) },
           { path: 'accounts/:accountId', element: suspense(<AccountDetailPage />), handle: { breadcrumb: 'Account' } },
@@ -78,6 +81,7 @@ export const router = createBrowserRouter([
       {
         path: 'growth',
         handle: { breadcrumb: 'Growth' },
+        errorElement: <RouteErrorPage />,
         children: [
           { index: true, element: suspense(<ProspectsPage />) },
           { path: 'revenue', element: suspense(<RevenuePage />), handle: { breadcrumb: 'Revenue' } },
@@ -89,6 +93,7 @@ export const router = createBrowserRouter([
       {
         path: 'workflows',
         handle: { breadcrumb: 'Workflows' },
+        errorElement: <RouteErrorPage />,
         children: [
           { index: true, element: suspense(<WorkflowCenterPage />) },
           { path: 'reconciliation', element: suspense(<ReconciliationPage />), handle: { breadcrumb: 'Reconciliation' } },

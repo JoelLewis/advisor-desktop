@@ -74,7 +74,7 @@ export function BreadcrumbBar() {
     segments.forEach((seg, i) => {
       const isDynamicId = /^(client|acc|hh|prospect)-/.test(seg)
       const label = isDynamicId
-        ? seg
+        ? '…' // Show ellipsis while entity names load, rather than raw IDs
         : seg.charAt(0).toUpperCase() + seg.slice(1).replace(/-/g, ' ')
       crumbs.push({
         label,

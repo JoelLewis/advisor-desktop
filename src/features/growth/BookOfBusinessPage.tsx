@@ -27,7 +27,7 @@ function WaterfallTooltip({ active, payload }: { active?: boolean; payload?: Arr
   const d = payload[0].payload
   const isPositive = d.value >= 0
   return (
-    <div className="rounded-md border border-border-primary bg-white px-3 py-2 shadow-lg">
+    <div className="rounded-md border border-border-primary bg-surface-primary px-3 py-2 shadow-lg">
       <div className="text-caption font-medium text-text-primary">{d.label}</div>
       <div className={`font-mono text-caption font-medium ${isPositive ? 'text-accent-green' : 'text-accent-red'}`}>
         {isPositive ? '+' : ''}{formatWithConversion(d.value, 'USD', { compact: true })}

@@ -34,10 +34,16 @@ const VIEW_TABS: { id: ViewMode; label: string }[] = [
   { id: 'calendar', label: 'Wash Sale Calendar' },
 ]
 
-function getWashSaleEndDate(purchaseDate: string): string {
-  const d = new Date(purchaseDate)
-  d.setDate(d.getDate() + 30)
-  return d.toISOString().slice(0, 10)
+function getWashSaleWindow(saleDate: string): { start: string; end: string } {
+  const d = new Date(saleDate)
+  const start = new Date(d)
+  start.setDate(start.getDate() - 30)
+  const end = new Date(d)
+  end.setDate(end.getDate() + 30)
+  return {
+    start: start.toISOString().slice(0, 10),
+    end: end.toISOString().slice(0, 10),
+  }
 }
 
 export function TaxManagementPage() {
@@ -128,19 +134,23 @@ export function TaxManagementPage() {
     }))
   }, [taxLots])
 
-  // Calendar: 30-day wash sale windows
+  // Calendar: 61-day wash sale windows (30 days before + 30 days after sale)
   const washSaleWindows = useMemo(() => {
     const now = new Date('2026-02-25')
     return (taxLots ?? [])
       .filter((lot) => {
-        const end = new Date(getWashSaleEndDate(lot.purchaseDate))
-        return end >= now
+        const window = getWashSaleWindow(lot.purchaseDate)
+        return new Date(window.end) >= now
       })
-      .map((lot) => ({
-        ...lot,
-        washSaleEnd: getWashSaleEndDate(lot.purchaseDate),
-        position: positionMap.get(lot.positionId),
-      }))
+      .map((lot) => {
+        const window = getWashSaleWindow(lot.purchaseDate)
+        return {
+          ...lot,
+          washSaleStart: window.start,
+          washSaleEnd: window.end,
+          position: positionMap.get(lot.positionId),
+        }
+      })
       .sort((a, b) => a.washSaleEnd.localeCompare(b.washSaleEnd))
   }, [taxLots, positionMap])
 
@@ -468,7 +478,7 @@ export function TaxManagementPage() {
                       </div>
                       <div className="text-right">
                         <p className="text-caption text-text-secondary">
-                          Window ends {formatDate(item.washSaleEnd)}
+                          {formatDate(item.washSaleStart)} — {formatDate(item.washSaleEnd)}
                         </p>
                         <p className={cn(
                           'font-mono text-caption font-medium',

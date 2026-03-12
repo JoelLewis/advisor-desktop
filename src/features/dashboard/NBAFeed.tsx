@@ -156,7 +156,16 @@ export function NBAFeed() {
     return new Map([...groupMap.entries()].filter(([, g]) => g.nbas.length >= 2))
   }, [filteredNBAs])
 
-  const renderedGroupBanners = new Set<string>()
+  // Track which group banners have been rendered — computed per render via useMemo
+  const nbaListWithBanners = useMemo(() => {
+    const seen = new Set<string>()
+    return filteredNBAs.map((nba) => {
+      const group = nba.groupId ? groups.get(nba.groupId) : undefined
+      const showBanner = group && !seen.has(nba.groupId!)
+      if (showBanner) seen.add(nba.groupId!)
+      return { nba, group: showBanner ? group : undefined }
+    })
+  }, [filteredNBAs, groups])
 
   return (
     <Card>
@@ -201,16 +210,13 @@ export function NBAFeed() {
               <Skeleton key={i} className="h-36" />
             ))}
           </div>
-        ) : filteredNBAs.length > 0 ? (
+        ) : nbaListWithBanners.length > 0 ? (
           <div className="space-y-3" data-annotation="actions-batch">
-            {filteredNBAs.map((nba) => {
-              const group = nba.groupId ? groups.get(nba.groupId) : undefined
-              const showBanner = group && !renderedGroupBanners.has(nba.groupId!)
-              if (showBanner) renderedGroupBanners.add(nba.groupId!)
+            {nbaListWithBanners.map(({ nba, group }) => {
 
               return (
-                <div key={nba.id} {...(nba === filteredNBAs[0] ? { 'data-annotation': 'actions-card' } : {})}>
-                  {showBanner && group && (
+                <div key={nba.id} {...(nba === nbaListWithBanners[0]?.nba ? { 'data-annotation': 'actions-card' } : {})}>
+                  {group && (
                     <button
                       onClick={() => setBatchGroup(group)}
                       className="mb-2 flex w-full items-center justify-between rounded-lg border border-accent-blue/30 bg-accent-blue/5 px-4 py-2 text-left transition-colors hover:bg-accent-blue/10"

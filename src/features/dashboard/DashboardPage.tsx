@@ -14,13 +14,20 @@ function formatToday(): string {
   })
 }
 
+function getGreeting(): string {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Good Morning'
+  if (hour < 17) return 'Good Afternoon'
+  return 'Good Evening'
+}
+
 export function DashboardPage() {
   const { data: insights } = useAIInsights('dashboard')
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-page-title">Good Morning, Sarah</h1>
+        <h1 className="text-page-title">{getGreeting()}, Sarah</h1>
         <p className="mt-1 text-body text-text-secondary">
           {formatToday()} — 4 meetings, 14 pending actions
         </p>

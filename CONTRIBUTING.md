@@ -1,4 +1,4 @@
-# Contributing to iDeal Desktop
+# Contributing to Advisor Desktop
 
 Thanks for your interest in contributing! This document covers the guidelines for contributing to this project.
 

@@ -307,6 +307,7 @@ export function ClientDetailPage() {
                   value={noteText}
                   onChange={(e) => setNoteText(e.target.value)}
                   placeholder="Add a note..."
+                  aria-label="Add a note"
                   className="flex-1 resize-none rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden"
                   rows={2}
                 />
@@ -314,6 +315,7 @@ export function ClientDetailPage() {
                   onClick={handleAddNote}
                   disabled={!noteText.trim() || createNote.isPending}
                   className="self-end rounded-md bg-accent-blue px-3 py-2 text-caption font-medium text-white transition-colors hover:bg-accent-blue/90 disabled:opacity-50"
+                  aria-label="Submit note"
                 >
                   <Send className="h-4 w-4" />
                 </button>

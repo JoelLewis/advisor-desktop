@@ -38,7 +38,7 @@ const robertTraditionalIRAPositions: Position[] = [
   { id: 'pos-032', accountId: 'acc-003', symbol: 'AGG', name: 'iShares Core US Aggregate Bond ETF', assetClass: 'fixed_income', quantity: 7500, price: 98.50, costBasis: 750_000, marketValue: 738_750, weight: 0.208, gainLoss: -11_250, gainLossPercent: -0.015 },
   { id: 'pos-033', accountId: 'acc-003', symbol: 'BND', name: 'Vanguard Total Bond Market ETF', assetClass: 'fixed_income', quantity: 5500, price: 72.40, costBasis: 405_000, marketValue: 398_200, weight: 0.112, gainLoss: -6_800, gainLossPercent: -0.017 },
   { id: 'pos-034', accountId: 'acc-003', symbol: 'TLT', name: 'iShares 20+ Year Treasury Bond ETF', assetClass: 'fixed_income', quantity: 4200, price: 95.80, costBasis: 415_000, marketValue: 402_360, weight: 0.113, gainLoss: -12_640, gainLossPercent: -0.030 },
-  { id: 'pos-035', accountId: 'acc-003', symbol: 'MUB', name: 'iShares National Muni Bond ETF', assetClass: 'fixed_income', quantity: 3700, price: 110.80, costBasis: 415_000, marketValue: 409_960, weight: 0.115, gainLoss: -5_040, gainLossPercent: -0.012 },
+  { id: 'pos-035', accountId: 'acc-003', symbol: 'TIP', name: 'iShares TIPS Bond ETF', assetClass: 'fixed_income', quantity: 3700, price: 110.80, costBasis: 415_000, marketValue: 409_960, weight: 0.115, gainLoss: -5_040, gainLossPercent: -0.012 },
   { id: 'pos-036', accountId: 'acc-003', symbol: 'QAI', name: 'IQ Hedge Multi-Strategy Tracker ETF', assetClass: 'alternatives', quantity: 5000, price: 35.20, costBasis: 180_000, marketValue: 176_000, weight: 0.050, gainLoss: -4_000, gainLossPercent: -0.022 },
   { id: 'pos-037', accountId: 'acc-003', symbol: 'VNQ', name: 'Vanguard Real Estate ETF', assetClass: 'real_estate', quantity: 2000, price: 89.20, costBasis: 170_000, marketValue: 178_400, weight: 0.050, gainLoss: 8_400, gainLossPercent: 0.049 },
   { id: 'pos-038', accountId: 'acc-003', symbol: 'CASH', name: 'Money Market Fund', assetClass: 'cash', quantity: 1, price: 367_170, costBasis: 367_170, marketValue: 367_170, weight: 0.103, gainLoss: 0, gainLossPercent: 0 },
@@ -145,6 +145,26 @@ const lindaGarciaIRAPositions: Position[] = [
   { id: 'pos-145', accountId: 'acc-035', symbol: 'CASH', name: 'Money Market Fund', assetClass: 'cash', quantity: 1, price: 43_420, costBasis: 43_420, marketValue: 43_420, weight: 0.084, gainLoss: 0, gainLossPercent: 0 },
 ]
 
+// ─── acc-046: James Thompson Inherited IRA ($485K, mod-003 Conservative Income) ──
+// Inherited IRA with RMD requirements, conservative allocation
+const jamesThompsonInheritedIRAPositions: Position[] = [
+  { id: 'pos-250', accountId: 'acc-046', symbol: 'AGG', name: 'iShares Core US Aggregate Bond ETF', assetClass: 'fixed_income', quantity: 1600, price: 98.50, costBasis: 160_000, marketValue: 157_600, weight: 0.325, gainLoss: -2_400, gainLossPercent: -0.015 },
+  { id: 'pos-251', accountId: 'acc-046', symbol: 'BND', name: 'Vanguard Total Bond Market ETF', assetClass: 'fixed_income', quantity: 1100, price: 72.40, costBasis: 81_000, marketValue: 79_640, weight: 0.164, gainLoss: -1_360, gainLossPercent: -0.017 },
+  { id: 'pos-252', accountId: 'acc-046', symbol: 'VTI', name: 'Vanguard Total Stock Market ETF', assetClass: 'us_equity', quantity: 400, price: 268.50, costBasis: 100_000, marketValue: 107_400, weight: 0.221, gainLoss: 7_400, gainLossPercent: 0.074 },
+  { id: 'pos-253', accountId: 'acc-046', symbol: 'EFA', name: 'iShares MSCI EAFE ETF', assetClass: 'intl_equity', quantity: 600, price: 82.30, costBasis: 47_000, marketValue: 49_380, weight: 0.102, gainLoss: 2_380, gainLossPercent: 0.051 },
+  { id: 'pos-254', accountId: 'acc-046', symbol: 'CASH', name: 'Money Market Fund', assetClass: 'cash', quantity: 1, price: 90_980, costBasis: 90_980, marketValue: 90_980, weight: 0.188, gainLoss: 0, gainLossPercent: 0 },
+]
+
+// ─── acc-047: David Williams SIMPLE IRA ($210K, mod-007 Moderate Balanced) ────
+// Small employer-sponsored retirement account, moderate allocation
+const davidWilliamsSIMPLEIRAPositions: Position[] = [
+  { id: 'pos-260', accountId: 'acc-047', symbol: 'VTI', name: 'Vanguard Total Stock Market ETF', assetClass: 'us_equity', quantity: 300, price: 268.50, costBasis: 74_000, marketValue: 80_550, weight: 0.384, gainLoss: 6_550, gainLossPercent: 0.089 },
+  { id: 'pos-261', accountId: 'acc-047', symbol: 'EFA', name: 'iShares MSCI EAFE ETF', assetClass: 'intl_equity', quantity: 350, price: 82.30, costBasis: 27_000, marketValue: 28_805, weight: 0.137, gainLoss: 1_805, gainLossPercent: 0.067 },
+  { id: 'pos-262', accountId: 'acc-047', symbol: 'AGG', name: 'iShares Core US Aggregate Bond ETF', assetClass: 'fixed_income', quantity: 550, price: 98.50, costBasis: 55_000, marketValue: 54_175, weight: 0.258, gainLoss: -825, gainLossPercent: -0.015 },
+  { id: 'pos-263', accountId: 'acc-047', symbol: 'BND', name: 'Vanguard Total Bond Market ETF', assetClass: 'fixed_income', quantity: 400, price: 72.40, costBasis: 29_500, marketValue: 28_960, weight: 0.138, gainLoss: -540, gainLossPercent: -0.018 },
+  { id: 'pos-264', accountId: 'acc-047', symbol: 'CASH', name: 'Money Market Fund', assetClass: 'cash', quantity: 1, price: 17_510, costBasis: 17_510, marketValue: 17_510, weight: 0.083, gainLoss: 0, gainLossPercent: 0 },
+]
+
 // ── acc-041: Chen-Wong HK Equity (HK$12.5M) ──────────────────────────────────
 // HK-listed equities and Asia-focused ETFs, denominated in HKD
 const chenHKPositions: Position[] = [
@@ -195,9 +215,9 @@ const muellerCHFPositions: Position[] = [
 // ── acc-045: Patel Digital Assets ($425K) ─────────────────────────────────────
 // Crypto portfolio in USD-denominated Coinbase account
 const patelCryptoPositions: Position[] = [
-  { id: 'pos-240', accountId: 'acc-045', symbol: 'BTC', name: 'Bitcoin', assetClass: 'digital_assets', quantity: 2.15, price: 91_000, costBasis: 145_000, marketValue: 195_650, weight: 0.460, gainLoss: 50_650, gainLossPercent: 0.349 },
-  { id: 'pos-241', accountId: 'acc-045', symbol: 'ETH', name: 'Ethereum', assetClass: 'digital_assets', quantity: 22.5, price: 3_572, costBasis: 62_000, marketValue: 80_370, weight: 0.189, gainLoss: 18_370, gainLossPercent: 0.296 },
-  { id: 'pos-242', accountId: 'acc-045', symbol: 'SOL', name: 'Solana', assetClass: 'digital_assets', quantity: 180, price: 238, costBasis: 30_000, marketValue: 42_840, weight: 0.101, gainLoss: 12_840, gainLossPercent: 0.428 },
+  { id: 'pos-240', accountId: 'acc-045', symbol: 'BTC', name: 'Bitcoin', assetClass: 'digital_assets', quantity: 2.15, price: 87_450, costBasis: 145_000, marketValue: 188_018, weight: 0.442, gainLoss: 43_018, gainLossPercent: 0.297 },
+  { id: 'pos-241', accountId: 'acc-045', symbol: 'ETH', name: 'Ethereum', assetClass: 'digital_assets', quantity: 22.5, price: 3_280, costBasis: 62_000, marketValue: 73_800, weight: 0.174, gainLoss: 11_800, gainLossPercent: 0.190 },
+  { id: 'pos-242', accountId: 'acc-045', symbol: 'SOL', name: 'Solana', assetClass: 'digital_assets', quantity: 180, price: 142.50, costBasis: 30_000, marketValue: 25_650, weight: 0.060, gainLoss: -4_350, gainLossPercent: -0.145 },
   { id: 'pos-243', accountId: 'acc-045', symbol: 'AVAX', name: 'Avalanche', assetClass: 'digital_assets', quantity: 800, price: 41.67, costBasis: 28_000, marketValue: 33_336, weight: 0.078, gainLoss: 5_336, gainLossPercent: 0.191 },
   { id: 'pos-244', accountId: 'acc-045', symbol: 'LINK', name: 'Chainlink', assetClass: 'digital_assets', quantity: 1500, price: 20.41, costBasis: 25_000, marketValue: 30_615, weight: 0.072, gainLoss: 5_615, gainLossPercent: 0.225 },
   { id: 'pos-245', accountId: 'acc-045', symbol: 'DOT', name: 'Polkadot', assetClass: 'digital_assets', quantity: 2200, price: 8.40, costBasis: 22_000, marketValue: 18_480, weight: 0.043, gainLoss: -3_520, gainLossPercent: -0.160 },
@@ -217,6 +237,8 @@ export const allPositions: Position[] = [
   ...patel529Positions,
   ...thomasKimPositions,
   ...lindaGarciaIRAPositions,
+  ...jamesThompsonInheritedIRAPositions,
+  ...davidWilliamsSIMPLEIRAPositions,
   ...chenHKPositions,
   ...chenSGPositions,
   ...muellerEURPositions,

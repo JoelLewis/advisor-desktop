@@ -128,7 +128,7 @@ function RevenueContent() {
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" />
                     <XAxis dataKey="period" tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} tickFormatter={(v: string) => v.slice(5)} />
                     <YAxis tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}K`} />
-                    <RechartsTooltip formatter={(value: number) => formatWithConversion(value, 'USD')} />
+                    <RechartsTooltip contentStyle={{ background: 'var(--surface-primary)', border: '1px solid var(--border-primary)' }} formatter={(value: number) => formatWithConversion(value, 'USD')} />
                     <Line type="monotone" dataKey="revenue" stroke="var(--accent-blue)" strokeWidth={2} dot={false} name="Revenue" />
                     <Line type="monotone" dataKey="projected" stroke="var(--accent-purple)" strokeWidth={1.5} dot={false} strokeDasharray="4 4" name="Projected" />
                     <Legend />
@@ -151,7 +151,7 @@ function RevenueContent() {
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" />
                       <XAxis dataKey="segment" tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} />
                       <YAxis tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}K`} />
-                      <RechartsTooltip formatter={(value: number) => formatWithConversion(value, 'USD')} />
+                      <RechartsTooltip contentStyle={{ background: 'var(--surface-primary)', border: '1px solid var(--border-primary)' }} formatter={(value: number) => formatWithConversion(value, 'USD')} />
                       <Bar dataKey="revenue" radius={[4, 4, 0, 0]}>
                         {bySegment.map((entry) => (
                           <Cell key={entry.segment} fill={SEGMENT_COLORS[entry.segment] ?? '#94A3B8'} />

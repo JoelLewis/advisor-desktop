@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { cn } from '@/lib/utils'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
 import type { Goal } from '@/types/planning'
@@ -14,7 +15,7 @@ type GoalProgressCardProps = {
   compact?: boolean
 }
 
-export function GoalProgressCard({ goal, compact = false }: GoalProgressCardProps) {
+export const GoalProgressCard = memo(function GoalProgressCard({ goal, compact = false }: GoalProgressCardProps) {
   const { formatWithConversion } = useFormatCurrency()
   const config = STATUS_CONFIG[goal.status]
   const progressPercent = goal.targetAmount > 0
@@ -64,4 +65,4 @@ export function GoalProgressCard({ goal, compact = false }: GoalProgressCardProp
       )}
     </div>
   )
-}
+})

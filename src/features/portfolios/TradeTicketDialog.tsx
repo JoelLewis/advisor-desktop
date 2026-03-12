@@ -63,6 +63,14 @@ export function TradeTicketDialog({
   const [complianceViolations, setComplianceViolations] = useState<PreTradeViolation[]>([])
   const checkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Stable refs for mutation methods (identity changes each render but behavior is stable)
+  const tradeResetRef = useRef(trade.reset)
+  tradeResetRef.current = trade.reset
+  const preCheckResetRef = useRef(preCheck.reset)
+  preCheckResetRef.current = preCheck.reset
+  const preCheckMutateRef = useRef(preCheck.mutate)
+  preCheckMutateRef.current = preCheck.mutate
+
   // Sync prefill when dialog opens
   useEffect(() => {
     if (open) {
@@ -78,10 +86,9 @@ export function TradeTicketDialog({
       setSubmitted(false)
       setCompliancePassed(null)
       setComplianceViolations([])
-      trade.reset()
-      preCheck.reset()
+      tradeResetRef.current()
+      preCheckResetRef.current()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, prefill?.symbol, prefill?.side, prefill?.quantity, prefill?.assetClass])
 
   // Debounced pre-trade compliance check
@@ -95,7 +102,7 @@ export function TradeTicketDialog({
       return
     }
     checkTimerRef.current = setTimeout(() => {
-      preCheck.mutate(
+      preCheckMutateRef.current(
         { accountId, symbol: trimmed, side, quantity: qty },
         {
           onSuccess: (result) => {
@@ -108,7 +115,6 @@ export function TradeTicketDialog({
     return () => {
       if (checkTimerRef.current) clearTimeout(checkTimerRef.current)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol, side, quantity, accountId])
 
   // Auto-close after successful submission
@@ -166,9 +172,12 @@ export function TradeTicketDialog({
         <div className="space-y-4 p-5">
           {/* Success banner */}
           {submitted && (
-            <div className="flex items-center gap-2 rounded-md bg-accent-green/10 px-3 py-2 text-body text-accent-green" role="status">
-              <Check className="h-4 w-4 flex-shrink-0" />
-              Order submitted
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 rounded-md bg-accent-green/10 px-3 py-2 text-body text-accent-green" role="status">
+                <Check className="h-4 w-4 flex-shrink-0" />
+                Order submitted
+              </div>
+              <p className="text-caption text-text-tertiary">Settlement: T+1 for equities and ETFs</p>
             </div>
           )}
 

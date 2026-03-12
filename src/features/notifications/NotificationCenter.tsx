@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   X,
@@ -80,6 +80,26 @@ export function NotificationCenter({ open, onClose }: NotificationCenterProps) {
     [dismissMutation],
   )
 
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  // Close on Escape
+  useEffect(() => {
+    if (!open) return
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [open, onClose])
+
+  // Focus the panel when it opens
+  useEffect(() => {
+    if (open) panelRef.current?.focus()
+  }, [open])
+
   if (!open) return null
 
   const items = data?.items ?? []
@@ -88,10 +108,17 @@ export function NotificationCenter({ open, onClose }: NotificationCenterProps) {
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-40" onClick={onClose} />
+      <div className="fixed inset-0 z-40" onClick={onClose} aria-hidden="true" />
 
       {/* Panel */}
-      <div className="fixed right-2 top-[calc(var(--topbar-height)+4px)] z-50 flex w-[420px] max-h-[calc(100vh-80px)] flex-col rounded-lg border border-border-primary bg-surface-primary shadow-xl">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Notifications"
+        tabIndex={-1}
+        className="fixed right-2 top-[calc(var(--spacing-topbar)+4px)] z-50 flex w-[420px] max-h-[calc(100vh-80px)] flex-col rounded-lg border border-border-primary bg-surface-primary shadow-xl"
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border-primary px-4 py-3">
           <div className="flex items-center gap-2">

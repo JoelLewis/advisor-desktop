@@ -29,7 +29,7 @@ function AllocationTooltip({ active, payload }: TooltipProps<number, string>) {
   const color = assetClass ? (COLORS[assetClass] ?? '#94A3B8') : '#94A3B8'
 
   return (
-    <div className="rounded-md border border-border-primary bg-white px-3 py-2 shadow-lg">
+    <div className="rounded-md border border-border-primary bg-surface-primary px-3 py-2 shadow-lg">
       <div className="flex items-center gap-2">
         <span className="h-2.5 w-2.5 rounded-xs" style={{ backgroundColor: color }} />
         <span className="text-caption font-medium text-text-primary">{label}</span>
@@ -64,8 +64,14 @@ export function AllocationChart({ data, size = 'md', showLegend = true, classNam
     }
   }
 
+  const chartDescription = data
+    .filter((d) => d.weight > 0)
+    .map((d) => `${LABELS[d.assetClass] ?? d.assetClass} ${(d.weight * 100).toFixed(1)}%`)
+    .join(', ')
+
   return (
     <div className={cn('flex items-center gap-6', className)}>
+      <div role="img" aria-label={`Asset allocation: ${chartDescription}`}>
       <ResponsiveContainer width={dim} height={dim}>
         <PieChart>
           <Pie
@@ -100,6 +106,7 @@ export function AllocationChart({ data, size = 'md', showLegend = true, classNam
           />
         </PieChart>
       </ResponsiveContainer>
+      </div>
       {showLegend && (
         <div className="space-y-1.5">
           {data.filter((d) => d.weight > 0).map((slice) => (

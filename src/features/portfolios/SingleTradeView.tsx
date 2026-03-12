@@ -428,6 +428,7 @@ export function SingleTradeView() {
             >
               {submitTrade.isPending ? 'Submitting...' : `Submit ${getCurrentSide().replace(/_/g, ' ').toUpperCase()} Order`}
             </button>
+            <p className="text-center text-caption text-text-tertiary">Settlement: T+1 for equities and ETFs</p>
           </CardContent>
         </Card>
       </div>

@@ -84,7 +84,7 @@ export const accountRequirements: AccountRequirement[] = [
   {
     accountType: 'individual', label: 'Individual Brokerage',
     additionalFields: [],
-    requiredDocuments: ['Advisory Agreement', 'W-9', 'Form CRS', 'Privacy Notice'],
+    requiredDocuments: ['Advisory Agreement', 'ADV Part 2 Brochure', 'W-9', 'Form CRS', 'Privacy Notice'],
   },
   {
     accountType: 'joint', label: 'Joint Account',
@@ -93,7 +93,7 @@ export const accountRequirements: AccountRequirement[] = [
       { name: 'jointOwnerSSN', label: 'Joint Owner SSN (last 4)', type: 'text', required: true },
       { name: 'jointOwnerDOB', label: 'Joint Owner Date of Birth', type: 'date', required: true },
     ],
-    requiredDocuments: ['Advisory Agreement', 'W-9', 'Form CRS', 'Privacy Notice', 'Joint Account Agreement'],
+    requiredDocuments: ['Advisory Agreement', 'ADV Part 2 Brochure', 'W-9', 'Form CRS', 'Privacy Notice', 'Joint Account Agreement'],
   },
   {
     accountType: 'trust', label: 'Trust Account',
@@ -103,7 +103,7 @@ export const accountRequirements: AccountRequirement[] = [
       { name: 'trustDate', label: 'Trust Formation Date', type: 'date', required: true },
       { name: 'trusteeNames', label: 'Trustee Name(s)', type: 'text', required: true },
     ],
-    requiredDocuments: ['Advisory Agreement', 'W-9', 'Form CRS', 'Privacy Notice', 'Trust Certification', 'Trust Document (first & last pages)'],
+    requiredDocuments: ['Advisory Agreement', 'ADV Part 2 Brochure', 'W-9', 'Form CRS', 'Privacy Notice', 'Trust Certification', 'Trust Document (first & last pages)'],
   },
   {
     accountType: 'traditional_ira', label: 'Traditional IRA',
@@ -111,7 +111,7 @@ export const accountRequirements: AccountRequirement[] = [
       { name: 'beneficiaryName', label: 'Primary Beneficiary', type: 'text', required: true },
       { name: 'beneficiaryRelation', label: 'Beneficiary Relationship', type: 'select', required: true, options: ['Spouse', 'Child', 'Other Family', 'Trust', 'Estate'] },
     ],
-    requiredDocuments: ['Advisory Agreement', 'W-9', 'Form CRS', 'Privacy Notice', 'IRA Application', 'Beneficiary Designation Form'],
+    requiredDocuments: ['Advisory Agreement', 'ADV Part 2 Brochure', 'W-9', 'Form CRS', 'Privacy Notice', 'IRA Application', 'Beneficiary Designation Form'],
   },
   {
     accountType: 'roth_ira', label: 'Roth IRA',
@@ -119,7 +119,7 @@ export const accountRequirements: AccountRequirement[] = [
       { name: 'beneficiaryName', label: 'Primary Beneficiary', type: 'text', required: true },
       { name: 'beneficiaryRelation', label: 'Beneficiary Relationship', type: 'select', required: true, options: ['Spouse', 'Child', 'Other Family', 'Trust', 'Estate'] },
     ],
-    requiredDocuments: ['Advisory Agreement', 'W-9', 'Form CRS', 'Privacy Notice', 'Roth IRA Application', 'Beneficiary Designation Form'],
+    requiredDocuments: ['Advisory Agreement', 'ADV Part 2 Brochure', 'W-9', 'Form CRS', 'Privacy Notice', 'Roth IRA Application', 'Beneficiary Designation Form'],
   },
   {
     accountType: 'entity', label: 'Entity (LLC/Corp)',
@@ -129,6 +129,6 @@ export const accountRequirements: AccountRequirement[] = [
       { name: 'entityType', label: 'Entity Type', type: 'select', required: true, options: ['LLC', 'S-Corp', 'C-Corp', 'Partnership', 'Sole Proprietorship'] },
       { name: 'authorizedSigner', label: 'Authorized Signer', type: 'text', required: true },
     ],
-    requiredDocuments: ['Advisory Agreement', 'W-9', 'Form CRS', 'Privacy Notice', 'Entity Resolution', 'Articles of Incorporation/Organization', 'Operating Agreement'],
+    requiredDocuments: ['Advisory Agreement', 'ADV Part 2 Brochure', 'W-9', 'Form CRS', 'Privacy Notice', 'Entity Resolution', 'Articles of Incorporation/Organization', 'Operating Agreement'],
   },
 ]

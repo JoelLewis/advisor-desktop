@@ -111,7 +111,7 @@ export function BookAnalyticsView() {
                 tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }}
                 tickFormatter={(v: number) => `$${(v / 1_000_000).toFixed(0)}M`}
               />
-              <RechartsTooltip formatter={(value: number) => formatWithConversion(value, 'USD', { compact: true })} />
+              <RechartsTooltip contentStyle={{ background: 'var(--surface-primary)', border: '1px solid var(--border-primary)' }} formatter={(value: number) => formatWithConversion(value, 'USD', { compact: true })} />
               <Bar dataKey="aum" radius={[4, 4, 0, 0]} name="AUM">
                 {analytics.aumBySegment.map((entry) => (
                   <Cell key={entry.segment} fill={SEGMENT_COLORS[entry.segment] ?? '#94A3B8'} />
@@ -137,7 +137,7 @@ export function BookAnalyticsView() {
                 tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }}
                 allowDecimals={false}
               />
-              <RechartsTooltip />
+              <RechartsTooltip contentStyle={{ background: 'var(--surface-primary)', border: '1px solid var(--border-primary)' }} />
               <Bar dataKey="count" fill="var(--accent-blue)" radius={[4, 4, 0, 0]} name="Clients" />
             </BarChart>
           </ResponsiveContainer>
@@ -157,7 +157,7 @@ export function BookAnalyticsView() {
                 tickFormatter={(v: string) => v.slice(5)}
               />
               <YAxis tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} allowDecimals={false} />
-              <RechartsTooltip />
+              <RechartsTooltip contentStyle={{ background: 'var(--surface-primary)', border: '1px solid var(--border-primary)' }} />
               <Legend />
               <Line type="monotone" dataKey="newClients" stroke="var(--accent-green)" strokeWidth={2} name="New Clients" />
               <Line type="monotone" dataKey="attrition" stroke="var(--accent-red)" strokeWidth={2} name="Attrition" />

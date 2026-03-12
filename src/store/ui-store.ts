@@ -3,7 +3,7 @@ import type { RichCardData } from '@/types/rich-card'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 
-type PanelTab = 'ai' | 'messages'
+export type PanelTab = 'ai' | 'messages'
 
 type UIStore = {
   themeMode: ThemeMode

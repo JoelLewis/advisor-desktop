@@ -159,7 +159,7 @@ function computeDriftForAccount(account: typeof accounts[0]): DriftStatus {
     }))
     .filter((d) => d.target > 0 || d.actual > 0)
 
-  const totalDrift = roundTo(assetClassDrifts.reduce((sum, d) => sum + d.drift, 0) / 2, 3)
+  const totalDrift = roundTo(Math.max(...assetClassDrifts.map((d) => d.drift), 0), 3)
 
   return {
     accountId: account.id,
@@ -206,12 +206,7 @@ export const pmsHandlers = [
     const account = findAccount(params.accountId)
     if (!account) return notFound()
     const positions = getPositionsForAccount(account.id, account.totalValue)
-
-    const targets: Record<string, number> = {
-      us_equity: 0.45, intl_equity: 0.12, emerging_markets: 0.03,
-      fixed_income: 0.30, alternatives: 0.05, real_estate: 0.03,
-      commodities: 0.02, cash: 0.05,
-    }
+    const targets = getModelTargets(account.modelId ?? 'mod-001')
 
     const groups = new Map<string, { targetWeight: number; actualWeight: number; positions: typeof positions }>()
     for (const pos of positions) {
@@ -419,7 +414,7 @@ export const pmsHandlers = [
 
     const sorted = [...positions].sort((a, b) => b.weight - a.weight)
     const concentrationMetrics = sorted.map((pos) => {
-      const limit = pos.assetClass === 'cash' ? 0.15 : 0.05
+      const limit = pos.assetClass === 'cash' ? 0.15 : 0.10
       return {
         positionId: pos.id,
         symbol: pos.symbol,

@@ -28,6 +28,7 @@ export function ToggleButton({ label, active, activeClass, onClick, disabled }: 
     <button
       onClick={onClick}
       disabled={disabled}
+      aria-pressed={active}
       className={cn(
         'flex-1 rounded-md border px-3 py-2 text-body font-medium transition-colors',
         active ? activeClass : 'border-border-secondary text-text-secondary hover:bg-surface-tertiary',

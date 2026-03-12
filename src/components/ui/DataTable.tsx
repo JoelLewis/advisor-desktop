@@ -82,6 +82,13 @@ export function DataTable<T>({
                   )}
                   onClick={header.column.getToggleSortingHandler()}
                   style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
+                  aria-sort={
+                    header.column.getCanSort()
+                      ? header.column.getIsSorted() === 'asc' ? 'ascending'
+                        : header.column.getIsSorted() === 'desc' ? 'descending'
+                        : 'none'
+                      : undefined
+                  }
                 >
                   <div className="flex items-center gap-1">
                     {flexRender(header.column.columnDef.header, header.getContext())}
@@ -116,12 +123,19 @@ export function DataTable<T>({
                     row.getIsExpanded() && 'bg-surface-tertiary/50',
                   )}
                   onClick={() => onRowClick?.(row.original)}
+                  {...(onRowClick ? {
+                    tabIndex: 0,
+                    role: 'button',
+                    onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onRowClick(row.original) } },
+                  } : {})}
                 >
                   {expandedContent && (
                     <td className={cn(compact ? 'px-2 py-1.5' : 'px-3 py-2')}>
                       <button
                         onClick={(e) => { e.stopPropagation(); row.toggleExpanded() }}
                         className="rounded p-0.5 text-text-tertiary hover:text-text-primary"
+                        aria-label={row.getIsExpanded() ? 'Collapse row' : 'Expand row'}
+                        aria-expanded={row.getIsExpanded()}
                       >
                         {row.getIsExpanded()
                           ? <ChevronDown className="h-4 w-4" />

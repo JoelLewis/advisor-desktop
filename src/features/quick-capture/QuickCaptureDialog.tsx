@@ -85,8 +85,13 @@ export function QuickCaptureDialog() {
 
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-black/30" onClick={close} />
-      <div className="fixed left-1/2 top-[20%] z-50 w-[480px] -translate-x-1/2 rounded-lg border border-border-primary bg-surface-primary shadow-xl">
+      <div className="fixed inset-0 z-50 bg-black/30" onClick={close} aria-hidden="true" />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Quick Capture"
+        className="fixed left-1/2 top-[20%] z-50 w-[480px] -translate-x-1/2 rounded-lg border border-border-primary bg-surface-primary shadow-xl"
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border-primary px-4 py-3">
           <div className="flex items-center gap-2">
@@ -136,6 +141,7 @@ export function QuickCaptureDialog() {
                 onChange={(e) => setTitle(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit() } }}
                 placeholder="What needs to be done?"
+                aria-label="Task title"
                 className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden"
                 autoComplete="off"
               />
@@ -169,6 +175,7 @@ export function QuickCaptureDialog() {
               onChange={(e) => setTitle(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); handleSubmit() } }}
               placeholder="Quick note..."
+              aria-label="Note content"
               className="w-full resize-none rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden"
               rows={4}
               autoComplete="off"

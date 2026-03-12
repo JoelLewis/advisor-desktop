@@ -48,7 +48,7 @@ function generateRebalanceTrades(accountId: string, taxAware: boolean): Proposed
 
 function generateComplianceChecks(): ComplianceCheck[] {
   return [
-    { rule: 'Concentration limit (5% single name)', status: 'pass', message: 'No single position exceeds 5% of portfolio' },
+    { rule: 'Concentration limit (10% single name)', status: 'pass', message: 'No single position exceeds 10% of portfolio' },
     { rule: 'Restricted securities list', status: 'pass', message: 'No restricted securities in proposed trades' },
     { rule: 'Cash reserve minimum (2%)', status: 'pass', message: 'Post-trade cash balance meets minimum reserve' },
     { rule: 'Tax-loss harvesting window', status: 'warning', message: 'VTI sold within 30 days of purchase — verify no wash sale' },
@@ -125,8 +125,8 @@ export const omsHandlers = [
         constraint: 'Single-security concentration limit',
         severity: estValue > 500_000 ? 'block' : 'warning',
         currentValue: `${((estValue / 2_500_000) * 100).toFixed(1)}%`,
-        limit: '5.0%',
-        message: `Position in ${sym} would represent ${((estValue / 2_500_000) * 100).toFixed(1)}% of portfolio (limit: 5%). ${estValue > 500_000 ? 'Exceeds IPS maximum.' : 'Approaching IPS limit.'}`,
+        limit: '10.0%',
+        message: `Position in ${sym} would represent ${((estValue / 2_500_000) * 100).toFixed(1)}% of portfolio (limit: 10%). ${estValue > 500_000 ? 'Exceeds IPS maximum.' : 'Approaching IPS limit.'}`,
       })
     }
 

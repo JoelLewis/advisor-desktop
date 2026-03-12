@@ -7,6 +7,37 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+// Cache Intl.NumberFormat instances — construction is expensive, called hundreds of times per page
+const formatterCache = new Map<string, Intl.NumberFormat>()
+
+function getCachedFormatter(locale: string, currency: string, decimals: number): Intl.NumberFormat {
+  const key = `${locale}:${currency}:${decimals}`
+  let fmt = formatterCache.get(key)
+  if (!fmt) {
+    fmt = new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    })
+    formatterCache.set(key, fmt)
+  }
+  return fmt
+}
+
+function getCachedNumberFormatter(locale: string, minDecimals: number, maxDecimals: number): Intl.NumberFormat {
+  const key = `num:${locale}:${minDecimals}:${maxDecimals}`
+  let fmt = formatterCache.get(key)
+  if (!fmt) {
+    fmt = new Intl.NumberFormat(locale, {
+      minimumFractionDigits: minDecimals,
+      maximumFractionDigits: maxDecimals,
+    })
+    formatterCache.set(key, fmt)
+  }
+  return fmt
+}
+
 type FormatCurrencyOptions = { compact?: boolean; currency?: CurrencyCode }
 
 export function formatCurrency(
@@ -29,21 +60,13 @@ export function formatCurrency(
     if (absValue >= 1_000) return `${sign}${info.symbol}${(absValue / 1_000).toFixed(0)}K`
   }
 
-  // Fiat currencies: use Intl.NumberFormat
+  // Fiat currencies: use cached Intl.NumberFormat
   if (info.isFiat) {
-    return new Intl.NumberFormat(info.locale, {
-      style: 'currency',
-      currency: currencyCode,
-      minimumFractionDigits: info.decimals,
-      maximumFractionDigits: info.decimals,
-    }).format(value)
+    return getCachedFormatter(info.locale, currencyCode, info.decimals).format(value)
   }
 
   // Crypto/stablecoin: manual format (not valid Intl currency codes)
-  const formatted = new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: Math.min(info.decimals, 6),
-  }).format(value)
+  const formatted = getCachedNumberFormatter('en-US', 2, Math.min(info.decimals, 6)).format(value)
   return `${formatted} ${currencyCode}`
 }
 

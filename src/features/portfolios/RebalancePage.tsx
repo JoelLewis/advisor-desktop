@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, CheckCircle2, AlertTriangle, XCircle, RefreshCw, Loader2, Shield, Layers } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '@/components/ui/Card'
@@ -54,6 +54,7 @@ export function RebalancePage() {
   const [driftThreshold, setDriftThreshold] = useState(3.0)
   const [previews, setPreviews] = useState<RebalancePreview[]>([])
   const [complianceResults, setComplianceResults] = useState<TradeComplianceResult[]>([])
+  const autoAdvancedRef = useRef(false)
   const [selectionMode, setSelectionMode] = useState<SelectionMode>(preselectedModel ? 'model' : 'accounts')
   const [selectedModelId, setSelectedModelId] = useState<string | null>(preselectedModel)
 
@@ -86,14 +87,27 @@ export function RebalancePage() {
     }
   }, [preselectedModel, accounts, driftSummary, driftedAccountsByModel])
 
+  const handlePreview = useCallback(() => {
+    if (selectedIds.size === 0) return
+    previewMutation.mutate(
+      { accountIds: [...selectedIds], driftThreshold: driftThreshold / 100, taxAware },
+      {
+        onSuccess: (data) => {
+          setPreviews(data)
+          setStep('preview')
+        },
+      },
+    )
+  }, [selectedIds, driftThreshold, taxAware, previewMutation])
+
   // Auto-advance to preview if accounts were pre-selected (not model mode)
   useEffect(() => {
+    if (autoAdvancedRef.current) return
     if (preselectedAccounts.length > 0 && !preselectedModel && accounts && driftSummary) {
+      autoAdvancedRef.current = true
       handlePreview()
     }
-    // Only run on initial mount with preselected accounts
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accounts, driftSummary])
+  }, [preselectedAccounts, preselectedModel, accounts, driftSummary, handlePreview])
 
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {
@@ -114,19 +128,6 @@ export function RebalancePage() {
       const modelDriftedIds = driftedAccountsByModel.get(modelId) ?? []
       setSelectedIds(new Set(modelDriftedIds))
     }
-  }
-
-  function handlePreview() {
-    if (selectedIds.size === 0) return
-    previewMutation.mutate(
-      { accountIds: [...selectedIds], driftThreshold: driftThreshold / 100, taxAware },
-      {
-        onSuccess: (data) => {
-          setPreviews(data)
-          setStep('preview')
-        },
-      },
-    )
   }
 
   function handleReviewCompliance() {

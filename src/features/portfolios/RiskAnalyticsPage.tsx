@@ -175,6 +175,7 @@ export function RiskAnalyticsPage() {
                   tickFormatter={(v: number) => formatWithConversion(v, 'USD', { compact: true })}
                 />
                 <RechartsTooltip
+                  contentStyle={{ background: 'var(--surface-primary)', border: '1px solid var(--border-primary)' }}
                   formatter={(value: number) => [formatWithConversion(value, 'USD'), 'Impact']}
                   labelFormatter={(label: number) => `Shock: ${formatShockLabel(sensitivityTab, label)}`}
                 />
@@ -231,6 +232,7 @@ export function RiskAnalyticsPage() {
                     tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }}
                   />
                   <RechartsTooltip
+                    contentStyle={{ background: 'var(--surface-primary)', border: '1px solid var(--border-primary)' }}
                     formatter={(value: number) => [value, 'Frequency']}
                     labelFormatter={(label: number) => `Return: ${formatPercent(label, 1)}`}
                   />

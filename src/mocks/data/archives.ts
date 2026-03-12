@@ -210,8 +210,8 @@ export const archiveRecords: ArchiveRecord[] = [
     retentionPolicy: '7 years (SEC 17a-4)',
     retentionExpiresAt: '2033-02-12',
     createdAt: '2026-02-12T14:30:00Z',
-    originalContent: 'Review of Michael Johnson\'s AAPL concentration (6.8% of portfolio). IPS single-security limit is 5%. AI recommends gradual liquidation over 3 months to reduce to 4.5%. However, client has expressed strong preference to retain position due to sentimental attachment and low cost basis ($45/share). Tax impact of full sale would be approximately $42,000.',
-    finalContent: 'Review of Michael Johnson\'s AAPL concentration (6.8% of portfolio). IPS single-security limit is 5%. AI recommends gradual liquidation over 3 months to reduce to 4.5%. However, client has expressed strong preference to retain position due to sentimental attachment and low cost basis ($45/share). Tax impact of full sale would be approximately $42,000.',
+    originalContent: 'Review of Michael Johnson\'s AAPL concentration (6.8% of portfolio). IPS single-security limit is 10%. AI recommends gradual liquidation over 3 months to reduce to 4.5%. However, client has expressed strong preference to retain position due to sentimental attachment and low cost basis ($45/share). Tax impact of full sale would be approximately $42,000.',
+    finalContent: 'Review of Michael Johnson\'s AAPL concentration (6.8% of portfolio). IPS single-security limit is 10%. AI recommends gradual liquidation over 3 months to reduce to 4.5%. However, client has expressed strong preference to retain position due to sentimental attachment and low cost basis ($45/share). Tax impact of full sale would be approximately $42,000.',
     editSummary: 'Advisor rejected AI recommendation — client prefers to maintain position with documented IPS exception',
   },
   {

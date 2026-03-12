@@ -92,7 +92,7 @@ function TrendingCharts() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" />
               <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-tertiary)' }} tickFormatter={(d: string) => d.slice(5)} />
               <YAxis domain={[97, 100]} tick={{ fontSize: 10, fill: 'var(--text-tertiary)' }} tickFormatter={(v: number) => `${v}%`} width={45} />
-              <RechartsTooltip contentStyle={{ fontSize: 11, border: '1px solid var(--border-primary)' }} />
+              <RechartsTooltip contentStyle={{ fontSize: 11, border: '1px solid var(--border-primary)', background: 'var(--surface-primary)' }} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line type="monotone" dataKey="positionMatchRate" name="Positions" stroke="var(--accent-blue)" strokeWidth={2} dot={false} />
               <Line type="monotone" dataKey="cashMatchRate" name="Cash" stroke="var(--accent-green)" strokeWidth={2} dot={false} />
@@ -110,7 +110,7 @@ function TrendingCharts() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" />
               <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-tertiary)' }} tickFormatter={(d: string) => d.slice(5)} />
               <YAxis tick={{ fontSize: 10, fill: 'var(--text-tertiary)' }} width={30} allowDecimals={false} />
-              <RechartsTooltip contentStyle={{ fontSize: 11, border: '1px solid var(--border-primary)' }} />
+              <RechartsTooltip contentStyle={{ fontSize: 11, border: '1px solid var(--border-primary)', background: 'var(--surface-primary)' }} />
               <Bar dataKey="openBreaks" name="Open Breaks" fill="var(--accent-red)" opacity={0.7} radius={[2, 2, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>

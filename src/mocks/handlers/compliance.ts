@@ -12,22 +12,16 @@ const RESTRICTED_SECURITIES = new Set([
 const SINGLE_NAME_LIMIT = 0.10      // 10% single position
 const CASH_MINIMUM_PCT = 0.02       // 2% cash minimum
 
-// ── Simulated account data for compliance checks ──
-const ACCOUNT_VALUES: Record<string, number> = {
-  'acc-001': 2_450_000, 'acc-002': 1_850_000, 'acc-003': 680_000,
-  'acc-004': 520_000, 'acc-005': 410_000, 'acc-006': 3_200_000,
-  'acc-007': 1_100_000, 'acc-008': 750_000, 'acc-009': 890_000,
-  'acc-010': 1_050_000, 'acc-011': 620_000, 'acc-012': 480_000,
-  'acc-013': 950_000, 'acc-014': 1_300_000, 'acc-015': 720_000,
-}
+// ── Account data derived from accounts.ts for compliance checks ──
+// Values must match the canonical account data
+import { accounts } from '../data/accounts'
 
-const ACCOUNT_CASH: Record<string, number> = {
-  'acc-001': 85_000, 'acc-002': 42_000, 'acc-003': 18_000,
-  'acc-004': 12_000, 'acc-005': 9_500, 'acc-006': 110_000,
-  'acc-007': 28_000, 'acc-008': 16_000, 'acc-009': 22_000,
-  'acc-010': 25_000, 'acc-011': 14_000, 'acc-012': 11_000,
-  'acc-013': 21_000, 'acc-014': 32_000, 'acc-015': 17_000,
-}
+const ACCOUNT_VALUES: Record<string, number> = Object.fromEntries(
+  accounts.map((a) => [a.id, a.totalValue])
+)
+const ACCOUNT_CASH: Record<string, number> = Object.fromEntries(
+  accounts.map((a) => [a.id, a.cashBalance])
+)
 
 // Existing large positions per account (for concentration check)
 const EXISTING_POSITIONS: Record<string, Record<string, number>> = {
@@ -182,7 +176,7 @@ function formatUSD(value: number): string {
 
 const alerts: ComplianceAlert[] = [
   { id: 'comp-001', type: 'Large Wire', severity: 'critical', title: 'Large wire deposit — source-of-funds required', description: '$250,000 incoming wire to Richard Anderson (acc-022). BSA/AML documentation required before funds release.', entityType: 'account', entityId: 'acc-022', reviewStatus: 'pending', createdAt: '2026-02-24T15:10:00Z' },
-  { id: 'comp-002', type: 'Concentration', severity: 'warning', title: 'Single-name concentration — AAPL in Johnson Trust', description: 'AAPL position at 7.6% of account value exceeds 5% single-name guideline.', entityType: 'account', entityId: 'acc-001', reviewStatus: 'in_review', createdAt: '2026-02-23T08:00:00Z' },
+  { id: 'comp-002', type: 'Concentration', severity: 'warning', title: 'Single-name concentration — AAPL in Johnson Trust', description: 'AAPL position at 7.6% of account value approaching 10% single-name guideline.', entityType: 'account', entityId: 'acc-001', reviewStatus: 'in_review', createdAt: '2026-02-23T08:00:00Z' },
   { id: 'comp-003', type: 'Suitability', severity: 'warning', title: 'Suitability review — Foster account opening', description: 'New individual brokerage for William Foster. Risk tolerance assessment and investment experience verification needed.', entityType: 'client', entityId: 'cli-017', reviewStatus: 'in_review', createdAt: '2026-02-22T14:00:00Z' },
   { id: 'comp-004', type: 'Trade Pre-clearance', severity: 'info', title: 'Pre-trade compliance check passed — Martinez rebalance', description: 'All proposed trades for Michael Martinez rebalance cleared compliance screening.', entityType: 'trade', entityId: 'acc-015', reviewStatus: 'approved', createdAt: '2026-02-22T09:30:00Z', resolvedAt: '2026-02-22T09:35:00Z' },
   { id: 'comp-005', type: 'Document Expiry', severity: 'warning', title: 'IPS approaching annual review — Thompson', description: 'James Thompson IPS last reviewed Oct 2025. Annual review due by Oct 2026.', entityType: 'document', entityId: 'doc-014', reviewStatus: 'pending', createdAt: '2026-02-20T08:00:00Z' },

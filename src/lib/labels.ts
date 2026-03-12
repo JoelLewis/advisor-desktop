@@ -26,12 +26,22 @@ export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   trust_irrevocable: 'Irrevocable Trust',
   ugma_utma: 'UGMA/UTMA',
   entity: 'Entity',
+  inherited_ira: 'Inherited IRA',
+  simple_ira: 'SIMPLE IRA',
 }
 
-export function taxTreatmentBadgeVariant(treatment: TaxTreatment): 'green' | 'yellow' | 'default' {
+export function taxTreatmentBadgeVariant(treatment: TaxTreatment): 'green' | 'yellow' | 'purple' | 'default' {
   if (treatment === 'tax_free') return 'green'
   if (treatment === 'tax_deferred') return 'yellow'
+  if (treatment === 'trust_taxable') return 'purple'
   return 'default'
+}
+
+export const TAX_TREATMENT_LABELS: Record<TaxTreatment, string> = {
+  taxable: 'Taxable',
+  tax_deferred: 'Tax Deferred',
+  tax_free: 'Tax Free',
+  trust_taxable: 'Trust (Compressed)',
 }
 
 export const PRIORITY_VARIANTS = {

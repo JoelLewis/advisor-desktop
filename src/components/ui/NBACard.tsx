@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import {
   RefreshCw, DollarSign, Target, AlertTriangle,
   Heart, Shield, TrendingUp, ChevronDown, ChevronUp,
@@ -109,7 +109,7 @@ type NBACardProps = {
   onAction?: (id: string) => void
 }
 
-export function NBACard({ nba, onDismiss, onSnooze, onAction }: NBACardProps) {
+export const NBACard = memo(function NBACard({ nba, onDismiss, onSnooze, onAction }: NBACardProps) {
   const [expanded, setExpanded] = useState(false)
   const [templatesOpen, setTemplatesOpen] = useState(false)
   const [auditOpen, setAuditOpen] = useState(false)
@@ -364,5 +364,4 @@ export function NBACard({ nba, onDismiss, onSnooze, onAction }: NBACardProps) {
       </div>
     </div>
   )
-}
-
+})

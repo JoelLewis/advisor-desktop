@@ -26,6 +26,7 @@ const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   roth_ira: 'Roth IRA', sep_ira: 'SEP IRA', '401k': '401(k)',
   roth_401k: 'Roth 401(k)', '529': '529', trust_revocable: 'Rev Trust',
   trust_irrevocable: 'Irrev Trust', ugma_utma: 'UGMA/UTMA', entity: 'Entity',
+  inherited_ira: 'Inherited IRA', simple_ira: 'SIMPLE IRA',
 }
 
 const VIEW_OPTIONS: { id: PortfolioView; label: string }[] = [

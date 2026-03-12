@@ -22,12 +22,13 @@ type CardHeaderProps = {
   children: React.ReactNode
   className?: string
   action?: React.ReactNode
+  as?: 'h1' | 'h2' | 'h3' | 'h4'
 }
 
-export function CardHeader({ children, className, action }: CardHeaderProps) {
+export function CardHeader({ children, className, action, as: Tag = 'h2' }: CardHeaderProps) {
   return (
     <div className={cn('flex items-center justify-between border-b border-border-primary p-4', className)}>
-      <div className="text-section-header text-text-primary">{children}</div>
+      <Tag className="text-section-header text-text-primary">{children}</Tag>
       {action}
     </div>
   )

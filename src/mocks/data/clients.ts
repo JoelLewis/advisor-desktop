@@ -189,7 +189,7 @@ export const clients: Client[] = [
       address: { street1: '720 Park Ave', city: 'New York', state: 'NY', postalCode: '10021', country: 'US' },
       preferredContactMethod: 'email',
     },
-    dateOfBirth: '1955-08-30',
+    dateOfBirth: '1953-08-30',
     occupation: 'Retired Surgeon',
     createdAt: '2017-11-05',
     updatedAt: '2025-12-08',

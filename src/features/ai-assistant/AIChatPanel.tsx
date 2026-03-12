@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { useLocation } from 'react-router-dom'
 import { X, Maximize2, Minimize2, Send, Sparkles, MessageSquare } from 'lucide-react'
 import { ChatBubble } from './ChatBubble'
 import { SuggestedPrompts } from './SuggestedPrompts'
@@ -6,14 +7,12 @@ import { ActionTemplateGrid } from './ActionTemplateGrid'
 import { ContextBriefing } from './ContextBriefing'
 import { TradeTicketDialog } from '@/features/portfolios/TradeTicketDialog'
 import { MessagingContent } from '@/features/messaging/MessagingContent'
-import { useUIStore } from '@/store/ui-store'
+import { useUIStore, type PanelTab } from '@/store/ui-store'
 import { useNavigationStore } from '@/store/navigation-store'
 import { useSendMessage } from '@/hooks/use-ai'
 import { useBreakpoint } from '@/hooks/use-breakpoint'
 import { cn } from '@/lib/utils'
 import type { ChatMessage, ChatContext, TradeSuggestion } from '@/types/ai'
-
-type PanelTab = 'ai' | 'messages'
 
 const TAB_CONFIG: { id: PanelTab; icon: typeof Sparkles; label: string; activeColor: string }[] = [
   { id: 'ai', icon: Sparkles, label: 'AI', activeColor: 'bg-accent-purple/10 text-accent-purple' },
@@ -89,7 +88,8 @@ export function AIChatPanel() {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const sendMutation = useSendMessage()
 
-  const screenType = deriveScreenType(window.location.pathname)
+  const { pathname } = useLocation()
+  const screenType = deriveScreenType(pathname)
 
   const buildContext = useCallback((): ChatContext => ({
     screenType,
@@ -103,7 +103,7 @@ export function AIChatPanel() {
     if (!trimmed) return
 
     const userMessage: ChatMessage = {
-      id: `msg-user-${Date.now()}`,
+      id: crypto.randomUUID(),
       role: 'user',
       content: trimmed,
       timestamp: new Date().toISOString(),
@@ -137,7 +137,7 @@ export function AIChatPanel() {
   useEffect(() => {
     if (pendingShareCard && panelTab === 'ai') {
       const userMessage: ChatMessage = {
-        id: `msg-share-${Date.now()}`,
+        id: crypto.randomUUID(),
         role: 'user',
         content: `Analyze ${pendingShareCard.entityName}`,
         timestamp: new Date().toISOString(),
@@ -192,7 +192,7 @@ export function AIChatPanel() {
           <div
             onMouseDown={handleMouseDown}
             className={cn(
-              'absolute left-0 top-0 bottom-0 w-1 cursor-col-resize transition-colors hover:bg-accent-blue/30',
+              'absolute -left-1 top-0 bottom-0 w-2 cursor-col-resize transition-colors hover:bg-accent-blue/30',
               isDragging && 'bg-accent-blue/40',
             )}
             role="separator"
@@ -296,7 +296,13 @@ export function AIChatPanel() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask AI anything..."
+                placeholder={
+                  screenType === 'client_detail' ? 'Ask about this client...'
+                    : screenType === 'account_detail' ? 'Ask about this account...'
+                    : screenType === 'household_detail' ? 'Ask about this household...'
+                    : screenType === 'trading' ? 'Ask about trades or market data...'
+                    : 'Ask AI anything...'
+                }
                 rows={1}
                 className="flex-1 resize-none bg-transparent text-caption text-text-primary placeholder:text-text-tertiary focus:outline-hidden max-h-24 scrollbar-thin"
               />

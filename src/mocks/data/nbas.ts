@@ -50,13 +50,13 @@ export const nbas: NBA[] = [
   // ── Planning ──
   {
     id: 'nba-004', title: 'RMD deadline approaching — James Thompson',
-    description: "James Thompson turns 73 this year. His first Required Minimum Distribution of ~$142,000 must be taken by April 1, 2027, but taking it in 2026 avoids a double-RMD year.",
+    description: "James Thompson turns 73 this year. His first Required Minimum Distribution of ~$83,000 (based on $2.2M IRA balance ÷ 26.5 Uniform Lifetime Table factor) must be taken by April 1, 2027, but taking it in 2026 avoids a double-RMD year.",
     category: 'planning', priority: 'high',
     scoring: { urgency: 80, impact: 70, efficiency: 65, relationship: 60, confidence: 95, composite: 76 },
     clients: [{ id: 'cli-008', name: 'James Thompson' }],
     trigger: { source: 'planning', condition: 'rmd_age_threshold', value: 'age 73 in 2026', detectedAt: '2026-01-15T08:00:00Z' },
     suggestedAction: 'Schedule RMD planning meeting; model tax-optimal distribution strategy',
-    estimatedImpact: 142_000, createdAt: '2026-01-15T08:30:00Z', dismissed: false,
+    estimatedImpact: 83_000, createdAt: '2026-01-15T08:30:00Z', dismissed: false,
     actionRoute: { path: '/clients/cli-008', openAI: true, aiMessage: 'Prepare RMD planning analysis for James Thompson — model tax-optimal distribution strategy for 2026' },
   },
   {

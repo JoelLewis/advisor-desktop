@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import {
   ArrowRightLeft, Calendar, Mail, Phone, FileText,
   RefreshCw, Sparkles, Shield, Activity, Zap,
@@ -37,7 +38,7 @@ type ActivityItemProps = {
   onClick?: (item: ActivityItemType) => void
 }
 
-export function ActivityItemRow({ item, onClick }: ActivityItemProps) {
+export const ActivityItemRow = memo(function ActivityItemRow({ item, onClick }: ActivityItemProps) {
   const Icon = ICON_MAP[item.type]
 
   return (
@@ -74,4 +75,4 @@ export function ActivityItemRow({ item, onClick }: ActivityItemProps) {
       )}
     </button>
   )
-}
+})

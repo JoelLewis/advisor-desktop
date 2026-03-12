@@ -8,6 +8,7 @@ export function usePositions(accountId: string) {
     queryKey: ['positions', accountId],
     queryFn: () => getPositions(accountId),
     enabled: !!accountId,
+    staleTime: 60_000,
   })
 }
 
@@ -16,6 +17,7 @@ export function useHoldingGroups(accountId: string) {
     queryKey: ['holdings', accountId],
     queryFn: () => getHoldingGroups(accountId),
     enabled: !!accountId,
+    staleTime: 60_000,
   })
 }
 
@@ -24,6 +26,7 @@ export function useDrift(accountId: string) {
     queryKey: ['drift', accountId],
     queryFn: () => getDrift(accountId),
     enabled: !!accountId,
+    staleTime: 30_000,
   })
 }
 
@@ -32,6 +35,7 @@ export function usePerformance(accountId: string) {
     queryKey: ['performance', accountId],
     queryFn: () => getPerformance(accountId),
     enabled: !!accountId,
+    staleTime: 60_000,
   })
 }
 
@@ -40,6 +44,7 @@ export function useBenchmark(accountId: string) {
     queryKey: ['benchmark', accountId],
     queryFn: () => getBenchmarkComparison(accountId),
     enabled: !!accountId,
+    staleTime: 60_000,
   })
 }
 
@@ -48,6 +53,7 @@ export function useAttribution(accountId: string, period?: string) {
     queryKey: ['attribution', accountId, period],
     queryFn: () => getAttribution(accountId, period),
     enabled: !!accountId,
+    staleTime: 60_000,
   })
 }
 
@@ -56,6 +62,7 @@ export function useRiskMetrics(accountId: string) {
     queryKey: ['risk', accountId],
     queryFn: () => getRiskMetrics(accountId),
     enabled: !!accountId,
+    staleTime: 60_000,
   })
 }
 
@@ -64,6 +71,7 @@ export function useFactorExposures(accountId: string) {
     queryKey: ['factors', accountId],
     queryFn: () => getFactorExposures(accountId),
     enabled: !!accountId,
+    staleTime: 60_000,
   })
 }
 
@@ -72,6 +80,7 @@ export function useStressScenarios(accountId: string) {
     queryKey: ['stress', accountId],
     queryFn: () => getStressScenarios(accountId),
     enabled: !!accountId,
+    staleTime: 60_000,
   })
 }
 
@@ -79,6 +88,7 @@ export function useModels() {
   return useQuery({
     queryKey: ['models'],
     queryFn: () => getModels(),
+    staleTime: 60_000,
   })
 }
 
@@ -86,6 +96,7 @@ export function useDriftSummary() {
   return useQuery({
     queryKey: ['drift', 'summary'],
     queryFn: () => getDriftSummary(),
+    staleTime: 30_000,
   })
 }
 
@@ -94,6 +105,7 @@ export function useHouseholdPositions(householdId: string) {
     queryKey: ['household-positions', householdId],
     queryFn: () => getHouseholdPositions(householdId),
     enabled: !!householdId,
+    staleTime: 60_000,
   })
 }
 
@@ -102,6 +114,7 @@ export function useHouseholdDrift(householdId: string) {
     queryKey: ['household-drift', householdId],
     queryFn: () => getHouseholdDrift(householdId),
     enabled: !!householdId,
+    staleTime: 30_000,
   })
 }
 
@@ -110,6 +123,7 @@ export function useHouseholdAllocation(householdId: string) {
     queryKey: ['household-allocation', householdId],
     queryFn: () => getHouseholdAllocation(householdId),
     enabled: !!householdId,
+    staleTime: 60_000,
   })
 }
 
@@ -118,6 +132,7 @@ export function useSensitivity(accountId: string) {
     queryKey: ['sensitivity', accountId],
     queryFn: () => getSensitivity(accountId),
     enabled: !!accountId,
+    staleTime: 60_000,
   })
 }
 
@@ -126,6 +141,7 @@ export function useConcentration(accountId: string) {
     queryKey: ['concentration', accountId],
     queryFn: () => getConcentration(accountId),
     enabled: !!accountId,
+    staleTime: 60_000,
   })
 }
 

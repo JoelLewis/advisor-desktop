@@ -1,4 +1,4 @@
-# iDeal Desktop
+# Advisor Desktop
 
 AI-native wealth management workstation for financial advisors. Built as a fully functional prototype with 20+ pages, 130+ mock API endpoints, and deep AI integration throughout every workflow.
 
@@ -10,7 +10,7 @@ AI-native wealth management workstation for financial advisors. Built as a fully
 
 ## Overview
 
-iDeal Desktop reimagines the financial advisor workstation with AI as a first-class participant in every workflow. Rather than bolting a chatbot onto a traditional dashboard, AI is woven into portfolio management, client engagement, compliance, and practice operations — suggesting next-best actions, drafting communications, pre-checking trades for compliance, and autonomously executing standing rules.
+Advisor Desktop reimagines the financial advisor workstation with AI as a first-class participant in every workflow. Rather than bolting a chatbot onto a traditional dashboard, AI is woven into portfolio management, client engagement, compliance, and practice operations — suggesting next-best actions, drafting communications, pre-checking trades for compliance, and autonomously executing standing rules.
 
 The entire app runs client-side with [MSW](https://mswjs.io/) intercepting all API calls, making it a self-contained, zero-backend demo that's ready to connect to real services.
 

@@ -6,7 +6,7 @@ const VARIANTS = {
   green: 'bg-accent-green/10 text-accent-green',
   red: 'bg-accent-red/10 text-accent-red',
   purple: 'bg-accent-purple/10 text-accent-purple',
-  yellow: 'bg-amber-50 text-amber-700',
+  yellow: 'bg-amber-100 text-amber-700',
 } as const
 
 type BadgeProps = {

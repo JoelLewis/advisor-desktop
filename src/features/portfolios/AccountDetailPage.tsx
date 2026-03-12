@@ -116,7 +116,7 @@ function makePositionColumns(onTrade?: (symbol: string, side: 'buy' | 'sell', as
 
 const benchmarkColumns: ColumnDef<BenchmarkComparison, unknown>[] = [
   { accessorKey: 'period', header: 'Period', cell: ({ row }) => <span className="font-mono uppercase">{row.original.period}</span>, size: 80 },
-  { accessorKey: 'portfolioReturn', header: 'Portfolio', cell: ({ row }) => <span className="font-mono">{formatPercent(row.original.portfolioReturn * 100)}</span>, size: 100 },
+  { accessorKey: 'portfolioReturn', header: 'Portfolio (TWR)', cell: ({ row }) => <span className="font-mono">{formatPercent(row.original.portfolioReturn * 100)}</span>, size: 100 },
   { accessorKey: 'benchmarkReturn', header: 'Benchmark', cell: ({ row }) => <span className="font-mono">{formatPercent(row.original.benchmarkReturn * 100)}</span>, size: 100 },
   {
     accessorKey: 'alpha', header: 'Alpha',
@@ -418,7 +418,12 @@ export function AccountDetailPage() {
       content: (
         <div className="space-y-6">
           <Card>
-            <CardHeader>Growth of $100</CardHeader>
+            <CardHeader>
+              <div className="flex items-baseline gap-2">
+                <span>Growth of $100</span>
+                <span className="text-caption font-normal text-text-tertiary">(TWR)</span>
+              </div>
+            </CardHeader>
             <CardContent>
               {performance && (
                 <ResponsiveContainer width="100%" height={320}>
@@ -426,7 +431,7 @@ export function AccountDetailPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" />
                     <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} tickFormatter={(v: string) => v.slice(5)} />
                     <YAxis tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} domain={['auto', 'auto']} />
-                    <RechartsTooltip />
+                    <RechartsTooltip contentStyle={{ background: 'var(--surface-primary)', border: '1px solid var(--border-primary)' }} />
                     <Line type="monotone" dataKey="value" stroke="var(--accent-blue)" strokeWidth={2} dot={false} name="Portfolio" />
                     <Line type="monotone" dataKey="benchmark" stroke="var(--text-tertiary)" strokeWidth={1.5} dot={false} strokeDasharray="4 4" name="Benchmark" />
                     <Legend />
@@ -438,7 +443,12 @@ export function AccountDetailPage() {
 
           {benchmark && (
             <Card>
-              <CardHeader>Benchmark Comparison</CardHeader>
+              <CardHeader>
+                <div className="flex items-baseline gap-2">
+                  <span>Benchmark Comparison</span>
+                  <span className="text-caption font-normal text-text-tertiary">(TWR)</span>
+                </div>
+              </CardHeader>
               <DataTable data={benchmark} columns={benchmarkColumns} compact />
             </Card>
           )}
@@ -476,7 +486,7 @@ export function AccountDetailPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" />
                     <XAxis type="number" tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} />
                     <YAxis type="category" dataKey="factor" tick={{ fontSize: 12, fill: 'var(--text-secondary)' }} width={80} />
-                    <RechartsTooltip />
+                    <RechartsTooltip contentStyle={{ background: 'var(--surface-primary)', border: '1px solid var(--border-primary)' }} />
                     <Bar dataKey="exposure" name="Portfolio" radius={[0, 4, 4, 0]}>
                       {factors.map((f, i) => (
                         <Cell key={i} fill={f.exposure >= 0 ? FACTOR_COLORS.positive : FACTOR_COLORS.negative} />

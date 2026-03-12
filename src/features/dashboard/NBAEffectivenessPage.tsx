@@ -82,7 +82,7 @@ export function NBAEffectivenessPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" />
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} />
                 <YAxis tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} />
-                <RechartsTooltip />
+                <RechartsTooltip contentStyle={{ background: 'var(--surface-primary)', border: '1px solid var(--border-primary)' }} />
                 <Legend />
                 <Bar dataKey="accepted" fill="#059669" name="Accepted" radius={[2, 2, 0, 0]} />
                 <Bar dataKey="dismissed" fill="#DC2626" name="Dismissed" radius={[2, 2, 0, 0]} />
@@ -101,7 +101,7 @@ export function NBAEffectivenessPage() {
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} />
                 <YAxis yAxisId="left" tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} domain={[0, 100]} unit="%" />
                 <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}K`} />
-                <RechartsTooltip formatter={(value: number, name: string) => name === 'Revenue Impact' ? formatWithConversion(value, 'USD', { compact: true }) : `${value}%`} />
+                <RechartsTooltip contentStyle={{ background: 'var(--surface-primary)', border: '1px solid var(--border-primary)' }} formatter={(value: number, name: string) => name === 'Revenue Impact' ? formatWithConversion(value, 'USD', { compact: true }) : `${value}%`} />
                 <Legend />
                 <Line yAxisId="left" type="monotone" dataKey="completionRate" stroke="#2563EB" strokeWidth={2} dot={{ r: 3 }} name="Completion Rate" />
                 <Line yAxisId="right" type="monotone" dataKey="revenueImpact" stroke="#7C3AED" strokeWidth={2} dot={{ r: 3 }} name="Revenue Impact" />

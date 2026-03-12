@@ -128,12 +128,14 @@
 }
 
 @utility text-mono {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 13px;
   line-height: 20px;
   font-weight: 400;
 }
 
 @utility text-mono-sm {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 11px;
   line-height: 16px;
   font-weight: 400;

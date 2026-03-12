@@ -13,11 +13,13 @@ type AccountType =
   | 'trust_revocable'
   | 'trust_irrevocable'
   | 'ugma_utma'
-  | 'entity';
+  | 'entity'
+  | 'inherited_ira'
+  | 'simple_ira';
 
 type AccountStatus = 'active' | 'pending' | 'frozen' | 'closed';
 
-type TaxTreatment = 'taxable' | 'tax_deferred' | 'tax_free';
+type TaxTreatment = 'taxable' | 'tax_deferred' | 'tax_free' | 'trust_taxable';
 
 type UMASleeve = {
   id: string;
