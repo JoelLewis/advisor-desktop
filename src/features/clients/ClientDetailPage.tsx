@@ -5,6 +5,7 @@ import { Sparkles, FileText, Pin, Send, BarChart3 } from 'lucide-react'
 import { ClientHeader } from '@/components/ui/ClientHeader'
 import { TabLayout } from '@/components/ui/TabLayout'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { QueryErrorBanner } from '@/components/ui/QueryErrorBanner'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { AllocationChart } from '@/components/ui/AllocationChart'
 import { GoalProgressCard } from '@/components/ui/GoalProgressCard'
@@ -142,7 +143,7 @@ export function ClientDetailPage() {
   const { clientId } = useParams()
   const navigate = useNavigate()
   const id = clientId ?? ''
-  const { data: client, isLoading } = useClient(id)
+  const { data: client, isLoading, isError, error, refetch } = useClient(id)
   const { data: accounts } = useAccounts(clientId ? { clientId } : undefined)
   const { data: plan } = usePlan(id)
   const { data: documents } = useClientDocuments(id)
@@ -156,6 +157,10 @@ export function ClientDetailPage() {
 
   if (isLoading) {
     return <div className="space-y-4"><Skeleton className="h-24" /><Skeleton className="h-96" /></div>
+  }
+
+  if (isError) {
+    return <QueryErrorBanner error={error} onRetry={refetch} message="Failed to load client" />
   }
 
   if (!client) {

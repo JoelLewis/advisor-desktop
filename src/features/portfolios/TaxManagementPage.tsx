@@ -1,32 +1,23 @@
 import { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Scissors, AlertTriangle, Calendar, ArrowRight } from 'lucide-react'
-import { Card, CardHeader, CardContent } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
+import { ArrowLeft } from 'lucide-react'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { QueryErrorBanner } from '@/components/ui/QueryErrorBanner'
 import { useAccount } from '@/hooks/use-accounts'
 import { useTaxLots } from '@/hooks/use-tax-lots'
 import { usePositions } from '@/hooks/use-portfolio'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
-import { CurrencyValue } from '@/components/ui/CurrencyValue'
-import { formatDate, cn } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import type { TaxLot } from '@/types/portfolio'
-import type { CurrencyCode } from '@/types/currency'
+import { MOCK_NOW } from './tax/shared'
+import { COST_BASIS_METHODS, type CostBasisMethod } from './tax/CostBasisMethodCard'
+import { TaxSummaryCards } from './tax/TaxSummaryCards'
+import { CostBasisMethodCard } from './tax/CostBasisMethodCard'
+import { TaxLotsView } from './tax/TaxLotsView'
+import { HarvestScannerView } from './tax/HarvestScannerView'
+import { WashSaleCalendarView } from './tax/WashSaleCalendarView'
 
 type ViewMode = 'lots' | 'harvest' | 'calendar'
-
-const COST_BASIS_METHODS = ['FIFO', 'LIFO', 'HIFO', 'AvgCost', 'SpecID'] as const
-type CostBasisMethod = (typeof COST_BASIS_METHODS)[number]
-
-const COST_BASIS_DESCRIPTIONS: Record<CostBasisMethod, string> = {
-  FIFO: 'First In, First Out — sells oldest lots first',
-  LIFO: 'Last In, First Out — sells newest lots first',
-  HIFO: 'Highest In, First Out — sells highest cost lots first (minimizes gains)',
-  AvgCost: 'Average Cost — uses average cost basis across all lots',
-  SpecID: 'Specific Identification — manually select which lots to sell',
-}
-
-const HOLDING_LABELS: Record<string, string> = { short: 'Short-Term', long: 'Long-Term' }
 
 const VIEW_TABS: { id: ViewMode; label: string }[] = [
   { id: 'lots', label: 'All Tax Lots' },
@@ -54,7 +45,7 @@ export function TaxManagementPage() {
   const [selectedLots, setSelectedLots] = useState<Set<string>>(new Set())
   const [costBasisMethod, setCostBasisMethod] = useState<CostBasisMethod>('FIFO')
 
-  const { data: account, isLoading: accountLoading } = useAccount(id)
+  const { data: account, isLoading: accountLoading, isError, error, refetch } = useAccount(id)
   const { data: taxLots, isLoading: lotsLoading } = useTaxLots(id)
   const { data: positions } = usePositions(id)
   const { formatWithConversion } = useFormatCurrency()
@@ -136,12 +127,8 @@ export function TaxManagementPage() {
 
   // Calendar: 61-day wash sale windows (30 days before + 30 days after sale)
   const washSaleWindows = useMemo(() => {
-    const now = new Date('2026-02-25')
+    const now = new Date(MOCK_NOW)
     return (taxLots ?? [])
-      .filter((lot) => {
-        const window = getWashSaleWindow(lot.purchaseDate)
-        return new Date(window.end) >= now
-      })
       .map((lot) => {
         const window = getWashSaleWindow(lot.purchaseDate)
         return {
@@ -151,6 +138,7 @@ export function TaxManagementPage() {
           position: positionMap.get(lot.positionId),
         }
       })
+      .filter((item) => new Date(item.washSaleEnd) >= now)
       .sort((a, b) => a.washSaleEnd.localeCompare(b.washSaleEnd))
   }, [taxLots, positionMap])
 
@@ -164,6 +152,10 @@ export function TaxManagementPage() {
         <Skeleton className="h-96" />
       </div>
     )
+  }
+
+  if (isError) {
+    return <QueryErrorBanner error={error} onRetry={refetch} message="Failed to load tax data" />
   }
 
   if (!account) {
@@ -183,6 +175,8 @@ export function TaxManagementPage() {
     .filter((l) => selectedLots.has(l.id))
     .reduce((s, l) => s + Math.abs(l.gainLoss), 0)
 
+  const baseCurrency = account.baseCurrency ?? 'USD'
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -198,110 +192,23 @@ export function TaxManagementPage() {
 
       {/* Summary cards */}
       {stats && (
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-          <Card>
-            <CardContent>
-              <p className="text-caption text-text-secondary">Unrealized Gains</p>
-              <p className="font-mono text-section-header text-accent-green">{formatWithConversion(stats.totalUnrealizedGain, account.baseCurrency ?? 'USD', { compact: true })}</p>
-              <div className="mt-1 flex gap-3 text-caption">
-                <span className="text-text-tertiary">ST: {formatWithConversion(stats.shortTermGain, account.baseCurrency ?? 'USD', { compact: true })}</span>
-                <span className="text-text-tertiary">LT: {formatWithConversion(stats.longTermGain, account.baseCurrency ?? 'USD', { compact: true })}</span>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent>
-              <p className="text-caption text-text-secondary">Unrealized Losses</p>
-              <p className="font-mono text-section-header text-accent-red">{formatWithConversion(stats.totalUnrealizedLoss, account.baseCurrency ?? 'USD', { compact: true })}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent>
-              <p className="text-caption text-text-secondary">Harvestable Losses</p>
-              <p className="font-mono text-section-header text-accent-blue">{formatWithConversion(stats.harvestableAmount, account.baseCurrency ?? 'USD', { compact: true })}</p>
-              <p className="mt-1 text-caption text-text-tertiary">{harvestOpportunities.length} lot{harvestOpportunities.length !== 1 ? 's' : ''}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent>
-              <p className="text-caption text-text-secondary">Wash Sale Windows</p>
-              <p className={cn('font-mono text-section-header', stats.washSaleCount > 0 ? 'text-amber-600' : 'text-accent-green')}>
-                {washSaleWindows.length}
-              </p>
-              <p className="mt-1 text-caption text-text-tertiary">active in next 30d</p>
-            </CardContent>
-          </Card>
-        </div>
+        <TaxSummaryCards
+          stats={stats}
+          washSaleWindowsCount={washSaleWindows.length}
+          harvestOpportunitiesLength={harvestOpportunities.length}
+          formatWithConversion={formatWithConversion}
+          baseCurrency={baseCurrency}
+        />
       )}
 
       {/* Cost Basis Method */}
-      <Card>
-        <CardHeader>Cost Basis Method</CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-4">
-            <select
-              value={costBasisMethod}
-              onChange={(e) => setCostBasisMethod(e.target.value as CostBasisMethod)}
-              className="rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-hidden"
-            >
-              {COST_BASIS_METHODS.map((m) => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
-            <span className="text-caption text-text-secondary">
-              {COST_BASIS_DESCRIPTIONS[costBasisMethod]}
-            </span>
-          </div>
-
-          {/* Impact comparison table */}
-          {methodImpact && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-caption">
-                <thead>
-                  <tr className="border-b border-border-primary text-text-tertiary">
-                    <th className="px-3 py-2 text-left font-medium">Method</th>
-                    <th className="px-3 py-2 text-right font-medium">Realized Gain/Loss</th>
-                    <th className="px-3 py-2 text-right font-medium">Short-Term</th>
-                    <th className="px-3 py-2 text-right font-medium">Long-Term</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {methodImpact.map((row) => (
-                    <tr
-                      key={row.method}
-                      className={cn(
-                        'border-b border-border-primary transition-colors',
-                        row.method === costBasisMethod
-                          ? 'bg-accent-blue/5 font-medium'
-                          : 'hover:bg-surface-tertiary',
-                      )}
-                    >
-                      <td className="px-3 py-2 text-text-primary">
-                        {row.method}
-                        {row.method === costBasisMethod && (
-                          <Badge variant="blue" className="ml-2 text-[9px]">Active</Badge>
-                        )}
-                      </td>
-                      <td className={cn('px-3 py-2 text-right font-mono', row.realizedGain >= 0 ? 'text-accent-green' : 'text-accent-red')}>
-                        {formatWithConversion(row.realizedGain, account.baseCurrency ?? 'USD', { compact: true })}
-                      </td>
-                      <td className={cn('px-3 py-2 text-right font-mono', row.shortTermGain >= 0 ? 'text-accent-green' : 'text-accent-red')}>
-                        {formatWithConversion(row.shortTermGain, account.baseCurrency ?? 'USD', { compact: true })}
-                      </td>
-                      <td className={cn('px-3 py-2 text-right font-mono', row.longTermGain >= 0 ? 'text-accent-green' : 'text-accent-red')}>
-                        {formatWithConversion(row.longTermGain, account.baseCurrency ?? 'USD', { compact: true })}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <p className="mt-2 text-[11px] text-text-tertiary">
-                Impact simulated on hypothetical 10% position reduction across all holdings.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <CostBasisMethodCard
+        costBasisMethod={costBasisMethod}
+        setCostBasisMethod={setCostBasisMethod}
+        methodImpact={methodImpact}
+        formatWithConversion={formatWithConversion}
+        baseCurrency={baseCurrency}
+      />
 
       {/* View toggle */}
       <div className="flex items-center gap-1 rounded-lg border border-border-primary bg-surface-primary p-1">
@@ -323,231 +230,30 @@ export function TaxManagementPage() {
 
       {/* Tax Lots Table */}
       {view === 'lots' && (
-        <Card>
-          <CardHeader>Tax Lots ({taxLots?.length ?? 0})</CardHeader>
-          <CardContent className="p-0">
-            <div className="max-h-[600px] overflow-y-auto scrollbar-thin">
-              <table className="w-full">
-                <thead className="sticky top-0 bg-surface-primary">
-                  <tr className="border-b border-border-primary">
-                    <Th>Symbol</Th>
-                    <Th>Purchase Date</Th>
-                    <Th>Holding</Th>
-                    <Th align="right">Qty</Th>
-                    <Th align="right">Cost Basis</Th>
-                    <Th align="right">Current Value</Th>
-                    <Th align="right">Gain/Loss</Th>
-                    <Th align="center">Wash Sale</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(taxLots ?? []).map((lot) => (
-                    <TaxLotRow key={lot.id} lot={lot} positionMap={positionMap} baseCurrency={account.baseCurrency ?? 'USD'} />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+        <TaxLotsView
+          taxLots={taxLots ?? []}
+          positionMap={positionMap}
+          baseCurrency={baseCurrency}
+        />
       )}
 
       {/* Harvest Scanner */}
       {view === 'harvest' && (
-        <div className="space-y-4">
-          {selectedLots.size > 0 && (
-            <Card className="border-l-[3px] border-l-accent-blue">
-              <CardContent className="flex items-center justify-between">
-                <div>
-                  <p className="text-body-strong">{selectedLots.size} lot{selectedLots.size !== 1 ? 's' : ''} selected</p>
-                  <p className="text-caption text-text-secondary">
-                    Estimated tax savings: <span className="font-mono font-medium text-accent-green">{formatWithConversion(selectedHarvestAmount * 0.37, account.baseCurrency ?? 'USD', { compact: true })}</span>
-                    {' '}(at 37% rate)
-                  </p>
-                </div>
-                <button className="flex items-center gap-1.5 rounded-md bg-accent-blue px-4 py-2 text-body font-medium text-white hover:bg-accent-blue/90">
-                  <Scissors className="h-4 w-4" /> Execute Harvest <ArrowRight className="h-3.5 w-3.5" />
-                </button>
-              </CardContent>
-            </Card>
-          )}
-
-          <Card>
-            <CardHeader
-              action={
-                <Badge variant="blue">{harvestOpportunities.length} opportunities</Badge>
-              }
-            >
-              <div className="flex items-center gap-2">
-                <Scissors className="h-4 w-4 text-text-secondary" />
-                Tax-Loss Harvesting Opportunities
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              {harvestOpportunities.length === 0 ? (
-                <div className="px-4 py-12 text-center text-text-tertiary">No harvest opportunities found (losses &gt; $1,000)</div>
-              ) : (
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border-primary">
-                      <Th>Select</Th>
-                      <Th>Symbol</Th>
-                      <Th>Holding</Th>
-                      <Th align="right">Qty</Th>
-                      <Th align="right">Unrealized Loss</Th>
-                      <Th align="right">Est. Tax Savings</Th>
-                      <Th align="center">Wash Sale Risk</Th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {harvestOpportunities.map((lot) => {
-                      const pos = positionMap.get(lot.positionId)
-                      return (
-                        <tr key={lot.id} className="border-b border-border-primary last:border-b-0 hover:bg-surface-tertiary/50">
-                          <td className="px-4 py-2.5">
-                            <input
-                              type="checkbox"
-                              checked={selectedLots.has(lot.id)}
-                              onChange={() => toggleLot(lot.id)}
-                              className="h-4 w-4 rounded border-border-secondary text-accent-blue"
-                            />
-                          </td>
-                          <td className="px-4 py-2.5">
-                            <p className="font-mono text-body-strong">{pos?.symbol ?? '—'}</p>
-                            <p className="text-caption text-text-tertiary">{pos?.name ?? ''}</p>
-                          </td>
-                          <td className="px-4 py-2.5">
-                            <Badge variant={lot.holdingPeriod === 'short' ? 'yellow' : 'default'}>
-                              {HOLDING_LABELS[lot.holdingPeriod]}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-2.5 text-right font-mono">{lot.quantity.toLocaleString()}</td>
-                          <td className="px-4 py-2.5 text-right font-mono text-accent-red"><CurrencyValue value={lot.gainLoss} from={account.baseCurrency ?? 'USD'} /></td>
-                          <td className="px-4 py-2.5 text-right font-mono text-accent-green"><CurrencyValue value={Math.abs(lot.gainLoss) * 0.37} from={account.baseCurrency ?? 'USD'} /></td>
-                          <td className="px-4 py-2.5 text-center">
-                            {lot.washSaleRestricted ? (
-                              <Badge variant="red">Restricted</Badge>
-                            ) : (
-                              <Badge variant="green">Clear</Badge>
-                            )}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        <HarvestScannerView
+          harvestOpportunities={harvestOpportunities}
+          selectedLots={selectedLots}
+          toggleLot={toggleLot}
+          selectedHarvestAmount={selectedHarvestAmount}
+          positionMap={positionMap}
+          formatWithConversion={formatWithConversion}
+          baseCurrency={baseCurrency}
+        />
       )}
 
       {/* Wash Sale Calendar */}
       {view === 'calendar' && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-text-secondary" />
-              30-Day Wash Sale Windows
-            </div>
-          </CardHeader>
-          <CardContent>
-            {washSaleWindows.length === 0 ? (
-              <div className="py-12 text-center text-text-tertiary">No active wash sale windows</div>
-            ) : (
-              <div className="space-y-3">
-                {washSaleWindows.map((item) => {
-                  const daysRemaining = Math.max(0, Math.ceil(
-                    (new Date(item.washSaleEnd).getTime() - new Date('2026-02-25').getTime()) / (1000 * 60 * 60 * 24),
-                  ))
-                  return (
-                    <div
-                      key={item.id}
-                      className={cn(
-                        'flex items-center justify-between rounded-md border px-4 py-3',
-                        daysRemaining <= 7 ? 'border-amber-300 bg-amber-50' : 'border-border-primary',
-                      )}
-                    >
-                      <div className="flex items-center gap-4">
-                        {daysRemaining <= 7 && <AlertTriangle className="h-4 w-4 text-amber-600" />}
-                        <div>
-                          <p className="font-mono text-body-strong">{item.position?.symbol ?? 'Unknown'}</p>
-                          <p className="text-caption text-text-tertiary">
-                            Purchased {formatDate(item.purchaseDate)} &middot; {item.quantity.toLocaleString()} shares
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-caption text-text-secondary">
-                          {formatDate(item.washSaleStart)} — {formatDate(item.washSaleEnd)}
-                        </p>
-                        <p className={cn(
-                          'font-mono text-caption font-medium',
-                          daysRemaining <= 7 ? 'text-amber-600' : 'text-text-tertiary',
-                        )}>
-                          {daysRemaining}d remaining
-                        </p>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <WashSaleCalendarView washSaleWindows={washSaleWindows} />
       )}
     </div>
-  )
-}
-
-const TH_ALIGN = {
-  left: 'text-left',
-  right: 'text-right',
-  center: 'text-center',
-} as const
-
-function Th({ children, align = 'left' }: { children: React.ReactNode; align?: 'left' | 'right' | 'center' }) {
-  return (
-    <th className={cn('px-4 py-2.5 text-caption font-medium text-text-secondary', TH_ALIGN[align])}>
-      {children}
-    </th>
-  )
-}
-
-function TaxLotRow({
-  lot,
-  positionMap,
-  baseCurrency,
-}: {
-  lot: TaxLot
-  positionMap: Map<string, { symbol: string; name: string }>
-  baseCurrency: CurrencyCode
-}) {
-  const pos = positionMap.get(lot.positionId)
-  return (
-    <tr className="border-b border-border-primary last:border-b-0 hover:bg-surface-tertiary/50">
-      <td className="px-4 py-2.5">
-        <p className="font-mono text-body-strong">{pos?.symbol ?? '—'}</p>
-        <p className="text-caption text-text-tertiary">{pos?.name ?? ''}</p>
-      </td>
-      <td className="px-4 py-2.5 font-mono text-caption text-text-secondary">{formatDate(lot.purchaseDate)}</td>
-      <td className="px-4 py-2.5">
-        <Badge variant={lot.holdingPeriod === 'short' ? 'yellow' : 'default'}>
-          {HOLDING_LABELS[lot.holdingPeriod]}
-        </Badge>
-      </td>
-      <td className="px-4 py-2.5 text-right font-mono">{lot.quantity.toLocaleString()}</td>
-      <td className="px-4 py-2.5 text-right font-mono"><CurrencyValue value={lot.costBasis} from={baseCurrency} compact /></td>
-      <td className="px-4 py-2.5 text-right font-mono"><CurrencyValue value={lot.currentValue} from={baseCurrency} compact /></td>
-      <td className={cn('px-4 py-2.5 text-right font-mono', lot.gainLoss >= 0 ? 'text-accent-green' : 'text-accent-red')}>
-        <CurrencyValue value={lot.gainLoss} from={baseCurrency} compact />
-      </td>
-      <td className="px-4 py-2.5 text-center">
-        {lot.washSaleRestricted ? (
-          <Badge variant="red">Yes</Badge>
-        ) : (
-          <span className="text-caption text-text-tertiary">No</span>
-        )}
-      </td>
-    </tr>
   )
 }

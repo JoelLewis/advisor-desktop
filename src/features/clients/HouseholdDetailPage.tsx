@@ -8,6 +8,7 @@ import { GoalProgressCard } from '@/components/ui/GoalProgressCard'
 import { DataTable } from '@/components/ui/DataTable'
 import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { QueryErrorBanner } from '@/components/ui/QueryErrorBanner'
 import { TabLayout } from '@/components/ui/TabLayout'
 import { ShareButton } from '@/components/ui/ShareButton'
 import { WorkflowLaunchButton } from '@/components/ui/WorkflowLaunchButton'
@@ -126,7 +127,7 @@ export function HouseholdDetailPage() {
   const { householdId } = useParams()
   const navigate = useNavigate()
   const id = householdId ?? ''
-  const { data: household, isLoading } = useHousehold(id)
+  const { data: household, isLoading, isError, error, refetch } = useHousehold(id)
   const { data: accounts } = useAccounts(householdId ? { householdId } : undefined)
   const { data: heldAway } = useHeldAway(id)
   const { data: householdPlan } = useHouseholdPlan(id)
@@ -139,6 +140,10 @@ export function HouseholdDetailPage() {
 
   if (isLoading) {
     return <div className="space-y-4"><Skeleton className="h-24" /><Skeleton className="h-96" /></div>
+  }
+
+  if (isError) {
+    return <QueryErrorBanner error={error} onRetry={refetch} message="Failed to load household" />
   }
 
   if (!household) {

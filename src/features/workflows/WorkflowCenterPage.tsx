@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { TabLayout } from '@/components/ui/TabLayout'
 import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { QueryErrorBanner } from '@/components/ui/QueryErrorBanner'
 import { DataTable } from '@/components/ui/DataTable'
 import { useMyActions, useInProcess, useDelegated, useWorkflowTemplates } from '@/hooks/use-workflows'
 import { useUIStore } from '@/store/ui-store'
@@ -254,7 +255,7 @@ function ProcessCard({ tracker }: { tracker: ProcessTracker }) {
 }
 
 export function WorkflowCenterPage() {
-  const { data: myActions, isLoading: loadingActions } = useMyActions()
+  const { data: myActions, isLoading: loadingActions, isError, error, refetch } = useMyActions()
   const { data: processes, isLoading: loadingProc } = useInProcess()
   const { data: delegated, isLoading: loadingDeleg } = useDelegated()
   const { data: templates } = useWorkflowTemplates()
@@ -334,6 +335,10 @@ export function WorkflowCenterPage() {
         <Skeleton className="h-96" />
       </div>
     )
+  }
+
+  if (isError) {
+    return <QueryErrorBanner error={error} onRetry={refetch} message="Failed to load workflows" />
   }
 
   const pendingActions = myActions?.filter((t) => t.status !== 'completed') ?? []

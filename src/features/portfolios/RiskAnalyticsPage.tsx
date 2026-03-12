@@ -8,7 +8,7 @@ import {
 import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
-import type { StressScenario } from '@/types/risk'
+import { RiskMetricCard, StressScenarioRow } from './account-detail/shared'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useRiskMetrics, useSensitivity, useStressScenarios } from '@/hooks/use-portfolio'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
@@ -302,44 +302,6 @@ export function RiskAnalyticsPage() {
           </CardContent>
         </Card>
       )}
-    </div>
-  )
-}
-
-function RiskMetricCard({ label, value, negative }: { label: string; value: string; negative?: boolean }) {
-  return (
-    <Card>
-      <CardContent>
-        <p className="text-caption text-text-secondary">{label}</p>
-        <p className={cn('font-mono text-section-header', negative && 'text-accent-red')}>{value}</p>
-      </CardContent>
-    </Card>
-  )
-}
-
-function StressScenarioRow({ scenario }: { scenario: StressScenario }) {
-  const { formatWithConversion } = useFormatCurrency()
-  return (
-    <div className="rounded-md border border-border-primary p-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-body-strong">{scenario.name}</p>
-          <p className="text-caption text-text-secondary">{scenario.description}</p>
-        </div>
-        <p className="font-mono text-section-header text-accent-red">
-          {(scenario.portfolioImpact * 100).toFixed(0)}%
-        </p>
-      </div>
-      <div className="mt-3 space-y-1">
-        {scenario.positionImpacts.map((pi) => (
-          <div key={pi.positionId} className="flex items-center justify-between text-caption">
-            <span className="font-mono text-text-secondary">{pi.symbol}</span>
-            <span className={cn('font-mono', pi.impactPercent >= 0 ? 'text-accent-green' : 'text-accent-red')}>
-              {formatPercent(pi.impactPercent * 100)} ({formatWithConversion(pi.impact, 'USD', { compact: true })})
-            </span>
-          </div>
-        ))}
-      </div>
     </div>
   )
 }

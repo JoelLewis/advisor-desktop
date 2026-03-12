@@ -30,6 +30,14 @@ export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   simple_ira: 'SIMPLE IRA',
 }
 
+export const ACCOUNT_TYPE_SHORT_LABELS: Record<AccountType, string> = {
+  individual: 'Individual', joint: 'Joint', traditional_ira: 'Trad IRA',
+  roth_ira: 'Roth IRA', sep_ira: 'SEP IRA', '401k': '401(k)',
+  roth_401k: 'Roth 401(k)', '529': '529', trust_revocable: 'Rev Trust',
+  trust_irrevocable: 'Irrev Trust', ugma_utma: 'UGMA/UTMA', entity: 'Entity',
+  inherited_ira: 'Inherited IRA', simple_ira: 'SIMPLE IRA',
+}
+
 export function taxTreatmentBadgeVariant(treatment: TaxTreatment): 'green' | 'yellow' | 'purple' | 'default' {
   if (treatment === 'tax_free') return 'green'
   if (treatment === 'tax_deferred') return 'yellow'

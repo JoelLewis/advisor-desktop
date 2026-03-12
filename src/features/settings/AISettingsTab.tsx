@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { useAISettings, useUpdateAISettings } from '@/hooks/use-settings'
 import { cn } from '@/lib/utils'
 import { SaveButton, Toggle, SelectField, COMMUNICATION_CHANNELS, FOLLOW_UP_CADENCES, PROPOSAL_TEMPLATES, PROPOSAL_SECTIONS } from './settings-shared'
-import { PermissionMatrixCard } from './AIAutonomyTab'
+import { PermissionMatrixCard } from './autonomy/PermissionMatrixCard'
 import type { AISettings, AITone, AIVerbosity, CommunicationChannel, FollowUpCadence } from '@/types/settings'
 
 export function AISettingsPanel() {
