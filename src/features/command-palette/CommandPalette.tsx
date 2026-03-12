@@ -118,7 +118,7 @@ export function CommandPalette() {
             <ResultsPlaceholder>Searching...</ResultsPlaceholder>
           )}
           {query.length >= 2 && !isLoading && results.length === 0 && (
-            <ResultsPlaceholder>No results found for &ldquo;{query}&rdquo;</ResultsPlaceholder>
+            <ResultsPlaceholder>No results for &ldquo;{query}&rdquo; — try a client name, account number, or &gt;action</ResultsPlaceholder>
           )}
           {query.length >= 2 && !isLoading && results.length > 0 && (
             <div className="py-2">

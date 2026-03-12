@@ -92,7 +92,7 @@ export function NBAEffectivenessContent() {
                 <RechartsTooltip contentStyle={{ background: 'var(--surface-primary)', border: '1px solid var(--border-primary)' }} formatter={(value: number, name: string) => name === 'Revenue Impact' ? formatWithConversion(value, 'USD', { compact: true }) : `${value}%`} />
                 <Legend />
                 <Line yAxisId="left" type="monotone" dataKey="completionRate" stroke="#2563EB" strokeWidth={2} dot={{ r: 3 }} name="Completion Rate" />
-                <Line yAxisId="right" type="monotone" dataKey="revenueImpact" stroke="#7C3AED" strokeWidth={2} dot={{ r: 3 }} name="Revenue Impact" />
+                <Line yAxisId="right" type="monotone" dataKey="revenueImpact" stroke="#8B7EC8" strokeWidth={2} dot={{ r: 3 }} name="Revenue Impact" />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>

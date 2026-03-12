@@ -143,7 +143,7 @@ export function AccountDetailPage() {
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       {/* Trade Ticket Dialog */}
       <TradeTicketDialog
         open={tradeDialogOpen}

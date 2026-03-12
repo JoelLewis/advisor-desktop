@@ -26,7 +26,7 @@ export function RebalancePage() {
   const { formatWithConversion } = useFormatCurrency()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const preselectedAccounts = searchParams.get('accounts')?.split(',').filter(Boolean) ?? []
+  const preselectedAccounts = useMemo(() => searchParams.get('accounts')?.split(',').filter(Boolean) ?? [], [searchParams])
   const preselectedModel = searchParams.get('model')
 
   const { data: accounts } = useAccounts({})
@@ -157,7 +157,7 @@ export function RebalancePage() {
   const totalTaxImpact = previews.reduce((sum, p) => sum + p.estimatedTaxImpact, 0)
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <button onClick={() => navigate(-1)} className="rounded p-1.5 text-text-secondary hover:bg-surface-tertiary hover:text-text-primary">

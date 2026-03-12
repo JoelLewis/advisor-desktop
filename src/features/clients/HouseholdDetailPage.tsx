@@ -353,7 +353,7 @@ export function HouseholdDetailPage() {
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <div className="flex items-center gap-4 rounded-lg border border-border-primary bg-surface-primary p-4">
         <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent-blue/10">
           <Home className="h-6 w-6 text-accent-blue" />

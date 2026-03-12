@@ -163,7 +163,7 @@ function NotesTab({ eventId }: { eventId: string }) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center gap-2 py-16">
-        <Loader2 className="h-5 w-5 animate-spin text-accent-purple" />
+        <Loader2 className="h-5 w-5 animate-spin text-accent-purple/60" />
         <span className="text-body text-text-secondary">Loading notes...</span>
       </div>
     )
@@ -185,7 +185,7 @@ function NotesTab({ eventId }: { eventId: string }) {
             onChange={(e) => handleSectionChange(section.key, e.target.value)}
             placeholder={`Enter ${section.label.toLowerCase()}...`}
             rows={3}
-            className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-caption text-text-primary placeholder:text-text-tertiary focus:border-accent-purple focus:outline-hidden focus:ring-1 focus:ring-accent-purple resize-none"
+            className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 text-caption text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue/30 resize-none"
           />
         </div>
       ))}
@@ -274,12 +274,12 @@ function WrapUpTab({ eventId, clientName, meetingType }: { eventId: string; clie
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Follow-up task title..."
-              className="flex-1 rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-caption text-text-primary placeholder:text-text-tertiary focus:border-accent-purple focus:outline-hidden focus:ring-1 focus:ring-accent-purple"
+              className="flex-1 rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-caption text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue/30"
             />
             <select
               value={assignee}
               onChange={(e) => setAssignee(e.target.value as 'advisor' | 'csa' | 'ai')}
-              className="rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-caption text-text-primary focus:border-accent-purple focus:outline-hidden focus:ring-1 focus:ring-accent-purple"
+              className="rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-caption text-text-primary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue/30"
             >
               <option value="advisor">Me</option>
               <option value="csa">CSA</option>
@@ -289,7 +289,7 @@ function WrapUpTab({ eventId, clientName, meetingType }: { eventId: string; clie
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-caption text-text-primary focus:border-accent-purple focus:outline-hidden focus:ring-1 focus:ring-accent-purple"
+              className="rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-caption text-text-primary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue/30"
             />
             <button
               onClick={handleAddFollowUp}
@@ -429,13 +429,13 @@ export function MeetingPrepModal({ eventId, onClose, initialTab = 'prep' }: Meet
               className={cn(
                 'relative px-4 py-2.5 text-caption font-medium transition-colors',
                 activeTab === tab.key
-                  ? 'text-accent-purple'
+                  ? 'text-text-primary'
                   : 'text-text-tertiary hover:text-text-secondary',
               )}
             >
               {tab.label}
               {activeTab === tab.key && (
-                <span className="absolute inset-x-0 bottom-0 h-0.5 bg-accent-purple" />
+                <span className="absolute inset-x-0 bottom-0 h-0.5 bg-accent-purple/60" />
               )}
             </button>
           ))}
@@ -444,7 +444,7 @@ export function MeetingPrepModal({ eventId, onClose, initialTab = 'prep' }: Meet
         <div className="max-h-[calc(80vh-180px)] overflow-y-auto scrollbar-thin" aria-busy={isLoading}>
           {isLoading ? (
             <div className="flex items-center justify-center gap-2 py-16">
-              <Loader2 className="h-5 w-5 animate-spin text-accent-purple" />
+              <Loader2 className="h-5 w-5 animate-spin text-accent-purple/60" />
               <span className="text-body text-text-secondary">Generating meeting prep...</span>
             </div>
           ) : prep ? (
@@ -487,7 +487,7 @@ export function MeetingPrepModal({ eventId, onClose, initialTab = 'prep' }: Meet
               </button>
               <button
                 onClick={onClose}
-                className="rounded-md bg-accent-purple px-4 py-1.5 text-caption font-medium text-white transition-colors hover:bg-accent-purple/90"
+                className="rounded-md bg-accent-blue px-4 py-1.5 text-caption font-medium text-white transition-colors hover:bg-accent-blue/90"
               >
                 Done
               </button>

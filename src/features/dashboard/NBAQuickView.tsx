@@ -95,8 +95,9 @@ export function NBAQuickView() {
             })}
           </div>
         ) : (
-          <div className="py-4 text-center text-caption text-text-tertiary">
-            No pending actions
+          <div className="flex flex-col items-center py-4 gap-1">
+            <p className="text-caption text-text-tertiary">No pending actions</p>
+            <p className="text-caption text-text-tertiary">You're all caught up.</p>
           </div>
         )}
       </CardContent>

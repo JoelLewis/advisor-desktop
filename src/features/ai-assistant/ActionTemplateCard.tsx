@@ -132,7 +132,7 @@ export function ActionTemplateCard({ template }: ActionTemplateCardProps) {
         className="flex w-full items-center gap-3 p-3 text-left"
       >
         <div className="min-w-0 flex-1">
-          <p className="text-caption font-medium text-accent-purple">{template.name}</p>
+          <p className="text-caption font-medium text-text-primary">{template.name}</p>
           <p className="text-[11px] text-text-secondary">{template.description}</p>
         </div>
         <span className="flex shrink-0 items-center gap-1 text-[10px] text-text-tertiary">

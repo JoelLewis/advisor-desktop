@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { TrendingUp, User, Phone, Mail, Calendar, UserPlus, LayoutGrid, List, FileText } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { DenseMetricsBar } from '@/components/ui/DenseMetricsBar'
-import type { DenseMetric } from '@/components/ui/DenseMetricsBar'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { ProspectListView } from '@/features/growth/ProspectListView'
 import { useProspects } from '@/hooks/use-prospects'
@@ -245,7 +243,6 @@ function BoardColumn({ stage, prospects: stageProspects }: { stage: typeof STAGE
 export function ProspectsPage() {
   const { data: prospects, isLoading } = useProspects()
   const [view, setView] = useState<ViewMode>('board')
-  const { formatWithConversion } = useFormatCurrency()
 
   const pipeline = useMemo(() => {
     if (!prospects) return new Map<ProspectStage, Prospect[]>()
@@ -255,9 +252,6 @@ export function ProspectsPage() {
     }
     return map
   }, [prospects])
-
-  const totalEstimatedAUM = prospects?.reduce((sum, p) => sum + p.estimatedAUM, 0) ?? 0
-  const weightedPipeline = prospects?.reduce((sum, p) => sum + p.estimatedAUM * p.probability, 0) ?? 0
 
   if (isLoading) {
     return (
@@ -270,7 +264,7 @@ export function ProspectsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <TrendingUp className="h-6 w-6 text-accent-green" />
@@ -279,18 +273,6 @@ export function ProspectsPage() {
         <div data-annotation="growth-view-toggle">
           <ViewToggle view={view} onViewChange={setView} />
         </div>
-      </div>
-
-      <div data-annotation="growth-metrics">
-        <DenseMetricsBar metrics={[
-          { label: 'Total Prospects', value: String(prospects?.length ?? 0) },
-          { label: 'Pipeline AUM', value: formatWithConversion(totalEstimatedAUM, 'USD', { compact: true }) },
-          { label: 'Weighted Pipeline', value: formatWithConversion(weightedPipeline, 'USD', { compact: true }) },
-          { label: 'Avg. Probability', value: prospects && prospects.length > 0
-            ? `${Math.round(prospects.reduce((sum, p) => sum + p.probability, 0) / prospects.length * 100)}%`
-            : '0%'
-          },
-        ] satisfies DenseMetric[]} />
       </div>
 
       {prospects && prospects.length > 0 && (

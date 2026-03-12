@@ -17,9 +17,9 @@ export function SettingsPage() {
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <h1 className="text-page-title">Settings</h1>
-      <TabLayout tabs={tabs} />
+      <div className="mt-4" data-annotation="settings-tabs"><TabLayout tabs={tabs} /></div>
     </div>
   )
 }

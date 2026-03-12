@@ -48,7 +48,7 @@ export function Sidebar() {
       {/* Logo area */}
       <div className="flex h-topbar items-center border-b border-border-primary px-4">
         <div className="flex items-center gap-2 overflow-hidden">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent-blue to-accent-purple text-white text-body-strong">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-text-primary text-surface-primary font-display text-[15px] font-semibold tracking-tight">
             AD
           </div>
           {expanded && (

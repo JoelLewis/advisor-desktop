@@ -22,7 +22,7 @@ export function ChatBubble({ message, onExecuteTrade }: ChatBubbleProps) {
           'max-w-[85%] rounded-lg px-3.5 py-2.5',
           isUser
             ? 'bg-accent-blue text-white'
-            : 'border-l-2 border-l-accent-purple bg-surface-primary',
+            : 'border-l-2 border-l-accent-purple/60 bg-accent-purple/5',
         )}
       >
         {/* Assistant icon */}

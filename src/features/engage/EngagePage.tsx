@@ -175,7 +175,10 @@ function ClientCommsTab() {
             </table>
           </div>
           {filtered.length === 0 && (
-            <div className="py-8 text-center text-caption text-text-tertiary">No communications match your filters</div>
+            <div className="flex flex-col items-center py-8 gap-1">
+              <p className="text-caption text-text-tertiary">No communications match your filters</p>
+              <p className="text-caption text-text-tertiary">Try adjusting or clearing your filter selection.</p>
+            </div>
           )}
         </Card>
       </div>
@@ -456,7 +459,7 @@ export function EngagePage() {
   const { data: insights } = useAIInsights('engage')
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <div className="flex items-center gap-3">
         <Megaphone className="h-6 w-6 text-text-secondary" />
         <h1 className="text-page-title">Engage</h1>

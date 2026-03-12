@@ -434,7 +434,7 @@ export function WorkflowCenterPage() {
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-page-title">Workflow Center</h1>
         <div className="flex items-center gap-3">
@@ -450,7 +450,7 @@ export function WorkflowCenterPage() {
         </div>
       </div>
 
-      <div data-annotation="workflows-tabs"><TabLayout tabs={tabs} /></div>
+      <div className="mt-4" data-annotation="workflows-tabs"><TabLayout tabs={tabs} /></div>
 
       <StartWorkflowDialog
         open={startWorkflowOpen}

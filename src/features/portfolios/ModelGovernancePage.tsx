@@ -290,7 +290,7 @@ export function ModelGovernancePage() {
   const pendingChanges = models.filter((m) => m.versions.some((v) => v.status === 'pending_approval')).length
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link to="/portfolios" className="rounded-md p-1 text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-secondary">

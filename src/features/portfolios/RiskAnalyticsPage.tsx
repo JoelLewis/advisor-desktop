@@ -79,7 +79,10 @@ export function RiskAnalyticsPage() {
           <Shield className="h-6 w-6 text-accent-blue" />
           <h1 className="text-page-title">Risk Analytics</h1>
         </div>
-        <div className="py-12 text-center text-text-tertiary">No accounts available</div>
+        <div className="flex flex-col items-center py-12 gap-1">
+          <p className="text-body text-text-tertiary">No accounts available</p>
+          <p className="text-caption text-text-tertiary">Add accounts to your portfolio to view risk analytics.</p>
+        </div>
       </div>
     )
   }
@@ -91,7 +94,7 @@ export function RiskAnalyticsPage() {
   ) ?? []
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">

@@ -3,7 +3,7 @@ export const ASSET_CLASS_COLORS: Record<string, string> = {
   intl_equity: '#3B82F6',
   emerging_markets: '#60A5FA',
   fixed_income: '#059669',
-  alternatives: '#7C3AED',
+  alternatives: '#8B7EC8',
   real_estate: '#D97706',
   commodities: '#DC2626',
   cash: '#94A3B8',

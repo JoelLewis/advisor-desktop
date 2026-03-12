@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- exports component + cost basis constants */
 import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'

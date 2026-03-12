@@ -179,7 +179,8 @@ export function NotificationCenter({ open, onClose }: NotificationCenterProps) {
           ) : items.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-12 text-text-tertiary">
               <Bell className="h-8 w-8" />
-              <span className="text-body-sm">No notifications</span>
+              <p className="text-body font-medium">All clear</p>
+              <p className="text-caption">No notifications right now.</p>
             </div>
           ) : (
             <div className="divide-y divide-border-primary">

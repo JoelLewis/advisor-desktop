@@ -3,8 +3,7 @@ import { Search, Shield, FileText, CheckCircle2, Pencil, XCircle, ChevronDown, C
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { DenseMetricsBar } from '@/components/ui/DenseMetricsBar'
-import { useArchiveSearch, useArchiveStats } from '@/hooks/use-archives'
+import { useArchiveSearch } from '@/hooks/use-archives'
 import { formatDate, cn } from '@/lib/utils'
 import {
   ARCHIVE_DOC_TYPES,
@@ -137,22 +136,13 @@ export function ArchivePage() {
   }, [searchQuery, docTypeFilter, dispositionFilter])
 
   const { data: records, isLoading } = useArchiveSearch(searchParams)
-  const { data: stats } = useArchiveStats()
 
   if (isLoading && !records) {
     return <div className="space-y-4"><Skeleton className="h-12" /><Skeleton className="h-96" /></div>
   }
 
-  const metrics = stats ? [
-    { label: 'Total Records', value: String(stats.total) },
-    { label: 'Approved', value: String(stats.approved) },
-    { label: 'Edited', value: String(stats.edited) },
-    { label: 'Rejected', value: String(stats.rejected) },
-    { label: 'WORM Compliant', value: `${stats.wormCompliant}/${stats.total}` },
-  ] : []
-
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-purple/10">
           <Shield className="h-5 w-5 text-accent-purple" />
@@ -164,8 +154,6 @@ export function ArchivePage() {
           </p>
         </div>
       </div>
-
-      {stats && <DenseMetricsBar metrics={metrics} />}
 
       {/* Filters */}
       <Card>
@@ -224,10 +212,17 @@ export function ArchivePage() {
             ))}
           </div>
         ) : (
-          <CardContent className="py-12 text-center text-text-tertiary">
-            {searchQuery || docTypeFilter || dispositionFilter
-              ? 'No records match your filters'
-              : 'No archive records'}
+          <CardContent className="flex flex-col items-center py-12 gap-1">
+            <p className="text-body text-text-tertiary">
+              {searchQuery || docTypeFilter || dispositionFilter
+                ? 'No records match your filters'
+                : 'No archive records yet'}
+            </p>
+            <p className="text-caption text-text-tertiary">
+              {searchQuery || docTypeFilter || dispositionFilter
+                ? 'Try adjusting your search or filter criteria.'
+                : 'AI-generated documents will appear here after they are finalized.'}
+            </p>
           </CardContent>
         )}
       </Card>

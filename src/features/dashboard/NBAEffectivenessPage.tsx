@@ -30,7 +30,7 @@ export function NBAEffectivenessPage() {
   if (!metrics) return <div className="py-12 text-center text-caption text-text-tertiary">Unable to load NBA effectiveness data</div>
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link to="/dashboard" className="rounded-md p-1 text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-secondary">
@@ -104,7 +104,7 @@ export function NBAEffectivenessPage() {
                 <RechartsTooltip contentStyle={{ background: 'var(--surface-primary)', border: '1px solid var(--border-primary)' }} formatter={(value: number, name: string) => name === 'Revenue Impact' ? formatWithConversion(value, 'USD', { compact: true }) : `${value}%`} />
                 <Legend />
                 <Line yAxisId="left" type="monotone" dataKey="completionRate" stroke="#2563EB" strokeWidth={2} dot={{ r: 3 }} name="Completion Rate" />
-                <Line yAxisId="right" type="monotone" dataKey="revenueImpact" stroke="#7C3AED" strokeWidth={2} dot={{ r: 3 }} name="Revenue Impact" />
+                <Line yAxisId="right" type="monotone" dataKey="revenueImpact" stroke="#8B7EC8" strokeWidth={2} dot={{ r: 3 }} name="Revenue Impact" />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>

@@ -170,7 +170,10 @@ export function MessagingContent({ headerSlot }: MessagingContentProps) {
             />
           ))}
           {(!threads || threads.length === 0) && (
-            <p className="py-12 text-center text-caption text-text-tertiary">No messages</p>
+            <div className="flex flex-col items-center py-12 gap-1">
+              <p className="text-caption text-text-tertiary">No messages yet</p>
+              <p className="text-caption text-text-tertiary">Start a conversation with your team.</p>
+            </div>
           )}
         </div>
       ) : (

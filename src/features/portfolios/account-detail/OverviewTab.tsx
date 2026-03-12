@@ -159,11 +159,11 @@ export function OverviewTab({ account, positions, allocation, totalGainLoss, dri
         )}
 
         {/* AI insight */}
-        <Card className="border-l-[3px] border-l-accent-purple">
+        <Card className="border-l-[3px] border-l-accent-purple/50">
           <CardContent className="flex items-start gap-3">
             <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-accent-purple" />
             <div className="flex-1">
-              <p className="text-body-strong text-accent-purple">AI Insight</p>
+              <p className="text-body-strong text-text-primary">AI Insight</p>
               <p className="mt-1 text-caption text-text-secondary">
                 This account has {drift?.needsRebalance ? 'drifted beyond threshold and should be rebalanced' : 'acceptable drift levels'}.
                 {totalGainLoss > 0 && ` Unrealized gains of ${formatWithConversion(totalGainLoss, account.baseCurrency ?? 'USD', { compact: true })} — consider tax-loss harvesting opportunities in underperforming positions.`}

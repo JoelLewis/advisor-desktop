@@ -34,7 +34,7 @@ Thanks for your interest in contributing! This document covers the guidelines fo
 
 - **Feature-based folders**: new features go in `src/features/<name>/`.
 - **Data flow**: Component → Hook (TanStack Query) → Service (fetch) → MSW Handler → Mock Data.
-- **AI content**: use the purple accent (`#7C3AED`) for anything AI-generated.
+- **AI content**: use the muted violet accent (`#8B7EC8`) for anything AI-generated.
 - **Accessibility**: include ARIA labels, respect `prefers-reduced-motion`, ensure keyboard navigation.
 - **Loading states**: every data-fetching component needs a skeleton fallback.
 

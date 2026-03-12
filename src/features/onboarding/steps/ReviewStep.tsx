@@ -95,7 +95,7 @@ export function ReviewStep({ data, onComplianceToggle }: ReviewStepProps) {
 
       {/* Compliance checklist */}
       <div className="rounded-lg border border-accent-purple/30 bg-accent-purple/5 p-4">
-        <h4 className="text-body-strong text-accent-purple">Compliance Checklist</h4>
+        <h4 className="text-body-strong text-text-primary">Compliance Checklist</h4>
         <p className="mt-1 text-[10px] text-text-tertiary">All items must be confirmed before submission</p>
         <div className="mt-3 space-y-2">
           {([

@@ -6,7 +6,7 @@ const VARIANTS = {
   secondary: 'bg-surface-primary text-text-primary border border-border-primary hover:bg-surface-tertiary',
   ghost: 'text-text-secondary hover:bg-surface-tertiary hover:text-text-primary',
   danger: 'bg-accent-red text-white hover:bg-accent-red/90',
-  ai: 'bg-accent-purple text-white hover:bg-accent-purple/90',
+  ai: 'bg-accent-purple/10 text-accent-purple border border-accent-purple/30 hover:bg-accent-purple/15',
 } as const
 
 const SIZES = {

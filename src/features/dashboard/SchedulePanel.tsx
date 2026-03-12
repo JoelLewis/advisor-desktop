@@ -80,8 +80,9 @@ export function SchedulePanel() {
             ))}
           </div>
         ) : (
-          <div className="flex h-32 items-center justify-center text-caption text-text-tertiary">
-            No meetings scheduled
+          <div className="flex h-32 flex-col items-center justify-center gap-1">
+            <p className="text-caption text-text-tertiary">No meetings scheduled</p>
+            <p className="text-caption text-text-tertiary">Your upcoming meetings will appear here.</p>
           </div>
         )}
       </div>

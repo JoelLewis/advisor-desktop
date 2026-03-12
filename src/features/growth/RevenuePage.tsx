@@ -26,7 +26,7 @@ const TIER_VARIANTS: Record<string, 'purple' | 'yellow' | 'default' | 'blue'> = 
 }
 
 const SEGMENT_COLORS: Record<string, string> = {
-  platinum: '#7C3AED',
+  platinum: '#8B7EC8',
   gold: '#D97706',
   silver: '#94A3B8',
   bronze: '#2563EB',
@@ -97,7 +97,7 @@ function RevenueContent() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       {metrics && (
         <div data-annotation="revenue-metrics">
           <DenseMetricsBar metrics={[
@@ -190,9 +190,9 @@ export function RevenuePage() {
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <h1 className="text-page-title">Practice Management</h1>
-      <TabLayout tabs={tabs} defaultTab="revenue" />
+      <div className="mt-4"><TabLayout tabs={tabs} defaultTab="revenue" /></div>
     </div>
   )
 }

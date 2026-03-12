@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- shared utility components + constants */
 import { Save } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { NBACategory } from '@/types/nba'

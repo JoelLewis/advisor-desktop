@@ -103,7 +103,7 @@ export function OptionTradeFields({
       {/* Greeks card */}
       {selectedQuote && (
         <div className="rounded-md border border-accent-purple/30 bg-accent-purple/5 p-3">
-          <div className="mb-2 text-caption font-semibold text-accent-purple">Greeks & Market Data</div>
+          <div className="mb-2 text-caption font-semibold text-text-secondary">Greeks & Market Data</div>
           <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-caption">
             <div className="flex justify-between">
               <span className="text-text-secondary">Underlying</span>

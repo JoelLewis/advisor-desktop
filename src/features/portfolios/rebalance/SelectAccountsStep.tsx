@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- exports component + selection mode type/options */
 import { Loader2, AlertTriangle, Layers } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -158,9 +159,10 @@ export function SelectAccountsStep({
                 )
               })}
               {driftedAccounts.length === 0 && (
-                <p className="py-8 text-center text-caption text-text-tertiary">
-                  No accounts exceed the {driftThreshold}% drift threshold
-                </p>
+                <div className="flex flex-col items-center py-8 gap-1">
+                  <p className="text-caption text-text-tertiary">No accounts exceed the {driftThreshold}% drift threshold</p>
+                  <p className="text-caption text-text-tertiary">All accounts are within target allocation. Adjust the threshold above to widen the selection.</p>
+                </div>
               )}
             </div>
           )}

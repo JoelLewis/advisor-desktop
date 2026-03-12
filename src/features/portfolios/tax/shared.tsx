@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- shared utility components + constants */
 import { cn } from '@/lib/utils'
 
 export const HOLDING_LABELS: Record<string, string> = { short: 'Short-Term', long: 'Long-Term' }

@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils'
 import type { AnnotationTheme } from '@/types/annotation'
 
 const THEME_COLORS: Record<AnnotationTheme, { bg: string; ring: string; cssVar: string }> = {
-  ai_embedded: { bg: 'bg-accent-purple', ring: 'ring-accent-purple/30', cssVar: '#7C3AED' },
+  ai_embedded: { bg: 'bg-accent-purple', ring: 'ring-accent-purple/30', cssVar: '#8B7EC8' },
   actionable_ux: { bg: 'bg-accent-blue', ring: 'ring-accent-blue/30', cssVar: '#2563EB' },
   smart_workflows: { bg: 'bg-accent-green', ring: 'ring-accent-green/30', cssVar: '#059669' },
   batch_actions: { bg: 'bg-accent-amber', ring: 'ring-accent-amber/30', cssVar: '#D97706' },

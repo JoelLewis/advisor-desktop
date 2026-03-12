@@ -59,14 +59,14 @@ export function ActionMenu({ context, variant = 'primary' }: ActionMenuProps) {
       <div className="flex items-center">
         <button
           onClick={handleAskAI}
-          className="flex items-center gap-1.5 rounded-l-md bg-accent-purple px-3 py-1.5 text-caption font-medium text-white transition-colors hover:bg-accent-purple/90"
+          className="flex items-center gap-1.5 rounded-l-md border border-r-0 border-accent-purple/30 bg-accent-purple/10 px-3 py-1.5 text-caption font-medium text-accent-purple transition-colors hover:bg-accent-purple/15"
         >
           <Sparkles className="h-3.5 w-3.5" />
           Take Action
         </button>
         <button
           onClick={() => setOpen(!open)}
-          className="flex h-[30px] items-center rounded-r-md border-l border-white/20 bg-accent-purple px-1.5 text-white transition-colors hover:bg-accent-purple/90"
+          className="flex h-[30px] items-center rounded-r-md border border-l-0 border-accent-purple/30 bg-accent-purple/10 px-1.5 text-accent-purple transition-colors hover:bg-accent-purple/15"
           aria-label="More actions"
         >
           <ChevronDown className="h-3.5 w-3.5" />

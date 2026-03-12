@@ -19,7 +19,8 @@
   --color-accent-amber: var(--accent-amber);
 
   /* Fonts */
-  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-display: 'Instrument Sans', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
   /* Spacing */
@@ -79,9 +80,9 @@
   }
 
   @keyframes hotspotPulse {
-    0% { box-shadow: 0 0 0 0 var(--hotspot-color, #7C3AED)66; }
-    70% { box-shadow: 0 0 0 10px var(--hotspot-color, #7C3AED)00; }
-    100% { box-shadow: 0 0 0 0 var(--hotspot-color, #7C3AED)00; }
+    0% { box-shadow: 0 0 0 0 var(--hotspot-color, #8B7EC8)66; }
+    70% { box-shadow: 0 0 0 10px var(--hotspot-color, #8B7EC8)00; }
+    100% { box-shadow: 0 0 0 0 var(--hotspot-color, #8B7EC8)00; }
   }
 
   @keyframes fabPulse {
@@ -98,12 +99,14 @@
 
 /* ── Custom text utilities (composite: size + line-height + weight) ── */
 @utility text-page-title {
+  font-family: var(--font-display);
   font-size: 24px;
   line-height: 32px;
   font-weight: 600;
 }
 
 @utility text-section-header {
+  font-family: var(--font-display);
   font-size: 18px;
   line-height: 28px;
   font-weight: 600;
@@ -165,17 +168,17 @@
 @layer base {
   :root {
     --surface-primary: #FFFFFF;
-    --surface-secondary: #F8FAFC;
-    --surface-tertiary: #F1F5F9;
-    --border-primary: #E2E8F0;
-    --border-secondary: #CBD5E1;
+    --surface-secondary: #F7F9FC;
+    --surface-tertiary: #F0F4F8;
+    --border-primary: #DEE5EE;
+    --border-secondary: #C4CFDB;
     --text-primary: #0F172A;
     --text-secondary: #475569;
     --text-tertiary: #94A3B8;
     --accent-blue: #2563EB;
     --accent-green: #059669;
     --accent-red: #DC2626;
-    --accent-purple: #7C3AED;
+    --accent-purple: #8B7EC8;
     --accent-amber: #D97706;
   }
 
@@ -191,7 +194,7 @@
     --accent-blue: #3B82F6;
     --accent-green: #10B981;
     --accent-red: #EF4444;
-    --accent-purple: #A78BFA;
+    --accent-purple: #A99DE0;
     --accent-amber: #F59E0B;
     color-scheme: dark;
   }

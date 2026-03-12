@@ -59,7 +59,7 @@ The entire app runs client-side with [MSW](https://mswjs.io/) intercepting all A
 - 8 parameterized action templates (rebalance, TLH, draft email, schedule meeting, etc.)
 - Trade suggestions rendered inline with one-click execution
 - Unified communications tab showing all client interactions
-- AI-generated content marked with purple accent (`#7C3AED`) throughout
+- AI-generated content marked with muted violet accent (`#8B7EC8`) throughout
 
 ### AI Autonomy & Automation
 - Standing rules with time-based and event-based triggers
@@ -176,7 +176,7 @@ src/
 ## Design System
 
 - 12 CSS custom properties for consistent theming (light + dark mode)
-- Purple accent (`#7C3AED`) marks all AI-generated content
+- Muted violet accent (`#8B7EC8`) marks all AI-generated content
 - Responsive breakpoints: 1920+ (3-col), 1440-1919 (2-col), 1024-1439 (collapsed nav)
 - `prefers-reduced-motion` respected for all animations
 - Skeleton loading states for every data-fetching component

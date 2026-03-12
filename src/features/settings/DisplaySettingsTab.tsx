@@ -75,7 +75,7 @@ export function DisplaySettingsPanel() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-annotation="settings-display">
       <ThemeCard />
       <Card>
         <CardHeader action={<SaveButton onClick={save} disabled={update.isPending} />}>

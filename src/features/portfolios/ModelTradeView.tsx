@@ -174,7 +174,7 @@ export function ModelTradeView() {
   const STEP_LABELS = ['Select Model', 'Select Accounts', 'Preview Trades', 'Complete']
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <ModelTradeStepIndicator steps={STEP_LABELS} currentStep={step} />
 
       {/* Step 1: Select Model */}

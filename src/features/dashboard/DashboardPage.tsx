@@ -25,7 +25,7 @@ export function DashboardPage() {
   const { data: insights } = useAIInsights('dashboard')
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-page-title">{getGreeting()}, Sarah</h1>
         <p className="mt-1 text-body text-text-secondary">
@@ -39,14 +39,16 @@ export function DashboardPage() {
         <div data-annotation="dash-ai-insights"><AIInsightStack insights={insights} /></div>
       )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <div className="mt-4 grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2" data-annotation="dash-nba">
           <NBAQuickView />
         </div>
         <div id="schedule-panel" data-annotation="dash-schedule"><SchedulePanel /></div>
       </div>
 
-      <ActivityStream />
+      <div className="mt-4">
+        <ActivityStream />
+      </div>
     </div>
   )
 }

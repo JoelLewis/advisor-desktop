@@ -23,8 +23,9 @@ export function ActivityStream() {
             ))}
           </div>
         ) : (
-          <div className="flex h-20 items-center justify-center text-caption text-text-tertiary">
-            No recent activity
+          <div className="flex h-20 flex-col items-center justify-center gap-1">
+            <p className="text-caption text-text-tertiary">No recent activity</p>
+            <p className="text-caption text-text-tertiary">Activity will appear here as you work with clients.</p>
           </div>
         )}
       </div>

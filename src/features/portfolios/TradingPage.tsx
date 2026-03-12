@@ -13,12 +13,12 @@ export function TradingPage() {
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <h1 className="text-page-title">Trading</h1>
       {insights && insights.length > 0 && (
         <div data-annotation="trading-ai-insights"><AIInsightStack insights={insights} /></div>
       )}
-      <div data-annotation="trading-tabs"><TabLayout tabs={tabs} /></div>
+      <div className="mt-4" data-annotation="trading-tabs"><TabLayout tabs={tabs} /></div>
     </div>
   )
 }

@@ -51,7 +51,7 @@ export function AISettingsPanel() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-annotation="settings-ai">
       {/* Card 1: Communication Style */}
       <Card>
         <CardHeader action={<SaveButton onClick={save} disabled={update.isPending} />}>

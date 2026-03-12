@@ -3,7 +3,6 @@ import { useNavigate, Link } from 'react-router-dom'
 import { Search, ChevronDown, Users, Building2 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { DenseMetricsBar } from '@/components/ui/DenseMetricsBar'
 import { AllocationChart } from '@/components/ui/AllocationChart'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useHouseholds } from '@/hooks/use-households'
@@ -53,19 +52,6 @@ const ALLOCATION_TEMPLATES: Record<ClientSegment, { assetClass: string; weight: 
   ],
 }
 
-function segmentBreakdownText(households: Household[]): string {
-  const counts: Record<ClientSegment, number> = { platinum: 0, gold: 0, silver: 0, bronze: 0 }
-  for (const hh of households) {
-    counts[hh.segment] += 1
-  }
-  const parts: string[] = []
-  if (counts.platinum > 0) parts.push(`${counts.platinum} Platinum`)
-  if (counts.gold > 0) parts.push(`${counts.gold} Gold`)
-  if (counts.silver > 0) parts.push(`${counts.silver} Silver`)
-  if (counts.bronze > 0) parts.push(`${counts.bronze} Bronze`)
-  return parts.join(' \u00B7 ')
-}
-
 function sortHouseholds(households: Household[], sortKey: SortKey): Household[] {
   const sorted = [...households]
   switch (sortKey) {
@@ -112,9 +98,6 @@ export function HouseholdListView() {
     return sortHouseholds(list, sortKey)
   }, [households, search, sortKey])
 
-  const totalAUM = useMemo(() => households.reduce((sum, hh) => sum + hh.totalAUM, 0), [households])
-  const avgAUM = households.length > 0 ? totalAUM / households.length : 0
-
   function toggleExpanded(id: string) {
     setExpandedIds((prev) => {
       const next = new Set(prev)
@@ -139,13 +122,6 @@ export function HouseholdListView() {
 
   return (
     <div className="space-y-6">
-      <DenseMetricsBar metrics={[
-        { label: 'Total Households', value: String(households.length) },
-        { label: 'Total AUM', value: formatWithConversion(totalAUM, 'USD', { compact: true }) },
-        { label: 'Avg AUM / HH', value: formatWithConversion(avgAUM, 'USD', { compact: true }) },
-        { label: 'Segments', value: segmentBreakdownText(households) },
-      ]} />
-
       <div className="flex items-center gap-4">
         <div className="relative max-w-md flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />

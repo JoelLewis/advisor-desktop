@@ -9,7 +9,7 @@ export function HouseholdListPage() {
   const { data: insights } = useAIInsights('households')
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <div className="flex items-center gap-3" data-annotation="hh-nav">
         <Home className="h-6 w-6 text-text-secondary" />
         <h1 className="text-page-title">Households</h1>

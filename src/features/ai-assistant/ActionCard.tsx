@@ -33,7 +33,7 @@ export function ActionCard({ action, onStatusChange }: ActionCardProps) {
     <div className="mt-2 rounded-md border border-accent-purple/20 bg-accent-purple/5 p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="text-caption font-medium text-accent-purple">{action.action}</p>
+          <p className="text-caption font-medium text-text-primary">{action.action}</p>
           <p className="mt-0.5 text-caption text-text-secondary">{action.description}</p>
           <p className="mt-1 text-[11px] text-text-tertiary">{action.impact}</p>
         </div>

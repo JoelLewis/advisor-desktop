@@ -94,7 +94,7 @@ const documentColumns: ColumnDef<Document, unknown>[] = [
       <div className="flex items-start gap-2">
         <FileText className="mt-0.5 h-4 w-4 shrink-0 text-text-tertiary" />
         <div>
-          <p className={cn('text-body-strong', row.original.aiGenerated && 'text-accent-purple')}>{row.original.name}</p>
+          <p className="text-body-strong text-text-primary">{row.original.name}</p>
           {row.original.aiGenerated && (
             <span className="flex items-center gap-1 text-caption text-accent-purple">
               <Sparkles className="h-3 w-3" /> AI Generated
@@ -181,11 +181,11 @@ export function ClientDetailPage() {
       id: 'overview', label: 'Overview',
       content: (
         <div className="space-y-6">
-          <div data-annotation="client-ai-summary"><Card className="border-l-[3px] border-l-accent-purple">
+          <div data-annotation="client-ai-summary"><Card className="border-l-[3px] border-l-accent-purple/50">
             <CardContent className="flex items-start gap-3">
               <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-accent-purple" />
               <div>
-                <p className="text-body-strong text-accent-purple">AI Summary</p>
+                <p className="text-body-strong text-text-primary">AI Summary</p>
                 <p className="mt-1 text-body text-text-secondary">
                   {client.fullName} is a {client.tier.label} client with {formatWithConversion(client.totalAUM, 'USD', { compact: true })} under management.
                   Risk profile is {client.riskProfile.tolerance} (score: {client.riskProfile.score}/100).
@@ -294,8 +294,9 @@ export function ClientDetailPage() {
               ))}
             </div>
           ) : (
-            <CardContent className="py-12 text-center text-text-tertiary">
-              No activity recorded
+            <CardContent className="flex flex-col items-center py-12 gap-1">
+              <p className="text-caption text-text-tertiary">No activity recorded</p>
+              <p className="text-caption text-text-tertiary">Client interactions will appear here as they happen.</p>
             </CardContent>
           )}
         </Card>
@@ -331,7 +332,7 @@ export function ClientDetailPage() {
           {notes && notes.length > 0 ? (
             <div className="space-y-3">
               {notes.map((note) => (
-                <Card key={note.id} className={cn(note.aiGenerated && 'border-l-[3px] border-l-accent-purple')}>
+                <Card key={note.id} className={cn(note.aiGenerated && 'border-l-[3px] border-l-accent-purple/50')}>
                   <CardContent>
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1">
@@ -358,8 +359,9 @@ export function ClientDetailPage() {
             </div>
           ) : (
             <Card>
-              <CardContent className="py-12 text-center text-text-tertiary">
-                No notes yet
+              <CardContent className="flex flex-col items-center py-12 gap-1">
+                <p className="text-caption text-text-tertiary">No notes yet</p>
+                <p className="text-caption text-text-tertiary">Use the form above to add your first note.</p>
               </CardContent>
             </Card>
           )}
@@ -369,7 +371,7 @@ export function ClientDetailPage() {
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <div className="flex items-start gap-2">
         <div className="flex-1">
           <ClientHeader client={client} />
@@ -398,7 +400,7 @@ export function ClientDetailPage() {
       {insights && insights.length > 0 && (
         <div data-annotation="client-insights"><AIInsightStack insights={insights} /></div>
       )}
-      <div data-annotation="client-notes"><TabLayout tabs={tabs} /></div>
+      <div className="mt-4" data-annotation="client-notes"><TabLayout tabs={tabs} /></div>
       {reportOpen && (
         <ReportGenerator
           clientId={client.id}

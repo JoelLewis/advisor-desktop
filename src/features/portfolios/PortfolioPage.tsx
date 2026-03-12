@@ -158,7 +158,7 @@ export function PortfolioPage() {
   const columns = makeDriftColumns(driftMap, selectedIds, toggleSelect, handleRebalanceSingle, formatWithConversion)
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-page-title">Portfolios</h1>
         <div className="flex items-center gap-2">

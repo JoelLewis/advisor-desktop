@@ -378,6 +378,96 @@ export const ROUTE_ANNOTATIONS: RouteAnnotations[] = [
     ],
   },
 
+  // ── Client List ──
+  {
+    route: '/clients',
+    pageTitle: 'Client List',
+    pageDescription: 'Searchable client directory with tier segmentation, household linking, and direct click-through to 360° client views.',
+    annotations: [
+      {
+        id: 'clients-search',
+        number: 1,
+        title: 'Instant Client Search',
+        description: 'Type-ahead search filters the client table by name or email in real time. Combined with column sorting, advisors can locate any client in their book in under two seconds.',
+        theme: 'actionable_ux',
+        anchor: 'top-right',
+      },
+      {
+        id: 'clients-table',
+        number: 2,
+        title: 'Sortable Client Table',
+        description: 'Multi-column sortable table with AUM, tier, household, and contact info. Click any row to navigate to the full client detail view. Tier badges provide instant segmentation at a glance.',
+        theme: 'actionable_ux',
+        anchor: 'top-left',
+      },
+      {
+        id: 'clients-tier',
+        number: 3,
+        title: 'Client Tier Segmentation',
+        description: 'Color-coded tier badges (Platinum, Gold, Silver, Bronze) based on AUM thresholds. Sort by tier to focus on high-value clients first — essential for time allocation and service level management.',
+        theme: 'smart_workflows',
+        anchor: 'center-right',
+      },
+      {
+        id: 'clients-household-link',
+        number: 4,
+        title: 'Household Cross-Reference',
+        description: 'Each client shows their household affiliation as a clickable link. Navigate directly to the household view without losing context — family relationships drive planning decisions.',
+        theme: 'smart_workflows',
+        anchor: 'center-right',
+      },
+    ],
+  },
+
+  // ── Settings ──
+  {
+    route: '/settings',
+    pageTitle: 'Settings',
+    pageDescription: 'Configure AI behavior, automation rules, templates, notification preferences, and display options — the advisor\'s control panel for personalizing the platform.',
+    annotations: [
+      {
+        id: 'settings-tabs',
+        number: 1,
+        title: 'Six Configuration Areas',
+        description: 'AI Behavior, Automation, Templates & Prompts, NBA Settings, Notifications, and Display. Each tab is a focused control surface. Settings persist across sessions and sync with the AI engine in real time.',
+        theme: 'actionable_ux',
+        anchor: 'top-left',
+      },
+      {
+        id: 'settings-ai',
+        number: 2,
+        title: 'AI Behavior Controls',
+        description: 'Persona and tone selector (Formal, Balanced, Casual), custom style guide, and document template library. The AI adapts its communication style to match your preferences — from formal compliance notes to conversational client emails.',
+        theme: 'ai_embedded',
+        anchor: 'top-right',
+      },
+      {
+        id: 'settings-automation',
+        number: 3,
+        title: 'AI Autonomy & Automation',
+        description: 'Standing rules (time/event triggers), permission matrix (auto-approve vs. queue vs. notify per action type), and delegation rules. Define exactly what the AI can do without asking — from generating meeting prep briefs to submitting routine trades.',
+        theme: 'ai_embedded',
+        anchor: 'top-right',
+      },
+      {
+        id: 'settings-nba',
+        number: 4,
+        title: 'NBA Priority Tuning',
+        description: 'Weight presets (Balanced, Revenue, Compliance, Relationship) and custom sliders for the NBA scoring algorithm. Live preview shows how weight changes reorder the top 10 actions — the advisor stays in control of AI prioritization.',
+        theme: 'smart_workflows',
+        anchor: 'top-left',
+      },
+      {
+        id: 'settings-display',
+        number: 5,
+        title: 'Display Preferences',
+        description: 'Theme mode (Light, Dark, System), reporting currency, number format (compact vs. full), and date format. Dark mode uses a cool Slate palette with adjusted accent colors for readability.',
+        theme: 'actionable_ux',
+        anchor: 'top-right',
+      },
+    ],
+  },
+
   // ── Portfolios ──
   {
     route: '/portfolios',

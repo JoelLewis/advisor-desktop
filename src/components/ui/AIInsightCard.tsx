@@ -36,14 +36,14 @@ export function AIInsightCard({ insight }: { insight: AIInsight }) {
   }
 
   return (
-    <div className={`rounded-lg border border-accent-purple/20 ${config.bgColor} p-3`}>
+    <div className={`rounded-lg border border-accent-purple/15 ${config.bgColor} p-3`}>
       <div className="flex items-start gap-2.5">
         <div className="mt-0.5 flex items-center gap-1.5">
           <Sparkles className="h-3.5 w-3.5 text-accent-purple" />
           <Icon className={`h-3.5 w-3.5 ${config.iconColor}`} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-caption font-medium text-accent-purple">{insight.title}</p>
+          <p className="text-caption font-medium text-text-secondary">{insight.title}</p>
           <p className="mt-0.5 text-caption text-text-secondary">{insight.body}</p>
           {insight.metric && (
             <p className="mt-1 font-mono text-caption font-medium text-text-primary">

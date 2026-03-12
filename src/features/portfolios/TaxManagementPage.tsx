@@ -178,7 +178,7 @@ export function TaxManagementPage() {
   const baseCurrency = account.baseCurrency ?? 'USD'
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <button onClick={() => navigate(-1)} className="rounded p-1.5 text-text-secondary hover:bg-surface-tertiary hover:text-text-primary">

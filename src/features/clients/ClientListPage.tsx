@@ -46,7 +46,7 @@ function makeColumns(householdNames: Map<string, string>): ColumnDef<Client, unk
       accessorKey: 'segment',
       header: 'Tier',
       cell: ({ row }) => (
-        <Badge variant={SEGMENT_VARIANT[row.original.segment]}>{row.original.tier.label}</Badge>
+        <span data-annotation="clients-tier"><Badge variant={SEGMENT_VARIANT[row.original.segment]}>{row.original.tier.label}</Badge></span>
       ),
       sortingFn: (a, b) =>
         TIER_RANK[a.original.segment] - TIER_RANK[b.original.segment],
@@ -84,6 +84,7 @@ function makeColumns(householdNames: Map<string, string>): ColumnDef<Client, unk
         const name = householdNames.get(hhId) ?? hhId
         return (
           <Link
+            data-annotation="clients-household-link"
             to={`/households/${hhId}`}
             onClick={(e) => e.stopPropagation()}
             className="text-caption text-accent-blue hover:underline"
@@ -114,7 +115,7 @@ export function ClientListPage() {
   const columns = useMemo(() => makeColumns(householdNames), [householdNames])
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Users className="h-6 w-6 text-text-secondary" />
@@ -128,7 +129,7 @@ export function ClientListPage() {
       </div>
 
       {/* Search bar */}
-      <div className="relative max-w-md">
+      <div data-annotation="clients-search" className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
         <input
           type="text"
@@ -142,7 +143,7 @@ export function ClientListPage() {
       {isLoading ? (
         <Skeleton className="h-96" />
       ) : (
-        <Card>
+        <Card data-annotation="clients-table">
           <DataTable
             data={data?.items ?? []}
             columns={columns}

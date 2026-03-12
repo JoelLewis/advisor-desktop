@@ -13,7 +13,7 @@ import { formatPercent } from '@/lib/utils'
 import type { ColumnDef } from '@tanstack/react-table'
 
 const SEGMENT_COLORS: Record<string, string> = {
-  platinum: '#7C3AED',
+  platinum: '#8B7EC8',
   gold: '#D97706',
   silver: '#94A3B8',
   bronze: '#2563EB',

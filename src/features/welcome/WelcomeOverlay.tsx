@@ -71,7 +71,7 @@ export function WelcomeOverlay({ forceOpen, onDismiss }: WelcomeOverlayProps = {
       <div className="mx-4 w-full max-w-lg rounded-xl border border-border-primary bg-surface-primary p-8 shadow-2xl animate-scale-in">
         {/* Logo mark */}
         <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent-blue to-accent-purple text-white font-semibold text-lg">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-text-primary text-surface-primary font-display text-lg font-semibold tracking-tight">
             AD
           </div>
           <div>

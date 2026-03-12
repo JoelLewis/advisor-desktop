@@ -28,6 +28,7 @@ type DataTableProps<T> = {
   expandedContent?: (row: Row<T>) => React.ReactNode
   onRowClick?: (row: T) => void
   emptyMessage?: string
+  emptyAction?: { label: string; onClick: () => void }
   compact?: boolean
   className?: string
 }
@@ -40,6 +41,7 @@ export function DataTable<T>({
   expandedContent,
   onRowClick,
   emptyMessage = 'No data',
+  emptyAction,
   compact = false,
   className,
 }: DataTableProps<T>) {
@@ -108,9 +110,17 @@ export function DataTable<T>({
             <tr>
               <td
                 colSpan={columns.length + (expandedContent ? 1 : 0)}
-                className="py-12 text-center text-caption text-text-tertiary"
+                className="py-12 text-center"
               >
-                {emptyMessage}
+                <p className="text-caption text-text-tertiary">{emptyMessage}</p>
+                {emptyAction && (
+                  <button
+                    onClick={emptyAction.onClick}
+                    className="mt-2 text-caption font-medium text-accent-blue hover:underline"
+                  >
+                    {emptyAction.label}
+                  </button>
+                )}
               </td>
             </tr>
           ) : (

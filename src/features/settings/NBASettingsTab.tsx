@@ -294,7 +294,7 @@ export function NBASettingsPanel() {
   const weightsTotal = Object.values(settings.weights).reduce((a, b) => a + b, 0)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-annotation="settings-nba">
       <Card>
         <CardHeader action={<SaveButton onClick={save} disabled={update.isPending} />}>
           Scoring Weights

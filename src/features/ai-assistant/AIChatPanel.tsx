@@ -273,11 +273,11 @@ export function AIChatPanel() {
                 ))}
                 {sendMutation.isPending && (
                   <div className="flex justify-start" role="status" aria-label="AI is thinking">
-                    <div className="flex items-center gap-2 rounded-lg border-l-2 border-l-accent-purple bg-surface-primary px-3.5 py-2.5">
+                    <div className="flex items-center gap-2 rounded-lg border-l-2 border-l-accent-purple/60 bg-accent-purple/5 px-3.5 py-2.5">
                       <div className="flex gap-1" aria-hidden="true">
-                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-accent-purple [animation-delay:0ms]" />
-                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-accent-purple [animation-delay:150ms]" />
-                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-accent-purple [animation-delay:300ms]" />
+                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-accent-purple/60 [animation-delay:0ms]" />
+                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-accent-purple/60 [animation-delay:150ms]" />
+                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-accent-purple/60 [animation-delay:300ms]" />
                       </div>
                       <span className="text-caption text-text-tertiary">Thinking...</span>
                     </div>

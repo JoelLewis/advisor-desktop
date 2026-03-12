@@ -15,7 +15,7 @@ export function ContextBriefing({ screenType, entityId }: ContextBriefingProps) 
   if (isLoading || !briefing) return null
 
   return (
-    <div className="mx-4 mb-3 overflow-hidden rounded-lg border-l-2 border-l-accent-purple bg-accent-purple/5" aria-live="polite">
+    <div className="mx-4 mb-3 overflow-hidden rounded-lg border-l-2 border-l-accent-purple/50 bg-accent-purple/5" aria-live="polite">
       {/* Header */}
       <button
         onClick={() => setCollapsed(!collapsed)}
@@ -24,14 +24,14 @@ export function ContextBriefing({ screenType, entityId }: ContextBriefingProps) 
       >
         <div className="flex items-center gap-2">
           <Sparkles className="h-3.5 w-3.5 text-accent-purple" />
-          <span className="text-caption font-medium text-accent-purple">
+          <span className="text-caption font-medium text-text-secondary">
             Context: {briefing.title}
           </span>
         </div>
         {collapsed ? (
-          <ChevronDown className="h-3.5 w-3.5 text-accent-purple" />
+          <ChevronDown className="h-3.5 w-3.5 text-text-tertiary" />
         ) : (
-          <ChevronUp className="h-3.5 w-3.5 text-accent-purple" />
+          <ChevronUp className="h-3.5 w-3.5 text-text-tertiary" />
         )}
       </button>
 

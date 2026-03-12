@@ -67,7 +67,7 @@ export function ConcentrationView({ accountId }: ConcentrationViewProps) {
   }))
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       {/* Breach warning banner */}
       {breachCount > 0 && (
         <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
