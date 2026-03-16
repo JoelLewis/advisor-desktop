@@ -10,3 +10,8 @@ test-results/
 *.png
 !public/og-image.png
 .wrangler/
+CLAUDE.md
+.claude/
+.superpowers/
+PRD-AI-Advisor-Desktop.md
+Design-Spec-AI-Advisor-Desktop.md
