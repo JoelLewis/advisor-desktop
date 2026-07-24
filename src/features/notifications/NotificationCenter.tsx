@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- exports component + testable formatTimeAgo helper */
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -22,6 +23,7 @@ import {
   useMarkAllRead,
 } from '@/hooks/use-notifications'
 import type { Notification, NotificationCategory } from '@/types/notification'
+import { now as clockNow } from '@/lib/clock'
 
 const CATEGORY_CONFIG: Record<NotificationCategory, { label: string; icon: typeof Bell; color: string }> = {
   compliance: { label: 'Compliance', icon: Shield, color: 'text-accent-red' },
@@ -298,10 +300,10 @@ function NotificationRow({
   )
 }
 
-function formatTimeAgo(timestamp: string): string {
-  const now = Date.now()
+export function formatTimeAgo(timestamp: string): string {
+  const reference = clockNow().getTime()
   const then = new Date(timestamp).getTime()
-  const diffMs = now - then
+  const diffMs = reference - then
   const diffMin = Math.floor(diffMs / 60_000)
   if (diffMin < 1) return 'Just now'
   if (diffMin < 60) return `${diffMin}m ago`

@@ -8,6 +8,7 @@ import { customPrompts } from './settings'
 import type { ChatMessage, ActionConfirmation, DocumentGeneration, ContextBriefingData, BriefingMetric, AIInsight, ActionTemplate, SuggestedPrompt } from '@/types/ai'
 import type { CustomPromptCategory } from '@/types/settings'
 import { formatAUM, computeTotalAUM } from './utils'
+import { now } from '@/lib/clock'
 
 function makeBriefing(
   title: string,
@@ -355,7 +356,7 @@ export const aiHandlers = [
     if (screenType === 'client_detail' && entityId) {
       const client = clients.find((c) => c.id === entityId)
       if (client) {
-        const daysSinceContact = Math.floor((Date.now() - new Date(client.updatedAt).getTime()) / (1000 * 60 * 60 * 24))
+        const daysSinceContact = Math.floor((now().getTime() - new Date(client.updatedAt).getTime()) / (1000 * 60 * 60 * 24))
         if (daysSinceContact > 60) {
           insights.push({
             id: `cli-${entityId}-1`,

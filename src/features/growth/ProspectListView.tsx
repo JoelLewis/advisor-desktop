@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- exports component + testable daysInStage helper */
 import { Phone, Mail } from 'lucide-react'
 import { type ColumnDef } from '@tanstack/react-table'
 import { DataTable } from '@/components/ui/DataTable'
@@ -5,6 +6,7 @@ import { Badge } from '@/components/ui/Badge'
 import { CurrencyValue } from '@/components/ui/CurrencyValue'
 import { cn } from '@/lib/utils'
 import type { Prospect, ProspectStage } from '@/types/prospect'
+import { now as clockNow } from '@/lib/clock'
 
 const STAGE_CONFIG: Record<ProspectStage, { label: string; color: string }> = {
   lead: { label: 'Lead', color: 'bg-text-tertiary' },
@@ -14,10 +16,10 @@ const STAGE_CONFIG: Record<ProspectStage, { label: string; color: string }> = {
   onboarding: { label: 'Onboarding', color: 'bg-accent-green' },
 }
 
-function daysInStage(prospect: Prospect): number {
+export function daysInStage(prospect: Prospect): number {
   const changed = new Date(prospect.stageChangedAt).getTime()
-  const now = Date.now()
-  return Math.max(0, Math.round((now - changed) / (1000 * 60 * 60 * 24)))
+  const reference = clockNow().getTime()
+  return Math.max(0, Math.round((reference - changed) / (1000 * 60 * 60 * 24)))
 }
 
 const columns: ColumnDef<Prospect, unknown>[] = [

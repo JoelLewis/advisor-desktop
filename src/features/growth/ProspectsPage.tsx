@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- exports page component + testable daysInStage helper */
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TrendingUp, User, Phone, Mail, Calendar, UserPlus, LayoutGrid, List, FileText } from 'lucide-react'
@@ -9,6 +10,7 @@ import { useProspects } from '@/hooks/use-prospects'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { cn } from '@/lib/utils'
 import type { Prospect, ProspectStage } from '@/types/prospect'
+import { now as clockNow } from '@/lib/clock'
 
 type ViewMode = 'board' | 'list'
 
@@ -30,10 +32,10 @@ const SOURCE_LABELS: Record<string, string> = {
 
 const BOARD_VISIBLE_LIMIT = 5
 
-function daysInStage(prospect: Prospect): number {
+export function daysInStage(prospect: Prospect): number {
   const changed = new Date(prospect.stageChangedAt).getTime()
-  const now = Date.now()
-  return Math.max(0, Math.round((now - changed) / (1000 * 60 * 60 * 24)))
+  const reference = clockNow().getTime()
+  return Math.max(0, Math.round((reference - changed) / (1000 * 60 * 60 * 24)))
 }
 
 function ProspectCard({ prospect }: { prospect: Prospect }) {
@@ -129,8 +131,8 @@ function PipelineMetrics({ prospects }: { prospects: Prospect[] }) {
     const weightedAUM = prospects.reduce((sum, p) => sum + p.estimatedAUM * p.probability, 0)
     const allDays = prospects.map((p) => {
       const created = new Date(p.createdAt).getTime()
-      const now = Date.now()
-      return Math.max(1, Math.round((now - created) / (1000 * 60 * 60 * 24)))
+      const reference = clockNow().getTime()
+      return Math.max(1, Math.round((reference - created) / (1000 * 60 * 60 * 24)))
     })
     const avgDaysInPipeline = allDays.length > 0
       ? Math.round(allDays.reduce((a, b) => a + b, 0) / allDays.length)

@@ -1,7 +1,16 @@
 import { http, HttpResponse, delay } from 'msw'
 import { tasks, processTrackers, workflowTemplates } from '../data/workflows'
 import { notFound } from './utils'
+import { startOfToday } from '@/lib/clock'
 import type { WorkflowTemplate } from '@/types/workflow'
+
+// Relative "due in N days," anchored to the frozen clock rather than the system clock — the
+// result is later compared against startOfToday() in WorkflowCenterPage's overdue/due-today logic.
+function dueInDays(days: number): string {
+  const d = startOfToday()
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().slice(0, 10)
+}
 
 // Mutable copy for CRUD
 const templateStore = new Map<string, WorkflowTemplate>(
@@ -108,7 +117,7 @@ export const workflowHandlers = [
       clientId: body.clientId,
       clientName: body.clientName,
       category: 'administrative',
-      dueDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+      dueDate: dueInDays(7),
       createdAt: new Date().toISOString(),
     })
   }),

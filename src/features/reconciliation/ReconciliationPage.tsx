@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- exports page component + testable formatTimeAgo helper */
 import { useState } from 'react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -18,9 +19,10 @@ import {
   useReconTrending, useResolveBreak,
 } from '@/hooks/use-reconciliation'
 import type { ReconStatus, BreakSeverity } from '@/types/reconciliation'
+import { now } from '@/lib/clock'
 
-function formatTimeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime()
+export function formatTimeAgo(iso: string): string {
+  const diff = now().getTime() - new Date(iso).getTime()
   const mins = Math.floor(diff / 60_000)
   if (mins < 1) return 'just now'
   if (mins < 60) return `${mins}m ago`
