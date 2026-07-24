@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils'
 import { Badge } from './Badge'
 import type { CalendarEvent, MeetingType } from '@/types/calendar'
 import { formatTime } from '@/lib/utils'
+import { now } from '@/lib/clock'
 
 const MEETING_TYPE_LABELS: Record<MeetingType, string> = {
   annual_review: 'Annual Review',
@@ -21,7 +22,7 @@ type MeetingCardProps = {
 
 export function MeetingCard({ event, onPrep, onNotes }: MeetingCardProps) {
   const isZoom = event.location?.toLowerCase().includes('zoom')
-  const isPast = new Date(event.endTime) < new Date()
+  const isPast = new Date(event.endTime) < now()
 
   return (
     <div

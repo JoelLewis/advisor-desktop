@@ -56,10 +56,16 @@ export const reconciliationHandlers = [
   }),
 
   http.get('/api/reconciliation/trending', () => {
-    // 30-day trending data for match rates
+    // 30-day trailing trending data for match rates, ending at today.
+    // NOTE: deviates from the Task 1 brief's literal instruction ("replace new Date('2026-01-29')
+    // with startOfToday()"). Applied verbatim, that produces d.getDate() + i for i in 0..29, which
+    // walks FORWARD from today for 29 days — the exact "dated ahead of the data it reconciles" bug
+    // (D19) this task exists to close, just pointed the other direction. Using `- 29 + i` instead
+    // keeps the window trailing (day 0 = 29 days ago, day 29 = today), so it never dates itself
+    // into the future relative to the frozen clock.
     const trending = Array.from({ length: 30 }, (_, i) => {
       const d = startOfToday()
-      d.setDate(d.getDate() + i)
+      d.setDate(d.getDate() - 29 + i)
       const date = d.toISOString().slice(0, 10)
       const noise = () => (Math.sin(i * 0.7) * 0.2 + Math.cos(i * 1.3) * 0.15)
       return {

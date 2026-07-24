@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { Zap, ListTodo, StickyNote, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/store/ui-store'
+import { startOfToday } from '@/lib/clock'
 
 type CaptureType = 'task' | 'note'
 
@@ -57,8 +58,10 @@ export function QuickCaptureDialog() {
 
     try {
       if (captureType === 'task') {
-        const dueDate = new Date()
-        dueDate.setDate(dueDate.getDate() + 7)
+        // Relative "due in 7 days," anchored to the frozen clock rather than the system clock so
+        // it stays consistent with the rest of the demo's frozen "today".
+        const dueDate = startOfToday()
+        dueDate.setUTCDate(dueDate.getUTCDate() + 7)
         await fetch('/api/workflows/tasks', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

@@ -5,6 +5,7 @@ import { accounts } from '../data/accounts'
 import { households } from '../data/households'
 import type { ProposalDraft, ProposalSection, ProposalSectionType, ProposalClientData } from '@/types/proposal'
 import { notFound } from './utils'
+import { now as clockNow } from '@/lib/clock'
 
 const proposalStore = new Map<string, ProposalDraft>()
 
@@ -24,9 +25,9 @@ function deriveInvestmentObjective(tolerance: string): string {
 }
 
 function deriveTimeHorizon(dateOfBirth: string): string {
-  const today = new Date()
+  const today = clockNow()
   const birth = new Date(dateOfBirth)
-  const age = today.getFullYear() - birth.getFullYear()
+  const age = today.getUTCFullYear() - birth.getUTCFullYear()
   if (age < 55) return '10+ years'
   if (age <= 65) return '5-10 years'
   return '3-5 years'

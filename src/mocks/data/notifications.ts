@@ -1,21 +1,22 @@
 import type { Notification } from '@/types/notification'
+import { now } from '@/lib/clock'
 
 function daysAgo(n: number): string {
-  const d = new Date()
-  d.setDate(d.getDate() - n)
-  d.setHours(9, 30, 0, 0)
+  const d = now()
+  d.setUTCDate(d.getUTCDate() - n)
+  d.setUTCHours(9, 30, 0, 0)
   return d.toISOString()
 }
 
 function hoursAgo(n: number): string {
-  const d = new Date()
-  d.setHours(d.getHours() - n)
+  const d = now()
+  d.setUTCHours(d.getUTCHours() - n)
   return d.toISOString()
 }
 
 function minutesAgo(n: number): string {
-  const d = new Date()
-  d.setMinutes(d.getMinutes() - n)
+  const d = now()
+  d.setUTCMinutes(d.getUTCMinutes() - n)
   return d.toISOString()
 }
 

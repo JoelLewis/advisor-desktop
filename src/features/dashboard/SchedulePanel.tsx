@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- exports component + date-label helpers used by tests */
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { MeetingCard } from '@/components/ui/MeetingCard'
@@ -7,20 +8,24 @@ import { MeetingPrepModal } from './MeetingPrepModal'
 import { useSchedule } from '@/hooks/use-schedule'
 import { startOfToday, MOCK_TODAY_ISO } from '@/lib/clock'
 
-function formatDateLabel(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00')
+// Date-only strings (YYYY-MM-DD) are parsed and compared as UTC instants throughout — never as
+// local time — so "Today"/"Tomorrow" labeling is correct regardless of the runtime's timezone.
+// (Fix round 1: this previously parsed dateStr as local time via `dateStr + 'T00:00:00'` while
+// comparing against startOfToday()'s UTC midnight, so the labels mismatched outside UTC.)
+export function formatDateLabel(dateStr: string): string {
+  const date = new Date(`${dateStr}T00:00:00Z`)
   const today = startOfToday()
   const tomorrow = new Date(today)
-  tomorrow.setDate(tomorrow.getDate() + 1)
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
 
   if (date.getTime() === today.getTime()) return 'Today'
   if (date.getTime() === tomorrow.getTime()) return 'Tomorrow'
-  return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
+  return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' })
 }
 
-function addDays(dateStr: string, days: number): string {
-  const d = new Date(dateStr + 'T00:00:00')
-  d.setDate(d.getDate() + days)
+export function addDays(dateStr: string, days: number): string {
+  const d = new Date(`${dateStr}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + days)
   return d.toISOString().slice(0, 10)
 }
 
