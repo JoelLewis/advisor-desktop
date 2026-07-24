@@ -8,6 +8,7 @@ import {
 import { cn } from '@/lib/utils'
 import { Badge } from './Badge'
 import { useNBATemplates } from '@/hooks/use-nbas'
+import { now } from '@/lib/clock'
 import type { NBA, NBACategory, NBAEscalationLevel, NBAPriority } from '@/types/nba'
 
 const MS_PER_HOUR = 1000 * 60 * 60
@@ -55,21 +56,19 @@ function getUrgencyBucket(urgency: number): UrgencyBucket {
   return 'when_convenient'
 }
 
-const MOCK_NOW = new Date('2026-02-25T12:00:00Z')
-
 function daysBetween(from: Date, to: Date): number {
   return Math.floor((to.getTime() - from.getTime()) / MS_PER_DAY)
 }
 
 function formatComplianceDeadline(deadline: string): { text: string; urgent: boolean } {
-  const days = daysBetween(MOCK_NOW, new Date(deadline))
+  const days = daysBetween(now(), new Date(deadline))
   if (days < 0) return { text: 'Past deadline', urgent: true }
   if (days <= 3) return { text: `${days}d remaining — action required`, urgent: true }
   return { text: `${days}d until deadline`, urgent: days <= 7 }
 }
 
 function formatCountdown(expiresAt: string): string | null {
-  const diffMs = new Date(expiresAt).getTime() - MOCK_NOW.getTime()
+  const diffMs = new Date(expiresAt).getTime() - now().getTime()
   if (diffMs <= 0) return 'Expired'
   const days = Math.floor(diffMs / MS_PER_DAY)
   const hours = Math.floor((diffMs % MS_PER_DAY) / MS_PER_HOUR)

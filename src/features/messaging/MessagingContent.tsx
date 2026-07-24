@@ -5,6 +5,7 @@ import { RichCard } from '@/components/ui/RichCard'
 import { useThreads, useMessages, useSendMessage as useSendTeamMessage } from '@/hooks/use-messaging'
 import { useUIStore } from '@/store/ui-store'
 import { cn } from '@/lib/utils'
+import { now as clockNow } from '@/lib/clock'
 import type { Thread, Message } from '@/types/messaging'
 
 const ROLE_COLORS: Record<string, string> = {
@@ -17,8 +18,8 @@ const ROLE_COLORS: Record<string, string> = {
 
 function formatTime(timestamp: string): string {
   const date = new Date(timestamp)
-  const now = new Date('2026-02-25T12:00:00Z')
-  const diffMs = now.getTime() - date.getTime()
+  const reference = clockNow()
+  const diffMs = reference.getTime() - date.getTime()
   const diffHours = diffMs / (1000 * 60 * 60)
 
   if (diffHours < 1) return 'Just now'

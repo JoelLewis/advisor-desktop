@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import type { ComplianceAlert, SupervisionRecord, TradeComplianceRequest, TradeComplianceCheck, TradeComplianceResult } from '@/types/compliance'
+import { startOfToday } from '@/lib/clock'
 
 // ── Restricted securities list ──
 const RESTRICTED_SECURITIES = new Set([
@@ -132,7 +133,7 @@ function checkTradesForAccount(req: TradeComplianceRequest): TradeComplianceResu
   }
 
   // ── Rule 4: Wash sale detection ──
-  const today = new Date('2026-02-26')
+  const today = startOfToday()
   let washSaleDetected = false
   for (const trade of req.trades) {
     const sellDateStr = recentSells[trade.symbol]

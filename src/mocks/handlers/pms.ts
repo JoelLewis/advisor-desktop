@@ -10,6 +10,7 @@ import { getPositionsForAccount } from '../data/positions'
 import { accounts } from '../data/accounts'
 import { households } from '../data/households'
 import { notFound, roundTo } from './utils'
+import { startOfToday } from '@/lib/clock'
 
 /** Convert an account's value from its base currency to USD using static FX rates */
 function toUSD(value: number, baseCurrency?: CurrencyCode): number {
@@ -51,9 +52,9 @@ function generatePerformanceSeries(months: number, accountId = 'default'): Perfo
   const series: PerformanceSeries[] = []
   let portfolioValue = 100
   let benchmarkValue = 100
-  const now = new Date('2026-02-25')
+  const anchor = startOfToday()
   for (let i = months; i >= 0; i--) {
-    const date = new Date(now)
+    const date = new Date(anchor)
     date.setMonth(date.getMonth() - i)
     portfolioValue *= 1 + (rand() * 0.06 - 0.02)
     benchmarkValue *= 1 + (rand() * 0.055 - 0.02)

@@ -5,11 +5,11 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { Card, CardHeader } from '@/components/ui/Card'
 import { MeetingPrepModal } from './MeetingPrepModal'
 import { useSchedule } from '@/hooks/use-schedule'
+import { startOfToday, MOCK_TODAY_ISO } from '@/lib/clock'
 
 function formatDateLabel(dateStr: string): string {
   const date = new Date(dateStr + 'T00:00:00')
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  const today = startOfToday()
   const tomorrow = new Date(today)
   tomorrow.setDate(tomorrow.getDate() + 1)
 
@@ -30,7 +30,7 @@ type ModalState = {
 } | null
 
 export function SchedulePanel() {
-  const [selectedDate, setSelectedDate] = useState('2026-02-25')
+  const [selectedDate, setSelectedDate] = useState<string>(MOCK_TODAY_ISO)
   const [modalState, setModalState] = useState<ModalState>(null)
   const { data: events, isLoading } = useSchedule(selectedDate)
 

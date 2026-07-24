@@ -10,6 +10,7 @@ import { useMyActions, useInProcess, useDelegated, useWorkflowTemplates } from '
 import { useUIStore } from '@/store/ui-store'
 import { formatDate, cn } from '@/lib/utils'
 import { PRIORITY_VARIANTS } from '@/lib/labels'
+import { startOfToday } from '@/lib/clock'
 import { StartWorkflowDialog } from './StartWorkflowDialog'
 import { QuickTaskDialog } from './QuickTaskDialog'
 import { WorkflowStepEditor } from './WorkflowStepEditor'
@@ -91,7 +92,7 @@ const taskColumns: ColumnDef<Task, unknown>[] = [
     accessorKey: 'dueDate', header: 'Due',
     cell: ({ row }) => {
       const due = new Date(row.original.dueDate)
-      const today = new Date('2026-02-25')
+      const today = startOfToday()
       const isOverdue = due < today && row.original.status !== 'completed'
       const isDueToday = due.toDateString() === today.toDateString()
 

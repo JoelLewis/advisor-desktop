@@ -1,9 +1,10 @@
 /* eslint-disable react-refresh/only-export-components -- shared utility components + constants */
 import { cn } from '@/lib/utils'
+import { MOCK_TODAY_ISO } from '@/lib/clock'
 
 export const HOLDING_LABELS: Record<string, string> = { short: 'Short-Term', long: 'Long-Term' }
 
-export const MOCK_NOW = '2026-02-25'
+export const MOCK_NOW = MOCK_TODAY_ISO
 
 const TH_ALIGN = {
   left: 'text-left',

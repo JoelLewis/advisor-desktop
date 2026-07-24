@@ -4,9 +4,10 @@ import type { TaxLot } from '@/types/portfolio'
 import { accounts } from '../data/accounts'
 import { getPositionsForAccount } from '../data/positions'
 import { notFound } from './utils'
+import { startOfToday } from '@/lib/clock'
 
 function generateTransactions(accountId: string, totalValue: number): Transaction[] {
-  const baseDate = new Date('2026-02-25')
+  const baseDate = startOfToday()
   const txns: Transaction[] = []
   const symbols = ['VTI', 'AGG', 'EFA', 'QQQ', 'BND', 'GLD']
 
@@ -78,7 +79,7 @@ function generateTaxLots(accountId: string, totalValue: number): TaxLot[] {
 
     for (let i = 0; i < lotCount; i++) {
       const monthsAgo = Math.floor(Math.random() * 48) + 3
-      const purchaseDate = new Date('2026-02-25')
+      const purchaseDate = startOfToday()
       purchaseDate.setMonth(purchaseDate.getMonth() - monthsAgo)
       const isLongTerm = monthsAgo > 12
       const costMultiplier = 0.7 + Math.random() * 0.5 // 70-120% of current value

@@ -4,21 +4,19 @@ import { SchedulePanel } from './SchedulePanel'
 import { ActivityStream } from './ActivityStream'
 import { AIInsightStack } from '@/components/ui/AIInsightCard'
 import { useAIInsights } from '@/hooks/use-ai'
+import { now } from '@/lib/clock'
 
 function formatToday(): string {
-  return new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+  return now().toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC',
   })
 }
 
 function getGreeting(): string {
-  const hour = new Date().getHours()
-  if (hour < 12) return 'Good Morning'
-  if (hour < 17) return 'Good Afternoon'
-  return 'Good Evening'
+  const hour = now().getUTCHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 17) return 'Good afternoon'
+  return 'Good evening'
 }
 
 export function DashboardPage() {

@@ -1,4 +1,5 @@
 import type { ProposalTemplate, ProposalSectionType } from '@/types/proposal'
+import { MOCK_TODAY_ISO } from '@/lib/clock'
 
 export const proposalTemplates: ProposalTemplate[] = [
   {
@@ -79,7 +80,9 @@ export function generateSectionContent(
 ): string {
   const template = proposalTemplates.find((t) => t.id === templateId)
   const templateName = template?.name ?? 'Investment Proposal'
-  const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  const today = new Date(`${MOCK_TODAY_ISO}T00:00:00Z`).toLocaleDateString('en-US', {
+    year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC',
+  })
 
   switch (sectionType) {
     case 'cover_page':
