@@ -3,8 +3,16 @@ import { getTaxLots, getTransactions, getOpenWashSaleWindows } from '@/services/
 import { getPositions } from '@/services/pms'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { accounts } from '@/mocks/data/accounts'
+import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
 import { boundedTradeQty } from '@/mocks/handlers/custodian'
 import { realisedSales, washSaleWindow, openWashSaleWindows } from '@/mocks/data/realised-sales'
+import {
+  estimatedTaxBenefit,
+  SHORT_TERM_RATE,
+  LONG_TERM_RATE,
+  HARVEST_LOSS_THRESHOLD_USD,
+  isHarvestable,
+} from '@/features/portfolios/tax/shared'
 
 const ACCOUNTS = ['acc-001', 'acc-002', 'acc-011', 'acc-020', 'acc-029', 'acc-041', 'acc-042', 'acc-043', 'acc-044']
 
@@ -326,5 +334,84 @@ describe('every realised sale reconciles with a real sell transaction (C14)', ()
       expect(balance, `${t.id} drives INTC's running balance to ${balance}`).toBeGreaterThanOrEqual(0)
     }
     expect(balance).toBe(heldToday)
+  })
+})
+
+describe('tax-loss harvesting rates', () => {
+  it('C11: short-term losses offset at the ordinary rate, long-term at capital-gains + NIIT', () => {
+    expect(SHORT_TERM_RATE).toBe(0.37)
+    expect(LONG_TERM_RATE).toBe(0.238)
+    expect(estimatedTaxBenefit({ gainLoss: -10_000, holdingPeriod: 'short' })).toBeCloseTo(3_700, 2)
+    expect(estimatedTaxBenefit({ gainLoss: -10_000, holdingPeriod: 'long' })).toBeCloseTo(2_380, 2)
+  })
+
+  it('C11: a gain produces no harvesting benefit', () => {
+    expect(estimatedTaxBenefit({ gainLoss: 10_000, holdingPeriod: 'long' })).toBe(0)
+  })
+
+  it('C11: a $224,000 long-term loss is a $53,312 benefit, not a $82,880 one', () => {
+    expect(estimatedTaxBenefit({ gainLoss: -224_000, holdingPeriod: 'long' })).toBeCloseTo(53_312, 2)
+  })
+
+  // Test-quality trap #1: a bound like `expect(benefit).toBeGreaterThanOrEqual(loss * 0.238)` and
+  // `toBeLessThanOrEqual(loss * 0.37)` passes under a flat-37% regression (lands on the upper
+  // bound) *and* under a flat-23.8% regression (lands on the lower bound). This fixture-based
+  // test instead asserts the exact aggregate against a real account confirmed below to hold both
+  // holding periods among its harvestable lots, so the two-rate branch is actually exercised.
+  it('C11: acc-018 holds both a short-term and a long-term harvestable lot; the aggregate benefit uses each lot\'s own rate', async () => {
+    const lots = await getTaxLots('acc-018')
+    const harvestable = lots.filter((l) => l.gainLoss < HARVEST_LOSS_THRESHOLD_USD)
+
+    // Test-quality trap #2: confirm the mix exists before relying on it — otherwise the branch
+    // under test is silently untested.
+    const shortLots = harvestable.filter((l) => l.holdingPeriod === 'short')
+    const longLots = harvestable.filter((l) => l.holdingPeriod === 'long')
+    expect(shortLots.length, 'acc-018 no longer has a short-term harvestable lot').toBeGreaterThan(0)
+    expect(longLots.length, 'acc-018 no longer has a long-term harvestable lot').toBeGreaterThan(0)
+
+    const actualBenefit = harvestable.reduce((s, l) => s + estimatedTaxBenefit(l), 0)
+    const expectedBenefit =
+      shortLots.reduce((s, l) => s + Math.abs(l.gainLoss), 0) * SHORT_TERM_RATE
+      + longLots.reduce((s, l) => s + Math.abs(l.gainLoss), 0) * LONG_TERM_RATE
+    expect(actualBenefit).toBeCloseTo(expectedBenefit, 6)
+
+    // A flat-rate regression (37% or 23.8% applied to every lot) would land the aggregate on one
+    // of these two values instead of the true mixed-rate figure — pin both as guardrails.
+    const flat37 = harvestable.reduce((s, l) => s + Math.abs(l.gainLoss), 0) * 0.37
+    const flat238 = harvestable.reduce((s, l) => s + Math.abs(l.gainLoss), 0) * 0.238
+    expect(actualBenefit).not.toBeCloseTo(flat37, 2)
+    expect(actualBenefit).not.toBeCloseTo(flat238, 2)
+  })
+})
+
+describe('the harvest threshold is currency-aware (PRE-FLIGHT correction 1)', () => {
+  it('HARVEST_LOSS_THRESHOLD_USD is -1000', () => {
+    expect(HARVEST_LOSS_THRESHOLD_USD).toBe(-1000)
+  })
+
+  it('a HK$1,000 loss (~US$128) does not clear a US$1,000 threshold', () => {
+    expect(isHarvestable(-1000, 'HKD', FX_RATES_USD_BASE)).toBe(false)
+  })
+
+  it('a CHF 1,000 loss (~US$1,120) clears a US$1,000 threshold even though the native-currency figure is close to the raw literal', () => {
+    expect(isHarvestable(-1000, 'CHF', FX_RATES_USD_BASE)).toBe(true)
+  })
+
+  // acc-044 (CHF Conservative Account) is one of the four non-USD accounts named in the
+  // PRE-FLIGHT corrections as where prior defects on this branch landed. lot-pos-234-2 carries a
+  // CHF -980 loss: under the old currency-blind literal (`gainLoss < -1000`, comparing a raw CHF
+  // number to a bare -1000) it is excluded, because -980 > -1000. Converted to USD at the fixed
+  // fixture rate (CHF 0.88 per USD) it is -1,113.64, which *does* clear a real US$1,000
+  // threshold — so the currency-blind filter silently hides a genuine harvest opportunity in
+  // every non-USD account whose currency is worth more per unit than the dollar.
+  it('acc-044: a CHF 980 loss is hidden by the currency-blind literal but is a real harvestable loss once converted', async () => {
+    const lots = await getTaxLots('acc-044')
+    const lot = lots.find((l) => l.id === 'lot-pos-234-2')!
+    expect(lot.gainLoss).toBeCloseTo(-980, 0)
+
+    const currencyBlindSelected = lot.gainLoss < -1000
+    expect(currencyBlindSelected, 'this lot should NOT clear the old currency-blind literal').toBe(false)
+
+    expect(isHarvestable(lot.gainLoss, 'CHF', FX_RATES_USD_BASE)).toBe(true)
   })
 })

@@ -3,8 +3,13 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'
 import type { CurrencyCode } from '@/types/currency'
+import type { Account } from '@/types/account'
 
-export const COST_BASIS_METHODS = ['FIFO', 'LIFO', 'HIFO', 'AvgCost', 'SpecID'] as const
+// C14 · tax-efficiency — Spec ID is not a fifth lot-selection algorithm alongside FIFO/LIFO/HIFO;
+// HIFO and LIFO are standing instructions *under* specific identification, which is how
+// custodians actually offer it. Dropping it here also drops the `case 'SpecID'` branch in
+// TaxManagementPage's `computeImpact` switch.
+export const COST_BASIS_METHODS = ['FIFO', 'LIFO', 'HIFO', 'AvgCost'] as const
 export type CostBasisMethod = (typeof COST_BASIS_METHODS)[number]
 
 export const COST_BASIS_DESCRIPTIONS: Record<CostBasisMethod, string> = {
@@ -12,7 +17,6 @@ export const COST_BASIS_DESCRIPTIONS: Record<CostBasisMethod, string> = {
   LIFO: 'Last In, First Out — sells newest lots first',
   HIFO: 'Highest In, First Out — sells highest cost lots first (minimizes gains)',
   AvgCost: 'Average Cost — uses average cost basis across all lots',
-  SpecID: 'Specific Identification — manually select which lots to sell',
 }
 
 type MethodImpactRow = {
@@ -23,6 +27,7 @@ type MethodImpactRow = {
 }
 
 type CostBasisMethodCardProps = {
+  account: Pick<Account, 'costBasisMethod'>
   costBasisMethod: CostBasisMethod
   setCostBasisMethod: (method: CostBasisMethod) => void
   methodImpact: MethodImpactRow[] | null
@@ -31,12 +36,20 @@ type CostBasisMethodCardProps = {
 }
 
 export function CostBasisMethodCard({
+  account,
   costBasisMethod,
   setCostBasisMethod,
   methodImpact,
   formatWithConversion,
   baseCurrency,
 }: CostBasisMethodCardProps) {
+  // Average cost is only an available election for accounts the custodian actually offers it
+  // on (mutual funds and DRIP-eligible shares) — not every brokerage account.
+  const availableMethods = COST_BASIS_METHODS.filter(
+    (m) => m !== 'AvgCost' || account.costBasisMethod === 'average_cost',
+  )
+  const visibleImpact = methodImpact?.filter((row) => availableMethods.includes(row.method)) ?? null
+
   return (
     <Card>
       <CardHeader>Cost Basis Method</CardHeader>
@@ -47,7 +60,7 @@ export function CostBasisMethodCard({
             onChange={(e) => setCostBasisMethod(e.target.value as CostBasisMethod)}
             className="rounded-md border border-border-secondary bg-surface-primary px-3 py-1.5 text-body text-text-primary focus:border-accent-blue focus:outline-hidden"
           >
-            {COST_BASIS_METHODS.map((m) => (
+            {availableMethods.map((m) => (
               <option key={m} value={m}>{m}</option>
             ))}
           </select>
@@ -55,9 +68,13 @@ export function CostBasisMethodCard({
             {COST_BASIS_DESCRIPTIONS[costBasisMethod]}
           </span>
         </div>
+        <p className="text-[11px] text-text-tertiary">
+          HIFO and LIFO are standing lot-selection instructions under specific identification.
+          Average cost is available only for mutual funds and DRIP-eligible shares.
+        </p>
 
         {/* Impact comparison table */}
-        {methodImpact && (
+        {visibleImpact && (
           <div className="overflow-x-auto">
             <table className="w-full text-caption">
               <thead>
@@ -69,7 +86,7 @@ export function CostBasisMethodCard({
                 </tr>
               </thead>
               <tbody>
-                {methodImpact.map((row) => (
+                {visibleImpact.map((row) => (
                   <tr
                     key={row.method}
                     className={cn(

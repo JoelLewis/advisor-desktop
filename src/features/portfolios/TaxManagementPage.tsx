@@ -8,8 +8,10 @@ import { useTaxLots } from '@/hooks/use-tax-lots'
 import { usePositions } from '@/hooks/use-portfolio'
 import { useOpenWashSaleWindows } from '@/hooks/use-open-wash-sale-windows'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
+import { useCurrencyConverter } from '@/hooks/use-fx'
 import { cn } from '@/lib/utils'
 import type { TaxLot } from '@/types/portfolio'
+import { isHarvestable } from './tax/shared'
 import { COST_BASIS_METHODS, type CostBasisMethod } from './tax/CostBasisMethodCard'
 import { TaxSummaryCards } from './tax/TaxSummaryCards'
 import { CostBasisMethodCard } from './tax/CostBasisMethodCard'
@@ -37,8 +39,10 @@ export function TaxManagementPage() {
   const { data: taxLots, isLoading: lotsLoading } = useTaxLots(id)
   const { data: positions } = usePositions(id)
   const { formatWithConversion } = useFormatCurrency()
+  const { rates, isReady: fxReady } = useCurrencyConverter()
 
-  const isLoading = accountLoading || lotsLoading
+  const baseCurrency = account?.baseCurrency ?? 'USD'
+  const isLoading = accountLoading || lotsLoading || !fxReady
 
   // Build position lookup for symbol display
   const positionMap = useMemo(() => {
@@ -49,10 +53,14 @@ export function TaxManagementPage() {
     return map
   }, [positions])
 
-  // Harvest opportunities: lots with unrealized losses > $1,000
+  // Harvest opportunities: lots with unrealized losses greater than HARVEST_LOSS_THRESHOLD_USD.
+  // PRE-FLIGHT correction 1 — the threshold is in USD; a lot's gainLoss is in the account's own
+  // baseCurrency, so it must be converted before comparing rather than compared as a raw literal.
   const harvestOpportunities = useMemo(
-    () => (taxLots ?? []).filter((lot) => lot.gainLoss < -1000).sort((a, b) => a.gainLoss - b.gainLoss),
-    [taxLots],
+    () => (taxLots ?? [])
+      .filter((lot) => isHarvestable(lot.gainLoss, baseCurrency, rates))
+      .sort((a, b) => a.gainLoss - b.gainLoss),
+    [taxLots, baseCurrency, rates],
   )
 
   // Tax summary stats
@@ -83,13 +91,37 @@ export function TaxManagementPage() {
       for (const [, lots] of byPosition) {
         const totalQty = lots.reduce((s, l) => s + l.quantity, 0)
         const sellQty = Math.ceil(totalQty * 0.1)
+
+        // C13 · tax-efficiency — under average cost every share carries an identical basis, so a
+        // 10% sale realises exactly 10% of the unrealised gain, with holding period allocated FIFO.
+        if (method === 'AvgCost') {
+          const totalBasis = lots.reduce((s, l) => s + l.costBasis, 0)
+          const totalValue = lots.reduce((s, l) => s + l.currentValue, 0)
+          const avgBasis = totalBasis / totalQty
+          const avgPrice = totalValue / totalQty
+          const gain = (avgPrice - avgBasis) * sellQty
+          totalGain += gain
+          // Holding period is allocated FIFO across the sold shares.
+          const fifo = [...lots].sort((a, b) => a.purchaseDate.localeCompare(b.purchaseDate))
+          let remainingAvg = sellQty
+          for (const lot of fifo) {
+            if (remainingAvg <= 0) break
+            const fromLot = Math.min(remainingAvg, lot.quantity)
+            const share = (fromLot / sellQty) * gain
+            if (lot.holdingPeriod === 'short') stGain += share
+            else ltGain += share
+            remainingAvg -= fromLot
+          }
+          continue
+        }
+
         let sorted: TaxLot[]
         switch (method) {
           case 'FIFO': sorted = [...lots].sort((a, b) => a.purchaseDate.localeCompare(b.purchaseDate)); break
           case 'LIFO': sorted = [...lots].sort((a, b) => b.purchaseDate.localeCompare(a.purchaseDate)); break
+          // C14 · tax-efficiency — HIFO is a standing lot-selection instruction *under* Spec ID,
+          // which is how custodians actually offer it. There is no separate "SpecID algorithm".
           case 'HIFO': sorted = [...lots].sort((a, b) => (b.costBasis / b.quantity) - (a.costBasis / a.quantity)); break
-          case 'AvgCost': sorted = lots; break // all lots treated equally
-          case 'SpecID': sorted = [...lots].sort((a, b) => a.gainLoss - b.gainLoss); break // best lots first
         }
         let remaining = sellQty
         for (const lot of sorted) {
@@ -143,11 +175,7 @@ export function TaxManagementPage() {
     })
   }
 
-  const selectedHarvestAmount = harvestOpportunities
-    .filter((l) => selectedLots.has(l.id))
-    .reduce((s, l) => s + Math.abs(l.gainLoss), 0)
-
-  const baseCurrency = account.baseCurrency ?? 'USD'
+  const selectedLotObjects = harvestOpportunities.filter((l) => selectedLots.has(l.id))
 
   return (
     <div className="flex flex-col gap-6">
@@ -175,6 +203,7 @@ export function TaxManagementPage() {
 
       {/* Cost Basis Method */}
       <CostBasisMethodCard
+        account={account}
         costBasisMethod={costBasisMethod}
         setCostBasisMethod={setCostBasisMethod}
         methodImpact={methodImpact}
@@ -215,7 +244,7 @@ export function TaxManagementPage() {
           harvestOpportunities={harvestOpportunities}
           selectedLots={selectedLots}
           toggleLot={toggleLot}
-          selectedHarvestAmount={selectedHarvestAmount}
+          selectedLotObjects={selectedLotObjects}
           positionMap={positionMap}
           formatWithConversion={formatWithConversion}
           baseCurrency={baseCurrency}

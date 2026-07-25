@@ -4,13 +4,13 @@ import { Badge } from '@/components/ui/Badge'
 import { CurrencyValue } from '@/components/ui/CurrencyValue'
 import type { TaxLot } from '@/types/portfolio'
 import type { CurrencyCode } from '@/types/currency'
-import { HOLDING_LABELS, Th } from './shared'
+import { HOLDING_LABELS, Th, estimatedTaxBenefit, RATE_DISCLOSURE } from './shared'
 
 type HarvestScannerViewProps = {
   harvestOpportunities: TaxLot[]
   selectedLots: Set<string>
   toggleLot: (lotId: string) => void
-  selectedHarvestAmount: number
+  selectedLotObjects: TaxLot[]
   positionMap: Map<string, { symbol: string; name: string }>
   formatWithConversion: (value: number, currency: CurrencyCode, opts?: { compact?: boolean }) => string
   baseCurrency: CurrencyCode
@@ -20,11 +20,14 @@ export function HarvestScannerView({
   harvestOpportunities,
   selectedLots,
   toggleLot,
-  selectedHarvestAmount,
+  selectedLotObjects,
   positionMap,
   formatWithConversion,
   baseCurrency,
 }: HarvestScannerViewProps) {
+  const selectedLoss = selectedLotObjects.reduce((s, l) => s + Math.abs(l.gainLoss), 0)
+  const selectedBenefit = selectedLotObjects.reduce((s, l) => s + estimatedTaxBenefit(l), 0)
+
   return (
     <div className="space-y-4">
       {selectedLots.size > 0 && (
@@ -33,8 +36,10 @@ export function HarvestScannerView({
             <div>
               <p className="text-body-strong">{selectedLots.size} lot{selectedLots.size !== 1 ? 's' : ''} selected</p>
               <p className="text-caption text-text-secondary">
-                Estimated tax savings: <span className="font-mono font-medium text-accent-green">{formatWithConversion(selectedHarvestAmount * 0.37, baseCurrency, { compact: true })}</span>
-                {' '}(at 37% rate)
+                Harvestable loss{' '}
+                <span className="font-mono font-medium">{formatWithConversion(selectedLoss, baseCurrency, { compact: true })}</span>
+                {' · '}estimated tax benefit{' '}
+                <span className="font-mono font-medium text-accent-green">{formatWithConversion(selectedBenefit, baseCurrency, { compact: true })}</span>
               </p>
             </div>
             <button className="flex items-center gap-1.5 rounded-md bg-accent-blue px-4 py-2 text-body font-medium text-white hover:bg-accent-blue/90">
@@ -57,7 +62,7 @@ export function HarvestScannerView({
         </CardHeader>
         <CardContent className="p-0">
           {harvestOpportunities.length === 0 ? (
-            <div className="px-4 py-12 text-center text-text-tertiary">No harvest opportunities found (losses &gt; $1,000)</div>
+            <div className="px-4 py-12 text-center text-text-tertiary">No harvest opportunities found (losses greater than US$1,000, converted to USD)</div>
           ) : (
             <table className="w-full">
               <thead>
@@ -67,7 +72,7 @@ export function HarvestScannerView({
                   <Th>Holding</Th>
                   <Th align="right">Qty</Th>
                   <Th align="right">Unrealized Loss</Th>
-                  <Th align="right">Est. Tax Savings</Th>
+                  <Th align="right">Est. tax benefit</Th>
                   <Th align="center">Wash Sale Risk</Th>
                 </tr>
               </thead>
@@ -95,7 +100,7 @@ export function HarvestScannerView({
                       </td>
                       <td className="px-4 py-2.5 text-right font-mono">{lot.quantity.toLocaleString()}</td>
                       <td className="px-4 py-2.5 text-right font-mono text-accent-red"><CurrencyValue value={lot.gainLoss} from={baseCurrency} /></td>
-                      <td className="px-4 py-2.5 text-right font-mono text-accent-green"><CurrencyValue value={Math.abs(lot.gainLoss) * 0.37} from={baseCurrency} /></td>
+                      <td className="px-4 py-2.5 text-right font-mono text-accent-green"><CurrencyValue value={estimatedTaxBenefit(lot)} from={baseCurrency} /></td>
                       <td className="px-4 py-2.5 text-center">
                         {lot.washSaleRestricted ? (
                           <Badge variant="red">Restricted</Badge>
@@ -110,6 +115,9 @@ export function HarvestScannerView({
             </table>
           )}
         </CardContent>
+        {harvestOpportunities.length > 0 && (
+          <p className="px-4 py-3 text-caption text-text-tertiary">{RATE_DISCLOSURE}</p>
+        )}
       </Card>
     </div>
   )
