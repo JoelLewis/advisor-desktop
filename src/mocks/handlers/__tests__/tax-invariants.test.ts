@@ -92,19 +92,20 @@ describe('tax lots partition their positions', () => {
   // blast radius of the pre-existing unbounded quantity draw — sells could exceed the position
   // held by 10-80x. Swept across all 47 accounts because the violations the reviewer found
   // (acc-010, 013, 014, 021, 031, 034, 036, 039, 040, 045) are outside the 9-account ACCOUNTS list.
-  it('D33: a sell never exceeds the quantity currently held', async () => {
-    for (const account of accounts) {
-      const [txns, positions] = await Promise.all([getTransactions(account.id), getPositions(account.id)])
-      const heldBySymbol = new Map(positions.map((p) => [p.symbol, p.quantity]))
-      for (const txn of txns.filter((t) => t.type === 'sell')) {
-        const held = heldBySymbol.get(txn.symbol!) ?? 0
-        expect(
-          txn.quantity!,
-          `${account.id} ${txn.id} sells ${txn.quantity} ${txn.symbol} against ${held} held`,
-        ).toBeLessThanOrEqual(held)
-      }
-    }
-  })
+  //
+  // RETIRED (task 14 follow-up, C14): this assertion compared a sell to the position's *current*
+  // quantity, which was a reasonable proxy only because every symbol's running balance started at
+  // zero and every trade in the 60-day window was itself bounded by that same running balance —
+  // under that model "currently held" and "held at any point in the window" always coincided.
+  // Seeding an opening balance (`current quantity + total quantity sold in the window`) to make
+  // `realisedSales` injectable breaks that coincidence on purpose: acc-007 legitimately sells 300
+  // NVDA while holding 0 today, because it sold all 300. The property this assertion was actually
+  // guarding — a sell can never exceed what the account held *at the time of the sale* — is the
+  // one already, and more correctly, covered below by "D33: no transaction implies a negative
+  // running balance for its symbol", which replays the balance chronologically instead of
+  // comparing against a single present-day snapshot. Loosening this assertion (e.g. widening the
+  // bound) rather than retiring it would have re-certified the defect it was written to catch, so
+  // it is deleted, not weakened.
 
   // Round-2 review, Important: bounding only sells left buys unbounded, so a single buy could
   // dwarf the entire position (151 BTC into a 2.15 BTC holding), and reconstructing each
@@ -270,5 +271,60 @@ describe('a household window reaches every account in the household, not just th
     // acc-011 is in hh-003 (Williams) — no relation to hh-001 or the INTC sale.
     const otherHouseholdWindows = await getOpenWashSaleWindows('acc-011')
     expect(otherHouseholdWindows.some((w) => w.symbol === 'INTC')).toBe(false)
+  })
+})
+
+// C14 · data-integrity follow-up — the tax page (realisedSales) and the transactions page
+// (generateTransactions) previously described two different worlds: none of the five realised
+// sales was backed by a matching sell transaction. These tests prove the match is exact — by id
+// and by the full (symbol, saleDate, quantity, proceeds) tuple — for every one of the five, so a
+// dropped or mismatched sale is named in the failure, not just counted.
+describe('every realised sale reconciles with a real sell transaction (C14)', () => {
+  it.each(realisedSales.map((s) => [s.id, s] as const))(
+    '%s: appears in its account\'s transaction stream as a matching sell',
+    async (_id, sale) => {
+      const txns = await getTransactions(sale.accountId)
+      const match = txns.find((t) => t.id === `txn-${sale.id}`)
+      expect(match, `${sale.id} missing from ${sale.accountId}'s transactions`).toBeDefined()
+      expect(match!.type).toBe('sell')
+      expect(match!.symbol).toBe(sale.symbol)
+      expect(match!.date.slice(0, 10)).toBe(sale.saleDate)
+      expect(match!.quantity).toBe(sale.quantity)
+      expect(match!.amount).toBeCloseTo(sale.proceeds, 6)
+      expect(match!.price).toBeCloseTo(sale.proceeds / sale.quantity, 6)
+    },
+  )
+
+  it('C14: acc-007 sold its entire NVDA position — the running balance opens above zero, is drawn down by exactly the sale, and lands on the 0 shares it holds today', async () => {
+    const [txns, positions] = await Promise.all([getTransactions('acc-007'), getPositions('acc-007')])
+    expect(positions.find((p) => p.symbol === 'NVDA')?.quantity ?? 0).toBe(0)
+
+    const nvda = txns
+      .filter((t) => t.symbol === 'NVDA' && (t.type === 'buy' || t.type === 'sell'))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    expect(nvda.length).toBeGreaterThanOrEqual(2) // the opening-balance buy + the fixture's sell
+
+    let balance = 0
+    for (const t of nvda) {
+      balance += t.type === 'buy' ? t.quantity! : -t.quantity!
+      expect(balance, `${t.id} drives NVDA's running balance to ${balance}`).toBeGreaterThanOrEqual(0)
+    }
+    expect(balance).toBe(0)
+  })
+
+  it('C14: acc-002 sold part of its INTC position — the running balance lands on the quantity it still holds today', async () => {
+    const [txns, positions] = await Promise.all([getTransactions('acc-002'), getPositions('acc-002')])
+    const heldToday = positions.find((p) => p.symbol === 'INTC')!.quantity
+
+    const intc = txns
+      .filter((t) => t.symbol === 'INTC' && (t.type === 'buy' || t.type === 'sell'))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+
+    let balance = 0
+    for (const t of intc) {
+      balance += t.type === 'buy' ? t.quantity! : -t.quantity!
+      expect(balance, `${t.id} drives INTC's running balance to ${balance}`).toBeGreaterThanOrEqual(0)
+    }
+    expect(balance).toBe(heldToday)
   })
 })

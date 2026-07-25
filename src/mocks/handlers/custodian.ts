@@ -3,9 +3,11 @@ import type { Transaction } from '@/services/custodian'
 import type { TaxLot } from '@/types/portfolio'
 import { accounts } from '../data/accounts'
 import { getPositionsForAccount } from '../data/positions'
-import { openWashSaleWindows } from '../data/realised-sales'
+import { openWashSaleWindows, realisedSales } from '../data/realised-sales'
 import { notFound } from './utils'
 import { startOfToday, MOCK_TODAY_ISO } from '@/lib/clock'
+
+const DAY_MS = 1000 * 60 * 60 * 24
 
 /**
  * C12 · tax-loss-harvesting / data-quality — lots must partition their position, and transactions
@@ -82,6 +84,75 @@ function generateTransactions(accountId: string, totalValue: number): Transactio
   const txns: Transaction[] = []
   const trades: TradeShell[] = []
 
+  // C14 · data-integrity — every realised sale in `realisedSales` must appear in its own account's
+  // transaction stream as a real sell (previously the two fixtures were unrelated: acc-002's
+  // stream held exactly one sell, SPY, never the INTC sale the tax page reports as having
+  // happened on 2026-02-21; acc-007's stream held zero sells at all). The PRNG below never draws
+  // these symbols for its own buy/sell trades (see `tradePool`), so the match is exact — the
+  // fixture's sale, not a coincidentally similar random one.
+  const accountSales = realisedSales.filter((s) => s.accountId === accountId)
+  const soldSymbols = new Set(accountSales.map((s) => s.symbol))
+  const heldBySymbol = new Map(held.map((p) => [p.symbol, p]))
+
+  // Task 13's running-balance model starts every symbol at zero 60 days ago — already unrealistic
+  // (it implicitly claims the account held nothing two months ago), and it makes an injected sell
+  // of an already-established position impossible without a preceding buy. Seed an opening balance
+  // instead: `opening = current position quantity + total quantity sold in the window`. That's
+  // self-consistent — the position existed before the window, the fixture sale(s) draw it down by
+  // exactly the sold amount, and the running balance lands on today's real holding: 0 for
+  // acc-007/acc-022 (sold out entirely) or the current quantity for acc-002/acc-015/acc-011 (sold
+  // only part). Modelled as a real 'buy' transaction dated before the earliest of this symbol's
+  // sales, so the existing per-symbol running-balance check (D33) — which recomputes balances from
+  // the transaction stream alone, starting at zero — verifies the same invariant it already
+  // verifies for every other symbol, rather than needing a carve-out.
+  for (const symbol of soldSymbols) {
+    const salesForSymbol = accountSales.filter((s) => s.symbol === symbol)
+    const position = heldBySymbol.get(symbol)
+    const currentQty = position?.quantity ?? 0
+    const soldQty = salesForSymbol.reduce((sum, s) => sum + s.quantity, 0)
+    const openingQty = currentQty + soldQty
+    const openingCostBasis = (position?.costBasis ?? 0)
+      + salesForSymbol.reduce((sum, s) => sum + s.costBasis, 0)
+    const openingPrice = openingCostBasis / openingQty
+
+    const earliestSaleMs = Math.min(
+      ...salesForSymbol.map((s) => new Date(`${s.saleDate}T00:00:00Z`).getTime()),
+    )
+    const openingMs = Math.min(baseDate.getTime() - 60 * DAY_MS, earliestSaleMs - DAY_MS)
+
+    txns.push({
+      id: `txn-${accountId}-opening-${symbol}`,
+      accountId,
+      date: new Date(openingMs).toISOString(),
+      type: 'buy',
+      symbol,
+      description: `Opening balance — ${symbol}`,
+      amount: -openingCostBasis,
+      quantity: openingQty,
+      price: openingPrice,
+    })
+  }
+
+  for (const sale of accountSales) {
+    txns.push({
+      id: `txn-${sale.id}`,
+      accountId,
+      date: new Date(`${sale.saleDate}T00:00:00Z`).toISOString(),
+      type: 'sell',
+      symbol: sale.symbol,
+      description: `Sold ${sale.quantity.toLocaleString()} shares ${sale.symbol}`,
+      amount: sale.proceeds,
+      quantity: sale.quantity,
+      price: sale.proceeds / sale.quantity,
+    })
+  }
+
+  // The PRNG's own buy/sell draws pick from this pool, which excludes every symbol carrying a
+  // real fixture sale — so a random draw can never dilute, duplicate, or contradict a narrative
+  // sale, and the opening-balance seed above never has to reconcile against an unpredictable
+  // random trade on the same symbol.
+  const tradePool = held.filter((p) => !soldSymbols.has(p.symbol))
+
   // Generate ~20 transactions over the past 60 days
   for (let i = 0; i < 20; i++) {
     const daysAgo = Math.floor(rand() * 60)
@@ -90,11 +161,11 @@ function generateTransactions(accountId: string, totalValue: number): Transactio
     const dateStr = date.toISOString()
 
     const typeRoll = rand()
-    if (typeRoll < 0.4) {
+    if (typeRoll < 0.4 && tradePool.length > 0) {
       // Buy/sell — quantity is resolved below in a chronological second pass (see `trades`),
       // so a trade can never imply a negative running balance for its symbol.
       const side = rand() > 0.5 ? 'buy' : 'sell'
-      const pos = held[Math.floor(rand() * held.length)]!
+      const pos = tradePool[Math.floor(rand() * tradePool.length)]!
       const rawQty = Math.floor(rand() * 200) + 10
       const fraction = 0.05 + rand() * 0.35
       trades.push({ index: i, date, dateStr, side, pos, rawQty, fraction })
