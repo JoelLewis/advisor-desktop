@@ -106,12 +106,19 @@ function estimateSaleTax(accountId: string, totalValue: number, target: Position
  * `computeDriftForAccount` already returns as an unsigned magnitude — is what tells an
  * overweight asset class (sell) from an underweight one (buy).
  *
- * Self-financing: an underweight asset class this account does not already hold (no tradable
- * candidate in `positions`) has nowhere for sell proceeds to go, so it is dropped from the buy
- * side — and the sell side is scaled down to match whatever the buy side can actually absorb,
- * rather than parking the shortfall in cash. (Scaling the smaller side up instead would overshoot
- * the genuine drift on the classes that *do* have a candidate, which is worse than a partial
- * correction.)
+ * Fix round 3 — self-financing applies to the **sell** side only, and only to avoid stranding
+ * proceeds that have nowhere to go: `sellScale` caps sells at what the buy side can actually
+ * absorb, which correctly falls to **zero** — propose nothing — when there is nothing to buy at
+ * all (`totalBuy === 0`; round 2's `totalBuy > 0 &&` guard left this branch unscaled instead,
+ * which read as a short sale in a long-only demo on the account's proxy holding for an asset
+ * class it's overweight but can't rebalance out of). Buys are **never** capped: an account draws
+ * on its own cash reserve to fund a purchase, exactly as it always could — capping buys to match
+ * sells (round 2's `buyScale`) needlessly shrank purchases an account had ample cash to make
+ * outright, leaving both the overweight-cash and the underweight-target gaps uncorrected.
+ *
+ * A sell also never exceeds the position actually held (`Math.min(rawNotional,
+ * target.marketValue)`) — long-only, no short sales, even before self-financing scaling: the
+ * asset-class drift can imply selling more than any one proxy position is worth.
  */
 function generateRebalanceTrades(accountId: string, taxAware: boolean, driftThreshold = 0.005): ProposedTrade[] {
   const account = accounts.find((a) => a.id === accountId)
@@ -126,31 +133,33 @@ function generateRebalanceTrades(accountId: string, taxAware: boolean, driftThre
       const candidates = positions.filter((p) => p.assetClass === d.assetClass && p.symbol !== 'CASH')
       const target = candidates[0]
       if (!target) return []
-      const notional = d.drift * account.totalValue
       const side: 'buy' | 'sell' = d.actual > d.target ? 'sell' : 'buy'
+      const rawNotional = d.drift * account.totalValue
+      const notional = side === 'sell' ? Math.min(rawNotional, target.marketValue) : rawNotional
       return [{ target, side, notional }]
     })
 
   const totalSell = raw.filter((t) => t.side === 'sell').reduce((s, t) => s + t.notional, 0)
   const totalBuy = raw.filter((t) => t.side === 'buy').reduce((s, t) => s + t.notional, 0)
-  const sellScale = totalBuy > 0 && totalSell > totalBuy ? totalBuy / totalSell : 1
-  const buyScale = totalSell > 0 && totalBuy > totalSell ? totalSell / totalBuy : 1
+  const sellScale = totalSell > 0 ? Math.min(1, totalBuy / totalSell) : 1
 
-  return raw.map(({ target, side, notional: rawNotional }) => {
-    const notional = rawNotional * (side === 'sell' ? sellScale : buyScale)
-    const taxImpact = side === 'sell' && taxable
-      ? estimateSaleTax(account.id, account.totalValue, target, notional, taxAware)
-      : 0
-    return {
-      symbol: target.symbol,
-      name: target.name,
-      side,
-      quantity: Math.round(notional / target.price),
-      estimatedValue: Math.round(notional),
-      taxImpact,
-      washSaleRisk: false,
-    }
-  })
+  return raw
+    .map(({ target, side, notional: rawNotional }) => {
+      const notional = side === 'sell' ? rawNotional * sellScale : rawNotional
+      const taxImpact = side === 'sell' && taxable
+        ? estimateSaleTax(account.id, account.totalValue, target, notional, taxAware)
+        : 0
+      return {
+        symbol: target.symbol,
+        name: target.name,
+        side,
+        quantity: Math.round(notional / target.price),
+        estimatedValue: Math.round(notional),
+        taxImpact,
+        washSaleRisk: false,
+      }
+    })
+    .filter((t) => t.estimatedValue > 0)
 }
 
 function generateComplianceChecks(): ComplianceCheck[] {

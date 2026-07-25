@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { preTradeCheck, previewRebalance } from '@/services/oms'
 import { checkTradeCompliance } from '@/services/compliance'
+import { getAccounts, getTaxLots } from '@/services/custodian'
+import { getPositions } from '@/services/pms'
+import { LONG_TERM_RATE, SHORT_TERM_RATE } from '@/features/portfolios/tax/shared'
 
 describe('pre-trade concentration uses the account own value', () => {
   it('C27: a $600K trade is 5% of the $12M Chen Trust, not 24% — no violation, trade passes', async () => {
@@ -123,6 +126,29 @@ describe('fix round 2 · cash and sector gates fire on the projected post-trade 
     expect(Number(sector.currentValue.replace('%', ''))).toBeCloseTo(33.9, 1)
     expect(sector.severity).toBe('warning')
   })
+
+  // Minor fix round 3 — this commit introduced the cash `block` severity (round 1/2 only ever
+  // warned); neither `block` branch had a dedicated test, so mutating either to always return
+  // 'warning' killed nothing.
+  it('cash reserve severity is "block" once the projected post-trade cash would go negative', async () => {
+    // acc-001 cashBalance 660,170; a $1.2M buy leaves -$539,830.
+    const result = await preTradeCheck({
+      accountId: 'acc-001', symbol: 'AAPL', side: 'buy', quantity: 6_142, estimatedValue: 1_200_000,
+    })
+    const cash = result.violations.find((v) => v.constraint.includes('Cash reserve'))!
+    expect(cash).toBeDefined()
+    expect(cash.severity).toBe('block')
+  })
+
+  it('sector concentration severity is "block" once the projected weight exceeds the 40% limit outright', async () => {
+    // acc-001's 19.2% existing tech weight plus a $2M AAPL buy projects to 43.6%.
+    const result = await preTradeCheck({
+      accountId: 'acc-001', symbol: 'AAPL', side: 'buy', quantity: 10_237, estimatedValue: 2_000_000,
+    })
+    const sector = result.violations.find((v) => v.constraint.includes('Sector concentration'))!
+    expect(sector).toBeDefined()
+    expect(sector.severity).toBe('block')
+  })
 })
 
 describe('rebalance tax estimation', () => {
@@ -166,6 +192,107 @@ describe('fix round 2 · rebalance is self-financing', () => {
     const totalSell = preview!.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
     const totalBuy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
     expect(Math.abs(totalSell - totalBuy)).toBeLessThanOrEqual(5)
+  })
+})
+
+describe('fix round 3 · self-financing applies to sells only — buys are never capped to match sells', () => {
+  it('acc-041: proposes nothing when nothing can absorb the sell proceeds, rather than a 2.2x short sale on 0700.HK', async () => {
+    // acc-041 (HKD) is underweight every class it doesn't hold at all (us_equity, emerging_markets,
+    // fixed_income, alternatives — none have a tradable candidate) and overweight intl_equity by
+    // 79.3 points. The old `totalBuy > 0 &&` guard left the sell side unscaled when totalBuy is
+    // exactly 0, proposing to sell HK$9,912,500 of 0700.HK — a position worth only HK$4,560,000
+    // (12,000 shares @ HK$380) — 2.2x the position, a short sale in a long-only demo.
+    const [preview] = await previewRebalance({ accountIds: ['acc-041'], taxAware: true })
+    expect(preview!.trades).toEqual([])
+  })
+
+  it('acc-006: buys the full $912,000 (funded from its own $1,012,470 cash balance), not scaled down to the $540,000 raised from selling BXPE', async () => {
+    // acc-006's model (mod-005) is underweight us_equity/intl_equity/alternatives and overweight
+    // private_equity (BXPE, not in the model at all) and cash. Raw sells: $540,000 (BXPE). Raw
+    // buys: $912,000 (SPY $72,000 + EFA $96,000 + QAI $744,000). The regression scaled buys down
+    // to match the $540,000 raised from selling, leaving both the cash overweight (8.4% vs 5%
+    // target) and the alternatives underweight (8.8% vs 15% target) uncorrected.
+    const [preview] = await previewRebalance({ accountIds: ['acc-006'], taxAware: true })
+    const totalSell = preview!.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
+    const totalBuy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
+    expect(totalSell).toBeCloseTo(540_000, -3)
+    expect(totalBuy).toBeCloseTo(912_000, -3)
+  })
+})
+
+describe('fix round 3 · rebalance sells never exceed the position actually held (long-only, no short sales)', () => {
+  it('across every account with a proposal, no sell trade exceeds that position\'s real market value', async () => {
+    const accountList = await getAccounts()
+    for (const account of accountList) {
+      const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
+      const sells = preview!.trades.filter((t) => t.side === 'sell')
+      if (sells.length === 0) continue
+      const positions = await getPositions(account.id)
+      for (const trade of sells) {
+        const position = positions.find((p) => p.symbol === trade.symbol)
+        if (!position) continue
+        expect(trade.estimatedValue, `${account.id} ${trade.symbol}`).toBeLessThanOrEqual(position.marketValue + 1)
+      }
+    }
+  })
+})
+
+/**
+ * Important fix round 4 (review's #4) · a flat `0.238` (or flat `0.37`) rate leaves the existing
+ * C26 tests green: `toBeGreaterThanOrEqual` is satisfied by two equal flat-rate numbers, and the
+ * aware/unaware comparison can't distinguish a flat rate from a per-lot one because both branches
+ * read the same `taxRateFor`. These are golden-model cross-checks (the same pattern
+ * `drift-invariants.test.ts` uses) against a *fixed*, single rate applied to the same lot-by-lot
+ * notional walk the production code performs — not a re-statement of `estimateSaleTax` itself.
+ */
+describe('fix round 3 · rebalance tax uses each lot\'s own holding-period rate, not a flat rate', () => {
+  it('acc-040: GLD has only short-term lots, so its sell tax must exceed what a flat 23.8% long-term rate would produce', async () => {
+    const [preview] = await previewRebalance({ accountIds: ['acc-040'], taxAware: false })
+    const gld = preview!.trades.find((t) => t.symbol === 'GLD' && t.side === 'sell')
+    expect(gld).toBeDefined()
+    expect(gld!.taxImpact).toBeGreaterThan(0)
+
+    const positions = await getPositions('acc-040')
+    const gldPosition = positions.find((p) => p.symbol === 'GLD')!
+    const lots = (await getTaxLots('acc-040')).filter((l) => l.positionId === gldPosition.id)
+    // Sanity: this account's fixture case is genuinely all short-term, so a flat long-term rate
+    // is the correct thing to compare against.
+    expect(lots.length).toBeGreaterThan(0)
+    expect(lots.every((l) => l.holdingPeriod === 'short')).toBe(true)
+
+    let remaining = gld!.estimatedValue
+    let naiveLongTermTax = 0
+    for (const lot of lots) {
+      if (remaining <= 0 || lot.currentValue <= 0) continue
+      const portion = Math.min(1, remaining / lot.currentValue)
+      const gain = lot.gainLoss * portion
+      if (gain > 0) naiveLongTermTax += gain * LONG_TERM_RATE
+      remaining -= lot.currentValue * portion
+    }
+    expect(gld!.taxImpact).toBeGreaterThan(Math.round(naiveLongTermTax))
+  })
+
+  it('acc-001: VTI\'s sale is covered entirely by its long-term lot, so its sell tax must be below what a flat 37% short-term rate would produce', async () => {
+    const [preview] = await previewRebalance({ accountIds: ['acc-001'], taxAware: false })
+    const vti = preview!.trades.find((t) => t.symbol === 'VTI' && t.side === 'sell')
+    expect(vti).toBeDefined()
+    expect(vti!.taxImpact).toBeGreaterThan(0)
+
+    const positions = await getPositions('acc-001')
+    const vtiPosition = positions.find((p) => p.symbol === 'VTI')!
+    const lots = (await getTaxLots('acc-001')).filter((l) => l.positionId === vtiPosition.id)
+    expect(lots.some((l) => l.holdingPeriod === 'long')).toBe(true)
+
+    let remaining = vti!.estimatedValue
+    let naiveShortTermTax = 0
+    for (const lot of lots) {
+      if (remaining <= 0 || lot.currentValue <= 0) continue
+      const portion = Math.min(1, remaining / lot.currentValue)
+      const gain = lot.gainLoss * portion
+      if (gain > 0) naiveShortTermTax += gain * SHORT_TERM_RATE
+      remaining -= lot.currentValue * portion
+    }
+    expect(vti!.taxImpact).toBeLessThan(Math.round(naiveShortTermTax))
   })
 })
 

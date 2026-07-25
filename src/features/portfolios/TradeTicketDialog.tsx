@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'
 import type { TradableAssetClass, EquitySide, EquityOrderType, TimeInForce } from '@/types/trading'
 import type { PreTradeViolation } from '@/services/oms'
-import { AssetClassSelector } from './trade-fields/shared'
+import { AssetClassSelector, computeEstimatedValue } from './trade-fields/shared'
 import { EquityTradeFields } from './trade-fields/EquityTradeFields'
 import { PreTradeComplianceDisplay } from './trade-fields/ComplianceCheck'
 import { validateTrade } from './trade-fields/validation'
@@ -54,6 +54,13 @@ export function TradeTicketDialog({
   const [orderType, setOrderType] = useState<EquityOrderType>('market')
   const [limitPrice, setLimitPrice] = useState('')
   const [stopPrice, setStopPrice] = useState('')
+  // Critical fix round 3 · pre-trade-compliance — an option's premium is not the underlying's
+  // share price, and nothing in this dialog's quote lookup can derive it (the quote-search
+  // fixture carries no option premiums at all, only equities). Reusing the underlying's quote as
+  // if it were the premium sent `quantity x underlying price` with no contract multiplier and no
+  // real premium — 5,000 contracts at $8.50 ($4,250,000) sent as `quantity 5000` against AAPL's
+  // $195.40 share price ($977,000), ~4.3x low. This must be entered, not inferred.
+  const [optionPremium, setOptionPremium] = useState('')
   const [timeInForce, setTimeInForce] = useState<TimeInForce>('day')
   const [extendedHours, setExtendedHours] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -68,11 +75,18 @@ export function TradeTicketDialog({
   // handler used to infer from `quantity * 100`. The dialog's symbol field is free text, so the
   // quote comes from the same symbol search `SingleTradeView` uses — falling back to the
   // position's own known price (`prefill.price`, set when the dialog opens from a position row)
-  // for the many ETF/fund symbols the quote-search fixture doesn't carry at all.
+  // for the many ETF/fund symbols the quote-search fixture doesn't carry at all. This is a real
+  // per-share/per-unit price for equity, fixed_income (bond quotes are clean price per $100
+  // par — `computeEstimatedValue` applies the par amount) and mutual_fund (NAV); it is *not* an
+  // option premium (see `optionPremium` above), which this must not be used for.
   const trimmedSymbol = symbol.trim().toUpperCase()
   const { data: symbolMatches } = useSymbolSearch(trimmedSymbol, assetClass === 'option' ? 'equity' : assetClass)
   const quote = symbolMatches?.find((s) => s.symbol === trimmedSymbol)
   const knownPrice = Number(limitPrice) || quote?.lastPrice || prefill?.price || 0
+  // Critical fix round 3 · pre-trade-compliance — the price actually fed into the notional
+  // formula: the entered premium for options, the equity/bond/fund quote otherwise. Using
+  // `knownPrice` (the underlying's share price) for an option was the defect this replaces.
+  const effectivePrice = assetClass === 'option' ? Number(optionPremium) || 0 : knownPrice
 
   // Stable refs for mutation methods (identity changes each render but behavior is stable)
   const tradeResetRef = useRef(trade.reset)
@@ -92,6 +106,7 @@ export function TradeTicketDialog({
       setOrderType('market')
       setLimitPrice('')
       setStopPrice('')
+      setOptionPremium('')
       setTimeInForce('day')
       setExtendedHours(false)
       setSubmitted(false)
@@ -107,14 +122,23 @@ export function TradeTicketDialog({
     if (checkTimerRef.current) clearTimeout(checkTimerRef.current)
     const trimmed = symbol.trim()
     const qty = Number(quantity)
-    if (!trimmed || qty <= 0 || !accountId || knownPrice <= 0) {
+    if (!trimmed || qty <= 0 || !accountId || effectivePrice <= 0) {
       setCompliancePassed(null)
       setComplianceViolations([])
       return
     }
+    // Critical fix round 3 · pre-trade-compliance — the shared formula (`OrderSummaryCard` /
+    // `SingleTradeView` also call this), not a flat `qty * price` that undercounted options by
+    // the 100x contract multiplier and bonds by the par-to-quantity ratio.
+    const estimatedValue = computeEstimatedValue({
+      assetClass,
+      quantity: qty,
+      price: effectivePrice,
+      contractMultiplier: assetClass === 'option' ? 100 : undefined,
+    })
     checkTimerRef.current = setTimeout(() => {
       preCheckMutateRef.current(
-        { accountId, symbol: trimmed, side, quantity: qty, estimatedValue: qty * knownPrice },
+        { accountId, symbol: trimmed, side, quantity: qty, estimatedValue },
         {
           onSuccess: (result) => {
             setCompliancePassed(result.passed)
@@ -126,7 +150,7 @@ export function TradeTicketDialog({
     return () => {
       if (checkTimerRef.current) clearTimeout(checkTimerRef.current)
     }
-  }, [symbol, side, quantity, accountId, knownPrice])
+  }, [symbol, side, quantity, accountId, effectivePrice, assetClass])
 
   // Auto-close after successful submission
   useEffect(() => {
@@ -143,7 +167,7 @@ export function TradeTicketDialog({
   // instead. `priceUnavailable` distinguishes "not filled in yet" (compliancePassed stays null,
   // submit stays disabled for the ordinary reason) from "filled in but unpriceable" (its own
   // message, submit blocked for a reason the advisor can see).
-  const priceUnavailable = !!symbol.trim() && parsedQuantity > 0 && !!accountId && knownPrice <= 0
+  const priceUnavailable = !!symbol.trim() && parsedQuantity > 0 && !!accountId && effectivePrice <= 0
 
   const isValid = validateTrade({
     assetClass,
@@ -274,7 +298,7 @@ export function TradeTicketDialog({
 
               <div className="space-y-1.5">
                 <label htmlFor="trade-quantity" className="text-caption font-medium text-text-secondary">
-                  Quantity
+                  {assetClass === 'option' ? 'Contracts' : assetClass === 'fixed_income' ? 'Quantity (bonds, par $1,000 each)' : 'Quantity'}
                 </label>
                 <input
                   id="trade-quantity"
@@ -288,6 +312,27 @@ export function TradeTicketDialog({
                   disabled={submitted}
                 />
               </div>
+
+              {/* Critical fix round 3 — an option's premium cannot be inferred from the
+                  underlying's quote; it must be entered directly. */}
+              {assetClass === 'option' && (
+                <div className="space-y-1.5">
+                  <label htmlFor="trade-option-premium" className="text-caption font-medium text-text-secondary">
+                    Premium (per contract)
+                  </label>
+                  <input
+                    id="trade-option-premium"
+                    type="number"
+                    value={optionPremium}
+                    onChange={(e) => setOptionPremium(e.target.value)}
+                    placeholder="e.g. 8.50"
+                    min={0}
+                    step={0.01}
+                    className="w-full rounded-md border border-border-secondary bg-surface-primary px-3 py-2 font-mono text-body text-text-primary focus:border-accent-blue focus:outline-hidden focus:ring-1 focus:ring-accent-blue"
+                    disabled={submitted}
+                  />
+                </div>
+              )}
             </>
           )}
 
@@ -308,7 +353,9 @@ export function TradeTicketDialog({
           {priceUnavailable && (
             <div className="flex items-center gap-2 rounded-md bg-amber-500/10 px-3 py-2 text-body text-amber-600" role="alert">
               <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-              No price available for {symbol.trim().toUpperCase()} — enter a limit price to run the compliance check.
+              {assetClass === 'option'
+                ? `Enter a premium for ${symbol.trim().toUpperCase()} to run the compliance check.`
+                : `No price available for ${symbol.trim().toUpperCase()} — enter a limit price to run the compliance check.`}
             </div>
           )}
 
