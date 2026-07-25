@@ -6,7 +6,7 @@ import { QueryErrorBanner } from '@/components/ui/QueryErrorBanner'
 import { useAccount } from '@/hooks/use-accounts'
 import { useTaxLots } from '@/hooks/use-tax-lots'
 import { usePositions } from '@/hooks/use-portfolio'
-import { useRealisedSales } from '@/hooks/use-realised-sales'
+import { useOpenWashSaleWindows } from '@/hooks/use-open-wash-sale-windows'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { cn } from '@/lib/utils'
 import type { TaxLot } from '@/types/portfolio'
@@ -20,8 +20,8 @@ import { WashSaleCalendarView } from './tax/WashSaleCalendarView'
 type ViewMode = 'lots' | 'harvest' | 'calendar'
 
 const VIEW_TABS: { id: ViewMode; label: string }[] = [
-  { id: 'lots', label: 'All Tax Lots' },
-  { id: 'harvest', label: 'Harvest Scanner' },
+  { id: 'lots', label: 'All tax lots' },
+  { id: 'harvest', label: 'Harvest scanner' },
   { id: 'calendar', label: 'Wash sale calendar' },
 ]
 
@@ -112,7 +112,7 @@ export function TaxManagementPage() {
     }))
   }, [taxLots])
 
-  const { data: washSaleWindows } = useRealisedSales(id)
+  const { data: washSaleWindows } = useOpenWashSaleWindows(id)
 
   if (isLoading) {
     return (

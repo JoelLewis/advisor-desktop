@@ -25,7 +25,10 @@ export const realisedSales: RealisedSale[] = [
   { id: 'rs-001', accountId: 'acc-002', householdId: 'hh-001', symbol: 'INTC', name: 'Intel Corp.', saleDate: '2026-02-21', quantity: 5_000, proceeds: 142_250, costBasis: 175_000, realisedGainLoss: -32_750, holdingPeriod: 'long' },
   { id: 'rs-002', accountId: 'acc-007', householdId: 'hh-002', symbol: 'NVDA', name: 'NVIDIA Corp.', saleDate: '2026-02-10', quantity: 300, proceeds: 234_000, costBasis: 262_500, realisedGainLoss: -28_500, holdingPeriod: 'short' },
   { id: 'rs-003', accountId: 'acc-015', householdId: 'hh-004', symbol: 'INTC', name: 'Intel Corp.', saleDate: '2026-02-18', quantity: 4_000, proceeds: 113_800, costBasis: 138_667, realisedGainLoss: -24_867, holdingPeriod: 'long' },
-  { id: 'rs-004', accountId: 'acc-011', householdId: 'hh-003', symbol: 'EFA', name: 'iShares MSCI EAFE ETF', saleDate: '2026-01-08', quantity: 1_200, proceeds: 98_760, costBasis: 92_500, realisedGainLoss: 6_260, holdingPeriod: 'long' },
+  // Planted gain sale, proving the loss filter — not the date filter — is what excludes it.
+  // Its window (2026-01-13 .. 2026-03-14) is still date-live at MOCK_TODAY_ISO (2026-02-25), so
+  // only `realisedGainLoss < 0` keeps it out of `openWashSaleWindows`.
+  { id: 'rs-004', accountId: 'acc-011', householdId: 'hh-003', symbol: 'EFA', name: 'iShares MSCI EAFE ETF', saleDate: '2026-02-12', quantity: 1_200, proceeds: 98_760, costBasis: 92_500, realisedGainLoss: 6_260, holdingPeriod: 'long' },
   { id: 'rs-005', accountId: 'acc-022', householdId: 'hh-006', symbol: 'TLT', name: 'iShares 20+ Year Treasury Bond ETF', saleDate: '2026-02-05', quantity: 900, proceeds: 86_220, costBasis: 94_500, realisedGainLoss: -8_280, holdingPeriod: 'short' },
 ]
 
@@ -58,6 +61,8 @@ export function openWashSaleWindows(asOf: string, householdId?: string): OpenWas
         daysRemaining: Math.ceil((new Date(`${end}T00:00:00Z`).getTime() - asOfMs) / DAY_MS),
       }
     })
-    .filter((w) => w.daysRemaining >= 0)
+    // "Open" means asOf falls inside [start, end] — bounded both directions, so a window that
+    // has not started yet is no more "open" than one that has already closed.
+    .filter((w) => asOfMs >= new Date(`${w.start}T00:00:00Z`).getTime() && w.daysRemaining >= 0)
     .sort((a, b) => a.end.localeCompare(b.end))
 }

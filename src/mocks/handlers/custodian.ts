@@ -167,9 +167,11 @@ function generateTaxLots(accountId: string, totalValue: number): TaxLot[] {
 
   const account = accounts.find((a) => a.id === accountId)
   // C12 · tax-loss-harvesting — scoped to the whole household, including IRAs and 401(k)s,
-  // because a repurchase in any of them triggers §1091 (the "IRA wash-sale trap").
+  // because a repurchase in any of them triggers §1091 (the "IRA wash-sale trap"). An account
+  // that can't be resolved to a household must restrict nothing, not everything — an omitted
+  // `householdId` would otherwise widen `openWashSaleWindows` to every household in the firm.
   const restrictedSymbols = new Set(
-    openWashSaleWindows(MOCK_TODAY_ISO, account?.householdId).map((w) => w.symbol),
+    account ? openWashSaleWindows(MOCK_TODAY_ISO, account.householdId).map((w) => w.symbol) : [],
   )
 
   for (const pos of positions) {

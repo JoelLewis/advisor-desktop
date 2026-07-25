@@ -29,7 +29,7 @@ export function TaxSummaryCards({
     <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
       <Card>
         <CardContent>
-          <p className="text-caption text-text-secondary">Unrealized Gains</p>
+          <p className="text-caption text-text-secondary">Unrealized gains</p>
           <p className="font-mono text-section-header text-accent-green">{formatWithConversion(stats.totalUnrealizedGain, baseCurrency, { compact: true })}</p>
           <div className="mt-1 flex gap-3 text-caption">
             <span className="text-text-tertiary">ST: {formatWithConversion(stats.shortTermGain, baseCurrency, { compact: true })}</span>
@@ -39,13 +39,13 @@ export function TaxSummaryCards({
       </Card>
       <Card>
         <CardContent>
-          <p className="text-caption text-text-secondary">Unrealized Losses</p>
+          <p className="text-caption text-text-secondary">Unrealized losses</p>
           <p className="font-mono text-section-header text-accent-red">{formatWithConversion(stats.totalUnrealizedLoss, baseCurrency, { compact: true })}</p>
         </CardContent>
       </Card>
       <Card>
         <CardContent>
-          <p className="text-caption text-text-secondary">Harvestable Losses</p>
+          <p className="text-caption text-text-secondary">Harvestable losses</p>
           <p className="font-mono text-section-header text-accent-blue">{formatWithConversion(stats.harvestableAmount, baseCurrency, { compact: true })}</p>
           <p className="mt-1 text-caption text-text-tertiary">{harvestOpportunitiesLength} lot{harvestOpportunitiesLength !== 1 ? 's' : ''}</p>
         </CardContent>

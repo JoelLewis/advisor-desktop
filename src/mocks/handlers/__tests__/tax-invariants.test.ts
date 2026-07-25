@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { getTaxLots, getTransactions } from '@/services/custodian'
+import { getTaxLots, getTransactions, getOpenWashSaleWindows } from '@/services/custodian'
 import { getPositions } from '@/services/pms'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { accounts } from '@/mocks/data/accounts'
@@ -198,6 +198,24 @@ describe('wash sale windows', () => {
     for (const w of open) expect(w.realisedGainLoss).toBeLessThan(0)
   })
 
+  it('C10: a gain sale is excluded by the loss filter, not by coincidence of dates', () => {
+    // rs-004 (EFA, +6,260) is a *gain* sale planted to prove the loss filter works. Its 61-day
+    // window (2026-01-13 .. 2026-03-14) is still date-live at MOCK_TODAY_ISO — confirmed below —
+    // so `realisedGainLoss < 0`, not the `daysRemaining` bound, is what has to keep it out.
+    const efaSale = realisedSales.find((s) => s.id === 'rs-004')!
+    expect(efaSale.symbol).toBe('EFA')
+    expect(efaSale.realisedGainLoss).toBeGreaterThan(0)
+    const window = washSaleWindow(efaSale.saleDate)
+    const asOfMs = new Date('2026-02-25T00:00:00Z').getTime()
+    expect(asOfMs).toBeGreaterThanOrEqual(new Date(`${window.start}T00:00:00Z`).getTime())
+    expect(asOfMs).toBeLessThanOrEqual(new Date(`${window.end}T00:00:00Z`).getTime())
+    expect(openWashSaleWindows('2026-02-25').some((w) => w.symbol === 'EFA')).toBe(false)
+  })
+
+  it('C10: a window that has not opened yet is not reported as open', () => {
+    expect(openWashSaleWindows('2026-01-01')).toHaveLength(0)
+  })
+
   it('C10: Margaret Chen sold NVDA at a loss on 2026-02-10; the window closes 2026-03-12', () => {
     const open = openWashSaleWindows('2026-02-25', 'hh-002')
     const nvda = open.find((w) => w.symbol === 'NVDA')!
@@ -232,5 +250,25 @@ describe('washSaleRestricted reflects a real restriction', () => {
     const lots = await getTaxLots('acc-002')
     expect(lots.some((l) => l.washSaleRestricted)).toBe(true)
     expect(lots.some((l) => !l.washSaleRestricted)).toBe(true)
+  })
+})
+
+// C12 · the IRA wash-sale trap — hh-001's only INTC holder is acc-002, the account that sold it,
+// so a lot-level check against acc-002 alone can't distinguish household scoping from
+// account-only scoping (both restrict the seller identically). These tests go through the
+// account-keyed but household-scoped /realised-sales endpoint instead, against a sibling that
+// never sold INTC and against an unrelated household, which *does* discriminate between the two.
+describe('a household window reaches every account in the household, not just the seller', () => {
+  it('C12: a sibling account that never sold INTC still sees hh-001\'s INTC window', async () => {
+    // acc-003 is Robert Johnson's Traditional IRA — same household as acc-002 (the seller),
+    // no INTC holding or sale of its own.
+    const siblingWindows = await getOpenWashSaleWindows('acc-003')
+    expect(siblingWindows.some((w) => w.symbol === 'INTC')).toBe(true)
+  })
+
+  it('C12: an account in an unrelated household does not see hh-001\'s INTC window', async () => {
+    // acc-011 is in hh-003 (Williams) — no relation to hh-001 or the INTC sale.
+    const otherHouseholdWindows = await getOpenWashSaleWindows('acc-011')
+    expect(otherHouseholdWindows.some((w) => w.symbol === 'INTC')).toBe(false)
   })
 })

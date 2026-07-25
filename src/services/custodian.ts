@@ -37,6 +37,6 @@ export function getBalances(accountId: string) {
   )
 }
 
-export function getRealisedSales(accountId: string) {
+export function getOpenWashSaleWindows(accountId: string) {
   return get<OpenWashSaleWindow[]>(`/custodian/accounts/${accountId}/realised-sales`)
 }
