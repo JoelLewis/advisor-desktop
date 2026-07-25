@@ -33,9 +33,11 @@ const orders: Order[] = [
   // next computed NAV, which for VFIAX is 4:00 PM ET (21:00Z), and a $25,000 dollar-amount purchase
   // buys $25,000 / $465.32 shares, not the placeholder 1.
   //
-  // 53.72647, at the five decimal places NSCC Fund/SERV carries share quantities to — not the 53.73
-  // this fixture first used, which multiplies out to $25,001.64, nor 53.727, which gives $25,000.25.
-  // 53.72647 x 465.32 = $25,000.00103, the only rounding that agrees with `dollarAmount` to the cent.
+  // 53.72647 — five decimals, because no shorter rounding reconciles: 53.73 multiplies out to
+  // $25,001.64, and 53.727 to $25,000.25, while 53.72647 x 465.32 = $25,000.00103, which agrees with
+  // `dollarAmount` to the cent. Fractional-share precision beyond the three decimals retail
+  // statements usually display is a settlement-layer detail; the arithmetic is the reason here, not
+  // a claim about any particular clearing system's record layout.
   { id: 'ord-013', accountId: 'acc-001', symbol: 'VFIAX', side: 'purchase', quantity: 53.72647, orderType: 'market', status: 'filled', filledQuantity: 53.72647, filledPrice: 465.32, submittedAt: '2026-02-23T15:00:00Z', filledAt: '2026-02-23T21:00:00Z', assetClass: 'mutual_fund', dollarAmount: 25000, amountType: 'dollars' },
   { id: 'ord-014', accountId: 'acc-002', symbol: 'UST-10Y', side: 'buy', quantity: 50, orderType: 'limit', limitPrice: 95.25, status: 'filled', filledQuantity: 50, filledPrice: 95.20, submittedAt: '2026-02-22T10:30:00Z', filledAt: '2026-02-22T10:30:05Z', assetClass: 'fixed_income', parAmount: 50000, bondPriceType: 'price', priceOrYield: 95.25 },
   // D27 — spot BTC settled into acc-002, a Schwab brokerage that can only hold the IBIT and ETHE
