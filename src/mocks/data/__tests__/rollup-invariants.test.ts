@@ -3,7 +3,7 @@ import { accounts } from '@/mocks/data/accounts'
 import { households } from '@/mocks/data/households'
 import { clients } from '@/mocks/data/clients'
 import { householdFees, billingCycles } from '@/mocks/data/billing'
-import { feeSchedules, revenueBySegment, revenueMetrics } from '@/mocks/data/revenue'
+import { feeSchedules, revenueBySegment, revenueMetrics, revenueTrend } from '@/mocks/data/revenue'
 import { bookAnalytics } from '@/mocks/data/practice'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
 import { getPositionsForAccount } from '@/mocks/data/positions'
@@ -424,6 +424,17 @@ describe('GATE — every roll-up equals the sum of its parts', () => {
           `totalRecurringRevenue (${revenueMetrics.totalRecurringRevenue.toLocaleString('en-US')}) ÷ ` +
           `${households.length} households = ${expectedAvg}.`,
       ).toBe(expectedAvg)
+    })
+
+    it('the revenue trend has no zero-revenue month and no actual beyond the clock', () => {
+      for (const point of revenueTrend) {
+        expect(point.revenue === undefined || point.revenue > 0).toBe(true)
+        if (point.revenue !== undefined) expect(point.period <= '2026-01').toBe(true)
+        if (point.period >= '2026-02') expect(point.revenue).toBeUndefined()
+      }
+      expect(revenueTrend.filter((p) => p.revenue !== undefined)).toHaveLength(12)
+      expect(revenueTrend[revenueTrend.length - 1]!.projected).toBe(69_563)
+      expect(revenueTrend.find((p) => p.period === '2026-01')!.revenue).toBe(68_535)
     })
   })
 })

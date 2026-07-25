@@ -25,11 +25,12 @@ type RevenueMetrics = {
   ytdRevenue: number
   avgRevenuePerHousehold: number
   revenueGrowthYoY: number // percentage
+  asOf: string
 }
 
 type RevenueTrend = {
   period: string
-  revenue: number
+  revenue?: number
   projected?: number
 }
 
