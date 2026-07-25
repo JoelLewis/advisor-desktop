@@ -77,6 +77,8 @@ type DriftStatus = {
   needsRebalance: boolean;
 };
 
+type SecurityKind = 'single_name' | 'fund' | 'cash';
+
 type ConcentrationMetric = {
   positionId: string;
   symbol: string;
@@ -84,7 +86,9 @@ type ConcentrationMetric = {
   assetClass: AssetClass;
   marketValue: Currency;
   weight: Percentage;
+  kind: SecurityKind;
   limit: Percentage;
+  limitBasis: string;
   breached: boolean;
 };
 
@@ -138,6 +142,7 @@ export type {
   ModelAssignment,
   AssetClassDrift,
   DriftStatus,
+  SecurityKind,
   ConcentrationMetric,
   ModelChangeType,
   ModelChangeEntry,

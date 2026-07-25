@@ -1,5 +1,6 @@
 import { get } from './api-client'
 import type { Position, DriftStatus, ModelAssignment, HoldingGroup, ModelGovernanceDetail } from '@/types/portfolio'
+import type { SecurityKind } from '@/lib/security-master'
 import type { PerformanceSeries, BenchmarkComparison, AttributionResult } from '@/types/performance'
 import type { RiskMetrics, FactorExposure, StressScenario } from '@/types/risk'
 
@@ -78,13 +79,18 @@ export type ConcentrationMetric = {
   assetClass: string
   marketValue: number
   weight: number
+  kind: SecurityKind
   limit: number
+  limitBasis: string
   breached: boolean
 }
 
 export type ConcentrationSummary = {
   top10Weight: number
   herfindahlIndex: number
+  effectiveN: number
+  singleNameWeight: number
+  largestSingleName: { symbol: string; weight: number } | null
   breachCount: number
   totalPositions: number
 }

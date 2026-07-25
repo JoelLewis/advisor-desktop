@@ -16,12 +16,6 @@ describe('concentration & compliance invariants', () => {
     expect(Math.abs(data.summary.top10Weight - expectedTop10Weight)).toBeLessThan(0.002)
   })
 
-  it('herfindahlIndex === sum(weight^2)', async () => {
-    const data = await getConcentration('acc-001')
-    const expectedHHI = data.positions.reduce((s, p) => s + p.weight ** 2, 0)
-    expect(Math.abs(data.summary.herfindahlIndex - expectedHHI)).toBeLessThan(0.001)
-  })
-
   it('breached === weight > limit for each position', async () => {
     const data = await getConcentration('acc-001')
     for (const pos of data.positions) {
@@ -52,11 +46,28 @@ describe('concentration & compliance invariants', () => {
     }
   })
 
-  it('cash positions have a higher limit (0.15)', async () => {
+  it('C23: acc-001 has no breach — VTI at 27.8% is a fund, not a single issuer', async () => {
     const data = await getConcentration('acc-001')
-    const cashPositions = data.positions.filter((p) => p.assetClass === 'cash')
-    for (const pos of cashPositions) {
-      expect(pos.limit).toBe(0.15)
-    }
+    expect(data.summary.breachCount).toBe(0)
+    const vti = data.positions.find((p) => p.symbol === 'VTI')!
+    expect(vti.kind).toBe('fund')
+    expect(vti.weight).toBeCloseTo(0.278, 3)
+    expect(vti.limit).toBe(0.35)
+    expect(vti.breached).toBe(false)
+  })
+
+  it('C23: acc-011 breaches on NVDA at 13.9% and nothing else', async () => {
+    const data = await getConcentration('acc-011')
+    const breaches = data.positions.filter((p) => p.breached)
+    expect(breaches.map((b) => b.symbol)).toEqual(['NVDA'])
+    expect(breaches[0]!.weight).toBeCloseTo(0.139, 3)
+    expect(breaches[0]!.kind).toBe('single_name')
+    expect(breaches[0]!.limit).toBe(0.10)
+  })
+
+  it('C22: HHI is on the 0-10,000 scale with an effective-N companion', async () => {
+    const data = await getConcentration('acc-001')
+    expect(data.summary.herfindahlIndex).toBeGreaterThan(100)
+    expect(data.summary.effectiveN).toBeCloseTo(10_000 / data.summary.herfindahlIndex, 0)
   })
 })

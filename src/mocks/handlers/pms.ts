@@ -6,6 +6,7 @@ import type { BenchmarkComparison, PerformanceSeries, AttributionResult } from '
 import type { CurrencyCode } from '@/types/currency'
 import { convertToBase } from '@/lib/currency'
 import { accountValueUSD, deriveBookAUM, deriveHouseholdAUM, deriveSegmentAUM, herfindahlIndex, effectiveN } from '@/lib/aum'
+import { securityKind, concentrationLimitFor } from '@/lib/security-master'
 import {
   RISK_FREE_RATE, assetClassWeights, portfolioBeta, portfolioVolatility,
   portfolioReturn1Y, trackingError, parametricVaR, sharpe, sortino, downsideDeviation,
@@ -614,7 +615,8 @@ export const pmsHandlers = [
 
     const sorted = [...positions].sort((a, b) => b.weight - a.weight)
     const concentrationMetrics = sorted.map((pos) => {
-      const limit = pos.assetClass === 'cash' ? 0.15 : 0.10
+      const kind = securityKind(pos.symbol, pos.assetClass)
+      const limit = concentrationLimitFor(kind)
       return {
         positionId: pos.id,
         symbol: pos.symbol,
@@ -622,19 +624,30 @@ export const pmsHandlers = [
         assetClass: pos.assetClass,
         marketValue: pos.marketValue,
         weight: pos.weight,
+        kind,
         limit,
+        limitBasis: kind === 'single_name' ? 'Single issuer (IPS)'
+          : kind === 'fund' ? 'Pooled vehicle (IPS)'
+          : 'Cash and equivalents (IPS)',
         breached: pos.weight > limit,
       }
     })
 
+    const singleNames = concentrationMetrics.filter((c) => c.kind === 'single_name')
+    const totalWeight = positions.reduce((s, p) => s + p.weight, 0) || 1
     const top10Weight = sorted.slice(0, 10).reduce((s, p) => s + p.weight, 0)
-    const herfindahl = positions.reduce((s, p) => s + p.weight ** 2, 0)
 
     return HttpResponse.json({
       positions: concentrationMetrics,
       summary: {
         top10Weight: roundTo(top10Weight, 3),
-        herfindahlIndex: roundTo(herfindahl, 4),
+        // C22 · diversification — one HHI scale across the product (0–10,000), with effective N.
+        herfindahlIndex: Math.round(herfindahlIndex(positions.map((p) => p.weight / totalWeight))),
+        effectiveN: roundTo(effectiveN(herfindahlIndex(positions.map((p) => p.weight / totalWeight))), 1),
+        singleNameWeight: roundTo(singleNames.reduce((s, c) => s + c.weight, 0), 3),
+        largestSingleName: singleNames[0]
+          ? { symbol: singleNames[0].symbol, weight: singleNames[0].weight }
+          : null,
         breachCount: concentrationMetrics.filter((c) => c.breached).length,
         totalPositions: positions.length,
       },

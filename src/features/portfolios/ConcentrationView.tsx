@@ -7,6 +7,13 @@ import { useConcentration } from '@/hooks/use-portfolio'
 import { useContainerWidth } from '@/hooks/use-container-width'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { cn } from '@/lib/utils'
+import { SINGLE_NAME_LIMIT, FUND_LIMIT } from '@/lib/security-master'
+
+const KIND_LABELS: Record<string, string> = {
+  single_name: 'Single issuer',
+  fund: 'Fund',
+  cash: 'Cash',
+}
 
 const ASSET_CLASS_LABELS: Record<string, string> = {
   us_equity: 'US Equity',
@@ -69,13 +76,23 @@ export function ConcentrationView({ accountId }: ConcentrationViewProps) {
   return (
     <div className="flex flex-col gap-6">
       {/* Breach warning banner */}
-      {breachCount > 0 && (
+      {breachCount > 0 ? (
         <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
           <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600" />
           <p className="text-body text-amber-800">
-            {breachCount} position{breachCount > 1 ? 's' : ''} exceed{breachCount === 1 ? 's' : ''} IPS concentration limits
+            {positions.filter((p) => p.breached).map((p) => `${p.symbol} at ${(p.weight * 100).toFixed(1)}%`).join(', ')}
+            {' '}exceeds the {(positions.find((p) => p.breached)!.limit * 100).toFixed(0)}%{' '}
+            {positions.find((p) => p.breached)!.kind === 'single_name' ? 'single-issuer' : 'pooled-vehicle'} limit.
           </p>
         </div>
+      ) : (
+        <p className="text-caption text-text-secondary">
+          No position exceeds its IPS limit. Single issuers are limited to{' '}
+          {(SINGLE_NAME_LIMIT * 100).toFixed(0)}% and pooled vehicles to {(FUND_LIMIT * 100).toFixed(0)}%.
+          Largest single issuer: {summary.largestSingleName
+            ? `${summary.largestSingleName.symbol} at ${(summary.largestSingleName.weight * 100).toFixed(1)}%`
+            : 'none'}.
+        </p>
       )}
 
       {/* Summary cards */}
@@ -137,6 +154,7 @@ export function ConcentrationView({ accountId }: ConcentrationViewProps) {
                 <th className="px-4 py-2.5 text-caption font-medium text-text-secondary">Symbol</th>
                 <th className="px-4 py-2.5 text-caption font-medium text-text-secondary">Name</th>
                 <th className="px-4 py-2.5 text-caption font-medium text-text-secondary">Asset Class</th>
+                <th className="px-4 py-2.5 text-caption font-medium text-text-secondary">Type</th>
                 <th className="px-4 py-2.5 text-right text-caption font-medium text-text-secondary">Market Value</th>
                 <th className="px-4 py-2.5 text-right text-caption font-medium text-text-secondary">Weight</th>
                 <th className="px-4 py-2.5 text-right text-caption font-medium text-text-secondary">Limit</th>
@@ -157,9 +175,12 @@ export function ConcentrationView({ accountId }: ConcentrationViewProps) {
                   <td className="px-4 py-2.5 text-caption text-text-secondary">
                     {ASSET_CLASS_LABELS[p.assetClass] ?? p.assetClass}
                   </td>
+                  <td className="px-4 py-2.5 text-caption text-text-secondary">
+                    {KIND_LABELS[p.kind] ?? p.kind}
+                  </td>
                   <td className="px-4 py-2.5 text-right font-mono">{formatWithConversion(p.marketValue, 'USD', { compact: true })}</td>
                   <td className="px-4 py-2.5 text-right font-mono">{(p.weight * 100).toFixed(1)}%</td>
-                  <td className="px-4 py-2.5 text-right font-mono">{(p.limit * 100).toFixed(1)}%</td>
+                  <td className="px-4 py-2.5 text-right font-mono" title={p.limitBasis}>{(p.limit * 100).toFixed(1)}%</td>
                   <td className="px-4 py-2.5 text-center">
                     {p.breached ? (
                       <Badge variant="red">Breach</Badge>
@@ -171,7 +192,7 @@ export function ConcentrationView({ accountId }: ConcentrationViewProps) {
               ))}
               {topPositions.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-text-tertiary">
+                  <td colSpan={8} className="px-4 py-8 text-center text-text-tertiary">
                     No positions above 2% weight
                   </td>
                 </tr>
