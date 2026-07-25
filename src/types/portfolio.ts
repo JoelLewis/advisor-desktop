@@ -71,6 +71,13 @@ type AssetClassDrift = {
 
 type DriftStatus = {
   accountId: string;
+  modelId: string;
+  // The account's own model band — a conservative model rebalances on tighter bands than an
+  // aggressive one, since equal percentage drift means unequal risk change. Read by
+  // `needsRebalance` and by the rebalance wizard's threshold filter, so both agree with what
+  // Model Governance displays for the same model.
+  driftTolerance: Percentage;
+  rebalanceFrequency: 'monthly' | 'quarterly' | 'semi_annual' | 'annual' | 'threshold_only';
   totalDrift: Percentage;
   assetClassDrifts: AssetClassDrift[];
   lastCalculated: string;

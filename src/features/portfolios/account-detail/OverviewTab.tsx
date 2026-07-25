@@ -147,8 +147,10 @@ export function OverviewTab({ account, positions, allocation, totalGainLoss, dri
                     <span className="text-text-secondary">{ASSET_CLASS_LABELS[d.assetClass] ?? d.assetClass}</span>
                     <div className="flex items-center gap-3">
                       <span className="font-mono text-text-tertiary">{(d.target * 100).toFixed(0)}% / {(d.actual * 100).toFixed(0)}%</span>
-                      <span className={cn('font-mono font-medium', d.drift > 0.02 ? 'text-accent-red' : 'text-accent-green')}>
-                        {(d.drift * 100).toFixed(1)}%
+                      {/* C24 — drift is signed (over- vs under-weight); the highlight compares by
+                          magnitude so an underweight breach is still flagged. */}
+                      <span className={cn('font-mono font-medium', Math.abs(d.drift) > 0.02 ? 'text-accent-red' : 'text-accent-green')}>
+                        {d.drift > 0 ? '+' : ''}{(d.drift * 100).toFixed(1)}%
                       </span>
                     </div>
                   </div>

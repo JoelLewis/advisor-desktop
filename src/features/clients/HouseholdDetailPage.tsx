@@ -287,7 +287,10 @@ export function HouseholdDetailPage() {
                 <div className="space-y-2">
                   {hhDrift.map((drift) => {
                     const acc = accounts?.find((a) => a.id === drift.accountId)
-                    const overThreshold = drift.assetClassDrifts.filter((d) => d.drift > 0.02).length
+                    // C24 — drift is now signed (over- vs under-weight), so a class must be
+                    // compared by magnitude here or an underweight breach would silently stop
+                    // counting.
+                    const overThreshold = drift.assetClassDrifts.filter((d) => Math.abs(d.drift) > 0.02).length
                     return (
                       <div
                         key={drift.accountId}

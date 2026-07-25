@@ -47,7 +47,20 @@ export function RebalancePage() {
   const [selectedModelId, setSelectedModelId] = useState<string | null>(preselectedModel)
 
   const driftMap = useMemo(() => new Map(driftSummary?.map((d) => [d.accountId, d]) ?? []), [driftSummary])
-  const driftedAccounts = useMemo(() => accounts?.filter((a) => driftMap.get(a.id)?.needsRebalance) ?? [], [accounts, driftMap])
+  // C25 · rebalancing — the entered threshold used to be passed to the API and never read: the
+  // server's `needsRebalance` (each account's own model band) decided the list regardless of what
+  // the user typed. Filtering here, against the max asset-class drift the same way `needsRebalance`
+  // is computed, means the control the empty state tells the user to adjust actually adjusts it —
+  // and the threshold can only ever tighten the account's own band, never loosen it.
+  const driftedAccounts = useMemo(() => {
+    return (accounts ?? []).filter((a) => {
+      const drift = driftMap.get(a.id)
+      if (!drift) return false
+      const maxAbsDrift = Math.max(0, ...drift.assetClassDrifts.map((ac) => Math.abs(ac.drift)))
+      const effectiveBand = Math.min(drift.driftTolerance, driftThreshold / 100)
+      return maxAbsDrift > effectiveBand
+    })
+  }, [accounts, driftMap, driftThreshold])
 
   // Build model -> drifted account mapping
   const driftedAccountsByModel = useMemo(() => {

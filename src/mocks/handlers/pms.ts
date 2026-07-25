@@ -408,33 +408,64 @@ function periodReturnsFor(account: typeof accounts[0], years: number) {
   }
 }
 
+/** C24 · rebalancing — these were defined per model and displayed on Model Governance, but the
+ *  rebalance engine never read them; a 7%-band model was treated identically to a 3%-band one.
+ *  Shared by `computeDriftForAccount` and the governance handler, so the band shown to a model
+ *  administrator is the same band the rebalance engine evaluates against. */
+type RebalanceFrequency = 'monthly' | 'quarterly' | 'semi_annual' | 'annual' | 'threshold_only'
+const MODEL_BANDS: Record<string, { driftTolerance: number; rebalanceFrequency: RebalanceFrequency }> = {
+  'mod-001': { driftTolerance: 0.05, rebalanceFrequency: 'quarterly' },
+  'mod-002': { driftTolerance: 0.05, rebalanceFrequency: 'quarterly' },
+  'mod-003': { driftTolerance: 0.03, rebalanceFrequency: 'quarterly' },
+  'mod-004': { driftTolerance: 0.07, rebalanceFrequency: 'threshold_only' },
+  'mod-005': { driftTolerance: 0.05, rebalanceFrequency: 'monthly' },
+  'mod-006': { driftTolerance: 0.05, rebalanceFrequency: 'semi_annual' },
+  'mod-007': { driftTolerance: 0.05, rebalanceFrequency: 'quarterly' },
+}
+
 function computeDriftForAccount(account: typeof accounts[0]): DriftStatus {
   const positions = getPositionsForAccount(account.id, account.totalValue)
-  const targets = getModelTargets(account.modelId ?? 'mod-001')
+  const modelId = account.modelId ?? 'mod-001'
+  const targets = getModelTargets(modelId)
+  const band = MODEL_BANDS[modelId] ?? { driftTolerance: 0.05, rebalanceFrequency: 'quarterly' }
 
+  const totalWeight = positions.reduce((s, p) => s + p.weight, 0) || 1
   const actualWeights = new Map<string, number>()
   for (const pos of positions) {
-    actualWeights.set(pos.assetClass, (actualWeights.get(pos.assetClass) ?? 0) + pos.weight)
+    actualWeights.set(pos.assetClass, (actualWeights.get(pos.assetClass) ?? 0) + pos.weight / totalWeight)
   }
 
   const allClasses = new Set([...Object.keys(targets), ...actualWeights.keys()])
   const assetClassDrifts: DriftStatus['assetClassDrifts'] = [...allClasses]
-    .map((ac) => ({
-      assetClass: ac as DriftStatus['assetClassDrifts'][0]['assetClass'],
-      target: targets[ac] ?? 0,
-      actual: actualWeights.get(ac) ?? 0,
-      drift: roundTo(Math.abs((actualWeights.get(ac) ?? 0) - (targets[ac] ?? 0)), 3),
-    }))
+    .map((ac) => {
+      const actual = actualWeights.get(ac) ?? 0
+      const target = targets[ac] ?? 0
+      // C24 — signed, so the UI can say "overweight" or "underweight" rather than "drifted".
+      return { assetClass: ac as DriftStatus['assetClassDrifts'][0]['assetClass'], target, actual, drift: roundTo(actual - target, 4) }
+    })
     .filter((d) => d.target > 0 || d.actual > 0)
 
-  const totalDrift = roundTo(Math.max(...assetClassDrifts.map((d) => d.drift), 0), 3)
+  // Two distinct metrics, deliberately not conflated:
+  //  - totalDrift: total portfolio drift, the classic half-sum-of-absolute-deviations. Because
+  //    actual and target weights each sum to ~1, every overweight class is balanced by an
+  //    underweight elsewhere, so summing |drift| double-counts the imbalance — halving it gives
+  //    the fraction of the portfolio that must trade to reach target.
+  //  - maxAbsDrift: the single worst asset-class breach, which is what a band actually gates —
+  //    a model rebalances when any one class breaches its tolerance, not when the portfolio-wide
+  //    total does.
+  const sumAbsDrift = assetClassDrifts.reduce((s, d) => s + Math.abs(d.drift), 0)
+  const totalDrift = roundTo(sumAbsDrift / 2, 4)
+  const maxAbsDrift = roundTo(Math.max(...assetClassDrifts.map((d) => Math.abs(d.drift)), 0), 4)
 
   return {
     accountId: account.id,
+    modelId,
+    driftTolerance: band.driftTolerance,
+    rebalanceFrequency: band.rebalanceFrequency,
     totalDrift,
     assetClassDrifts,
-    lastCalculated: '2026-02-25T08:00:00Z',
-    needsRebalance: totalDrift > 0.03,
+    lastCalculated: MOCK_NOW_ISO,
+    needsRebalance: maxAbsDrift > band.driftTolerance,
   }
 }
 
@@ -874,7 +905,7 @@ export const pmsHandlers = [
         id: 'mod-001', name: 'Balanced Growth', benchmark: 'S&P 500 / Agg 60/40',
         description: 'Core 60/40 model with growth tilt',
         riskProfile: 'moderate', currentVersion: 3, assignedAccounts: 14, totalAUM: 42_350_000,
-        lastRebalanceDate: '2026-02-10', driftTolerance: 0.05, rebalanceFrequency: 'quarterly',
+        lastRebalanceDate: '2026-02-10', ...MODEL_BANDS['mod-001'],
         assetClasses: getModelByIndex(0).assetClasses,
         versions: [
           {
@@ -917,7 +948,7 @@ export const pmsHandlers = [
         id: 'mod-002', name: 'Growth', benchmark: 'S&P 500',
         description: 'Equity-focused growth model',
         riskProfile: 'moderate_aggressive', currentVersion: 2, assignedAccounts: 8, totalAUM: 28_120_000,
-        lastRebalanceDate: '2026-02-12', driftTolerance: 0.05, rebalanceFrequency: 'quarterly',
+        lastRebalanceDate: '2026-02-12', ...MODEL_BANDS['mod-002'],
         assetClasses: getModelByIndex(1).assetClasses,
         versions: [
           {
@@ -946,7 +977,7 @@ export const pmsHandlers = [
         id: 'mod-003', name: 'Conservative Income', benchmark: 'Barclays Agg',
         description: 'Income-focused with capital preservation',
         riskProfile: 'conservative', currentVersion: 2, assignedAccounts: 6, totalAUM: 15_800_000,
-        lastRebalanceDate: '2026-01-28', driftTolerance: 0.03, rebalanceFrequency: 'quarterly',
+        lastRebalanceDate: '2026-01-28', ...MODEL_BANDS['mod-003'],
         assetClasses: getModelByIndex(2).assetClasses,
         versions: [
           {
@@ -974,7 +1005,7 @@ export const pmsHandlers = [
         id: 'mod-004', name: 'Aggressive Growth', benchmark: 'MSCI ACWI',
         description: 'High-growth equity allocation',
         riskProfile: 'aggressive', currentVersion: 1, assignedAccounts: 4, totalAUM: 8_450_000,
-        lastRebalanceDate: '2026-02-05', driftTolerance: 0.07, rebalanceFrequency: 'threshold_only',
+        lastRebalanceDate: '2026-02-05', ...MODEL_BANDS['mod-004'],
         assetClasses: getModelByIndex(3).assetClasses,
         versions: [
           {
@@ -989,7 +1020,7 @@ export const pmsHandlers = [
         id: 'mod-005', name: 'Ultra-HNW Multi-Strategy', benchmark: 'Custom Blended',
         description: 'Multi-strategy for large accounts',
         riskProfile: 'moderate_aggressive', currentVersion: 3, assignedAccounts: 3, totalAUM: 18_900_000,
-        lastRebalanceDate: '2026-01-20', driftTolerance: 0.05, rebalanceFrequency: 'monthly',
+        lastRebalanceDate: '2026-01-20', ...MODEL_BANDS['mod-005'],
         assetClasses: getModelByIndex(4).assetClasses,
         versions: [
           {
@@ -1031,7 +1062,7 @@ export const pmsHandlers = [
         id: 'mod-006', name: 'Education 529', benchmark: 'Age-Based Glide',
         description: 'Age-based education savings glide path',
         riskProfile: 'moderate', currentVersion: 1, assignedAccounts: 3, totalAUM: 1_850_000,
-        lastRebalanceDate: '2026-01-15', driftTolerance: 0.05, rebalanceFrequency: 'semi_annual',
+        lastRebalanceDate: '2026-01-15', ...MODEL_BANDS['mod-006'],
         assetClasses: getModelByIndex(5).assetClasses,
         versions: [
           {
@@ -1046,7 +1077,7 @@ export const pmsHandlers = [
         id: 'mod-007', name: 'Moderate Balanced', benchmark: 'S&P 500 / Agg 50/50',
         description: 'Balanced 50/50 equity-bond split',
         riskProfile: 'moderate_conservative', currentVersion: 2, assignedAccounts: 2, totalAUM: 3_200_000,
-        lastRebalanceDate: '2026-02-01', driftTolerance: 0.05, rebalanceFrequency: 'quarterly',
+        lastRebalanceDate: '2026-02-01', ...MODEL_BANDS['mod-007'],
         assetClasses: getModelByIndex(6).assetClasses,
         versions: [
           {
