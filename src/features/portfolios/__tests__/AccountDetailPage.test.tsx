@@ -5,13 +5,17 @@ import { Routes, Route } from 'react-router-dom'
 import { renderWithProviders } from '@/test/render'
 import { AccountDetailPage } from '../AccountDetailPage'
 
-function renderPage() {
+function renderPageAt(initialEntry: string) {
   return renderWithProviders(
     <Routes>
       <Route path="/portfolios/accounts/:accountId" element={<AccountDetailPage />} />
     </Routes>,
-    { initialEntries: ['/portfolios/accounts/acc-001'] },
+    { initialEntries: [initialEntry] },
   )
+}
+
+function renderPage() {
+  return renderPageAt('/portfolios/accounts/acc-001')
 }
 
 describe('AccountDetailPage', () => {
@@ -56,5 +60,28 @@ describe('AccountDetailPage', () => {
     const buttons = screen.getAllByRole('button')
     // At least one button exists for back navigation
     expect(buttons.length).toBeGreaterThan(0)
+  })
+
+  // Review round 2, Important · nba-007's actionRoute is
+  // `{ path: '/portfolios/accounts/acc-011', params: { tab: 'concentration' } }`, which NBAFeed
+  // turns into `/portfolios/accounts/acc-011?tab=concentration`. Before TabLayout read the URL,
+  // this silently opened Overview instead of Concentration — a route-existence check alone cannot
+  // catch that, since the route resolves fine. This asserts the tab that actually opens.
+  it('opens the Concentration tab when the URL carries ?tab=concentration (the NBA route shape)', async () => {
+    renderPageAt('/portfolios/accounts/acc-011?tab=concentration')
+    await screen.findByText('David Williams Individual')
+
+    const concentrationTab = await screen.findByRole('tab', { name: /Concentration/ })
+    expect(concentrationTab).toHaveAttribute('aria-selected', 'true')
+    const overviewTab = screen.getByRole('tab', { name: /Overview/ })
+    expect(overviewTab).toHaveAttribute('aria-selected', 'false')
+  })
+
+  it('falls back to Overview when ?tab= is absent or names an unknown tab', async () => {
+    renderPageAt('/portfolios/accounts/acc-011?tab=not-a-real-tab')
+    await screen.findByText('David Williams Individual')
+
+    const overviewTab = await screen.findByRole('tab', { name: /Overview/ })
+    expect(overviewTab).toHaveAttribute('aria-selected', 'true')
   })
 })

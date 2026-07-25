@@ -1,4 +1,5 @@
 import { useState, useId } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 
 type Tab = {
@@ -14,8 +15,23 @@ type TabLayoutProps = {
   className?: string
 }
 
+/**
+ * Review round 2, Important · a `?tab=` search param on the route (e.g. an NBA's
+ * `actionRoute.params.tab`) previously did nothing — `TabLayout` never read the URL at all, so
+ * navigating to `/portfolios/accounts/acc-011?tab=concentration` silently opened Overview instead
+ * of Concentration. An unknown or absent `tab` param falls back to `defaultTab` (and then
+ * `tabs[0]`) exactly as before, so the three existing hardcoded-literal callers (EngagePage,
+ * RevenuePage, ActionsPage) are unaffected — this only changes behavior when a *valid* `tab` id
+ * is present in the URL, which none of them currently produce.
+ */
+function initialTabFrom(urlTab: string | null, tabs: Tab[], defaultTab?: string): string {
+  if (urlTab && tabs.some((t) => t.id === urlTab)) return urlTab
+  return defaultTab ?? tabs[0]?.id ?? ''
+}
+
 export function TabLayout({ tabs, defaultTab, className }: TabLayoutProps) {
-  const [activeTab, setActiveTab] = useState(defaultTab ?? tabs[0]?.id ?? '')
+  const [searchParams] = useSearchParams()
+  const [activeTab, setActiveTab] = useState(() => initialTabFrom(searchParams.get('tab'), tabs, defaultTab))
   const instanceId = useId()
 
   const activeContent = tabs.find((t) => t.id === activeTab)?.content

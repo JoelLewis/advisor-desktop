@@ -113,9 +113,12 @@ export const nbas: NBA[] = [
     estimatedImpact: 110_000, createdAt: '2026-02-24T07:15:00Z', dismissed: false,
     // Review round 1, Important #3 · '/portfolios/accounts/acc-011/concentration' is not a route
     // (routes.tsx defines only accounts/:accountId, .../attribution and .../tax — no concentration
-    // child). AccountDetailPage renders a "concentration" tab via ?tab=concentration on the base
-    // account route, which is how the pre-existing pattern (nba-007's own former actionRoute, and
-    // AttributionPage/TaxManagementPage's siblings) already worked — restored that shape here.
+    // child). AccountDetailPage renders a "concentration" tab on the base account route, selected
+    // via a ?tab= query param. Review round 2 correction: that ?tab= mechanism did not actually
+    // work before this change — TabLayout never read the URL, so this route+params shape (matching
+    // nba-007's own pre-existing actionRoute) silently landed on Overview rather than crashing.
+    // TabLayout now reads `tab` from the URL (falling back to its prior defaultTab/tabs[0]
+    // behavior when absent or unrecognised), so this actually opens the Concentration tab.
     actionRoute: { path: '/portfolios/accounts/acc-011', params: { tab: 'concentration' } },
   },
   {
