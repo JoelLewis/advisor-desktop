@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw'
-import type { MetricsSummary } from '@/services/pms'
+import type { MetricsSummary, AllocationSlice } from '@/services/pms'
 import type { DriftStatus } from '@/types/portfolio'
 import type { RiskMetrics, FactorExposure, StressScenario } from '@/types/risk'
 import type {
@@ -421,6 +421,27 @@ function computeDriftForAccount(account: typeof accounts[0]): DriftStatus {
   }
 }
 
+/**
+ * FX-aware allocation aggregation shared by the household and client allocation endpoints:
+ * convert every position's market value to USD before combining by asset class, so mixed-
+ * currency entities (e.g. hh-002's HKD and SGD accounts) aggregate correctly. One derivation,
+ * two consumers — keeps the two endpoints from drifting apart on rounding or ordering.
+ */
+function deriveAllocationByAssetClass(entityAccounts: readonly (typeof accounts)[0][]): AllocationSlice[] {
+  const byClass = new Map<string, number>()
+  for (const acc of entityAccounts) {
+    for (const pos of getPositionsForAccount(acc.id, acc.totalValue)) {
+      byClass.set(pos.assetClass, (byClass.get(pos.assetClass) ?? 0)
+        + toUSD(pos.marketValue, acc.baseCurrency))
+    }
+  }
+  const total = [...byClass.values()].reduce((sum, v) => sum + v, 0)
+  return [...byClass.entries()]
+    .map(([assetClass, value]) => ({
+      assetClass, weight: roundTo(value / total, 3), value: Math.round(value),
+    }))
+    .sort((a, b) => b.value - a.value)
+}
 
 /**
  * C8 · historical-risk — the Bloomberg Aggregate was flat-to-positive Sep-08 → Mar-09; the
@@ -821,49 +842,13 @@ export const pmsHandlers = [
   http.get('/api/pms/households/:householdId/allocation', ({ params }) => {
     const hhAccounts = accounts.filter((a) => a.householdId === params.householdId)
     if (hhAccounts.length === 0) return notFound()
-
-    // FX-aware aggregation: convert each account's positions to USD before combining
-    const byClass = new Map<string, number>()
-    for (const acc of hhAccounts) {
-      const positions = getPositionsForAccount(acc.id, acc.totalValue)
-      for (const pos of positions) {
-        const usdValue = toUSD(pos.marketValue, acc.baseCurrency)
-        byClass.set(pos.assetClass, (byClass.get(pos.assetClass) ?? 0) + usdValue)
-      }
-    }
-    const totalValue = [...byClass.values()].reduce((sum, v) => sum + v, 0)
-
-    return HttpResponse.json(
-      [...byClass.entries()]
-        .map(([assetClass, value]) => ({
-          assetClass,
-          weight: roundTo(value / totalValue, 3),
-          value: Math.round(value),
-        }))
-        .sort((a, b) => b.value - a.value),
-    )
+    return HttpResponse.json(deriveAllocationByAssetClass(hhAccounts))
   }),
 
   http.get('/api/pms/clients/:clientId/allocation', ({ params }) => {
     const clientAccounts = accounts.filter((a) => a.clientId === params.clientId)
     if (clientAccounts.length === 0) return notFound()
-
-    // FX-aware aggregation: convert each account's positions to USD before combining
-    const byClass = new Map<string, number>()
-    for (const acc of clientAccounts) {
-      for (const pos of getPositionsForAccount(acc.id, acc.totalValue)) {
-        byClass.set(pos.assetClass, (byClass.get(pos.assetClass) ?? 0)
-          + toUSD(pos.marketValue, acc.baseCurrency))
-      }
-    }
-    const total = [...byClass.values()].reduce((s, v) => s + v, 0)
-    return HttpResponse.json(
-      [...byClass.entries()]
-        .map(([assetClass, value]) => ({
-          assetClass, weight: roundTo(value / total, 3), value: Math.round(value),
-        }))
-        .sort((a, b) => b.value - a.value),
-    )
+    return HttpResponse.json(deriveAllocationByAssetClass(clientAccounts))
   }),
 
   http.get('/api/pms/models/governance', () => {
