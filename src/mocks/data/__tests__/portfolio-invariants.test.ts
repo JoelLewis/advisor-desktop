@@ -1,7 +1,5 @@
 import { describe, it, expect } from 'vitest'
 import { allPositions, getPositionsForAccount } from '@/mocks/data/positions'
-import { accounts } from '@/mocks/data/accounts'
-import { households } from '@/mocks/data/households'
 
 describe('Portfolio Invariants', () => {
   describe('Position-level math (explicit positions)', () => {
@@ -75,23 +73,8 @@ describe('Portfolio Invariants', () => {
     )
   })
 
-  describe('Household AUM consistency', () => {
-    it.each(households.map((h) => [h.id, h.name, h]))(
-      '%s (%s): managedAUM equals sum of account totalValues',
-      (_id, _name, household) => {
-        const householdAccounts = accounts.filter(
-          (a) =>
-            a.householdId === household.id ||
-            household.accountIds.includes(a.id),
-        )
-        const accountSum = householdAccounts.reduce(
-          (sum, a) => sum + a.totalValue,
-          0,
-        )
-        expect(household.managedAUM).toBe(accountSum)
-      },
-    )
-  })
+  // Household AUM consistency now lives in rollup-invariants.test.ts, which asserts the
+  // FX-applied identity for every household. D1 · reconciliation.
 
   describe('getPositionsForAccount', () => {
     it('returns explicit positions for acc-001', () => {

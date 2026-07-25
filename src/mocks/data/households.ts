@@ -1,6 +1,15 @@
-import type { Household } from '@/types/household'
+import type { Household, HouseholdFixture } from '@/types/household'
+import { accounts } from './accounts'
+import { FX_RATES_USD_BASE } from './currencies'
+import { deriveHouseholdAUM } from '@/lib/aum'
 
-export const households: Household[] = [
+/**
+ * Leaf data only. `heldAwayAUM` describes accounts that are not in `accounts.ts` and is therefore
+ * hand-typed; `managedAUM` and `totalAUM` are derived below.
+ *
+ * D1 · data-quality / reconciliation / currencies-and-fx
+ */
+export const householdFixtures: HouseholdFixture[] = [
   {
     id: 'hh-001',
     name: 'Johnson Household',
@@ -8,8 +17,6 @@ export const households: Household[] = [
       { clientId: 'cli-001', name: 'Robert Johnson', relationship: 'primary', dateOfBirth: '1958-03-22' },
       { clientId: 'cli-002', name: 'Patricia Johnson', relationship: 'spouse', dateOfBirth: '1960-07-11' },
     ],
-    totalAUM: 22_650_000,
-    managedAUM: 18_750_000,
     heldAwayAUM: 3_900_000,
     accountIds: ['acc-001', 'acc-002', 'acc-003', 'acc-004', 'acc-005'],
     primaryContactId: 'cli-001',
@@ -23,8 +30,6 @@ export const households: Household[] = [
       { clientId: 'cli-003', name: 'Margaret Chen', relationship: 'primary', dateOfBirth: '1965-11-03' },
       { clientId: 'cli-020', name: 'Elizabeth Wong', relationship: 'spouse', dateOfBirth: '1967-09-14' },
     ],
-    totalAUM: 48_300_000,
-    managedAUM: 43_500_000,
     heldAwayAUM: 4_800_000,
     accountIds: ['acc-006', 'acc-007', 'acc-008', 'acc-009', 'acc-010', 'acc-041', 'acc-042'],
     primaryContactId: 'cli-003',
@@ -38,8 +43,6 @@ export const households: Household[] = [
       { clientId: 'cli-004', name: 'David Williams', relationship: 'primary', dateOfBirth: '1970-05-18' },
       { clientId: 'cli-005', name: 'Sarah Williams', relationship: 'spouse', dateOfBirth: '1972-09-25' },
     ],
-    totalAUM: 7_560_000,
-    managedAUM: 6_360_000,
     heldAwayAUM: 1_200_000,
     accountIds: ['acc-011', 'acc-012', 'acc-013', 'acc-014', 'acc-047'],
     primaryContactId: 'cli-004',
@@ -53,8 +56,6 @@ export const households: Household[] = [
       { clientId: 'cli-006', name: 'Michael Martinez', relationship: 'primary', dateOfBirth: '1968-12-07' },
       { clientId: 'cli-007', name: 'Jennifer Martinez', relationship: 'spouse', dateOfBirth: '1971-04-14' },
     ],
-    totalAUM: 11_200_000,
-    managedAUM: 9_500_000,
     heldAwayAUM: 1_700_000,
     accountIds: ['acc-015', 'acc-016', 'acc-017', 'acc-018'],
     primaryContactId: 'cli-006',
@@ -67,8 +68,6 @@ export const households: Household[] = [
     members: [
       { clientId: 'cli-008', name: 'James Thompson', relationship: 'primary', dateOfBirth: '1953-08-30' },
     ],
-    totalAUM: 4_385_000,
-    managedAUM: 4_385_000,
     heldAwayAUM: 0,
     accountIds: ['acc-019', 'acc-020', 'acc-021', 'acc-046'],
     primaryContactId: 'cli-008',
@@ -82,8 +81,6 @@ export const households: Household[] = [
       { clientId: 'cli-009', name: 'Richard Anderson', relationship: 'primary', dateOfBirth: '1962-01-19' },
       { clientId: 'cli-010', name: 'Susan Anderson', relationship: 'spouse', dateOfBirth: '1964-06-05' },
     ],
-    totalAUM: 8_400_000,
-    managedAUM: 7_200_000,
     heldAwayAUM: 1_200_000,
     accountIds: ['acc-022', 'acc-023', 'acc-024', 'acc-025'],
     primaryContactId: 'cli-009',
@@ -97,8 +94,6 @@ export const households: Household[] = [
       { clientId: 'cli-011', name: 'Raj Patel', relationship: 'primary', dateOfBirth: '1975-03-12' },
       { clientId: 'cli-012', name: 'Priya Patel', relationship: 'spouse', dateOfBirth: '1978-11-28' },
     ],
-    totalAUM: 7_825_000,
-    managedAUM: 6_225_000,
     heldAwayAUM: 1_600_000,
     accountIds: ['acc-026', 'acc-027', 'acc-028', 'acc-029', 'acc-045'],
     primaryContactId: 'cli-011',
@@ -112,8 +107,6 @@ export const households: Household[] = [
       { clientId: 'cli-013', name: "Brian O'Brien", relationship: 'primary', dateOfBirth: '1980-02-14' },
       { clientId: 'cli-014', name: "Karen O'Brien", relationship: 'spouse', dateOfBirth: '1982-08-19' },
     ],
-    totalAUM: 2_100_000,
-    managedAUM: 1_650_000,
     heldAwayAUM: 450_000,
     accountIds: ['acc-030', 'acc-031', 'acc-032'],
     primaryContactId: 'cli-013',
@@ -127,8 +120,6 @@ export const households: Household[] = [
       { clientId: 'cli-015', name: 'Thomas Kim', relationship: 'primary', dateOfBirth: '1985-06-30' },
       { clientId: 'cli-019', name: 'Daniel Lee', relationship: 'other', dateOfBirth: '1990-07-22' },
     ],
-    totalAUM: 1_255_000,
-    managedAUM: 1_050_000,
     heldAwayAUM: 205_000,
     accountIds: ['acc-033', 'acc-034'],
     primaryContactId: 'cli-015',
@@ -141,8 +132,6 @@ export const households: Household[] = [
     members: [
       { clientId: 'cli-016', name: 'Linda Garcia', relationship: 'primary', dateOfBirth: '1950-10-08' },
     ],
-    totalAUM: 720_000,
-    managedAUM: 720_000,
     heldAwayAUM: 0,
     accountIds: ['acc-035', 'acc-036'],
     primaryContactId: 'cli-016',
@@ -155,8 +144,6 @@ export const households: Household[] = [
     members: [
       { clientId: 'cli-017', name: 'William Foster', relationship: 'primary', dateOfBirth: '1978-04-25' },
     ],
-    totalAUM: 1_500_000,
-    managedAUM: 1_500_000,
     heldAwayAUM: 0,
     accountIds: ['acc-037', 'acc-038'],
     primaryContactId: 'cli-017',
@@ -169,8 +156,6 @@ export const households: Household[] = [
     members: [
       { clientId: 'cli-018', name: 'Nancy Taylor', relationship: 'primary', dateOfBirth: '1948-12-01' },
     ],
-    totalAUM: 380_000,
-    managedAUM: 380_000,
     heldAwayAUM: 0,
     accountIds: ['acc-039', 'acc-040'],
     primaryContactId: 'cli-018',
@@ -184,8 +169,6 @@ export const households: Household[] = [
       { clientId: 'cli-021', name: 'Hans Mueller', relationship: 'primary', dateOfBirth: '1963-04-18' },
       { clientId: 'cli-022', name: 'Ingrid Mueller', relationship: 'spouse', dateOfBirth: '1966-09-22' },
     ],
-    totalAUM: 7_200_000,
-    managedAUM: 4_700_000,
     heldAwayAUM: 2_500_000,
     accountIds: ['acc-043', 'acc-044'],
     primaryContactId: 'cli-021',
@@ -193,3 +176,8 @@ export const households: Household[] = [
     createdAt: '2024-03-15',
   },
 ]
+
+export const households: Household[] = householdFixtures.map((hh) => {
+  const managedAUM = deriveHouseholdAUM(hh.id, accounts, FX_RATES_USD_BASE)
+  return { ...hh, managedAUM, totalAUM: managedAUM + hh.heldAwayAUM }
+})
