@@ -31,8 +31,12 @@ const orders: Order[] = [
   // ── Multi-asset orders ──
   // D26 — a mutual fund order cannot fill at 11:00 ET. Rule 22c-1 requires forward pricing at the
   // next computed NAV, which for VFIAX is 4:00 PM ET (21:00Z), and a $25,000 dollar-amount purchase
-  // buys $25,000 / $465.32 = 53.73 shares, not the placeholder 1.
-  { id: 'ord-013', accountId: 'acc-001', symbol: 'VFIAX', side: 'purchase', quantity: 53.73, orderType: 'market', status: 'filled', filledQuantity: 53.73, filledPrice: 465.32, submittedAt: '2026-02-23T15:00:00Z', filledAt: '2026-02-23T21:00:00Z', assetClass: 'mutual_fund', dollarAmount: 25000, amountType: 'dollars' },
+  // buys $25,000 / $465.32 shares, not the placeholder 1.
+  //
+  // 53.72647, at the five decimal places NSCC Fund/SERV carries share quantities to — not the 53.73
+  // this fixture first used, which multiplies out to $25,001.64, nor 53.727, which gives $25,000.25.
+  // 53.72647 x 465.32 = $25,000.00103, the only rounding that agrees with `dollarAmount` to the cent.
+  { id: 'ord-013', accountId: 'acc-001', symbol: 'VFIAX', side: 'purchase', quantity: 53.72647, orderType: 'market', status: 'filled', filledQuantity: 53.72647, filledPrice: 465.32, submittedAt: '2026-02-23T15:00:00Z', filledAt: '2026-02-23T21:00:00Z', assetClass: 'mutual_fund', dollarAmount: 25000, amountType: 'dollars' },
   { id: 'ord-014', accountId: 'acc-002', symbol: 'UST-10Y', side: 'buy', quantity: 50, orderType: 'limit', limitPrice: 95.25, status: 'filled', filledQuantity: 50, filledPrice: 95.20, submittedAt: '2026-02-22T10:30:00Z', filledAt: '2026-02-22T10:30:05Z', assetClass: 'fixed_income', parAmount: 50000, bondPriceType: 'price', priceOrYield: 95.25 },
   // D27 — spot BTC settled into acc-002, a Schwab brokerage that can only hold the IBIT and ETHE
   // ETFs. It belongs in acc-045, the Coinbase account that actually custodies coins, and at the one

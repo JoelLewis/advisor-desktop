@@ -12,12 +12,18 @@ import type { Account } from '@/types/account'
  */
 export const accounts: Account[] = [
   // ── Johnson Household (hh-001) — managed $18.75M ──
-  // Sleeves from pos-001..012: equity (VTI/AAPL/MSFT/NVDA/EFA/VWO) 4,581,910; fixed income
-  // (AGG/BND/TLT) 2,295,560; real assets (GLD/VNQ) 662,360; cash 660,170 = 8,200,000.
+  // Sleeves from pos-001..012, targets from mod-001: equity (VTI/AAPL/MSFT/NVDA/EFA/VWO) 4,581,910;
+  // fixed income (AGG/BND/TLT) 2,295,560; real assets (GLD/VNQ) 662,360; cash 660,170 = 8,200,000.
+  // mod-001 also targets 5% alternatives, which this account holds none of, so the sleeve is
+  // carried unfunded rather than dropped: deleting it would make the UMA plan disagree with the
+  // drift engine, which reports that 0.05 alternatives drift either way. Real assets is 0.05
+  // (real_estate 0.03 + commodities 0.02), not the 0.10 it would take to absorb the alternatives
+  // target — a sleeve plan that quietly reallocates the model's targets is not the model's plan.
   { id: 'acc-001', accountNumber: 'TRU-847291', name: 'Johnson Family Trust', type: 'trust_revocable', status: 'active', taxTreatment: 'taxable', clientId: 'cli-001', householdId: 'hh-001', totalValue: 8_200_000, cashBalance: 660_170, isUMA: true, sleeves: [
     { id: 'slv-001', name: 'Core equity', strategy: 'Global equity', manager: 'Internal', targetAllocation: 0.55, actualAllocation: 0.559, value: 4_581_910 },
     { id: 'slv-002', name: 'Core fixed income', strategy: 'Investment grade', manager: 'PIMCO', targetAllocation: 0.30, actualAllocation: 0.280, value: 2_295_560 },
-    { id: 'slv-003', name: 'Real assets', strategy: 'Real estate and commodities', manager: 'Internal', targetAllocation: 0.10, actualAllocation: 0.081, value: 662_360 },
+    { id: 'slv-003', name: 'Real assets', strategy: 'Real estate and commodities', manager: 'Internal', targetAllocation: 0.05, actualAllocation: 0.081, value: 662_360 },
+    { id: 'slv-010', name: 'Alternatives', strategy: 'Multi-strategy', manager: 'Unassigned', targetAllocation: 0.05, actualAllocation: 0, value: 0 },
     { id: 'slv-004', name: 'Cash', strategy: 'Money market', manager: 'Internal', targetAllocation: 0.05, actualAllocation: 0.081, value: 660_170 },
   ], modelId: 'mod-001', custodian: 'Schwab', openDate: '2018-03-01', lastRebalance: '2025-11-15', costBasisMethod: 'specific_id' as const },
   { id: 'acc-002', accountNumber: 'BRK-293847', name: 'Robert Johnson Individual', type: 'individual', status: 'active', taxTreatment: 'taxable', clientId: 'cli-001', householdId: 'hh-001', totalValue: 4_500_000, cashBalance: 269_640, isUMA: false, modelId: 'mod-002', custodian: 'Schwab', openDate: '2018-01-15', lastRebalance: '2025-10-20', costBasisMethod: 'specific_id' as const },

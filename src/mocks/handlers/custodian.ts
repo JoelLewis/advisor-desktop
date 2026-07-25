@@ -77,7 +77,7 @@ type TradeShell = {
   fraction: number
 }
 
-function generateTransactions(accountId: string, totalValue: number): Transaction[] {
+export function generateTransactions(accountId: string, totalValue: number): Transaction[] {
   const baseDate = startOfToday()
   const rand = seeded(`txn:${accountId}`)
   const held = getPositionsForAccount(accountId, totalValue).filter((p) => p.symbol !== 'CASH')

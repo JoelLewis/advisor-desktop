@@ -1,6 +1,23 @@
 import { http, HttpResponse } from 'msw'
 import type { IntegrationHealth, ReconBreak, DataQualitySummary } from '@/types/reconciliation'
 import { startOfToday, MOCK_TODAY_ISO } from '@/lib/clock'
+import { accounts } from '../data/accounts'
+import { generateTransactions } from './custodian'
+
+/**
+ * A break states what the book says and what the custodian says. The book's side has to be read
+ * off the book, not typed next to it — brk-004 claimed acc-003's transaction count was 14 against a
+ * stream that actually returns 20, which is the same hand-typed-versus-derived defect this task
+ * exists to remove, one layer down. The custodian's side is the book's minus the one transaction it
+ * has not yet delivered.
+ */
+function transactionCount(accountId: string): number {
+  const account = accounts.find((a) => a.id === accountId)
+  if (!account) throw new Error(`Cannot count transactions for unknown account ${accountId}`)
+  return generateTransactions(account.id, account.totalValue).length
+}
+
+const ACC_003_TRANSACTIONS = transactionCount('acc-003')
 
 /**
  * D17 — every break row named the wrong account, and two named accounts that do not exist anywhere
@@ -16,7 +33,7 @@ import { startOfToday, MOCK_TODAY_ISO } from '@/lib/clock'
 const breaks: ReconBreak[] = [
   { id: 'brk-002', integrationName: 'Schwab Custodian', accountId: 'acc-001', accountName: 'Johnson Family Trust', field: 'cash_balance', expectedValue: '$660,170.00', actualValue: '$660,020.00', severity: 'medium', detectedAt: '2026-02-25T07:00:00Z' },
   { id: 'brk-003', integrationName: 'Fidelity Custodian', accountId: 'acc-006', accountName: 'Chen Family Irrevocable Trust', field: 'position_quantity', expectedValue: '14,500 (EFA)', actualValue: '14,480 (EFA)', severity: 'medium', detectedAt: '2026-02-24T07:00:00Z', resolvedAt: '2026-02-24T09:00:00Z' },
-  { id: 'brk-004', integrationName: 'Schwab Custodian', accountId: 'acc-003', accountName: 'Robert Johnson Traditional IRA', field: 'transaction_count', expectedValue: '14', actualValue: '13', severity: 'low', detectedAt: '2026-02-24T07:00:00Z', resolvedAt: '2026-02-24T07:45:00Z' },
+  { id: 'brk-004', integrationName: 'Schwab Custodian', accountId: 'acc-003', accountName: 'Robert Johnson Traditional IRA', field: 'transaction_count', expectedValue: String(ACC_003_TRANSACTIONS), actualValue: String(ACC_003_TRANSACTIONS - 1), severity: 'low', detectedAt: '2026-02-24T07:00:00Z', resolvedAt: '2026-02-24T07:45:00Z' },
   { id: 'brk-005', integrationName: 'Vanguard Custodian', accountId: 'acc-014', accountName: 'Williams 529 Education', field: 'market_value', expectedValue: '$385,000.00', actualValue: '$383,750.00', severity: 'low', detectedAt: '2026-02-23T07:00:00Z', resolvedAt: '2026-02-23T08:20:00Z' },
 ]
 
