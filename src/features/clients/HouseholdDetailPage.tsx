@@ -287,7 +287,11 @@ export function HouseholdDetailPage() {
                 <div className="space-y-2">
                   {hhDrift.map((drift) => {
                     const acc = accounts?.find((a) => a.id === drift.accountId)
-                    const overThreshold = drift.assetClassDrifts.filter((d) => d.drift > 0.02).length
+                    // C24 — drift is now signed (over- vs under-weight), so a class must be
+                    // compared by magnitude, and against the account's own band (not a hardcoded
+                    // 2%) or a class can be flagged "over threshold" while the card says the
+                    // account's drift is acceptable.
+                    const overThreshold = drift.assetClassDrifts.filter((d) => Math.abs(d.drift) > drift.driftTolerance).length
                     return (
                       <div
                         key={drift.accountId}
@@ -305,11 +309,14 @@ export function HouseholdDetailPage() {
                             </p>
                           </div>
                         </div>
+                        {/* needsRebalance gates on maxAbsDrift vs. the account's own band, not
+                            totalDrift (the portfolio-wide aggregate) — render the same pair the
+                            gate uses so this can't read e.g. a green "15.0%" on a 3x-tolerance account. */}
                         <span className={cn(
                           'font-mono text-section-header',
                           drift.needsRebalance ? 'text-accent-red' : 'text-accent-green',
                         )}>
-                          {(drift.totalDrift * 100).toFixed(1)}%
+                          {(drift.maxAbsDrift * 100).toFixed(1)}% / ±{(drift.driftTolerance * 100).toFixed(1)}%
                         </span>
                       </div>
                     )

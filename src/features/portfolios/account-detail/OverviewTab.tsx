@@ -122,9 +122,13 @@ export function OverviewTab({ account, positions, allocation, totalGainLoss, dri
             </CardHeader>
             <CardContent>
               <div className="mb-3 flex items-center justify-between">
-                <span className="text-caption text-text-secondary">Total Drift</span>
+                {/* needsRebalance gates on the worst single asset-class breach (maxAbsDrift)
+                    against the account's own band, not the portfolio-wide aggregate (totalDrift)
+                    — render that pair together, or this can read e.g. a red-free "15.0%" on an
+                    account that is 3x its own tolerance. */}
+                <span className="text-caption text-text-secondary">Max Drift</span>
                 <span className={cn('font-mono text-section-header', drift.needsRebalance ? 'text-accent-red' : 'text-accent-green')}>
-                  {(drift.totalDrift * 100).toFixed(1)}%
+                  {(drift.maxAbsDrift * 100).toFixed(1)}% / ±{(drift.driftTolerance * 100).toFixed(1)}%
                 </span>
               </div>
               {drift.needsRebalance && (
@@ -147,8 +151,11 @@ export function OverviewTab({ account, positions, allocation, totalGainLoss, dri
                     <span className="text-text-secondary">{ASSET_CLASS_LABELS[d.assetClass] ?? d.assetClass}</span>
                     <div className="flex items-center gap-3">
                       <span className="font-mono text-text-tertiary">{(d.target * 100).toFixed(0)}% / {(d.actual * 100).toFixed(0)}%</span>
-                      <span className={cn('font-mono font-medium', d.drift > 0.02 ? 'text-accent-red' : 'text-accent-green')}>
-                        {(d.drift * 100).toFixed(1)}%
+                      {/* C24 — drift is signed (over- vs under-weight); the highlight compares by
+                          magnitude against the account's own band (not a hardcoded 2%), so a
+                          class isn't flagged red on a card that says drift is acceptable. */}
+                      <span className={cn('font-mono font-medium', Math.abs(d.drift) > drift.driftTolerance ? 'text-accent-red' : 'text-accent-green')}>
+                        {d.drift > 0 ? '+' : ''}{(d.drift * 100).toFixed(1)}%
                       </span>
                     </div>
                   </div>

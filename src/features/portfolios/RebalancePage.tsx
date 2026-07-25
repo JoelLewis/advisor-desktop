@@ -39,7 +39,12 @@ export function RebalancePage() {
   const [step, setStep] = useState<WizardStep>('select')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(preselectedAccounts))
   const [taxAware, setTaxAware] = useState(true)
-  const [driftThreshold, setDriftThreshold] = useState(3.0)
+  // C24/C25 · Important #5 — defaults to the top of the control's range (10%, above the widest
+  // model band of 7%) so `Math.min(band, driftThreshold / 100)` resolves to each account's own
+  // band by default: the per-model bands this task introduces bind out of the box, and lowering
+  // the control is an opt-in to a *tighter* global threshold, never a wider one (see the filter
+  // below). A default of 3% would silently reintroduce the flat-3% list C24 removed.
+  const [driftThreshold, setDriftThreshold] = useState(10.0)
   const [previews, setPreviews] = useState<RebalancePreview[]>([])
   const [complianceResults, setComplianceResults] = useState<TradeComplianceResult[]>([])
   const autoAdvancedRef = useRef(false)
@@ -47,7 +52,20 @@ export function RebalancePage() {
   const [selectedModelId, setSelectedModelId] = useState<string | null>(preselectedModel)
 
   const driftMap = useMemo(() => new Map(driftSummary?.map((d) => [d.accountId, d]) ?? []), [driftSummary])
-  const driftedAccounts = useMemo(() => accounts?.filter((a) => driftMap.get(a.id)?.needsRebalance) ?? [], [accounts, driftMap])
+  // C25 · rebalancing — the entered threshold used to be passed to the API and never read: the
+  // server's `needsRebalance` (each account's own model band) decided the list regardless of what
+  // the user typed. Filtering here, against `maxAbsDrift` (published by the server, not
+  // recomputed — the same quantity `needsRebalance` gates on), means the control the empty state
+  // tells the user to adjust actually adjusts it — and the threshold can only ever tighten the
+  // account's own band, never loosen it.
+  const driftedAccounts = useMemo(() => {
+    return (accounts ?? []).filter((a) => {
+      const drift = driftMap.get(a.id)
+      if (!drift) return false
+      const effectiveBand = Math.min(drift.driftTolerance, driftThreshold / 100)
+      return drift.maxAbsDrift > effectiveBand
+    })
+  }, [accounts, driftMap, driftThreshold])
 
   // Build model -> drifted account mapping
   const driftedAccountsByModel = useMemo(() => {
