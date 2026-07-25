@@ -13,7 +13,7 @@ export function useFXRates(base = 'USD') {
 }
 
 export function useCurrencyConverter() {
-  const { data } = useFXRates()
+  const { data, isError } = useFXRates()
   const rates: FXRateMap = useMemo(() => data?.rates ?? {}, [data?.rates])
 
   const convert = useCallback(
@@ -28,5 +28,9 @@ export function useCurrencyConverter() {
     [rates],
   )
 
-  return { convert, toBase, rates, isReady: !!data }
+  // `isReady` never becomes true after a failed fetch (retries exhausted, `data` stays
+  // undefined forever) — callers that gate rendering on `isReady` alone would otherwise block
+  // indefinitely on an FX outage. Expose `isError` so a caller can distinguish "still loading"
+  // from "never going to load" and fail open instead of hanging.
+  return { convert, toBase, rates, isReady: !!data, isError }
 }

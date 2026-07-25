@@ -10,8 +10,7 @@ import { useOpenWashSaleWindows } from '@/hooks/use-open-wash-sale-windows'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { useCurrencyConverter } from '@/hooks/use-fx'
 import { cn } from '@/lib/utils'
-import type { TaxLot } from '@/types/portfolio'
-import { isHarvestable } from './tax/shared'
+import { isHarvestable, computeCostBasisImpact } from './tax/shared'
 import { COST_BASIS_METHODS, type CostBasisMethod } from './tax/CostBasisMethodCard'
 import { TaxSummaryCards } from './tax/TaxSummaryCards'
 import { CostBasisMethodCard } from './tax/CostBasisMethodCard'
@@ -42,7 +41,16 @@ export function TaxManagementPage() {
   const { rates, isReady: fxReady } = useCurrencyConverter()
 
   const baseCurrency = account?.baseCurrency ?? 'USD'
-  const isLoading = accountLoading || lotsLoading || !fxReady
+  // Fix-round-1 review, Important #3: an earlier version of this gate waited on `!fxReady` too —
+  // `isReady` never becomes true once React Query's retries are exhausted, so on a permanent FX
+  // outage the skeleton below (which renders before the isError/not-found branches) never yielded
+  // to anything. Worse, gating the whole tree's mount on `fxReady` meant every remount of an
+  // FX-dependent descendant (e.g. `TaxLotsView`'s per-lot `CurrencyValue`s, each with their own
+  // `useFormatCurrency` → `useFXRates` observer) re-triggered React Query's refetch-on-mount for
+  // the same errored query, which flips `isReady`/`isError` again, unmounts the tree again, and
+  // remounts it again — a self-sustaining refetch loop, confirmed against a real 500 response.
+  // FX readiness must not gate the page mount at all; it only gates the harvest computation below.
+  const isLoading = accountLoading || lotsLoading
 
   // Build position lookup for symbol display
   const positionMap = useMemo(() => {
@@ -56,11 +64,17 @@ export function TaxManagementPage() {
   // Harvest opportunities: lots with unrealized losses greater than HARVEST_LOSS_THRESHOLD_USD.
   // PRE-FLIGHT correction 1 — the threshold is in USD; a lot's gainLoss is in the account's own
   // baseCurrency, so it must be converted before comparing rather than compared as a raw literal.
+  // While FX rates are unavailable — still loading, or permanently failed — fail open to an empty
+  // list instead of running the comparison against an empty rate map, which would silently
+  // reproduce the currency-blind bug this task fixed. This is the *only* place FX readiness gates
+  // anything; it must not gate the page's own mount (see isLoading above).
   const harvestOpportunities = useMemo(
-    () => (taxLots ?? [])
-      .filter((lot) => isHarvestable(lot.gainLoss, baseCurrency, rates))
-      .sort((a, b) => a.gainLoss - b.gainLoss),
-    [taxLots, baseCurrency, rates],
+    () => fxReady
+      ? (taxLots ?? [])
+          .filter((lot) => isHarvestable(lot.gainLoss, baseCurrency, rates))
+          .sort((a, b) => a.gainLoss - b.gainLoss)
+      : [],
+    [taxLots, baseCurrency, rates, fxReady],
   )
 
   // Tax summary stats
@@ -74,73 +88,13 @@ export function TaxManagementPage() {
     return { totalUnrealizedGain, totalUnrealizedLoss, shortTermGain, longTermGain, harvestableAmount }
   }, [taxLots, harvestOpportunities])
 
-  // Cost basis method impact simulation
+  // Cost basis method impact simulation — computeCostBasisImpact lives in tax/shared.tsx (not
+  // inline here) so it is independently importable and testable; see shared.tsx for why.
   const methodImpact = useMemo(() => {
     if (!taxLots || taxLots.length === 0) return null
-    // Group lots by position
-    const byPosition = new Map<string, TaxLot[]>()
-    for (const lot of taxLots) {
-      const existing = byPosition.get(lot.positionId) ?? []
-      existing.push(lot)
-      byPosition.set(lot.positionId, existing)
-    }
-
-    // Simulate selling 10% of each position under each method
-    function computeImpact(method: CostBasisMethod): { realizedGain: number; shortTermGain: number; longTermGain: number } {
-      let totalGain = 0, stGain = 0, ltGain = 0
-      for (const [, lots] of byPosition) {
-        const totalQty = lots.reduce((s, l) => s + l.quantity, 0)
-        const sellQty = Math.ceil(totalQty * 0.1)
-
-        // C13 · tax-efficiency — under average cost every share carries an identical basis, so a
-        // 10% sale realises exactly 10% of the unrealised gain, with holding period allocated FIFO.
-        if (method === 'AvgCost') {
-          const totalBasis = lots.reduce((s, l) => s + l.costBasis, 0)
-          const totalValue = lots.reduce((s, l) => s + l.currentValue, 0)
-          const avgBasis = totalBasis / totalQty
-          const avgPrice = totalValue / totalQty
-          const gain = (avgPrice - avgBasis) * sellQty
-          totalGain += gain
-          // Holding period is allocated FIFO across the sold shares.
-          const fifo = [...lots].sort((a, b) => a.purchaseDate.localeCompare(b.purchaseDate))
-          let remainingAvg = sellQty
-          for (const lot of fifo) {
-            if (remainingAvg <= 0) break
-            const fromLot = Math.min(remainingAvg, lot.quantity)
-            const share = (fromLot / sellQty) * gain
-            if (lot.holdingPeriod === 'short') stGain += share
-            else ltGain += share
-            remainingAvg -= fromLot
-          }
-          continue
-        }
-
-        let sorted: TaxLot[]
-        switch (method) {
-          case 'FIFO': sorted = [...lots].sort((a, b) => a.purchaseDate.localeCompare(b.purchaseDate)); break
-          case 'LIFO': sorted = [...lots].sort((a, b) => b.purchaseDate.localeCompare(a.purchaseDate)); break
-          // C14 · tax-efficiency — HIFO is a standing lot-selection instruction *under* Spec ID,
-          // which is how custodians actually offer it. There is no separate "SpecID algorithm".
-          case 'HIFO': sorted = [...lots].sort((a, b) => (b.costBasis / b.quantity) - (a.costBasis / a.quantity)); break
-        }
-        let remaining = sellQty
-        for (const lot of sorted) {
-          if (remaining <= 0) break
-          const sellFromLot = Math.min(remaining, lot.quantity)
-          const fraction = sellFromLot / lot.quantity
-          const gain = lot.gainLoss * fraction
-          totalGain += gain
-          if (lot.holdingPeriod === 'short') stGain += gain
-          else ltGain += gain
-          remaining -= sellFromLot
-        }
-      }
-      return { realizedGain: totalGain, shortTermGain: stGain, longTermGain: ltGain }
-    }
-
     return COST_BASIS_METHODS.map((method) => ({
       method,
-      ...computeImpact(method),
+      ...computeCostBasisImpact(taxLots, method),
     }))
   }, [taxLots])
 
@@ -248,6 +202,7 @@ export function TaxManagementPage() {
           positionMap={positionMap}
           formatWithConversion={formatWithConversion}
           baseCurrency={baseCurrency}
+          fxUnavailable={!fxReady}
         />
       )}
 

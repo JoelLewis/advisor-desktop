@@ -14,6 +14,13 @@ type HarvestScannerViewProps = {
   positionMap: Map<string, { symbol: string; name: string }>
   formatWithConversion: (value: number, currency: CurrencyCode, opts?: { compact?: boolean }) => string
   baseCurrency: CurrencyCode
+  /**
+   * Fix-round-1 review, Important #3 — true when FX rates failed to load. The scanner can't
+   * safely apply the (USD) harvest threshold to a non-USD account's lots without a live rate,
+   * so it fails open to an empty, explained list rather than falling back to a currency-blind
+   * comparison or blocking the whole page indefinitely.
+   */
+  fxUnavailable?: boolean
 }
 
 export function HarvestScannerView({
@@ -24,6 +31,7 @@ export function HarvestScannerView({
   positionMap,
   formatWithConversion,
   baseCurrency,
+  fxUnavailable = false,
 }: HarvestScannerViewProps) {
   const selectedLoss = selectedLotObjects.reduce((s, l) => s + Math.abs(l.gainLoss), 0)
   const selectedBenefit = selectedLotObjects.reduce((s, l) => s + estimatedTaxBenefit(l), 0)
@@ -61,7 +69,12 @@ export function HarvestScannerView({
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {harvestOpportunities.length === 0 ? (
+          {fxUnavailable ? (
+            <div className="px-4 py-12 text-center text-text-tertiary">
+              Exchange rates are unavailable, so harvest opportunities can&rsquo;t be compared
+              against the US$1,000 threshold right now. Try again shortly.
+            </div>
+          ) : harvestOpportunities.length === 0 ? (
             <div className="px-4 py-12 text-center text-text-tertiary">No harvest opportunities found (losses greater than US$1,000, converted to USD)</div>
           ) : (
             <table className="w-full">

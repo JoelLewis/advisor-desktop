@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils'
 import { convertToBase } from '@/lib/currency'
 import type { TaxLot } from '@/types/portfolio'
 import type { CurrencyCode, FXRateMap } from '@/types/currency'
+import type { CostBasisMethod } from './CostBasisMethodCard'
 
 export const HOLDING_LABELS: Record<string, string> = { short: 'Short-Term', long: 'Long-Term' }
 
@@ -16,9 +17,18 @@ export const SHORT_TERM_RATE = 0.37 as const
 /** 20% long-term capital gains + 3.8% net investment income tax. */
 export const LONG_TERM_RATE = 0.238 as const
 
+/** 0.238 → "23.8%", 0.37 → "37%". Trims a bare ".0" so whole-percent rates read cleanly. */
+function formatRatePercent(rate: number): string {
+  return `${Number((rate * 100).toFixed(1))}%`
+}
+
+// Templated from the constants above, not restated as free text — changing SHORT_TERM_RATE or
+// LONG_TERM_RATE previously would not have changed this copy, so the disclosure could silently
+// lie about the rates actually applied.
 export const RATE_DISCLOSURE =
-  'Estimated at top federal marginal rates — 37% short-term, 23.8% long-term including net ' +
-  'investment income tax. State tax is not modelled. Estimates only, not tax advice.'
+  `Estimated at top federal marginal rates — ${formatRatePercent(SHORT_TERM_RATE)} short-term, ` +
+  `${formatRatePercent(LONG_TERM_RATE)} long-term including net investment income tax. State ` +
+  'tax is not modelled. Estimates only, not tax advice.'
 
 export function taxRateFor(holdingPeriod: TaxLot['holdingPeriod']): number {
   return holdingPeriod === 'short' ? SHORT_TERM_RATE : LONG_TERM_RATE
@@ -41,6 +51,78 @@ export const HARVEST_LOSS_THRESHOLD_USD = -1000 as const
 
 export function isHarvestable(gainLoss: number, currency: CurrencyCode, rates: FXRateMap): boolean {
   return convertToBase(gainLoss, currency, rates) < HARVEST_LOSS_THRESHOLD_USD
+}
+
+export type MethodImpact = { realizedGain: number; shortTermGain: number; longTermGain: number }
+
+/**
+ * C13/C14 · tax-efficiency — cost-basis method simulation: sells the top 10% (by quantity) of
+ * each position under the given method and reports the realised gain/loss it would produce,
+ * split by holding period.
+ *
+ * Fix-round-1 review: this was originally an inline closure inside `TaxManagementPage`'s
+ * `useMemo`, which meant nothing in the repo imported it and it was untestable — the reviewer
+ * reverted the whole fix, left the component syntactically broken, and the suite still reported
+ * the identical 31-failure baseline. Lifted out to a pure, importable function so C13's fix has
+ * real coverage instead of code-inspection-only sign-off.
+ */
+export function computeCostBasisImpact(taxLots: readonly TaxLot[], method: CostBasisMethod): MethodImpact {
+  const byPosition = new Map<string, TaxLot[]>()
+  for (const lot of taxLots) {
+    const existing = byPosition.get(lot.positionId) ?? []
+    existing.push(lot)
+    byPosition.set(lot.positionId, existing)
+  }
+
+  let totalGain = 0, stGain = 0, ltGain = 0
+  for (const [, lots] of byPosition) {
+    const totalQty = lots.reduce((s, l) => s + l.quantity, 0)
+    const sellQty = Math.ceil(totalQty * 0.1)
+
+    // C13 · under average cost every share carries an identical basis, so a 10% sale realises
+    // exactly 10% of the unrealised gain, with holding period allocated FIFO across the sold
+    // shares.
+    if (method === 'AvgCost') {
+      const totalBasis = lots.reduce((s, l) => s + l.costBasis, 0)
+      const totalValue = lots.reduce((s, l) => s + l.currentValue, 0)
+      const avgBasis = totalBasis / totalQty
+      const avgPrice = totalValue / totalQty
+      const gain = (avgPrice - avgBasis) * sellQty
+      totalGain += gain
+      const fifo = [...lots].sort((a, b) => a.purchaseDate.localeCompare(b.purchaseDate))
+      let remainingAvg = sellQty
+      for (const lot of fifo) {
+        if (remainingAvg <= 0) break
+        const fromLot = Math.min(remainingAvg, lot.quantity)
+        const share = (fromLot / sellQty) * gain
+        if (lot.holdingPeriod === 'short') stGain += share
+        else ltGain += share
+        remainingAvg -= fromLot
+      }
+      continue
+    }
+
+    let sorted: TaxLot[]
+    switch (method) {
+      case 'FIFO': sorted = [...lots].sort((a, b) => a.purchaseDate.localeCompare(b.purchaseDate)); break
+      case 'LIFO': sorted = [...lots].sort((a, b) => b.purchaseDate.localeCompare(a.purchaseDate)); break
+      // C14 · tax-efficiency — HIFO is a standing lot-selection instruction *under* Spec ID,
+      // which is how custodians actually offer it. There is no separate "SpecID algorithm".
+      case 'HIFO': sorted = [...lots].sort((a, b) => (b.costBasis / b.quantity) - (a.costBasis / a.quantity)); break
+    }
+    let remaining = sellQty
+    for (const lot of sorted) {
+      if (remaining <= 0) break
+      const sellFromLot = Math.min(remaining, lot.quantity)
+      const fraction = sellFromLot / lot.quantity
+      const gain = lot.gainLoss * fraction
+      totalGain += gain
+      if (lot.holdingPeriod === 'short') stGain += gain
+      else ltGain += gain
+      remaining -= sellFromLot
+    }
+  }
+  return { realizedGain: totalGain, shortTermGain: stGain, longTermGain: ltGain }
 }
 
 const TH_ALIGN = {

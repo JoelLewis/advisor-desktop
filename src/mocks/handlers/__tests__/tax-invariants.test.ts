@@ -12,6 +12,8 @@ import {
   LONG_TERM_RATE,
   HARVEST_LOSS_THRESHOLD_USD,
   isHarvestable,
+  computeCostBasisImpact,
+  RATE_DISCLOSURE,
 } from '@/features/portfolios/tax/shared'
 
 const ACCOUNTS = ['acc-001', 'acc-002', 'acc-011', 'acc-020', 'acc-029', 'acc-041', 'acc-042', 'acc-043', 'acc-044']
@@ -358,16 +360,21 @@ describe('tax-loss harvesting rates', () => {
   // bound) *and* under a flat-23.8% regression (lands on the lower bound). This fixture-based
   // test instead asserts the exact aggregate against a real account confirmed below to hold both
   // holding periods among its harvestable lots, so the two-rate branch is actually exercised.
-  it('C11: acc-018 holds both a short-term and a long-term harvestable lot; the aggregate benefit uses each lot\'s own rate', async () => {
-    const lots = await getTaxLots('acc-018')
+  //
+  // Fix-round-1 review, Minor: the original account here (acc-018) is a Roth IRA — harvesting a
+  // loss in a tax-free account yields no real tax benefit, so a $3,849.30 headline figure could
+  // never actually be realised. acc-015 (Michael Martinez Individual, taxable) has the same kind
+  // of genuine short+long mix in an account where the number means something.
+  it('C11: acc-015 (taxable) holds both a short-term and a long-term harvestable lot; the aggregate benefit uses each lot\'s own rate', async () => {
+    const lots = await getTaxLots('acc-015')
     const harvestable = lots.filter((l) => l.gainLoss < HARVEST_LOSS_THRESHOLD_USD)
 
     // Test-quality trap #2: confirm the mix exists before relying on it — otherwise the branch
     // under test is silently untested.
     const shortLots = harvestable.filter((l) => l.holdingPeriod === 'short')
     const longLots = harvestable.filter((l) => l.holdingPeriod === 'long')
-    expect(shortLots.length, 'acc-018 no longer has a short-term harvestable lot').toBeGreaterThan(0)
-    expect(longLots.length, 'acc-018 no longer has a long-term harvestable lot').toBeGreaterThan(0)
+    expect(shortLots.length, 'acc-015 no longer has a short-term harvestable lot').toBeGreaterThan(0)
+    expect(longLots.length, 'acc-015 no longer has a long-term harvestable lot').toBeGreaterThan(0)
 
     const actualBenefit = harvestable.reduce((s, l) => s + estimatedTaxBenefit(l), 0)
     const expectedBenefit =
@@ -389,8 +396,16 @@ describe('the harvest threshold is currency-aware (PRE-FLIGHT correction 1)', ()
     expect(HARVEST_LOSS_THRESHOLD_USD).toBe(-1000)
   })
 
-  it('a HK$1,000 loss (~US$128) does not clear a US$1,000 threshold', () => {
-    expect(isHarvestable(-1000, 'HKD', FX_RATES_USD_BASE)).toBe(false)
+  // Fix-round-1 review, Important #2: `isHarvestable(-1000, 'HKD', ...)` is true for the right
+  // reason (converted, -1000/7.82 ≈ -127.9, not below -1000) *and* the wrong one (currency-blind,
+  // -1000 < -1000 is also false) — it wasn't among the failures when the reviewer mutated
+  // `isHarvestable` back to a raw comparison, so it covered nothing. HK$5,000 is a real loss
+  // (converted ≈ -US$639) that a currency-blind comparison would wrongly wave through
+  // (-5000 < -1000 is true) but the real, converted comparison correctly excludes — this is
+  // strictly inside the gap between the two interpretations, not on the boundary where they
+  // coincide.
+  it('a HK$5,000 loss (~US$639, genuinely under the US$1,000 threshold) is excluded — a currency-blind comparison would wrongly include it', () => {
+    expect(isHarvestable(-5000, 'HKD', FX_RATES_USD_BASE)).toBe(false)
   })
 
   it('a CHF 1,000 loss (~US$1,120) clears a US$1,000 threshold even though the native-currency figure is close to the raw literal', () => {
@@ -413,5 +428,89 @@ describe('the harvest threshold is currency-aware (PRE-FLIGHT correction 1)', ()
     expect(currencyBlindSelected, 'this lot should NOT clear the old currency-blind literal').toBe(false)
 
     expect(isHarvestable(lot.gainLoss, 'CHF', FX_RATES_USD_BASE)).toBe(true)
+  })
+})
+
+// Fix-round-1 review, Important #1: `computeImpact` was an inline closure inside
+// `TaxManagementPage`'s `useMemo` — nothing in the repo imported it, so it was untestable. The
+// reviewer reverted the whole C13/C14 fix, left `TaxManagementPage.tsx` syntactically broken, and
+// the suite still reported the identical 31-failure baseline: an untested fix is indistinguishable
+// from an unfixed one. `computeCostBasisImpact` is now a standalone export in tax/shared.tsx; these
+// exercise it against real fixture lots (acc-011, pos-072), hand-verified independently below.
+describe('computeCostBasisImpact (fix-round-1 review, Important #1)', () => {
+  it('acc-011 pos-072: FIFO, LIFO and HIFO each draw from a different lot and attribute holding period by the lot actually sold', async () => {
+    const lots = await getTaxLots('acc-011')
+    const posLots = lots.filter((l) => l.positionId === 'pos-072')
+    expect(posLots).toHaveLength(3)
+    // The position mixes holding periods — two long-term lots and one short-term — which is what
+    // lets this test show FIFO/HIFO landing on a long-term gain while LIFO lands on a short-term
+    // one from the very same position.
+    expect(posLots.some((l) => l.holdingPeriod === 'short')).toBe(true)
+    expect(posLots.some((l) => l.holdingPeriod === 'long')).toBe(true)
+
+    const fifo = computeCostBasisImpact(posLots, 'FIFO')
+    const lifo = computeCostBasisImpact(posLots, 'LIFO')
+    const hifo = computeCostBasisImpact(posLots, 'HIFO')
+
+    // FIFO sells the oldest lot first (lot-pos-072-0, long-term, 2023-12-25) — that single lot
+    // alone covers the 10% sale quantity.
+    expect(fifo.realizedGain).toBeCloseTo(3623.93, 2)
+    expect(fifo.shortTermGain).toBe(0)
+    expect(fifo.longTermGain).toBeCloseTo(3623.93, 2)
+
+    // LIFO sells the newest lot first (lot-pos-072-2, short-term, 2025-10-25) — same position,
+    // opposite tax character, and a different dollar figure.
+    expect(lifo.realizedGain).toBeCloseTo(3624.24, 2)
+    expect(lifo.shortTermGain).toBeCloseTo(3624.24, 2)
+    expect(lifo.longTermGain).toBe(0)
+
+    // HIFO sells the highest-cost-basis-per-share lot first (lot-pos-072-1, long-term), distinct
+    // from both FIFO's and LIFO's picks.
+    expect(hifo.realizedGain).toBeCloseTo(3623.75, 2)
+    expect(hifo.shortTermGain).toBe(0)
+    expect(hifo.longTermGain).toBeCloseTo(3623.75, 2)
+
+    // All three methods land on genuinely different figures — not the same lot picked three ways.
+    const distinct = new Set([fifo.realizedGain, lifo.realizedGain, hifo.realizedGain].map((v) => v.toFixed(2)))
+    expect(distinct.size).toBe(3)
+  })
+
+  it('acc-011 pos-072: AvgCost realises exactly 10% of the position\'s unrealised gain, with holding period allocated FIFO', async () => {
+    const lots = await getTaxLots('acc-011')
+    const posLots = lots.filter((l) => l.positionId === 'pos-072')
+
+    const avg = computeCostBasisImpact(posLots, 'AvgCost')
+    // Independently: avgBasis/avgPrice over all three lots, times the 80-share sale quantity.
+    expect(avg.realizedGain).toBeCloseTo(3624.0, 2)
+    expect(avg.shortTermGain + avg.longTermGain).toBeCloseTo(avg.realizedGain, 6)
+    // FIFO-allocated holding period: the oldest (long-term) lot alone covers the sold quantity,
+    // so the entire realised gain is attributed long-term despite the position holding a
+    // short-term lot too.
+    expect(avg.shortTermGain).toBe(0)
+    expect(avg.longTermGain).toBeCloseTo(3624.0, 2)
+  })
+
+  it('acc-011 pos-072: every method realises a materially similar total (same 80 shares, same lots) but attributes holding period differently', async () => {
+    const lots = await getTaxLots('acc-011')
+    const posLots = lots.filter((l) => l.positionId === 'pos-072')
+
+    for (const method of ['FIFO', 'LIFO', 'HIFO', 'AvgCost'] as const) {
+      const impact = computeCostBasisImpact(posLots, method)
+      expect(impact.shortTermGain + impact.longTermGain).toBeCloseTo(impact.realizedGain, 6)
+    }
+  })
+})
+
+describe('RATE_DISCLOSURE (fix-round-1 review, Minor)', () => {
+  it('is derived from SHORT_TERM_RATE and LONG_TERM_RATE, not restated as independent free text', () => {
+    // The disclosure is templated from the constants in shared.tsx (not hardcoded copy sitting
+    // next to them), so this holds by construction — a changed SHORT_TERM_RATE or LONG_TERM_RATE
+    // cannot drift out of sync with what the screen tells the advisor. This asserts today's
+    // values render correctly, as a smoke test of the template itself.
+    expect(SHORT_TERM_RATE).toBe(0.37)
+    expect(LONG_TERM_RATE).toBe(0.238)
+    expect(RATE_DISCLOSURE).toContain('37% short-term')
+    expect(RATE_DISCLOSURE).toContain('23.8% long-term')
+    expect(RATE_DISCLOSURE.toLowerCase()).toContain('not tax advice')
   })
 })
