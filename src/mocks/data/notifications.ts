@@ -149,11 +149,15 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
     category: 'nba',
     priority: 'high',
     title: 'Tax-Loss Harvest Opportunity',
-    // PRE-FLIGHT correction 7 (fourth site) — the previous copy implied a flat 37% against a
-    // $49,730 loss base ($18,400). Tax savings depend on each lot's holding period (23.8%
-    // long-term / 37% short-term), so a single flat-rate dollar figure here would misstate the
-    // benefit for whichever mix these three accounts actually carry.
-    body: '3 accounts have unrealized losses >$10K with no wash sale risk. Tax savings depend on each lot\'s holding period.',
+    // PRE-FLIGHT correction 7 (fourth site) / fix round 1, Important #3 — the previous copy
+    // implied a flat 37% against a $49,730 loss base ($18,400): removed. The account count ("3")
+    // was also removed rather than fixed in place — it doesn't match any real derivation (9
+    // accounts have a single harvestable lot over $10K; 25 have an aggregate harvestable loss over
+    // $10K; the dashboard's own book-wide count is different again), and this file only imports
+    // `@/types/notification` and `@/lib/clock` — wiring in a handler-level tax-lot generator here
+    // would be a real layering change, not a copy fix. A number no derivation produces, sitting
+    // next to a screen that produces a different one, is worse than no number.
+    body: 'Several accounts have unrealized losses >$10K with no wash sale risk. Tax savings depend on each lot\'s holding period.',
     timestamp: hoursAgo(1),
     read: false,
     dismissed: false,

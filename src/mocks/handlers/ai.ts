@@ -8,13 +8,24 @@ import { customPrompts } from './settings'
 import type { ChatMessage, ActionConfirmation, DocumentGeneration, ContextBriefingData, BriefingMetric, AIInsight, ActionTemplate, SuggestedPrompt } from '@/types/ai'
 import type { CustomPromptCategory } from '@/types/settings'
 import type { TaxLot } from '@/types/portfolio'
+import type { TaxTreatment } from '@/types/account'
 import { formatAUM, computeTotalAUM } from './utils'
 import { now, MOCK_TODAY_ISO } from '@/lib/clock'
 import { computeMetrics } from './pms'
 import { generateTaxLots } from './custodian'
 import { openWashSaleWindows } from '../data/realised-sales'
 import { FX_RATES_USD_BASE } from '../data/currencies'
+import { convertToBase } from '@/lib/currency'
+import { formatDate } from '@/lib/utils'
 import { estimatedTaxBenefit, isHarvestable } from '@/features/portfolios/tax/shared'
+
+/**
+ * Fix round 1, Important #2 — a loss inside a tax-deferred or tax-free wrapper (traditional/SEP/
+ * inherited IRA, Roth IRA, 529) produces no deduction at all: there is no realisation event to
+ * harvest. `trust_taxable` stays in — the trust itself owes tax on it. Gating on this (rather than
+ * `taxTreatment === 'taxable'` alone) is what keeps acc-006, a taxable trust, in the aggregate.
+ */
+const HARVEST_ELIGIBLE_TREATMENTS = new Set<TaxTreatment>(['taxable', 'trust_taxable'])
 
 /**
  * D22 · tax-loss-harvesting — the book-wide harvestable lot set, walked once here so the dashboard
@@ -22,17 +33,25 @@ import { estimatedTaxBenefit, isHarvestable } from '@/features/portfolios/tax/sh
  * set rather than three independently hand-typed numbers (previously $47K / $17,400 / 6 accounts,
  * none of which the tax page — which computes from the real lots — agreed with).
  *
- * Currency-aware via `isHarvestable` (PRE-FLIGHT correction 2): a bare `gainLoss < -1000` would
- * compare native-currency losses against a USD threshold, misclassifying acc-041 (HKD) and acc-044
- * (CHF) by more than an order of magnitude in either direction.
+ * Currency-aware end to end: `isHarvestable` gates each lot against the USD threshold correctly,
+ * and — fix round 1, Important #1 — `gainLoss` is converted to USD at map time here too, the same
+ * shape `deriveBookAUM` uses in `pms.ts`. The gate alone being currency-aware was not enough: the
+ * lots that pass it still carried native-currency numbers, so acc-043's EUR and acc-044's CHF
+ * losses were being summed as if they were dollars and printed with a USD symbol.
  */
 function harvestableLotsAcrossBook(): (TaxLot & { accountId: string })[] {
-  return accounts.flatMap((account) => {
-    const currency = account.baseCurrency ?? 'USD'
-    return generateTaxLots(account.id, account.totalValue)
-      .filter((lot) => isHarvestable(lot.gainLoss, currency, FX_RATES_USD_BASE))
-      .map((lot) => ({ ...lot, accountId: account.id }))
-  })
+  return accounts
+    .filter((account) => HARVEST_ELIGIBLE_TREATMENTS.has(account.taxTreatment))
+    .flatMap((account) => {
+      const currency = account.baseCurrency ?? 'USD'
+      return generateTaxLots(account.id, account.totalValue)
+        .filter((lot) => isHarvestable(lot.gainLoss, currency, FX_RATES_USD_BASE))
+        .map((lot) => ({
+          ...lot,
+          accountId: account.id,
+          gainLoss: convertToBase(lot.gainLoss, currency, FX_RATES_USD_BASE),
+        }))
+    })
 }
 
 function makeBriefing(
@@ -334,7 +353,10 @@ export const aiHandlers = [
         id: 'dash-1',
         severity: 'info',
         title: 'Portfolio health summary',
-        body: `Managing ${formatAUM(metrics.totalAUM)} across ${accounts.length} accounts. ${metrics.pendingTasks} pending actions identified.`,
+        // Fix round 1, minor — `metrics.asOf` was added to the interface and populated but never
+        // read anywhere, so it was dead. Rendered here rather than removed: it is the one place on
+        // the dashboard that dates the figures above it.
+        body: `Managing ${formatAUM(metrics.totalAUM)} across ${accounts.length} accounts as of ${formatDate(metrics.asOf)}. ${metrics.pendingTasks} pending actions identified.`,
         metric: {
           label: 'Net inflows this month',
           value: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(metrics.netFlowsMTD),
