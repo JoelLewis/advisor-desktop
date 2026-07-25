@@ -4,6 +4,7 @@ import { getPositions } from '@/services/pms'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { accounts } from '@/mocks/data/accounts'
 import { boundedTradeQty } from '@/mocks/handlers/custodian'
+import { realisedSales, washSaleWindow, openWashSaleWindows } from '@/mocks/data/realised-sales'
 
 const ACCOUNTS = ['acc-001', 'acc-002', 'acc-011', 'acc-020', 'acc-029', 'acc-041', 'acc-042', 'acc-043', 'acc-044']
 
@@ -174,5 +175,62 @@ describe('tax lots partition their positions', () => {
     expect(boundedTradeQty(0.5, 10, -0.2)).toBe(0)
     // A fraction above 1 must not let the draw exceed the cap on the whole-share branch either.
     expect(boundedTradeQty(1.5, 100, 2)).toBeLessThanOrEqual(1.5)
+  })
+})
+
+describe('wash sale windows', () => {
+  it('C10: the window is 61 days — 30 before, the sale date, 30 after', () => {
+    const window = washSaleWindow('2026-02-10')
+    expect(window.start).toBe('2026-01-11')
+    expect(window.end).toBe('2026-03-12')
+    expect(window.days).toBe(61)
+    const spanDays = (new Date(window.end).getTime() - new Date(window.start).getTime())
+      / (1000 * 60 * 60 * 24)
+    expect(spanDays + 1).toBe(61)
+  })
+
+  it('C10: only loss sales open a window', () => {
+    for (const sale of realisedSales) {
+      expect(typeof sale.realisedGainLoss).toBe('number')
+    }
+    const open = openWashSaleWindows('2026-02-25')
+    expect(open.length).toBeGreaterThan(0)
+    for (const w of open) expect(w.realisedGainLoss).toBeLessThan(0)
+  })
+
+  it('C10: Margaret Chen sold NVDA at a loss on 2026-02-10; the window closes 2026-03-12', () => {
+    const open = openWashSaleWindows('2026-02-25', 'hh-002')
+    const nvda = open.find((w) => w.symbol === 'NVDA')!
+    expect(nvda.saleDate).toBe('2026-02-10')
+    expect(nvda.end).toBe('2026-03-12')
+    expect(nvda.daysRemaining).toBe(15)
+  })
+
+  it('C10: windows are scoped across every account in the household, including IRAs', () => {
+    const open = openWashSaleWindows('2026-02-25', 'hh-001')
+    const intc = open.find((w) => w.symbol === 'INTC')!
+    expect(intc.accountId).toBe('acc-002')
+    // The household's IRAs are in scope for the same symbol — the IRA wash-sale trap.
+    expect(realisedSales.filter((s) => s.householdId === 'hh-001').length).toBeGreaterThan(0)
+  })
+
+  it('C10: a window that has already closed is not reported as open', () => {
+    expect(openWashSaleWindows('2026-06-01')).toHaveLength(0)
+  })
+})
+
+describe('washSaleRestricted reflects a real restriction', () => {
+  it('C12: a lot whose symbol has an open household window is restricted', async () => {
+    const lots = await getTaxLots('acc-002')
+    const positions = await getPositions('acc-002')
+    const intcPositionId = positions.find((p) => p.symbol === 'INTC')!.id
+    const intcLots = lots.filter((l) => l.positionId === intcPositionId)
+    expect(intcLots.every((l) => l.washSaleRestricted)).toBe(true)
+  })
+
+  it('C12: not every lot is Clear', async () => {
+    const lots = await getTaxLots('acc-002')
+    expect(lots.some((l) => l.washSaleRestricted)).toBe(true)
+    expect(lots.some((l) => !l.washSaleRestricted)).toBe(true)
   })
 })

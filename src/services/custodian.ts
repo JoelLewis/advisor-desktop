@@ -1,6 +1,7 @@
 import { get } from './api-client'
 import type { Account } from '@/types/account'
 import type { TaxLot } from '@/types/portfolio'
+import type { OpenWashSaleWindow } from '@/mocks/data/realised-sales'
 
 export type Transaction = {
   id: string
@@ -34,4 +35,8 @@ export function getBalances(accountId: string) {
   return get<{ totalValue: number; cashBalance: number; marginBalance: number }>(
     `/custodian/accounts/${accountId}/balances`,
   )
+}
+
+export function getRealisedSales(accountId: string) {
+  return get<OpenWashSaleWindow[]>(`/custodian/accounts/${accountId}/realised-sales`)
 }

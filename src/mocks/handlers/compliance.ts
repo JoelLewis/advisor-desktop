@@ -16,6 +16,7 @@ const CASH_MINIMUM_PCT = 0.02       // 2% cash minimum
 // ── Account data derived from accounts.ts for compliance checks ──
 // Values must match the canonical account data
 import { accounts } from '../data/accounts'
+import { realisedSales } from '../data/realised-sales'
 
 const ACCOUNT_VALUES: Record<string, number> = Object.fromEntries(
   accounts.map((a) => [a.id, a.totalValue])
@@ -33,10 +34,14 @@ const EXISTING_POSITIONS: Record<string, Record<string, number>> = {
   'acc-015': { VTI: 0.28, EFA: 0.14, GLD: 0.06, AGG: 0.18, VNQ: 0.08, CASH: 0.024 },
 }
 
-// Recent sells for wash sale detection (symbol → date sold)
-const RECENT_SELLS: Record<string, Record<string, string>> = {
-  'acc-002': { INTC: '2026-02-21' },
-}
+// C10 — one source for realised loss sales: recent sells for wash sale detection are derived
+// from `realisedSales`, not a second hand-typed list.
+const RECENT_SELLS: Record<string, Record<string, string>> = realisedSales
+  .filter((s) => s.realisedGainLoss < 0)
+  .reduce<Record<string, Record<string, string>>>((acc, s) => {
+    acc[s.accountId] = { ...(acc[s.accountId] ?? {}), [s.symbol]: s.saleDate }
+    return acc
+  }, {})
 
 function checkTradesForAccount(req: TradeComplianceRequest): TradeComplianceResult {
   const checks: TradeComplianceCheck[] = []

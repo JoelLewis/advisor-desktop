@@ -6,10 +6,10 @@ import { QueryErrorBanner } from '@/components/ui/QueryErrorBanner'
 import { useAccount } from '@/hooks/use-accounts'
 import { useTaxLots } from '@/hooks/use-tax-lots'
 import { usePositions } from '@/hooks/use-portfolio'
+import { useRealisedSales } from '@/hooks/use-realised-sales'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { cn } from '@/lib/utils'
 import type { TaxLot } from '@/types/portfolio'
-import { MOCK_NOW } from './tax/shared'
 import { COST_BASIS_METHODS, type CostBasisMethod } from './tax/CostBasisMethodCard'
 import { TaxSummaryCards } from './tax/TaxSummaryCards'
 import { CostBasisMethodCard } from './tax/CostBasisMethodCard'
@@ -22,20 +22,8 @@ type ViewMode = 'lots' | 'harvest' | 'calendar'
 const VIEW_TABS: { id: ViewMode; label: string }[] = [
   { id: 'lots', label: 'All Tax Lots' },
   { id: 'harvest', label: 'Harvest Scanner' },
-  { id: 'calendar', label: 'Wash Sale Calendar' },
+  { id: 'calendar', label: 'Wash sale calendar' },
 ]
-
-function getWashSaleWindow(saleDate: string): { start: string; end: string } {
-  const d = new Date(saleDate)
-  const start = new Date(d)
-  start.setDate(start.getDate() - 30)
-  const end = new Date(d)
-  end.setDate(end.getDate() + 30)
-  return {
-    start: start.toISOString().slice(0, 10),
-    end: end.toISOString().slice(0, 10),
-  }
-}
 
 export function TaxManagementPage() {
   const { accountId } = useParams()
@@ -75,8 +63,7 @@ export function TaxManagementPage() {
     const shortTermGain = taxLots.filter((l) => l.holdingPeriod === 'short' && l.gainLoss > 0).reduce((s, l) => s + l.gainLoss, 0)
     const longTermGain = taxLots.filter((l) => l.holdingPeriod === 'long' && l.gainLoss > 0).reduce((s, l) => s + l.gainLoss, 0)
     const harvestableAmount = harvestOpportunities.reduce((s, l) => s + Math.abs(l.gainLoss), 0)
-    const washSaleCount = taxLots.filter((l) => l.washSaleRestricted).length
-    return { totalUnrealizedGain, totalUnrealizedLoss, shortTermGain, longTermGain, harvestableAmount, washSaleCount }
+    return { totalUnrealizedGain, totalUnrealizedLoss, shortTermGain, longTermGain, harvestableAmount }
   }, [taxLots, harvestOpportunities])
 
   // Cost basis method impact simulation
@@ -125,22 +112,7 @@ export function TaxManagementPage() {
     }))
   }, [taxLots])
 
-  // Calendar: 61-day wash sale windows (30 days before + 30 days after sale)
-  const washSaleWindows = useMemo(() => {
-    const now = new Date(MOCK_NOW)
-    return (taxLots ?? [])
-      .map((lot) => {
-        const window = getWashSaleWindow(lot.purchaseDate)
-        return {
-          ...lot,
-          washSaleStart: window.start,
-          washSaleEnd: window.end,
-          position: positionMap.get(lot.positionId),
-        }
-      })
-      .filter((item) => new Date(item.washSaleEnd) >= now)
-      .sort((a, b) => a.washSaleEnd.localeCompare(b.washSaleEnd))
-  }, [taxLots, positionMap])
+  const { data: washSaleWindows } = useRealisedSales(id)
 
   if (isLoading) {
     return (
@@ -194,7 +166,7 @@ export function TaxManagementPage() {
       {stats && (
         <TaxSummaryCards
           stats={stats}
-          washSaleWindowsCount={washSaleWindows.length}
+          washSaleWindowsCount={washSaleWindows?.length ?? 0}
           harvestOpportunitiesLength={harvestOpportunities.length}
           formatWithConversion={formatWithConversion}
           baseCurrency={baseCurrency}
@@ -250,9 +222,9 @@ export function TaxManagementPage() {
         />
       )}
 
-      {/* Wash Sale Calendar */}
+      {/* Wash sale calendar */}
       {view === 'calendar' && (
-        <WashSaleCalendarView washSaleWindows={washSaleWindows} />
+        <WashSaleCalendarView windows={washSaleWindows ?? []} />
       )}
     </div>
   )

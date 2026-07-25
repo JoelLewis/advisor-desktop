@@ -8,7 +8,6 @@ type TaxStats = {
   shortTermGain: number
   longTermGain: number
   harvestableAmount: number
-  washSaleCount: number
 }
 
 type TaxSummaryCardsProps = {
@@ -53,11 +52,11 @@ export function TaxSummaryCards({
       </Card>
       <Card>
         <CardContent>
-          <p className="text-caption text-text-secondary">Wash Sale Windows</p>
-          <p className={cn('font-mono text-section-header', stats.washSaleCount > 0 ? 'text-amber-600' : 'text-accent-green')}>
+          <p className="text-caption text-text-secondary">Wash sale windows</p>
+          <p className={cn('font-mono text-section-header', washSaleWindowsCount > 0 ? 'text-amber-600' : 'text-accent-green')}>
             {washSaleWindowsCount}
           </p>
-          <p className="mt-1 text-caption text-text-tertiary">active in next 30d</p>
+          <p className="mt-1 text-caption text-text-tertiary">open, household-wide</p>
         </CardContent>
       </Card>
     </div>

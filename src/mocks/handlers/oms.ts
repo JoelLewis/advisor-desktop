@@ -51,7 +51,7 @@ function generateComplianceChecks(): ComplianceCheck[] {
     { rule: 'Concentration limit (10% single name)', status: 'pass', message: 'No single position exceeds 10% of portfolio' },
     { rule: 'Restricted securities list', status: 'pass', message: 'No restricted securities in proposed trades' },
     { rule: 'Cash reserve minimum (2%)', status: 'pass', message: 'Post-trade cash balance meets minimum reserve' },
-    { rule: 'Tax-loss harvesting window', status: 'warning', message: 'VTI sold within 30 days of purchase — verify no wash sale' },
+    { rule: 'Wash sale (61-day window)', status: 'warning', message: 'VTI sold within 30 days of purchase — verify no wash sale' },
   ]
 }
 
@@ -147,10 +147,10 @@ export const omsHandlers = [
       const washSaleSymbols = ['VTI', 'NVDA', 'AAPL']
       if (washSaleSymbols.includes(sym)) {
         violations.push({
-          constraint: 'Wash sale rule (30-day window)',
+          constraint: 'Wash sale rule (61-day window)',
           severity: 'warning',
           currentValue: 'Bought 15 days ago',
-          limit: '30-day window',
+          limit: '61-day window',
           message: `${sym} was purchased within the last 30 days. Selling now may trigger a wash sale, disallowing the tax loss.`,
         })
       }

@@ -3,8 +3,9 @@ import type { Transaction } from '@/services/custodian'
 import type { TaxLot } from '@/types/portfolio'
 import { accounts } from '../data/accounts'
 import { getPositionsForAccount } from '../data/positions'
+import { openWashSaleWindows } from '../data/realised-sales'
 import { notFound } from './utils'
-import { startOfToday } from '@/lib/clock'
+import { startOfToday, MOCK_TODAY_ISO } from '@/lib/clock'
 
 /**
  * C12 · tax-loss-harvesting / data-quality — lots must partition their position, and transactions
@@ -164,6 +165,13 @@ function generateTaxLots(accountId: string, totalValue: number): TaxLot[] {
   const anchor = startOfToday()
   const lots: TaxLot[] = []
 
+  const account = accounts.find((a) => a.id === accountId)
+  // C12 · tax-loss-harvesting — scoped to the whole household, including IRAs and 401(k)s,
+  // because a repurchase in any of them triggers §1091 (the "IRA wash-sale trap").
+  const restrictedSymbols = new Set(
+    openWashSaleWindows(MOCK_TODAY_ISO, account?.householdId).map((w) => w.symbol),
+  )
+
   for (const pos of positions) {
     if (pos.symbol === 'CASH') continue
     const rand = seeded(`${accountId}:${pos.id}`)
@@ -207,8 +215,7 @@ function generateTaxLots(accountId: string, totalValue: number): TaxLot[] {
         // IRC §1222 requires *more than* one year for long-term treatment, so a lot exactly
         // 12 months old is short-term.
         holdingPeriod: ages[i]! > 12 ? 'long' : 'short',
-        // Set in Task 14 from the household's realised loss sales.
-        washSaleRestricted: false,
+        washSaleRestricted: restrictedSymbols.has(pos.symbol),
       })
     }
   }
@@ -254,5 +261,11 @@ export const custodianHandlers = [
     const account = accounts.find((a) => a.id === params.accountId)
     if (!account) return notFound()
     return HttpResponse.json(generateTaxLots(account.id, account.totalValue))
+  }),
+
+  http.get('/api/custodian/accounts/:accountId/realised-sales', ({ params }) => {
+    const account = accounts.find((a) => a.id === params.accountId)
+    if (!account) return notFound()
+    return HttpResponse.json(openWashSaleWindows(MOCK_TODAY_ISO, account.householdId))
   }),
 ]
