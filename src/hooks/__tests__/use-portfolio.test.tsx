@@ -162,6 +162,6 @@ describe('useSensitivity', () => {
     const { result } = renderHook(() => useSensitivity('acc-001'), { wrapper: createWrapper() })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(result.current.data!.interestRate.length).toBeGreaterThan(0)
-    expect(result.current.data!.monteCarlo.method).toBe('closed-form lognormal')
+    expect(result.current.data!.monteCarlo.method).toBe('closed-form normal')
   })
 })

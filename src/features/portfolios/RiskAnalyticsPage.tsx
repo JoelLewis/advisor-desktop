@@ -214,7 +214,7 @@ export function RiskAnalyticsPage() {
         </CardContent>
       </Card>
 
-      {/* Monte Carlo Simulation */}
+      {/* Modelled return distribution */}
       <Card>
         <CardHeader
           action={

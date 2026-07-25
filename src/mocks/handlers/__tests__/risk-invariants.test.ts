@@ -128,7 +128,9 @@ describe('monte carlo', () => {
 
   it('C7: does not claim 10,000 simulations for a closed-form curve', async () => {
     const { monteCarlo } = await getSensitivity('acc-001')
-    expect(monteCarlo.method).toBe('closed-form lognormal')
+    // "normal" names the delta-normal form the handler actually implements. See the comment on
+    // the `method` field in pms.ts before changing this string.
+    expect(monteCarlo.method).toBe('closed-form normal')
     expect(monteCarlo).not.toHaveProperty('simulations')
   })
 })

@@ -545,7 +545,13 @@ export const pmsHandlers = [
         return {
           // C7 · forward-risk — one distribution drives both the table and the chart, and the
           // method is stated rather than asserting 10,000 simulations that never ran.
-          method: 'closed-form lognormal' as const,
+          //
+          // "normal", not "lognormal", and deliberately so: returns are placed arithmetically as
+          // `1 + μ + σz` and the histogram is a Gaussian density in return space, which is the
+          // delta-normal form. Lognormal VaR takes a different form entirely (`exp(μ + σz)`). The
+          // label was corrected to match the maths — do not change it back without changing the
+          // maths, and do not change the maths: the delta-normal form is the intended one.
+          method: 'closed-form normal' as const,
           horizon: '1Y',
           expectedReturn: mu,
           volatility: sigma,
