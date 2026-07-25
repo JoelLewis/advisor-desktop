@@ -133,10 +133,14 @@ export function getHouseholdDrift(householdId: string) {
   return get<DriftStatus[]>(`/pms/households/${householdId}/drift`)
 }
 
-type AllocationSlice = { assetClass: string; weight: number; value: number }
+export type AllocationSlice = { assetClass: string; weight: number; value: number }
 
 export function getHouseholdAllocation(householdId: string) {
   return get<AllocationSlice[]>(`/pms/households/${householdId}/allocation`)
+}
+
+export function getClientAllocation(clientId: string) {
+  return get<AllocationSlice[]>(`/pms/clients/${clientId}/allocation`)
 }
 
 export function getModelGovernance() {

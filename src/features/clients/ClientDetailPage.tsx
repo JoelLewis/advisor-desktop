@@ -18,6 +18,7 @@ import { WorkflowLaunchButton } from '@/components/ui/WorkflowLaunchButton'
 import { ReportGenerator } from './ReportGenerator'
 import { useClient } from '@/hooks/use-clients'
 import { useAccounts } from '@/hooks/use-accounts'
+import { useClientAllocation } from '@/hooks/use-portfolio'
 import { usePlan } from '@/hooks/use-planning'
 import { useClientDocuments } from '@/hooks/use-documents'
 import { useClientActivities } from '@/hooks/use-client-activity'
@@ -131,13 +132,14 @@ const documentColumns: ColumnDef<Document, unknown>[] = [
   },
 ]
 
-const CLIENT_ALLOCATION = [
-  { assetClass: 'us_equity', weight: 0.42 },
-  { assetClass: 'intl_equity', weight: 0.12 },
-  { assetClass: 'fixed_income', weight: 0.28 },
-  { assetClass: 'alternatives', weight: 0.10 },
-  { assetClass: 'cash', weight: 0.08 },
-]
+function ClientAllocation({ clientId }: { clientId: string }) {
+  const { data, isLoading } = useClientAllocation(clientId)
+  if (isLoading) return <Skeleton className="h-48" />
+  if (!data || data.length === 0) {
+    return <p className="py-8 text-center text-caption text-text-tertiary">No positions to allocate.</p>
+  }
+  return <AllocationChart data={data} />
+}
 
 export function ClientDetailPage() {
   const { clientId } = useParams()
@@ -199,7 +201,7 @@ export function ClientDetailPage() {
             <Card>
               <CardHeader>Asset Allocation</CardHeader>
               <CardContent>
-                <AllocationChart data={CLIENT_ALLOCATION} />
+                <ClientAllocation clientId={id} />
               </CardContent>
             </Card>
             <Card>

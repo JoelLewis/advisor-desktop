@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { getPositions, getHoldingGroups, getDrift, getDriftSummary, getPerformance, getBenchmarkComparison, getAttribution, getModels } from '@/services/pms'
-import { getHouseholdPositions, getHouseholdDrift, getHouseholdAllocation } from '@/services/pms'
+import { getHouseholdPositions, getHouseholdDrift, getHouseholdAllocation, getClientAllocation } from '@/services/pms'
 import { getRiskMetrics, getFactorExposures, getStressScenarios, getSensitivity, getConcentration, getModelGovernance, getBookOfBusiness } from '@/services/pms'
 
 export function usePositions(accountId: string) {
@@ -123,6 +123,15 @@ export function useHouseholdAllocation(householdId: string) {
     queryKey: ['household-allocation', householdId],
     queryFn: () => getHouseholdAllocation(householdId),
     enabled: !!householdId,
+    staleTime: 60_000,
+  })
+}
+
+export function useClientAllocation(clientId: string) {
+  return useQuery({
+    queryKey: ['client-allocation', clientId],
+    queryFn: () => getClientAllocation(clientId),
+    enabled: !!clientId,
     staleTime: 60_000,
   })
 }

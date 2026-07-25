@@ -834,11 +834,35 @@ export const pmsHandlers = [
     const totalValue = [...byClass.values()].reduce((sum, v) => sum + v, 0)
 
     return HttpResponse.json(
-      [...byClass.entries()].map(([assetClass, value]) => ({
-        assetClass,
-        weight: roundTo(value / totalValue, 3),
-        value: Math.round(value),
-      })),
+      [...byClass.entries()]
+        .map(([assetClass, value]) => ({
+          assetClass,
+          weight: roundTo(value / totalValue, 3),
+          value: Math.round(value),
+        }))
+        .sort((a, b) => b.value - a.value),
+    )
+  }),
+
+  http.get('/api/pms/clients/:clientId/allocation', ({ params }) => {
+    const clientAccounts = accounts.filter((a) => a.clientId === params.clientId)
+    if (clientAccounts.length === 0) return notFound()
+
+    // FX-aware aggregation: convert each account's positions to USD before combining
+    const byClass = new Map<string, number>()
+    for (const acc of clientAccounts) {
+      for (const pos of getPositionsForAccount(acc.id, acc.totalValue)) {
+        byClass.set(pos.assetClass, (byClass.get(pos.assetClass) ?? 0)
+          + toUSD(pos.marketValue, acc.baseCurrency))
+      }
+    }
+    const total = [...byClass.values()].reduce((s, v) => s + v, 0)
+    return HttpResponse.json(
+      [...byClass.entries()]
+        .map(([assetClass, value]) => ({
+          assetClass, weight: roundTo(value / total, 3), value: Math.round(value),
+        }))
+        .sort((a, b) => b.value - a.value),
     )
   }),
 

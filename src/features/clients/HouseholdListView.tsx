@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge'
 import { AllocationChart } from '@/components/ui/AllocationChart'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useHouseholds } from '@/hooks/use-households'
+import { useHouseholdAllocation } from '@/hooks/use-portfolio'
 import { formatDate, cn } from '@/lib/utils'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { capitalize } from '@/lib/labels'
@@ -21,35 +22,13 @@ const SEGMENT_BADGE_VARIANT: Record<ClientSegment, 'purple' | 'yellow' | 'defaul
 
 type SortKey = 'aum' | 'name' | 'members'
 
-const ALLOCATION_TEMPLATES: Record<ClientSegment, { assetClass: string; weight: number }[]> = {
-  platinum: [
-    { assetClass: 'us_equity', weight: 0.35 },
-    { assetClass: 'intl_equity', weight: 0.15 },
-    { assetClass: 'fixed_income', weight: 0.20 },
-    { assetClass: 'alternatives', weight: 0.15 },
-    { assetClass: 'private_equity', weight: 0.10 },
-    { assetClass: 'cash', weight: 0.05 },
-  ],
-  gold: [
-    { assetClass: 'us_equity', weight: 0.40 },
-    { assetClass: 'intl_equity', weight: 0.12 },
-    { assetClass: 'fixed_income', weight: 0.25 },
-    { assetClass: 'alternatives', weight: 0.10 },
-    { assetClass: 'real_estate', weight: 0.08 },
-    { assetClass: 'cash', weight: 0.05 },
-  ],
-  silver: [
-    { assetClass: 'us_equity', weight: 0.45 },
-    { assetClass: 'intl_equity', weight: 0.10 },
-    { assetClass: 'fixed_income', weight: 0.30 },
-    { assetClass: 'real_estate', weight: 0.05 },
-    { assetClass: 'cash', weight: 0.10 },
-  ],
-  bronze: [
-    { assetClass: 'us_equity', weight: 0.50 },
-    { assetClass: 'fixed_income', weight: 0.30 },
-    { assetClass: 'cash', weight: 0.20 },
-  ],
+function HouseholdAllocation({ householdId }: { householdId: string }) {
+  const { data, isLoading } = useHouseholdAllocation(householdId)
+  if (isLoading) return <Skeleton className="h-24 w-24 rounded-full" />
+  if (!data || data.length === 0) {
+    return <p className="text-caption text-text-tertiary">No positions to allocate.</p>
+  }
+  return <AllocationChart data={data} size="sm" showLegend={false} />
 }
 
 function sortHouseholds(households: Household[], sortKey: SortKey): Household[] {
@@ -235,11 +214,7 @@ export function HouseholdListView() {
 
                       <div>
                         <SectionHeading>Allocation</SectionHeading>
-                        <AllocationChart
-                          data={ALLOCATION_TEMPLATES[hh.segment]}
-                          size="sm"
-                          showLegend={false}
-                        />
+                        <HouseholdAllocation householdId={hh.id} />
                       </div>
                     </div>
                   </div>
