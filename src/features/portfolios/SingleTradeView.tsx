@@ -4,7 +4,7 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { DataTable } from '@/components/ui/DataTable'
 import { useAccounts } from '@/hooks/use-accounts'
-import { useOrders, useSubmitTrade } from '@/hooks/use-orders'
+import { useOrders, useSubmitTrade, usePreTradeCheck } from '@/hooks/use-orders'
 import { useSymbolSearch } from '@/hooks/use-trading'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
@@ -16,6 +16,7 @@ import { OptionTradeFields } from './trade-fields/OptionTradeFields'
 import { MutualFundTradeFields } from './trade-fields/MutualFundTradeFields'
 import { FixedIncomeTradeFields } from './trade-fields/FixedIncomeTradeFields'
 import { DigitalAssetTradeFields } from './trade-fields/DigitalAssetTradeFields'
+import { PreTradeComplianceDisplay } from './trade-fields/ComplianceCheck'
 import { validateTrade } from './trade-fields/validation'
 
 const STATUS_BADGE: Record<string, 'yellow' | 'blue' | 'green' | 'red'> = {
@@ -73,6 +74,10 @@ export function SingleTradeView() {
   const { data: accounts } = useAccounts({})
   const { data: orders } = useOrders()
   const submitTrade = useSubmitTrade()
+  // C27/C28 · pre-trade-compliance — this is the only screen that can place options, bonds,
+  // funds and crypto, and it never called the pre-trade check at all, so the stricter surface
+  // (per-kind concentration, restricted securities, wash sale) was the unchecked one.
+  const preCheck = usePreTradeCheck()
   const { formatWithConversion } = useFormatCurrency()
 
   // ── Asset class ──
@@ -154,6 +159,7 @@ export function SingleTradeView() {
     setSymbolQuery('')
     setShowDropdown(false)
     setSuccessMessage('')
+    preCheck.reset()
   }
 
   function handleSelectSymbol(sym: SymbolSearchResult) {
@@ -245,14 +251,25 @@ export function SingleTradeView() {
         break
     }
 
-    submitTrade.mutate(request, {
-      onSuccess: () => {
-        setSuccessMessage(`Order submitted: ${getCurrentSide().replace(/_/g, ' ').toUpperCase()} ${selectedSymbol.symbol}`)
-        setSelectedSymbol(null)
-        setSymbolQuery('')
-        setTimeout(() => setSuccessMessage(''), 4000)
+    const estimatedValue = getCurrentQuantity() * getCurrentPrice()
+
+    preCheck.mutate(
+      { accountId, symbol: selectedSymbol.symbol, side: getCurrentSide(), quantity: getCurrentQuantity(), estimatedValue },
+      {
+        onSuccess: (result) => {
+          if (!result.passed) return
+          submitTrade.mutate(request, {
+            onSuccess: () => {
+              setSuccessMessage(`Order submitted: ${getCurrentSide().replace(/_/g, ' ').toUpperCase()} ${selectedSymbol.symbol}`)
+              setSelectedSymbol(null)
+              setSymbolQuery('')
+              preCheck.reset()
+              setTimeout(() => setSuccessMessage(''), 4000)
+            },
+          })
+        },
       },
-    })
+    )
   }
 
   const showSummary = selectedSymbol && getCurrentQuantity() > 0
@@ -420,13 +437,25 @@ export function SingleTradeView() {
               /></div>
             )}
 
-            {/* Submit */}
+            {/* Pre-trade compliance results */}
+            <PreTradeComplianceDisplay
+              violations={preCheck.data?.violations ?? []}
+              isChecking={preCheck.isPending}
+              passed={preCheck.data?.passed ?? null}
+            />
+
+            {/* Submit — re-clicking after a block re-runs the check, so adjusting the order
+                (or the underlying facts) can clear it rather than leaving the button stuck. */}
             <button
               onClick={handleSubmit}
-              disabled={!canSubmit || submitTrade.isPending}
+              disabled={!canSubmit || submitTrade.isPending || preCheck.isPending}
               className="w-full rounded-md bg-accent-blue px-4 py-2.5 text-body font-semibold text-white transition-colors hover:bg-accent-blue/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {submitTrade.isPending ? 'Submitting...' : `Submit ${getCurrentSide().replace(/_/g, ' ').toUpperCase()} Order`}
+              {submitTrade.isPending || preCheck.isPending
+                ? 'Submitting...'
+                : preCheck.data?.passed === false
+                  ? 'Blocked by compliance — retry'
+                  : `Submit ${getCurrentSide().replace(/_/g, ' ').toUpperCase()} Order`}
             </button>
             <p className="text-center text-caption text-text-tertiary">Settlement: T+1 for equities and ETFs</p>
           </CardContent>

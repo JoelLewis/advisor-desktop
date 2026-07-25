@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { AlertTriangle, Check } from 'lucide-react'
 import { useSubmitTrade, usePreTradeCheck } from '@/hooks/use-orders'
+import { useSymbolSearch } from '@/hooks/use-trading'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/Dialog'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'
@@ -63,6 +64,13 @@ export function TradeTicketDialog({
   const [complianceViolations, setComplianceViolations] = useState<PreTradeViolation[]>([])
   const checkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // C28 · pre-trade-compliance — a real notional for the pre-check, not an omitted one the
+  // handler used to infer from `quantity * 100`. The dialog's symbol field is free text, so the
+  // quote comes from the same symbol search `SingleTradeView` uses.
+  const trimmedSymbol = symbol.trim().toUpperCase()
+  const { data: symbolMatches } = useSymbolSearch(trimmedSymbol, assetClass === 'option' ? 'equity' : assetClass)
+  const quote = symbolMatches?.find((s) => s.symbol === trimmedSymbol)
+
   // Stable refs for mutation methods (identity changes each render but behavior is stable)
   const tradeResetRef = useRef(trade.reset)
   tradeResetRef.current = trade.reset
@@ -101,9 +109,10 @@ export function TradeTicketDialog({
       setComplianceViolations([])
       return
     }
+    const price = Number(limitPrice) || quote?.lastPrice || 0
     checkTimerRef.current = setTimeout(() => {
       preCheckMutateRef.current(
-        { accountId, symbol: trimmed, side, quantity: qty },
+        { accountId, symbol: trimmed, side, quantity: qty, estimatedValue: qty * price },
         {
           onSuccess: (result) => {
             setCompliancePassed(result.passed)
@@ -115,7 +124,7 @@ export function TradeTicketDialog({
     return () => {
       if (checkTimerRef.current) clearTimeout(checkTimerRef.current)
     }
-  }, [symbol, side, quantity, accountId])
+  }, [symbol, side, quantity, accountId, limitPrice, quote])
 
   // Auto-close after successful submission
   useEffect(() => {

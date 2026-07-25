@@ -408,7 +408,9 @@ function periodReturnsFor(account: typeof accounts[0], years: number) {
   }
 }
 
-function computeDriftForAccount(account: typeof accounts[0]): DriftStatus {
+// Exported so `oms.ts`'s rebalance trade generator reads the same drift the drift surface does,
+// rather than a second computation.
+export function computeDriftForAccount(account: typeof accounts[0]): DriftStatus {
   const positions = getPositionsForAccount(account.id, account.totalValue)
   const targets = getModelTargets(account.modelId ?? 'mod-001')
 
