@@ -100,6 +100,12 @@ type NBA = {
   trigger: TriggerSignal;
   suggestedAction: string;
   estimatedImpact: Currency;
+  /**
+   * Explains why `estimatedImpact` is 0 or otherwise not a revenue figure — e.g. a Reg BI rollover
+   * recommendation that must not be scored on the fee it would generate. Rendered under the
+   * impact figure when present.
+   */
+  estimatedImpactNote?: string;
   createdAt: string;
   expiresAt?: string;
   dismissed: boolean;

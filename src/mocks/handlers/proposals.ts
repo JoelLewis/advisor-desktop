@@ -119,7 +119,7 @@ export const proposalHandlers = [
 
     // Auto-generate all section content inline during creation
     const sections: ProposalSection[] = template.sections.map((sectionType, idx) => {
-      const content = generateSectionContent(sectionType, client.fullName, template.id)
+      const content = generateSectionContent(sectionType, client.fullName, template.id, clientData.householdAUM)
       return {
         id: `sec-${Date.now()}-${idx}`,
         type: sectionType,
@@ -171,7 +171,7 @@ export const proposalHandlers = [
       return new HttpResponse(JSON.stringify({ error: 'Section not found' }), { status: 404 })
     }
 
-    const content = generateSectionContent(body.sectionType, draft.clientData.clientName, draft.templateId)
+    const content = generateSectionContent(body.sectionType, draft.clientData.clientName, draft.templateId, draft.clientData.householdAUM)
     const now = new Date().toISOString()
 
     section.content = content

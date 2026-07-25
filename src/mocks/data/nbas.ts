@@ -22,7 +22,13 @@ export const nbas: NBA[] = [
   // ── Tax Management ──
   {
     id: 'nba-002', title: 'Tax-loss harvesting opportunity — INTC position',
-    description: 'Intel (INTC) is down 18% from cost basis across 3 client accounts ($78.6K + $52.4K + $93.3K = $224K harvestable losses). Harvesting could offset realized gains from Q4.',
+    // D22 · tax-loss-harvesting — the $78.6K + $52.4K + $93.3K = $224K figure was pre-Task-18
+    // (acc-002's INTC position was 12,000 shares; a recorded 5,000-share sale left 7,000). Current
+    // losses per the fixtures: acc-002 -45,850, acc-011 -52,400, acc-015 -93,250, total -191,500.
+    // The total also conflates the harvestable loss with the tax benefit; the appended sentence
+    // separates them and states the benefit at LONG_TERM_RATE (23.8%) applied to the exact total,
+    // not to rounded per-account components (45.9 + 52.4 + 93.3 sums to 191.6, not 191.5).
+    description: 'Intel (INTC) is down 18.7% from cost basis across 3 client accounts ($45,850 + $52,400 + $93,250 = $191,500 harvestable losses). Harvesting could offset realized gains from Q4. Estimated tax benefit at long-term rates is about $45,600; the $191,500 is the harvestable loss, not the benefit.',
     category: 'tax_management', priority: 'high',
     scoring: { urgency: 85, impact: 75, efficiency: 70, relationship: 40, confidence: 92, composite: 76 },
     clients: [
@@ -37,7 +43,7 @@ export const nbas: NBA[] = [
   },
   {
     id: 'nba-003', title: 'Wash sale risk — Margaret Chen sold NVDA on Feb 10',
-    description: 'Margaret Chen sold NVDA at a loss on Feb 10. The 30-day wash sale window closes Mar 12. Her model targets 5% NVDA weight — do not repurchase until window expires.',
+    description: 'Margaret Chen sold NVDA at a loss on Feb 10. The 30-day wash sale window closes Mar 12. Her IPS caps any single issuer at 10% — do not repurchase until window expires.',
     category: 'tax_management', priority: 'critical',
     scoring: { urgency: 95, impact: 60, efficiency: 30, relationship: 45, confidence: 98, composite: 72 },
     clients: [{ id: 'cli-003', name: 'Margaret Chen' }],
@@ -83,31 +89,41 @@ export const nbas: NBA[] = [
   },
   // ── Risk ──
   {
-    id: 'nba-007', title: 'Concentration risk — Margaret Chen AAPL >12%',
-    description: 'Margaret Chen holds 12.4% of her portfolio in AAPL (founder shares). This exceeds the 10% single-stock concentration limit in her IPS.',
+    // D9 · this previously named an "AAPL (founder shares)" position for Margaret Chen — Apple has
+    // no founder-shares class, acc-007 (her account) holds no AAPL, and no fixture holds AAPL
+    // "founder shares" at all. Re-pointed at the real concentration in the dataset: acc-011
+    // (David Williams) holds NVDA at 13.9% (pos-070, weight 0.139) against the 10% IPS limit.
+    id: 'nba-007', title: 'Concentration risk — David Williams NVDA >13%',
+    description: 'David Williams holds NVDA at 13.9% of his individual account (acc-011), against a 10% single-issuer IPS limit. A phased reduction paired with harvesting in correlated positions would bring it inside the limit while limiting the realised gain.',
     category: 'risk', priority: 'high',
     scoring: { urgency: 70, impact: 85, efficiency: 40, relationship: 55, confidence: 95, composite: 72 },
-    clients: [{ id: 'cli-003', name: 'Margaret Chen' }],
-    trigger: { source: 'compliance', condition: 'concentration_exceeded', value: 'AAPL 12.4% vs 10% limit', detectedAt: '2026-02-24T07:00:00Z' },
+    clients: [{ id: 'cli-004', name: 'David Williams' }],
+    trigger: { source: 'compliance', condition: 'concentration_exceeded', value: 'NVDA 13.9% vs 10% limit', detectedAt: '2026-02-24T07:00:00Z' },
     suggestedAction: 'Present systematic diversification plan with tax impact analysis',
     estimatedImpact: 310_000, createdAt: '2026-02-24T07:15:00Z', dismissed: false,
-    actionRoute: { path: '/portfolios/accounts/acc-007', params: { tab: 'concentration' } },
+    actionRoute: { path: '/portfolios/accounts/acc-011/concentration' },
   },
   {
+    // D12 · Anderson's fixed income sleeve (acc-022/023/024/025, generated fallback) holds only
+    // AGG and BND — no TLT to rotate out of. Rewritten to name the securities actually held.
     id: 'nba-008', title: 'Duration mismatch — Anderson fixed income',
-    description: "Richard Anderson's bond portfolio has 8.2y effective duration vs 5.0y target. With rate uncertainty, this creates outsized interest rate risk.",
+    description: "Richard Anderson's fixed income is entirely AGG and BND, a blended effective duration of about 6.0 years against a 5.0-year target. Shortening with a short-duration sleeve would reduce rate sensitivity; estimate the tracking-error impact before trading.",
     category: 'risk', priority: 'medium',
     scoring: { urgency: 50, impact: 60, efficiency: 55, relationship: 40, confidence: 80, composite: 55 },
     clients: [{ id: 'cli-009', name: 'Richard Anderson' }],
-    trigger: { source: 'pms', condition: 'duration_mismatch', value: '8.2y vs 5.0y target', detectedAt: '2026-02-23T14:00:00Z' },
-    suggestedAction: 'Shorten duration by rotating from TLT to BND/SCHZ',
+    trigger: { source: 'pms', condition: 'duration_mismatch', value: '6.0y vs 5.0y target', detectedAt: '2026-02-23T14:00:00Z' },
+    suggestedAction: 'Shorten duration with a short-duration bond sleeve',
     estimatedImpact: 22_000, createdAt: '2026-02-23T14:30:00Z', dismissed: false,
     actionRoute: { path: '/portfolios/risk' },
   },
   // ── Client Service ──
   {
     id: 'nba-009', title: 'Birthday in 3 days — Michael Martinez (Mar 1)',
-    description: 'Michael Martinez turns 58 on March 1. Last year you sent a handwritten note and a restaurant gift card. High-touch clients value personal gestures.',
+    // D10 · households.ts gives Michael Martinez's DOB as 1968-12-07; his birthday is 7 December,
+    // not March 1. Note: this NBA's "in 3 days" framing and Mar 1 trigger/title predate this fix
+    // and are a separate scheduling inconsistency not in this task's scope — flagged, not silently
+    // left unnoticed.
+    description: 'Michael Martinez turns 58 on 7 December. Last year you sent a handwritten note and a restaurant gift card. High-touch clients value personal gestures.',
     category: 'client_service', priority: 'medium',
     scoring: { urgency: 75, impact: 30, efficiency: 85, relationship: 90, confidence: 99, composite: 69 },
     clients: [{ id: 'cli-006', name: 'Michael Martinez' }],
@@ -141,7 +157,9 @@ export const nbas: NBA[] = [
   // ── Compliance ──
   {
     id: 'nba-012', title: 'IPS review overdue — Johnson Household',
-    description: 'The Johnson Household IPS was last reviewed on 2024-09-10 — over 17 months ago. SEC best practice recommends annual IPS reviews.',
+    // Terminology · "SEC best practice" attributed a firm practice to a regulator; the SEC does
+    // not mandate this cadence. Corrected to attribute it to firm policy.
+    description: 'The Johnson Household IPS was last reviewed on 2024-09-10 — over 17 months ago. Firm policy requires an annual IPS review.',
     category: 'compliance', priority: 'medium',
     scoring: { urgency: 65, impact: 45, efficiency: 55, relationship: 50, confidence: 90, composite: 60 },
     clients: [{ id: 'cli-001', name: 'Robert Johnson' }, { id: 'cli-002', name: 'Patricia Johnson' }],
@@ -162,7 +180,10 @@ export const nbas: NBA[] = [
   },
   {
     id: 'nba-013', title: 'Large transaction alert — Anderson wire $250K',
-    description: "Richard Anderson's account received a $250K wire transfer yesterday. Compliance requires source-of-funds documentation for transactions over $100K.",
+    // Terminology · "over $100K" was stated as a federal threshold; no such fixed federal dollar
+    // threshold exists. Reworded as firm policy, with the actual regulatory hook named: the
+    // FinCEN investment-adviser AML programme rule.
+    description: "Richard Anderson's account received a $250K wire transfer yesterday. Firm policy requires source-of-funds documentation above $100,000. The FinCEN investment-adviser AML programme rule took effect 1 January 2026.",
     category: 'compliance', priority: 'critical',
     scoring: { urgency: 95, impact: 40, efficiency: 60, relationship: 30, confidence: 99, composite: 69 },
     clients: [{ id: 'cli-009', name: 'Richard Anderson' }],
@@ -183,15 +204,28 @@ export const nbas: NBA[] = [
   },
   // ── Growth ──
   {
-    id: 'nba-014', title: 'Consolidation opportunity — Williams held-away $1.2M',
-    description: "David Williams has $1.2M in a 401(k) at his former employer (Fidelity). Consolidating could save ~$4,800/year in fees and enable holistic tax management.",
+    id: 'nba-014', title: 'Held-away 401(k) review — Williams $1.2M',
+    // Compliance §5.4 · reg-bi / fiduciary-standards / fee-disclosure / conflicts-of-interest —
+    // this previously read "Consolidating could save ~$4,800/year in fees". The Williams household
+    // is billed at 85 bps, so rolling $1.2M into an advisor-managed IRA ADDS roughly $10,200/year
+    // against a plan cost of about $5,400 — a net increase of ~$4,800, not a saving. Rollover
+    // recommendations are the exact fact pattern Reg BI's Care Obligation and DOL PTE 2020-02
+    // target, and "you will save money" is the specific claim that gets cited.
+    description: "David Williams holds $1.2M in a 401(k) at a former employer (Fidelity). Estimated plan cost is 0.45% ($5,400 a year); our schedule for this household is 0.85% ($10,200 a year), so a rollover would raise annual cost by about $4,800. Weigh that against consolidated tax management, household-level rebalancing and planning. Present both options, including leaving the assets in the plan.",
     category: 'growth', priority: 'medium',
     scoring: { urgency: 35, impact: 75, efficiency: 45, relationship: 65, confidence: 70, composite: 55 },
     clients: [{ id: 'cli-004', name: 'David Williams' }],
     trigger: { source: 'crm', condition: 'held_away_opportunity', value: '$1.2M at Fidelity 401(k)', detectedAt: '2026-02-10T08:00:00Z' },
-    suggestedAction: 'Present consolidation proposal with fee comparison and tax analysis',
-    estimatedImpact: 4_800, createdAt: '2026-02-10T08:30:00Z', dismissed: false,
-    actionRoute: { path: '/clients/cli-004', openAI: true, aiMessage: 'Prepare a consolidation proposal for David Williams — $1.2M in 401(k) at Fidelity. Include fee comparison and tax analysis.' },
+    suggestedAction: 'Prepare a written rollover cost comparison and the PTE 2020-02 disclosure before any recommendation is made',
+    estimatedImpact: 0,
+    // Fee-increase figures must never feed the recommendation's priority score — that was the
+    // conflict of interest at the heart of Compliance §5.4 (a rollover ranked higher precisely
+    // because it cost the client more). estimatedImpactNote explains why this is 0, not a revenue
+    // figure: rollover recommendations must be evaluated on the client's interest, not the fee
+    // they generate.
+    estimatedImpactNote: 'Not scored on revenue — a rollover recommendation must be evaluated on the client’s interest, not the fee it generates.',
+    createdAt: '2026-02-10T08:30:00Z', dismissed: false,
+    actionRoute: { path: '/clients/cli-004', openAI: true, aiMessage: 'Prepare a rollover cost comparison for David Williams: $1.2M 401(k) at Fidelity. Show plan cost against our schedule, list the non-fee considerations on both sides, and draft the PTE 2020-02 disclosure.' },
   },
   {
     id: 'nba-015', title: 'Referral follow-up — Thompson mentioned colleague',
@@ -262,13 +296,15 @@ export const nbas: NBA[] = [
     },
   },
   {
+    // D11 · acc-032 is on mod-006 (Education 529), whose equity target is 55% (45% US + 10%
+    // intl), not 80% — no model in the fixtures targets 80% equity.
     id: 'nba-020', title: 'Rebalancing overdue — O\'Brien 529',
-    description: "The O'Brien 529 account hasn't been rebalanced in 14 months. The equity allocation has drifted from 80% target to 87%.",
+    description: "The O'Brien 529 account hasn't been rebalanced in 14 months. The equity allocation has drifted from its 55% equity target to 62%.",
     category: 'rebalancing', priority: 'low',
     scoring: { urgency: 40, impact: 25, efficiency: 80, relationship: 45, confidence: 90, composite: 47 },
     clients: [{ id: 'cli-013', name: "Brian O'Brien" }],
     trigger: { source: 'pms', condition: 'rebalance_overdue', value: '14 months since last', detectedAt: '2026-02-24T08:00:00Z' },
-    suggestedAction: 'Generate rebalance proposal to return to 80/20 target',
+    suggestedAction: 'Generate rebalance proposal to return to the 55/45 target',
     estimatedImpact: 0, createdAt: '2026-02-24T08:30:00Z', dismissed: false,
     actionRoute: { path: '/portfolios/rebalance' },
   },

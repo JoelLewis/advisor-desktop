@@ -1,5 +1,18 @@
-import type { ProposalTemplate, ProposalSectionType } from '@/types/proposal'
+import type { ProposalTemplate, ProposalSectionType, ProposalFeeTier } from '@/types/proposal'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
+import { blendedTieredFee, type FeeTier } from '@/lib/fees'
+import { formatCurrency } from '@/lib/utils'
+
+/**
+ * C33 · `blendedTieredFee` (Task 7) takes `{ upTo, rate }`; `proposalTemplates[].feeTiers` fixture
+ * data uses `{ minAUM, maxAUM, rate, label }`. `upTo` is exactly `maxAUM` — the tiers are
+ * contiguous from 0, so `minAUM`/`label` carry no information `blendedTieredFee` needs.
+ */
+function toFeeTiers(tiers: readonly ProposalFeeTier[]): FeeTier[] {
+  return tiers.map((t) => ({ upTo: t.maxAUM, rate: t.rate }))
+}
+
+const ILLUSTRATIVE_AUM_FALLBACK = 5_000_000
 
 export const proposalTemplates: ProposalTemplate[] = [
   {
@@ -77,6 +90,7 @@ export function generateSectionContent(
   sectionType: ProposalSectionType,
   clientName: string,
   templateId: string,
+  householdAUM?: number,
 ): string {
   const template = proposalTemplates.find((t) => t.id === templateId)
   const templateName = template?.name ?? 'Investment Proposal'
@@ -205,12 +219,20 @@ export function generateSectionContent(
         return `| ${min} | ${max} | ${(t.rate * 100).toFixed(2)}% |`
       })
 
+      // C33 · the fee illustration previously hardcoded "$40,250 (0.805% blended rate)" for a
+      // $5,000,000 portfolio on every template, understating tpl-001's own tier table ($45,500 /
+      // 0.91%) by $5,250/yr. Derive it from the template's actual tiers and the client's own AUM.
+      const basis = householdAUM ?? ILLUSTRATIVE_AUM_FALLBACK
+      const { fee, blendedRate } = blendedTieredFee(basis, toFeeTiers(tiers))
+
       return [
         '## Fee Schedule',
         '',
         '### Advisory Fee Structure',
         '',
-        'Our fees are calculated as a percentage of assets under management (AUM) and are billed quarterly in arrears based on the average daily account balance:',
+        // Aligned with billing.ts, where 11 of 13 household fee schedules bill in advance —
+        // this section previously said "in arrears" here and "in advance" three lines below.
+        'Our fees are calculated as a percentage of assets under management (AUM) and are billed quarterly in advance based on the average daily account balance:',
         '',
         '| AUM From | AUM To | Annual Rate |',
         '|---|---|---|',
@@ -218,7 +240,9 @@ export function generateSectionContent(
         '',
         '### Annual Cost Estimate',
         '',
-        'Based on your current portfolio value, the estimated annual advisory fee is detailed in the table above. For a $5,000,000 portfolio, the blended annual fee would be approximately $40,250 (0.805% blended rate).',
+        `Based on a portfolio value of ${formatCurrency(basis)}, the estimated annual advisory fee is ` +
+        `${formatCurrency(fee)}, a blended rate of ${(blendedRate * 100).toFixed(3)}%. Fees are billed ` +
+        'quarterly in advance on the average daily balance and are subject to the schedule above.',
         '',
         '### Fee Comparison',
         '',
@@ -235,7 +259,7 @@ export function generateSectionContent(
         '- Tax-loss harvesting and tax-efficient rebalancing',
         '- Access to institutional share classes and alternative investments',
         '- Dedicated advisor and client service team',
-        '- No additional trading commissions or transaction fees',
+        '- Transaction costs are charged separately by the custodian: $4.95 per equity or ETF trade, $0.65 per option contract and $1.00 per bond.',
         '',
         '*Fees do not include underlying fund expense ratios, which average 0.08% – 0.25% for the recommended vehicle lineup. Custodial fees are separate and charged directly by the custodian.*',
       ].join('\n')

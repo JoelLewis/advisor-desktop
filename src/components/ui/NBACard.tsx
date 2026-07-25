@@ -5,7 +5,7 @@ import {
   X, Clock, ArrowRight, Timer, Sparkles, Mail, FileText, MessageSquare, Loader2, Copy, Check,
   ShieldAlert, History, Lock,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, formatCurrency } from '@/lib/utils'
 import { Badge } from './Badge'
 import { useNBATemplates } from '@/hooks/use-nbas'
 import { now } from '@/lib/clock'
@@ -166,6 +166,17 @@ export const NBACard = memo(function NBACard({ nba, onDismiss, onSnooze, onActio
         {/* Title & description */}
         <h3 className="mt-2 text-body-strong text-text-primary">{nba.title}</h3>
         <p className="mt-1 text-caption text-text-secondary line-clamp-2">{nba.description}</p>
+
+        {/* Estimated impact figure — not shown for a bare $0 unless a note explains why */}
+        {(nba.estimatedImpact > 0 || nba.estimatedImpactNote) && (
+          <div className="mt-2 flex items-center gap-1.5 text-caption font-medium text-text-secondary">
+            <DollarSign className="h-3 w-3" />
+            <span>Est. impact: {formatCurrency(nba.estimatedImpact, { compact: true })}</span>
+          </div>
+        )}
+        {nba.estimatedImpactNote && (
+          <p className="mt-1 text-caption text-text-tertiary">{nba.estimatedImpactNote}</p>
+        )}
 
         {/* Countdown timer */}
         {countdown && (

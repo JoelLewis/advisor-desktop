@@ -108,6 +108,23 @@ describe('NBACard', () => {
     expect(onDismiss).toHaveBeenCalledWith('nba-test-001')
   })
 
+  it('renders estimatedImpactNote under the impact figure when present', () => {
+    const nba = createTestNBA({
+      estimatedImpact: 0,
+      estimatedImpactNote: 'Not scored on revenue — a rollover recommendation must be evaluated on the client’s interest, not the fee it generates.',
+    })
+    renderWithProviders(<NBACard nba={nba} />)
+
+    expect(screen.getByText(/Not scored on revenue/)).toBeInTheDocument()
+  })
+
+  it('does not render an impact figure for a bare zero-impact NBA with no note', () => {
+    const nba = createTestNBA({ estimatedImpact: 0, estimatedImpactNote: undefined })
+    renderWithProviders(<NBACard nba={nba} />)
+
+    expect(screen.queryByText(/Est\. impact/)).not.toBeInTheDocument()
+  })
+
   it('shows "Compliance Required" for compliance NBAs with nonDismissible=true', () => {
     const nba = createTestNBA({
       category: 'compliance',
