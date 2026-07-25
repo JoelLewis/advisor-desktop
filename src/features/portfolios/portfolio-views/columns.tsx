@@ -81,14 +81,14 @@ export function makeDriftColumns(
       cell: ({ row }) => {
         const drift = driftMap.get(row.original.id)
         if (!drift) return <span className="text-caption text-text-tertiary">--</span>
-        const val = drift.totalDrift * 100
+        // needsRebalance gates on the worst single asset-class breach (maxAbsDrift), not the
+        // portfolio-wide aggregate (totalDrift) — render the same quantity the gate uses, or a
+        // row can read e.g. "15.0% / ±5.0%" in green with no alert, contradicting itself.
+        const val = drift.maxAbsDrift * 100
         const band = drift.driftTolerance * 100
         return (
           <div className="flex items-center gap-1.5">
             {drift.needsRebalance && <AlertTriangle className="h-3.5 w-3.5 text-accent-red" />}
-            {/* totalDrift is the portfolio-wide magnitude (half-sum of |drift| across asset
-                classes), which is never negative — direction ("overweight"/"underweight") lives
-                per asset class on assetClassDrifts[].drift, not on this aggregate. */}
             <span className={`font-mono text-caption ${drift.needsRebalance ? 'text-accent-red' : val > 1.5 ? 'text-amber-600' : 'text-accent-green'}`}>
               {val.toFixed(1)}% / ±{band.toFixed(1)}%
             </span>

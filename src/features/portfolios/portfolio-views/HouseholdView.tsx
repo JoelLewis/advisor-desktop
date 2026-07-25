@@ -92,7 +92,10 @@ export function HouseholdView({
               <div className="border-t border-border-primary">
                 {group.accounts.map((acc) => {
                   const drift = driftMap.get(acc.id)
-                  const driftVal = drift ? drift.totalDrift * 100 : 0
+                  // needsRebalance gates on maxAbsDrift vs. the account's own band, not totalDrift
+                  // (the portfolio-wide aggregate) — same quantity here, or this row can read
+                  // green at 3x the account's tolerance (see columns.tsx for the same fix).
+                  const driftVal = drift ? drift.maxAbsDrift * 100 : 0
                   return (
                     <button
                       key={acc.id}

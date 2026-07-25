@@ -76,11 +76,27 @@ describe('drift calculation invariants', () => {
     expect(drift.assetClassDrifts.reduce((s, a) => s + a.drift, 0)).toBeCloseTo(0, 2)
   })
 
-  it('actual weights roughly sum to 1.0 for each account', async () => {
+  // Tight on purpose: computeDriftForAccount normalizes each position's weight by the account's
+  // own total position weight before summing into asset-class buckets. Raw (unnormalized) weights
+  // sum to 0.999–1.001 across the fixture set (e.g. acc-045) — inside the old ±0.05 tolerance this
+  // test used to have, so removing the normalization passed silently. ±0.0005 catches it.
+  it('actual weights sum to 1.0 for each account (normalized, not just close)', async () => {
     const drifts = await getDriftSummary()
     for (const d of drifts) {
       const sumActual = d.assetClassDrifts.reduce((s, ac) => s + ac.actual, 0)
-      expect(sumActual).toBeCloseTo(1.0, 1)
+      expect(Math.abs(sumActual - 1.0)).toBeLessThan(0.0005)
+    }
+  })
+
+  // C24 · Important #4 — maxAbsDrift is published once by the server and consumed everywhere
+  // (RebalancePage's filter, SelectAccountsStep, the UI columns) instead of each recomputing
+  // `Math.max(...|drift|)` independently. Pin the published field against the same computation
+  // performed on the account's own assetClassDrifts, independent of needsRebalance.
+  it('maxAbsDrift === max(|drift|) across the account\'s own asset classes', async () => {
+    const drifts = await getDriftSummary()
+    for (const d of drifts) {
+      const expected = Math.max(...d.assetClassDrifts.map((ac) => Math.abs(ac.drift)), 0)
+      expect(Math.abs(d.maxAbsDrift - expected)).toBeLessThan(0.0001)
     }
   })
 

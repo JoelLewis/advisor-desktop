@@ -427,7 +427,8 @@ function computeDriftForAccount(account: typeof accounts[0]): DriftStatus {
   const positions = getPositionsForAccount(account.id, account.totalValue)
   const modelId = account.modelId ?? 'mod-001'
   const targets = getModelTargets(modelId)
-  const band = MODEL_BANDS[modelId] ?? { driftTolerance: 0.05, rebalanceFrequency: 'quarterly' }
+  const band = MODEL_BANDS[modelId]
+  if (!band) throw new Error(`no drift band defined for model ${modelId}`)
 
   const totalWeight = positions.reduce((s, p) => s + p.weight, 0) || 1
   const actualWeights = new Map<string, number>()
@@ -463,6 +464,7 @@ function computeDriftForAccount(account: typeof accounts[0]): DriftStatus {
     driftTolerance: band.driftTolerance,
     rebalanceFrequency: band.rebalanceFrequency,
     totalDrift,
+    maxAbsDrift,
     assetClassDrifts,
     lastCalculated: MOCK_NOW_ISO,
     needsRebalance: maxAbsDrift > band.driftTolerance,

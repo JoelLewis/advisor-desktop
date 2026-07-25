@@ -5,12 +5,12 @@ import { Routes, Route } from 'react-router-dom'
 import { renderWithProviders } from '@/test/render'
 import { AccountDetailPage } from '../AccountDetailPage'
 
-function renderPage() {
+function renderPage(accountId = 'acc-001') {
   return renderWithProviders(
     <Routes>
       <Route path="/portfolios/accounts/:accountId" element={<AccountDetailPage />} />
     </Routes>,
-    { initialEntries: ['/portfolios/accounts/acc-001'] },
+    { initialEntries: [`/portfolios/accounts/${accountId}`] },
   )
 }
 
@@ -56,5 +56,35 @@ describe('AccountDetailPage', () => {
     const buttons = screen.getAllByRole('button')
     // At least one button exists for back navigation
     expect(buttons.length).toBeGreaterThan(0)
+  })
+
+  // C24 review fix — the per-asset-class drift highlight used to compare against a hardcoded 2%,
+  // independent of the account's own model band, so a class could render red on a card that
+  // simultaneously says "acceptable drift levels". acc-011 (mod-002, 5% band) is a real account in
+  // the fixture set with two classes over 2% (us_equity +3.0%, fixed_income -2.7%) but under its
+  // own 5% band — needsRebalance is false, so neither class should be flagged.
+  it("acc-011: an asset-class drift over 2% but within the account's own model band is not flagged red", async () => {
+    renderPage('acc-011')
+    await screen.findByText('David Williams Individual')
+
+    expect(await screen.findByText(/acceptable drift levels/)).toBeInTheDocument()
+
+    const overweight = screen.getByText('+3.0%')
+    expect(overweight.className).not.toMatch(/text-accent-red/)
+    expect(overweight.className).toMatch(/text-accent-green/)
+
+    const underweight = screen.getByText('-2.7%')
+    expect(underweight.className).not.toMatch(/text-accent-red/)
+    expect(underweight.className).toMatch(/text-accent-green/)
+  })
+
+  // C24 review fix — Max Drift is now rendered against the account's own band (not the aggregate
+  // totalDrift against a mismatched hardcoded 3%), so an in-tolerance account never shows red.
+  it('acc-011: Max Drift renders in green, paired with its own band, when drift is acceptable', async () => {
+    renderPage('acc-011')
+    await screen.findByText('David Williams Individual')
+
+    const maxDrift = await screen.findByText('3.0% / ±5.0%')
+    expect(maxDrift.className).toMatch(/text-accent-green/)
   })
 })

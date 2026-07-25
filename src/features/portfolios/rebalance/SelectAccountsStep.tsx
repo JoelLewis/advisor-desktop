@@ -17,7 +17,7 @@ export const SELECTION_MODE_OPTIONS: { id: SelectionMode; label: string }[] = [
 type SelectAccountsStepProps = {
   accounts: { id: string; name: string; accountNumber: string; totalValue: number; modelId: string }[] | undefined
   driftedAccounts: { id: string; name: string; accountNumber: string; totalValue: number; modelId: string }[]
-  driftMap: Map<string, { totalDrift: number; needsRebalance: boolean }>
+  driftMap: Map<string, { maxAbsDrift: number; needsRebalance: boolean }>
   selectedIds: Set<string>
   toggleSelect: (id: string) => void
   selectionMode: SelectionMode
@@ -152,7 +152,7 @@ export function SelectAccountsStep({
                     <div className="flex items-center gap-6">
                       <span className="font-mono text-body">{formatWithConversion(acc.totalValue, 'USD', { compact: true })}</span>
                       <span className="font-mono text-caption text-accent-red">
-                        {drift ? `${(drift.totalDrift * 100).toFixed(1)}% drift` : ''}
+                        {drift ? `${(drift.maxAbsDrift * 100).toFixed(1)}% drift` : ''}
                       </span>
                     </div>
                   </label>
@@ -199,7 +199,7 @@ function ModelSelectionView({
   models: ModelAssignment[]
   driftedAccountsByModel: Map<string, string[]>
   accounts: { id: string; name: string; accountNumber: string; totalValue: number; modelId: string }[]
-  driftMap: Map<string, { totalDrift: number; needsRebalance: boolean }>
+  driftMap: Map<string, { maxAbsDrift: number; needsRebalance: boolean }>
   selectedModelId: string | null
   selectedIds: Set<string>
   onSelectModel: (modelId: string) => void
@@ -210,8 +210,14 @@ function ModelSelectionView({
   const modelsWithDrift = models.filter((m) => (driftedAccountsByModel.get(m.id)?.length ?? 0) > 0)
   const modelsWithoutDrift = models.filter((m) => (driftedAccountsByModel.get(m.id)?.length ?? 0) === 0)
 
-  const selectedModelAccounts = selectedModelId
-    ? accounts.filter((a) => a.modelId === selectedModelId && driftMap.get(a.id)?.needsRebalance)
+  // C25 · Important #2 — this used to filter on the raw server `needsRebalance` flag, which
+  // ignores the threshold override entirely. `driftedAccountsByModel` is the threshold-aware list
+  // (RebalancePage.tsx) that also drives the model card's "N drifted" badge and the ids
+  // auto-selected on model click — reusing it here means a selected-but-invisible account
+  // (present in `selectedIds`, absent from these checkboxes) can't happen again.
+  const eligibleIdsForModel = selectedModelId ? new Set(driftedAccountsByModel.get(selectedModelId) ?? []) : null
+  const selectedModelAccounts = eligibleIdsForModel
+    ? accounts.filter((a) => a.modelId === selectedModelId && eligibleIdsForModel.has(a.id))
     : []
 
   return (
@@ -311,7 +317,7 @@ function ModelSelectionView({
                 <div className="flex items-center gap-6">
                   <span className="font-mono text-body">{formatWithConversion(acc.totalValue, 'USD', { compact: true })}</span>
                   <span className="font-mono text-caption text-accent-red">
-                    {drift ? `${(drift.totalDrift * 100).toFixed(1)}% drift` : ''}
+                    {drift ? `${(drift.maxAbsDrift * 100).toFixed(1)}% drift` : ''}
                   </span>
                 </div>
               </label>

@@ -78,7 +78,13 @@ type DriftStatus = {
   // Model Governance displays for the same model.
   driftTolerance: Percentage;
   rebalanceFrequency: 'monthly' | 'quarterly' | 'semi_annual' | 'annual' | 'threshold_only';
+  // Total portfolio drift: half-sum-of-|drift| across asset classes — the one-way turnover needed
+  // to return to target. Never negative, and NOT the quantity a band gates (see maxAbsDrift).
   totalDrift: Percentage;
+  // The single worst asset-class breach. This is what needsRebalance and any threshold/band
+  // comparison gate on — published once here so the client never recomputes it (one fact, one
+  // place) and never renders totalDrift (a different quantity) against driftTolerance.
+  maxAbsDrift: Percentage;
   assetClassDrifts: AssetClassDrift[];
   lastCalculated: string;
   needsRebalance: boolean;
