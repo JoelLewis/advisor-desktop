@@ -14,6 +14,7 @@ import {
   isHarvestable,
   computeCostBasisImpact,
   RATE_DISCLOSURE,
+  buildRateDisclosure,
 } from '@/features/portfolios/tax/shared'
 
 const ACCOUNTS = ['acc-001', 'acc-002', 'acc-011', 'acc-020', 'acc-029', 'acc-041', 'acc-042', 'acc-043', 'acc-044']
@@ -501,14 +502,32 @@ describe('computeCostBasisImpact (fix-round-1 review, Important #1)', () => {
   })
 })
 
-describe('RATE_DISCLOSURE (fix-round-1 review, Minor)', () => {
-  it('is derived from SHORT_TERM_RATE and LONG_TERM_RATE, not restated as independent free text', () => {
-    // The disclosure is templated from the constants in shared.tsx (not hardcoded copy sitting
-    // next to them), so this holds by construction — a changed SHORT_TERM_RATE or LONG_TERM_RATE
-    // cannot drift out of sync with what the screen tells the advisor. This asserts today's
-    // values render correctly, as a smoke test of the template itself.
+// Fix-round-2 review, Minor M1 — the previous version of this test asserted `RATE_DISCLOSURE`
+// contains '37%' and '23.8%'. The reviewer reverted the string to the exact pre-fix hardcoded
+// prose (which also happens to say 37% and 23.8%, since that was never in dispute — only whether
+// it stays in sync with the constants) and the test passed: a hardcoded string and a templated
+// one are byte-identical today, so no test on `RATE_DISCLOSURE`'s *content* alone can tell them
+// apart. The only way to prove derivation is to drive the builder with values that appear nowhere
+// else in the codebase.
+describe('rate disclosure derivation (fix-round-2 review, Minor M1)', () => {
+  it('buildRateDisclosure renders whatever rates it is given, not fixed prose', () => {
+    const disclosure = buildRateDisclosure(0.4, 0.25)
+    expect(disclosure).toContain('40% short-term')
+    expect(disclosure).toContain('25% long-term')
+    // Neither of the real, current rates should leak in from a hardcoded fallback.
+    expect(disclosure).not.toContain('37%')
+    expect(disclosure).not.toContain('23.8%')
+  })
+
+  it('a different pair of rates produces different, correctly-formatted copy', () => {
+    expect(buildRateDisclosure(0.2, 0.15)).toContain('20% short-term')
+    expect(buildRateDisclosure(0.2, 0.15)).toContain('15% long-term')
+  })
+
+  it('RATE_DISCLOSURE is buildRateDisclosure(SHORT_TERM_RATE, LONG_TERM_RATE), not a separate literal', () => {
     expect(SHORT_TERM_RATE).toBe(0.37)
     expect(LONG_TERM_RATE).toBe(0.238)
+    expect(RATE_DISCLOSURE).toBe(buildRateDisclosure(SHORT_TERM_RATE, LONG_TERM_RATE))
     expect(RATE_DISCLOSURE).toContain('37% short-term')
     expect(RATE_DISCLOSURE).toContain('23.8% long-term')
     expect(RATE_DISCLOSURE.toLowerCase()).toContain('not tax advice')

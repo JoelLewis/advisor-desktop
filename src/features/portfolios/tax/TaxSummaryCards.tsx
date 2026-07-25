@@ -14,6 +14,14 @@ type TaxSummaryCardsProps = {
   stats: TaxStats
   washSaleWindowsCount: number
   harvestOpportunitiesLength: number
+  /**
+   * Fix-round-2 review, Important #2 — while FX rates are unavailable, `harvestOpportunities`
+   * fails open to `[]` (correctly — see TaxManagementPage), but rendering that as "$0.00 / 0
+   * lots" presents an unknown as a measured fact. The exact defect class Phase 1 removes
+   * elsewhere: a confident number standing in for "we don't actually know." When true, the
+   * harvestable-losses card reads as unknown instead of zero.
+   */
+  harvestUnavailable?: boolean
   formatWithConversion: (value: number, currency: CurrencyCode, opts?: { compact?: boolean }) => string
   baseCurrency: CurrencyCode
 }
@@ -22,6 +30,7 @@ export function TaxSummaryCards({
   stats,
   washSaleWindowsCount,
   harvestOpportunitiesLength,
+  harvestUnavailable = false,
   formatWithConversion,
   baseCurrency,
 }: TaxSummaryCardsProps) {
@@ -46,8 +55,17 @@ export function TaxSummaryCards({
       <Card>
         <CardContent>
           <p className="text-caption text-text-secondary">Harvestable losses</p>
-          <p className="font-mono text-section-header text-accent-blue">{formatWithConversion(stats.harvestableAmount, baseCurrency, { compact: true })}</p>
-          <p className="mt-1 text-caption text-text-tertiary">{harvestOpportunitiesLength} lot{harvestOpportunitiesLength !== 1 ? 's' : ''}</p>
+          {harvestUnavailable ? (
+            <>
+              <p className="font-mono text-section-header text-text-tertiary">—</p>
+              <p className="mt-1 text-caption text-text-tertiary">Exchange rates unavailable</p>
+            </>
+          ) : (
+            <>
+              <p className="font-mono text-section-header text-accent-blue">{formatWithConversion(stats.harvestableAmount, baseCurrency, { compact: true })}</p>
+              <p className="mt-1 text-caption text-text-tertiary">{harvestOpportunitiesLength} lot{harvestOpportunitiesLength !== 1 ? 's' : ''}</p>
+            </>
+          )}
         </CardContent>
       </Card>
       <Card>

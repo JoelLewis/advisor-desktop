@@ -22,13 +22,26 @@ function formatRatePercent(rate: number): string {
   return `${Number((rate * 100).toFixed(1))}%`
 }
 
+/**
+ * Fix-round-2 review, Minor M1 · a test asserting `RATE_DISCLOSURE` contains `'37%'` and
+ * `'23.8%'` passes identically whether the string is templated from the rate constants or
+ * hardcoded prose that happens to say the same thing — it cannot distinguish "derived" from
+ * "coincidentally correct today". Exporting the builder as a function of its own arguments lets
+ * a test drive it with values that appear nowhere else in the codebase (see
+ * tax-invariants.test.ts), which a hardcoded string cannot satisfy by coincidence.
+ */
+export function buildRateDisclosure(shortTermRate: number, longTermRate: number): string {
+  return (
+    `Estimated at top federal marginal rates — ${formatRatePercent(shortTermRate)} short-term, ` +
+    `${formatRatePercent(longTermRate)} long-term including net investment income tax. State ` +
+    'tax is not modelled. Estimates only, not tax advice.'
+  )
+}
+
 // Templated from the constants above, not restated as free text — changing SHORT_TERM_RATE or
 // LONG_TERM_RATE previously would not have changed this copy, so the disclosure could silently
 // lie about the rates actually applied.
-export const RATE_DISCLOSURE =
-  `Estimated at top federal marginal rates — ${formatRatePercent(SHORT_TERM_RATE)} short-term, ` +
-  `${formatRatePercent(LONG_TERM_RATE)} long-term including net investment income tax. State ` +
-  'tax is not modelled. Estimates only, not tax advice.'
+export const RATE_DISCLOSURE = buildRateDisclosure(SHORT_TERM_RATE, LONG_TERM_RATE)
 
 export function taxRateFor(holdingPeriod: TaxLot['holdingPeriod']): number {
   return holdingPeriod === 'short' ? SHORT_TERM_RATE : LONG_TERM_RATE
@@ -51,6 +64,21 @@ export const HARVEST_LOSS_THRESHOLD_USD = -1000 as const
 
 export function isHarvestable(gainLoss: number, currency: CurrencyCode, rates: FXRateMap): boolean {
   return convertToBase(gainLoss, currency, rates) < HARVEST_LOSS_THRESHOLD_USD
+}
+
+/**
+ * Fix-round-2 review, Minor M2 · `useCurrencyConverter` exposes `isReady` and `isError`
+ * specifically so a caller can tell "still loading" apart from "never going to load" — a single
+ * `fxUnavailable` boolean collapsed both into one, so a component that only ever knows "not
+ * ready" can't tell an advisor which one it's looking at. A discriminated union keeps that
+ * distinction from being re-collapsed at any call site that adopts it.
+ */
+export type FxStatus = 'ready' | 'loading' | 'error'
+
+export function fxStatusFrom(isReady: boolean, isError: boolean): FxStatus {
+  if (isReady) return 'ready'
+  if (isError) return 'error'
+  return 'loading'
 }
 
 export type MethodImpact = { realizedGain: number; shortTermGain: number; longTermGain: number }

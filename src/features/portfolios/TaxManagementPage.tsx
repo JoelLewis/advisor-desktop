@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, AlertTriangle } from 'lucide-react'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { QueryErrorBanner } from '@/components/ui/QueryErrorBanner'
 import { useAccount } from '@/hooks/use-accounts'
@@ -10,7 +10,7 @@ import { useOpenWashSaleWindows } from '@/hooks/use-open-wash-sale-windows'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { useCurrencyConverter } from '@/hooks/use-fx'
 import { cn } from '@/lib/utils'
-import { isHarvestable, computeCostBasisImpact } from './tax/shared'
+import { isHarvestable, computeCostBasisImpact, fxStatusFrom } from './tax/shared'
 import { COST_BASIS_METHODS, type CostBasisMethod } from './tax/CostBasisMethodCard'
 import { TaxSummaryCards } from './tax/TaxSummaryCards'
 import { CostBasisMethodCard } from './tax/CostBasisMethodCard'
@@ -37,19 +37,31 @@ export function TaxManagementPage() {
   const { data: account, isLoading: accountLoading, isError, error, refetch } = useAccount(id)
   const { data: taxLots, isLoading: lotsLoading } = useTaxLots(id)
   const { data: positions } = usePositions(id)
-  const { formatWithConversion } = useFormatCurrency()
-  const { rates, isReady: fxReady } = useCurrencyConverter()
+  const { formatWithConversion, reportingCurrency } = useFormatCurrency()
+  const { rates, isReady: fxReady, isError: fxError } = useCurrencyConverter()
+  const fxStatus = fxStatusFrom(fxReady, fxError)
 
   const baseCurrency = account?.baseCurrency ?? 'USD'
-  // Fix-round-1 review, Important #3: an earlier version of this gate waited on `!fxReady` too —
-  // `isReady` never becomes true once React Query's retries are exhausted, so on a permanent FX
-  // outage the skeleton below (which renders before the isError/not-found branches) never yielded
-  // to anything. Worse, gating the whole tree's mount on `fxReady` meant every remount of an
-  // FX-dependent descendant (e.g. `TaxLotsView`'s per-lot `CurrencyValue`s, each with their own
-  // `useFormatCurrency` → `useFXRates` observer) re-triggered React Query's refetch-on-mount for
-  // the same errored query, which flips `isReady`/`isError` again, unmounts the tree again, and
-  // remounts it again — a self-sustaining refetch loop, confirmed against a real 500 response.
-  // FX readiness must not gate the page mount at all; it only gates the harvest computation below.
+  // Fix-round-1 review, Important #3, corrected in fix-round-2 review: the bug shipped at
+  // `4e3c665` was `isLoading = accountLoading || lotsLoading || !fxReady` — a *permanent* gate.
+  // `isReady` never becomes true once React Query's retries are exhausted, so on an FX outage
+  // `isLoading` stays `true` forever and the whole tree — including the isError/not-found
+  // branches below — never renders. Nothing there ever mounts, so there is nothing to remount:
+  // that shape is a static brick, exactly as the round-1 review diagnosed, not a loop.
+  //
+  // A *different*, transient gate — `!fxReady && !fxError` — is the one that loops, and it only
+  // ever existed here as an intermediate mutation while testing the fix, never as shipped code.
+  // Once the FX query settles into `error`, that expression flips back to `false` (i.e. "loading"
+  // again) the instant anything remounts an FX-consuming descendant — e.g. `TaxLotsView`'s
+  // per-lot `CurrencyValue`s, each with its own `useFormatCurrency` → `useFXRates` observer —
+  // because mounting a *new* observer against an already-errored query triggers React Query's
+  // refetch-on-mount. That refetch flips `isLoading` back to `true`, unmounting the tree, which
+  // remounts it once the query settles again, repeating indefinitely. Confirmed against a real
+  // 500 response: roughly 380 fetches/sec under this suite's `gcTime: 0` test client — `gcTime: 0`
+  // is what turns a much slower underlying loop into that storm, not what causes the loop itself.
+  //
+  // Either shape is wrong for the same underlying reason: FX readiness must not gate the page
+  // mount at all, permanently or transiently. It only gates the harvest computation below.
   const isLoading = accountLoading || lotsLoading
 
   // Build position lookup for symbol display
@@ -131,6 +143,15 @@ export function TaxManagementPage() {
 
   const selectedLotObjects = harvestOpportunities.filter((l) => selectedLots.has(l.id))
 
+  // Fix-round-2 review, Important #1: `formatWithConversion` falls through to the raw,
+  // unconverted value whenever FX isn't ready (see use-format-currency.ts) — a deliberate,
+  // correct choice for a demo that must render something, but it means every figure on this
+  // screen quietly becomes the account's native-currency number wearing the reporting currency's
+  // symbol (e.g. a CHF amount rendered with a "$"). Self-consistent and therefore invisible
+  // unless disclosed. Only matters when the account's own currency actually differs from the
+  // reporting currency — a USD account reporting in USD is never affected by FX being down.
+  const fxCurrencyMismatch = fxStatus !== 'ready' && baseCurrency !== reportingCurrency
+
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
@@ -144,12 +165,23 @@ export function TaxManagementPage() {
         </div>
       </div>
 
+      {fxCurrencyMismatch && (
+        <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+          <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600" />
+          <p className="text-body text-amber-800">
+            Exchange rates are unavailable. Every figure below is shown in {baseCurrency}, the
+            account&rsquo;s own currency — not converted to {reportingCurrency}.
+          </p>
+        </div>
+      )}
+
       {/* Summary cards */}
       {stats && (
         <TaxSummaryCards
           stats={stats}
           washSaleWindowsCount={washSaleWindows?.length ?? 0}
           harvestOpportunitiesLength={harvestOpportunities.length}
+          harvestUnavailable={fxStatus !== 'ready'}
           formatWithConversion={formatWithConversion}
           baseCurrency={baseCurrency}
         />
@@ -202,7 +234,7 @@ export function TaxManagementPage() {
           positionMap={positionMap}
           formatWithConversion={formatWithConversion}
           baseCurrency={baseCurrency}
-          fxUnavailable={!fxReady}
+          fxStatus={fxStatus}
         />
       )}
 

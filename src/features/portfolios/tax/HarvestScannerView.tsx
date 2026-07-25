@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/Badge'
 import { CurrencyValue } from '@/components/ui/CurrencyValue'
 import type { TaxLot } from '@/types/portfolio'
 import type { CurrencyCode } from '@/types/currency'
-import { HOLDING_LABELS, Th, estimatedTaxBenefit, RATE_DISCLOSURE } from './shared'
+import { HOLDING_LABELS, Th, estimatedTaxBenefit, RATE_DISCLOSURE, type FxStatus } from './shared'
 
 type HarvestScannerViewProps = {
   harvestOpportunities: TaxLot[]
@@ -15,12 +15,13 @@ type HarvestScannerViewProps = {
   formatWithConversion: (value: number, currency: CurrencyCode, opts?: { compact?: boolean }) => string
   baseCurrency: CurrencyCode
   /**
-   * Fix-round-1 review, Important #3 — true when FX rates failed to load. The scanner can't
-   * safely apply the (USD) harvest threshold to a non-USD account's lots without a live rate,
-   * so it fails open to an empty, explained list rather than falling back to a currency-blind
-   * comparison or blocking the whole page indefinitely.
+   * Fix-round-1 review, Important #3 / fix-round-2 review, Minor M2 — the scanner can't safely
+   * apply the (USD) harvest threshold to a non-USD account's lots without a live rate, so it
+   * fails open to an empty, explained list rather than a currency-blind comparison or blocking
+   * the whole page. `'loading'` vs `'error'` get different copy: `useCurrencyConverter` exposes
+   * `isError` specifically so this distinction doesn't collapse into one ambiguous boolean.
    */
-  fxUnavailable?: boolean
+  fxStatus?: FxStatus
 }
 
 export function HarvestScannerView({
@@ -31,7 +32,7 @@ export function HarvestScannerView({
   positionMap,
   formatWithConversion,
   baseCurrency,
-  fxUnavailable = false,
+  fxStatus = 'ready',
 }: HarvestScannerViewProps) {
   const selectedLoss = selectedLotObjects.reduce((s, l) => s + Math.abs(l.gainLoss), 0)
   const selectedBenefit = selectedLotObjects.reduce((s, l) => s + estimatedTaxBenefit(l), 0)
@@ -69,10 +70,14 @@ export function HarvestScannerView({
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {fxUnavailable ? (
+          {fxStatus === 'error' ? (
             <div className="px-4 py-12 text-center text-text-tertiary">
               Exchange rates are unavailable, so harvest opportunities can&rsquo;t be compared
               against the US$1,000 threshold right now. Try again shortly.
+            </div>
+          ) : fxStatus === 'loading' ? (
+            <div className="px-4 py-12 text-center text-text-tertiary">
+              Loading exchange rates before comparing losses against the US$1,000 threshold…
             </div>
           ) : harvestOpportunities.length === 0 ? (
             <div className="px-4 py-12 text-center text-text-tertiary">No harvest opportunities found (losses greater than US$1,000, converted to USD)</div>

@@ -59,15 +59,15 @@ describe('TaxManagementPage', () => {
   })
 
   // Fix-round-1 review, Important #3: an earlier version of this fix gated the page's own
-  // `isLoading` on `!fxReady`, and `useCurrencyConverter`'s `isReady` never becomes true once
-  // React Query's retries are exhausted — an FX outage left the page on its loading skeleton
-  // forever, before the isError branch ever got a chance to run. Worse: since the page tree
-  // (including every per-lot `CurrencyValue`, each with its own FX observer) mounted and
-  // unmounted with `isLoading`, and mounting a new observer on an errored query triggers React
-  // Query's refetch-on-mount, that gate was a *self-sustaining refetch loop* — confirmed here by
-  // forcing a real 500 from `/api/fx/rates` and asserting the page still settles instead of
-  // spinning. FX readiness now only gates the harvest computation, never the page mount.
-  it('renders the page (not stuck on a skeleton or a refetch loop) and explains itself when FX rates fail to load', async () => {
+  // `isLoading` on `!fxReady`. `useCurrencyConverter`'s `isReady` never becomes true once React
+  // Query's retries are exhausted, so on a permanent FX outage `isLoading` stayed `true` forever
+  // and the page never rendered anything at all — not the skeleton yielding to an error, just the
+  // skeleton, permanently (see the corrected account of this in TaxManagementPage.tsx; a
+  // fix-round-2 review found the original commit message and a code comment here had
+  // mischaracterized this as a refetch loop, which is a real but *different* hazard that never
+  // actually shipped). This forces a real 500 from `/api/fx/rates` and asserts the page still
+  // settles instead of hanging.
+  it('renders the page (not stuck on a skeleton) and explains itself when FX rates fail to load', async () => {
     server.use(
       http.get('/api/fx/rates', () => HttpResponse.json({ code: 'FX_DOWN', message: 'boom' }, { status: 500 })),
     )
@@ -80,5 +80,73 @@ describe('TaxManagementPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Harvest scanner' }))
     expect(await screen.findByText(/Exchange rates are unavailable/)).toBeInTheDocument()
+  })
+
+  // Fix-round-2 review, Important #1: `formatWithConversion` falls through to the raw value when
+  // FX isn't ready, so an unconverted CHF figure quietly renders wearing a "$". Self-consistent
+  // and therefore invisible without an explicit notice.
+  describe('page-level FX-unavailable notice (fix-round-2 review, Important #1)', () => {
+    it('acc-044 (CHF base, USD reporting): a banner discloses that figures are shown unconverted', async () => {
+      server.use(
+        http.get('/api/fx/rates', () => HttpResponse.json({ code: 'FX_DOWN', message: 'boom' }, { status: 500 })),
+      )
+      renderPage('acc-044')
+      await screen.findByText('Mueller CHF Conservative Account')
+
+      expect(await screen.findByText(/Exchange rates are unavailable/)).toBeInTheDocument()
+      expect(screen.getByText(/shown in CHF/)).toBeInTheDocument()
+      expect(screen.getByText(/not converted to USD/)).toBeInTheDocument()
+    })
+
+    it('acc-001 (USD base, USD reporting): no banner — an FX outage cannot mislabel a currency that was never converted', async () => {
+      server.use(
+        http.get('/api/fx/rates', () => HttpResponse.json({ code: 'FX_DOWN', message: 'boom' }, { status: 500 })),
+      )
+      renderPage('acc-001')
+      await screen.findByText('Johnson Family Trust')
+
+      expect(screen.queryByText(/Exchange rates are unavailable/)).not.toBeInTheDocument()
+    })
+  })
+
+  // Fix-round-2 review, Important #2: failing open to `[]` is correct, but the summary card
+  // rendered that as "$0.00 / 0 lots" — a confidently wrong zero standing in for "unknown," on
+  // the page's default (lots) view, one click away from the tab that actually explains why.
+  it('acc-044: the "Harvestable losses" card reads as unknown, not zero, while FX is unavailable', async () => {
+    server.use(
+      http.get('/api/fx/rates', () => HttpResponse.json({ code: 'FX_DOWN', message: 'boom' }, { status: 500 })),
+    )
+    renderPage('acc-044')
+    await screen.findByText('Mueller CHF Conservative Account')
+
+    await screen.findByText('Exchange rates unavailable')
+    // Scoped to the card itself — "$0.00" legitimately appears elsewhere on this page (e.g. the
+    // cost-basis impact table), so the assertion must be about *this* card, not the whole page.
+    const harvestCard = screen.getByText('Harvestable losses').closest('div')!
+    expect(within(harvestCard).getByText('—')).toBeInTheDocument()
+    expect(within(harvestCard).getByText('Exchange rates unavailable')).toBeInTheDocument()
+    expect(within(harvestCard).queryByText(/\$/)).not.toBeInTheDocument()
+    expect(within(harvestCard).queryByText(/lots?$/)).not.toBeInTheDocument()
+  })
+
+  // Fix-round-2 review, Minor M2: `useCurrencyConverter` exposes `isReady` and `isError`
+  // specifically so a caller can tell "still loading" apart from "never going to load" — the
+  // harvest scanner's only caller had collapsed both into a single `fxUnavailable` boolean.
+  // Holds the FX request open (never resolving) to force the transient "loading" state and
+  // confirms it reads differently from the permanent "error" state exercised above.
+  it('shows a "loading" message, not the "unavailable" one, while FX is still in flight', async () => {
+    server.use(
+      http.get('/api/fx/rates', () => new Promise(() => {})), // never resolves
+    )
+    const user = userEvent.setup()
+    renderPage('acc-044')
+    await screen.findByText('Mueller CHF Conservative Account')
+
+    await user.click(screen.getByRole('button', { name: 'Harvest scanner' }))
+    expect(await screen.findByText(/Loading exchange rates/)).toBeInTheDocument()
+    // "Try again shortly" only appears in the harvest scanner's *error*-state copy — unlike the
+    // page-level banner text, which (correctly) also renders during this transient loading
+    // window, so it isn't a safe thing to assert absent here.
+    expect(screen.queryByText(/Try again shortly/)).not.toBeInTheDocument()
   })
 })
