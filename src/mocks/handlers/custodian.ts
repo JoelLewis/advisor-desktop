@@ -38,8 +38,8 @@ function fractions(rand: () => number, n: number): number[] {
 }
 
 function quarterLabel(date: Date): string {
-  const quarter = Math.floor(date.getMonth() / 3) + 1
-  return `Q${quarter} ${date.getFullYear()}`
+  const quarter = Math.floor(date.getUTCMonth() / 3) + 1
+  return `Q${quarter} ${date.getUTCFullYear()}`
 }
 
 function generateTransactions(accountId: string, totalValue: number): Transaction[] {
@@ -60,7 +60,10 @@ function generateTransactions(accountId: string, totalValue: number): Transactio
       // Buy/sell
       const side = rand() > 0.5 ? 'buy' : 'sell'
       const pos = held[Math.floor(rand() * held.length)]!
-      const qty = Math.floor(rand() * 200) + 10
+      const rawQty = Math.floor(rand() * 200) + 10
+      // A sell can never exceed the position currently held. Every held position has quantity
+      // >= 2, so this floor never produces a bound below 1.
+      const qty = side === 'sell' ? Math.max(1, Math.min(rawQty, Math.floor(pos.quantity))) : rawQty
       const price = pos.price
       txns.push({
         id: `txn-${accountId}-${i}`, accountId, date: dateStr,
@@ -68,9 +71,10 @@ function generateTransactions(accountId: string, totalValue: number): Transactio
         amount: side === 'buy' ? -(qty * price) : qty * price, quantity: qty, price,
       })
     } else if (typeRoll < 0.6) {
-      // Dividend
+      // Dividend — a plausible quarterly yield (0.2%–0.8%) on the position actually named,
+      // rather than an arbitrary fraction of total account value.
       const pos = held[Math.floor(rand() * held.length)]!
-      const amount = Math.round(totalValue * 0.001 * rand() * 100) / 100
+      const amount = Math.round(pos.marketValue * (0.002 + rand() * 0.006) * 100) / 100
       txns.push({
         id: `txn-${accountId}-${i}`, accountId, date: dateStr,
         type: 'dividend', symbol: pos.symbol, description: `Dividend — ${pos.symbol}`, amount,
@@ -126,7 +130,9 @@ function generateTaxLots(accountId: string, totalValue: number): TaxLot[] {
       const isLast = i === lotCount - 1
       const share = shares[i]!
       const purchaseDate = new Date(anchor)
-      purchaseDate.setMonth(purchaseDate.getMonth() - ages[i]!)
+      // UTC, not local: `anchor` is UTC midnight, and local get/set-Month would bake in the
+      // host timezone's day-of-month, making the serialised date machine-dependent.
+      purchaseDate.setUTCMonth(purchaseDate.getUTCMonth() - ages[i]!)
 
       const quantity = isLast ? pos.quantity - allocatedQty
         : Math.round(pos.quantity * share * 1e6) / 1e6
