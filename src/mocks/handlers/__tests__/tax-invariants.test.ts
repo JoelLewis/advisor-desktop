@@ -15,6 +15,8 @@ import {
   computeCostBasisImpact,
   RATE_DISCLOSURE,
   buildRateDisclosure,
+  harvestNeedsFx,
+  harvestFxStatus,
 } from '@/features/portfolios/tax/shared'
 
 const ACCOUNTS = ['acc-001', 'acc-002', 'acc-011', 'acc-020', 'acc-029', 'acc-041', 'acc-042', 'acc-043', 'acc-044']
@@ -531,5 +533,45 @@ describe('rate disclosure derivation (fix-round-2 review, Minor M1)', () => {
     expect(RATE_DISCLOSURE).toContain('37% short-term')
     expect(RATE_DISCLOSURE).toContain('23.8% long-term')
     expect(RATE_DISCLOSURE.toLowerCase()).toContain('not tax advice')
+  })
+})
+
+// Fix-round-3 review — `isHarvestable` converts through `convertToBase`, which always targets
+// USD (`HARVEST_LOSS_THRESHOLD_USD` is a fixed-USD figure). `convertCurrency` short-circuits
+// `if (from === to) return amount`, so a USD-native account's harvest computation never actually
+// touches the FX rate map. A prior round of this fix gated `harvestOpportunities`, the summary
+// card, and the scanner tab on the *global* FX status for every account regardless — suppressing
+// a fully-known number for the large majority of the book whenever FX had an unrelated hiccup.
+describe('the harvest FX gate is scoped to accounts that actually need it (fix-round-3 review)', () => {
+  it('harvestNeedsFx is false only for USD — the currency isHarvestable always converts to', () => {
+    expect(harvestNeedsFx('USD')).toBe(false)
+    expect(harvestNeedsFx('CHF')).toBe(true)
+    expect(harvestNeedsFx('HKD')).toBe(true)
+    expect(harvestNeedsFx('SGD')).toBe(true)
+    expect(harvestNeedsFx('EUR')).toBe(true)
+  })
+
+  it('harvestFxStatus reads "ready" for a USD account no matter what the global FX status is', () => {
+    expect(harvestFxStatus('USD', 'error')).toBe('ready')
+    expect(harvestFxStatus('USD', 'loading')).toBe('ready')
+    expect(harvestFxStatus('USD', 'ready')).toBe('ready')
+  })
+
+  it('harvestFxStatus mirrors the global FX status for a non-USD account, unchanged', () => {
+    expect(harvestFxStatus('CHF', 'error')).toBe('error')
+    expect(harvestFxStatus('CHF', 'loading')).toBe('loading')
+    expect(harvestFxStatus('CHF', 'ready')).toBe('ready')
+  })
+
+  // Verifies the "large majority of the book" claim against the live fixture rather than taking
+  // it on faith — acc-041/042/043/044 are the only accounts with a non-USD baseCurrency; every
+  // other account in the fixture is USD-native and hits the harvestNeedsFx('USD') === false path.
+  it('every fixture account except acc-041/042/043/044 is USD-native', () => {
+    const nonUsd = accounts.filter((a) => a.baseCurrency && a.baseCurrency !== 'USD')
+    expect(nonUsd.map((a) => a.id).sort()).toEqual(['acc-041', 'acc-042', 'acc-043', 'acc-044'])
+    const usdNative = accounts.length - nonUsd.length
+    expect(usdNative).toBe(accounts.length - 4)
+    // Not a rounding error — this is nearly the entire book.
+    expect(usdNative / accounts.length).toBeGreaterThan(0.9)
   })
 })

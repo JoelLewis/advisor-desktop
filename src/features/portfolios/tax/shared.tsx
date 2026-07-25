@@ -67,6 +67,21 @@ export function isHarvestable(gainLoss: number, currency: CurrencyCode, rates: F
 }
 
 /**
+ * Fix-round-3 review · `isHarvestable` converts through `convertToBase`, which always targets
+ * USD (`HARVEST_LOSS_THRESHOLD_USD` is a fixed-USD figure, independent of the user's reporting
+ * currency). `convertCurrency` (`lib/currency.ts`) short-circuits `if (from === to) return
+ * amount` — so a USD-native account's lots never actually touch the FX rate map, and the harvest
+ * computation for that account is exact regardless of whether FX is loading, healthy, or down.
+ * All but four fixture accounts (acc-041/042/043/044) are USD-native; gating their harvest
+ * availability on the global FX query status (as a prior round of this fix did) suppressed a
+ * fully-known figure for the vast majority of the book over an outage that had nothing to do
+ * with them.
+ */
+export function harvestNeedsFx(baseCurrency: CurrencyCode): boolean {
+  return baseCurrency !== 'USD'
+}
+
+/**
  * Fix-round-2 review, Minor M2 · `useCurrencyConverter` exposes `isReady` and `isError`
  * specifically so a caller can tell "still loading" apart from "never going to load" — a single
  * `fxUnavailable` boolean collapsed both into one, so a component that only ever knows "not
@@ -79,6 +94,17 @@ export function fxStatusFrom(isReady: boolean, isError: boolean): FxStatus {
   if (isReady) return 'ready'
   if (isError) return 'error'
   return 'loading'
+}
+
+/**
+ * Fix-round-3 review · the single place every harvest-availability-dependent surface (the
+ * opportunity list itself, the summary card, the scanner tab) must derive its status from, so
+ * they can't drift apart into a third, independently-wrong answer. Only the accounts that
+ * `harvestNeedsFx` actually depend on the live FX query; everyone else reads `'ready'`
+ * regardless of the global `fxStatus`.
+ */
+export function harvestFxStatus(baseCurrency: CurrencyCode, fxStatus: FxStatus): FxStatus {
+  return harvestNeedsFx(baseCurrency) ? fxStatus : 'ready'
 }
 
 export type MethodImpact = { realizedGain: number; shortTermGain: number; longTermGain: number }

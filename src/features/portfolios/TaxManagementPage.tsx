@@ -10,7 +10,7 @@ import { useOpenWashSaleWindows } from '@/hooks/use-open-wash-sale-windows'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { useCurrencyConverter } from '@/hooks/use-fx'
 import { cn } from '@/lib/utils'
-import { isHarvestable, computeCostBasisImpact, fxStatusFrom } from './tax/shared'
+import { isHarvestable, computeCostBasisImpact, fxStatusFrom, harvestFxStatus } from './tax/shared'
 import { COST_BASIS_METHODS, type CostBasisMethod } from './tax/CostBasisMethodCard'
 import { TaxSummaryCards } from './tax/TaxSummaryCards'
 import { CostBasisMethodCard } from './tax/CostBasisMethodCard'
@@ -42,6 +42,13 @@ export function TaxManagementPage() {
   const fxStatus = fxStatusFrom(fxReady, fxError)
 
   const baseCurrency = account?.baseCurrency ?? 'USD'
+  // Fix-round-3 review: harvestOpportunities, the summary card, and the scanner tab all derive
+  // their availability from this single value rather than the raw `fxStatus` — a USD-native
+  // account's harvest computation never touches the FX rate map (see `harvestFxStatus` in
+  // tax/shared.tsx), so it must read 'ready' even while the global FX query is down. All but
+  // four fixture accounts are USD-native; gating them on `fxStatus` directly suppressed a
+  // fully-known number across nearly the whole book over an outage irrelevant to them.
+  const harvestStatus = harvestFxStatus(baseCurrency, fxStatus)
   // Fix-round-1 review, Important #3, corrected in fix-round-2 review: the bug shipped at
   // `4e3c665` was `isLoading = accountLoading || lotsLoading || !fxReady` — a *permanent* gate.
   // `isReady` never becomes true once React Query's retries are exhausted, so on an FX outage
@@ -76,17 +83,17 @@ export function TaxManagementPage() {
   // Harvest opportunities: lots with unrealized losses greater than HARVEST_LOSS_THRESHOLD_USD.
   // PRE-FLIGHT correction 1 — the threshold is in USD; a lot's gainLoss is in the account's own
   // baseCurrency, so it must be converted before comparing rather than compared as a raw literal.
-  // While FX rates are unavailable — still loading, or permanently failed — fail open to an empty
-  // list instead of running the comparison against an empty rate map, which would silently
-  // reproduce the currency-blind bug this task fixed. This is the *only* place FX readiness gates
-  // anything; it must not gate the page's own mount (see isLoading above).
+  // While FX rates are unavailable *and actually needed* (see harvestStatus above) fail open to
+  // an empty list instead of running the comparison against an empty rate map, which would
+  // silently reproduce the currency-blind bug this task fixed. This is the *only* place FX
+  // readiness gates anything; it must not gate the page's own mount (see isLoading above).
   const harvestOpportunities = useMemo(
-    () => fxReady
+    () => harvestStatus === 'ready'
       ? (taxLots ?? [])
           .filter((lot) => isHarvestable(lot.gainLoss, baseCurrency, rates))
           .sort((a, b) => a.gainLoss - b.gainLoss)
       : [],
-    [taxLots, baseCurrency, rates, fxReady],
+    [taxLots, baseCurrency, rates, harvestStatus],
   )
 
   // Tax summary stats
@@ -181,7 +188,7 @@ export function TaxManagementPage() {
           stats={stats}
           washSaleWindowsCount={washSaleWindows?.length ?? 0}
           harvestOpportunitiesLength={harvestOpportunities.length}
-          harvestUnavailable={fxStatus !== 'ready'}
+          harvestUnavailable={harvestStatus !== 'ready'}
           formatWithConversion={formatWithConversion}
           baseCurrency={baseCurrency}
         />
@@ -234,7 +241,7 @@ export function TaxManagementPage() {
           positionMap={positionMap}
           formatWithConversion={formatWithConversion}
           baseCurrency={baseCurrency}
-          fxStatus={fxStatus}
+          fxStatus={harvestStatus}
         />
       )}
 

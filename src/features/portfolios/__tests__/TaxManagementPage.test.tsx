@@ -66,20 +66,81 @@ describe('TaxManagementPage', () => {
   // fix-round-2 review found the original commit message and a code comment here had
   // mischaracterized this as a refetch loop, which is a real but *different* hazard that never
   // actually shipped). This forces a real 500 from `/api/fx/rates` and asserts the page still
-  // settles instead of hanging.
+  // settles instead of hanging. Uses acc-044 (CHF), which genuinely needs FX for its harvest
+  // computation — see the fix-round-3 tests below for acc-001 (USD), which does not.
   it('renders the page (not stuck on a skeleton) and explains itself when FX rates fail to load', async () => {
     server.use(
       http.get('/api/fx/rates', () => HttpResponse.json({ code: 'FX_DOWN', message: 'boom' }, { status: 500 })),
     )
     const user = userEvent.setup()
-    renderPage('acc-001')
+    renderPage('acc-044')
 
     // The account itself loaded fine — its own data is independent of FX — so the page must
     // render, not sit on the skeleton because a *different* query failed.
-    expect(await screen.findByText('Johnson Family Trust')).toBeInTheDocument()
+    expect(await screen.findByText('Mueller CHF Conservative Account')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Harvest scanner' }))
-    expect(await screen.findByText(/Exchange rates are unavailable/)).toBeInTheDocument()
+    // acc-044 needs FX for its own display too, so the page-level banner from fix-round-2's
+    // Important #1 also renders "Exchange rates are unavailable..." — match on wording unique to
+    // the scanner's own copy so this assertion isn't ambiguous between the two.
+    expect(await screen.findByText(/can.t be compared against the US\$1,000 threshold/)).toBeInTheDocument()
+  })
+
+  // Fix-round-3 review: `harvestOpportunities` gated on the *global* `fxReady`, but
+  // `isHarvestable`'s conversion (via `convertToBase`, always targeting USD) short-circuits for
+  // any USD-native account — `convertCurrency` returns the amount unchanged when `from === to`.
+  // All but four fixture accounts are USD-native (see tax-invariants.test.ts for the exact
+  // count), so an FX outage that has nothing to do with them was suppressing a fully-known
+  // number across nearly the whole book: the harvestable-losses card went to "— / Exchange
+  // rates unavailable" and the scanner tab claimed opportunities
+  // "can't be compared against the threshold," both false for an account whose own currency
+  // already *is* the threshold's currency.
+  describe('the harvest gate is scoped to accounts that actually need FX (fix-round-3 review)', () => {
+    it('acc-001 (USD-native): the "Harvestable losses" card shows the real figure while FX is down', async () => {
+      server.use(
+        http.get('/api/fx/rates', () => HttpResponse.json({ code: 'FX_DOWN', message: 'boom' }, { status: 500 })),
+      )
+      renderPage('acc-001')
+      await screen.findByText('Johnson Family Trust')
+
+      // acc-001 has 5 real harvestable lots totalling $54,440 (compact: "$54K") — independent of
+      // FX, since every lot is already in USD.
+      const harvestCard = await screen.findByText('Harvestable losses')
+      const cardEl = harvestCard.closest('div')!
+      expect(within(cardEl).getByText('$54K')).toBeInTheDocument()
+      expect(within(cardEl).getByText('5 lots')).toBeInTheDocument()
+      expect(within(cardEl).queryByText('Exchange rates unavailable')).not.toBeInTheDocument()
+      expect(within(cardEl).queryByText('—')).not.toBeInTheDocument()
+    })
+
+    it('acc-001 (USD-native): the scanner tab lists real opportunities, not an "unavailable" message, while FX is down', async () => {
+      server.use(
+        http.get('/api/fx/rates', () => HttpResponse.json({ code: 'FX_DOWN', message: 'boom' }, { status: 500 })),
+      )
+      const user = userEvent.setup()
+      renderPage('acc-001')
+      await screen.findByText('Johnson Family Trust')
+
+      await user.click(screen.getByRole('button', { name: 'Harvest scanner' }))
+      expect(await screen.findByText('5 opportunities')).toBeInTheDocument()
+      expect(screen.queryByText(/Exchange rates are unavailable/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/Loading exchange rates/)).not.toBeInTheDocument()
+    })
+
+    // The mirror check: acc-044 (CHF) genuinely does need FX, and must still fail open rather
+    // than silently reproducing the currency-blind bug — confirming the scoping didn't
+    // overcorrect into "never gate anything."
+    it('acc-044 (CHF, needs FX): the "Harvestable losses" card still reads unavailable, not a wrong number', async () => {
+      server.use(
+        http.get('/api/fx/rates', () => HttpResponse.json({ code: 'FX_DOWN', message: 'boom' }, { status: 500 })),
+      )
+      renderPage('acc-044')
+      await screen.findByText('Mueller CHF Conservative Account')
+
+      const harvestCard = await screen.findByText('Harvestable losses')
+      const cardEl = harvestCard.closest('div')!
+      expect(await within(cardEl).findByText('Exchange rates unavailable')).toBeInTheDocument()
+    })
   })
 
   // Fix-round-2 review, Important #1: `formatWithConversion` falls through to the raw value when
