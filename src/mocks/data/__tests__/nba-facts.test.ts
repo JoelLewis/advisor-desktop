@@ -5,6 +5,27 @@ import { households } from '@/mocks/data/households'
 import { householdFees } from '@/mocks/data/billing'
 import { getPositionsForAccount } from '@/mocks/data/positions'
 import { estimatedTaxBenefit } from '@/features/portfolios/tax/shared'
+import { getModels } from '@/services/pms'
+import { router } from '@/app/routes'
+
+type RouteNode = { path?: string; index?: boolean; children?: RouteNode[] }
+
+function flattenRoutePaths(routes: RouteNode[], prefix = ''): string[] {
+  const paths: string[] = []
+  for (const route of routes) {
+    const full = route.path ? `${prefix}/${route.path}`.replace(/\/+/g, '/') : prefix || '/'
+    if (route.index || (!route.children && route.path)) paths.push(full)
+    if (route.children) paths.push(...flattenRoutePaths(route.children, full))
+  }
+  return paths
+}
+
+function pathResolves(actionPath: string, routePaths: string[]): boolean {
+  return routePaths.some((routePath) => {
+    const pattern = '^' + routePath.replace(/:[A-Za-z]+\??/g, '[^/]+') + '$'
+    return new RegExp(pattern).test(actionPath)
+  })
+}
 
 function positionsFor(accountId: string) {
   const account = accounts.find((a) => a.id === accountId)!
@@ -34,6 +55,28 @@ describe('NBA narratives match the data', () => {
     }
   })
 
+  it("D9: nba-007's 13.9% concentration figure matches pos-070's actual weight, not a stale carryover", () => {
+    // Review round 1, Minor · the "13.9%" text and the NVDA position's real `weight` were never
+    // tied together — mutating the narrative to a different percentage would have passed.
+    const nba = nbas.find((n) => n.id === 'nba-007')!
+    const nvda = positionsFor('acc-011').find((p) => p.symbol === 'NVDA')!
+    expect(nvda.weight).toBeCloseTo(0.139, 3)
+    expect(nba.description).toContain(`${(nvda.weight * 100).toFixed(1)}%`)
+  })
+
+  it("D9: nba-007's estimatedImpact is the dollar excess over the 10% IPS limit, not a stale carryover", () => {
+    // Review round 1, Minor · estimatedImpact: 310_000 was the deleted Margaret Chen/AAPL
+    // narrative's figure (a $6.8M account) and survived onto a different client, account and
+    // security untouched. The dollar amount that actually needs trimming is the position's
+    // marketValue less 10% of the account's totalValue.
+    const nba = nbas.find((n) => n.id === 'nba-007')!
+    const account = accounts.find((a) => a.id === 'acc-011')!
+    const nvda = positionsFor('acc-011').find((p) => p.symbol === 'NVDA')!
+    const excessOverLimit = nvda.marketValue - 0.1 * account.totalValue
+    expect(excessOverLimit).toBe(110_000)
+    expect(nba.estimatedImpact).toBe(excessOverLimit)
+  })
+
   it('D9: the wash-sale NBA names a security the account must NOT currently hold', () => {
     // nba-003 is Margaret Chen's wash-sale NBA: "sold NVDA … do not repurchase until the window
     // expires". By construction acc-007 should NOT hold NVDA (it has no explicit fixture
@@ -53,10 +96,17 @@ describe('NBA narratives match the data', () => {
   })
 
   it('D10: Michael Martinez turns 58 on the anniversary of 1968-12-07', () => {
+    // Review round 1, Important #5 · the `if (nba)` guard made this vacuous: dropping "Michael
+    // Martinez" or "turns \d+" from the description would silently no-op the assertion rather
+    // than fail. Key on the id directly, as D11 already does, with no conditional.
     const dob = households.flatMap((h) => h.members).find((m) => m.name === 'Michael Martinez')!.dateOfBirth
     expect(dob).toBe('1968-12-07')
-    const nba = nbas.find((n) => n.description.includes('Michael Martinez') && /turns \d+/.test(n.description))
-    if (nba) expect(nba.description).toContain('7 December')
+    const nba = nbas.find((n) => n.id === 'nba-009')!
+    expect(nba.description).toContain('7 December')
+    // aiMessage feeds the AI drafting flow directly (NBAFeed.tsx) — it must not still say the
+    // wrong date even though description was fixed.
+    expect(nba.actionRoute?.aiMessage).toContain('7 December')
+    expect(nba.actionRoute?.aiMessage).not.toContain('March 1')
   })
 
   // PRE-FLIGHT correction 3: `nbas.find(n => n.description.includes('529'))` returns nba-005
@@ -64,10 +114,32 @@ describe('NBA narratives match the data', () => {
   // array order and contains neither '80%' nor '55%'. The first assertion below would pass on
   // nba-005 by accident and the second would fail forever, even after Step 4 correctly rewrites
   // nba-020 — the predicate never reaches it. Key on the id directly.
-  it("D11: the O'Brien 529 drift claim uses mod-006's 55% equity target", () => {
+  //
+  // Review round 1, Important #1 · the first pass replaced one unfixture-backed figure (80%) with
+  // another (62%) — acc-032 has no explicit positions, so its equity weight comes from
+  // `getPositionsForAccount`'s generated fallback, whose weights (VTI 0.348, QQQ 0.087,
+  // EFA 0.145 — fixed constants, independent of totalValue) sum to exactly 58.0% equity, not 62%.
+  // Both ends of the claim are now derived: the model target from the live `/pms/models` payload
+  // (mod-006), the actual from the account's live positions.
+  it("D11: the O'Brien 529 drift claim matches mod-006's real target and acc-032's real equity weight", async () => {
     const nba = nbas.find((n) => n.id === 'nba-020')!
+    const equityClasses = new Set(['us_equity', 'intl_equity'])
+
+    const models = await getModels()
+    const mod006 = models.find((m) => m.id === 'mod-006')!
+    const target = mod006.assetClasses
+      .filter((ac) => equityClasses.has(ac.assetClass))
+      .reduce((sum, ac) => sum + ac.targetWeight, 0)
+    expect(target).toBeCloseTo(0.55, 3)
+
+    const actual = positionsFor('acc-032')
+      .filter((p) => equityClasses.has(p.assetClass))
+      .reduce((sum, p) => sum + p.weight, 0)
+    expect(actual).toBeCloseTo(0.58, 3)
+
+    expect(nba.description).toContain(`${Math.round(target * 100)}%`)
+    expect(nba.description).toContain(`${Math.round(actual * 100)}%`)
     expect(nba.description).not.toContain('80%')
-    expect(nba.description).toContain('55%')
   })
 
   it('D12: no NBA recommends rotating out of a security the household does not hold', () => {
@@ -75,13 +147,38 @@ describe('NBA narratives match the data', () => {
     // `suggestedAction` ("rotating from TLT to BND/SCHZ"), not `description` — scanning only
     // `description`, as the brief's original test did, would pass on the unfixed text, since the
     // ticker it should have caught was never in the field it looked at. Scan both.
+    //
+    // Review round 1, Important #5 · this also had the `if (nba)` vacuous-pass guard: dropping
+    // "duration" from nba-008's description would silently no-op the whole check, even with the
+    // TLT text restored. Key on the id directly.
     const anderson = ['acc-022', 'acc-023', 'acc-024', 'acc-025'].flatMap((id) => positionsFor(id).map((p) => p.symbol))
-    const nba = nbas.find((n) => n.description.includes('Anderson') && n.description.includes('duration'))
-    if (nba) {
-      const text = nba.description + ' ' + nba.suggestedAction
-      const named = [...text.matchAll(/\b([A-Z]{2,5})\b/g)].map((m) => m[1]!)
-        .filter((s) => !['IRA', 'ETF', 'SEC', 'RMD', 'AUM', 'IPS'].includes(s))
-      for (const symbol of named) expect(anderson).toContain(symbol)
+    const nba = nbas.find((n) => n.id === 'nba-008')!
+    const text = nba.description + ' ' + nba.suggestedAction
+    const named = [...text.matchAll(/\b([A-Z]{2,5})\b/g)].map((m) => m[1]!)
+      .filter((s) => !['IRA', 'ETF', 'SEC', 'RMD', 'AUM', 'IPS'].includes(s))
+    for (const symbol of named) expect(anderson).toContain(symbol)
+  })
+})
+
+describe('NBA action routes resolve to a real page', () => {
+  // Review round 1, Important #3 · nba-007's actionRoute was rewritten to
+  // '/portfolios/accounts/acc-011/concentration', which routes.tsx does not define (only
+  // accounts/:accountId, .../attribution and .../tax exist as children) — clicking it would land
+  // on RouteErrorPage. Rather than special-case nba-007, this walks the real route tree
+  // (`router.routes` from `@/app/routes`, not a hand-maintained duplicate) and checks every NBA's
+  // actionRoute.path against it, so the whole class of dead-link regressions is caught.
+  const routePaths = flattenRoutePaths(router.routes as unknown as RouteNode[])
+
+  it('has at least the known portfolio/account/client routes (route tree read correctly)', () => {
+    expect(routePaths).toContain('/portfolios/accounts/:accountId')
+    expect(routePaths).toContain('/clients/:clientId')
+  })
+
+  it('every NBA actionRoute.path resolves to a defined route', () => {
+    for (const nba of nbas) {
+      const path = nba.actionRoute?.path
+      if (!path) continue
+      expect(pathResolves(path, routePaths), `${nba.id} actionRoute.path "${path}" has no matching route`).toBe(true)
     }
   })
 })
@@ -116,6 +213,20 @@ describe('D22: nba-002 states the post-Task-18 harvestable loss, not the stale p
     expect(benefit).toBeCloseTo(45_577, 0)
     expect(nba.description).toContain('$45,600')
     expect(nba.description).toContain('not the benefit')
+  })
+
+  it('estimatedImpact is the derived tax benefit, not the raw harvestable loss now rendered on-screen', () => {
+    // Review round 1, Critical · nba-002's `estimatedImpact` was left at 224_000 (the stale loss
+    // figure, not even the corrected loss) while the description was fixed around it — three
+    // lines apart, on the NBA this task rewrote, in the task whose purpose is removing exactly
+    // this. NBACard now renders `estimatedImpact` on screen, so this was a live regression, not a
+    // dormant one. Tie the field to the same derived total the description itself uses, computed
+    // here from the fixtures rather than transcribed, so a hardcoded stand-in (e.g. 999_000)
+    // cannot slip back in.
+    const benefit = intcLosses.reduce((sum, g) => sum + estimatedTaxBenefit({ gainLoss: g, holdingPeriod: 'long' }), 0)
+    expect(nba.estimatedImpact).toBe(benefit)
+    expect(nba.estimatedImpact).not.toBe(Math.abs(total))
+    expect(nba.estimatedImpact).not.toBe(224_000)
   })
 })
 
@@ -161,11 +272,48 @@ describe('Reg BI / DOL PTE 2020-02 rollover framing', () => {
     expect(rollover.description).toContain('$4,800')
   })
 
+  // Review round 1, Important #2 (the twelfth cannot-fail test) · every assertion above pins
+  // numbers and one forbidden phrase, but none of them pin the *direction*. Swapping "raise" for
+  // "reduce" — or fully re-inverting (swapping both rate/dollar pairs between "our schedule" and
+  // "the plan" AND flipping the verb) — leaves every string above untouched and passes. The
+  // original defect was a sign inversion; a test that can't fail on a sign inversion doesn't test
+  // this finding. Pin which number belongs to which party, and pin the verb.
+  it('attributes the higher rate/cost to our schedule and the lower one to the plan, and states the direction as an increase', () => {
+    // Windows, not `[^;.]*[;.]` sentence-matching: the numbers themselves ("0.85%") contain
+    // periods, so a terminator-based regex truncates at the decimal point and never actually
+    // sees the dollar figure it's supposed to be checking.
+    const WINDOW = 70
+    const scheduleIdx = rollover.description.toLowerCase().indexOf('our schedule')
+    const planIdx = rollover.description.toLowerCase().indexOf('plan cost')
+    expect(scheduleIdx, 'should name "our schedule"').toBeGreaterThan(-1)
+    expect(planIdx, 'should name "plan cost"').toBeGreaterThan(-1)
+
+    const scheduleWindow = rollover.description.slice(scheduleIdx, scheduleIdx + WINDOW)
+    expect(scheduleWindow).toContain('0.85%')
+    expect(scheduleWindow).toContain('$10,200')
+
+    const planWindow = rollover.description.slice(planIdx, planIdx + WINDOW)
+    expect(planWindow).toContain('0.45%')
+    expect(planWindow).toContain('$5,400')
+
+    // The delta sentence must say the rollover costs more, not less — this is the actual finding.
+    expect(rollover.description).toMatch(/rais(e|es|ing)|increase|adds/i)
+    expect(rollover.description).not.toMatch(/reduc(e|es|ing)|lower(s|ing)?|decrease|save/i)
+  })
+
   it('names the disclosure obligation', () => {
     expect(rollover.description + rollover.suggestedAction).toContain('PTE 2020-02')
   })
 
-  it('estimatedImpact is not the fee increase presented as a benefit', () => {
+  it('estimatedImpact is not the fee increase (or any other revenue figure) presented as a benefit', () => {
+    // Review round 1, Minor · `not.toBe(4_800)` alone let `10_200` (the other, larger fee figure)
+    // through, which is an arguably worse framing than the original defect. Pin the actual value
+    // and the presence of the note that explains it, rather than only excluding one bad answer.
+    expect(rollover.estimatedImpact).toBe(0)
     expect(rollover.estimatedImpact).not.toBe(4_800)
+    expect(rollover.estimatedImpact).not.toBe(10_200)
+    expect(rollover.estimatedImpact).not.toBe(5_400)
+    expect(rollover.estimatedImpactNote).toBeTruthy()
+    expect(rollover.estimatedImpactNote?.toLowerCase()).toContain('not scored on revenue')
   })
 })

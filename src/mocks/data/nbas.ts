@@ -38,7 +38,13 @@ export const nbas: NBA[] = [
     groupId: 'grp-002',
     trigger: { source: 'pms', condition: 'unrealized_loss_threshold', value: '-18.7%', detectedAt: '2026-02-24T09:30:00Z' },
     suggestedAction: 'Sell INTC, replace with semiconductor ETF (SMH) to maintain sector exposure',
-    estimatedImpact: 224_000, createdAt: '2026-02-24T09:45:00Z', dismissed: false,
+    // Review round 1, Critical · this was 224_000 — the harvestable loss, not the benefit — the
+    // same "impact = the raw dollar figure, not what the client actually gets" mistake nba-014's
+    // Reg BI fix exists to correct, now rendered on-screen by NBACard's impact figure. The value
+    // the client actually realises is the tax benefit at long-term rates: 45,850 + 52,400 + 93,250
+    // = 191,500 × LONG_TERM_RATE (0.238) = 45,577 exactly (nba-facts.test.ts asserts this figure
+    // is exactly the sum of estimatedTaxBenefit() over the three INTC lots, not transcribed).
+    estimatedImpact: 45_577, createdAt: '2026-02-24T09:45:00Z', dismissed: false,
     actionRoute: { path: '/portfolios/accounts/acc-002/tax' },
   },
   {
@@ -100,8 +106,17 @@ export const nbas: NBA[] = [
     clients: [{ id: 'cli-004', name: 'David Williams' }],
     trigger: { source: 'compliance', condition: 'concentration_exceeded', value: 'NVDA 13.9% vs 10% limit', detectedAt: '2026-02-24T07:00:00Z' },
     suggestedAction: 'Present systematic diversification plan with tax impact analysis',
-    estimatedImpact: 310_000, createdAt: '2026-02-24T07:15:00Z', dismissed: false,
-    actionRoute: { path: '/portfolios/accounts/acc-011/concentration' },
+    // Review round 1, Minor · 310_000 was the AAPL narrative's figure (Margaret Chen, a $6.8M
+    // account) and survived onto a different client, account and security. The dollar amount that
+    // actually needs trimming is the excess over the 10% IPS limit: pos-070's marketValue 390,000
+    // minus 10% of acc-011's totalValue 2,800,000 (280,000) = 110,000.
+    estimatedImpact: 110_000, createdAt: '2026-02-24T07:15:00Z', dismissed: false,
+    // Review round 1, Important #3 · '/portfolios/accounts/acc-011/concentration' is not a route
+    // (routes.tsx defines only accounts/:accountId, .../attribution and .../tax — no concentration
+    // child). AccountDetailPage renders a "concentration" tab via ?tab=concentration on the base
+    // account route, which is how the pre-existing pattern (nba-007's own former actionRoute, and
+    // AttributionPage/TaxManagementPage's siblings) already worked — restored that shape here.
+    actionRoute: { path: '/portfolios/accounts/acc-011', params: { tab: 'concentration' } },
   },
   {
     // D12 · Anderson's fixed income sleeve (acc-022/023/024/025, generated fallback) holds only
@@ -120,9 +135,11 @@ export const nbas: NBA[] = [
   {
     id: 'nba-009', title: 'Birthday in 3 days — Michael Martinez (Mar 1)',
     // D10 · households.ts gives Michael Martinez's DOB as 1968-12-07; his birthday is 7 December,
-    // not March 1. Note: this NBA's "in 3 days" framing and Mar 1 trigger/title predate this fix
-    // and are a separate scheduling inconsistency not in this task's scope — flagged, not silently
-    // left unnoticed.
+    // not March 1. Note: `title`, `trigger.value` and `expiresAt` still frame this as "in 3 days"
+    // / "Mar 1" — re-dating those is a scheduling restructure outside this task's scope (this NBA
+    // may not even belong in a near-term bucket once correctly dated) and is flagged, not silently
+    // left unnoticed. `aiMessage`, unlike those, is narrative text like `description` — it is the
+    // string fed to the AI drafting flow (NBAFeed.tsx), so it gets the same one-phrase fix.
     description: 'Michael Martinez turns 58 on 7 December. Last year you sent a handwritten note and a restaurant gift card. High-touch clients value personal gestures.',
     category: 'client_service', priority: 'medium',
     scoring: { urgency: 75, impact: 30, efficiency: 85, relationship: 90, confidence: 99, composite: 69 },
@@ -130,7 +147,7 @@ export const nbas: NBA[] = [
     trigger: { source: 'crm', condition: 'birthday_approaching', value: 'Mar 1 — 3 days', detectedAt: '2026-02-25T06:00:00Z' },
     suggestedAction: 'Send birthday card; AI can draft personalized message',
     estimatedImpact: 0, createdAt: '2026-02-25T06:15:00Z', expiresAt: '2026-02-28T23:59:00Z', dismissed: false,
-    actionRoute: { openAI: true, aiMessage: 'Draft a personalized birthday message for Michael Martinez turning 58 on March 1. Last year we sent a handwritten note and restaurant gift card.' },
+    actionRoute: { openAI: true, aiMessage: 'Draft a personalized birthday message for Michael Martinez turning 58 on 7 December. Last year we sent a handwritten note and restaurant gift card.' },
   },
   {
     id: 'nba-010', title: 'Annual review overdue — Williams Household',
@@ -297,9 +314,12 @@ export const nbas: NBA[] = [
   },
   {
     // D11 · acc-032 is on mod-006 (Education 529), whose equity target is 55% (45% US + 10%
-    // intl), not 80% — no model in the fixtures targets 80% equity.
+    // intl), not 80% — no model in the fixtures targets 80% equity. Review round 1, Important #1:
+    // the actual figure was also wrong (62%) — acc-032 has no explicit positions, so it uses
+    // `getPositionsForAccount`'s generated fallback, whose equity weights (VTI 0.348 + QQQ 0.087
+    // + EFA 0.145) sum to exactly 58.0%, independent of the account's totalValue.
     id: 'nba-020', title: 'Rebalancing overdue — O\'Brien 529',
-    description: "The O'Brien 529 account hasn't been rebalanced in 14 months. The equity allocation has drifted from its 55% equity target to 62%.",
+    description: "The O'Brien 529 account hasn't been rebalanced in 14 months. The equity allocation has drifted from its 55% equity target to 58%.",
     category: 'rebalancing', priority: 'low',
     scoring: { urgency: 40, impact: 25, efficiency: 80, relationship: 45, confidence: 90, composite: 47 },
     clients: [{ id: 'cli-013', name: "Brian O'Brien" }],
