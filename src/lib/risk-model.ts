@@ -104,7 +104,19 @@ export function trackingError(
   return Math.sqrt(Math.max(variance, 0))
 }
 
-/** Parametric (variance-covariance) VaR. Positive number = expected loss. */
+/**
+ * Parametric (variance-covariance) VaR. Positive number = expected loss.
+ *
+ * @param annualVol — **must be rounded to 4 decimal places by the caller** before this call,
+ * e.g. `Math.round(portfolioVolatility(weights) * 10_000) / 10_000`. This function does not
+ * round it for you — per the `aum.ts` convention, pure lib functions don't round, callers do —
+ * but skipping the round is not a cosmetic omission: at $12M, feeding the raw
+ * `portfolioVolatility` output for acc-006 (σ = 0.090411...) instead of the rounded 0.0904
+ * produces $515,202.31 instead of the correct $515,139.62 — $62.68 of drift on one account,
+ * an order of magnitude past the "±1" tolerance the model's spec warns about. See
+ * `risk-model.test.ts`'s "rounding order is load-bearing" test, which asserts both the correct
+ * rounded-then-VaR value and that skipping the round produces a materially different number.
+ */
 export function parametricVaR(
   value: number,
   annualVol: number,

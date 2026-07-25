@@ -16,6 +16,19 @@ const ACC_001 = [
   { assetClass: 'cash', weight: 0.081 },
 ]
 
+// acc-006's actual asset-class mix — an $8-figure trust, chosen because the drift from
+// skipping the rounding step is largest in dollar terms at this scale.
+const ACC_006 = [
+  { assetClass: 'us_equity', weight: 0.344 },
+  { assetClass: 'intl_equity', weight: 0.142 },
+  { assetClass: 'emerging_markets', weight: 0.052 },
+  { assetClass: 'fixed_income', weight: 0.197 },
+  { assetClass: 'private_equity', weight: 0.045 },
+  { assetClass: 'alternatives', weight: 0.088 },
+  { assetClass: 'real_estate', weight: 0.048 },
+  { assetClass: 'cash', weight: 0.084 },
+]
+
 describe('assetClassWeights', () => {
   it('normalises so weights always sum to exactly 1', () => {
     // acc-045's fixture weights sum to 0.925 — D4.
@@ -77,6 +90,28 @@ describe('parametricVaR', () => {
   it('scales with the square root of the horizon', () => {
     expect(parametricVaR(1_000_000, 0.12, 12) / parametricVaR(1_000_000, 0.12, 1))
       .toBeCloseTo(Math.sqrt(12), 9)
+  })
+})
+
+describe('the round-then-VaR sequence (rounding order is load-bearing)', () => {
+  // acc-006, $12M — exercises the real caller sequence: portfolioVolatility's full-precision
+  // output must be rounded to 4dp *before* it reaches parametricVaR, exactly as `parametricVaR`'s
+  // JSDoc requires. This is the seam Task 10 wires up; a caller that forgets to round here is
+  // wrong by tens of dollars, not by a rounding artefact.
+  const value = 12_000_000
+  const rawVol = portfolioVolatility(assetClassWeights(ACC_006))
+  const roundedVol = Math.round(rawVol * 10_000) / 10_000
+
+  it('rounding sigma to 4dp before calling parametricVaR reproduces the correct, disclosed VaR', () => {
+    expect(roundedVol).toBeCloseTo(0.0904, 4)
+    expect(parametricVaR(value, roundedVol)).toBeCloseTo(515_140, 0)
+  })
+
+  it('skipping the round is not a cosmetic omission — it moves VaR by tens of dollars, ' +
+    'far past the ±1 tolerance the model promises, so Task 10 must round sigma before calling parametricVaR', () => {
+    const correctVaR = parametricVaR(value, roundedVol)
+    const wrongVaR = parametricVaR(value, rawVol)
+    expect(Math.abs(wrongVaR - correctVaR)).toBeGreaterThan(10)
   })
 })
 
