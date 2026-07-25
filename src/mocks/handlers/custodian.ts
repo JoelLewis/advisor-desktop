@@ -231,7 +231,7 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
   return txns.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 }
 
-function generateTaxLots(accountId: string, totalValue: number): TaxLot[] {
+export function generateTaxLots(accountId: string, totalValue: number): TaxLot[] {
   const positions = getPositionsForAccount(accountId, totalValue)
   const anchor = startOfToday()
   const lots: TaxLot[] = []

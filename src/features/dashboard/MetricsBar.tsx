@@ -32,13 +32,13 @@ export function MetricsBar() {
       onClick: () => navigate('/portfolios'),
     },
     {
-      label: 'Pending Tasks',
+      label: 'Pending tasks',
       value: String(data.pendingTasks),
-      change: { value: '3 due today', direction: 'neutral' },
+      change: { value: `${data.criticalCount} critical`, direction: 'neutral' },
       onClick: () => navigate('/workflows'),
     },
     {
-      label: 'Meetings Today',
+      label: 'Meetings today',
       value: String(data.meetingsToday),
       onClick: () =>
         document
@@ -48,13 +48,11 @@ export function MetricsBar() {
     {
       label: 'Alerts',
       value: String(data.alertCount),
-      change: { value: '1 critical', direction: 'down' },
       onClick: () => navigate('/actions'),
     },
     {
-      label: `Net Flows MTD${currencyLabel}`,
+      label: `Net flows MTD${currencyLabel}`,
       value: formatWithConversion(data.netFlowsMTD, 'USD', { compact: true }),
-      change: { value: '+$1.2M', direction: 'up' },
       onClick: () => navigate('/portfolios'),
     },
   ]

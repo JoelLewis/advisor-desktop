@@ -4,6 +4,7 @@ import { SchedulePanel } from './SchedulePanel'
 import { ActivityStream } from './ActivityStream'
 import { AIInsightStack } from '@/components/ui/AIInsightCard'
 import { useAIInsights } from '@/hooks/use-ai'
+import { useMetrics } from '@/hooks/use-metrics'
 import { now } from '@/lib/clock'
 
 function formatToday(): string {
@@ -21,13 +22,15 @@ function getGreeting(): string {
 
 export function DashboardPage() {
   const { data: insights } = useAIInsights('dashboard')
+  const { data: metrics } = useMetrics()
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-page-title">{getGreeting()}, Sarah</h1>
         <p className="mt-1 text-body text-text-secondary">
-          {formatToday()} — 4 meetings, 14 pending actions
+          {formatToday()}
+          {metrics ? ` — ${metrics.meetingsToday} meetings, ${metrics.pendingTasks} pending actions` : ''}
         </p>
       </div>
 

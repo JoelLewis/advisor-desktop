@@ -190,7 +190,9 @@ function formatUSD(value: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value)
 }
 
-const alerts: ComplianceAlert[] = [
+// D21 — exported so the dashboard metrics derivation (`pms.ts`) reads the same alerts the
+// compliance surfaces do, rather than a second hardcoded count.
+export const complianceAlerts: ComplianceAlert[] = [
   { id: 'comp-001', type: 'Large Wire', severity: 'critical', title: 'Large wire deposit — source-of-funds required', description: '$250,000 incoming wire to Richard Anderson (acc-022). BSA/AML documentation required before funds release.', entityType: 'account', entityId: 'acc-022', reviewStatus: 'pending', createdAt: '2026-02-24T15:10:00Z' },
   { id: 'comp-002', type: 'Concentration', severity: 'warning', title: 'Single-name concentration — AAPL in Johnson Trust', description: 'AAPL position at 7.6% of account value approaching 10% single-name guideline.', entityType: 'account', entityId: 'acc-001', reviewStatus: 'in_review', createdAt: '2026-02-23T08:00:00Z' },
   { id: 'comp-003', type: 'Suitability', severity: 'warning', title: 'Suitability review — Foster account opening', description: 'New individual brokerage for William Foster. Risk tolerance assessment and investment experience verification needed.', entityType: 'client', entityId: 'cli-017', reviewStatus: 'in_review', createdAt: '2026-02-22T14:00:00Z' },
@@ -217,14 +219,14 @@ export const complianceHandlers = [
     const url = new URL(request.url)
     const severity = url.searchParams.get('severity')
     const status = url.searchParams.get('status')
-    let filtered = [...alerts]
+    let filtered = [...complianceAlerts]
     if (severity) filtered = filtered.filter((a) => a.severity === severity)
     if (status) filtered = filtered.filter((a) => a.reviewStatus === status)
     return HttpResponse.json(filtered)
   }),
 
   http.get('/api/compliance/review-queue', () => {
-    return HttpResponse.json(alerts.filter((a) => a.reviewStatus === 'pending' || a.reviewStatus === 'in_review'))
+    return HttpResponse.json(complianceAlerts.filter((a) => a.reviewStatus === 'pending' || a.reviewStatus === 'in_review'))
   }),
 
   http.get('/api/compliance/alerts/:alertId/records', ({ params }) => {

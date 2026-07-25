@@ -149,7 +149,11 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
     category: 'nba',
     priority: 'high',
     title: 'Tax-Loss Harvest Opportunity',
-    body: '3 accounts have unrealized losses >$10K with no wash sale risk. Est. $18,400 tax savings.',
+    // PRE-FLIGHT correction 7 (fourth site) — the previous copy implied a flat 37% against a
+    // $49,730 loss base ($18,400). Tax savings depend on each lot's holding period (23.8%
+    // long-term / 37% short-term), so a single flat-rate dollar figure here would misstate the
+    // benefit for whichever mix these three accounts actually carry.
+    body: '3 accounts have unrealized losses >$10K with no wash sale risk. Tax savings depend on each lot\'s holding period.',
     timestamp: hoursAgo(1),
     read: false,
     dismissed: false,

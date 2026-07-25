@@ -2,6 +2,16 @@ import { http, HttpResponse, delay } from 'msw'
 import { nbas } from '../data/nbas'
 import type { BatchActionRequest, NBAActionTemplate, NBAEffectivenessMetrics, NBACategory } from '@/types/nba'
 import { notFound } from './utils'
+import { SHORT_TERM_RATE, LONG_TERM_RATE, formatRatePercent } from '@/features/portfolios/tax/shared'
+
+/**
+ * PRE-FLIGHT correction 7 — these templates previously said "at 37% bracket" / "at top marginal
+ * rate" for every tax-loss-harvesting NBA, regardless of whether the underlying lots are
+ * short-term (37%) or long-term (23.8%). The rate depends on holding period; a generic template
+ * cannot know a specific lot's period, so it discloses the range rather than asserting a single
+ * rate it cannot back up — the same posture `RATE_DISCLOSURE` takes on the tax page itself.
+ */
+const TAX_RATE_RANGE = `${formatRatePercent(SHORT_TERM_RATE)} short-term / ${formatRatePercent(LONG_TERM_RATE)} long-term`
 
 export const nbaHandlers = [
   // GET /api/nba/effectiveness — NBA system effectiveness metrics
@@ -173,7 +183,7 @@ export const nbaHandlers = [
       tax_management: () => ({
         talkingPoints: [
           `Tax-loss harvesting opportunity identified: ${nba.trigger.value}`,
-          impact ? `Estimated tax savings at 37% bracket: ${impact}` : 'Harvesting losses offsets realized gains from earlier in the year',
+          impact ? `Estimated tax savings at applicable rate (${TAX_RATE_RANGE}): ${impact}` : 'Harvesting losses offsets realized gains from earlier in the year',
           'Replacement securities maintain sector exposure while observing wash sale rules',
           'The 30-day wash sale window must be tracked across all accounts for the same tax ID',
           'Document the tax rationale for compliance records before executing',
@@ -182,7 +192,7 @@ export const nbaHandlers = [
           subject: `Tax Management Opportunity — ${firstClient}`,
           body: `Dear ${firstClient},\n\nOur monitoring systems have identified a tax management opportunity in your portfolio. ${nba.description}\n\nBy harvesting these losses now, we can offset realized gains and potentially reduce your tax liability for the year${impact ? ` by approximately ${impact}` : ''}.\n\nWe'll replace the sold positions with similar investments to maintain your portfolio's risk profile while observing wash sale rules.\n\nWould you like to discuss this strategy? I'm available for a brief call at your convenience.\n\nBest regards,\nYour Advisor`,
         },
-        analysisSummary: `Unrealized loss detected: ${nba.trigger.value}. Strategy: sell loss position, replace with correlated ETF to maintain sector exposure. Wash sale monitoring across all client accounts required. ${impact ? `Estimated tax benefit: ${impact} at top marginal rate.` : ''} Recommendation: execute before additional price recovery narrows the harvesting window.`,
+        analysisSummary: `Unrealized loss detected: ${nba.trigger.value}. Strategy: sell loss position, replace with correlated ETF to maintain sector exposure. Wash sale monitoring across all client accounts required. ${impact ? `Estimated tax benefit: ${impact} at applicable rate (${TAX_RATE_RANGE}).` : ''} Recommendation: execute before additional price recovery narrows the harvesting window.`,
         generatedAt: new Date().toISOString(),
       }),
       planning: () => ({

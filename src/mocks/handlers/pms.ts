@@ -16,12 +16,15 @@ import {
 } from '@/lib/risk-model'
 import { assetWeightedEffectiveFee, householdAnnualFee } from '@/lib/fees'
 import { computeWaterfallDomain, type WaterfallBar } from '@/lib/waterfall'
-import { MOCK_NOW_ISO, startOfToday } from '@/lib/clock'
+import { MOCK_NOW_ISO, MOCK_TODAY_ISO, startOfToday } from '@/lib/clock'
 import { FX_RATES_USD_BASE } from '../data/currencies'
 import { getPositionsForAccount } from '../data/positions'
 import { accounts } from '../data/accounts'
 import { households } from '../data/households'
 import { householdFees } from '../data/billing'
+import { nbas } from '../data/nbas'
+import { complianceAlerts } from './compliance'
+import { calendarEvents } from '../data/calendar'
 import { notFound, roundTo } from './utils'
 
 /** Convert an account's value from its base currency to USD using static FX rates */
@@ -30,15 +33,29 @@ function toUSD(value: number, baseCurrency?: CurrencyCode): number {
   return convertToBase(value, baseCurrency, FX_RATES_USD_BASE)
 }
 
-function computeMetrics(): MetricsSummary {
+/**
+ * D21 · advisor-dashboards — every count previously hardcoded here contradicted the module that
+ * owned it: `pendingTasks: 14` against 20 active NBAs, `alertCount: 3` against 5 open compliance
+ * alerts, `meetingsToday: 4` against whatever the calendar actually schedules for the frozen
+ * "today", and `netFlowsMTD: 1_250_000` against the AI insight's own "+$420K". One count per fact:
+ * this is now the single place that counts NBAs, alerts and meetings, and `ai.ts` reads the result
+ * rather than recounting.
+ */
+const NET_FLOWS_MTD = 1_250_000
+
+export function computeMetrics(): MetricsSummary {
   const totalAUM = deriveBookAUM(accounts, FX_RATES_USD_BASE)
+  const activeNBAs = nbas.filter((n) => !n.dismissed)
+  const openAlerts = complianceAlerts.filter((a) => !a.resolvedAt && a.reviewStatus !== 'approved')
   return {
     totalAUM: Math.round(totalAUM),
     totalClients: new Set(accounts.map((a) => a.clientId)).size,
-    pendingTasks: 14,
-    meetingsToday: 4,
-    alertCount: 3,
-    netFlowsMTD: 1_250_000,
+    pendingTasks: activeNBAs.length,
+    criticalCount: activeNBAs.filter((n) => n.priority === 'critical').length,
+    meetingsToday: calendarEvents.filter((e) => e.startTime.startsWith(MOCK_TODAY_ISO)).length,
+    alertCount: openAlerts.length,
+    netFlowsMTD: NET_FLOWS_MTD,
+    asOf: MOCK_NOW_ISO,
   }
 }
 

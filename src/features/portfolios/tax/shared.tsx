@@ -17,8 +17,12 @@ export const SHORT_TERM_RATE = 0.37 as const
 /** 20% long-term capital gains + 3.8% net investment income tax. */
 export const LONG_TERM_RATE = 0.238 as const
 
-/** 0.238 → "23.8%", 0.37 → "37%". Trims a bare ".0" so whole-percent rates read cleanly. */
-function formatRatePercent(rate: number): string {
+/**
+ * 0.238 → "23.8%", 0.37 → "37%". Trims a bare ".0" so whole-percent rates read cleanly.
+ * Exported so every surface quoting a rate (the tax page, the dashboard insight, NBA templates)
+ * formats it identically rather than re-deriving the same trim logic per call site.
+ */
+export function formatRatePercent(rate: number): string {
   return `${Number((rate * 100).toFixed(1))}%`
 }
 

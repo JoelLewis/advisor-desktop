@@ -7,8 +7,33 @@ import { nbas } from '../data/nbas'
 import { customPrompts } from './settings'
 import type { ChatMessage, ActionConfirmation, DocumentGeneration, ContextBriefingData, BriefingMetric, AIInsight, ActionTemplate, SuggestedPrompt } from '@/types/ai'
 import type { CustomPromptCategory } from '@/types/settings'
+import type { TaxLot } from '@/types/portfolio'
 import { formatAUM, computeTotalAUM } from './utils'
-import { now } from '@/lib/clock'
+import { now, MOCK_TODAY_ISO } from '@/lib/clock'
+import { computeMetrics } from './pms'
+import { generateTaxLots } from './custodian'
+import { openWashSaleWindows } from '../data/realised-sales'
+import { FX_RATES_USD_BASE } from '../data/currencies'
+import { estimatedTaxBenefit, isHarvestable } from '@/features/portfolios/tax/shared'
+
+/**
+ * D22 · tax-loss-harvesting — the book-wide harvestable lot set, walked once here so the dashboard
+ * insight's loss figure, its estimated benefit and its account count are three views of the same
+ * set rather than three independently hand-typed numbers (previously $47K / $17,400 / 6 accounts,
+ * none of which the tax page — which computes from the real lots — agreed with).
+ *
+ * Currency-aware via `isHarvestable` (PRE-FLIGHT correction 2): a bare `gainLoss < -1000` would
+ * compare native-currency losses against a USD threshold, misclassifying acc-041 (HKD) and acc-044
+ * (CHF) by more than an order of magnitude in either direction.
+ */
+function harvestableLotsAcrossBook(): (TaxLot & { accountId: string })[] {
+  return accounts.flatMap((account) => {
+    const currency = account.baseCurrency ?? 'USD'
+    return generateTaxLots(account.id, account.totalValue)
+      .filter((lot) => isHarvestable(lot.gainLoss, currency, FX_RATES_USD_BASE))
+      .map((lot) => ({ ...lot, accountId: account.id }))
+  })
+}
 
 function makeBriefing(
   title: string,
@@ -300,34 +325,53 @@ export const aiHandlers = [
     const insights: AIInsight[] = []
 
     if (screenType === 'dashboard') {
-      const activeNBAs = nbas.filter((n) => !n.dismissed)
-      const criticalCount = activeNBAs.filter((n) => n.priority === 'critical').length
-      const urgentCount = activeNBAs.filter((n) => n.scoring.urgency > 80).length
+      // D21 — the KPI strip and the insight body previously counted NBAs independently
+      // (`pendingTasks: 14` in `pms.ts` vs. this handler's own `activeNBAs.length`). Both now
+      // read `computeMetrics()`, so "pending actions" is one fact quoted in two places.
+      const metrics = computeMetrics()
 
       insights.push({
         id: 'dash-1',
         severity: 'info',
-        title: 'Portfolio Health Summary',
-        body: `Managing ${formatAUM(computeTotalAUM())} across ${accounts.length} accounts. ${activeNBAs.length} pending actions identified.`,
-        metric: { label: 'Net inflows this month', value: '+$420K' },
+        title: 'Portfolio health summary',
+        body: `Managing ${formatAUM(metrics.totalAUM)} across ${accounts.length} accounts. ${metrics.pendingTasks} pending actions identified.`,
+        metric: {
+          label: 'Net inflows this month',
+          value: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(metrics.netFlowsMTD),
+        },
       })
-      if (criticalCount > 0) {
+      if (metrics.criticalCount > 0) {
         insights.push({
           id: 'dash-2',
           severity: 'warning',
-          title: `${criticalCount} Critical Action${criticalCount > 1 ? 's' : ''} Require Attention`,
-          body: `${urgentCount} time-sensitive items detected across your book. Compliance review and RMD deadlines approaching.`,
-          actionLabel: 'View Critical Actions',
+          title: `${metrics.criticalCount} critical action${metrics.criticalCount > 1 ? 's' : ''} outstanding`,
+          // D21 — the headline previously said "2 Critical Actions" while the body said "3
+          // time-sensitive items", counting urgency-scored NBAs instead of critical-priority ones.
+          // One count, one fact: both read `metrics.criticalCount`.
+          body: `${metrics.criticalCount} item${metrics.criticalCount > 1 ? 's' : ''} carrying a deadline across your book. Compliance review and RMD deadlines are the earliest.`,
+          actionLabel: 'View critical actions',
           actionAI: 'Show me all critical priority NBAs that need attention today',
         })
       }
+
+      // D22 — one harvestable-loss figure, walked once by `harvestableLotsAcrossBook`, with the
+      // benefit computed lot-by-lot at the rate its own holding period earns (PRE-FLIGHT
+      // correction 7) rather than a flat 37% that disagreed with the tax page this insight links
+      // to — acc-001's five harvestable lots are all long-term, so that page computes 23.8% on
+      // exactly those losses.
+      const harvestable = harvestableLotsAcrossBook()
+      const harvestableLoss = harvestable.reduce((s, l) => s + Math.abs(l.gainLoss), 0)
+      const harvestableBenefit = harvestable.reduce((s, l) => s + estimatedTaxBenefit(l), 0)
       insights.push({
         id: 'dash-3',
         severity: 'opportunity',
-        title: 'Tax-Loss Harvesting Window',
-        body: 'Market pullback in international equities creates $47K in harvestable losses across 6 client accounts.',
-        metric: { label: 'Estimated tax savings', value: '$17,400' },
-        actionLabel: 'Review Opportunities',
+        title: 'Tax-loss harvesting window',
+        body: `${formatAUM(harvestableLoss)} in harvestable losses across ${new Set(harvestable.map((l) => l.accountId)).size} client accounts, with ${openWashSaleWindows(MOCK_TODAY_ISO).length} open wash sale windows.`,
+        metric: {
+          label: 'Estimated tax benefit',
+          value: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(harvestableBenefit),
+        },
+        actionLabel: 'Review opportunities',
         actionRoute: '/portfolios/accounts/acc-001/tax',
       })
     }
@@ -433,22 +477,24 @@ export const aiHandlers = [
     }
 
     if (screenType === 'actions') {
+      // D21 — this screen used to recount active/critical NBAs itself rather than reading
+      // `computeMetrics()`, the single place `pendingTasks`/`criticalCount` are derived.
+      const metrics = computeMetrics()
       const activeNBAs = nbas.filter((n) => !n.dismissed)
-      const criticalCount = activeNBAs.filter((n) => n.priority === 'critical').length
       insights.push({
         id: 'act-1',
         severity: 'info',
-        title: 'Action Queue Summary',
-        body: `${activeNBAs.length} pending actions across ${new Set(activeNBAs.map((n) => n.category)).size} categories. ${criticalCount} marked critical.`,
+        title: 'Action queue summary',
+        body: `${metrics.pendingTasks} pending actions across ${new Set(activeNBAs.map((n) => n.category)).size} categories. ${metrics.criticalCount} marked critical.`,
         metric: { label: 'Batch opportunities', value: '3 groups' },
       })
-      if (criticalCount > 0) {
+      if (metrics.criticalCount > 0) {
         insights.push({
           id: 'act-2',
           severity: 'warning',
-          title: 'Compliance Actions Approaching Deadline',
+          title: 'Compliance actions approaching deadline',
           body: 'Several compliance-related actions have hard regulatory deadlines. Prioritize these to avoid escalation.',
-          actionLabel: 'Filter Critical',
+          actionLabel: 'Filter critical',
           actionAI: 'Show me all critical priority actions with upcoming deadlines',
         })
       }

@@ -112,9 +112,11 @@ export type MetricsSummary = {
   totalAUM: number
   totalClients: number
   pendingTasks: number
+  criticalCount: number
   meetingsToday: number
   alertCount: number
   netFlowsMTD: number
+  asOf: string
 }
 
 export function getMetricsSummary() {
