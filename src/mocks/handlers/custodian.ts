@@ -6,37 +6,74 @@ import { getPositionsForAccount } from '../data/positions'
 import { notFound } from './utils'
 import { startOfToday } from '@/lib/clock'
 
+/**
+ * C12 · tax-loss-harvesting / data-quality — lots must partition their position, and transactions
+ * (D33) must be deterministic and priced from the position they reference. The previous generators
+ * called `Math.random()` directly: lot cost basis was unrelated to the position's own `costBasis`
+ * and `gainLoss` so lots never summed to the position, transaction prices were drawn from a fresh
+ * random range unrelated to any real holding, and both modules changed on every page load.
+ */
+function seeded(str: string): () => number {
+  let h = 2166136261
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  let state = Math.abs(h) || 1
+  return () => {
+    state = (state * 1664525 + 1013904223) | 0
+    return (state >>> 0) / 0x1_0000_0000
+  }
+}
+
+/** Split 1.0 into `n` deterministic fractions that sum to exactly 1. */
+function fractions(rand: () => number, n: number): number[] {
+  const raw = Array.from({ length: n }, () => 0.5 + rand())
+  const total = raw.reduce((s, v) => s + v, 0)
+  const parts = raw.map((v) => v / total)
+  // Absorb floating-point residual into the last part so the sum is exact.
+  const residual = 1 - parts.reduce((s, v) => s + v, 0)
+  parts[parts.length - 1]! += residual
+  return parts
+}
+
+function quarterLabel(date: Date): string {
+  const quarter = Math.floor(date.getMonth() / 3) + 1
+  return `Q${quarter} ${date.getFullYear()}`
+}
+
 function generateTransactions(accountId: string, totalValue: number): Transaction[] {
   const baseDate = startOfToday()
+  const rand = seeded(`txn:${accountId}`)
+  const held = getPositionsForAccount(accountId, totalValue).filter((p) => p.symbol !== 'CASH')
   const txns: Transaction[] = []
-  const symbols = ['VTI', 'AGG', 'EFA', 'QQQ', 'BND', 'GLD']
 
   // Generate ~20 transactions over the past 60 days
   for (let i = 0; i < 20; i++) {
-    const daysAgo = Math.floor(Math.random() * 60)
+    const daysAgo = Math.floor(rand() * 60)
     const date = new Date(baseDate)
     date.setDate(date.getDate() - daysAgo)
     const dateStr = date.toISOString()
 
-    const typeRoll = Math.random()
+    const typeRoll = rand()
     if (typeRoll < 0.4) {
       // Buy/sell
-      const side = Math.random() > 0.5 ? 'buy' : 'sell'
-      const symbol = symbols[Math.floor(Math.random() * symbols.length)]
-      const qty = Math.floor(Math.random() * 200) + 10
-      const price = Math.round((Math.random() * 400 + 50) * 100) / 100
+      const side = rand() > 0.5 ? 'buy' : 'sell'
+      const pos = held[Math.floor(rand() * held.length)]!
+      const qty = Math.floor(rand() * 200) + 10
+      const price = pos.price
       txns.push({
         id: `txn-${accountId}-${i}`, accountId, date: dateStr,
-        type: side, symbol, description: `${side === 'buy' ? 'Bought' : 'Sold'} ${qty} shares ${symbol}`,
+        type: side, symbol: pos.symbol, description: `${side === 'buy' ? 'Bought' : 'Sold'} ${qty} shares ${pos.symbol}`,
         amount: side === 'buy' ? -(qty * price) : qty * price, quantity: qty, price,
       })
     } else if (typeRoll < 0.6) {
       // Dividend
-      const symbol = symbols[Math.floor(Math.random() * 3)]
-      const amount = Math.round(totalValue * 0.001 * Math.random() * 100) / 100
+      const pos = held[Math.floor(rand() * held.length)]!
+      const amount = Math.round(totalValue * 0.001 * rand() * 100) / 100
       txns.push({
         id: `txn-${accountId}-${i}`, accountId, date: dateStr,
-        type: 'dividend', symbol, description: `Dividend — ${symbol}`, amount,
+        type: 'dividend', symbol: pos.symbol, description: `Dividend — ${pos.symbol}`, amount,
       })
     } else if (typeRoll < 0.75) {
       // Interest
@@ -50,12 +87,12 @@ function generateTransactions(accountId: string, totalValue: number): Transactio
       const amount = Math.round(totalValue * 0.00025 * 100) / 100
       txns.push({
         id: `txn-${accountId}-${i}`, accountId, date: dateStr,
-        type: 'fee', description: 'Advisory fee — Q4 2025', amount: -amount,
+        type: 'fee', description: `Advisory fee — ${quarterLabel(date)}`, amount: -amount,
       })
     } else {
       // Transfer
-      const amount = Math.round((Math.random() * 50000 + 5000) * 100) / 100
-      const direction = Math.random() > 0.5 ? 'transfer_in' : 'transfer_out'
+      const amount = Math.round((rand() * 50000 + 5000) * 100) / 100
+      const direction = rand() > 0.5 ? 'transfer_in' : 'transfer_out'
       txns.push({
         id: `txn-${accountId}-${i}`, accountId, date: dateStr,
         type: direction, description: direction === 'transfer_in' ? 'Wire deposit' : 'Wire withdrawal',
@@ -69,35 +106,55 @@ function generateTransactions(accountId: string, totalValue: number): Transactio
 
 function generateTaxLots(accountId: string, totalValue: number): TaxLot[] {
   const positions = getPositionsForAccount(accountId, totalValue)
+  const anchor = startOfToday()
   const lots: TaxLot[] = []
 
   for (const pos of positions) {
     if (pos.symbol === 'CASH') continue
-    // Split each position into 1-3 tax lots
-    const lotCount = Math.min(3, Math.max(1, Math.floor(Math.random() * 3) + 1))
-    const lotValue = pos.marketValue / lotCount
+    const rand = seeded(`${accountId}:${pos.id}`)
+    const lotCount = 1 + Math.floor(rand() * 3) // 1–3
+    const shares = fractions(rand, lotCount)
 
+    // Older lots first, so FIFO and LIFO orderings are meaningful.
+    const ages = Array.from({ length: lotCount }, () => 3 + Math.floor(rand() * 45))
+      .sort((a, b) => b - a)
+
+    let allocatedQty = 0
+    let allocatedBasis = 0
+    let allocatedValue = 0
     for (let i = 0; i < lotCount; i++) {
-      const monthsAgo = Math.floor(Math.random() * 48) + 3
-      const purchaseDate = startOfToday()
-      purchaseDate.setMonth(purchaseDate.getMonth() - monthsAgo)
-      const isLongTerm = monthsAgo > 12
-      const costMultiplier = 0.7 + Math.random() * 0.5 // 70-120% of current value
+      const isLast = i === lotCount - 1
+      const share = shares[i]!
+      const purchaseDate = new Date(anchor)
+      purchaseDate.setMonth(purchaseDate.getMonth() - ages[i]!)
+
+      const quantity = isLast ? pos.quantity - allocatedQty
+        : Math.round(pos.quantity * share * 1e6) / 1e6
+      const costBasis = isLast ? pos.costBasis - allocatedBasis
+        : Math.round(pos.costBasis * share)
+      const currentValue = isLast ? pos.marketValue - allocatedValue
+        : Math.round(pos.marketValue * share)
+
+      allocatedQty += quantity
+      allocatedBasis += costBasis
+      allocatedValue += currentValue
 
       lots.push({
         id: `lot-${pos.id}-${i}`,
         positionId: pos.id,
         purchaseDate: purchaseDate.toISOString().slice(0, 10),
-        quantity: Math.round(pos.quantity / lotCount),
-        costBasis: Math.round(lotValue * costMultiplier),
-        currentValue: Math.round(lotValue),
-        gainLoss: Math.round(lotValue * (1 - costMultiplier)),
-        holdingPeriod: isLongTerm ? 'long' : 'short',
+        quantity,
+        costBasis,
+        currentValue,
+        gainLoss: currentValue - costBasis,
+        // IRC §1222 requires *more than* one year for long-term treatment, so a lot exactly
+        // 12 months old is short-term.
+        holdingPeriod: ages[i]! > 12 ? 'long' : 'short',
+        // Set in Task 14 from the household's realised loss sales.
         washSaleRestricted: false,
       })
     }
   }
-
   return lots
 }
 
