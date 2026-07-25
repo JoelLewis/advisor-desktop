@@ -92,18 +92,19 @@ export function makePositionColumns(onTrade?: (symbol: string, side: 'buy' | 'se
 
 export const benchmarkColumns: ColumnDef<BenchmarkComparison, unknown>[] = [
   { accessorKey: 'period', header: 'Period', cell: ({ row }) => <span className="font-mono uppercase">{row.original.period}</span>, size: 80 },
-  { accessorKey: 'portfolioReturn', header: 'Portfolio (TWR)', cell: ({ row }) => <span className="font-mono">{formatPercent(row.original.portfolioReturn * 100)}</span>, size: 100 },
-  { accessorKey: 'benchmarkReturn', header: 'Benchmark', cell: ({ row }) => <span className="font-mono">{formatPercent(row.original.benchmarkReturn * 100)}</span>, size: 100 },
+  { accessorKey: 'portfolioReturn', header: 'Portfolio (TWR, cumulative)', cell: ({ row }) => <span className="font-mono">{formatPercent(row.original.portfolioReturn * 100)}</span>, size: 100 },
+  { accessorKey: 'benchmarkReturn', header: 'Benchmark (cumulative)', cell: ({ row }) => <span className="font-mono">{formatPercent(row.original.benchmarkReturn * 100)}</span>, size: 100 },
   {
-    accessorKey: 'alpha', header: 'Alpha',
+    // C6 · performance-reporting — portfolio minus benchmark is active return. It was labelled
+    // "Alpha", which names a different statistic (excess return adjusted for market risk).
+    accessorKey: 'activeReturn', header: 'Active return',
     cell: ({ row }) => (
-      <span className={cn('font-mono', row.original.alpha >= 0 ? 'text-accent-green' : 'text-accent-red')}>
-        {formatPercent(row.original.alpha * 100)}
+      <span className={cn('font-mono', row.original.activeReturn >= 0 ? 'text-accent-green' : 'text-accent-red')}>
+        {formatPercent(row.original.activeReturn * 100)}
       </span>
     ),
-    size: 80,
+    size: 100,
   },
-  { accessorKey: 'trackingError', header: 'TE', cell: ({ row }) => <span className="font-mono text-text-secondary">{(row.original.trackingError * 100).toFixed(2)}%</span>, size: 80 },
 ]
 
 export const orderColumns: ColumnDef<Order, unknown>[] = [

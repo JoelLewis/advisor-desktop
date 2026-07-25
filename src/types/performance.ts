@@ -13,10 +13,12 @@ type BenchmarkComparison = {
   period: ReturnPeriod;
   portfolioReturn: Percentage;
   benchmarkReturn: Percentage;
-  /** Excess return over benchmark (portfolio - benchmark) */
-  alpha: Percentage;
-  /** Standard deviation of excess returns vs. benchmark */
-  trackingError: Percentage;
+  /**
+   * C6 · performance-reporting — plain active (excess) return, portfolio − benchmark. This was
+   * named `alpha`, which means the risk-adjusted excess return over CAPM, not this figure.
+   * Tracking error is one annualised statistic and now lives on `RiskMetrics`, not per period.
+   */
+  activeReturn: Percentage;
 };
 
 type AttributionResult = {

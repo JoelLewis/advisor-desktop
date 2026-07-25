@@ -12,7 +12,7 @@ import { RiskMetricCard, StressScenarioRow } from './account-detail/shared'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useRiskMetrics, useSensitivity, useStressScenarios } from '@/hooks/use-portfolio'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
-import { formatPercent, cn } from '@/lib/utils'
+import { formatDate, formatPercent, cn } from '@/lib/utils'
 
 type SensitivityTab = 'interestRate' | 'equity' | 'credit'
 
@@ -110,7 +110,9 @@ export function RiskAnalyticsPage() {
         >
           {accounts.map((acc) => (
             <option key={acc.id} value={acc.id}>
-              {acc.name} ({formatWithConversion(acc.totalValue, 'USD', { compact: true })})
+              {/* C36 · currencies-and-fx — convert from the account's own base currency, so the
+                  HKD account no longer reads as if its local-currency value were dollars. */}
+              {acc.name} ({formatWithConversion(acc.totalValue, acc.baseCurrency ?? 'USD', { compact: true })})
             </option>
           ))}
         </select>
@@ -124,13 +126,27 @@ export function RiskAnalyticsPage() {
           ))}
         </div>
       ) : risk ? (
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-          <RiskMetricCard label="Beta" value={risk.beta.toFixed(2)} />
-          <RiskMetricCard label="Sharpe Ratio" value={risk.sharpe.toFixed(2)} />
-          <RiskMetricCard label="Sortino Ratio" value={risk.sortino.toFixed(2)} />
-          <RiskMetricCard label="Max Drawdown" value={`${(risk.maxDrawdown * 100).toFixed(1)}%`} negative />
-          <RiskMetricCard label="Std Deviation" value={`${(risk.standardDeviation * 100).toFixed(1)}%`} />
-          <RiskMetricCard label="VaR (95%)" value={formatWithConversion(risk.var95, 'USD', { compact: true })} negative />
+        <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+            <RiskMetricCard label={`Beta vs ${risk.benchmark}`} value={risk.beta.toFixed(2)} />
+            <RiskMetricCard label="Sharpe ratio" value={risk.sharpe.toFixed(2)} />
+            <RiskMetricCard label="Sortino ratio" value={risk.sortino.toFixed(2)} />
+            <RiskMetricCard label="Max drawdown (modelled, 3y)" value={`${(risk.maxDrawdown * 100).toFixed(1)}%`} negative />
+            <RiskMetricCard label="Standard deviation (annualised)" value={`${(risk.standardDeviation * 100).toFixed(1)}%`} />
+            <RiskMetricCard
+              label={`VaR (${(risk.var95Confidence * 100).toFixed(0)}%), ${risk.var95Horizon}, ${risk.var95Method}`}
+              value={formatWithConversion(risk.var95, 'USD', { compact: true })}
+              negative
+            />
+          </div>
+          <p className="text-caption text-text-tertiary">
+            Value at risk is an estimate: {(risk.var95Confidence * 100).toFixed(0)}% confidence,
+            {' '}{risk.var95Horizon} horizon, {risk.var95Method} method
+            {' '}({(risk.var95Percent * 100).toFixed(2)}% of account value). Sharpe uses a
+            {' '}{(risk.riskFreeRate * 100).toFixed(1)}% risk-free rate. Tracking error against
+            {' '}{risk.benchmark} is {(risk.trackingError * 100).toFixed(2)}%. As of{' '}
+            {formatDate(risk.asOf)}. Hypothetical — not a prediction.
+          </p>
         </div>
       ) : null}
 
@@ -204,14 +220,16 @@ export function RiskAnalyticsPage() {
           action={
             monteCarlo ? (
               <Badge variant="blue">
-                {monteCarlo.simulations.toLocaleString()} sims / {monteCarlo.horizon}
+                {monteCarlo.method}, {monteCarlo.horizon} horizon
               </Badge>
             ) : null
           }
         >
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-text-secondary" />
-            Monte Carlo Simulation
+            {/* C7 · forward-risk — this is a closed-form curve, so it is not described as a
+                simulation and no longer claims a simulation count that never ran. */}
+            Modelled return distribution
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -287,6 +305,14 @@ export function RiskAnalyticsPage() {
                   </div>
                 </div>
               )}
+
+              <p className="text-caption text-text-tertiary">
+                Modelled from this account's own assumptions: {(monteCarlo.expectedReturn * 100).toFixed(2)}%
+                {' '}expected annual return, {(monteCarlo.volatility * 100).toFixed(2)}% annualised volatility,
+                {' '}applied to {formatWithConversion(monteCarlo.baseValue, 'USD', { compact: true })} over
+                {' '}{monteCarlo.horizon}. The percentile table and the chart come from the same
+                {' '}{monteCarlo.method} distribution. Hypothetical — not a prediction.
+              </p>
             </>
           ) : (
             <div className="py-12 text-center text-text-tertiary">No Monte Carlo data available</div>

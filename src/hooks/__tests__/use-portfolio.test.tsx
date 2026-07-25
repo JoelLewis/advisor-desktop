@@ -158,10 +158,10 @@ describe('useRiskMetrics', () => {
 })
 
 describe('useSensitivity', () => {
-  it('fetches sensitivity analysis with Monte Carlo', async () => {
+  it('fetches sensitivity analysis with a modelled return distribution', async () => {
     const { result } = renderHook(() => useSensitivity('acc-001'), { wrapper: createWrapper() })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(result.current.data!.interestRate.length).toBeGreaterThan(0)
-    expect(result.current.data!.monteCarlo.simulations).toBe(10000)
+    expect(result.current.data!.monteCarlo.method).toBe('closed-form lognormal')
   })
 })

@@ -5,7 +5,12 @@ import type { RiskMetrics, FactorExposure, StressScenario } from '@/types/risk'
 import type { BenchmarkComparison, PerformanceSeries, AttributionResult } from '@/types/performance'
 import type { CurrencyCode } from '@/types/currency'
 import { convertToBase } from '@/lib/currency'
-import { deriveBookAUM, deriveHouseholdAUM, deriveSegmentAUM, herfindahlIndex, effectiveN } from '@/lib/aum'
+import { accountValueUSD, deriveBookAUM, deriveHouseholdAUM, deriveSegmentAUM, herfindahlIndex, effectiveN } from '@/lib/aum'
+import {
+  RISK_FREE_RATE, assetClassWeights, portfolioBeta, portfolioVolatility,
+  portfolioReturn1Y, trackingError, parametricVaR, sharpe, sortino, downsideDeviation,
+  modelledMaxDrawdown,
+} from '@/lib/risk-model'
 import { assetWeightedEffectiveFee, householdAnnualFee } from '@/lib/fees'
 import { computeWaterfallDomain, type WaterfallBar } from '@/lib/waterfall'
 import { MOCK_NOW_ISO, startOfToday } from '@/lib/clock'
@@ -51,17 +56,35 @@ function createSeededRandom(seed: number) {
   }
 }
 
-function generatePerformanceSeries(months: number, accountId = 'default'): PerformanceSeries[] {
+/** Box–Muller from a seeded uniform stream, so the series is deterministic per account. */
+function seededNormal(rand: () => number): number {
+  const u1 = Math.max(rand(), 1e-9)
+  const u2 = rand()
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2)
+}
+
+/**
+ * C34 · performance-reporting — the monthly series is drawn from the account's own μ and σ. The
+ * previous uniform [−2%, +4%] draw was identical for every account and could not produce the
+ * drawdown the risk tab reported alongside it.
+ *
+ * The series is trailing: it ends at the frozen clock and never runs into the future.
+ */
+function generatePerformanceSeries(
+  months: number, accountId: string, annualReturn: number, annualVol: number,
+): PerformanceSeries[] {
   const rand = createSeededRandom(hashSeed(accountId))
   const series: PerformanceSeries[] = []
+  const muM = annualReturn / 12
+  const sigmaM = annualVol / Math.sqrt(12)
   let portfolioValue = 100
   let benchmarkValue = 100
   const anchor = startOfToday()
   for (let i = months; i >= 0; i--) {
     const date = new Date(anchor)
-    date.setMonth(date.getMonth() - i)
-    portfolioValue *= 1 + (rand() * 0.06 - 0.02)
-    benchmarkValue *= 1 + (rand() * 0.055 - 0.02)
+    date.setUTCMonth(date.getUTCMonth() - i)
+    portfolioValue *= 1 + muM + sigmaM * seededNormal(rand)
+    benchmarkValue *= 1 + muM * 0.92 + sigmaM * 0.95 * seededNormal(rand)
     series.push({
       date: date.toISOString().slice(0, 10),
       value: roundTo(portfolioValue, 2),
@@ -141,8 +164,55 @@ function findAccount(accountId: string | readonly string[] | undefined): typeof 
   return accounts.find((a) => a.id === accountId)
 }
 
-function getAccountValueById(accountId: string | readonly string[] | undefined): number {
-  return findAccount(accountId)?.totalValue ?? 1_000_000
+/** C36 · currencies-and-fx — risk and sensitivity read a USD value, not the raw local-currency one. */
+function accountUSD(account: typeof accounts[0]): number {
+  return accountValueUSD(account, FX_RATES_USD_BASE)
+}
+
+/**
+ * The one place per-account risk is derived, so the risk tab, the benchmark table, the
+ * performance chart and the Monte Carlo curve all quote the same μ, σ and β.
+ *
+ * Rounding happens here, not in `@/lib/risk-model` — per the `aum.ts` convention the pure module
+ * stays at full precision and its callers round. σ is rounded to 4dp *before* it reaches
+ * `parametricVaR`; feeding the raw value instead shifts VaR by tens of dollars on a large account.
+ */
+function riskProfileFor(account: typeof accounts[0]) {
+  const positions = getPositionsForAccount(account.id, account.totalValue)
+  const weights = assetClassWeights(positions)
+  const model = MODELS.find((m) => m.id === account.modelId) ?? getModelByIndex(0)
+  const benchWeights = new Map(model.assetClasses.map((a) => [a.assetClass, a.targetWeight]))
+  return {
+    weights,
+    benchWeights,
+    benchmarkName: model.benchmark,
+    value: accountUSD(account),
+    beta: roundTo(portfolioBeta(weights), 2),
+    vol: roundTo(portfolioVolatility(weights), 4),
+    ret: roundTo(portfolioReturn1Y(weights), 4),
+    benchReturn: roundTo(portfolioReturn1Y(benchWeights), 4),
+    te: roundTo(trackingError(weights, benchWeights), 4),
+  }
+}
+
+/**
+ * Period lengths in years. The sub-annual ones are measured from the frozen clock rather than
+ * hard-coded, so QTD and YTD agree in Q1 instead of the quarter reading longer than the year.
+ */
+function periodYears(): Record<string, number> {
+  const anchor = startOfToday()
+  const y = anchor.getUTCFullYear()
+  const m = anchor.getUTCMonth()
+  const yearsSince = (start: Date) => (anchor.getTime() - start.getTime()) / 86_400_000 / 365
+  return {
+    mtd: yearsSince(new Date(Date.UTC(y, m, 1))),
+    qtd: yearsSince(new Date(Date.UTC(y, Math.floor(m / 3) * 3, 1))),
+    ytd: yearsSince(new Date(Date.UTC(y, 0, 1))),
+    '1y': 1,
+    '3y': 3,
+    '5y': 5,
+    inception: 7.2,
+  }
 }
 
 function computeDriftForAccount(account: typeof accounts[0]): DriftStatus {
@@ -176,20 +246,69 @@ function computeDriftForAccount(account: typeof accounts[0]): DriftStatus {
 }
 
 
-function buildStressPositionImpact(
-  symbol: string, name: string, positionId: string,
-  value: number, weight: number, impactPct: number,
-) {
-  const currentValue = value * weight
-  return {
-    positionId,
-    symbol,
-    name,
-    currentValue,
-    projectedValue: currentValue * (1 + impactPct),
-    impact: currentValue * impactPct,
-    impactPercent: impactPct,
+/**
+ * C8 · historical-risk — the Bloomberg Aggregate was flat-to-positive Sep-08 → Mar-09; the
+ * flight-to-quality Treasury rally is the single most famous fixed-income fact about 2008.
+ * C9 · historical-risk — impacts are computed from the account's own holdings, so the position
+ * rows reconcile to the headline by construction.
+ */
+type StressFactorSet = {
+  id: string
+  name: string
+  description: string
+  factors: Record<string, number>
+}
+
+const STRESS_FACTORS: StressFactorSet[] = [
+  {
+    id: 'stress-001', name: '2008 financial crisis',
+    description: 'Replay of September 2008 – March 2009 factor returns',
+    factors: {
+      us_equity: -0.45, intl_equity: -0.50, emerging_markets: -0.55, fixed_income: 0.03,
+      alternatives: -0.20, real_estate: -0.42, commodities: -0.30, cash: 0.00,
+      digital_assets: -0.60, private_equity: -0.35,
+    },
+  },
+  {
+    id: 'stress-002', name: 'Rising rate shock (+300bp)',
+    description: 'Parallel 300 basis-point increase in the yield curve',
+    factors: {
+      us_equity: -0.10, intl_equity: -0.09, emerging_markets: -0.12, fixed_income: -0.18,
+      alternatives: -0.04, real_estate: -0.22, commodities: -0.03, cash: 0.01,
+      digital_assets: -0.15, private_equity: -0.14,
+    },
+  },
+  {
+    id: 'stress-003', name: 'Pandemic selloff (March 2020)',
+    description: 'Replay of February – March 2020 factor returns',
+    factors: {
+      us_equity: -0.34, intl_equity: -0.33, emerging_markets: -0.31, fixed_income: -0.03,
+      alternatives: -0.12, real_estate: -0.40, commodities: -0.25, cash: 0.00,
+      digital_assets: -0.50, private_equity: -0.28,
+    },
+  },
+]
+
+/**
+ * Acklam's inverse normal CDF, accurate to ~1e-9 over (0,1). Used to place percentiles on the
+ * same curve the histogram draws, rather than from a second, unrelated table of multipliers.
+ */
+function inverseNormalCDF(q: number): number {
+  const a = [-3.969683028665376e1, 2.209460984245205e2, -2.759285104469687e2, 1.383577518672690e2, -3.066479806614716e1, 2.506628277459239]
+  const b = [-5.447609879822406e1, 1.615858368580409e2, -1.556989798598866e2, 6.680131188771972e1, -1.328068155288572e1]
+  const c = [-7.784894002430293e-3, -3.223964580411365e-1, -2.400758277161838, -2.549732539343734, 4.374664141464968, 2.938163982698783]
+  const d = [7.784695709041462e-3, 3.224671290700398e-1, 2.445134137142996, 3.754408661907416]
+  const pLow = 0.02425
+  if (q < pLow) {
+    const u = Math.sqrt(-2 * Math.log(q))
+    return (((((c[0]! * u + c[1]!) * u + c[2]!) * u + c[3]!) * u + c[4]!) * u + c[5]!) /
+      ((((d[0]! * u + d[1]!) * u + d[2]!) * u + d[3]!) * u + 1)
   }
+  if (q > 1 - pLow) return -inverseNormalCDF(1 - q)
+  const u = q - 0.5
+  const r = u * u
+  return (((((a[0]! * r + a[1]!) * r + a[2]!) * r + a[3]!) * r + a[4]!) * r + a[5]!) * u /
+    (((((b[0]! * r + b[1]!) * r + b[2]!) * r + b[3]!) * r + b[4]!) * r + 1)
 }
 
 export const pmsHandlers = [
@@ -246,20 +365,32 @@ export const pmsHandlers = [
   }),
 
   http.get('/api/pms/accounts/:accountId/performance', ({ params }) => {
-    const accountId = Array.isArray(params.accountId) ? params.accountId[0] : params.accountId
-    return HttpResponse.json(generatePerformanceSeries(24, accountId ?? 'default'))
+    const account = findAccount(params.accountId)
+    if (!account) return notFound()
+    const p = riskProfileFor(account)
+    return HttpResponse.json(generatePerformanceSeries(24, account.id, p.ret, p.vol))
   }),
 
-  http.get('/api/pms/accounts/:accountId/benchmark', () => {
-    const comparisons: BenchmarkComparison[] = [
-      { period: 'mtd', portfolioReturn: 0.018, benchmarkReturn: 0.015, alpha: 0.003, trackingError: 0.005 },
-      { period: 'qtd', portfolioReturn: 0.042, benchmarkReturn: 0.038, alpha: 0.004, trackingError: 0.008 },
-      { period: 'ytd', portfolioReturn: 0.065, benchmarkReturn: 0.058, alpha: 0.007, trackingError: 0.012 },
-      { period: '1y', portfolioReturn: 0.124, benchmarkReturn: 0.115, alpha: 0.009, trackingError: 0.015 },
-      { period: '3y', portfolioReturn: 0.087, benchmarkReturn: 0.079, alpha: 0.008, trackingError: 0.018 },
-      { period: '5y', portfolioReturn: 0.098, benchmarkReturn: 0.092, alpha: 0.006, trackingError: 0.020 },
-      { period: 'inception', portfolioReturn: 0.105, benchmarkReturn: 0.095, alpha: 0.010, trackingError: 0.022 },
-    ]
+  http.get('/api/pms/accounts/:accountId/benchmark', ({ params }) => {
+    const account = findAccount(params.accountId)
+    if (!account) return notFound()
+    const p = riskProfileFor(account)
+
+    // Period scaling of an annual figure. Every row is the compounded fraction of the one-year
+    // return, so returns are cumulative over the period rather than annualised.
+    const compound = (annual: number, years: number) => roundTo((1 + annual) ** years - 1, 4)
+
+    const comparisons: BenchmarkComparison[] = Object.entries(periodYears()).map(([period, years]) => {
+      const portfolioReturn = compound(p.ret, years)
+      const benchmarkReturn = compound(p.benchReturn, years)
+      return {
+        period: period as BenchmarkComparison['period'],
+        portfolioReturn,
+        benchmarkReturn,
+        // C6 · performance-reporting — this is active (excess) return, not Jensen's alpha.
+        activeReturn: roundTo(portfolioReturn - benchmarkReturn, 4),
+      }
+    })
     return HttpResponse.json(comparisons)
   }),
 
@@ -290,14 +421,31 @@ export const pmsHandlers = [
     })))
   }),
 
-  http.get('/api/pms/accounts/:accountId/risk', () => {
+  http.get('/api/pms/accounts/:accountId/risk', ({ params }) => {
+    const account = findAccount(params.accountId)
+    if (!account) return notFound()
+    const p = riskProfileFor(account)
+    const dd = roundTo(downsideDeviation(p.vol), 4)
+    // C5 · forward-risk — p.vol is already rounded to 4dp by riskProfileFor, which is required
+    // before parametricVaR; the raw σ moves VaR by tens of dollars on a large account.
+    const var95 = Math.round(parametricVaR(p.value, p.vol))
+
     const metrics: RiskMetrics = {
-      beta: 0.92,
-      sharpe: 1.34,
-      sortino: 1.78,
-      maxDrawdown: -0.142,
-      standardDeviation: 0.118,
-      var95: 485_000,
+      beta: p.beta,
+      sharpe: roundTo(sharpe(p.ret, p.vol), 2),
+      sortino: roundTo(sortino(p.ret, dd), 2),
+      maxDrawdown: roundTo(modelledMaxDrawdown(p.vol), 3),
+      standardDeviation: p.vol,
+      downsideDeviation: dd,
+      riskFreeRate: RISK_FREE_RATE,
+      var95,
+      var95Percent: roundTo(var95 / p.value, 4),
+      var95Horizon: '1 month',
+      var95Confidence: 0.95,
+      var95Method: 'parametric',
+      benchmark: p.benchmarkName,
+      trackingError: p.te,
+      asOf: MOCK_NOW_ISO,
     }
     return HttpResponse.json(metrics)
   }),
@@ -316,48 +464,47 @@ export const pmsHandlers = [
   }),
 
   http.get('/api/pms/accounts/:accountId/stress', ({ params }) => {
-    const value = getAccountValueById(params.accountId)
+    const account = findAccount(params.accountId)
+    if (!account) return notFound()
+    const positions = getPositionsForAccount(account.id, account.totalValue)
 
-    const scenarios: StressScenario[] = [
-      {
-        id: 'stress-001',
-        name: '2008 Financial Crisis',
-        description: 'Replay of Sept 2008 - Mar 2009 market conditions',
-        portfolioImpact: -0.38,
-        positionImpacts: [
-          buildStressPositionImpact('VTI', 'Vanguard Total Stock Market ETF', 'p1', value, 0.35, -0.45),
-          buildStressPositionImpact('AGG', 'iShares Core US Aggregate Bond ETF', 'p2', value, 0.21, -0.05),
-          buildStressPositionImpact('EFA', 'iShares MSCI EAFE ETF', 'p3', value, 0.15, -0.50),
-        ],
-      },
-      {
-        id: 'stress-002',
-        name: 'Rising Rate Shock (+300bp)',
-        description: 'Sudden 300 basis-point increase in interest rates',
-        portfolioImpact: -0.14,
-        positionImpacts: [
-          buildStressPositionImpact('VTI', 'Vanguard Total Stock Market ETF', 'p1', value, 0.35, -0.10),
-          buildStressPositionImpact('AGG', 'iShares Core US Aggregate Bond ETF', 'p2', value, 0.21, -0.18),
-          buildStressPositionImpact('TLT', 'iShares 20+ Year Treasury', 'p3', value, 0.06, -0.35),
-        ],
-      },
-      {
-        id: 'stress-003',
-        name: 'Pandemic Selloff (Mar 2020)',
-        description: 'Replay of Feb - Mar 2020 COVID-driven selloff',
-        portfolioImpact: -0.25,
-        positionImpacts: [
-          buildStressPositionImpact('VTI', 'Vanguard Total Stock Market ETF', 'p1', value, 0.35, -0.34),
-          buildStressPositionImpact('AGG', 'iShares Core US Aggregate Bond ETF', 'p2', value, 0.21, -0.03),
-          buildStressPositionImpact('GLD', 'SPDR Gold Shares', 'p3', value, 0.05, 0.08),
-        ],
-      },
-    ]
+    const scenarios: StressScenario[] = STRESS_FACTORS.map((scenario) => {
+      const positionImpacts = positions.map((p) => {
+        const impactPct = scenario.factors[p.assetClass] ?? 0
+        return {
+          positionId: p.id,
+          symbol: p.symbol,
+          name: p.name,
+          currentValue: p.marketValue,
+          projectedValue: p.marketValue * (1 + impactPct),
+          impact: p.marketValue * impactPct,
+          impactPercent: impactPct,
+        }
+      })
+      const covered = positionImpacts.reduce((s, p) => s + p.currentValue, 0)
+      // Left unrounded on purpose: C9 asks that Σ position impact equal portfolioImpact × Σ
+      // position value exactly. Rounding this ratio to 4dp puts that reconciliation hundreds of
+      // dollars out on a large account. The display layer rounds it, the API does not.
+      const portfolioImpact = covered === 0
+        ? 0
+        : positionImpacts.reduce((s, p) => s + p.impact, 0) / covered
+      return {
+        id: scenario.id,
+        name: scenario.name,
+        description: scenario.description,
+        portfolioImpact,
+        positionImpacts,
+      }
+    })
     return HttpResponse.json(scenarios)
   }),
 
   http.get('/api/pms/accounts/:accountId/sensitivity', ({ params }) => {
-    const value = getAccountValueById(params.accountId)
+    const account = findAccount(params.accountId)
+    if (!account) return notFound()
+    const p = riskProfileFor(account)
+    // C36 · currencies-and-fx — the ladders scale a USD value, not the raw local-currency one.
+    const value = p.value
 
     return HttpResponse.json({
       interestRate: [
@@ -383,32 +530,30 @@ export const pmsHandlers = [
         { shock: 100, impact: value * -0.018 },
         { shock: 200, impact: value * -0.038 },
       ],
-      monteCarlo: {
-        simulations: 10000,
-        horizon: '1Y',
-        percentiles: [
-          { percentile: 1, value: value * 0.72 },
-          { percentile: 5, value: value * 0.82 },
-          { percentile: 10, value: value * 0.87 },
-          { percentile: 25, value: value * 0.94 },
-          { percentile: 50, value: value * 1.06 },
-          { percentile: 75, value: value * 1.15 },
-          { percentile: 90, value: value * 1.22 },
-          { percentile: 95, value: value * 1.28 },
-          { percentile: 99, value: value * 1.38 },
-        ],
-        histogram: (() => {
-          const accountId = Array.isArray(params.accountId) ? params.accountId[0] : params.accountId
-          const rand = createSeededRandom(hashSeed(accountId ?? 'mc'))
-          return Array.from({ length: 30 }, (_, i) => {
-            const returnPct = -0.30 + i * 0.025
-            const center = 0.06
-            const sigma = 0.12
-            const freq = Math.exp(-0.5 * ((returnPct - center) / sigma) ** 2)
-            return { returnBucket: roundTo(returnPct, 2), frequency: Math.round(freq * 800 + rand() * 40) }
-          })
-        })(),
-      },
+      monteCarlo: (() => {
+        const mu = p.ret
+        const sigma = p.vol
+        const percentiles = [1, 5, 10, 25, 50, 75, 90, 95, 99].map((pct) => ({
+          percentile: pct,
+          value: roundTo(value * (1 + mu + sigma * inverseNormalCDF(pct / 100)), 2),
+        }))
+        const histogram = Array.from({ length: 30 }, (_, i) => {
+          const returnBucket = roundTo(mu - 3 * sigma + i * (6 * sigma / 29), 4)
+          const density = Math.exp(-0.5 * ((returnBucket - mu) / sigma) ** 2)
+          return { returnBucket, frequency: Math.round(density * 1000) }
+        })
+        return {
+          // C7 · forward-risk — one distribution drives both the table and the chart, and the
+          // method is stated rather than asserting 10,000 simulations that never ran.
+          method: 'closed-form lognormal' as const,
+          horizon: '1Y',
+          expectedReturn: mu,
+          volatility: sigma,
+          baseValue: value,
+          percentiles,
+          histogram,
+        }
+      })(),
     })
   }),
 

@@ -51,8 +51,15 @@ export function getStressScenarios(accountId: string) {
 export type SensitivityShock = { shock: number; impact: number }
 
 export type MonteCarloResult = {
-  simulations: number
+  /** How the distribution was produced. It is a closed form, not a simulation run. */
+  method: string
   horizon: string
+  /** Annualised expected return the curve is centred on. */
+  expectedReturn: number
+  /** Annualised standard deviation the curve is scaled by. */
+  volatility: number
+  /** Account value in USD the percentiles are applied to. */
+  baseValue: number
   percentiles: { percentile: number; value: number }[]
   histogram: { returnBucket: number; frequency: number }[]
 }

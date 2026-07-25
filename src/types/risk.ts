@@ -1,18 +1,29 @@
 import type { Currency, Percentage } from './common';
 
 type RiskMetrics = {
-  /** Portfolio sensitivity to market movements (1.0 = market neutral) */
+  /** Portfolio sensitivity to the global equity market (1.0 = market). */
   beta: number;
-  /** Risk-adjusted return: (return - risk-free rate) / std deviation */
+  /** (R₁ᵧ − risk-free) ÷ σ, from the same return series the performance tab shows. */
   sharpe: number;
-  /** Downside risk-adjusted return: (return - risk-free rate) / downside deviation */
+  /** (R₁ᵧ − risk-free) ÷ downside deviation. */
   sortino: number;
-  /** Largest peak-to-trough decline as a percentage */
+  /** Modelled trailing-3-year peak-to-trough decline. */
   maxDrawdown: Percentage;
-  /** Annualized standard deviation of returns */
+  /** Annualised standard deviation of returns. */
   standardDeviation: Percentage;
-  /** 95th percentile Value at Risk — maximum expected loss over a given period at 95% confidence */
+  downsideDeviation: Percentage;
+  riskFreeRate: Percentage;
+  /** Estimated loss not exceeded with `var95Confidence` probability over `var95Horizon`. */
   var95: Currency;
+  var95Percent: Percentage;
+  var95Horizon: string;
+  var95Confidence: number;
+  var95Method: 'parametric' | 'historical' | 'monte_carlo';
+  /** Name of the benchmark that beta and tracking error are measured against. */
+  benchmark: string;
+  /** One annualised active-risk statistic, not a per-horizon value. */
+  trackingError: Percentage;
+  asOf: string;
 };
 
 type FactorExposure = {

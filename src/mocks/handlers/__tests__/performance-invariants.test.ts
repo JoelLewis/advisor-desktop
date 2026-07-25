@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { getBenchmarkComparison, getAttribution } from '@/services/pms'
+import { getBenchmarkComparison, getAttribution, getRiskMetrics } from '@/services/pms'
 
 describe('performance & benchmark invariants', () => {
-  it('alpha === portfolioReturn - benchmarkReturn within rounding', async () => {
+  it('activeReturn === portfolioReturn - benchmarkReturn within rounding', async () => {
     const comparisons = await getBenchmarkComparison('acc-001')
     for (const comp of comparisons) {
-      const expectedAlpha = comp.portfolioReturn - comp.benchmarkReturn
-      expect(Math.abs(comp.alpha - expectedAlpha)).toBeLessThan(0.001)
+      const expected = comp.portfolioReturn - comp.benchmarkReturn
+      expect(Math.abs(comp.activeReturn - expected)).toBeLessThan(0.001)
     }
   })
 
@@ -22,18 +22,30 @@ describe('performance & benchmark invariants', () => {
     expect(periods).toContain('inception')
   })
 
-  it('tracking error is positive for all periods', async () => {
+  // C6 · performance-reporting — tracking error is one annualised statistic reported on the risk
+  // metrics, not a different number per horizon on every benchmark row.
+  it('tracking error is a single annualised figure on the risk metrics', async () => {
     const comparisons = await getBenchmarkComparison('acc-001')
     for (const comp of comparisons) {
-      expect(comp.trackingError).toBeGreaterThan(0)
+      expect(comp).not.toHaveProperty('trackingError')
     }
+    const risk = await getRiskMetrics('acc-001')
+    expect(risk.trackingError).toBeGreaterThan(0)
   })
 
-  it('longer periods have larger tracking error (generally)', async () => {
+  it('longer periods compound to larger cumulative returns', async () => {
     const comparisons = await getBenchmarkComparison('acc-001')
-    const mtd = comparisons.find((c) => c.period === 'mtd')
-    const inception = comparisons.find((c) => c.period === 'inception')
-    expect(inception!.trackingError).toBeGreaterThan(mtd!.trackingError)
+    const mtd = comparisons.find((c) => c.period === 'mtd')!
+    const inception = comparisons.find((c) => c.period === 'inception')!
+    expect(inception.portfolioReturn).toBeGreaterThan(mtd.portfolioReturn)
+  })
+
+  // On a February date the quarter-to-date and year-to-date windows are the same window.
+  it('quarter-to-date does not read longer than year-to-date in Q1', async () => {
+    const comparisons = await getBenchmarkComparison('acc-001')
+    const qtd = comparisons.find((c) => c.period === 'qtd')!
+    const ytd = comparisons.find((c) => c.period === 'ytd')!
+    expect(qtd.portfolioReturn).toBe(ytd.portfolioReturn)
   })
 })
 
