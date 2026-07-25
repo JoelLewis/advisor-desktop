@@ -11,7 +11,7 @@ import { accountValueUSD, deriveBookAUM, deriveHouseholdAUM, deriveSegmentAUM, h
 import { securityKind, concentrationLimitFor } from '@/lib/security-master'
 import {
   RISK_FREE_RATE, assetClassWeights, portfolioBeta, portfolioVolatility,
-  portfolioReturn1Y, assetClassReturn1Y, trackingError, parametricVaR, sharpe, sortino,
+  assetClassReturn1Y, trackingError, parametricVaR, sharpe, sortino,
   downsideDeviation, modelledMaxDrawdown,
 } from '@/lib/risk-model'
 import { assetWeightedEffectiveFee, householdAnnualFee } from '@/lib/fees'
@@ -193,11 +193,9 @@ function accountUSD(account: typeof accounts[0]): number {
  * account's holdings inside a class are modelled to beat that class's index.
  *
  * It is the only source of selection and interaction effect in the attribution, which makes it
- * part of the portfolio's return, not a decoration on top of it. `riskProfileFor` therefore adds
- * it to `ret`. Leaving it out there while the attribution counts it would put the benchmark
- * table's portfolio return and the Sharpe numerator Σ(selection + interaction) below what the
- * attribution page reports — the same two-numbers-for-one-thing defect this phase exists to
- * remove.
+ * part of the portfolio's return, not a decoration on top of it. There is no separate expression
+ * for "the account's return" anywhere in this file — `periodReturnsFor` is the one derivation, and
+ * it gets the edge through the attribution's own rows.
  */
 const SELECTION_EDGE: Record<string, number> = {
   us_equity: 0.008, intl_equity: 0.002, emerging_markets: -0.002, fixed_income: -0.001,
@@ -205,40 +203,51 @@ const SELECTION_EDGE: Record<string, number> = {
   digital_assets: 0.010, private_equity: 0.004,
 }
 
-/** Σ wᵢ·edgeᵢ — the account-level manager edge implied by its asset-class weights. */
-function portfolioSelectionEdge(weights: ReadonlyMap<string, number>): number {
-  let edge = 0
-  for (const [ac, w] of weights) edge += w * (SELECTION_EDGE[ac] ?? 0)
-  return edge
+/**
+ * An account's own asset-class weights and the target weights of the model it tracks.
+ *
+ * Split out of `riskProfileFor` so that `attributionFor` can take the weights without taking the
+ * returns: `riskProfileFor` now *sources* its returns from the attribution, and the two would
+ * otherwise call each other.
+ */
+function weightsFor(account: typeof accounts[0]) {
+  const model = MODELS.find((m) => m.id === account.modelId) ?? getModelByIndex(0)
+  return {
+    weights: assetClassWeights(getPositionsForAccount(account.id, account.totalValue)),
+    benchWeights: new Map(model.assetClasses.map((a) => [a.assetClass, a.targetWeight])),
+    modelId: model.id,
+    benchmarkName: model.benchmark,
+  }
 }
 
 /**
- * The one place per-account risk is derived, so the risk tab, the benchmark table, the
- * performance chart and the Monte Carlo curve all quote the same μ, σ and β.
+ * The one place per-account risk is derived, so the risk tab, the performance chart and the Monte
+ * Carlo curve all quote the same σ and β. μ is not derived here at all: it comes from
+ * `periodReturnsFor`, which is also what the benchmark table publishes, so the returns quoted
+ * across those surfaces are one number rather than two expressions for it.
  *
- * Rounding happens here, not in `@/lib/risk-model` — per the `aum.ts` convention the pure module
- * stays at full precision and its callers round. σ is rounded to 4dp *before* it reaches
+ * σ's rounding happens here, not in `@/lib/risk-model` — per the `aum.ts` convention the pure
+ * module stays at full precision and its callers round. σ is rounded to 4dp *before* it reaches
  * `parametricVaR`; feeding the raw value instead shifts VaR by tens of dollars on a large account.
  */
 function riskProfileFor(account: typeof accounts[0]) {
-  const positions = getPositionsForAccount(account.id, account.totalValue)
-  const weights = assetClassWeights(positions)
-  const model = MODELS.find((m) => m.id === account.modelId) ?? getModelByIndex(0)
-  const benchWeights = new Map(model.assetClasses.map((a) => [a.assetClass, a.targetWeight]))
+  const { weights, benchWeights, modelId, benchmarkName } = weightsFor(account)
+  // The account's own one-year return and its benchmark's, taken from the single derivation rather
+  // than re-expressed here. `portfolioReturn1Y(weights) + Σ wᵢ·edgeᵢ` is algebraically the same
+  // quantity, but it rounds at a different point and so disagreed with the benchmark table by one
+  // unit in the fourth decimal on 12 of the 47 accounts — visible as 10.09% on the performance tab
+  // against 10.08% on risk analytics for the same account on the same date.
+  const oneYear = periodReturnsFor(account, 1)
   return {
     weights,
     benchWeights,
-    modelId: model.id,
-    benchmarkName: model.benchmark,
+    modelId,
+    benchmarkName,
     value: accountUSD(account),
     beta: roundTo(portfolioBeta(weights), 2),
     vol: roundTo(portfolioVolatility(weights), 4),
-    // Index return of the account's asset-class mix plus the manager edge those holdings are
-    // modelled to earn inside each class. The edge is the whole of the attribution's selection and
-    // interaction effect, so it belongs in the account's return rather than only in the
-    // attribution — see SELECTION_EDGE.
-    ret: roundTo(portfolioReturn1Y(weights) + portfolioSelectionEdge(weights), 4),
-    benchReturn: roundTo(portfolioReturn1Y(benchWeights), 4),
+    ret: oneYear.portfolioReturn,
+    benchReturn: oneYear.benchmarkReturn,
     // Derived from the model's target weights by the same primitive as the portfolio's σ, so the
     // benchmark line on the chart carries the model's own risk rather than a multiple of the
     // account's.
@@ -311,7 +320,7 @@ type Attribution = {
  * arithmetic rather than implying a rigour it does not have.
  */
 function attributionFor(account: typeof accounts[0], years: number): Attribution {
-  const p = riskProfileFor(account)
+  const p = weightsFor(account)
   const compound = (annual: number) => (1 + annual) ** years - 1
 
   const legs = [...new Set([...p.weights.keys(), ...p.benchWeights.keys()])].map((assetClass) => {
@@ -352,6 +361,34 @@ function attributionFor(account: typeof accounts[0], years: number): Attribution
   )
 
   return { rows, totals, benchmarkReturn, benchmarkName: p.benchmarkName }
+}
+
+/**
+ * **The one place a cumulative return is published.** The benchmark table, Sharpe, Sortino, the
+ * Monte Carlo mean and the performance series drift all read these three numbers, so "what this
+ * portfolio returned" has exactly one value per account per period across the product.
+ *
+ * Rounding happens once, here, at publication rather than at derivation — `attributionFor` works
+ * at full precision and the row effects carry 6dp. Rp is published as the sum of its own published
+ * parts rather than as `roundTo(Rb + Σ(A + S + I), 4)`, because the two disagree by one unit in
+ * the fourth decimal on 12 of the 47 accounts (acc-004, 010, 013, 014, 018, 021, 025, 031, 032,
+ * 034, 038 and acc-044) and only this form leaves the published row footing: rounding the sum
+ * instead moves the same 1e-4 discrepancy from *between* surfaces to *within* the row, where
+ * `Rp − Rb` would stop equalling the active return on those same 12 accounts. One derivation, one
+ * rounding, and the row adds up as printed.
+ */
+function periodReturnsFor(account: typeof accounts[0], years: number) {
+  const a = attributionFor(account, years)
+  const benchmarkReturn = roundTo(a.benchmarkReturn, 4)
+  // C6 · performance-reporting — active (excess) return, not Jensen's alpha. It is the
+  // attribution's own total rounded once: rounding Rp and Rb separately and subtracting differs
+  // from it by a full basis point on a month-to-date window, which is most of the figure.
+  const activeReturn = roundTo(a.totals.total, 4)
+  return {
+    portfolioReturn: roundTo(benchmarkReturn + activeReturn, 4),
+    benchmarkReturn,
+    activeReturn,
+  }
 }
 
 function computeDriftForAccount(account: typeof accounts[0]): DriftStatus {
@@ -521,25 +558,14 @@ export const pmsHandlers = [
     const account = findAccount(params.accountId)
     if (!account) return notFound()
 
-    // Returns are cumulative over the period, compounded from the annual asset-class figures.
-    // Both sides come from `attributionFor`, the same helper the attribution endpoint uses, so
-    // the benchmark table's active return and Σ(allocation + selection + interaction) are the
-    // same quantity rather than two derivations that happen to be close.
-    const comparisons: BenchmarkComparison[] = Object.entries(periodYears()).map(([period, years]) => {
-      const a = attributionFor(account, years)
-      const benchmarkReturn = roundTo(a.benchmarkReturn, 4)
-      // C6 · performance-reporting — this is active (excess) return, not Jensen's alpha. It is
-      // the attribution's own total rounded once, not Rp and Rb rounded separately and then
-      // subtracted: on a month-to-date window those two differ by a full basis point, which is
-      // most of the figure. Rp is then published as Rb + active so the row adds up as printed.
-      const activeReturn = roundTo(a.totals.total, 4)
-      return {
-        period: period as BenchmarkComparison['period'],
-        portfolioReturn: roundTo(benchmarkReturn + activeReturn, 4),
-        benchmarkReturn,
-        activeReturn,
-      }
-    })
+    // Returns are cumulative over the period, compounded from the annual asset-class figures, and
+    // come from `periodReturnsFor` — the same single derivation the risk tab, the Monte Carlo mean
+    // and the performance chart read. The active return here and Σ(allocation + selection +
+    // interaction) on the attribution page are one quantity, not two that happen to be close.
+    const comparisons: BenchmarkComparison[] = Object.entries(periodYears()).map(([period, years]) => ({
+      period: period as BenchmarkComparison['period'],
+      ...periodReturnsFor(account, years),
+    }))
     return HttpResponse.json(comparisons)
   }),
 

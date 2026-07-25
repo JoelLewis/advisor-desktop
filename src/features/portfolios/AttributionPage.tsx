@@ -114,7 +114,12 @@ export function AttributionPage() {
         <CardContent>
           <div ref={chartContainerRef}>
             {waterfallData.length > 0 ? (
-              <WaterfallChart data={waterfallData} width={chartWidth} height={Math.round(chartWidth * 0.5)} />
+              <WaterfallChart
+                data={waterfallData}
+                width={chartWidth}
+                height={Math.round(chartWidth * 0.5)}
+                valueDecimals={EFFECT_DECIMALS}
+              />
             ) : (
               <p className="py-8 text-center text-text-tertiary">No attribution data available</p>
             )}
@@ -129,15 +134,20 @@ export function AttributionPage() {
         <SummaryCard label="Interaction effect" value={totals.interaction} />
         <SummaryCard label="Total active return" value={totals.total} />
       </div>
-      <p className="text-caption text-text-tertiary">
-        {attribution?.model}, {attribution?.linking}. Benchmark: {attribution?.benchmark}.{' '}
-        {attribution?.basis === 'gross of fees' ? 'Gross of fees.' : 'Net of fees.'} As of{' '}
-        {attribution ? formatDate(attribution.asOf) : '—'}. Allocation is measured against the
-        benchmark&rsquo;s total return, so overweighting a class helps only where that class beat
-        the benchmark overall. Allocation plus selection plus interaction equals total active
-        return. Sub-period figures are compounded from annual returns; they are not geometrically
-        linked across sub-periods.
-      </p>
+      {/* Guarded as a whole: with no response there is no model, no benchmark and no fee basis to
+          describe, and a partially-interpolated caption would state a fee basis the server never
+          sent. */}
+      {attribution && (
+        <p className="text-caption text-text-tertiary">
+          {attribution.model}, {attribution.linking}. Benchmark: {attribution.benchmark}.{' '}
+          {attribution.basis === 'gross of fees' ? 'Gross of fees.' : 'Net of fees.'} As of{' '}
+          {formatDate(attribution.asOf)}. Allocation is measured against the benchmark&rsquo;s
+          total return, so overweighting a class helps only where that class beat the benchmark
+          overall. Allocation plus selection plus interaction equals total active return.
+          Sub-period figures are compounded from annual returns; they are not geometrically linked
+          across sub-periods.
+        </p>
+      )}
 
       {/* Attribution Breakdown Table */}
       <Card>

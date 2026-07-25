@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { getAttribution, getBenchmarkComparison } from '@/services/pms'
+import { getAttribution, getBenchmarkComparison, getDrift, getSensitivity } from '@/services/pms'
+import { assetClassWeights, assetClassReturn1Y } from '@/lib/risk-model'
+import { getPositionsForAccount } from '@/mocks/data/positions'
 import { accounts } from '@/mocks/data/accounts'
+
+/** Mirrors the API's publication rounding, so the tests can assert equality rather than nearness. */
+const roundTo = (value: number, decimals: number) =>
+  Math.round(value * 10 ** decimals) / 10 ** decimals
 
 const PERIODS = ['mtd', 'qtd', 'ytd', '1y']
 
@@ -25,8 +31,13 @@ describe('Brinson attribution identity', () => {
       const result = await getAttribution('acc-001', period)
       const bench = await getBenchmarkComparison('acc-001')
       const row = bench.find((b) => b.period === period)!
-      expect(result.activeReturn).toBeCloseTo(row.activeReturn, 4)
-      expect(result.totals.total).toBeCloseTo(row.activeReturn, 4)
+      // Exactly, not nearly: the benchmark row's active return *is* the attribution total rounded
+      // for publication, so the assertion is on that relationship rather than on a tolerance that
+      // a genuinely different figure could still slip through.
+      expect(roundTo(result.activeReturn, 4)).toBe(row.activeReturn)
+      expect(roundTo(result.totals.total, 4)).toBe(row.activeReturn)
+      // The published row foots at the precision it is published.
+      expect(roundTo(row.portfolioReturn - row.benchmarkReturn, 4)).toBe(row.activeReturn)
     }
   })
 
@@ -34,6 +45,59 @@ describe('Brinson attribution identity', () => {
     const ytd = await getAttribution('acc-001', 'ytd')
     const oneYear = await getAttribution('acc-001', '1y')
     expect(oneYear.totals.total / ytd.totals.total).not.toBeCloseTo(1.8, 2)
+  })
+
+  /**
+   * `model: 'Brinson-Fachler'` is a literal string, and BF and Brinson-Hood-Beebower produce
+   * *identical totals* — the −Rb cancels in aggregate because Σ(wp − wb) = 0 — so every other test
+   * in this file would still pass if the `− benchmarkReturn` were deleted from the handler and the
+   * label left in place. The variants differ only row by row, so that is where this asserts.
+   *
+   * The 1Y window is used because years = 1 makes the compounding an identity, which lets the
+   * expected value be written in closed form from the fixture rather than re-deriving the handler.
+   */
+  it('the allocation effect is Brinson-Fachler, not Brinson-Hood-Beebower', async () => {
+    const account = accounts.find((a) => a.id === 'acc-001')!
+    const weights = assetClassWeights(getPositionsForAccount(account.id, account.totalValue))
+    const drift = await getDrift(account.id)
+    const benchWeights = new Map(drift.assetClassDrifts.map((d) => [d.assetClass as string, d.target]))
+    const benchmarkTotal = [...benchWeights].reduce(
+      (sum, [ac, wb]) => sum + wb * assetClassReturn1Y(ac), 0,
+    )
+
+    const { rows } = await getAttribution(account.id, '1y')
+    for (const row of rows) {
+      const wp = weights.get(row.assetClass) ?? 0
+      const wb = benchWeights.get(row.assetClass) ?? 0
+      // Brinson-Fachler: the class return is measured against the benchmark's *total* return.
+      expect(row.allocation, row.assetClass)
+        .toBeCloseTo((wp - wb) * (assetClassReturn1Y(row.assetClass) - benchmarkTotal), 6)
+    }
+
+    // And is demonstrably not BHB, which would measure against the class's own return. On cash the
+    // two do not merely differ, they carry opposite signs: cash returned 4.8% against a benchmark
+    // total of 9.4%, so overweighting it is a positive contribution under BHB and a negative one
+    // under BF. If this ever passes trivially the discriminator has stopped discriminating.
+    const cash = rows.find((r) => r.assetClass === 'cash')!
+    const bhbCash = ((weights.get('cash') ?? 0) - (benchWeights.get('cash') ?? 0))
+      * assetClassReturn1Y('cash')
+    expect(Math.sign(bhbCash)).not.toBe(Math.sign(cash.allocation))
+    expect(cash.allocation).not.toBeCloseTo(bhbCash, 6)
+  })
+
+  /**
+   * Important #1 from review: `riskProfileFor.ret` used to be a second expression for the account's
+   * one-year return and disagreed with the benchmark table by 1e-4 on 12 of the 47 accounts —
+   * 10.09% on the performance tab against 10.08% on risk analytics. There is now one derivation,
+   * so the two are the same number, not merely close.
+   */
+  it('the 1Y portfolio return is one number across the benchmark table and the risk surfaces', async () => {
+    for (const account of accounts) {
+      const bench = await getBenchmarkComparison(account.id)
+      const { monteCarlo } = await getSensitivity(account.id)
+      const oneYear = bench.find((b) => b.period === '1y')!
+      expect(monteCarlo.expectedReturn, account.id).toBe(oneYear.portfolioReturn)
+    }
   })
 
   it('states the model, the linking, the benchmark and the fee basis', async () => {
@@ -94,9 +158,8 @@ describe('Brinson attribution identity', () => {
         expect(result.totals.total, where).toBeCloseTo(
           result.totals.allocation + result.totals.selection + result.totals.interaction, 12,
         )
-        expect(result.totals.total, where).toBeCloseTo(row.activeReturn, 4)
-        expect(result.totals.total, where)
-          .toBeCloseTo(row.portfolioReturn - row.benchmarkReturn, 4)
+        expect(roundTo(result.totals.total, 4), where).toBe(row.activeReturn)
+        expect(roundTo(row.portfolioReturn - row.benchmarkReturn, 4), where).toBe(row.activeReturn)
       }
     }
   })

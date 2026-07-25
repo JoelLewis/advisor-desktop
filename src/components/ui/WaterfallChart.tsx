@@ -11,9 +11,18 @@ type WaterfallChartProps = {
   width?: number
   height?: number
   showTotal?: boolean
+  /**
+   * Decimal places for the bar labels; the axis takes one fewer. The default reproduces the
+   * chart's original behaviour for every existing caller. Pass a higher value where the values
+   * plotted are smaller than the default resolution — attribution effects are basis-point
+   * quantities, and at two decimals most bars label as `+0.00%` or, worse, `−0.00%`.
+   */
+  valueDecimals?: number
 }
 
-export function WaterfallChart({ data, width = 720, height = 360, showTotal = true }: WaterfallChartProps) {
+export function WaterfallChart({
+  data, width = 720, height = 360, showTotal = true, valueDecimals = 2,
+}: WaterfallChartProps) {
   const svgRef = useRef<SVGSVGElement>(null)
 
   useEffect(() => {
@@ -93,7 +102,7 @@ export function WaterfallChart({ data, width = 720, height = 360, showTotal = tr
       .attr('fill', 'var(--text-secondary)')
       .attr('font-size', 11)
       .attr('font-family', '"JetBrains Mono", monospace')
-      .text((d) => `${d.value >= 0 ? '+' : ''}${(d.value * 100).toFixed(2)}%`)
+      .text((d) => `${d.value >= 0 ? '+' : ''}${(d.value * 100).toFixed(valueDecimals)}%`)
 
     // Axes
     g.append('g')
@@ -106,7 +115,7 @@ export function WaterfallChart({ data, width = 720, height = 360, showTotal = tr
       .style('fill', 'var(--text-secondary)')
 
     g.append('g')
-      .call(d3.axisLeft(y).ticks(6).tickFormat((d) => `${(d as number * 100).toFixed(1)}%`))
+      .call(d3.axisLeft(y).ticks(6).tickFormat((d) => `${(d as number * 100).toFixed(Math.max(valueDecimals - 1, 0))}%`))
       .selectAll('text')
       .style('font-size', '11px')
       .style('fill', 'var(--text-tertiary)')
@@ -114,7 +123,7 @@ export function WaterfallChart({ data, width = 720, height = 360, showTotal = tr
     // Remove axis lines for cleaner look
     g.selectAll('.domain').attr('stroke', 'var(--border-primary)')
     g.selectAll('.tick line').attr('stroke', 'var(--border-primary)')
-  }, [data, width, height, showTotal])
+  }, [data, width, height, showTotal, valueDecimals])
 
   return <svg ref={svgRef} width={width} height={height} />
 }
