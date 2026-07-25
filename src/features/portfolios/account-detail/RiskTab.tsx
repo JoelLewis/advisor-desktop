@@ -4,7 +4,7 @@ import {
 } from 'recharts'
 import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { RiskMetricCard, StressScenarioRow } from './shared'
-import type { Account } from '@/types/account'
+import { formatDate } from '@/lib/utils'
 import type { CurrencyCode } from '@/types/currency'
 import type { RiskMetrics, FactorExposure, StressScenario } from '@/types/risk'
 
@@ -14,21 +14,39 @@ type RiskTabProps = {
   risk: RiskMetrics | undefined
   factors: FactorExposure[] | undefined
   stress: StressScenario[] | undefined
-  account: Account
   formatWithConversion: (value: number, from: CurrencyCode, opts?: { compact?: boolean }) => string
 }
 
-export function RiskTab({ risk, factors, stress, account, formatWithConversion }: RiskTabProps) {
+export function RiskTab({ risk, factors, stress, formatWithConversion }: RiskTabProps) {
   return (
     <div className="space-y-6">
       {risk && (
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-          <RiskMetricCard label="Beta" value={risk.beta.toFixed(2)} />
-          <RiskMetricCard label="Sharpe Ratio" value={risk.sharpe.toFixed(2)} />
-          <RiskMetricCard label="Sortino Ratio" value={risk.sortino.toFixed(2)} />
-          <RiskMetricCard label="Max Drawdown" value={`${(risk.maxDrawdown * 100).toFixed(1)}%`} negative />
-          <RiskMetricCard label="Std Deviation" value={`${(risk.standardDeviation * 100).toFixed(1)}%`} />
-          <RiskMetricCard label="VaR (95%)" value={formatWithConversion(risk.var95, account.baseCurrency ?? 'USD', { compact: true })} negative />
+        <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+            {/* Beta is not benchmark-relative — it is sensitivity to the global equity market.
+                Only tracking error is measured against the account's model benchmark. */}
+            <RiskMetricCard label="Beta vs global equity market" value={risk.beta.toFixed(2)} />
+            <RiskMetricCard label="Sharpe ratio" value={risk.sharpe.toFixed(2)} />
+            <RiskMetricCard label="Sortino ratio" value={risk.sortino.toFixed(2)} />
+            <RiskMetricCard label="Max drawdown (modelled, 3y)" value={`${(risk.maxDrawdown * 100).toFixed(1)}%`} negative />
+            <RiskMetricCard label="Standard deviation (annualised)" value={`${(risk.standardDeviation * 100).toFixed(1)}%`} />
+            {/* `var95` is already USD — riskProfileFor converts the account value at the FX
+                boundary — so it is formatted from USD, not from the account's base currency. */}
+            <RiskMetricCard
+              label={`VaR (${(risk.var95Confidence * 100).toFixed(0)}%), ${risk.var95Horizon}, ${risk.var95Method}`}
+              value={formatWithConversion(risk.var95, 'USD', { compact: true })}
+              negative
+            />
+          </div>
+          <p className="text-caption text-text-tertiary">
+            Value at risk is an estimate: {(risk.var95Confidence * 100).toFixed(0)}% confidence,
+            {' '}{risk.var95Horizon} horizon, {risk.var95Method} method
+            {' '}({(risk.var95Percent * 100).toFixed(2)}% of account value). Sharpe and Sortino use a
+            {' '}{(risk.riskFreeRate * 100).toFixed(1)}% risk-free rate; Sortino divides by
+            {' '}{(risk.downsideDeviation * 100).toFixed(2)}% downside deviation. Tracking error
+            {' '}against {risk.benchmark} is {(risk.trackingError * 100).toFixed(2)}%. As of{' '}
+            {formatDate(risk.asOf)}. Hypothetical — not a prediction.
+          </p>
         </div>
       )}
 

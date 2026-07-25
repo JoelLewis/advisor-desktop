@@ -128,7 +128,9 @@ export function RiskAnalyticsPage() {
       ) : risk ? (
         <div className="flex flex-col gap-3">
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-            <RiskMetricCard label={`Beta vs ${risk.benchmark}`} value={risk.beta.toFixed(2)} />
+            {/* Beta is not benchmark-relative — it is sensitivity to the global equity market.
+                Only tracking error is measured against the account's model benchmark. */}
+            <RiskMetricCard label="Beta vs global equity market" value={risk.beta.toFixed(2)} />
             <RiskMetricCard label="Sharpe ratio" value={risk.sharpe.toFixed(2)} />
             <RiskMetricCard label="Sortino ratio" value={risk.sortino.toFixed(2)} />
             <RiskMetricCard label="Max drawdown (modelled, 3y)" value={`${(risk.maxDrawdown * 100).toFixed(1)}%`} negative />
@@ -142,9 +144,10 @@ export function RiskAnalyticsPage() {
           <p className="text-caption text-text-tertiary">
             Value at risk is an estimate: {(risk.var95Confidence * 100).toFixed(0)}% confidence,
             {' '}{risk.var95Horizon} horizon, {risk.var95Method} method
-            {' '}({(risk.var95Percent * 100).toFixed(2)}% of account value). Sharpe uses a
-            {' '}{(risk.riskFreeRate * 100).toFixed(1)}% risk-free rate. Tracking error against
-            {' '}{risk.benchmark} is {(risk.trackingError * 100).toFixed(2)}%. As of{' '}
+            {' '}({(risk.var95Percent * 100).toFixed(2)}% of account value). Sharpe and Sortino use a
+            {' '}{(risk.riskFreeRate * 100).toFixed(1)}% risk-free rate; Sortino divides by
+            {' '}{(risk.downsideDeviation * 100).toFixed(2)}% downside deviation. Tracking error
+            {' '}against {risk.benchmark} is {(risk.trackingError * 100).toFixed(2)}%. As of{' '}
             {formatDate(risk.asOf)}. Hypothetical — not a prediction.
           </p>
         </div>
@@ -311,7 +314,9 @@ export function RiskAnalyticsPage() {
                 {' '}expected annual return, {(monteCarlo.volatility * 100).toFixed(2)}% annualised volatility,
                 {' '}applied to {formatWithConversion(monteCarlo.baseValue, 'USD', { compact: true })} over
                 {' '}{monteCarlo.horizon}. The percentile table and the chart come from the same
-                {' '}{monteCarlo.method} distribution. Hypothetical — not a prediction.
+                {' '}{monteCarlo.method} distribution, which is unbounded below: on a very high
+                {' '}volatility account the extreme lower percentiles imply a value below zero, and
+                {' '}those are shown floored at zero. Hypothetical — not a prediction.
               </p>
             </>
           ) : (

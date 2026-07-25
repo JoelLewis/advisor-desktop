@@ -63,20 +63,36 @@ function seededNormal(rand: () => number): number {
   return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2)
 }
 
+type SeriesParams = {
+  accountId: string
+  modelId: string
+  annualReturn: number
+  annualVol: number
+  benchReturn: number
+  benchVol: number
+}
+
 /**
  * C34 · performance-reporting — the monthly series is drawn from the account's own μ and σ. The
  * previous uniform [−2%, +4%] draw was identical for every account and could not produce the
  * drawdown the risk tab reported alongside it.
  *
+ * The benchmark line is drawn from the *model's* own μ and σ — the same `benchReturn` that drives
+ * the benchmark comparison table — rather than from hand-typed 0.92/0.95 multiples of the
+ * portfolio's. Two benchmark returns for one account on two tabs is the failure this phase exists
+ * to remove. It is also seeded from the model, not the account, so every account tracking a given
+ * benchmark sees the identical line: one index, one series.
+ *
  * The series is trailing: it ends at the frozen clock and never runs into the future.
  */
-function generatePerformanceSeries(
-  months: number, accountId: string, annualReturn: number, annualVol: number,
-): PerformanceSeries[] {
-  const rand = createSeededRandom(hashSeed(accountId))
+function generatePerformanceSeries(months: number, p: SeriesParams): PerformanceSeries[] {
+  const rand = createSeededRandom(hashSeed(p.accountId))
+  const benchRand = createSeededRandom(hashSeed(p.modelId))
   const series: PerformanceSeries[] = []
-  const muM = annualReturn / 12
-  const sigmaM = annualVol / Math.sqrt(12)
+  const muM = p.annualReturn / 12
+  const sigmaM = p.annualVol / Math.sqrt(12)
+  const benchMuM = p.benchReturn / 12
+  const benchSigmaM = p.benchVol / Math.sqrt(12)
   let portfolioValue = 100
   let benchmarkValue = 100
   const anchor = startOfToday()
@@ -84,7 +100,7 @@ function generatePerformanceSeries(
     const date = new Date(anchor)
     date.setUTCMonth(date.getUTCMonth() - i)
     portfolioValue *= 1 + muM + sigmaM * seededNormal(rand)
-    benchmarkValue *= 1 + muM * 0.92 + sigmaM * 0.95 * seededNormal(rand)
+    benchmarkValue *= 1 + benchMuM + benchSigmaM * seededNormal(benchRand)
     series.push({
       date: date.toISOString().slice(0, 10),
       value: roundTo(portfolioValue, 2),
@@ -185,12 +201,17 @@ function riskProfileFor(account: typeof accounts[0]) {
   return {
     weights,
     benchWeights,
+    modelId: model.id,
     benchmarkName: model.benchmark,
     value: accountUSD(account),
     beta: roundTo(portfolioBeta(weights), 2),
     vol: roundTo(portfolioVolatility(weights), 4),
     ret: roundTo(portfolioReturn1Y(weights), 4),
     benchReturn: roundTo(portfolioReturn1Y(benchWeights), 4),
+    // Derived from the model's target weights by the same primitive as the portfolio's σ, so the
+    // benchmark line on the chart carries the model's own risk rather than a multiple of the
+    // account's.
+    benchVol: roundTo(portfolioVolatility(benchWeights), 4),
     te: roundTo(trackingError(weights, benchWeights), 4),
   }
 }
@@ -368,7 +389,14 @@ export const pmsHandlers = [
     const account = findAccount(params.accountId)
     if (!account) return notFound()
     const p = riskProfileFor(account)
-    return HttpResponse.json(generatePerformanceSeries(24, account.id, p.ret, p.vol))
+    return HttpResponse.json(generatePerformanceSeries(24, {
+      accountId: account.id,
+      modelId: p.modelId,
+      annualReturn: p.ret,
+      annualVol: p.vol,
+      benchReturn: p.benchReturn,
+      benchVol: p.benchVol,
+    }))
   }),
 
   http.get('/api/pms/accounts/:accountId/benchmark', ({ params }) => {
@@ -533,9 +561,14 @@ export const pmsHandlers = [
       monteCarlo: (() => {
         const mu = p.ret
         const sigma = p.vol
+        // The delta-normal form is unbounded below, so at extreme quantiles on a very high-σ
+        // account (acc-045, σ = 0.636) `1 + μ + σz` goes negative — a projected account value
+        // below zero. A portfolio cannot be worth less than nothing, so the displayed value is
+        // floored at zero. The floor is a display bound only: μ, σ and the method are unchanged,
+        // and the caption on the page discloses that the normal form admits sub-zero values here.
         const percentiles = [1, 5, 10, 25, 50, 75, 90, 95, 99].map((pct) => ({
           percentile: pct,
-          value: roundTo(value * (1 + mu + sigma * inverseNormalCDF(pct / 100)), 2),
+          value: roundTo(Math.max(0, value * (1 + mu + sigma * inverseNormalCDF(pct / 100))), 2),
         }))
         const histogram = Array.from({ length: 30 }, (_, i) => {
           const returnBucket = roundTo(mu - 3 * sigma + i * (6 * sigma / 29), 4)

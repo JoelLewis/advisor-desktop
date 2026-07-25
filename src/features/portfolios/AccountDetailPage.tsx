@@ -126,7 +126,7 @@ export function AccountDetailPage() {
     },
     {
       id: 'risk', label: 'Risk',
-      content: <RiskTab risk={risk} factors={factors} stress={stress} account={account} formatWithConversion={formatWithConversion} />,
+      content: <RiskTab risk={risk} factors={factors} stress={stress} formatWithConversion={formatWithConversion} />,
     },
     {
       id: 'concentration', label: 'Concentration',

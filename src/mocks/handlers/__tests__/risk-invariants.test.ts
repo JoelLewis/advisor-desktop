@@ -112,6 +112,48 @@ describe('the performance series the risk numbers are quoted against', () => {
     expect(series.every((p) => p.date <= MOCK_TODAY_ISO)).toBe(true)
     expect(series.every((p) => p.value > 0)).toBe(true)
   })
+
+  // The chart's benchmark line and the benchmark table are both pure functions of the account's
+  // model, so accounts sharing a model must show the identical line. Before this, the chart
+  // compounded a hand-typed 0.92 multiple of the *portfolio's* return, which made the benchmark
+  // account-specific and put the chart 0.0036/yr away from the table for acc-001.
+  it('the chart benchmark and the table benchmark are the same model figure', async () => {
+    // acc-011 and acc-040 are both assigned mod-002.
+    const [a, b] = await Promise.all([getPerformance('acc-011'), getPerformance('acc-040')])
+    expect(a.map((p) => p.benchmark)).toEqual(b.map((p) => p.benchmark))
+
+    const [benchA, benchB] = await Promise.all([
+      getBenchmarkComparison('acc-011'), getBenchmarkComparison('acc-040'),
+    ])
+    const oneYear = (rows: Awaited<ReturnType<typeof getBenchmarkComparison>>) =>
+      rows.find((r) => r.period === '1y')!.benchmarkReturn
+    expect(oneYear(benchA)).toBe(oneYear(benchB))
+
+    // Accounts on different models must not share it, or the assertion above proves nothing.
+    const other = await getPerformance('acc-020')
+    expect(other.map((p) => p.benchmark)).not.toEqual(a.map((p) => p.benchmark))
+  })
+})
+
+describe('the modelled return distribution', () => {
+  it('never shows a projected account value below zero', async () => {
+    for (const id of ['acc-001', 'acc-020', 'acc-045']) {
+      const { monteCarlo } = await getSensitivity(id)
+      for (const p of monteCarlo.percentiles) {
+        expect(p.value, `${id} p${p.percentile}`).toBeGreaterThanOrEqual(0)
+      }
+    }
+  })
+
+  // acc-045 is the account that forces the floor: sigma = 0.636, so the delta-normal 1st
+  // percentile is 1 + 0.4041 - 0.636 * 2.3263 = -0.0755 of value before flooring.
+  it('floors the extreme lower tail on a very high volatility account', async () => {
+    const { monteCarlo } = await getSensitivity('acc-045')
+    expect(monteCarlo.volatility).toBe(0.636)
+    expect(monteCarlo.percentiles.find((p) => p.percentile === 1)!.value).toBe(0)
+    // The floor is a display bound only — the rest of the curve is untouched.
+    expect(monteCarlo.percentiles.find((p) => p.percentile === 5)!.value).toBeGreaterThan(0)
+  })
 })
 
 describe('monte carlo', () => {
