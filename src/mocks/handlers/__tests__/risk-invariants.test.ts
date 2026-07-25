@@ -154,6 +154,28 @@ describe('the modelled return distribution', () => {
     // The floor is a display bound only — the rest of the curve is untouched.
     expect(monteCarlo.percentiles.find((p) => p.percentile === 5)!.value).toBeGreaterThan(0)
   })
+
+  it('never shows a return bucket below total loss', async () => {
+    for (const id of ['acc-001', 'acc-020', 'acc-045']) {
+      const { monteCarlo } = await getSensitivity(id)
+      for (const b of monteCarlo.histogram) {
+        expect(b.returnBucket, `${id} bucket`).toBeGreaterThanOrEqual(-1)
+      }
+    }
+  })
+
+  // acc-045's raw domain is mu - 3*sigma = 0.4041 - 1.908 = -1.5039, i.e. a -150% return. The
+  // domain starts at total loss instead; the upper end is untouched, and the bars are still the
+  // raw density, so the truncated mass is dropped rather than redistributed.
+  it('bounds the domain at total loss without reshaping the density', async () => {
+    const { monteCarlo } = await getSensitivity('acc-045')
+    const buckets = monteCarlo.histogram.map((b) => b.returnBucket)
+    expect(buckets[0]).toBe(-1)
+    expect(buckets[buckets.length - 1]).toBeCloseTo(0.4041 + 3 * 0.636, 3)
+    // A lower-sigma account is unaffected — the clamp only bites where the domain runs past -100%.
+    const calm = await getSensitivity('acc-001')
+    expect(calm.monteCarlo.histogram[0]!.returnBucket).toBeCloseTo(0.0985 - 3 * 0.0935, 4)
+  })
 })
 
 describe('monte carlo', () => {

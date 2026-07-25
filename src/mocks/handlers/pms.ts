@@ -570,8 +570,19 @@ export const pmsHandlers = [
           percentile: pct,
           value: roundTo(Math.max(0, value * (1 + mu + sigma * inverseNormalCDF(pct / 100))), 2),
         }))
+        // Same bound on the other axis. The μ − 3σ domain runs to −150% for acc-045, and a
+        // long-only unlevered portfolio cannot lose more than everything, so the domain starts at
+        // −100% at the earliest. The probability the normal approximation places below total loss
+        // is **truncated from the display, not redistributed**: each bar is still the raw Gaussian
+        // density at its own return, so the visible bars sum to slightly less than the whole
+        // distribution. Renormalising would hide the model's edge rather than disclose it, which
+        // is why it is not done here and why the caption states the truncation.
+        const TOTAL_LOSS = -1
+        const lower = Math.max(TOTAL_LOSS, mu - 3 * sigma)
+        const upper = mu + 3 * sigma
+        const step = (upper - lower) / 29
         const histogram = Array.from({ length: 30 }, (_, i) => {
-          const returnBucket = roundTo(mu - 3 * sigma + i * (6 * sigma / 29), 4)
+          const returnBucket = roundTo(lower + i * step, 4)
           const density = Math.exp(-0.5 * ((returnBucket - mu) / sigma) ** 2)
           return { returnBucket, frequency: Math.round(density * 1000) }
         })

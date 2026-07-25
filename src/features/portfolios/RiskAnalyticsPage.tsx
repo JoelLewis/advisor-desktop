@@ -315,8 +315,11 @@ export function RiskAnalyticsPage() {
                 {' '}applied to {formatWithConversion(monteCarlo.baseValue, 'USD', { compact: true })} over
                 {' '}{monteCarlo.horizon}. The percentile table and the chart come from the same
                 {' '}{monteCarlo.method} distribution, which is unbounded below: on a very high
-                {' '}volatility account the extreme lower percentiles imply a value below zero, and
-                {' '}those are shown floored at zero. Hypothetical — not a prediction.
+                {' '}volatility account the normal approximation assigns residual probability to
+                {' '}losses beyond total loss, so projected values are floored at zero and the chart
+                {' '}is bounded at −100%. That probability is truncated from the display rather than
+                {' '}redistributed, so the bars shown sum to slightly less than the whole
+                {' '}distribution. Hypothetical — not a prediction.
               </p>
             </>
           ) : (
