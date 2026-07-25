@@ -42,11 +42,38 @@ function quarterLabel(date: Date): string {
   return `Q${quarter} ${date.getUTCFullYear()}`
 }
 
+/**
+ * Bound a random trade-quantity draw against `cap` — the running per-symbol balance for a sell,
+ * or the position's own quantity for a buy — so a trade can never imply more shares than are
+ * available. Round-2 review: capping only sells left buys unbounded, so a single buy could
+ * dwarf the entire position (151 BTC bought into a 2.15 BTC holding); capping via
+ * `Math.max(1, Math.floor(...))` also assumed the cap was always >= 1, which is unsound for any
+ * sub-1-unit position (a fractional crypto holding below 1 unit) — the forced minimum of 1 would
+ * exceed the cap. Whole-share positions trade in whole shares; a cap below one unit trades in
+ * fractional units instead of flooring to zero and forcing an out-of-bounds minimum.
+ */
+export function boundedTradeQty(cap: number, rawQty: number, fraction: number): number {
+  if (cap <= 0) return 0
+  const rough = Math.min(rawQty, cap * fraction)
+  return cap >= 1 ? Math.max(1, Math.floor(rough)) : Math.round(rough * 1e6) / 1e6
+}
+
+type TradeShell = {
+  index: number
+  date: Date
+  dateStr: string
+  side: 'buy' | 'sell'
+  pos: ReturnType<typeof getPositionsForAccount>[number]
+  rawQty: number
+  fraction: number
+}
+
 function generateTransactions(accountId: string, totalValue: number): Transaction[] {
   const baseDate = startOfToday()
   const rand = seeded(`txn:${accountId}`)
   const held = getPositionsForAccount(accountId, totalValue).filter((p) => p.symbol !== 'CASH')
   const txns: Transaction[] = []
+  const trades: TradeShell[] = []
 
   // Generate ~20 transactions over the past 60 days
   for (let i = 0; i < 20; i++) {
@@ -57,19 +84,13 @@ function generateTransactions(accountId: string, totalValue: number): Transactio
 
     const typeRoll = rand()
     if (typeRoll < 0.4) {
-      // Buy/sell
+      // Buy/sell — quantity is resolved below in a chronological second pass (see `trades`),
+      // so a trade can never imply a negative running balance for its symbol.
       const side = rand() > 0.5 ? 'buy' : 'sell'
       const pos = held[Math.floor(rand() * held.length)]!
       const rawQty = Math.floor(rand() * 200) + 10
-      // A sell can never exceed the position currently held. Every held position has quantity
-      // >= 2, so this floor never produces a bound below 1.
-      const qty = side === 'sell' ? Math.max(1, Math.min(rawQty, Math.floor(pos.quantity))) : rawQty
-      const price = pos.price
-      txns.push({
-        id: `txn-${accountId}-${i}`, accountId, date: dateStr,
-        type: side, symbol: pos.symbol, description: `${side === 'buy' ? 'Bought' : 'Sold'} ${qty} shares ${pos.symbol}`,
-        amount: side === 'buy' ? -(qty * price) : qty * price, quantity: qty, price,
-      })
+      const fraction = 0.05 + rand() * 0.35
+      trades.push({ index: i, date, dateStr, side, pos, rawQty, fraction })
     } else if (typeRoll < 0.6) {
       // Dividend — a plausible quarterly yield (0.2%–0.8%) on the position actually named,
       // rather than an arbitrary fraction of total account value.
@@ -103,6 +124,30 @@ function generateTransactions(accountId: string, totalValue: number): Transactio
         amount: direction === 'transfer_in' ? amount : -amount,
       })
     }
+  }
+
+  // Resolve buy/sell quantities oldest-first, carrying a running balance per symbol, so no
+  // trade can imply a negative holding at any point in the simulated 60-day window. A 'sell'
+  // against a symbol with no accumulated balance is reclassified as a 'buy' — there is nothing
+  // to sell yet this early in the window. This does not reconcile the running balance to the
+  // account's current position quantity (a stronger property); see the code comment on
+  // `boundedTradeQty` and the task report for why that stronger property was not attempted.
+  const balances = new Map<string, number>()
+  const chronological = [...trades].sort((a, b) => a.date.getTime() - b.date.getTime())
+  for (const trade of chronological) {
+    const symbol = trade.pos.symbol
+    const balance = balances.get(symbol) ?? 0
+    const side = trade.side === 'sell' && balance <= 0 ? 'buy' : trade.side
+    const cap = side === 'sell' ? balance : trade.pos.quantity
+    const qty = boundedTradeQty(cap, trade.rawQty, trade.fraction)
+    balances.set(symbol, side === 'buy' ? balance + qty : balance - qty)
+
+    const price = trade.pos.price
+    txns.push({
+      id: `txn-${accountId}-${trade.index}`, accountId, date: trade.dateStr,
+      type: side, symbol, description: `${side === 'buy' ? 'Bought' : 'Sold'} ${qty} shares ${symbol}`,
+      amount: side === 'buy' ? -(qty * price) : qty * price, quantity: qty, price,
+    })
   }
 
   return txns.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())

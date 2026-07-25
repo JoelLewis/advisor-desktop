@@ -3,6 +3,7 @@ import { getTaxLots, getTransactions } from '@/services/custodian'
 import { getPositions } from '@/services/pms'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { accounts } from '@/mocks/data/accounts'
+import { boundedTradeQty } from '@/mocks/handlers/custodian'
 
 const ACCOUNTS = ['acc-001', 'acc-002', 'acc-011', 'acc-020', 'acc-029', 'acc-041', 'acc-042', 'acc-043', 'acc-044']
 
@@ -102,5 +103,57 @@ describe('tax lots partition their positions', () => {
         ).toBeLessThanOrEqual(held)
       }
     }
+  })
+
+  // Round-2 review, Important: bounding only sells left buys unbounded, so a single buy could
+  // dwarf the entire position (151 BTC into a 2.15 BTC holding), and reconstructing each
+  // account's running per-symbol balance chronologically went negative in 11 of 47 accounts
+  // (e.g. acc-034's GLD implied -4 shares). Swept across all 47 accounts, not the 9-account
+  // ACCOUNTS list, for the same reason as the sell-only check above: the violations the reviewer
+  // found (acc-004, 010, 031, 032, 034, 038, 039, 040, 045) are outside it.
+  it('D33: no transaction implies a negative running balance for its symbol', async () => {
+    for (const account of accounts) {
+      const txns = await getTransactions(account.id)
+      const trades = txns
+        .filter((t) => t.type === 'buy' || t.type === 'sell')
+        .slice()
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      const balances = new Map<string, number>()
+      for (const txn of trades) {
+        const symbol = txn.symbol!
+        const before = balances.get(symbol) ?? 0
+        const after = txn.type === 'buy' ? before + txn.quantity! : before - txn.quantity!
+        expect(
+          after,
+          `${account.id} ${txn.id} (${txn.type} ${txn.quantity} ${symbol}) drives the running balance to ${after}`,
+        ).toBeGreaterThanOrEqual(0)
+        balances.set(symbol, after)
+      }
+    }
+  })
+
+  // Round-2 review, Minor: `Math.max(1, Math.floor(cap * fraction))` is unsound whenever cap < 1
+  // — it forces a minimum trade of 1 unit against a cap that holds less than that. It didn't
+  // manifest against the fixture (today's smallest non-cash quantity is 2.15 BTC), which is
+  // exactly why a synthetic, fixture-independent check is needed: this must hold for any future
+  // sub-1-unit position, not just the ones that happen to exist today.
+  it('boundedTradeQty never exceeds a sub-1-unit cap', () => {
+    const subUnitCaps = [0.05, 0.15, 0.3, 0.5, 0.9, 0.99]
+    const rawQtys = [10, 50, 100, 209]
+    const fractions = [0.05, 0.2, 0.4]
+    for (const cap of subUnitCaps) {
+      for (const rawQty of rawQtys) {
+        for (const fraction of fractions) {
+          const qty = boundedTradeQty(cap, rawQty, fraction)
+          expect(qty, `cap=${cap} rawQty=${rawQty} fraction=${fraction}`).toBeLessThanOrEqual(cap)
+          expect(qty).toBeGreaterThan(0)
+        }
+      }
+    }
+  })
+
+  it('boundedTradeQty returns 0 for a non-positive cap', () => {
+    expect(boundedTradeQty(0, 100, 0.2)).toBe(0)
+    expect(boundedTradeQty(-1, 100, 0.2)).toBe(0)
   })
 })
