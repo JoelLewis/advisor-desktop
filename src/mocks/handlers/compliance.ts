@@ -2,11 +2,21 @@ import { http, HttpResponse } from 'msw'
 import type { ComplianceAlert, SupervisionRecord, TradeComplianceRequest, TradeComplianceCheck, TradeComplianceResult } from '@/types/compliance'
 import { startOfToday } from '@/lib/clock'
 
-// ── Restricted securities list ──
-const RESTRICTED_SECURITIES = new Set([
-  'META', 'GOOG', 'GOOGL', // Firm has investment banking relationship
-  'COIN',                    // Insider affiliation
-  'GME', 'AMC',             // Heightened risk designation
+/**
+ * D29 · pre-trade compliance / conflicts of interest — one list, used by both the trade ticket
+ * (oms.ts) and the pre-trade engine below. They previously kept separate lists that disagreed:
+ * this one omitted the ticket's BBBY, and the ticket omitted every name here except GME and AMC.
+ *
+ * The rationales were a broker-dealer's, not an RIA's. "Investment banking relationship" is a
+ * sell-side construct — an RIA has no underwriting book. A registered adviser's restricted list is
+ * driven by material non-public information, access-person reportable holdings, and firm-wide
+ * restrictions. BBBY is also gone: it was delisted in 2023, so no adviser's live restricted list
+ * would still carry it.
+ */
+export const RESTRICTED_SECURITIES = new Set([
+  'META', 'GOOG', 'GOOGL', // Access person holds a reportable position
+  'COIN',                  // Material non-public information — engagement in progress
+  'GME', 'AMC',            // Firm-wide restriction — heightened volatility designation
 ])
 
 // ── Concentration limits ──

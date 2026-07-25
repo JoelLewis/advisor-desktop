@@ -15,8 +15,8 @@ describe('Referential Integrity — Cross-Entity Validation', () => {
       expect(clients).toHaveLength(22)
     })
 
-    it('has 45 accounts', () => {
-      expect(accounts).toHaveLength(45)
+    it('has 47 accounts', () => {
+      expect(accounts).toHaveLength(47)
     })
 
     it('has 13 households', () => {

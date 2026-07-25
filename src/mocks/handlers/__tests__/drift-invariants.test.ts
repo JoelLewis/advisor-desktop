@@ -55,9 +55,9 @@ describe('drift calculation invariants', () => {
     }
   })
 
-  it('returns drift data for all 45 accounts', async () => {
+  it('returns drift data for all 47 accounts', async () => {
     const drifts = await getDriftSummary()
-    expect(drifts).toHaveLength(45)
+    expect(drifts).toHaveLength(47)
   })
 
   it('acc-001 has drift data with valid structure', async () => {

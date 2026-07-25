@@ -12,6 +12,7 @@ export const COST_BASIS_LABELS: Record<string, string> = {
   specific_id: 'Specific Identification',
   fifo: 'FIFO (First In, First Out)',
   average_cost: 'Average Cost',
+  not_applicable: 'Not applicable (tax-advantaged account)',
 }
 
 export function makePositionColumns(onTrade?: (symbol: string, side: 'buy' | 'sell', assetClass?: string) => void, currencyCode?: CurrencyCode): ColumnDef<Position, unknown>[] {

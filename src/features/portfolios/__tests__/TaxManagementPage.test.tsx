@@ -50,12 +50,24 @@ describe('TaxManagementPage', () => {
     expect(within(select).getByRole('option', { name: 'FIFO' })).toBeInTheDocument()
   })
 
-  it('acc-004 (average_cost): AvgCost is offered as a cost-basis method', async () => {
+  // Was acc-004 until Task 18: every `average_cost` account in the book was a Roth IRA or a 529,
+  // and D35 moved those to `not_applicable` — a tax-free account elects no lot-selection method at
+  // all. acc-042 is the one genuinely taxable average-cost account left, so it is what this
+  // assertion has to be made against.
+  it('acc-042 (average_cost): AvgCost is offered as a cost-basis method', async () => {
+    renderPage('acc-042')
+    await screen.findByText('Chen-Wong SG Growth Account')
+
+    const select = screen.getByRole('combobox')
+    expect(within(select).getByRole('option', { name: 'AvgCost' })).toBeInTheDocument()
+  })
+
+  it('acc-004 (Roth IRA): no cost-basis method is elected, so AvgCost is not offered', async () => {
     renderPage('acc-004')
     await screen.findByText('Patricia Johnson Roth IRA')
 
     const select = screen.getByRole('combobox')
-    expect(within(select).getByRole('option', { name: 'AvgCost' })).toBeInTheDocument()
+    expect(within(select).queryByRole('option', { name: 'AvgCost' })).not.toBeInTheDocument()
   })
 
   // Fix-round-1 review, Important #3: an earlier version of this fix gated the page's own

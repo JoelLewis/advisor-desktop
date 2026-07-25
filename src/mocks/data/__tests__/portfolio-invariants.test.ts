@@ -3,8 +3,8 @@ import { allPositions, getPositionsForAccount } from '@/mocks/data/positions'
 
 describe('Portfolio Invariants', () => {
   describe('Position-level math (explicit positions)', () => {
-    it('allPositions contains 130 explicit positions (15 accounts)', () => {
-      expect(allPositions).toHaveLength(130)
+    it('allPositions contains 140 explicit positions (17 accounts)', () => {
+      expect(allPositions).toHaveLength(140)
     })
 
     it.each(allPositions.map((p) => [p.id, p.symbol, p]))(

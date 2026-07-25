@@ -1,13 +1,22 @@
 import type { SymbolSearchResult, OptionChain, OptionStrike } from '@/types/trading'
 
+/**
+ * D24/D25 — one price per security. This quote feed disagreed with the positions it prices: NVDA
+ * was $870.00 here against $780.00 in positions.ts, AAPL $185.00 against $195.40, MSFT $420.00
+ * against $420.15, and three of the crypto quotes disagreed with the acc-045 holdings they value.
+ * Positions are the book of record, so every quote below is the position's price, and
+ * currencies.ts derives its implied crypto rates from `digitalAssetSymbols` rather than restating
+ * them. `changePct` is recomputed as `change / (lastPrice - change)` wherever a price moved.
+ */
+
 // ── Equities (existing) ───────────────────────────────────────────────
 
 export const equitySymbols: SymbolSearchResult[] = [
-  { symbol: 'AAPL', name: 'Apple Inc.', assetClass: 'equity', lastPrice: 185.0, change: 2.34, changePct: 1.28 },
-  { symbol: 'MSFT', name: 'Microsoft Corporation', assetClass: 'equity', lastPrice: 420.0, change: -3.15, changePct: -0.74 },
+  { symbol: 'AAPL', name: 'Apple Inc.', assetClass: 'equity', lastPrice: 195.40, change: 2.34, changePct: 1.21 },
+  { symbol: 'MSFT', name: 'Microsoft Corporation', assetClass: 'equity', lastPrice: 420.15, change: -3.15, changePct: -0.74 },
   { symbol: 'GOOG', name: 'Alphabet Inc.', assetClass: 'equity', lastPrice: 175.0, change: 1.87, changePct: 1.08 },
   { symbol: 'AMZN', name: 'Amazon.com Inc.', assetClass: 'equity', lastPrice: 195.0, change: 4.12, changePct: 2.16 },
-  { symbol: 'NVDA', name: 'NVIDIA Corporation', assetClass: 'equity', lastPrice: 870.0, change: -12.50, changePct: -1.42 },
+  { symbol: 'NVDA', name: 'NVIDIA Corporation', assetClass: 'equity', lastPrice: 780.0, change: -12.50, changePct: -1.58 },
   { symbol: 'META', name: 'Meta Platforms Inc.', assetClass: 'equity', lastPrice: 520.0, change: 8.75, changePct: 1.71 },
   { symbol: 'TSLA', name: 'Tesla Inc.', assetClass: 'equity', lastPrice: 245.0, change: -5.60, changePct: -2.23 },
   { symbol: 'BRK.B', name: 'Berkshire Hathaway Inc.', assetClass: 'equity', lastPrice: 410.0, change: 1.20, changePct: 0.29 },
@@ -57,7 +66,9 @@ export const fixedIncomeSymbols: SymbolSearchResult[] = [
   { symbol: 'AAPL-30', name: 'Apple Inc. 3.00% 2030', assetClass: 'fixed_income', lastPrice: 94.75, change: 0.12, changePct: 0.13, cusip: '037833DX1', couponRate: 3.000, maturityDate: '2030-06-20', creditRating: 'AA+', yieldToMaturity: 4.15, yieldToWorst: 4.15, duration: 3.85, parValue: 1000, issuer: 'Apple Inc.', bondType: 'corporate' },
   { symbol: 'MSFT-31', name: 'Microsoft Corp 2.40% 2031', assetClass: 'fixed_income', lastPrice: 91.20, change: -0.18, changePct: -0.20, cusip: '594918BW6', couponRate: 2.400, maturityDate: '2031-08-08', creditRating: 'AAA', yieldToMaturity: 4.25, yieldToWorst: 4.25, duration: 4.62, parValue: 1000, issuer: 'Microsoft Corp', bondType: 'corporate' },
   { symbol: 'JPM-29', name: 'JPMorgan Chase 4.25% 2029', assetClass: 'fixed_income', lastPrice: 98.80, change: 0.05, changePct: 0.05, cusip: '46647PAZ5', couponRate: 4.250, maturityDate: '2029-10-01', creditRating: 'A-', yieldToMaturity: 4.45, yieldToWorst: 4.45, duration: 3.15, parValue: 1000, issuer: 'JPMorgan Chase & Co.', bondType: 'corporate' },
-  { symbol: 'GS-28', name: 'Goldman Sachs 3.85% 2028', assetClass: 'fixed_income', lastPrice: 97.50, change: -0.10, changePct: -0.10, cusip: '38141GYB3', couponRate: 3.850, maturityDate: '2028-07-08', creditRating: 'A+', yieldToMaturity: 4.30, yieldToWorst: 4.30, duration: 2.18, parValue: 1000, issuer: 'Goldman Sachs Group', bondType: 'corporate' },
+  // D34 — Goldman Sachs Group senior unsecured is BBB+ (S&P) / A2 (Moody's). 'A+' was the
+  // operating-bank rating, not the holding company's, and it priced the bond as if it were.
+  { symbol: 'GS-28', name: 'Goldman Sachs 3.85% 2028', assetClass: 'fixed_income', lastPrice: 97.50, change: -0.10, changePct: -0.10, cusip: '38141GYB3', couponRate: 3.850, maturityDate: '2028-07-08', creditRating: 'BBB+', yieldToMaturity: 4.30, yieldToWorst: 4.30, duration: 2.18, parValue: 1000, issuer: 'Goldman Sachs Group', bondType: 'corporate' },
   { symbol: 'CA-GO-32', name: 'California GO 5.00% 2032', assetClass: 'fixed_income', lastPrice: 105.25, change: 0.20, changePct: 0.19, cusip: '13063DRG8', couponRate: 5.000, maturityDate: '2032-10-01', creditRating: 'AA-', yieldToMaturity: 3.25, yieldToWorst: 3.25, duration: 5.10, parValue: 5000, issuer: 'State of California', bondType: 'municipal' },
   { symbol: 'NY-GO-30', name: 'New York GO 4.50% 2030', assetClass: 'fixed_income', lastPrice: 102.75, change: 0.15, changePct: 0.15, cusip: '649791MQ7', couponRate: 4.500, maturityDate: '2030-03-15', creditRating: 'AA', yieldToMaturity: 3.15, yieldToWorst: 3.15, duration: 3.52, parValue: 5000, issuer: 'City of New York', bondType: 'municipal' },
   { symbol: 'TX-REV-33', name: 'Texas Water Revenue 4.75% 2033', assetClass: 'fixed_income', lastPrice: 103.50, change: 0.08, changePct: 0.08, cusip: '882854KR2', couponRate: 4.750, maturityDate: '2033-08-01', creditRating: 'AAA', yieldToMaturity: 3.40, yieldToWorst: 3.40, duration: 5.82, parValue: 5000, issuer: 'Texas Water Dev Board', bondType: 'municipal' },
@@ -71,9 +82,9 @@ export const digitalAssetSymbols: SymbolSearchResult[] = [
   { symbol: 'ETH', name: 'Ethereum', assetClass: 'digital_asset', lastPrice: 3280.00, change: -45.00, changePct: -1.35, volume24h: 15_800_000_000, marketCap: 394_000_000_000, circulatingSupply: 120_200_000, fractionalAllowed: true },
   { symbol: 'SOL', name: 'Solana', assetClass: 'digital_asset', lastPrice: 142.50, change: 5.80, changePct: 4.24, volume24h: 3_200_000_000, marketCap: 65_000_000_000, circulatingSupply: 456_000_000, fractionalAllowed: true },
   { symbol: 'ADA', name: 'Cardano', assetClass: 'digital_asset', lastPrice: 0.62, change: 0.03, changePct: 5.08, volume24h: 850_000_000, marketCap: 22_000_000_000, circulatingSupply: 35_500_000_000, fractionalAllowed: true },
-  { symbol: 'AVAX', name: 'Avalanche', assetClass: 'digital_asset', lastPrice: 38.75, change: -1.20, changePct: -3.00, volume24h: 620_000_000, marketCap: 15_200_000_000, circulatingSupply: 392_000_000, fractionalAllowed: true },
-  { symbol: 'DOT', name: 'Polkadot', assetClass: 'digital_asset', lastPrice: 7.85, change: 0.25, changePct: 3.29, volume24h: 380_000_000, marketCap: 10_500_000_000, circulatingSupply: 1_340_000_000, fractionalAllowed: true },
-  { symbol: 'LINK', name: 'Chainlink', assetClass: 'digital_asset', lastPrice: 18.40, change: 0.65, changePct: 3.66, volume24h: 520_000_000, marketCap: 11_200_000_000, circulatingSupply: 608_000_000, fractionalAllowed: true },
+  { symbol: 'AVAX', name: 'Avalanche', assetClass: 'digital_asset', lastPrice: 41.67, change: -1.20, changePct: -2.80, volume24h: 620_000_000, marketCap: 16_300_000_000, circulatingSupply: 392_000_000, fractionalAllowed: true },
+  { symbol: 'DOT', name: 'Polkadot', assetClass: 'digital_asset', lastPrice: 8.40, change: 0.25, changePct: 3.07, volume24h: 380_000_000, marketCap: 11_300_000_000, circulatingSupply: 1_340_000_000, fractionalAllowed: true },
+  { symbol: 'LINK', name: 'Chainlink', assetClass: 'digital_asset', lastPrice: 20.41, change: 0.65, changePct: 3.29, volume24h: 520_000_000, marketCap: 12_400_000_000, circulatingSupply: 608_000_000, fractionalAllowed: true },
   { symbol: 'MATIC', name: 'Polygon', assetClass: 'digital_asset', lastPrice: 0.92, change: -0.04, changePct: -4.17, volume24h: 410_000_000, marketCap: 9_200_000_000, circulatingSupply: 10_000_000_000, fractionalAllowed: true },
   { symbol: 'UNI', name: 'Uniswap', assetClass: 'digital_asset', lastPrice: 12.35, change: 0.42, changePct: 3.52, volume24h: 290_000_000, marketCap: 7_400_000_000, circulatingSupply: 600_000_000, fractionalAllowed: true },
   { symbol: 'ATOM', name: 'Cosmos', assetClass: 'digital_asset', lastPrice: 9.45, change: -0.18, changePct: -1.87, volume24h: 195_000_000, marketCap: 3_600_000_000, circulatingSupply: 381_000_000, fractionalAllowed: true },
@@ -81,13 +92,15 @@ export const digitalAssetSymbols: SymbolSearchResult[] = [
 
 // ── Option chain data ─────────────────────────────────────────────────
 
-const OPTION_UNDERLYINGS: Record<string, number> = {
-  AAPL: 185.0,
-  MSFT: 420.0,
-  NVDA: 870.0,
-  AMZN: 195.0,
-  TSLA: 245.0,
-}
+// Underlying prices come from the same quote feed — an option chain struck against a different
+// price than the trade ticket quotes is the same D24 inconsistency in a second place.
+const OPTION_UNDERLYINGS: Record<string, number> = Object.fromEntries(
+  ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'TSLA'].map((symbol) => {
+    const quote = equitySymbols.find((s) => s.symbol === symbol)
+    if (!quote) throw new Error(`No quote for option underlying ${symbol}`)
+    return [symbol, quote.lastPrice]
+  }),
+)
 
 const EXPIRATION_DATES = [
   { date: '2026-03-07', dte: 9 },

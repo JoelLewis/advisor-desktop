@@ -705,16 +705,21 @@ export const pmsHandlers = [
       monteCarlo: (() => {
         const mu = p.ret
         const sigma = p.vol
-        // The delta-normal form is unbounded below, so at extreme quantiles on a very high-σ
-        // account (acc-045, σ = 0.636) `1 + μ + σz` goes negative — a projected account value
-        // below zero. A portfolio cannot be worth less than nothing, so the displayed value is
-        // floored at zero. The floor is a display bound only: μ, σ and the method are unchanged,
-        // and the caption on the page discloses that the normal form admits sub-zero values here.
+        // The delta-normal form is unbounded below, so at extreme quantiles on a high-σ account
+        // `1 + μ + σz` goes negative — a projected account value below zero. A portfolio cannot be
+        // worth less than nothing, so the displayed value is floored at zero. The floor is a
+        // display bound only: μ, σ and the method are unchanged, and the caption on the page
+        // discloses that the normal form admits sub-zero values here.
+        //
+        // No fixture account currently reaches it. acc-045 used to (σ = 0.636 when its weights
+        // summed to 0.925 and the 9.4% cash weight was normalised away); at its real σ = 0.589 the
+        // 1st percentile lands at 0.0166 of value. The floor stays because the bound is a property
+        // of the method, not of today's book — see risk-invariants.test.ts.
         const percentiles = [1, 5, 10, 25, 50, 75, 90, 95, 99].map((pct) => ({
           percentile: pct,
           value: roundTo(Math.max(0, value * (1 + mu + sigma * inverseNormalCDF(pct / 100))), 2),
         }))
-        // Same bound on the other axis. The μ − 3σ domain runs to −150% for acc-045, and a
+        // Same bound on the other axis. The μ − 3σ domain runs to −138% for acc-045, and a
         // long-only unlevered portfolio cannot lose more than everything, so the domain starts at
         // −100% at the earliest. The probability the normal approximation places below total loss
         // is **truncated from the display, not redistributed**: each bar is still the raw Gaussian

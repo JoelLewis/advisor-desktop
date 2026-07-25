@@ -52,7 +52,11 @@ describe('risk metrics are per account', () => {
     const thompsonIRA = await getRiskMetrics('acc-020')
     const crypto = await getRiskMetrics('acc-045')
     expect(thompsonIRA.standardDeviation).toBe(0.061)
-    expect(crypto.standardDeviation).toBe(0.636)
+    // 0.589, not the 0.636 frozen here before Task 18. acc-045's positions summed to $393,630
+    // against a $425,000 balance (D4) and its weights to 0.925; `assetClassWeights` normalised
+    // that gap away, so the account was modelled as 97.8% digital assets. The missing $31,370 is
+    // cash, which makes the real mix 90.5% digital assets and 9.4% cash and lowers sigma.
+    expect(crypto.standardDeviation).toBe(0.589)
     expect(crypto.beta).toBeGreaterThan(thompsonIRA.beta * 3)
   })
 
@@ -149,14 +153,28 @@ describe('the modelled return distribution', () => {
     }
   })
 
-  // acc-045 is the account that forces the floor: sigma = 0.636, so the delta-normal 1st
-  // percentile is 1 + 0.4041 - 0.636 * 2.3263 = -0.0755 of value before flooring.
-  it('floors the extreme lower tail on a very high volatility account', async () => {
+  // Task 18 note: acc-045 used to force the percentile floor to bite (sigma 0.636, mu 0.4041 gave
+  // a 1st percentile of -0.0755 of value). Correcting D4 — the account's positions summed to
+  // $393,630 against a $425,000 balance, and the missing $31,370 is cash — dropped sigma to 0.589,
+  // just under the 0.596 at which `1 + mu - 2.3263 * sigma` turns negative. No fixture account
+  // reaches the floor any more, so this asserts the invariant across the whole book rather than
+  // the single account that happened to breach it, plus how close the sharpest account now comes.
+  it('never projects a percentile below zero, on any account in the book', async () => {
+    for (const account of accounts) {
+      const { monteCarlo } = await getSensitivity(account.id)
+      for (const p of monteCarlo.percentiles) {
+        expect(p.value, `${account.id} p${p.percentile}`).toBeGreaterThanOrEqual(0)
+      }
+    }
+  })
+
+  it('acc-045 is the account that comes closest to the floor', async () => {
     const { monteCarlo } = await getSensitivity('acc-045')
-    expect(monteCarlo.volatility).toBe(0.636)
-    expect(monteCarlo.percentiles.find((p) => p.percentile === 1)!.value).toBe(0)
-    // The floor is a display bound only — the rest of the curve is untouched.
-    expect(monteCarlo.percentiles.find((p) => p.percentile === 5)!.value).toBeGreaterThan(0)
+    expect(monteCarlo.volatility).toBe(0.589)
+    const p1 = monteCarlo.percentiles.find((p) => p.percentile === 1)!
+    // 1 + 0.3868 - 0.589 * 2.3263 = 0.0166 of a $425,000 base: a 98.3% loss, positive by a hair.
+    expect(p1.value / monteCarlo.baseValue).toBeCloseTo(0.0166, 4)
+    expect(monteCarlo.percentiles.find((p) => p.percentile === 5)!.value).toBeGreaterThan(p1.value)
   })
 
   it('never shows a return bucket below total loss', async () => {
@@ -168,18 +186,19 @@ describe('the modelled return distribution', () => {
     }
   })
 
-  // acc-045's raw domain is mu - 3*sigma = 0.4139 - 1.908 = -1.4941, i.e. a -149% return. The
+  // acc-045's raw domain is mu - 3*sigma = 0.3868 - 1.767 = -1.3802, i.e. a -138% return. The
   // domain starts at total loss instead; the upper end is untouched, and the bars are still the
-  // raw density, so the truncated mass is dropped rather than redistributed.
+  // raw density, so the truncated mass is dropped rather than redistributed. Unlike the percentile
+  // floor above, this clamp still bites after Task 18's D4 correction.
   //
-  // mu is 0.4139 rather than the 0.4041 frozen here before Task 12 because the account's return
-  // now includes the manager edge inside each asset class — the same edge the attribution reports
-  // as selection and interaction. Only the constant moved; the clamp is unchanged.
+  // mu is 0.3868 rather than the 0.4139 frozen here before Task 18 (itself 0.4041 before Task 12,
+  // which added the manager edge inside each asset class). The move is the same D4 correction: the
+  // account's real 9.4% cash weight had been normalised away. Only the constants moved.
   it('bounds the domain at total loss without reshaping the density', async () => {
     const { monteCarlo } = await getSensitivity('acc-045')
     const buckets = monteCarlo.histogram.map((b) => b.returnBucket)
     expect(buckets[0]).toBe(-1)
-    expect(buckets[buckets.length - 1]).toBeCloseTo(0.4139 + 3 * 0.636, 3)
+    expect(buckets[buckets.length - 1]).toBeCloseTo(0.3868 + 3 * 0.589, 3)
     // A lower-sigma account is unaffected — the clamp only bites where the domain runs past -100%.
     const calm = await getSensitivity('acc-001')
     expect(calm.monteCarlo.histogram[0]!.returnBucket).toBeCloseTo(0.1021 - 3 * 0.0935, 4)

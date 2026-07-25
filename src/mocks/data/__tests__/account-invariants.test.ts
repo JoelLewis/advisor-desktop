@@ -16,8 +16,8 @@ const validModelIds = new Set([
 ])
 
 describe('Account Invariants', () => {
-  it('has exactly 45 accounts', () => {
-    expect(accounts).toHaveLength(45)
+  it('has exactly 47 accounts', () => {
+    expect(accounts).toHaveLength(47)
   })
 
   describe('Tax treatment mapping', () => {
@@ -26,8 +26,11 @@ describe('Account Invariants', () => {
     const taxableTypes = [
       'individual',
       'trust_revocable',
-      'trust_irrevocable',
     ] as const
+    // An irrevocable trust is a separate taxpayer filing its own Form 1041 at compressed trust
+    // rates, not an individual's taxable account. `trust_taxable` is the correct treatment and
+    // acc-006 already carried it — the grouping that expected plain `taxable` was the error.
+    const trustTaxableTypes = ['trust_irrevocable'] as const
 
     it.each(
       accounts
@@ -61,6 +64,17 @@ describe('Account Invariants', () => {
       '%s (%s): taxable account types have taxable treatment',
       (_id, _type, account) => {
         expect(account.taxTreatment).toBe('taxable')
+      },
+    )
+
+    it.each(
+      accounts
+        .filter((a) => (trustTaxableTypes as readonly string[]).includes(a.type))
+        .map((a) => [a.id, a.type, a]),
+    )(
+      '%s (%s): irrevocable trusts are taxed at trust rates',
+      (_id, _type, account) => {
+        expect(account.taxTreatment).toBe('trust_taxable')
       },
     )
   })

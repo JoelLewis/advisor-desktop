@@ -17,17 +17,24 @@ const trustPositions: Position[] = [
 ]
 
 // ─── acc-002: Robert Johnson Individual ($4.5M, mod-002 Growth) ─────────────
-// Growth tilt with digital assets, PE, and INTC loss position (TLH candidate)
+// Growth tilt with digital assets, PE, and INTC loss position (TLH candidate).
+//
+// D2/D28 — the nine positions summed to $4,832,000 against a $4,500,000 balance, and INTC still
+// showed the full 12,000 shares four days after ord-004/rs-001 sold 5,000 of them. INTC is now the
+// 7,000 shares actually held (cost basis $35.00/share, matching rs-001's $175,000 on 5,000), CASH
+// is the money market balance plus that sale's $142,250 of proceeds ($127,390 + $142,250), and the
+// remaining holdings are scaled by 0.923909 (= $4,031,210 / $4,363,210) with quantities re-derived
+// as whole shares so every market value is quantity x price and the nine sum to $4,500,000 exactly.
 const robertIndividualPositions: Position[] = [
-  { id: 'pos-020', accountId: 'acc-002', symbol: 'SPY', name: 'SPDR S&P 500 ETF', assetClass: 'us_equity', quantity: 4200, price: 520.30, costBasis: 1_800_000, marketValue: 2_185_260, weight: 0.452, gainLoss: 385_260, gainLossPercent: 0.214 },
-  { id: 'pos-021', accountId: 'acc-002', symbol: 'QQQ', name: 'Invesco QQQ Trust', assetClass: 'us_equity', quantity: 1800, price: 485.20, costBasis: 680_000, marketValue: 873_360, weight: 0.181, gainLoss: 193_360, gainLossPercent: 0.284 },
-  { id: 'pos-022', accountId: 'acc-002', symbol: 'EFA', name: 'iShares MSCI EAFE ETF', assetClass: 'intl_equity', quantity: 4500, price: 82.30, costBasis: 350_000, marketValue: 370_350, weight: 0.077, gainLoss: 20_350, gainLossPercent: 0.058 },
-  { id: 'pos-023', accountId: 'acc-002', symbol: 'INTC', name: 'Intel Corp.', assetClass: 'us_equity', quantity: 12000, price: 28.45, costBasis: 420_000, marketValue: 341_400, weight: 0.071, gainLoss: -78_600, gainLossPercent: -0.187 },
-  { id: 'pos-024', accountId: 'acc-002', symbol: 'AGG', name: 'iShares Core US Aggregate Bond ETF', assetClass: 'fixed_income', quantity: 5500, price: 98.50, costBasis: 545_000, marketValue: 541_750, weight: 0.112, gainLoss: -3_250, gainLossPercent: -0.006 },
-  { id: 'pos-026', accountId: 'acc-002', symbol: 'IBIT', name: 'iShares Bitcoin Trust ETF', assetClass: 'digital_assets', quantity: 3500, price: 52.80, costBasis: 140_000, marketValue: 184_800, weight: 0.038, gainLoss: 44_800, gainLossPercent: 0.320 },
-  { id: 'pos-027', accountId: 'acc-002', symbol: 'ETHE', name: 'iShares Ethereum Trust ETF', assetClass: 'digital_assets', quantity: 4200, price: 18.45, costBasis: 65_000, marketValue: 77_490, weight: 0.016, gainLoss: 12_490, gainLossPercent: 0.192 },
-  { id: 'pos-028', accountId: 'acc-002', symbol: 'BXPE', name: 'Blackstone Private Equity Fund', assetClass: 'private_equity', quantity: 1200, price: 108.50, costBasis: 115_000, marketValue: 130_200, weight: 0.027, gainLoss: 15_200, gainLossPercent: 0.132 },
-  { id: 'pos-025', accountId: 'acc-002', symbol: 'CASH', name: 'Money Market Fund', assetClass: 'cash', quantity: 1, price: 127_390, costBasis: 127_390, marketValue: 127_390, weight: 0.026, gainLoss: 0, gainLossPercent: 0 },
+  { id: 'pos-020', accountId: 'acc-002', symbol: 'SPY', name: 'SPDR S&P 500 ETF', assetClass: 'us_equity', quantity: 3879, price: 520.30, costBasis: 1_663_037, marketValue: 2_018_243.70, weight: 0.448, gainLoss: 355_206.70, gainLossPercent: 0.214 },
+  { id: 'pos-021', accountId: 'acc-002', symbol: 'QQQ', name: 'Invesco QQQ Trust', assetClass: 'us_equity', quantity: 1664, price: 485.20, costBasis: 628_258, marketValue: 807_372.80, weight: 0.179, gainLoss: 179_114.80, gainLossPercent: 0.285 },
+  { id: 'pos-022', accountId: 'acc-002', symbol: 'EFA', name: 'iShares MSCI EAFE ETF', assetClass: 'intl_equity', quantity: 4158, price: 82.30, costBasis: 323_368, marketValue: 342_203.40, weight: 0.076, gainLoss: 18_835.40, gainLossPercent: 0.058 },
+  { id: 'pos-023', accountId: 'acc-002', symbol: 'INTC', name: 'Intel Corp.', assetClass: 'us_equity', quantity: 7000, price: 28.45, costBasis: 245_000, marketValue: 199_150, weight: 0.044, gainLoss: -45_850, gainLossPercent: -0.187 },
+  { id: 'pos-024', accountId: 'acc-002', symbol: 'AGG', name: 'iShares Core US Aggregate Bond ETF', assetClass: 'fixed_income', quantity: 5082, price: 98.50, costBasis: 503_531, marketValue: 500_577, weight: 0.111, gainLoss: -2_954, gainLossPercent: -0.006 },
+  { id: 'pos-026', accountId: 'acc-002', symbol: 'IBIT', name: 'iShares Bitcoin Trust ETF', assetClass: 'digital_assets', quantity: 3234, price: 52.80, costBasis: 129_347, marketValue: 170_755.20, weight: 0.038, gainLoss: 41_408.20, gainLossPercent: 0.320 },
+  { id: 'pos-027', accountId: 'acc-002', symbol: 'ETHE', name: 'iShares Ethereum Trust ETF', assetClass: 'digital_assets', quantity: 3882, price: 18.45, costBasis: 60_054, marketValue: 71_622.90, weight: 0.016, gainLoss: 11_568.90, gainLossPercent: 0.193 },
+  { id: 'pos-028', accountId: 'acc-002', symbol: 'BXPE', name: 'Blackstone Private Equity Fund', assetClass: 'private_equity', quantity: 1110, price: 108.50, costBasis: 106_250, marketValue: 120_435, weight: 0.027, gainLoss: 14_185, gainLossPercent: 0.134 },
+  { id: 'pos-025', accountId: 'acc-002', symbol: 'CASH', name: 'Money Market Fund', assetClass: 'cash', quantity: 1, price: 269_640, costBasis: 269_640, marketValue: 269_640, weight: 0.060, gainLoss: 0, gainLossPercent: 0 },
 ]
 
 // ─── acc-003: Robert Johnson Traditional IRA ($3.55M, mod-003 Conservative Income) ──
@@ -104,18 +111,23 @@ const jamesThompsonIRAPositions: Position[] = [
   { id: 'pos-105', accountId: 'acc-020', symbol: 'VCIT', name: 'Vanguard Intermediate-Term Corporate Bond ETF', assetClass: 'fixed_income', quantity: 2920, price: 83.50, costBasis: 248_000, marketValue: 243_820, weight: 0.111, gainLoss: -4_180, gainLossPercent: -0.017 },
   { id: 'pos-106', accountId: 'acc-020', symbol: 'QAI', name: 'IQ Hedge Multi-Strategy Tracker ETF', assetClass: 'alternatives', quantity: 3000, price: 35.20, costBasis: 108_000, marketValue: 105_600, weight: 0.048, gainLoss: -2_400, gainLossPercent: -0.022 },
   { id: 'pos-107', accountId: 'acc-020', symbol: 'VNQ', name: 'Vanguard Real Estate ETF', assetClass: 'real_estate', quantity: 1200, price: 89.20, costBasis: 100_000, marketValue: 107_040, weight: 0.049, gainLoss: 7_040, gainLossPercent: 0.070 },
-  { id: 'pos-108', accountId: 'acc-020', symbol: 'CASH', name: 'Money Market Fund', assetClass: 'cash', quantity: 1, price: 220_840, costBasis: 220_840, marketValue: 220_840, weight: 0.100, gainLoss: 0, gainLossPercent: 0 },
+  // D3 — the eight non-cash holdings sum to $1,979,220, so cash is the $220,780 residual, not
+  // $220,840: the account's positions overstated its $2,200,000 balance by $60.
+  { id: 'pos-108', accountId: 'acc-020', symbol: 'CASH', name: 'Money Market Fund', assetClass: 'cash', quantity: 1, price: 220_780, costBasis: 220_780, marketValue: 220_780, weight: 0.100, gainLoss: 0, gainLossPercent: 0 },
 ]
 
-// ─── acc-029: Patel 529 Education ($600K, mod-006 Education) ────────────────
-// Age-based glide path with target-date logic for education goal
+// ─── acc-029: Patel 529 Education ($340K, mod-006 Education) ────────────────
+// Age-based glide path with target-date logic for education goal.
+// D3 — the section claimed $600K against accounts.ts's $340,000. The glide-path narrative
+// (nba-016) needs the account, not the balance, so the holdings are scaled by 340/600 with
+// quantities re-derived as whole shares and cash taking the $42,800 residual.
 const patel529Positions: Position[] = [
-  { id: 'pos-120', accountId: 'acc-029', symbol: 'VTI', name: 'Vanguard Total Stock Market ETF', assetClass: 'us_equity', quantity: 700, price: 268.50, costBasis: 170_000, marketValue: 187_950, weight: 0.313, gainLoss: 17_950, gainLossPercent: 0.106 },
-  { id: 'pos-121', accountId: 'acc-029', symbol: 'QQQ', name: 'Invesco QQQ Trust', assetClass: 'us_equity', quantity: 150, price: 485.20, costBasis: 65_000, marketValue: 72_780, weight: 0.121, gainLoss: 7_780, gainLossPercent: 0.120 },
-  { id: 'pos-122', accountId: 'acc-029', symbol: 'EFA', name: 'iShares MSCI EAFE ETF', assetClass: 'intl_equity', quantity: 800, price: 82.30, costBasis: 62_000, marketValue: 65_840, weight: 0.110, gainLoss: 3_840, gainLossPercent: 0.062 },
-  { id: 'pos-123', accountId: 'acc-029', symbol: 'AGG', name: 'iShares Core US Aggregate Bond ETF', assetClass: 'fixed_income', quantity: 1200, price: 98.50, costBasis: 120_000, marketValue: 118_200, weight: 0.197, gainLoss: -1_800, gainLossPercent: -0.015 },
-  { id: 'pos-124', accountId: 'acc-029', symbol: 'BND', name: 'Vanguard Total Bond Market ETF', assetClass: 'fixed_income', quantity: 1100, price: 72.40, costBasis: 81_000, marketValue: 79_640, weight: 0.133, gainLoss: -1_360, gainLossPercent: -0.017 },
-  { id: 'pos-125', accountId: 'acc-029', symbol: 'CASH', name: 'Money Market Fund', assetClass: 'cash', quantity: 1, price: 75_590, costBasis: 75_590, marketValue: 75_590, weight: 0.126, gainLoss: 0, gainLossPercent: 0 },
+  { id: 'pos-120', accountId: 'acc-029', symbol: 'VTI', name: 'Vanguard Total Stock Market ETF', assetClass: 'us_equity', quantity: 397, price: 268.50, costBasis: 96_333, marketValue: 106_594.50, weight: 0.314, gainLoss: 10_261.50, gainLossPercent: 0.107 },
+  { id: 'pos-121', accountId: 'acc-029', symbol: 'QQQ', name: 'Invesco QQQ Trust', assetClass: 'us_equity', quantity: 85, price: 485.20, costBasis: 36_833, marketValue: 41_242, weight: 0.121, gainLoss: 4_409, gainLossPercent: 0.120 },
+  { id: 'pos-122', accountId: 'acc-029', symbol: 'EFA', name: 'iShares MSCI EAFE ETF', assetClass: 'intl_equity', quantity: 450, price: 82.30, costBasis: 35_133, marketValue: 37_035, weight: 0.109, gainLoss: 1_902, gainLossPercent: 0.054 },
+  { id: 'pos-123', accountId: 'acc-029', symbol: 'AGG', name: 'iShares Core US Aggregate Bond ETF', assetClass: 'fixed_income', quantity: 681, price: 98.50, costBasis: 68_000, marketValue: 67_078.50, weight: 0.197, gainLoss: -921.50, gainLossPercent: -0.014 },
+  { id: 'pos-124', accountId: 'acc-029', symbol: 'BND', name: 'Vanguard Total Bond Market ETF', assetClass: 'fixed_income', quantity: 625, price: 72.40, costBasis: 45_900, marketValue: 45_250, weight: 0.133, gainLoss: -650, gainLossPercent: -0.014 },
+  { id: 'pos-125', accountId: 'acc-029', symbol: 'CASH', name: 'Money Market Fund', assetClass: 'cash', quantity: 1, price: 42_800, costBasis: 42_800, marketValue: 42_800, weight: 0.126, gainLoss: 0, gainLossPercent: 0 },
 ]
 
 // ─── acc-033: Thomas Kim Individual ($780K, mod-007 Moderate Balanced) ───────
@@ -213,16 +225,22 @@ const muellerCHFPositions: Position[] = [
 ]
 
 // ── acc-045: Patel Digital Assets ($425K) ─────────────────────────────────────
-// Crypto portfolio in USD-denominated Coinbase account
+// Crypto portfolio in USD-denominated Coinbase account.
+// D4 — the eight positions summed to $393,630 and their weights to 0.925 against a $425,000
+// balance. The $31,370 shortfall is cash, and every weight is now marketValue / 425,000.
+// D24 — BTC's market value was rounded to $188,018 while 2.15 x $87,450 is $188,017.50, which is
+// the one figure `marketValue === quantity * price` could not tolerate. Prices here are the book
+// of record for BTC/ETH/SOL/AVAX/DOT/LINK: trading.ts's quote feed and currencies.ts's implied
+// crypto rates both derive from them.
 const patelCryptoPositions: Position[] = [
-  { id: 'pos-240', accountId: 'acc-045', symbol: 'BTC', name: 'Bitcoin', assetClass: 'digital_assets', quantity: 2.15, price: 87_450, costBasis: 145_000, marketValue: 188_018, weight: 0.442, gainLoss: 43_018, gainLossPercent: 0.297 },
+  { id: 'pos-240', accountId: 'acc-045', symbol: 'BTC', name: 'Bitcoin', assetClass: 'digital_assets', quantity: 2.15, price: 87_450, costBasis: 145_000, marketValue: 188_017.50, weight: 0.442, gainLoss: 43_017.50, gainLossPercent: 0.297 },
   { id: 'pos-241', accountId: 'acc-045', symbol: 'ETH', name: 'Ethereum', assetClass: 'digital_assets', quantity: 22.5, price: 3_280, costBasis: 62_000, marketValue: 73_800, weight: 0.174, gainLoss: 11_800, gainLossPercent: 0.190 },
   { id: 'pos-242', accountId: 'acc-045', symbol: 'SOL', name: 'Solana', assetClass: 'digital_assets', quantity: 180, price: 142.50, costBasis: 30_000, marketValue: 25_650, weight: 0.060, gainLoss: -4_350, gainLossPercent: -0.145 },
   { id: 'pos-243', accountId: 'acc-045', symbol: 'AVAX', name: 'Avalanche', assetClass: 'digital_assets', quantity: 800, price: 41.67, costBasis: 28_000, marketValue: 33_336, weight: 0.078, gainLoss: 5_336, gainLossPercent: 0.191 },
   { id: 'pos-244', accountId: 'acc-045', symbol: 'LINK', name: 'Chainlink', assetClass: 'digital_assets', quantity: 1500, price: 20.41, costBasis: 25_000, marketValue: 30_615, weight: 0.072, gainLoss: 5_615, gainLossPercent: 0.225 },
   { id: 'pos-245', accountId: 'acc-045', symbol: 'DOT', name: 'Polkadot', assetClass: 'digital_assets', quantity: 2200, price: 8.40, costBasis: 22_000, marketValue: 18_480, weight: 0.043, gainLoss: -3_520, gainLossPercent: -0.160 },
-  { id: 'pos-246', accountId: 'acc-045', symbol: 'USDC', name: 'USD Coin', assetClass: 'digital_assets', quantity: 15231, price: 1.00, costBasis: 15_231, marketValue: 15_231, weight: 0.036, gainLoss: 0, gainLossPercent: 0 },
-  { id: 'pos-247', accountId: 'acc-045', symbol: 'CASH', name: 'USD Cash', assetClass: 'cash', quantity: 1, price: 8_500, costBasis: 8_500, marketValue: 8_500, weight: 0.020, gainLoss: 0, gainLossPercent: 0 },
+  { id: 'pos-246', accountId: 'acc-045', symbol: 'USDC', name: 'USD Coin', assetClass: 'digital_assets', quantity: 15_231.5, price: 1.00, costBasis: 15_231.50, marketValue: 15_231.50, weight: 0.036, gainLoss: 0, gainLossPercent: 0 },
+  { id: 'pos-247', accountId: 'acc-045', symbol: 'CASH', name: 'USD Cash', assetClass: 'cash', quantity: 1, price: 39_870, costBasis: 39_870, marketValue: 39_870, weight: 0.094, gainLoss: 0, gainLossPercent: 0 },
 ]
 
 // ─── Aggregate & Export ─────────────────────────────────────────────────────

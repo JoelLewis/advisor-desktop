@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import type { Order, RebalancePreview, ProposedTrade, ComplianceCheck, TradeRequest, PreTradeCheckRequest, PreTradeViolation } from '@/services/oms'
 import { notFound } from './utils'
+import { RESTRICTED_SECURITIES } from './compliance'
 
 const orders: Order[] = [
   // ── Recent orders for Johnson Family Trust (acc-001) ──
@@ -9,7 +10,9 @@ const orders: Order[] = [
   { id: 'ord-003', accountId: 'acc-001', symbol: 'NVDA', side: 'sell', quantity: 25, orderType: 'limit', limitPrice: 785.00, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-25T09:31:00Z', assetClass: 'equity' },
 
   // ── Robert Johnson Individual (acc-002) ──
-  { id: 'ord-004', accountId: 'acc-002', symbol: 'INTC', side: 'sell', quantity: 5000, orderType: 'market', status: 'filled', filledQuantity: 5000, filledPrice: 28.52, submittedAt: '2026-02-21T10:15:00Z', filledAt: '2026-02-21T10:15:03Z', assetClass: 'equity' },
+  // D28 — this fill is the same event as rs-001, so it prices at rs-001's $142,250 / 5,000 shares
+  // and acc-002's INTC position now shows the 7,000 shares left after it.
+  { id: 'ord-004', accountId: 'acc-002', symbol: 'INTC', side: 'sell', quantity: 5000, orderType: 'market', status: 'filled', filledQuantity: 5000, filledPrice: 28.45, submittedAt: '2026-02-21T10:15:00Z', filledAt: '2026-02-21T10:15:03Z', assetClass: 'equity' },
   { id: 'ord-005', accountId: 'acc-002', symbol: 'QQQ', side: 'buy', quantity: 200, orderType: 'limit', limitPrice: 480.00, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-25T09:35:00Z', assetClass: 'equity' },
 
   // ── Chen Irrevocable Trust (acc-006) ──
@@ -26,9 +29,15 @@ const orders: Order[] = [
   { id: 'ord-012', accountId: 'acc-015', symbol: 'VNQ', side: 'buy', quantity: 200, orderType: 'market', status: 'filled', filledQuantity: 200, filledPrice: 89.15, submittedAt: '2026-02-24T13:20:00Z', filledAt: '2026-02-24T13:20:02Z', assetClass: 'equity' },
 
   // ── Multi-asset orders ──
-  { id: 'ord-013', accountId: 'acc-001', symbol: 'VFIAX', side: 'purchase', quantity: 1, orderType: 'market', status: 'filled', filledQuantity: 1, filledPrice: 465.32, submittedAt: '2026-02-23T15:00:00Z', filledAt: '2026-02-23T16:00:00Z', assetClass: 'mutual_fund', dollarAmount: 25000, amountType: 'dollars' },
+  // D26 — a mutual fund order cannot fill at 11:00 ET. Rule 22c-1 requires forward pricing at the
+  // next computed NAV, which for VFIAX is 4:00 PM ET (21:00Z), and a $25,000 dollar-amount purchase
+  // buys $25,000 / $465.32 = 53.73 shares, not the placeholder 1.
+  { id: 'ord-013', accountId: 'acc-001', symbol: 'VFIAX', side: 'purchase', quantity: 53.73, orderType: 'market', status: 'filled', filledQuantity: 53.73, filledPrice: 465.32, submittedAt: '2026-02-23T15:00:00Z', filledAt: '2026-02-23T21:00:00Z', assetClass: 'mutual_fund', dollarAmount: 25000, amountType: 'dollars' },
   { id: 'ord-014', accountId: 'acc-002', symbol: 'UST-10Y', side: 'buy', quantity: 50, orderType: 'limit', limitPrice: 95.25, status: 'filled', filledQuantity: 50, filledPrice: 95.20, submittedAt: '2026-02-22T10:30:00Z', filledAt: '2026-02-22T10:30:05Z', assetClass: 'fixed_income', parAmount: 50000, bondPriceType: 'price', priceOrYield: 95.25 },
-  { id: 'ord-015', accountId: 'acc-002', symbol: 'BTC', side: 'buy', quantity: 0.25, orderType: 'market', status: 'filled', filledQuantity: 0.25, filledPrice: 86200.00, submittedAt: '2026-02-21T14:15:00Z', filledAt: '2026-02-21T14:15:01Z', assetClass: 'digital_asset', fractionalQuantity: true },
+  // D27 — spot BTC settled into acc-002, a Schwab brokerage that can only hold the IBIT and ETHE
+  // ETFs. It belongs in acc-045, the Coinbase account that actually custodies coins, and at the one
+  // BTC price the app knows.
+  { id: 'ord-015', accountId: 'acc-045', symbol: 'BTC', side: 'buy', quantity: 0.25, orderType: 'market', status: 'filled', filledQuantity: 0.25, filledPrice: 87_450.00, submittedAt: '2026-02-21T14:15:00Z', filledAt: '2026-02-21T14:15:01Z', assetClass: 'digital_asset', fractionalQuantity: true },
   { id: 'ord-016', accountId: 'acc-006', symbol: 'AAPLC185', side: 'buy_to_open', quantity: 5, orderType: 'limit', limitPrice: 8.50, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-25T11:00:00Z', assetClass: 'option', underlying: 'AAPL', optionType: 'call', strikePrice: 185, expirationDate: '2026-03-21', contractMultiplier: 100 },
 ]
 
@@ -130,9 +139,8 @@ export const omsHandlers = [
       })
     }
 
-    // Restricted securities check
-    const restricted = ['GME', 'AMC', 'BBBY']
-    if (restricted.includes(sym)) {
+    // Restricted securities check — D29: one list, shared with the pre-trade compliance engine.
+    if (RESTRICTED_SECURITIES.has(sym)) {
       violations.push({
         constraint: 'Restricted securities list',
         severity: 'block',

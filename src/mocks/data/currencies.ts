@@ -1,7 +1,21 @@
+import { digitalAssetSymbols } from './trading'
+
 // ── FX Rates (USD base) ──
 // 1 USD = X units of target currency
 // For crypto: since 1 BTC >> 1 USD, the rate is a small fraction
-// (e.g., 0.000011 means 1 USD buys 0.000011 BTC, i.e., BTC ≈ $91K)
+// (e.g., 0.0000114 means 1 USD buys 0.0000114 BTC, i.e., BTC ≈ $87.5K)
+
+/**
+ * D25 — a crypto FX rate is the reciprocal of that asset's price, so restating it invites the two
+ * to drift: BTC was quoted at 0.000011 (implying $90,909) against a book price of $87,450, SOL at
+ * 0.0042 ($238) against $142.50, and every other crypto rate here disagreed with its own quote.
+ * The rates are now derived from `digitalAssetSymbols`, which in turn carries the position prices.
+ */
+function impliedRate(symbol: string): number {
+  const quote = digitalAssetSymbols.find((s) => s.symbol === symbol)
+  if (!quote) throw new Error(`No quote for ${symbol}; cannot derive its USD-base FX rate`)
+  return 1 / quote.lastPrice
+}
 
 export const FX_RATES_USD_BASE = {
   // ── Fiat ──
@@ -25,22 +39,22 @@ export const FX_RATES_USD_BASE = {
   KRW: 1298.50,
   TWD: 31.45,
 
-  // ── Crypto ──
-  BTC: 0.000011,   // ≈ $91,000
-  ETH: 0.00028,    // ≈ $3,571
-  SOL: 0.0042,     // ≈ $238
-  ADA: 1.11,       // ≈ $0.90
-  AVAX: 0.024,     // ≈ $41.67
-  DOT: 0.119,      // ≈ $8.40
-  LINK: 0.049,     // ≈ $20.41
-  MATIC: 1.82,     // ≈ $0.55
-  UNI: 0.067,      // ≈ $14.93
-  ATOM: 0.089,     // ≈ $11.24
+  // ── Crypto (derived from the quote feed — see `impliedRate`) ──
+  BTC: impliedRate('BTC'),
+  ETH: impliedRate('ETH'),
+  SOL: impliedRate('SOL'),
+  ADA: impliedRate('ADA'),
+  AVAX: impliedRate('AVAX'),
+  DOT: impliedRate('DOT'),
+  LINK: impliedRate('LINK'),
+  MATIC: impliedRate('MATIC'),
+  UNI: impliedRate('UNI'),
+  ATOM: impliedRate('ATOM'),
 
-  // ── Stablecoins ──
+  // ── Stablecoins (pegged 1:1, matching the USDC position's $1.00 price) ──
   USDT: 1.0,
   USDC: 1.0,
   DAI: 1.0,
-} as const satisfies Record<string, number>
+} satisfies Record<string, number>
 
 export const FX_RATE_TIMESTAMP = '2026-02-25T16:00:00Z' as const

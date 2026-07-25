@@ -31,7 +31,11 @@ type UMASleeve = {
   value: Currency;
 };
 
-type CostBasisMethod = 'specific_id' | 'fifo' | 'average_cost';
+/**
+ * D35 — `not_applicable` is the honest election for a Roth IRA or a 529: distributions are tax-free
+ * and gains are never realised for tax purposes, so no lot-selection method is in force.
+ */
+type CostBasisMethod = 'specific_id' | 'fifo' | 'average_cost' | 'not_applicable';
 
 type Account = {
   id: string;
