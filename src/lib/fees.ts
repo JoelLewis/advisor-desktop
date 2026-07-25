@@ -10,6 +10,16 @@ export type HouseholdFeeInput = {
   annualFee: number
 }
 
+/** 0.0085 → 85. The single place `× 10_000` happens when converting a rate to basis points. */
+export function bps(rate: number): number {
+  return rate * 10_000
+}
+
+/** 85 → 0.0085. Inverse of `bps`. */
+export function rateFromBps(basisPoints: number): number {
+  return basisPoints / 10_000
+}
+
 export function householdAnnualFee(aum: number, annualRate: number): number {
   return aum * annualRate
 }
@@ -19,5 +29,31 @@ export function assetWeightedEffectiveFee(fees: readonly HouseholdFeeInput[]): n
   const totalAUM = fees.reduce((sum, f) => sum + f.aum, 0)
   if (totalAUM === 0) return 0
   const totalFees = fees.reduce((sum, f) => sum + f.annualFee, 0)
-  return (totalFees / totalAUM) * 10_000
+  return bps(totalFees / totalAUM)
+}
+
+export type FeeTier = { upTo: number | null; rate: number }
+
+/**
+ * C33 · fee-billing / fee-disclosure — marginal tiered billing. A proposal previously hardcoded
+ * "$40,250 (0.805% blended rate)" for a $5,000,000 portfolio; tpl-001's own tier table gives
+ * $45,500 / 0.91%, a $5,250/yr understatement in a client-facing fee disclosure. Each tier's rate
+ * applies only to the slice of AUM that falls within it — not to the whole balance.
+ */
+export function blendedTieredFee(
+  aum: number,
+  tiers: readonly FeeTier[],
+): { fee: number; blendedRate: number } {
+  let remaining = aum
+  let floor = 0
+  let fee = 0
+  for (const tier of tiers) {
+    if (remaining <= 0) break
+    const ceiling = tier.upTo ?? Number.POSITIVE_INFINITY
+    const slice = Math.min(remaining, ceiling - floor)
+    fee += slice * tier.rate
+    remaining -= slice
+    floor = ceiling
+  }
+  return { fee, blendedRate: aum === 0 ? 0 : fee / aum }
 }

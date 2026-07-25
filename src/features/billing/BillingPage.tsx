@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/Badge'
 import { TabLayout } from '@/components/ui/TabLayout'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useBillingCycles, useHouseholdFees, useBillingExceptions, useBreakpointAnalyses } from '@/hooks/use-billing'
+import { useBookOfBusiness } from '@/hooks/use-portfolio'
 import { useUIStore } from '@/store/ui-store'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { formatPercent } from '@/lib/utils'
@@ -245,6 +246,10 @@ export function BillingPage() {
   const { data: fees, isLoading: feesLoading } = useHouseholdFees()
   const { data: exceptions } = useBillingExceptions({ resolved: 'false' })
   const { data: breakpoints } = useBreakpointAnalyses()
+  // C29 · fee-billing — the effective fee is asset-weighted (Σ fees ÷ Σ AUM), read from Book of
+  // Business so there is exactly one source. It was previously the unweighted mean of 13 rates
+  // (88 bps), which lets a handful of small, high-rate households distort the reported figure.
+  const { data: book } = useBookOfBusiness()
   const { formatWithConversion } = useFormatCurrency()
 
   const isLoading = cyclesLoading || feesLoading
@@ -259,9 +264,6 @@ export function BillingPage() {
   }
 
   const totalQuarterly = fees?.reduce((s, f) => s + f.quarterlyAmount, 0) ?? 0
-  const avgRate = fees && fees.length > 0
-    ? fees.reduce((s, f) => s + f.annualRate, 0) / fees.length
-    : 0
 
   const tabs = [
     {
@@ -302,8 +304,8 @@ export function BillingPage() {
         </Card>
         <Card>
           <CardContent className="p-3">
-            <div className="text-caption text-text-tertiary">Avg Fee Rate</div>
-            <div className="font-mono text-heading text-text-primary">{(avgRate * 10000).toFixed(0)} bps</div>
+            <div className="text-caption text-text-tertiary">Effective fee (asset-weighted)</div>
+            <div className="font-mono text-heading text-text-primary">{book ? `${book.effectiveFeeBps} bps` : '—'}</div>
           </CardContent>
         </Card>
         <Card>
