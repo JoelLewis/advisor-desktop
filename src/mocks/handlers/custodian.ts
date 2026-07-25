@@ -53,9 +53,15 @@ function quarterLabel(date: Date): string {
  * fractional units instead of flooring to zero and forcing an out-of-bounds minimum.
  */
 export function boundedTradeQty(cap: number, rawQty: number, fraction: number): number {
-  if (cap <= 0) return 0
+  // Guarded uniformly rather than only where today's caller happens to be safe. The sole caller
+  // always passes finite positives, but this is exported for reuse and its whole purpose is to
+  // clamp — a caller deriving `cap` from a running balance can reach zero from the negative side
+  // through float residue, and `NaN <= 0` is false, so an unguarded NaN would flow straight
+  // through the cap check and be returned as a "quantity".
+  if (!Number.isFinite(cap) || !Number.isFinite(rawQty) || !Number.isFinite(fraction)) return 0
+  if (cap <= 0 || rawQty <= 0 || fraction <= 0) return 0
   const rough = Math.min(rawQty, cap * fraction)
-  return cap >= 1 ? Math.max(1, Math.floor(rough)) : Math.round(rough * 1e6) / 1e6
+  return cap >= 1 ? Math.min(cap, Math.max(1, Math.floor(rough))) : Math.round(rough * 1e6) / 1e6
 }
 
 type TradeShell = {

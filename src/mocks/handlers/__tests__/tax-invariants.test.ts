@@ -156,4 +156,23 @@ describe('tax lots partition their positions', () => {
     expect(boundedTradeQty(0, 100, 0.2)).toBe(0)
     expect(boundedTradeQty(-1, 100, 0.2)).toBe(0)
   })
+
+  /**
+   * The function is exported for reuse and exists to clamp, so it must clamp on every argument
+   * rather than only where today's single caller happens to be safe. `NaN <= 0` is false, so an
+   * unguarded NaN cap flows past the non-positive check and is returned as a "quantity"; a caller
+   * deriving a cap from a running balance can also reach zero from the negative side through float
+   * residue. Neither is reachable from the current caller — that is the point of testing it here.
+   */
+  it('boundedTradeQty clamps out-of-domain input instead of returning it', () => {
+    for (const bad of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      expect(boundedTradeQty(bad, 100, 0.2), `cap ${bad}`).toBe(0)
+      expect(boundedTradeQty(0.5, bad, 0.2), `rawQty ${bad}`).toBe(0)
+      expect(boundedTradeQty(0.5, 100, bad), `fraction ${bad}`).toBe(0)
+    }
+    expect(boundedTradeQty(0.5, -5, 0.2)).toBe(0)
+    expect(boundedTradeQty(0.5, 10, -0.2)).toBe(0)
+    // A fraction above 1 must not let the draw exceed the cap on the whole-share branch either.
+    expect(boundedTradeQty(1.5, 100, 2)).toBeLessThanOrEqual(1.5)
+  })
 })
