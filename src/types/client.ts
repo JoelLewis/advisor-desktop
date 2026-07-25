@@ -59,6 +59,12 @@ type Client = {
   updatedAt: string;
 };
 
+/**
+ * D23 · fee-billing / regulatory-reporting — the shape a client fixture is allowed to hold.
+ * `totalAUM` is derived from `accounts.ts` and must never appear in a literal.
+ */
+type ClientFixture = Omit<Client, 'totalAUM'>;
+
 export type {
   ClientSegment,
   ReviewFrequency,
@@ -68,4 +74,5 @@ export type {
   RiskTolerance,
   RiskProfile,
   Client,
+  ClientFixture,
 };

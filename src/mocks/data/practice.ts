@@ -1,4 +1,8 @@
 import type { TeamMemberActivity, BookAnalytics } from '@/types/practice'
+import { accounts } from './accounts'
+import { households } from './households'
+import { FX_RATES_USD_BASE } from './currencies'
+import { accountValueUSD, deriveSegmentAUM } from '@/lib/aum'
 
 export const teamActivity: TeamMemberActivity[] = [
   {
@@ -39,21 +43,42 @@ export const teamActivity: TeamMemberActivity[] = [
   },
 ]
 
+const ACCOUNT_TYPE_LABELS: Record<string, string> = {
+  individual: 'Individual',
+  trust_revocable: 'Trust',
+  trust_irrevocable: 'Trust',
+  traditional_ira: 'IRA',
+  roth_ira: 'IRA',
+  sep_ira: 'IRA',
+  simple_ira: 'IRA',
+  inherited_ira: 'IRA',
+  '529': '529',
+}
+
+function deriveAUMByAccountType(): BookAnalytics['aumByAccountType'] {
+  const grouped = new Map<string, { aum: number; count: number }>()
+  for (const account of accounts) {
+    const label = ACCOUNT_TYPE_LABELS[account.type] ?? 'Other'
+    const entry = grouped.get(label) ?? { aum: 0, count: 0 }
+    entry.aum += accountValueUSD(account, FX_RATES_USD_BASE)
+    entry.count += 1
+    grouped.set(label, entry)
+  }
+  return [...grouped.entries()]
+    .map(([type, d]) => ({ type, aum: d.aum, count: d.count }))
+    .sort((a, b) => b.aum - a.aum)
+}
+
 export const bookAnalytics: BookAnalytics = {
-  aumBySegment: [
-    { segment: 'platinum', aum: 66_850_000, count: 3 },
-    { segment: 'gold', aum: 27_050_000, count: 4 },
-    { segment: 'silver', aum: 5_575_000, count: 4 },
-    { segment: 'bronze', aum: 380_000, count: 1 },
-  ],
-  aumByAccountType: [
-    { type: 'Individual', aum: 35_000_000, count: 14 },
-    { type: 'Joint', aum: 18_000_000, count: 6 },
-    { type: 'IRA', aum: 22_000_000, count: 10 },
-    { type: 'Trust', aum: 12_000_000, count: 4 },
-    { type: '401k', aum: 8_000_000, count: 4 },
-    { type: 'Other', aum: 4_855_000, count: 2 },
-  ],
+  // critique-ux §1.4 — these were hand-typed and summed to $99,855,000 against a book of
+  // $91,320,824, with `Other: 4,855,000` acting as a visible plug on the bar chart. Kept at full
+  // float64 precision, unrounded, per lib/aum.ts — rounding for display is a Phase 2 concern.
+  aumBySegment: deriveSegmentAUM(households, accounts, FX_RATES_USD_BASE).map((s) => ({
+    segment: s.segment as BookAnalytics['aumBySegment'][number]['segment'],
+    aum: s.aum,
+    count: s.householdCount,
+  })),
+  aumByAccountType: deriveAUMByAccountType(),
   clientTenure: [
     { bucket: '0-1yr', count: 2 },
     { bucket: '1-3yr', count: 5 },

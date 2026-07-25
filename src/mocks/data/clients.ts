@@ -1,6 +1,9 @@
-import type { Client } from '@/types/client'
+import type { Client, ClientFixture } from '@/types/client'
+import { accounts } from './accounts'
+import { FX_RATES_USD_BASE } from './currencies'
+import { deriveClientAUM } from '@/lib/aum'
 
-export const clients: Client[] = [
+const clientFixtures: ClientFixture[] = [
   {
     id: 'cli-001',
     firstName: 'Robert',
@@ -11,7 +14,6 @@ export const clients: Client[] = [
     segment: 'platinum',
     tier: { segment: 'platinum', label: 'Platinum', minAUM: 10_000_000, reviewFrequency: 'quarterly' },
     advisorId: 'adv-001',
-    totalAUM: 18_450_000,
     householdId: 'hh-001',
     riskProfile: { tolerance: 'moderate', score: 55, lastAssessed: '2025-09-15' },
     contactInfo: {
@@ -36,7 +38,6 @@ export const clients: Client[] = [
     segment: 'platinum',
     tier: { segment: 'platinum', label: 'Platinum', minAUM: 10_000_000, reviewFrequency: 'quarterly' },
     advisorId: 'adv-001',
-    totalAUM: 4_200_000,
     householdId: 'hh-001',
     riskProfile: { tolerance: 'conservative', score: 35, lastAssessed: '2025-09-15' },
     contactInfo: {
@@ -60,7 +61,6 @@ export const clients: Client[] = [
     segment: 'platinum',
     tier: { segment: 'platinum', label: 'Platinum', minAUM: 10_000_000, reviewFrequency: 'quarterly' },
     advisorId: 'adv-001',
-    totalAUM: 24_800_000,
     householdId: 'hh-002',
     riskProfile: { tolerance: 'growth', score: 78, lastAssessed: '2025-08-20' },
     contactInfo: {
@@ -84,7 +84,6 @@ export const clients: Client[] = [
     segment: 'gold',
     tier: { segment: 'gold', label: 'Gold', minAUM: 2_000_000, reviewFrequency: 'semi_annual' },
     advisorId: 'adv-001',
-    totalAUM: 5_250_000,
     householdId: 'hh-003',
     riskProfile: { tolerance: 'moderate', score: 60, lastAssessed: '2025-10-01' },
     contactInfo: {
@@ -108,7 +107,6 @@ export const clients: Client[] = [
     segment: 'gold',
     tier: { segment: 'gold', label: 'Gold', minAUM: 2_000_000, reviewFrequency: 'semi_annual' },
     advisorId: 'adv-001',
-    totalAUM: 2_100_000,
     householdId: 'hh-003',
     riskProfile: { tolerance: 'moderate', score: 50, lastAssessed: '2025-10-01' },
     contactInfo: {
@@ -132,7 +130,6 @@ export const clients: Client[] = [
     segment: 'gold',
     tier: { segment: 'gold', label: 'Gold', minAUM: 2_000_000, reviewFrequency: 'semi_annual' },
     advisorId: 'adv-001',
-    totalAUM: 7_800_000,
     householdId: 'hh-004',
     riskProfile: { tolerance: 'aggressive', score: 82, lastAssessed: '2025-07-10' },
     contactInfo: {
@@ -156,7 +153,6 @@ export const clients: Client[] = [
     segment: 'gold',
     tier: { segment: 'gold', label: 'Gold', minAUM: 2_000_000, reviewFrequency: 'semi_annual' },
     advisorId: 'adv-001',
-    totalAUM: 3_400_000,
     householdId: 'hh-004',
     riskProfile: { tolerance: 'moderate', score: 52, lastAssessed: '2025-07-10' },
     contactInfo: {
@@ -180,7 +176,6 @@ export const clients: Client[] = [
     segment: 'gold',
     tier: { segment: 'gold', label: 'Gold', minAUM: 2_000_000, reviewFrequency: 'semi_annual' },
     advisorId: 'adv-001',
-    totalAUM: 3_900_000,
     householdId: 'hh-005',
     riskProfile: { tolerance: 'moderate', score: 58, lastAssessed: '2025-06-15' },
     contactInfo: {
@@ -204,7 +199,6 @@ export const clients: Client[] = [
     segment: 'gold',
     tier: { segment: 'gold', label: 'Gold', minAUM: 2_000_000, reviewFrequency: 'semi_annual' },
     advisorId: 'adv-001',
-    totalAUM: 6_100_000,
     householdId: 'hh-006',
     riskProfile: { tolerance: 'moderate', score: 62, lastAssessed: '2025-08-01' },
     contactInfo: {
@@ -228,7 +222,6 @@ export const clients: Client[] = [
     segment: 'gold',
     tier: { segment: 'gold', label: 'Gold', minAUM: 2_000_000, reviewFrequency: 'semi_annual' },
     advisorId: 'adv-001',
-    totalAUM: 2_300_000,
     householdId: 'hh-006',
     riskProfile: { tolerance: 'conservative', score: 38, lastAssessed: '2025-08-01' },
     contactInfo: {
@@ -252,7 +245,6 @@ export const clients: Client[] = [
     segment: 'gold',
     tier: { segment: 'gold', label: 'Gold', minAUM: 2_000_000, reviewFrequency: 'semi_annual' },
     advisorId: 'adv-001',
-    totalAUM: 4_600_000,
     householdId: 'hh-007',
     riskProfile: { tolerance: 'moderate', score: 55, lastAssessed: '2025-09-20' },
     contactInfo: {
@@ -276,7 +268,6 @@ export const clients: Client[] = [
     segment: 'gold',
     tier: { segment: 'gold', label: 'Gold', minAUM: 2_000_000, reviewFrequency: 'semi_annual' },
     advisorId: 'adv-001',
-    totalAUM: 2_800_000,
     householdId: 'hh-007',
     riskProfile: { tolerance: 'moderate', score: 48, lastAssessed: '2025-09-20' },
     contactInfo: {
@@ -300,7 +291,6 @@ export const clients: Client[] = [
     segment: 'silver',
     tier: { segment: 'silver', label: 'Silver', minAUM: 500_000, reviewFrequency: 'annual' },
     advisorId: 'adv-001',
-    totalAUM: 1_250_000,
     householdId: 'hh-008',
     riskProfile: { tolerance: 'aggressive', score: 75, lastAssessed: '2025-05-10' },
     contactInfo: {
@@ -324,7 +314,6 @@ export const clients: Client[] = [
     segment: 'silver',
     tier: { segment: 'silver', label: 'Silver', minAUM: 500_000, reviewFrequency: 'annual' },
     advisorId: 'adv-001',
-    totalAUM: 850_000,
     householdId: 'hh-008',
     riskProfile: { tolerance: 'moderate', score: 50, lastAssessed: '2025-05-10' },
     contactInfo: {
@@ -348,7 +337,6 @@ export const clients: Client[] = [
     segment: 'silver',
     tier: { segment: 'silver', label: 'Silver', minAUM: 500_000, reviewFrequency: 'annual' },
     advisorId: 'adv-001',
-    totalAUM: 980_000,
     householdId: 'hh-009',
     riskProfile: { tolerance: 'growth', score: 70, lastAssessed: '2025-04-22' },
     contactInfo: {
@@ -372,7 +360,6 @@ export const clients: Client[] = [
     segment: 'silver',
     tier: { segment: 'silver', label: 'Silver', minAUM: 500_000, reviewFrequency: 'annual' },
     advisorId: 'adv-001',
-    totalAUM: 720_000,
     householdId: 'hh-010',
     riskProfile: { tolerance: 'conservative', score: 30, lastAssessed: '2025-03-18' },
     contactInfo: {
@@ -396,7 +383,6 @@ export const clients: Client[] = [
     segment: 'silver',
     tier: { segment: 'silver', label: 'Silver', minAUM: 500_000, reviewFrequency: 'annual' },
     advisorId: 'adv-001',
-    totalAUM: 1_500_000,
     householdId: 'hh-011',
     riskProfile: { tolerance: 'aggressive', score: 80, lastAssessed: '2025-07-05' },
     contactInfo: {
@@ -420,7 +406,6 @@ export const clients: Client[] = [
     segment: 'bronze',
     tier: { segment: 'bronze', label: 'Bronze', minAUM: 0, reviewFrequency: 'annual' },
     advisorId: 'adv-001',
-    totalAUM: 380_000,
     householdId: 'hh-012',
     riskProfile: { tolerance: 'conservative', score: 25, lastAssessed: '2025-02-14' },
     contactInfo: {
@@ -444,7 +429,6 @@ export const clients: Client[] = [
     segment: 'bronze',
     tier: { segment: 'bronze', label: 'Bronze', minAUM: 0, reviewFrequency: 'annual' },
     advisorId: 'adv-001',
-    totalAUM: 275_000,
     householdId: 'hh-009',
     riskProfile: { tolerance: 'moderate', score: 55, lastAssessed: '2025-06-01' },
     contactInfo: {
@@ -468,7 +452,6 @@ export const clients: Client[] = [
     segment: 'gold',
     tier: { segment: 'gold', label: 'Gold', minAUM: 2_000_000, reviewFrequency: 'semi_annual' },
     advisorId: 'adv-001',
-    totalAUM: 8_200_000,
     householdId: 'hh-002',
     riskProfile: { tolerance: 'moderate', score: 58, lastAssessed: '2025-08-20' },
     contactInfo: {
@@ -492,7 +475,6 @@ export const clients: Client[] = [
     segment: 'gold',
     tier: { segment: 'gold', label: 'Gold', minAUM: 2_000_000, reviewFrequency: 'semi_annual' },
     advisorId: 'adv-001',
-    totalAUM: 5_400_000,
     householdId: 'hh-013',
     riskProfile: { tolerance: 'moderate', score: 52, lastAssessed: '2025-10-01' },
     contactInfo: {
@@ -516,7 +498,6 @@ export const clients: Client[] = [
     segment: 'gold',
     tier: { segment: 'gold', label: 'Gold', minAUM: 2_000_000, reviewFrequency: 'semi_annual' },
     advisorId: 'adv-001',
-    totalAUM: 1_800_000,
     householdId: 'hh-013',
     riskProfile: { tolerance: 'conservative', score: 38, lastAssessed: '2025-10-01' },
     contactInfo: {
@@ -531,3 +512,14 @@ export const clients: Client[] = [
     updatedAt: '2025-11-20',
   },
 ]
+
+/**
+ * D23 · fee-billing / regulatory-reporting — client AUM is the FX-applied sum of the client's own
+ * accounts. The hand-typed values summed to $107,055,000 against a book of $91,320,824, and were
+ * an unlabelled blend of managed and held-away assets. Only managed AUM is billable and reportable
+ * as Regulatory AUM under Form ADV Item 5.
+ */
+export const clients: Client[] = clientFixtures.map((c) => ({
+  ...c,
+  totalAUM: deriveClientAUM(c.id, accounts, FX_RATES_USD_BASE),
+}))

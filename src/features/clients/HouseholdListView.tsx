@@ -56,7 +56,7 @@ function sortHouseholds(households: Household[], sortKey: SortKey): Household[] 
   const sorted = [...households]
   switch (sortKey) {
     case 'aum':
-      sorted.sort((a, b) => b.totalAUM - a.totalAUM)
+      sorted.sort((a, b) => b.managedAUM - a.managedAUM)
       break
     case 'name':
       sorted.sort((a, b) => a.name.localeCompare(b.name))
@@ -184,8 +184,13 @@ export function HouseholdListView() {
                   <span className="rounded-full bg-surface-tertiary px-2 py-0.5 text-caption text-text-secondary">
                     {pluralize(hh.accountIds.length, 'account')}
                   </span>
-                  <span className="ml-auto font-mono text-body font-medium text-text-primary">
-                    {formatWithConversion(hh.totalAUM, 'USD', { compact: true })}
+                  <span className="ml-auto text-right">
+                    <span className="block font-mono text-body font-medium text-text-primary">
+                      {formatWithConversion(hh.managedAUM, 'USD', { compact: true })}
+                    </span>
+                    <span className="block font-mono text-caption text-text-tertiary">
+                      managed{hh.heldAwayAUM > 0 ? ` · ${formatWithConversion(hh.heldAwayAUM, 'USD', { compact: true })} held away` : ''}
+                    </span>
                   </span>
                 </div>
 
