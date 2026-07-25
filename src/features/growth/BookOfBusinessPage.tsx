@@ -7,7 +7,6 @@ import { DenseMetricsBar } from '@/components/ui/DenseMetricsBar'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useBookOfBusiness } from '@/hooks/use-portfolio'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
-import { formatPercent } from '@/lib/utils'
 import type { DenseMetric } from '@/components/ui/DenseMetricsBar'
 import type { BookSegment, CapacityMetrics, AUMWaterfallItem } from '@/services/pms'
 
@@ -21,7 +20,7 @@ const SEGMENT_COLORS: Record<string, string> = {
 
 const SEGMENT_ORDER = ['platinum', 'gold', 'silver', 'bronze', 'unclassified']
 
-function WaterfallTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: { label: string; value: number; displayValue: number } }> }) {
+function WaterfallTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: { label: string; value: number } }> }) {
   const { formatWithConversion } = useFormatCurrency()
   if (!active || !payload?.[0]) return null
   const d = payload[0].payload
@@ -36,55 +35,47 @@ function WaterfallTooltip({ active, payload }: { active?: boolean; payload?: Arr
   )
 }
 
-function AUMWaterfall({ data }: { data: AUMWaterfallItem[] }) {
+function AUMWaterfall({ data, domain }: { data: AUMWaterfallItem[]; domain: [number, number] }) {
   const { formatWithConversion } = useFormatCurrency()
 
-  // Build cumulative waterfall bars for Recharts stacked bar
-  type WaterfallBar = { label: string; value: number; start: number; end: number; displayValue: number }
-  const bars: WaterfallBar[] = []
+  type Bar = { label: string; base: number; bar: number; value: number; isTotal: boolean; isNegative: boolean }
+  const bars: Bar[] = []
   let running = 0
   for (const d of data) {
-    bars.push({ label: d.label, value: d.value, start: running, end: running + d.value, displayValue: d.value })
-    running += d.value
+    if (d.kind === 'anchor') {
+      running = d.value
+      bars.push({ label: d.label, base: domain[0], bar: d.value - domain[0], value: d.value, isTotal: true, isNegative: false })
+    } else {
+      const start = running
+      running += d.value
+      bars.push({
+        label: d.label,
+        base: Math.min(start, running),
+        bar: Math.abs(d.value),
+        value: d.value,
+        isTotal: false,
+        isNegative: d.value < 0,
+      })
+    }
   }
-  bars.push({ label: 'Current AUM', value: running, start: 0, end: running, displayValue: running })
-
-  // For Recharts stacked bar: invisible base + visible bar
-  const chartData = bars.map((b) => ({
-    label: b.label,
-    base: Math.min(b.start, b.end),
-    bar: Math.abs(b.end - b.start),
-    value: b.value,
-    displayValue: b.displayValue,
-    isTotal: b.label === 'Current AUM',
-    isNegative: b.value < 0,
-  }))
 
   return (
     <ResponsiveContainer width="100%" height={280}>
-      <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 30 }}>
+      <BarChart data={bars} margin={{ top: 10, right: 10, left: 10, bottom: 30 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" vertical={false} />
-        <XAxis
-          dataKey="label"
-          tick={{ fontSize: 11, fill: 'var(--text-secondary)' }}
-          angle={-20}
-          textAnchor="end"
-          height={50}
-        />
+        <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} angle={-20} textAnchor="end" height={50} />
         <YAxis
+          domain={domain}
+          allowDataOverflow
           tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }}
           tickFormatter={(v: number) => formatWithConversion(v, 'USD', { compact: true })}
           width={60}
         />
         <RechartsTooltip content={<WaterfallTooltip />} />
-        <Bar dataKey="base" stackId="a" fill="transparent" />
-        <Bar dataKey="bar" stackId="a" radius={[2, 2, 0, 0]}>
-          {chartData.map((entry, i) => (
-            <Cell
-              key={i}
-              fill={entry.isTotal ? 'var(--accent-blue)' : entry.isNegative ? 'var(--accent-red)' : 'var(--accent-green)'}
-              opacity={0.85}
-            />
+        <Bar dataKey="base" stackId="a" fill="transparent" isAnimationActive={false} />
+        <Bar dataKey="bar" stackId="a" radius={[2, 2, 0, 0]} isAnimationActive={false}>
+          {bars.map((entry, i) => (
+            <Cell key={i} fill={entry.isTotal ? 'var(--accent-blue)' : entry.isNegative ? 'var(--accent-red)' : 'var(--accent-green)'} opacity={0.85} />
           ))}
         </Bar>
       </BarChart>
@@ -125,7 +116,7 @@ function SegmentTable({ segments }: { segments: BookSegment[] }) {
               </td>
               <td className="px-3 py-2 text-right font-mono text-text-primary">{seg.householdCount}</td>
               <td className="px-3 py-2 text-right font-mono text-text-primary">{formatWithConversion(seg.aum, 'USD', { compact: true })}</td>
-              <td className="px-3 py-2 text-right font-mono text-text-primary">{formatPercent(seg.pctOfAUM * 100, 1)}</td>
+              <td className="px-3 py-2 text-right font-mono text-text-primary">{(seg.pctOfAUM * 100).toFixed(1)}%</td>
             </tr>
           ))}
         </tbody>
@@ -195,11 +186,11 @@ export function BookOfBusinessPage() {
     { label: 'Total AUM', value: formatWithConversion(data.totalAUM, 'USD', { compact: true }), change: { value: `${data.organicGrowthRate}%`, direction: 'up' } },
     { label: 'Households', value: String(data.householdCount) },
     { label: 'Clients', value: String(data.clientCount) },
-    { label: 'Annual Revenue', value: formatWithConversion(data.annualRevenue, 'USD', { compact: true }), change: { value: '4.2%', direction: 'up' } },
-    { label: 'Effective Fee', value: `${data.effectiveFee} bps` },
-    { label: 'Organic Growth', value: `${data.organicGrowthRate}%`, change: { value: '0.3%', direction: 'up' } },
+    { label: 'Annual revenue', value: formatWithConversion(data.annualRevenue, 'USD', { compact: true }) },
+    { label: 'Effective fee', value: `${data.effectiveFeeBps} bps` },
+    { label: 'Organic growth', value: `${data.organicGrowthRate}%` },
     { label: 'Retention', value: `${data.retentionRate}%` },
-    { label: 'HHI', value: String(data.revenueConcentrationHHI) },
+    { label: 'AUM concentration', value: String(data.concentrationHHI) },
   ]
 
   return (
@@ -209,9 +200,13 @@ export function BookOfBusinessPage() {
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         {/* AUM Waterfall */}
         <Card>
-          <CardHeader>AUM Decomposition (Trailing 12M)</CardHeader>
+          <CardHeader>AUM decomposition (trailing 12 months)</CardHeader>
           <CardContent>
-            <AUMWaterfall data={data.aumWaterfall} />
+            <AUMWaterfall data={data.aumWaterfall} domain={data.aumWaterfallDomain} />
+            <p className="mt-2 text-caption text-text-tertiary">
+              Vertical axis begins at {formatWithConversion(data.aumWaterfallDomain[0], 'USD', { compact: true })}, not zero, so
+              that period movements are legible against the opening balance.
+            </p>
           </CardContent>
         </Card>
 
@@ -233,23 +228,28 @@ export function BookOfBusinessPage() {
           </CardContent>
         </Card>
 
-        {/* Revenue Concentration */}
+        {/* AUM Concentration */}
         <Card>
-          <CardHeader>Revenue Concentration</CardHeader>
+          <CardHeader>AUM concentration</CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="flex items-center gap-4">
                 <div className="rounded-md bg-surface-secondary px-4 py-3 text-center">
-                  <div className="font-mono text-heading text-text-primary">{data.revenueConcentrationHHI}</div>
+                  <div className="font-mono text-heading text-text-primary">{data.concentrationHHI}</div>
                   <div className="text-caption text-text-tertiary">HHI Score</div>
                 </div>
                 <div className="text-caption text-text-secondary">
-                  {data.revenueConcentrationHHI < 1500
+                  {data.concentrationHHI < 1500
                     ? 'Well-diversified practice. Low concentration risk.'
-                    : data.revenueConcentrationHHI < 2500
+                    : data.concentrationHHI < 2500
                       ? 'Moderate concentration. Monitor top clients.'
                       : 'High concentration. Revenue at risk from attrition.'}
                 </div>
+              </div>
+              <div className="text-caption text-text-secondary">
+                Effective number of households: <span className="font-mono">{data.concentrationEffectiveN}</span>.
+                At {data.householdCount} households the mathematical floor is{' '}
+                <span className="font-mono">{Math.round(10_000 / data.householdCount)}</span>.
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-caption">

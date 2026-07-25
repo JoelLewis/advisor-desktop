@@ -14,6 +14,8 @@ import { useHouseholds } from '@/hooks/use-households'
 import { useModels, useDriftSummary } from '@/hooks/use-portfolio'
 import { useAIInsights } from '@/hooks/use-ai'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
+import { accountValueUSD, sumAccountsUSD } from '@/lib/aum'
+import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
 import type { Account } from '@/types/account'
 import type { DriftStatus } from '@/types/portfolio'
 import { HouseholdView } from './portfolio-views/HouseholdView'
@@ -68,9 +70,9 @@ export function PortfolioPage() {
       const existing = groups.get(acc.householdId)
       if (existing) {
         existing.accounts.push(acc)
-        existing.totalAUM += acc.totalValue
+        existing.totalAUM += accountValueUSD(acc, FX_RATES_USD_BASE)
       } else {
-        groups.set(acc.householdId, { accounts: [acc], totalAUM: acc.totalValue })
+        groups.set(acc.householdId, { accounts: [acc], totalAUM: accountValueUSD(acc, FX_RATES_USD_BASE) })
       }
     }
     const result: HouseholdGroup[] = []
@@ -120,7 +122,7 @@ export function PortfolioPage() {
   }
 
   const allAccounts = accounts ?? []
-  const totalAUM = allAccounts.reduce((sum, a) => sum + a.totalValue, 0)
+  const totalAUM = sumAccountsUSD(allAccounts, FX_RATES_USD_BASE)
   const umaCount = allAccounts.filter((a) => a.isUMA).length
   const modelCount = models?.length ?? 0
   const driftedCount = driftSummary?.filter((d) => d.needsRebalance).length ?? 0

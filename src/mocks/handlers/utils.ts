@@ -1,5 +1,5 @@
 import { HttpResponse } from 'msw'
-import { convertToBase } from '@/lib/currency'
+import { deriveBookAUM } from '@/lib/aum'
 import { FX_RATES_USD_BASE } from '../data/currencies'
 import { accounts } from '../data/accounts'
 
@@ -15,14 +15,7 @@ export function notFound(): HttpResponse<null> {
 
 /** Sum all account values, converting non-USD accounts at current FX rates */
 export function computeTotalAUM(): number {
-  return Math.round(
-    accounts.reduce((sum, a) => {
-      if (a.baseCurrency && a.baseCurrency !== 'USD') {
-        return sum + convertToBase(a.totalValue, a.baseCurrency, FX_RATES_USD_BASE)
-      }
-      return sum + a.totalValue
-    }, 0),
-  )
+  return Math.round(deriveBookAUM(accounts, FX_RATES_USD_BASE))
 }
 
 export function roundTo(value: number, decimals: number): number {

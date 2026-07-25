@@ -5,12 +5,16 @@ import type { RiskMetrics, FactorExposure, StressScenario } from '@/types/risk'
 import type { BenchmarkComparison, PerformanceSeries, AttributionResult } from '@/types/performance'
 import type { CurrencyCode } from '@/types/currency'
 import { convertToBase } from '@/lib/currency'
+import { deriveBookAUM, deriveHouseholdAUM, deriveSegmentAUM, herfindahlIndex, effectiveN } from '@/lib/aum'
+import { assetWeightedEffectiveFee, householdAnnualFee } from '@/lib/fees'
+import { computeWaterfallDomain, type WaterfallBar } from '@/lib/waterfall'
+import { MOCK_NOW_ISO, startOfToday } from '@/lib/clock'
 import { FX_RATES_USD_BASE } from '../data/currencies'
 import { getPositionsForAccount } from '../data/positions'
 import { accounts } from '../data/accounts'
 import { households } from '../data/households'
+import { householdFees } from '../data/billing'
 import { notFound, roundTo } from './utils'
-import { startOfToday } from '@/lib/clock'
 
 /** Convert an account's value from its base currency to USD using static FX rates */
 function toUSD(value: number, baseCurrency?: CurrencyCode): number {
@@ -19,7 +23,7 @@ function toUSD(value: number, baseCurrency?: CurrencyCode): number {
 }
 
 function computeMetrics(): MetricsSummary {
-  const totalAUM = accounts.reduce((sum, a) => sum + toUSD(a.totalValue, a.baseCurrency), 0)
+  const totalAUM = deriveBookAUM(accounts, FX_RATES_USD_BASE)
   return {
     totalAUM: Math.round(totalAUM),
     totalClients: new Set(accounts.map((a) => a.clientId)).size,
@@ -697,67 +701,78 @@ export const pmsHandlers = [
 
   // ── Book of Business ──
   http.get('/api/pms/book-of-business', () => {
-    const totalAUM = accounts.reduce((sum, a) => sum + toUSD(a.totalValue, a.baseCurrency), 0)
-    const hhCount = households.length
+    const totalAUM = deriveBookAUM(accounts, FX_RATES_USD_BASE)
     const clientCount = new Set(accounts.map((a) => a.clientId)).size
-    const annualRevenue = totalAUM * 0.0085 // ~85bps effective fee
-    const effectiveFee = 0.85
 
-    // Segment distribution from household segments
-    const segmentCounts: Record<string, { count: number; aum: number }> = {}
-    for (const hh of households) {
-      const seg = hh.segment ?? 'unclassified'
-      const hhAUM = hh.accountIds.reduce((s, aid) => {
-        const acc = accounts.find((a) => a.id === aid)
-        return s + (acc ? toUSD(acc.totalValue, acc.baseCurrency) : 0)
-      }, 0)
-      if (!segmentCounts[seg]) segmentCounts[seg] = { count: 0, aum: 0 }
-      segmentCounts[seg].count += 1
-      segmentCounts[seg].aum += hhAUM
-    }
+    // C29 · fee-billing — the effective fee is asset-weighted (Σ fees ÷ Σ AUM), reported in basis
+    // points. It was previously the constant 0.85 rendered as "0.85 bps" — a 100× unit error — and
+    // disagreed with Billing's 88 bps (an unweighted mean of 13 rates).
+    const fees = householdFees.map((f) => ({
+      aum: deriveHouseholdAUM(f.householdId, accounts, FX_RATES_USD_BASE),
+      annualFee: householdAnnualFee(
+        deriveHouseholdAUM(f.householdId, accounts, FX_RATES_USD_BASE), f.annualRate,
+      ),
+    }))
+    const annualRevenue = fees.reduce((s, f) => s + f.annualFee, 0)
+    const effectiveFeeBps = assetWeightedEffectiveFee(fees)
 
-    const segments = Object.entries(segmentCounts).map(([segment, data]) => ({
-      segment,
-      householdCount: data.count,
-      aum: Math.round(data.aum),
-      pctOfAUM: roundTo(data.aum / totalAUM, 4),
+    const segments = deriveSegmentAUM(households, accounts, FX_RATES_USD_BASE).map((s) => ({
+      segment: s.segment,
+      householdCount: s.householdCount,
+      aum: Math.round(s.aum),
+      pctOfAUM: roundTo(s.pctOfAUM, 4),
     }))
 
-    // AUM waterfall (decomposition for trailing 12 months)
-    const aumWaterfall = [
-      { label: 'Starting AUM', value: Math.round(totalAUM * 0.92) },
-      { label: 'Market Appreciation', value: Math.round(totalAUM * 0.065) },
-      { label: 'New Assets', value: Math.round(totalAUM * 0.032) },
-      { label: 'Withdrawals', value: -Math.round(totalAUM * 0.012) },
-      { label: 'Attrition', value: -Math.round(totalAUM * 0.005) },
+    // AUM waterfall — trailing 12 months. Deltas are the leaf figures; both anchors are derived
+    // so the bars reconcile exactly to the book total.
+    const marketAppreciation = Math.round(totalAUM * 0.065)
+    const newAssets = Math.round(totalAUM * 0.032)
+    const withdrawals = -Math.round(totalAUM * 0.012)
+    const attrition = -Math.round(totalAUM * 0.005)
+    const startingAUM = Math.round(totalAUM) - marketAppreciation - newAssets - withdrawals - attrition
+    const aumWaterfall: WaterfallBar[] = [
+      { label: 'Starting AUM', value: startingAUM, kind: 'anchor' },
+      { label: 'Market appreciation', value: marketAppreciation, kind: 'delta' },
+      { label: 'New assets', value: newAssets, kind: 'delta' },
+      { label: 'Withdrawals', value: withdrawals, kind: 'delta' },
+      { label: 'Attrition', value: attrition, kind: 'delta' },
+      { label: 'Current AUM', value: Math.round(totalAUM), kind: 'anchor' },
     ]
 
-    // Revenue concentration (HHI) — sum of squared shares
-    const hhAUMs = households.map((hh) => {
-      return hh.accountIds.reduce((s, aid) => {
-        const acc = accounts.find((a) => a.id === aid)
-        return s + (acc ? toUSD(acc.totalValue, acc.baseCurrency) : 0)
-      }, 0)
-    })
-    const hhi = Math.round(hhAUMs.reduce((sum, a) => sum + ((a / totalAUM) * 100) ** 2, 0))
+    // C29 · advisor-dashboards — organic growth is net of withdrawals and attrition. The 3.2%
+    // previously shown was the gross new-asset line straight off the waterfall.
+    const organicGrowthRate = roundTo(
+      ((newAssets + withdrawals + attrition) / startingAUM) * 100, 1,
+    )
 
-    // Capacity model
-    const targetClients = 120
+    // C22 · diversification — one HHI scale (0–10,000), named for what it measures (AUM, not
+    // revenue), reported with its effective-N companion. At 13 households the floor is 769.
+    const shares = households.map((hh) => deriveHouseholdAUM(hh.id, accounts, FX_RATES_USD_BASE) / totalAUM)
+    const concentrationHHI = Math.round(herfindahlIndex(shares))
+    const concentrationEffectiveN = roundTo(effectiveN(herfindahlIndex(shares)), 1)
+
+    // D30 · advisor-dashboards — losing 1 of 13 households is 92.3% retention, not 98.5%.
+    const attritionCount = 1
+    // D31 · advisor-dashboards — 120 clients on a $4.3M-average book implies a $520M practice.
+    const targetClients = 75
     const avgMeetingsPerClient = 2.4
     const meetingsPerWeek = 12
 
     return HttpResponse.json({
       totalAUM: Math.round(totalAUM),
-      householdCount: hhCount,
+      householdCount: households.length,
       clientCount,
       annualRevenue: Math.round(annualRevenue),
-      effectiveFee,
-      organicGrowthRate: 3.2,
-      retentionRate: 98.5,
-      attritionCount: 1,
-      revenueConcentrationHHI: hhi,
+      effectiveFeeBps: roundTo(effectiveFeeBps, 1),
+      organicGrowthRate,
+      retentionRate: roundTo(((households.length - attritionCount) / households.length) * 100, 1),
+      attritionCount,
+      concentrationHHI,
+      concentrationEffectiveN,
       segments,
       aumWaterfall,
+      aumWaterfallDomain: computeWaterfallDomain(aumWaterfall),
+      asOf: MOCK_NOW_ISO,
       capacity: {
         currentClients: clientCount,
         targetClients,

@@ -149,6 +149,7 @@ export type CapacityMetrics = {
 export type AUMWaterfallItem = {
   label: string
   value: number
+  kind: 'anchor' | 'delta'
 }
 
 export type BookOfBusiness = {
@@ -156,13 +157,20 @@ export type BookOfBusiness = {
   householdCount: number
   clientCount: number
   annualRevenue: number
-  effectiveFee: number
+  /** Asset-weighted: Σ household annual fees ÷ Σ AUM, in basis points. */
+  effectiveFeeBps: number
+  /** Net of withdrawals and attrition, percent. */
   organicGrowthRate: number
   retentionRate: number
   attritionCount: number
-  revenueConcentrationHHI: number
+  /** AUM-share Herfindahl on the 0–10,000 scale. */
+  concentrationHHI: number
+  /** 10,000 ÷ HHI — the number of equally-sized households the book behaves like. */
+  concentrationEffectiveN: number
   segments: BookSegment[]
   aumWaterfall: AUMWaterfallItem[]
+  aumWaterfallDomain: [number, number]
+  asOf: string
   capacity: CapacityMetrics
 }
 

@@ -217,6 +217,24 @@ describe('GATE — every roll-up equals the sum of its parts', () => {
           `${accounts.length} accounts in the accounts fixture.`,
       ).toBe(accounts.length)
     })
+
+    it('the AUM waterfall reconciles to the book total', async () => {
+      const { getBookOfBusiness } = await import('@/services/pms')
+      const book = await getBookOfBusiness()
+      const deltas = book.aumWaterfall.filter((b) => b.kind === 'delta')
+      const start = book.aumWaterfall.find((b) => b.label === 'Starting AUM')!
+      const end = book.aumWaterfall.find((b) => b.label === 'Current AUM')!
+      expect(start.value + deltas.reduce((s, d) => s + d.value, 0)).toBe(end.value)
+      expect(end.value).toBe(Math.round(deriveBookAUM(accounts, RATES)))
+      expect(book.totalAUM).toBe(91_320_824)
+      expect(book.concentrationHHI).toBe(1828)
+      expect(book.concentrationEffectiveN).toBe(5.5)
+      expect(book.retentionRate).toBe(92.3)
+      expect(book.organicGrowthRate).toBe(1.6)
+      expect(book.segments.find((s) => s.segment === 'platinum')).toMatchObject({
+        householdCount: 3, aum: 58_558_018,
+      })
+    })
   })
 
   describe('positions', () => {
