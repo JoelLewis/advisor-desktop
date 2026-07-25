@@ -70,4 +70,88 @@ describe('concentration & compliance invariants', () => {
     expect(data.summary.herfindahlIndex).toBeGreaterThan(100)
     expect(data.summary.effectiveN).toBeCloseTo(10_000 / data.summary.herfindahlIndex, 0)
   })
+
+  // Fix round 1 — acc-041/042/043/044 are the only non-USD accounts in the book (the same four
+  // Task 10's FX fix had to touch), and were the ones a US-centric FUND_SYMBOLS list silently
+  // corrupted: their foreign-listed ETFs fell through to the single_name default and reintroduced
+  // C23 for a different set of tickers. Before this round: acc-041 reported breaches on
+  // ['0700.HK', '9988.HK', '0005.HK', '2800.HK'] (2800.HK, an index-tracking ETF, was a false
+  // positive); acc-042 on ['D05.SI', 'O39.SI', 'CASH', 'ES3.SI', 'CLR.SI'] (ES3.SI, CLR.SI false
+  // positives; MBH.SI was silently misclassified without crossing its own, much lower, limit);
+  // acc-043 on ['SIE.DE', 'ASML.AS', 'MC.PA', 'CSBGU0.SW'] (CSBGU0.SW false positive); acc-044 on
+  // ['NESN.SW', 'NOVN.SW', 'ROG.SW', 'CASH', 'CSBGC0.SW'] (CSBGC0.SW false positive). After this
+  // round, every fund in these four accounts is classified `fund` at the 35% limit and none of
+  // them breach — the remaining breaches are genuine: concentrated individual foreign stocks
+  // (the same story as NVDA in acc-011) and, in acc-042/044, cash above its own 15% limit.
+  it('C23 fix round 1: acc-041 (HKD) breaches only on individual stocks, not the Hang Seng tracker fund', async () => {
+    const data = await getConcentration('acc-041')
+    const breaches = data.positions.filter((p) => p.breached)
+    expect(breaches.map((b) => b.symbol).sort()).toEqual(['0005.HK', '0700.HK', '9988.HK'].sort())
+    for (const b of breaches) expect(b.kind).toBe('single_name')
+
+    const tracker = data.positions.find((p) => p.symbol === '2800.HK')!
+    expect(tracker.kind).toBe('fund')
+    expect(tracker.limit).toBe(0.35)
+    expect(tracker.breached).toBe(false)
+
+    expect(data.summary.singleNameWeight).toBeCloseTo(0.801, 3)
+  })
+
+  it('C23 fix round 1: acc-042 (SGD) breaches only on individual stocks and cash, not the STI/bond funds or the REIT', async () => {
+    const data = await getConcentration('acc-042')
+    const breaches = data.positions.filter((p) => p.breached)
+    expect(breaches.map((b) => b.symbol).sort()).toEqual(['CASH', 'D05.SI', 'O39.SI'].sort())
+    expect(breaches.find((b) => b.symbol === 'CASH')!.kind).toBe('cash')
+    expect(breaches.filter((b) => b.symbol !== 'CASH').every((b) => b.kind === 'single_name')).toBe(true)
+
+    for (const symbol of ['ES3.SI', 'CLR.SI', 'MBH.SI', 'A17U.SI']) {
+      const fund = data.positions.find((p) => p.symbol === symbol)!
+      expect(fund.kind).toBe('fund')
+      expect(fund.limit).toBe(0.35)
+      expect(fund.breached).toBe(false)
+    }
+
+    expect(data.summary.singleNameWeight).toBeCloseTo(0.304, 3)
+  })
+
+  it('C23 fix round 1: acc-043 (EUR) breaches only on individual stocks, not the govt/corp bond ETFs or the all-world fund', async () => {
+    const data = await getConcentration('acc-043')
+    const breaches = data.positions.filter((p) => p.breached)
+    expect(breaches.map((b) => b.symbol).sort()).toEqual(['ASML.AS', 'MC.PA', 'SIE.DE'].sort())
+    for (const b of breaches) expect(b.kind).toBe('single_name')
+
+    for (const symbol of ['CSBGU0.SW', 'IEAC.AS', 'VWRL.AS']) {
+      const fund = data.positions.find((p) => p.symbol === symbol)!
+      expect(fund.kind).toBe('fund')
+      expect(fund.limit).toBe(0.35)
+      expect(fund.breached).toBe(false)
+    }
+
+    expect(data.summary.singleNameWeight).toBeCloseTo(0.489, 3)
+  })
+
+  it('C23 fix round 1: acc-044 (CHF) breaches only on individual stocks and cash, not the corp/govt bond ETFs', async () => {
+    const data = await getConcentration('acc-044')
+    const breaches = data.positions.filter((p) => p.breached)
+    expect(breaches.map((b) => b.symbol).sort()).toEqual(['CASH', 'NESN.SW', 'NOVN.SW', 'ROG.SW'].sort())
+    expect(breaches.find((b) => b.symbol === 'CASH')!.kind).toBe('cash')
+    expect(breaches.filter((b) => b.symbol !== 'CASH').every((b) => b.kind === 'single_name')).toBe(true)
+
+    for (const symbol of ['CSBGC0.SW', 'SRFCHA.SW']) {
+      const fund = data.positions.find((p) => p.symbol === symbol)!
+      expect(fund.kind).toBe('fund')
+      expect(fund.limit).toBe(0.35)
+      expect(fund.breached).toBe(false)
+    }
+
+    expect(data.summary.singleNameWeight).toBeCloseTo(0.389, 3)
+  })
+
+  it('C23 fix round 1: no account produces a breach on a pooled vehicle among the international funds', async () => {
+    for (const accountId of ['acc-041', 'acc-042', 'acc-043', 'acc-044']) {
+      const data = await getConcentration(accountId)
+      const fundBreaches = data.positions.filter((p) => p.kind === 'fund' && p.breached)
+      expect(fundBreaches, `${accountId} has unexpected fund breaches: ${fundBreaches.map((b) => b.symbol).join(', ')}`).toEqual([])
+    }
+  })
 })

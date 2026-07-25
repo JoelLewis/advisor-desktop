@@ -8,6 +8,7 @@ import { useContainerWidth } from '@/hooks/use-container-width'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { cn } from '@/lib/utils'
 import { SINGLE_NAME_LIMIT, FUND_LIMIT } from '@/lib/security-master'
+import { describeBreaches } from '@/lib/concentration-copy'
 
 const KIND_LABELS: Record<string, string> = {
   single_name: 'Single issuer',
@@ -80,9 +81,7 @@ export function ConcentrationView({ accountId }: ConcentrationViewProps) {
         <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
           <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600" />
           <p className="text-body text-amber-800">
-            {positions.filter((p) => p.breached).map((p) => `${p.symbol} at ${(p.weight * 100).toFixed(1)}%`).join(', ')}
-            {' '}exceeds the {(positions.find((p) => p.breached)!.limit * 100).toFixed(0)}%{' '}
-            {positions.find((p) => p.breached)!.kind === 'single_name' ? 'single-issuer' : 'pooled-vehicle'} limit.
+            {describeBreaches(positions.filter((p) => p.breached))}
           </p>
         </div>
       ) : (
