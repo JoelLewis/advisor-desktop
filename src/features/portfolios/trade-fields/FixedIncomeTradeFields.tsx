@@ -79,10 +79,12 @@ export function FixedIncomeTradeFields({
               <span className="text-text-secondary">YTM</span>
               <span className="font-mono font-medium">{selectedSymbol.yieldToMaturity?.toFixed(2)}%</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-text-secondary">YTW</span>
-              <span className="font-mono font-medium">{selectedSymbol.yieldToWorst?.toFixed(2)}%</span>
-            </div>
+            {selectedSymbol.yieldToWorst != null && (
+              <div className="flex justify-between">
+                <span className="text-text-secondary">YTW</span>
+                <span className="font-mono font-medium">{selectedSymbol.yieldToWorst.toFixed(2)}%</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-text-secondary">Duration</span>
               <span className="font-mono font-medium">{selectedSymbol.duration?.toFixed(2)} yrs</span>

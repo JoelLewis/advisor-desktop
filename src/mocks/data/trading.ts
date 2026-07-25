@@ -1,4 +1,6 @@
 import type { SymbolSearchResult, OptionChain, OptionStrike } from '@/types/trading'
+import { yieldToMaturity, modifiedDuration, yearsToMaturity } from '@/lib/bond-math'
+import { MOCK_TODAY_ISO } from '@/lib/clock'
 
 /**
  * D24/D25 — one price per security. This quote feed disagreed with the positions it prices: NVDA
@@ -58,22 +60,47 @@ export const mutualFundSymbols: SymbolSearchResult[] = [
 
 // ── Fixed Income ──────────────────────────────────────────────────────
 
-export const fixedIncomeSymbols: SymbolSearchResult[] = [
-  { symbol: 'UST-2Y', name: 'US Treasury Note 2-Year', assetClass: 'fixed_income', lastPrice: 99.45, change: 0.08, changePct: 0.08, cusip: '91282CJH2', couponRate: 4.625, maturityDate: '2028-02-28', creditRating: 'AAA', yieldToMaturity: 4.35, yieldToWorst: 4.35, duration: 1.92, parValue: 1000, issuer: 'US Treasury', bondType: 'treasury' },
-  { symbol: 'UST-5Y', name: 'US Treasury Note 5-Year', assetClass: 'fixed_income', lastPrice: 97.88, change: -0.15, changePct: -0.15, cusip: '91282CJK5', couponRate: 4.250, maturityDate: '2031-02-15', creditRating: 'AAA', yieldToMaturity: 4.52, yieldToWorst: 4.52, duration: 4.48, parValue: 1000, issuer: 'US Treasury', bondType: 'treasury' },
-  { symbol: 'UST-10Y', name: 'US Treasury Note 10-Year', assetClass: 'fixed_income', lastPrice: 95.25, change: -0.32, changePct: -0.34, cusip: '91282CJM1', couponRate: 4.000, maturityDate: '2036-02-15', creditRating: 'AAA', yieldToMaturity: 4.58, yieldToWorst: 4.58, duration: 8.12, parValue: 1000, issuer: 'US Treasury', bondType: 'treasury' },
-  { symbol: 'UST-30Y', name: 'US Treasury Bond 30-Year', assetClass: 'fixed_income', lastPrice: 88.50, change: -0.78, changePct: -0.87, cusip: '912810TL0', couponRate: 4.375, maturityDate: '2056-02-15', creditRating: 'AAA', yieldToMaturity: 4.72, yieldToWorst: 4.72, duration: 16.85, parValue: 1000, issuer: 'US Treasury', bondType: 'treasury' },
-  { symbol: 'AAPL-30', name: 'Apple Inc. 3.00% 2030', assetClass: 'fixed_income', lastPrice: 94.75, change: 0.12, changePct: 0.13, cusip: '037833DX1', couponRate: 3.000, maturityDate: '2030-06-20', creditRating: 'AA+', yieldToMaturity: 4.15, yieldToWorst: 4.15, duration: 3.85, parValue: 1000, issuer: 'Apple Inc.', bondType: 'corporate' },
-  { symbol: 'MSFT-31', name: 'Microsoft Corp 2.40% 2031', assetClass: 'fixed_income', lastPrice: 91.20, change: -0.18, changePct: -0.20, cusip: '594918BW6', couponRate: 2.400, maturityDate: '2031-08-08', creditRating: 'AAA', yieldToMaturity: 4.25, yieldToWorst: 4.25, duration: 4.62, parValue: 1000, issuer: 'Microsoft Corp', bondType: 'corporate' },
-  { symbol: 'JPM-29', name: 'JPMorgan Chase 4.25% 2029', assetClass: 'fixed_income', lastPrice: 98.80, change: 0.05, changePct: 0.05, cusip: '46647PAZ5', couponRate: 4.250, maturityDate: '2029-10-01', creditRating: 'A-', yieldToMaturity: 4.45, yieldToWorst: 4.45, duration: 3.15, parValue: 1000, issuer: 'JPMorgan Chase & Co.', bondType: 'corporate' },
+/**
+ * Leaf data only — price, coupon, maturity, and issue-level facts. `yieldToMaturity` and
+ * `duration` are derived below from `@/lib/bond-math` rather than restated by hand: the 2-year
+ * Treasury previously stated a 4.35% yield on a 99.45 price with a 4.625% coupon, which is
+ * backwards (a discount bond must yield MORE than its coupon; see `bond-math.ts`'s C19/C20 note).
+ */
+type BondFixture = Omit<SymbolSearchResult, 'yieldToMaturity' | 'yieldToWorst' | 'duration'>
+
+const bondFixtures: BondFixture[] = [
+  { symbol: 'UST-2Y', name: 'US Treasury Note 2-Year', assetClass: 'fixed_income', lastPrice: 99.45, change: 0.08, changePct: 0.08, cusip: '91282CJH2', couponRate: 4.625, maturityDate: '2028-02-28', creditRating: 'AAA', parValue: 1000, issuer: 'US Treasury', bondType: 'treasury' },
+  { symbol: 'UST-5Y', name: 'US Treasury Note 5-Year', assetClass: 'fixed_income', lastPrice: 97.88, change: -0.15, changePct: -0.15, cusip: '91282CJK5', couponRate: 4.250, maturityDate: '2031-02-15', creditRating: 'AAA', parValue: 1000, issuer: 'US Treasury', bondType: 'treasury' },
+  { symbol: 'UST-10Y', name: 'US Treasury Note 10-Year', assetClass: 'fixed_income', lastPrice: 95.25, change: -0.32, changePct: -0.34, cusip: '91282CJM1', couponRate: 4.000, maturityDate: '2036-02-15', creditRating: 'AAA', parValue: 1000, issuer: 'US Treasury', bondType: 'treasury' },
+  { symbol: 'UST-30Y', name: 'US Treasury Bond 30-Year', assetClass: 'fixed_income', lastPrice: 88.50, change: -0.78, changePct: -0.87, cusip: '912810TL0', couponRate: 4.375, maturityDate: '2056-02-15', creditRating: 'AAA', parValue: 1000, issuer: 'US Treasury', bondType: 'treasury' },
+  { symbol: 'AAPL-30', name: 'Apple Inc. 3.00% 2030', assetClass: 'fixed_income', lastPrice: 94.75, change: 0.12, changePct: 0.13, cusip: '037833DX1', couponRate: 3.000, maturityDate: '2030-06-20', creditRating: 'AA+', parValue: 1000, issuer: 'Apple Inc.', bondType: 'corporate' },
+  { symbol: 'MSFT-31', name: 'Microsoft Corp 2.40% 2031', assetClass: 'fixed_income', lastPrice: 91.20, change: -0.18, changePct: -0.20, cusip: '594918BW6', couponRate: 2.400, maturityDate: '2031-08-08', creditRating: 'AAA', parValue: 1000, issuer: 'Microsoft Corp', bondType: 'corporate' },
+  { symbol: 'JPM-29', name: 'JPMorgan Chase 4.25% 2029', assetClass: 'fixed_income', lastPrice: 98.80, change: 0.05, changePct: 0.05, cusip: '46647PAZ5', couponRate: 4.250, maturityDate: '2029-10-01', creditRating: 'A-', parValue: 1000, issuer: 'JPMorgan Chase & Co.', bondType: 'corporate' },
   // D34 — Goldman Sachs Group senior unsecured is BBB+ (S&P) / A2 (Moody's). 'A+' was the
   // operating-bank rating, not the holding company's, and it priced the bond as if it were.
-  { symbol: 'GS-28', name: 'Goldman Sachs 3.85% 2028', assetClass: 'fixed_income', lastPrice: 97.50, change: -0.10, changePct: -0.10, cusip: '38141GYB3', couponRate: 3.850, maturityDate: '2028-07-08', creditRating: 'BBB+', yieldToMaturity: 4.30, yieldToWorst: 4.30, duration: 2.18, parValue: 1000, issuer: 'Goldman Sachs Group', bondType: 'corporate' },
-  { symbol: 'CA-GO-32', name: 'California GO 5.00% 2032', assetClass: 'fixed_income', lastPrice: 105.25, change: 0.20, changePct: 0.19, cusip: '13063DRG8', couponRate: 5.000, maturityDate: '2032-10-01', creditRating: 'AA-', yieldToMaturity: 3.25, yieldToWorst: 3.25, duration: 5.10, parValue: 5000, issuer: 'State of California', bondType: 'municipal' },
-  { symbol: 'NY-GO-30', name: 'New York GO 4.50% 2030', assetClass: 'fixed_income', lastPrice: 102.75, change: 0.15, changePct: 0.15, cusip: '649791MQ7', couponRate: 4.500, maturityDate: '2030-03-15', creditRating: 'AA', yieldToMaturity: 3.15, yieldToWorst: 3.15, duration: 3.52, parValue: 5000, issuer: 'City of New York', bondType: 'municipal' },
-  { symbol: 'TX-REV-33', name: 'Texas Water Revenue 4.75% 2033', assetClass: 'fixed_income', lastPrice: 103.50, change: 0.08, changePct: 0.08, cusip: '882854KR2', couponRate: 4.750, maturityDate: '2033-08-01', creditRating: 'AAA', yieldToMaturity: 3.40, yieldToWorst: 3.40, duration: 5.82, parValue: 5000, issuer: 'Texas Water Dev Board', bondType: 'municipal' },
-  { symbol: 'FNMA-28', name: 'Fannie Mae 3.50% 2028', assetClass: 'fixed_income', lastPrice: 96.80, change: 0.04, changePct: 0.04, cusip: '3135G0W33', couponRate: 3.500, maturityDate: '2028-09-12', creditRating: 'AA+', yieldToMaturity: 4.10, yieldToWorst: 4.10, duration: 2.35, parValue: 1000, issuer: 'Fannie Mae', bondType: 'agency' },
+  { symbol: 'GS-28', name: 'Goldman Sachs 3.85% 2028', assetClass: 'fixed_income', lastPrice: 97.50, change: -0.10, changePct: -0.10, cusip: '38141GYB3', couponRate: 3.850, maturityDate: '2028-07-08', creditRating: 'BBB+', parValue: 1000, issuer: 'Goldman Sachs Group', bondType: 'corporate' },
+  { symbol: 'CA-GO-32', name: 'California GO 5.00% 2032', assetClass: 'fixed_income', lastPrice: 105.25, change: 0.20, changePct: 0.19, cusip: '13063DRG8', couponRate: 5.000, maturityDate: '2032-10-01', creditRating: 'AA-', parValue: 5000, issuer: 'State of California', bondType: 'municipal' },
+  { symbol: 'NY-GO-30', name: 'New York GO 4.50% 2030', assetClass: 'fixed_income', lastPrice: 102.75, change: 0.15, changePct: 0.15, cusip: '649791MQ7', couponRate: 4.500, maturityDate: '2030-03-15', creditRating: 'AA', parValue: 5000, issuer: 'City of New York', bondType: 'municipal' },
+  { symbol: 'TX-REV-33', name: 'Texas Water Revenue 4.75% 2033', assetClass: 'fixed_income', lastPrice: 103.50, change: 0.08, changePct: 0.08, cusip: '882854KR2', couponRate: 4.750, maturityDate: '2033-08-01', creditRating: 'AAA', parValue: 5000, issuer: 'Texas Water Dev Board', bondType: 'municipal' },
+  { symbol: 'FNMA-28', name: 'Fannie Mae 3.50% 2028', assetClass: 'fixed_income', lastPrice: 96.80, change: 0.04, changePct: 0.04, cusip: '3135G0W33', couponRate: 3.500, maturityDate: '2028-09-12', creditRating: 'AA+', parValue: 1000, issuer: 'Fannie Mae', bondType: 'agency' },
 ]
+
+/**
+ * C21 · fixed-income-municipal — `yieldToWorst` was identical to `yieldToMaturity` on every
+ * instrument including three long-dated callable municipals (CA-GO-32, NY-GO-30, TX-REV-33), and
+ * YTW is the entire reason the field exists: it should be the lower of YTM and yield-to-call
+ * across the issue's call schedule. No call schedule is modelled in these fixtures, so the field
+ * is omitted rather than quoted as a duplicate of YTM.
+ */
+export const fixedIncomeSymbols: SymbolSearchResult[] = bondFixtures.map((bond) => {
+  const years = yearsToMaturity(bond.maturityDate!, MOCK_TODAY_ISO)
+  const ytm = yieldToMaturity(bond.lastPrice, bond.couponRate!, years)
+  return {
+    ...bond,
+    yieldToMaturity: Math.round(ytm * 100) / 100,
+    duration: Math.round(modifiedDuration(ytm, bond.couponRate!, years) * 100) / 100,
+  }
+})
 
 // ── Digital Assets ────────────────────────────────────────────────────
 
