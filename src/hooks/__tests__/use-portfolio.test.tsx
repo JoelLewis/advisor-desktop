@@ -142,10 +142,14 @@ describe('useBenchmark', () => {
 })
 
 describe('useAttribution', () => {
-  it('fetches attribution results', async () => {
+  it('fetches attribution results with the model and totals that describe them', async () => {
     const { result } = renderHook(() => useAttribution('acc-001', 'ytd'), { wrapper: createWrapper() })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(result.current.data!.length).toBeGreaterThan(0)
+    const data = result.current.data!
+    expect(data.rows.length).toBeGreaterThan(0)
+    expect(data.model).toBe('Brinson-Fachler')
+    expect(data.totals.allocation + data.totals.selection + data.totals.interaction)
+      .toBeCloseTo(data.totals.total, 12)
   })
 })
 

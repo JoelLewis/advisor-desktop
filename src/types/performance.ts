@@ -33,9 +33,38 @@ type AttributionResult = {
   total: Percentage;
 };
 
+/**
+ * The attribution endpoint's envelope.
+ *
+ * The effects mean nothing without the model that produced them: Brinson-Fachler measures the
+ * allocation effect against the benchmark's *total* return, Brinson-Hood-Beebower against the
+ * sector's own return, and the two disagree class by class. A reader cannot tell which is in use
+ * from the numbers alone, so the response names it, along with the linking, the benchmark and the
+ * fee basis.
+ */
+type AttributionResponse = {
+  model: 'Brinson-Fachler';
+  /** Single period, arithmetic. Sub-period geometric linking (Carino et al.) is not modelled. */
+  linking: 'single-period arithmetic';
+  period: string;
+  benchmark: string;
+  basis: 'gross of fees';
+  asOf: string;
+  rows: AttributionResult[];
+  totals: {
+    allocation: Percentage;
+    selection: Percentage;
+    interaction: Percentage;
+    total: Percentage;
+  };
+  /** Rp − Rb over the period. Equals `totals.total` by construction. */
+  activeReturn: Percentage;
+};
+
 export type {
   ReturnPeriod,
   PerformanceSeries,
   BenchmarkComparison,
   AttributionResult,
+  AttributionResponse,
 };

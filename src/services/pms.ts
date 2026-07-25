@@ -1,7 +1,7 @@
 import { get } from './api-client'
 import type { Position, DriftStatus, ModelAssignment, HoldingGroup, ModelGovernanceDetail } from '@/types/portfolio'
 import type { SecurityKind } from '@/lib/security-master'
-import type { PerformanceSeries, BenchmarkComparison, AttributionResult } from '@/types/performance'
+import type { PerformanceSeries, BenchmarkComparison, AttributionResponse } from '@/types/performance'
 import type { RiskMetrics, FactorExposure, StressScenario } from '@/types/risk'
 
 export function getPositions(accountId: string) {
@@ -34,7 +34,7 @@ export function getBenchmarkComparison(accountId: string) {
 
 export function getAttribution(accountId: string, period?: string) {
   const params = period ? { period } : undefined
-  return get<AttributionResult[]>(`/pms/accounts/${accountId}/attribution`, params)
+  return get<AttributionResponse>(`/pms/accounts/${accountId}/attribution`, params)
 }
 
 export function getRiskMetrics(accountId: string) {

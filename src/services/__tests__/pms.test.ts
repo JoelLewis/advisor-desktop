@@ -36,13 +36,15 @@ describe('PMS service', () => {
     it('returns attribution data with period param', async () => {
       const attribution = await getAttribution('acc-001', 'ytd')
       expect(attribution).toBeTruthy()
-      expect(Array.isArray(attribution)).toBe(true)
+      expect(Array.isArray(attribution.rows)).toBe(true)
+      expect(attribution.period).toBe('ytd')
     })
 
     it('returns attribution data without period param', async () => {
       const attribution = await getAttribution('acc-001')
       expect(attribution).toBeTruthy()
-      expect(Array.isArray(attribution)).toBe(true)
+      expect(Array.isArray(attribution.rows)).toBe(true)
+      expect(attribution.period).toBe('ytd')
     })
   })
 

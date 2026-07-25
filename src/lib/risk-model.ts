@@ -72,6 +72,16 @@ export function portfolioReturn1Y(weights: ReadonlyMap<string, number>): number 
   return r
 }
 
+/**
+ * One asset class's trailing one-year index return, with the same fallback `portfolioReturn1Y`
+ * applies. Attribution needs the per-class figure rather than the weighted total, and reading
+ * `ASSET_CLASS_RISK` directly there would silently use a different fallback for an unmapped class,
+ * so Σ wᵢ·assetClassReturn1Y(i) would stop equalling `portfolioReturn1Y`.
+ */
+export function assetClassReturn1Y(assetClass: string): number {
+  return risk(assetClass).return1Y
+}
+
 /** σp = √(ΣᵢΣⱼ wᵢwⱼσᵢσⱼρᵢⱼ), with ρ = 1 within an asset class and 0.35 across. */
 export function portfolioVolatility(weights: ReadonlyMap<string, number>): number {
   const entries = [...weights.entries()]

@@ -7,8 +7,7 @@ import { WaterfallChart } from '@/components/ui/WaterfallChart'
 import { useAttribution } from '@/hooks/use-portfolio'
 import { useAccount } from '@/hooks/use-accounts'
 import { useContainerWidth } from '@/hooks/use-container-width'
-import { formatPercent, cn } from '@/lib/utils'
-import type { AttributionResult } from '@/types/performance'
+import { formatPercent, formatDate, cn } from '@/lib/utils'
 
 const ASSET_CLASS_LABELS: Record<string, string> = {
   us_equity: 'US Equity', intl_equity: 'Intl Equity', emerging_markets: 'EM',
@@ -17,16 +16,21 @@ const ASSET_CLASS_LABELS: Record<string, string> = {
   private_equity: 'Private Equity',
 }
 
+/**
+ * The effects are published on a 1e-6 grid in return space and are single-basis-point quantities
+ * on a short window, so they are rendered at the precision the API publishes rather than rounded
+ * to two decimal places. Rounding each figure independently is what stops the four cards adding
+ * up on screen — at two decimals acc-001's year-to-date cards read 0.06 + 0.04 + 0.00 against a
+ * total of 0.11 — which loses the interaction effect in the last digit having just restored it.
+ */
+const EFFECT_DECIMALS = 4
+
 const PERIODS = [
   { id: 'mtd', label: 'MTD' },
   { id: 'qtd', label: 'QTD' },
   { id: 'ytd', label: 'YTD' },
   { id: '1y', label: '1Y' },
 ] as const
-
-function sumField(data: AttributionResult[], field: 'allocation' | 'selection' | 'total'): number {
-  return data.reduce((sum, row) => sum + row[field], 0)
-}
 
 export function AttributionPage() {
   const { accountId } = useParams()
@@ -46,7 +50,8 @@ export function AttributionPage() {
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-10 w-48" />
         <Skeleton className="h-80" />
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
+          <Skeleton className="h-24" />
           <Skeleton className="h-24" />
           <Skeleton className="h-24" />
           <Skeleton className="h-24" />
@@ -60,14 +65,14 @@ export function AttributionPage() {
     return <div className="py-12 text-center text-text-tertiary">Account not found</div>
   }
 
-  const waterfallData = (attribution ?? []).map((a) => ({
+  // The totals come from the server, which sums the same rounded rows the table renders. Summing
+  // them again here is how the interaction effect went missing from the cards in the first place.
+  const rows = attribution?.rows ?? []
+  const totals = attribution?.totals ?? { allocation: 0, selection: 0, interaction: 0, total: 0 }
+  const waterfallData = rows.map((a) => ({
     label: ASSET_CLASS_LABELS[a.assetClass] ?? a.assetClass,
     value: a.total,
   }))
-
-  const totalAllocation = sumField(attribution ?? [], 'allocation')
-  const totalSelection = sumField(attribution ?? [], 'selection')
-  const totalActive = sumField(attribution ?? [], 'total')
 
   return (
     <div className="flex flex-col gap-6">
@@ -118,11 +123,21 @@ export function AttributionPage() {
       </Card>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <SummaryCard label="Total Allocation Effect" value={totalAllocation} />
-        <SummaryCard label="Total Selection Effect" value={totalSelection} />
-        <SummaryCard label="Total Active Return" value={totalActive} />
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
+        <SummaryCard label="Allocation effect" value={totals.allocation} />
+        <SummaryCard label="Selection effect" value={totals.selection} />
+        <SummaryCard label="Interaction effect" value={totals.interaction} />
+        <SummaryCard label="Total active return" value={totals.total} />
       </div>
+      <p className="text-caption text-text-tertiary">
+        {attribution?.model}, {attribution?.linking}. Benchmark: {attribution?.benchmark}.{' '}
+        {attribution?.basis === 'gross of fees' ? 'Gross of fees.' : 'Net of fees.'} As of{' '}
+        {attribution ? formatDate(attribution.asOf) : '—'}. Allocation is measured against the
+        benchmark&rsquo;s total return, so overweighting a class helps only where that class beat
+        the benchmark overall. Allocation plus selection plus interaction equals total active
+        return. Sub-period figures are compounded from annual returns; they are not geometrically
+        linked across sub-periods.
+      </p>
 
       {/* Attribution Breakdown Table */}
       <Card>
@@ -139,7 +154,7 @@ export function AttributionPage() {
               </tr>
             </thead>
             <tbody>
-              {(attribution ?? []).map((row) => (
+              {rows.map((row) => (
                 <tr key={row.assetClass} className="border-b border-border-primary last:border-b-0 hover:bg-surface-tertiary/50">
                   <td className="px-4 py-3 text-body-strong">
                     {ASSET_CLASS_LABELS[row.assetClass] ?? row.assetClass}
@@ -158,7 +173,7 @@ export function AttributionPage() {
                   </td>
                 </tr>
               ))}
-              {(attribution ?? []).length === 0 && (
+              {rows.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-4 py-8 text-center text-text-tertiary">
                     No attribution data
@@ -179,7 +194,7 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
       <CardContent>
         <p className="text-caption text-text-secondary">{label}</p>
         <p className={cn('mt-1 font-mono text-section-header', value >= 0 ? 'text-accent-green' : 'text-accent-red')}>
-          {formatPercent(value * 100)}
+          {formatPercent(value * 100, EFFECT_DECIMALS)}
         </p>
       </CardContent>
     </Card>
@@ -195,7 +210,7 @@ function NumericCell({ value, bold = false }: { value: number; bold?: boolean })
         bold && 'font-medium',
       )}
     >
-      {formatPercent(value * 100)}
+      {formatPercent(value * 100, EFFECT_DECIMALS)}
     </span>
   )
 }

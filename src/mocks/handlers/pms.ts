@@ -2,15 +2,17 @@ import { http, HttpResponse } from 'msw'
 import type { MetricsSummary } from '@/services/pms'
 import type { DriftStatus } from '@/types/portfolio'
 import type { RiskMetrics, FactorExposure, StressScenario } from '@/types/risk'
-import type { BenchmarkComparison, PerformanceSeries, AttributionResult } from '@/types/performance'
+import type {
+  BenchmarkComparison, PerformanceSeries, AttributionResult, AttributionResponse,
+} from '@/types/performance'
 import type { CurrencyCode } from '@/types/currency'
 import { convertToBase } from '@/lib/currency'
 import { accountValueUSD, deriveBookAUM, deriveHouseholdAUM, deriveSegmentAUM, herfindahlIndex, effectiveN } from '@/lib/aum'
 import { securityKind, concentrationLimitFor } from '@/lib/security-master'
 import {
   RISK_FREE_RATE, assetClassWeights, portfolioBeta, portfolioVolatility,
-  portfolioReturn1Y, trackingError, parametricVaR, sharpe, sortino, downsideDeviation,
-  modelledMaxDrawdown,
+  portfolioReturn1Y, assetClassReturn1Y, trackingError, parametricVaR, sharpe, sortino,
+  downsideDeviation, modelledMaxDrawdown,
 } from '@/lib/risk-model'
 import { assetWeightedEffectiveFee, householdAnnualFee } from '@/lib/fees'
 import { computeWaterfallDomain, type WaterfallBar } from '@/lib/waterfall'
@@ -187,6 +189,30 @@ function accountUSD(account: typeof accounts[0]): number {
 }
 
 /**
+ * Deterministic per-asset-class manager selection edge, annualised: the amount by which the
+ * account's holdings inside a class are modelled to beat that class's index.
+ *
+ * It is the only source of selection and interaction effect in the attribution, which makes it
+ * part of the portfolio's return, not a decoration on top of it. `riskProfileFor` therefore adds
+ * it to `ret`. Leaving it out there while the attribution counts it would put the benchmark
+ * table's portfolio return and the Sharpe numerator Σ(selection + interaction) below what the
+ * attribution page reports — the same two-numbers-for-one-thing defect this phase exists to
+ * remove.
+ */
+const SELECTION_EDGE: Record<string, number> = {
+  us_equity: 0.008, intl_equity: 0.002, emerging_markets: -0.002, fixed_income: -0.001,
+  alternatives: 0.003, real_estate: 0.000, commodities: 0.001, cash: 0.000,
+  digital_assets: 0.010, private_equity: 0.004,
+}
+
+/** Σ wᵢ·edgeᵢ — the account-level manager edge implied by its asset-class weights. */
+function portfolioSelectionEdge(weights: ReadonlyMap<string, number>): number {
+  let edge = 0
+  for (const [ac, w] of weights) edge += w * (SELECTION_EDGE[ac] ?? 0)
+  return edge
+}
+
+/**
  * The one place per-account risk is derived, so the risk tab, the benchmark table, the
  * performance chart and the Monte Carlo curve all quote the same μ, σ and β.
  *
@@ -207,7 +233,11 @@ function riskProfileFor(account: typeof accounts[0]) {
     value: accountUSD(account),
     beta: roundTo(portfolioBeta(weights), 2),
     vol: roundTo(portfolioVolatility(weights), 4),
-    ret: roundTo(portfolioReturn1Y(weights), 4),
+    // Index return of the account's asset-class mix plus the manager edge those holdings are
+    // modelled to earn inside each class. The edge is the whole of the attribution's selection and
+    // interaction effect, so it belongs in the account's return rather than only in the
+    // attribution — see SELECTION_EDGE.
+    ret: roundTo(portfolioReturn1Y(weights) + portfolioSelectionEdge(weights), 4),
     benchReturn: roundTo(portfolioReturn1Y(benchWeights), 4),
     // Derived from the model's target weights by the same primitive as the portfolio's σ, so the
     // benchmark line on the chart carries the model's own risk rather than a multiple of the
@@ -235,6 +265,93 @@ function periodYears(): Record<string, number> {
     '5y': 5,
     inception: 7.2,
   }
+}
+
+type Attribution = {
+  rows: AttributionResult[]
+  totals: { allocation: number; selection: number; interaction: number; total: number }
+  /** Σ wb·Rb,i — the benchmark's cumulative return over the period. Rp is Rb + totals.total. */
+  benchmarkReturn: number
+  benchmarkName: string
+}
+
+/**
+ * Brinson-Fachler attribution for one account over one period. **This is the only place either
+ * the attribution endpoint or the benchmark endpoint derives a portfolio or benchmark return.**
+ * Two handlers computing the same decomposition independently is precisely how the three summary
+ * cards came to disagree with the benchmark table.
+ *
+ * C3 · performance-attribution — the interaction effect is retained and totalled. The previous
+ * implementation summed only allocation and selection, so the summary cards were short of active
+ * return by the whole interaction term. It is reported as its own column and its own card, not
+ * folded into selection: folding is a defensible presentation choice in some shops, but it is a
+ * different decomposition and must not happen silently.
+ *
+ * The variant is **Brinson-Fachler**, so the allocation effect is measured against the benchmark's
+ * *total* return:
+ *
+ *   allocation  = (wp − wb) × (Rb,i − Rb)
+ *   selection   = wb × (Rp,i − Rb,i)
+ *   interaction = (wp − wb) × (Rp,i − Rb,i)
+ *
+ * Brinson-Hood-Beebower would use `(wp − wb) × Rb,i` for allocation instead, which rewards
+ * overweighting any class with a positive return rather than one that beat the benchmark. The
+ * numbers alone do not reveal which is in use, so the response and the page caption name it.
+ *
+ * C2 · performance-attribution — Σ(A + S + I) = Rp − Rb holds exactly, not approximately. Both
+ * weight sets sum to one (`assetClassWeights` normalises; every model's targets sum to 1.00), so
+ * Σ(wp − wb) = 0, the −Rb in the allocation term cancels, and the three effects collapse to
+ * Σ wp·Rp,i − Σ wb·Rb,i. The totals returned here are the totals of the *rounded* rows, so the
+ * published cards add up to the published total as well.
+ *
+ * C1 · performance-attribution — the period is compounded from the annual class returns rather
+ * than multiplied by an arbitrary scale factor, and compounding happens per asset class so that
+ * Σ wb·Rb,i is the benchmark return for the period by construction. Sub-period geometric linking
+ * (Carino, Menchero, GRAP) is **not** modelled; the response labels the model single-period
+ * arithmetic rather than implying a rigour it does not have.
+ */
+function attributionFor(account: typeof accounts[0], years: number): Attribution {
+  const p = riskProfileFor(account)
+  const compound = (annual: number) => (1 + annual) ** years - 1
+
+  const legs = [...new Set([...p.weights.keys(), ...p.benchWeights.keys()])].map((assetClass) => {
+    const annualIndexReturn = assetClassReturn1Y(assetClass)
+    return {
+      assetClass,
+      wp: p.weights.get(assetClass) ?? 0,
+      wb: p.benchWeights.get(assetClass) ?? 0,
+      rb: compound(annualIndexReturn),
+      rp: compound(annualIndexReturn + (SELECTION_EDGE[assetClass] ?? 0)),
+    }
+  })
+
+  const benchmarkReturn = legs.reduce((sum, l) => sum + l.wb * l.rb, 0)
+
+  const rows: AttributionResult[] = legs.map((l) => {
+    const allocation = roundTo((l.wp - l.wb) * (l.rb - benchmarkReturn), 6)
+    const selection = roundTo(l.wb * (l.rp - l.rb), 6)
+    const interaction = roundTo((l.wp - l.wb) * (l.rp - l.rb), 6)
+    return {
+      assetClass: l.assetClass as AttributionResult['assetClass'],
+      allocation,
+      selection,
+      interaction,
+      // The sum of the rounded parts, not the rounding of the sum, so the row reconciles on screen.
+      total: roundTo(allocation + selection + interaction, 6),
+    }
+  })
+
+  const totals = rows.reduce(
+    (acc, r) => ({
+      allocation: roundTo(acc.allocation + r.allocation, 6),
+      selection: roundTo(acc.selection + r.selection, 6),
+      interaction: roundTo(acc.interaction + r.interaction, 6),
+      total: roundTo(acc.total + r.total, 6),
+    }),
+    { allocation: 0, selection: 0, interaction: 0, total: 0 },
+  )
+
+  return { rows, totals, benchmarkReturn, benchmarkName: p.benchmarkName }
 }
 
 function computeDriftForAccount(account: typeof accounts[0]): DriftStatus {
@@ -403,51 +520,51 @@ export const pmsHandlers = [
   http.get('/api/pms/accounts/:accountId/benchmark', ({ params }) => {
     const account = findAccount(params.accountId)
     if (!account) return notFound()
-    const p = riskProfileFor(account)
 
-    // Period scaling of an annual figure. Every row is the compounded fraction of the one-year
-    // return, so returns are cumulative over the period rather than annualised.
-    const compound = (annual: number, years: number) => roundTo((1 + annual) ** years - 1, 4)
-
+    // Returns are cumulative over the period, compounded from the annual asset-class figures.
+    // Both sides come from `attributionFor`, the same helper the attribution endpoint uses, so
+    // the benchmark table's active return and Σ(allocation + selection + interaction) are the
+    // same quantity rather than two derivations that happen to be close.
     const comparisons: BenchmarkComparison[] = Object.entries(periodYears()).map(([period, years]) => {
-      const portfolioReturn = compound(p.ret, years)
-      const benchmarkReturn = compound(p.benchReturn, years)
+      const a = attributionFor(account, years)
+      const benchmarkReturn = roundTo(a.benchmarkReturn, 4)
+      // C6 · performance-reporting — this is active (excess) return, not Jensen's alpha. It is
+      // the attribution's own total rounded once, not Rp and Rb rounded separately and then
+      // subtracted: on a month-to-date window those two differ by a full basis point, which is
+      // most of the figure. Rp is then published as Rb + active so the row adds up as printed.
+      const activeReturn = roundTo(a.totals.total, 4)
       return {
         period: period as BenchmarkComparison['period'],
-        portfolioReturn,
+        portfolioReturn: roundTo(benchmarkReturn + activeReturn, 4),
         benchmarkReturn,
-        // C6 · performance-reporting — this is active (excess) return, not Jensen's alpha.
-        activeReturn: roundTo(portfolioReturn - benchmarkReturn, 4),
+        activeReturn,
       }
     })
     return HttpResponse.json(comparisons)
   }),
 
-  http.get('/api/pms/accounts/:accountId/attribution', ({ request }) => {
+  http.get('/api/pms/accounts/:accountId/attribution', ({ params, request }) => {
+    const account = findAccount(params.accountId)
+    if (!account) return notFound()
     const url = new URL(request.url)
     const period = url.searchParams.get('period') ?? 'ytd'
-    const scaleFactors: Record<string, number> = { mtd: 0.15, qtd: 0.35, ytd: 1.0, '1y': 1.8 }
-    const s = scaleFactors[period] ?? 1.0
-    const scale = (v: number) => roundTo(v * s, 4)
+    // The same clock-derived period lengths the benchmark table uses. A second, hard-coded map
+    // here would put the two endpoints on different windows for the same named period.
+    const years = periodYears()[period] ?? 1
 
-    const base: AttributionResult[] = [
-      { assetClass: 'us_equity', allocation: 0.012, selection: 0.008, interaction: 0.001, total: 0.021 },
-      { assetClass: 'intl_equity', allocation: -0.003, selection: 0.002, interaction: 0.000, total: -0.001 },
-      { assetClass: 'emerging_markets', allocation: -0.001, selection: -0.002, interaction: 0.000, total: -0.003 },
-      { assetClass: 'fixed_income', allocation: 0.004, selection: -0.001, interaction: 0.000, total: 0.003 },
-      { assetClass: 'alternatives', allocation: 0.002, selection: 0.003, interaction: 0.001, total: 0.006 },
-      { assetClass: 'real_estate', allocation: 0.001, selection: 0.000, interaction: 0.000, total: 0.001 },
-      { assetClass: 'commodities', allocation: 0.003, selection: 0.001, interaction: 0.000, total: 0.004 },
-      { assetClass: 'cash', allocation: -0.002, selection: 0.000, interaction: 0.000, total: -0.002 },
-    ]
-
-    return HttpResponse.json(base.map((a) => ({
-      ...a,
-      allocation: scale(a.allocation),
-      selection: scale(a.selection),
-      interaction: scale(a.interaction),
-      total: scale(a.total),
-    })))
+    const a = attributionFor(account, years)
+    const response: AttributionResponse = {
+      model: 'Brinson-Fachler',
+      linking: 'single-period arithmetic',
+      period,
+      benchmark: a.benchmarkName,
+      basis: 'gross of fees',
+      asOf: MOCK_NOW_ISO,
+      rows: a.rows,
+      totals: a.totals,
+      activeReturn: a.totals.total,
+    }
+    return HttpResponse.json(response)
   }),
 
   http.get('/api/pms/accounts/:accountId/risk', ({ params }) => {

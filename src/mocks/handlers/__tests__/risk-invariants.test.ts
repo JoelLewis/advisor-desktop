@@ -39,7 +39,11 @@ describe('risk metrics are per account', () => {
     expect(risk.sharpe).toBeCloseTo(
       (oneYear.portfolioReturn - RISK_FREE_RATE) / risk.standardDeviation, 2,
     )
-    expect(risk.sharpe).toBe(0.63)
+    // 0.66, not the 0.63 frozen here before Task 12: the account's return now includes the
+    // manager edge inside each asset class that the attribution counts as selection and
+    // interaction. Excluding it here while the attribution page counted it was the same figure
+    // quoted two ways. The invariant above is the assertion that matters; this pins the value.
+    expect(risk.sharpe).toBe(0.66)
     expect(risk.standardDeviation).toBe(0.0935)
     expect(risk.beta).toBe(0.64)
   })
@@ -164,24 +168,31 @@ describe('the modelled return distribution', () => {
     }
   })
 
-  // acc-045's raw domain is mu - 3*sigma = 0.4041 - 1.908 = -1.5039, i.e. a -150% return. The
+  // acc-045's raw domain is mu - 3*sigma = 0.4139 - 1.908 = -1.4941, i.e. a -149% return. The
   // domain starts at total loss instead; the upper end is untouched, and the bars are still the
   // raw density, so the truncated mass is dropped rather than redistributed.
+  //
+  // mu is 0.4139 rather than the 0.4041 frozen here before Task 12 because the account's return
+  // now includes the manager edge inside each asset class — the same edge the attribution reports
+  // as selection and interaction. Only the constant moved; the clamp is unchanged.
   it('bounds the domain at total loss without reshaping the density', async () => {
     const { monteCarlo } = await getSensitivity('acc-045')
     const buckets = monteCarlo.histogram.map((b) => b.returnBucket)
     expect(buckets[0]).toBe(-1)
-    expect(buckets[buckets.length - 1]).toBeCloseTo(0.4041 + 3 * 0.636, 3)
+    expect(buckets[buckets.length - 1]).toBeCloseTo(0.4139 + 3 * 0.636, 3)
     // A lower-sigma account is unaffected — the clamp only bites where the domain runs past -100%.
     const calm = await getSensitivity('acc-001')
-    expect(calm.monteCarlo.histogram[0]!.returnBucket).toBeCloseTo(0.0985 - 3 * 0.0935, 4)
+    expect(calm.monteCarlo.histogram[0]!.returnBucket).toBeCloseTo(0.1021 - 3 * 0.0935, 4)
   })
 })
 
 describe('monte carlo', () => {
   it('C7: percentiles and histogram come from the same distribution', async () => {
     const { monteCarlo } = await getSensitivity('acc-001')
-    expect(monteCarlo.expectedReturn).toBeCloseTo(0.0985, 4)
+    // 0.1021, not the 0.0985 frozen here before Task 12 — see SELECTION_EDGE in pms.ts. The
+    // curve's mu is the account's own one-year return, and that return now includes the manager
+    // edge the attribution attributes to selection and interaction.
+    expect(monteCarlo.expectedReturn).toBeCloseTo(0.1021, 4)
     expect(monteCarlo.volatility).toBeCloseTo(0.0935, 4)
     // p5 = exp of (mu + z5*sigma) applied to the account value; recover sigma from p5 and p95
     const p5 = monteCarlo.percentiles.find((p) => p.percentile === 5)!.value

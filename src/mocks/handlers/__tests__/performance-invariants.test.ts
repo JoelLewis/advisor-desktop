@@ -51,16 +51,16 @@ describe('performance & benchmark invariants', () => {
 
 describe('attribution invariants', () => {
   it('total === allocation + selection + interaction per asset class', async () => {
-    const attribution = await getAttribution('acc-001', 'ytd')
-    for (const a of attribution) {
+    const { rows } = await getAttribution('acc-001', 'ytd')
+    for (const a of rows) {
       const computed = a.allocation + a.selection + a.interaction
       expect(Math.abs(a.total - computed)).toBeLessThan(0.001)
     }
   })
 
   it('attribution covers multiple asset classes', async () => {
-    const attribution = await getAttribution('acc-001', 'ytd')
-    expect(attribution.length).toBeGreaterThanOrEqual(5)
+    const { rows } = await getAttribution('acc-001', 'ytd')
+    expect(rows.length).toBeGreaterThanOrEqual(5)
   })
 
   it('different periods return different magnitudes', async () => {
@@ -68,8 +68,6 @@ describe('attribution invariants', () => {
     const ytd = await getAttribution('acc-001', 'ytd')
 
     // YTD values should be larger in magnitude than MTD
-    const mtdTotal = Math.abs(mtd.reduce((s, a) => s + a.total, 0))
-    const ytdTotal = Math.abs(ytd.reduce((s, a) => s + a.total, 0))
-    expect(ytdTotal).toBeGreaterThan(mtdTotal)
+    expect(Math.abs(ytd.totals.total)).toBeGreaterThan(Math.abs(mtd.totals.total))
   })
 })
