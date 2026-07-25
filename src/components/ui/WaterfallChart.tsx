@@ -12,16 +12,19 @@ type WaterfallChartProps = {
   height?: number
   showTotal?: boolean
   /**
-   * Decimal places for the bar labels; the axis takes one fewer. The default reproduces the
-   * chart's original behaviour for every existing caller. Pass a higher value where the values
-   * plotted are smaller than the default resolution — attribution effects are basis-point
-   * quantities, and at two decimals most bars label as `+0.00%` or, worse, `−0.00%`.
+   * Decimal places for the bar labels; the axis takes one fewer. Pass a value matched to the
+   * quantities plotted — attribution effects are basis-point quantities, and at two decimals most
+   * bars label as `+0.00%` or, worse, `−0.00%`.
+   *
+   * Required rather than defaulted: a default of 2 silently reinstates that defect for any caller
+   * who forgets it, and a component test cannot notice a prop the page stopped passing. Making it
+   * required moves that check to `pnpm type-check`, which cannot be skipped.
    */
-  valueDecimals?: number
+  valueDecimals: number
 }
 
 export function WaterfallChart({
-  data, width = 720, height = 360, showTotal = true, valueDecimals = 2,
+  data, width = 720, height = 360, showTotal = true, valueDecimals,
 }: WaterfallChartProps) {
   const svgRef = useRef<SVGSVGElement>(null)
 

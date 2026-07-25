@@ -17,8 +17,10 @@ function barLabels(container: HTMLElement): string[] {
 }
 
 describe('WaterfallChart value precision', () => {
-  it('defaults to two decimals, so existing callers are unchanged', () => {
-    const { container } = render(<WaterfallChart data={[{ label: 'New assets', value: 0.032 }]} />)
+  it('renders percentage-scale values at two decimals', () => {
+    const { container } = render(
+      <WaterfallChart data={[{ label: 'New assets', value: 0.032 }]} valueDecimals={2} />,
+    )
     expect(barLabels(container)).toContain('+3.20%')
   })
 
@@ -40,8 +42,8 @@ describe('WaterfallChart value precision', () => {
     expect(labels.filter((l) => /^[+-]0\.00%$/.test(l))).toHaveLength(0)
   })
 
-  it('collapses those same bars to zero at the default precision', () => {
-    const { container } = render(<WaterfallChart data={attributionBars} />)
+  it('collapses those same bars to zero at two decimals', () => {
+    const { container } = render(<WaterfallChart data={attributionBars} valueDecimals={2} />)
     expect(barLabels(container).filter((l) => /^[+-]0\.00%$/.test(l)).length).toBeGreaterThan(0)
   })
 })

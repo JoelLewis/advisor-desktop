@@ -57,7 +57,7 @@ describe('Brinson attribution identity', () => {
    * expected value be written in closed form from the fixture rather than re-deriving the handler.
    */
   it('the allocation effect is Brinson-Fachler, not Brinson-Hood-Beebower', async () => {
-    const account = accounts.find((a) => a.id === 'acc-001')!
+    for (const account of accounts) {
     const weights = assetClassWeights(getPositionsForAccount(account.id, account.totalValue))
     const drift = await getDrift(account.id)
     const benchWeights = new Map(drift.assetClassDrifts.map((d) => [d.assetClass as string, d.target]))
@@ -70,19 +70,34 @@ describe('Brinson attribution identity', () => {
       const wp = weights.get(row.assetClass) ?? 0
       const wb = benchWeights.get(row.assetClass) ?? 0
       // Brinson-Fachler: the class return is measured against the benchmark's *total* return.
-      expect(row.allocation, row.assetClass)
-        .toBeCloseTo((wp - wb) * (assetClassReturn1Y(row.assetClass) - benchmarkTotal), 6)
+      //
+      // The tolerance is deliberately coarse, and must not be tightened to the publication grid.
+      // `allocation` is published as `roundTo(exact, 6)`, so any assertion at 5e-7 sits *on* the
+      // rounding boundary: acc-014's commodities row is a genuine .5 tie (−0.0003275) whose two
+      // computations differ in the last bits, so it measures 5.000000000007711e-7 and fails both
+      // `toBeCloseTo(…, 6)` and an inclusive <=5e-7. That failure would be a float artefact, not a
+      // model break — and this test exists to discriminate the *model*. C2 and C3 audit the
+      // rounding exactly; here, 1e-5 stays 20× clear of the grid while BHB misses by ~6.6e-3,
+      // which is 660× the bound. Both properties are what make this assertion meaningful.
+      const exact = (wp - wb) * (assetClassReturn1Y(row.assetClass) - benchmarkTotal)
+      expect(Math.abs(row.allocation - exact), `${account.id} ${row.assetClass}`)
+        .toBeLessThanOrEqual(1e-5)
     }
 
-    // And is demonstrably not BHB, which would measure against the class's own return. On cash the
-    // two do not merely differ, they carry opposite signs: cash returned 4.8% against a benchmark
-    // total of 9.4%, so overweighting it is a positive contribution under BHB and a negative one
-    // under BF. If this ever passes trivially the discriminator has stopped discriminating.
-    const cash = rows.find((r) => r.assetClass === 'cash')!
-    const bhbCash = ((weights.get('cash') ?? 0) - (benchWeights.get('cash') ?? 0))
-      * assetClassReturn1Y('cash')
-    expect(Math.sign(bhbCash)).not.toBe(Math.sign(cash.allocation))
-    expect(cash.allocation).not.toBeCloseTo(bhbCash, 6)
+    // And is demonstrably not BHB, which would measure against the class's own return. On acc-001's
+    // cash the two do not merely differ, they carry opposite signs: cash returned 4.8% against a
+    // benchmark total of 9.4%, so overweighting it is a positive contribution under BHB and a
+    // negative one under BF. Scoped to acc-001 because the opposite-sign property is a fact about
+    // that account's weights, not a general one. If this ever passes trivially the discriminator
+    // has stopped discriminating.
+    if (account.id === 'acc-001') {
+      const cash = rows.find((r) => r.assetClass === 'cash')!
+      const bhbCash = ((weights.get('cash') ?? 0) - (benchWeights.get('cash') ?? 0))
+        * assetClassReturn1Y('cash')
+      expect(Math.sign(bhbCash)).not.toBe(Math.sign(cash.allocation))
+      expect(cash.allocation).not.toBeCloseTo(bhbCash, 6)
+    }
+    }
   })
 
   /**
