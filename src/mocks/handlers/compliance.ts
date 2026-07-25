@@ -23,7 +23,8 @@ export const RESTRICTED_SECURITIES = new Set([
 // ── Concentration limits ──
 // C23 · diversification — per-kind limits (single-issuer / fund / cash), imported from the one
 // place they are defined (`security-master.ts`), not a blanket 10% restated here.
-const CASH_MINIMUM_PCT = 0.02       // 2% cash minimum
+// Exported so `oms.ts`'s pre-check handler reads the same 2% floor, rather than a second literal.
+export const CASH_MINIMUM_PCT = 0.02       // 2% cash minimum
 
 // ── Account data derived from accounts.ts for compliance checks ──
 // Values must match the canonical account data
@@ -94,14 +95,18 @@ function checkTradesForAccount(req: TradeComplianceRequest): TradeComplianceResu
       const additionalWeight = trade.estimatedValue / accountValue
       const postTradeWeight = currentWeight + additionalWeight
 
-      if (postTradeWeight > limit) {
+      // Same ladder as `/api/oms/orders/pre-check` in `oms.ts`: warn approaching the limit (80% of
+      // it), fail/block at the limit itself. The two endpoints previously disagreed — this one
+      // only fired once the limit was already crossed, and called it "fail" only above 1.5x — so
+      // the same trade could be a block on one surface and a mere warning on the other.
+      if (postTradeWeight > limit * 0.8) {
         concentrationFailed = true
         const kindLabel = kind === 'single_name' ? 'single-name' : kind === 'fund' ? 'pooled-vehicle' : 'cash'
         checks.push({
           rule: `Concentration limit: ${trade.symbol}`,
           category: 'concentration_limit',
-          status: postTradeWeight > limit * 1.5 ? 'fail' : 'warning',
-          message: `Post-trade weight of ${trade.symbol} would be ${(postTradeWeight * 100).toFixed(1)}%, ${postTradeWeight > limit * 1.5 ? 'exceeding' : 'approaching'} the ${(limit * 100).toFixed(0)}% ${kindLabel} limit.`,
+          status: postTradeWeight > limit ? 'fail' : 'warning',
+          message: `Post-trade weight of ${trade.symbol} would be ${(postTradeWeight * 100).toFixed(1)}%, ${postTradeWeight > limit ? 'exceeding' : 'approaching'} the ${(limit * 100).toFixed(0)}% ${kindLabel} limit.`,
           details: {
             symbol: trade.symbol,
             currentWeight,

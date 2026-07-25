@@ -66,10 +66,13 @@ export function TradeTicketDialog({
 
   // C28 · pre-trade-compliance — a real notional for the pre-check, not an omitted one the
   // handler used to infer from `quantity * 100`. The dialog's symbol field is free text, so the
-  // quote comes from the same symbol search `SingleTradeView` uses.
+  // quote comes from the same symbol search `SingleTradeView` uses — falling back to the
+  // position's own known price (`prefill.price`, set when the dialog opens from a position row)
+  // for the many ETF/fund symbols the quote-search fixture doesn't carry at all.
   const trimmedSymbol = symbol.trim().toUpperCase()
   const { data: symbolMatches } = useSymbolSearch(trimmedSymbol, assetClass === 'option' ? 'equity' : assetClass)
   const quote = symbolMatches?.find((s) => s.symbol === trimmedSymbol)
+  const knownPrice = Number(limitPrice) || quote?.lastPrice || prefill?.price || 0
 
   // Stable refs for mutation methods (identity changes each render but behavior is stable)
   const tradeResetRef = useRef(trade.reset)
@@ -104,15 +107,14 @@ export function TradeTicketDialog({
     if (checkTimerRef.current) clearTimeout(checkTimerRef.current)
     const trimmed = symbol.trim()
     const qty = Number(quantity)
-    if (!trimmed || qty <= 0 || !accountId) {
+    if (!trimmed || qty <= 0 || !accountId || knownPrice <= 0) {
       setCompliancePassed(null)
       setComplianceViolations([])
       return
     }
-    const price = Number(limitPrice) || quote?.lastPrice || 0
     checkTimerRef.current = setTimeout(() => {
       preCheckMutateRef.current(
-        { accountId, symbol: trimmed, side, quantity: qty, estimatedValue: qty * price },
+        { accountId, symbol: trimmed, side, quantity: qty, estimatedValue: qty * knownPrice },
         {
           onSuccess: (result) => {
             setCompliancePassed(result.passed)
@@ -124,7 +126,7 @@ export function TradeTicketDialog({
     return () => {
       if (checkTimerRef.current) clearTimeout(checkTimerRef.current)
     }
-  }, [symbol, side, quantity, accountId, limitPrice, quote])
+  }, [symbol, side, quantity, accountId, knownPrice])
 
   // Auto-close after successful submission
   useEffect(() => {
@@ -134,6 +136,14 @@ export function TradeTicketDialog({
   }, [submitted, onClose])
 
   const parsedQuantity = Number(quantity)
+
+  // Critical fix round 2 · pre-trade-compliance — a trade with a symbol, quantity and account but
+  // no resolvable price must not run the check at all (which would previously send
+  // `estimatedValue: 0` and come back an affirmative "compliant" pass); it must block submission
+  // instead. `priceUnavailable` distinguishes "not filled in yet" (compliancePassed stays null,
+  // submit stays disabled for the ordinary reason) from "filled in but unpriceable" (its own
+  // message, submit blocked for a reason the advisor can see).
+  const priceUnavailable = !!symbol.trim() && parsedQuantity > 0 && !!accountId && knownPrice <= 0
 
   const isValid = validateTrade({
     assetClass,
@@ -293,6 +303,23 @@ export function TradeTicketDialog({
             </div>
           )}
 
+          {/* Critical fix round 2 · pre-trade-compliance — no known price means no verified
+              compliance check, which must block submission rather than silently allow it. */}
+          {priceUnavailable && (
+            <div className="flex items-center gap-2 rounded-md bg-amber-500/10 px-3 py-2 text-body text-amber-600" role="alert">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+              No price available for {symbol.trim().toUpperCase()} — enter a limit price to run the compliance check.
+            </div>
+          )}
+
+          {/* Minor fix round 2 — a failed check must not leave the button silently reverted. */}
+          {preCheck.isError && (
+            <div className="flex items-center gap-2 rounded-md bg-accent-red/10 px-3 py-2 text-body text-accent-red" role="alert">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+              Could not run the pre-trade compliance check. Submission is blocked until it succeeds.
+            </div>
+          )}
+
           {/* Pre-trade compliance results */}
           <PreTradeComplianceDisplay
             violations={complianceViolations}
@@ -303,15 +330,23 @@ export function TradeTicketDialog({
           {/* Submit button */}
           <button
             onClick={handleSubmit}
-            disabled={!isValid || trade.isPending || submitted || compliancePassed === false}
+            disabled={!isValid || trade.isPending || submitted || compliancePassed === false || priceUnavailable || preCheck.isError}
             className={cn(
               'w-full rounded-md px-4 py-2 text-body font-medium text-white transition-colors',
-              isValid && !trade.isPending && !submitted && compliancePassed !== false
+              isValid && !trade.isPending && !submitted && compliancePassed !== false && !priceUnavailable && !preCheck.isError
                 ? 'bg-accent-blue hover:bg-accent-blue/90'
                 : 'cursor-not-allowed bg-accent-blue/50',
             )}
           >
-            {trade.isPending ? 'Submitting...' : compliancePassed === false ? 'Blocked by Compliance' : 'Submit Order'}
+            {trade.isPending
+              ? 'Submitting...'
+              : compliancePassed === false
+                ? 'Blocked by Compliance'
+                : priceUnavailable
+                  ? 'Price required'
+                  : preCheck.isError
+                    ? 'Compliance check failed'
+                    : 'Submit Order'}
           </button>
         </div>
       </DialogContent>

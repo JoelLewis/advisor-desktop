@@ -28,7 +28,7 @@ export function AccountDetailPage() {
   const id = accountId ?? ''
   const { data: account, isLoading, isError, error, refetch } = useAccount(id)
   const [tradeDialogOpen, setTradeDialogOpen] = useState(false)
-  const [tradePrefill, setTradePrefill] = useState<{ symbol?: string; side?: 'buy' | 'sell'; assetClass?: 'equity' | 'option' | 'mutual_fund' | 'fixed_income' | 'digital_asset' }>({})
+  const [tradePrefill, setTradePrefill] = useState<{ symbol?: string; side?: 'buy' | 'sell'; assetClass?: 'equity' | 'option' | 'mutual_fund' | 'fixed_income' | 'digital_asset'; price?: number }>({})
   const { data: positions } = usePositions(id)
   const { data: drift } = useDrift(id)
   const { data: performance } = usePerformance(id)
@@ -70,14 +70,17 @@ export function AccountDetailPage() {
 
   const totalGainLoss = positions?.reduce((sum, p) => sum + p.gainLoss, 0) ?? 0
 
-  function handlePositionTrade(symbol: string, side: 'buy' | 'sell', positionAssetClass?: string) {
+  function handlePositionTrade(symbol: string, side: 'buy' | 'sell', positionAssetClass?: string, price?: number) {
     const acMap: Record<string, 'equity' | 'option' | 'mutual_fund' | 'fixed_income' | 'digital_asset'> = {
       us_equity: 'equity', intl_equity: 'equity', emerging_markets: 'equity',
       fixed_income: 'fixed_income',
       digital_assets: 'digital_asset',
     }
     const tradableAc = positionAssetClass ? acMap[positionAssetClass] : undefined
-    setTradePrefill({ symbol, side, assetClass: tradableAc })
+    // Critical fix round 2 · pre-trade-compliance — the position's own known price, so the trade
+    // ticket has a real notional to check against even for symbols (most ETFs) the quote-search
+    // fixture doesn't carry at all.
+    setTradePrefill({ symbol, side, assetClass: tradableAc, price })
     setTradeDialogOpen(true)
   }
 

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- shared utility components + the notional formula */
 import { TrendingUp, Layers, PieChart, Landmark, Bitcoin } from 'lucide-react'
 import type { TradableAssetClass } from '@/types/trading'
 import { cn, formatCurrency } from '@/lib/utils'
@@ -144,31 +145,50 @@ const COMMISSION_LABEL: Record<TradableAssetClass, string> = {
   digital_asset: 'Commission',
 }
 
-export function OrderSummaryCard({ assetClass, side, quantity, price, symbol, contractMultiplier, parAmount, dollarAmount }: OrderSummaryProps) {
-  let estimatedValue: number
-  let commission: number
+type EstimatedValueInput = {
+  assetClass: TradableAssetClass
+  quantity: number
+  price: number
+  contractMultiplier?: number
+  parAmount?: number
+  dollarAmount?: number
+}
 
+/**
+ * Critical fix round 2 · pre-trade-compliance — the one place notional is computed from an
+ * order's raw fields. `SingleTradeView` used to send `quantity * price` straight to the
+ * pre-trade check regardless of asset class, which is off by the contract multiplier for
+ * options (100x low on a 500-contract order), ignores `parAmount` for bonds (10x low), and
+ * ignores `dollarAmount` for funds (~1000x low on a dollar-amount purchase) — silently
+ * evadable concentration and cash checks on exactly the three asset classes that screen exists
+ * to check. `OrderSummaryCard` below is the other caller, so this is the one formula both read.
+ */
+export function computeEstimatedValue({ assetClass, quantity, price, contractMultiplier, parAmount, dollarAmount }: EstimatedValueInput): number {
   switch (assetClass) {
     case 'option':
-      estimatedValue = quantity * price * (contractMultiplier ?? 100)
-      commission = quantity * COMMISSION.option
-      break
+      return quantity * price * (contractMultiplier ?? 100)
     case 'mutual_fund':
-      estimatedValue = dollarAmount ?? quantity * price
-      commission = 0
-      break
+      return dollarAmount ?? quantity * price
     case 'fixed_income':
-      estimatedValue = (parAmount ?? quantity * 1000) * (price / 100)
-      commission = (parAmount ? parAmount / 1000 : quantity) * COMMISSION.fixed_income
-      break
+      return (parAmount ?? quantity * 1000) * (price / 100)
     case 'digital_asset':
-      estimatedValue = quantity * price
-      commission = 0
-      break
+      return quantity * price
     default:
-      estimatedValue = quantity * price
-      commission = COMMISSION.equity
+      return quantity * price
   }
+}
+
+export function OrderSummaryCard({ assetClass, side, quantity, price, symbol, contractMultiplier, parAmount, dollarAmount }: OrderSummaryProps) {
+  const estimatedValue = computeEstimatedValue({ assetClass, quantity, price, contractMultiplier, parAmount, dollarAmount })
+  const commission = (() => {
+    switch (assetClass) {
+      case 'option': return quantity * COMMISSION.option
+      case 'mutual_fund': return 0
+      case 'fixed_income': return (parAmount ? parAmount / 1000 : quantity) * COMMISSION.fixed_income
+      case 'digital_asset': return 0
+      default: return COMMISSION.equity
+    }
+  })()
 
   const isBuy = ['buy', 'buy_to_open', 'buy_to_cover', 'purchase'].includes(side)
   const total = isBuy ? estimatedValue + commission : estimatedValue - commission

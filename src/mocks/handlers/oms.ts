@@ -1,18 +1,20 @@
 import { http, HttpResponse } from 'msw'
 import type { Order, RebalancePreview, ProposedTrade, ComplianceCheck, TradeRequest, PreTradeCheckRequest, PreTradeViolation } from '@/services/oms'
 import { notFound } from './utils'
-import { RESTRICTED_SECURITIES } from './compliance'
+import { RESTRICTED_SECURITIES, CASH_MINIMUM_PCT } from './compliance'
 import { computeDriftForAccount } from './pms'
 import { accounts } from '../data/accounts'
 import { getPositionsForAccount } from '../data/positions'
 import { openWashSaleWindows } from '../data/realised-sales'
-import { accountValueUSD } from '@/lib/aum'
 import { securityKind, concentrationLimitFor } from '@/lib/security-master'
-import { FX_RATES_USD_BASE } from '../data/currencies'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
+import { generateTaxLots } from './custodian'
+import { taxRateFor } from '@/features/portfolios/tax/shared'
+import type { Position } from '@/types/portfolio'
 
 /** Pooled/individual tech names used by the sector-concentration check below. */
 const TECH_SYMBOLS = ['AAPL', 'MSFT', 'NVDA', 'GOOGL', 'META', 'AMZN', 'TSLA']
+const SECTOR_LIMIT = 0.40
 
 const orders: Order[] = [
   // ── Recent orders for Johnson Family Trust (acc-001) ──
@@ -58,46 +60,97 @@ const orders: Order[] = [
   { id: 'ord-016', accountId: 'acc-006', symbol: 'AAPLC185', side: 'buy_to_open', quantity: 5, orderType: 'limit', limitPrice: 8.50, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-25T11:00:00Z', assetClass: 'option', underlying: 'AAPL', optionType: 'call', strikePrice: 185, expirationDate: '2026-03-21', contractMultiplier: 100 },
 ]
 
+/** Roth IRAs and tax-deferred accounts realise no reportable capital gain on a sale. */
+function isTaxableAccount(taxTreatment: string): boolean {
+  return taxTreatment === 'taxable' || taxTreatment === 'trust_taxable'
+}
+
+/**
+ * Estimate the capital-gains tax on selling `notional` dollars out of `target`, using the same
+ * per-lot generator the tax page reads (`generateTaxLots`) and the same rate function
+ * (`taxRateFor`) it applies — a short-term-heavy sell is taxed at `SHORT_TERM_RATE` (37%), not
+ * silently at the long-term rate (23.8%) for the entire position. A tax-aware pass sells the
+ * lowest-gain-fraction (highest cost basis) lots first to minimise realised gain; a tax-unaware
+ * pass sells the lots in their own oldest-first order.
+ */
+function estimateSaleTax(accountId: string, totalValue: number, target: Position, notional: number, taxAware: boolean): number {
+  const lots = generateTaxLots(accountId, totalValue).filter((l) => l.positionId === target.id)
+  if (lots.length === 0 || notional <= 0) return 0
+  // Minimise realised gain and rank by *tax per dollar sold*, not gain per dollar sold: a
+  // low-gain short-term lot (37% rate) can carry more tax than a low-gain long-term lot (23.8%
+  // rate), so sorting by gain fraction alone can pick a worse-taxed lot first.
+  const taxPerDollar = (l: (typeof lots)[number]) => (l.gainLoss / l.currentValue) * taxRateFor(l.holdingPeriod)
+  const ordered = taxAware ? [...lots].sort((a, b) => taxPerDollar(a) - taxPerDollar(b)) : lots
+
+  let remaining = notional
+  let tax = 0
+  for (const lot of ordered) {
+    if (remaining <= 0 || lot.currentValue <= 0) continue
+    const portion = Math.min(1, remaining / lot.currentValue)
+    const realisedGain = lot.gainLoss * portion
+    if (realisedGain > 0) tax += realisedGain * taxRateFor(lot.holdingPeriod)
+    remaining -= lot.currentValue * portion
+  }
+  return Math.max(0, Math.round(tax))
+}
+
 /**
  * C26 · rebalancing / tax-efficiency — `taxImpact: taxAware ? 3_800 : 0` made the riskier setting
- * display as free. Tax is estimated from the account's actual embedded gain at the applicable
- * rate, so a tax-unaware rebalance realises MORE than a tax-aware one, never zero.
+ * display as free. Tax is estimated per-lot from the account's actual embedded gains at the
+ * lot's own holding-period rate, so a tax-unaware rebalance realises MORE than a tax-aware one,
+ * never zero — and a Roth IRA or traditional IRA (`isTaxableAccount`) shows zero, always.
  *
  * Trades come from the account's own drift (`computeDriftForAccount`, the same function the
- * drift surface reads), not a hardcoded four-trade list scaled x5 for two accounts. `d.actual >
- * d.target` — not `d.drift`, which `computeDriftForAccount` already returns as an unsigned
- * magnitude — is what tells an overweight asset class (sell) from an underweight one (buy).
+ * drift surface reads) filtered by the caller's own `driftThreshold` (the Rebalance page's
+ * control), not a hardcoded 0.005. `d.actual > d.target` — not `d.drift`, which
+ * `computeDriftForAccount` already returns as an unsigned magnitude — is what tells an
+ * overweight asset class (sell) from an underweight one (buy).
+ *
+ * Self-financing: an underweight asset class this account does not already hold (no tradable
+ * candidate in `positions`) has nowhere for sell proceeds to go, so it is dropped from the buy
+ * side — and the sell side is scaled down to match whatever the buy side can actually absorb,
+ * rather than parking the shortfall in cash. (Scaling the smaller side up instead would overshoot
+ * the genuine drift on the classes that *do* have a candidate, which is worse than a partial
+ * correction.)
  */
-function generateRebalanceTrades(accountId: string, taxAware: boolean): ProposedTrade[] {
+function generateRebalanceTrades(accountId: string, taxAware: boolean, driftThreshold = 0.005): ProposedTrade[] {
   const account = accounts.find((a) => a.id === accountId)
   if (!account) return []
   const positions = getPositionsForAccount(account.id, account.totalValue)
   const drift = computeDriftForAccount(account)
+  const taxable = isTaxableAccount(account.taxTreatment)
 
-  return drift.assetClassDrifts
-    .filter((d) => d.drift > 0.005)
+  const raw = drift.assetClassDrifts
+    .filter((d) => d.drift > driftThreshold)
     .flatMap((d) => {
       const candidates = positions.filter((p) => p.assetClass === d.assetClass && p.symbol !== 'CASH')
       const target = candidates[0]
       if (!target) return []
       const notional = d.drift * account.totalValue
-      const side = d.actual > d.target ? 'sell' : 'buy'
-      // Realised gain on a sell = notional x the position's embedded gain fraction. A tax-aware
-      // pass selects the highest-basis lots and realises roughly 40% of the naive figure.
-      const embeddedGainFraction = target.marketValue > 0 ? target.gainLoss / target.marketValue : 0
-      const realised = side === 'sell' ? notional * embeddedGainFraction : 0
-      const rate = 0.238
-      const taxImpact = Math.max(0, Math.round(realised * rate * (taxAware ? 0.4 : 1)))
-      return [{
-        symbol: target.symbol,
-        name: target.name,
-        side,
-        quantity: Math.round(notional / target.price),
-        estimatedValue: Math.round(notional),
-        taxImpact,
-        washSaleRisk: false,
-      }]
+      const side: 'buy' | 'sell' = d.actual > d.target ? 'sell' : 'buy'
+      return [{ target, side, notional }]
     })
+
+  const totalSell = raw.filter((t) => t.side === 'sell').reduce((s, t) => s + t.notional, 0)
+  const totalBuy = raw.filter((t) => t.side === 'buy').reduce((s, t) => s + t.notional, 0)
+  const sellScale = totalBuy > 0 && totalSell > totalBuy ? totalBuy / totalSell : 1
+  const buyScale = totalSell > 0 && totalBuy > totalSell ? totalSell / totalBuy : 1
+
+  return raw.map(({ target, side, notional: rawNotional }) => {
+    const notional = rawNotional * (side === 'sell' ? sellScale : buyScale)
+    const taxImpact = side === 'sell' && taxable
+      ? estimateSaleTax(account.id, account.totalValue, target, notional, taxAware)
+      : 0
+    return {
+      symbol: target.symbol,
+      name: target.name,
+      side,
+      quantity: Math.round(notional / target.price),
+      estimatedValue: Math.round(notional),
+      taxImpact,
+      washSaleRisk: false,
+    }
+  })
 }
 
 function generateComplianceChecks(): ComplianceCheck[] {
@@ -172,12 +225,12 @@ export const omsHandlers = [
     const violations: PreTradeViolation[] = []
     const sym = body.symbol.toUpperCase()
 
-    // C28 · pre-trade-compliance / order-lifecycle — notional is required. Inferring it from
-    // `quantity * 100` valued a 100-share order in a $900 stock at $10,000 instead of $90,000,
-    // so concentration limits were evadable by trading high-priced securities.
-    if (typeof body.estimatedValue !== 'number' || !Number.isFinite(body.estimatedValue)) {
+    // C28 · pre-trade-compliance / order-lifecycle — notional is required and must be a real,
+    // positive amount. Zero and negative values are finite too, and a zero-notional order would
+    // otherwise pass every check with an affirmative "compliant" result.
+    if (typeof body.estimatedValue !== 'number' || !Number.isFinite(body.estimatedValue) || body.estimatedValue <= 0) {
       return HttpResponse.json(
-        { error: 'estimatedValue (notional) is required for a pre-trade check' },
+        { error: 'estimatedValue (notional) must be a positive number for a pre-trade check' },
         { status: 400 },
       )
     }
@@ -185,8 +238,11 @@ export const omsHandlers = [
 
     const account = accounts.find((a) => a.id === body.accountId)
     if (!account) return notFound()
-    // C27 · pre-trade-compliance — the account's own market value, not a hardcoded $2,500,000.
-    const accountValue = accountValueUSD(account, FX_RATES_USD_BASE)
+    // C27 · pre-trade-compliance — the account's own market value, in the account's own base
+    // currency, not a hardcoded $2,500,000. `accountValueUSD` would mix a USD-converted
+    // denominator against `positions`' native-currency `marketValue`/`cashBalance`, inflating
+    // every weight in the four non-USD accounts by their FX rate (acc-041 HKD by ~7.8x).
+    const accountValue = account.totalValue
     const positions = getPositionsForAccount(account.id, account.totalValue)
     const existingPosition = positions.find((p) => p.symbol === sym)
     const existing = existingPosition?.marketValue ?? 0
@@ -236,32 +292,41 @@ export const omsHandlers = [
       }
     }
 
-    // Cash reserve check for buys
-    const cashPct = (account.cashBalance / accountValue) * 100
-    if (isBuy && estValue > 100_000) {
-      violations.push({
-        constraint: 'Cash reserve minimum (2%)',
-        severity: 'warning',
-        currentValue: `${cashPct.toFixed(1)}%`,
-        limit: '2.0%',
-        message: 'Post-trade cash balance would be near the 2% minimum reserve requirement.',
-      })
+    // Cash reserve check for buys — gated on the actual projected post-trade cash balance, not a
+    // raw notional threshold. A buy that leaves cash comfortably above the floor must not warn
+    // just because it happened to be a large trade.
+    if (isBuy) {
+      const postTradeCash = account.cashBalance - estValue
+      const postTradeCashPct = (postTradeCash / accountValue) * 100
+      if (postTradeCashPct < CASH_MINIMUM_PCT * 100) {
+        violations.push({
+          constraint: 'Cash reserve minimum (2%)',
+          severity: postTradeCash < 0 ? 'block' : 'warning',
+          currentValue: `${postTradeCashPct.toFixed(1)}%`,
+          limit: `${(CASH_MINIMUM_PCT * 100).toFixed(1)}%`,
+          message: `Post-trade cash balance would be ${postTradeCashPct.toFixed(1)}%, below the ${(CASH_MINIMUM_PCT * 100).toFixed(0)}% minimum reserve requirement.`,
+        })
+      }
     }
 
     // Sector concentration for known tech stocks — the account's actual technology exposure,
-    // not a fixed 38.2%.
-    if (TECH_SYMBOLS.includes(sym) && ['buy', 'buy_to_open'].includes(body.side) && estValue > 50_000) {
+    // not a fixed 38.2%, and gated on the projected post-trade weight (same 0.8x-warn / 1.0x-block
+    // ladder as the concentration check above), not a raw notional threshold that fired regardless
+    // of whether the sector limit was anywhere close to being breached.
+    if (TECH_SYMBOLS.includes(sym) && ['buy', 'buy_to_open'].includes(body.side)) {
       const techWeight = positions
         .filter((p) => TECH_SYMBOLS.includes(p.symbol))
         .reduce((sum, p) => sum + p.marketValue, 0) / accountValue
       const projected = techWeight + estValue / accountValue
-      violations.push({
-        constraint: 'Sector concentration (Technology)',
-        severity: 'warning',
-        currentValue: `${(techWeight * 100).toFixed(1)}%`,
-        limit: '40.0%',
-        message: `Technology sector allocation is currently ${(techWeight * 100).toFixed(1)}%. This trade would push it to ~${(projected * 100).toFixed(1)}% (limit: 40%).`,
-      })
+      if (projected > SECTOR_LIMIT * 0.8) {
+        violations.push({
+          constraint: 'Sector concentration (Technology)',
+          severity: projected > SECTOR_LIMIT ? 'block' : 'warning',
+          currentValue: `${(projected * 100).toFixed(1)}%`,
+          limit: `${(SECTOR_LIMIT * 100).toFixed(1)}%`,
+          message: `Technology sector allocation would be ${(projected * 100).toFixed(1)}% after this trade (currently ${(techWeight * 100).toFixed(1)}%), against a ${(SECTOR_LIMIT * 100).toFixed(0)}% limit.`,
+        })
+      }
     }
 
     return HttpResponse.json({
@@ -273,7 +338,9 @@ export const omsHandlers = [
   http.post('/api/oms/rebalance', async ({ request }) => {
     const body = await request.json() as { accountIds: string[]; driftThreshold?: number; taxAware: boolean }
     const previews: RebalancePreview[] = body.accountIds.map((accountId) => {
-      const trades = generateRebalanceTrades(accountId, body.taxAware)
+      // The Rebalance page's drift-threshold control was sent and ignored; `driftThreshold` was
+      // in scope one line away.
+      const trades = generateRebalanceTrades(accountId, body.taxAware, body.driftThreshold)
       return {
         accountId,
         trades,

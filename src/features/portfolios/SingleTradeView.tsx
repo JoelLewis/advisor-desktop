@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { AlertTriangle } from 'lucide-react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -10,7 +11,7 @@ import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import type { Order } from '@/services/oms'
 import type { SymbolSearchResult, TradableAssetClass, EquitySide, EquityOrderType, OptionSide, MutualFundAction, MutualFundAmountType, BondSide, BondOrderType, BondPriceType, DigitalAssetSide, DigitalAssetOrderType, TimeInForce } from '@/types/trading'
-import { AssetClassSelector, FieldGroup, OrderSummaryCard } from './trade-fields/shared'
+import { AssetClassSelector, FieldGroup, OrderSummaryCard, computeEstimatedValue } from './trade-fields/shared'
 import { EquityTradeFields } from './trade-fields/EquityTradeFields'
 import { OptionTradeFields } from './trade-fields/OptionTradeFields'
 import { MutualFundTradeFields } from './trade-fields/MutualFundTradeFields'
@@ -195,7 +196,12 @@ export function SingleTradeView() {
       case 'equity': return selectedSymbol.lastPrice
       case 'option': return Number(optLimitPrice) || selectedSymbol.lastPrice
       case 'mutual_fund': return selectedSymbol.nav ?? selectedSymbol.lastPrice
-      case 'fixed_income': return Number(fiPriceOrYield) || selectedSymbol.lastPrice
+      case 'fixed_income':
+        // Critical fix round 2 — `priceOrYield` is a currency price only in `bondPriceType ===
+        // 'price'` mode. In yield mode it is a percentage (e.g. 4.5), and multiplying that
+        // directly into a notional formula is not a currency amount at all. There is no
+        // yield-to-price converter here, so the estimate falls back to the quoted market price.
+        return fiBondPriceType === 'price' ? (Number(fiPriceOrYield) || selectedSymbol.lastPrice) : selectedSymbol.lastPrice
       case 'digital_asset': return selectedSymbol.lastPrice
     }
   }
@@ -251,7 +257,18 @@ export function SingleTradeView() {
         break
     }
 
-    const estimatedValue = getCurrentQuantity() * getCurrentPrice()
+    // Critical fix round 2 — the real per-asset-class notional (contract multiplier / par
+    // amount / dollar amount), not a flat `quantity * price` that under-counted options by the
+    // 100x contract multiplier, bonds by the par-to-quantity ratio, and dollar-amount fund
+    // orders almost entirely.
+    const estimatedValue = computeEstimatedValue({
+      assetClass,
+      quantity: getCurrentQuantity(),
+      price: getCurrentPrice(),
+      contractMultiplier: assetClass === 'option' ? 100 : undefined,
+      parAmount: assetClass === 'fixed_income' ? Number(fiParAmount) : undefined,
+      dollarAmount: assetClass === 'mutual_fund' && mfAmountType === 'dollars' ? Number(mfAmount) : undefined,
+    })
 
     preCheck.mutate(
       { accountId, symbol: selectedSymbol.symbol, side: getCurrentSide(), quantity: getCurrentQuantity(), estimatedValue },
@@ -444,8 +461,19 @@ export function SingleTradeView() {
               passed={preCheck.data?.passed ?? null}
             />
 
-            {/* Submit — re-clicking after a block re-runs the check, so adjusting the order
-                (or the underlying facts) can clear it rather than leaving the button stuck. */}
+            {/* Minor fix round 2 — a failed check (network error, invalid notional) previously
+                left `passed === null`, rendered nothing, and reverted the button silently. The
+                order is never actually submitted in that case (submitTrade only runs inside
+                preCheck's onSuccess), but the advisor had no way to know that; now it's explicit. */}
+            {preCheck.isError && (
+              <div className="flex items-center gap-2 rounded-md bg-accent-red/10 px-3 py-2 text-body text-accent-red" role="alert">
+                <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                Could not run the pre-trade compliance check — the order was not submitted. Try again.
+              </div>
+            )}
+
+            {/* Submit — re-clicking after a block or a failed check re-runs it, so adjusting the
+                order (or the underlying facts) can clear it rather than leaving the button stuck. */}
             <button
               onClick={handleSubmit}
               disabled={!canSubmit || submitTrade.isPending || preCheck.isPending}
@@ -455,7 +483,9 @@ export function SingleTradeView() {
                 ? 'Submitting...'
                 : preCheck.data?.passed === false
                   ? 'Blocked by compliance — retry'
-                  : `Submit ${getCurrentSide().replace(/_/g, ' ').toUpperCase()} Order`}
+                  : preCheck.isError
+                    ? 'Compliance check failed — retry'
+                    : `Submit ${getCurrentSide().replace(/_/g, ' ').toUpperCase()} Order`}
             </button>
             <p className="text-center text-caption text-text-tertiary">Settlement: T+1 for equities and ETFs</p>
           </CardContent>
