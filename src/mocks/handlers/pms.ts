@@ -187,6 +187,17 @@ function getModelByIndex(index: number): ModelDefinition {
   return model
 }
 
+/** §5.2 · model-governance — these were hand-typed and summed to $118.67M across 40 accounts
+ *  against a derived book of $91.32M across 47, rendering 130% of the book. Derived from the
+ *  same `deriveBookAUM` the book page reads, so the two can never disagree again. */
+function modelBookFor(modelId: string): { assignedAccounts: number; totalAUM: number } {
+  const own = accounts.filter((a) => a.modelId === modelId)
+  return {
+    assignedAccounts: own.length,
+    totalAUM: Math.round(deriveBookAUM(own, FX_RATES_USD_BASE)),
+  }
+}
+
 function getModelTargets(modelId: string): Record<string, number> {
   const model = MODELS.find((m) => m.id === modelId) ?? getModelByIndex(0)
   const targets: Record<string, number> = {}
@@ -908,7 +919,7 @@ export const pmsHandlers = [
       {
         id: 'mod-001', name: 'Balanced Growth', benchmark: 'S&P 500 / Agg 60/40',
         description: 'Core 60/40 model with growth tilt',
-        riskProfile: 'moderate', currentVersion: 3, assignedAccounts: 14, totalAUM: 42_350_000,
+        riskProfile: 'moderate', currentVersion: 3, ...modelBookFor('mod-001'),
         lastRebalanceDate: '2026-02-10', ...MODEL_BANDS['mod-001'],
         assetClasses: getModelByIndex(0).assetClasses,
         versions: [
@@ -951,7 +962,7 @@ export const pmsHandlers = [
       {
         id: 'mod-002', name: 'Growth', benchmark: 'S&P 500',
         description: 'Equity-focused growth model',
-        riskProfile: 'moderate_aggressive', currentVersion: 2, assignedAccounts: 8, totalAUM: 28_120_000,
+        riskProfile: 'moderate_aggressive', currentVersion: 2, ...modelBookFor('mod-002'),
         lastRebalanceDate: '2026-02-12', ...MODEL_BANDS['mod-002'],
         assetClasses: getModelByIndex(1).assetClasses,
         versions: [
@@ -980,7 +991,7 @@ export const pmsHandlers = [
       {
         id: 'mod-003', name: 'Conservative Income', benchmark: 'Barclays Agg',
         description: 'Income-focused with capital preservation',
-        riskProfile: 'conservative', currentVersion: 2, assignedAccounts: 6, totalAUM: 15_800_000,
+        riskProfile: 'conservative', currentVersion: 2, ...modelBookFor('mod-003'),
         lastRebalanceDate: '2026-01-28', ...MODEL_BANDS['mod-003'],
         assetClasses: getModelByIndex(2).assetClasses,
         versions: [
@@ -1008,7 +1019,7 @@ export const pmsHandlers = [
       {
         id: 'mod-004', name: 'Aggressive Growth', benchmark: 'MSCI ACWI',
         description: 'High-growth equity allocation',
-        riskProfile: 'aggressive', currentVersion: 1, assignedAccounts: 4, totalAUM: 8_450_000,
+        riskProfile: 'aggressive', currentVersion: 1, ...modelBookFor('mod-004'),
         lastRebalanceDate: '2026-02-05', ...MODEL_BANDS['mod-004'],
         assetClasses: getModelByIndex(3).assetClasses,
         versions: [
@@ -1023,7 +1034,7 @@ export const pmsHandlers = [
       {
         id: 'mod-005', name: 'Ultra-HNW Multi-Strategy', benchmark: 'Custom Blended',
         description: 'Multi-strategy for large accounts',
-        riskProfile: 'moderate_aggressive', currentVersion: 3, assignedAccounts: 3, totalAUM: 18_900_000,
+        riskProfile: 'moderate_aggressive', currentVersion: 3, ...modelBookFor('mod-005'),
         lastRebalanceDate: '2026-01-20', ...MODEL_BANDS['mod-005'],
         assetClasses: getModelByIndex(4).assetClasses,
         versions: [
@@ -1065,7 +1076,7 @@ export const pmsHandlers = [
       {
         id: 'mod-006', name: 'Education 529', benchmark: 'Age-Based Glide',
         description: 'Age-based education savings glide path',
-        riskProfile: 'moderate', currentVersion: 1, assignedAccounts: 3, totalAUM: 1_850_000,
+        riskProfile: 'moderate', currentVersion: 1, ...modelBookFor('mod-006'),
         lastRebalanceDate: '2026-01-15', ...MODEL_BANDS['mod-006'],
         assetClasses: getModelByIndex(5).assetClasses,
         versions: [
@@ -1080,7 +1091,7 @@ export const pmsHandlers = [
       {
         id: 'mod-007', name: 'Moderate Balanced', benchmark: 'S&P 500 / Agg 50/50',
         description: 'Balanced 50/50 equity-bond split',
-        riskProfile: 'moderate_conservative', currentVersion: 2, assignedAccounts: 2, totalAUM: 3_200_000,
+        riskProfile: 'moderate_conservative', currentVersion: 2, ...modelBookFor('mod-007'),
         lastRebalanceDate: '2026-02-01', ...MODEL_BANDS['mod-007'],
         assetClasses: getModelByIndex(6).assetClasses,
         versions: [
