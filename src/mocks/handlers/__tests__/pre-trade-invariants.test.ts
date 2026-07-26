@@ -515,6 +515,53 @@ describe('compliance.ts /api/compliance/check-trades wash-sale check is househol
   })
 })
 
+describe('§9.2 · compliance reports the whole projected book, not only proposed buys', () => {
+  it('acc-002: a clean AGG buy does not certify SPY, which is already over the fund limit', async () => {
+    const [result] = await checkTradeCompliance([
+      { accountId: 'acc-002', trades: [{ symbol: 'AGG', side: 'buy', quantity: 100, estimatedValue: 10_000 }] },
+    ])
+    const concentration = result!.checks.filter((c) => c.category === 'concentration_limit')
+    // The affirmative all-positions pass must not appear while a real breach exists.
+    expect(concentration.some((c) => c.status === 'pass' && /All post-trade positions/.test(c.message))).toBe(false)
+    // SPY is 44.8% against a 35% fund limit and must be named.
+    const spy = concentration.find((c) => c.details?.symbol === 'SPY')
+    expect(spy, 'SPY breach must be reported').toBeDefined()
+    expect(spy!.details!.preExisting).toBe(true)
+    expect(spy!.details!.postTradeWeight).toBeGreaterThan(0.35)
+  })
+
+  it('a pre-existing breach is reported as pre-existing, not blamed on the trade', async () => {
+    const [result] = await checkTradeCompliance([
+      { accountId: 'acc-002', trades: [{ symbol: 'AGG', side: 'buy', quantity: 100, estimatedValue: 10_000 }] },
+    ])
+    const spy = result!.checks.find((c) => c.details?.symbol === 'SPY')!
+    expect(spy.message).toMatch(/already|pre-existing|not created by this trade/i)
+  })
+
+  it('an account with no breach anywhere still gets a clean affirmative pass', async () => {
+    // The direction that matters: this must not become a check that can never pass. Asserting
+    // only `.every(status === 'pass')` would be vacuously true on an empty array — if the
+    // affirmative pass check were deleted outright and nothing else breaches, `concentration`
+    // would be `[]` and `.every` would still report true. Pin that the array is non-empty and
+    // that the affirmative pass rule specifically is present.
+    const [result] = await checkTradeCompliance([
+      { accountId: 'acc-006', trades: [{ symbol: 'AGG', side: 'buy', quantity: 10, estimatedValue: 1_000 }] },
+    ])
+    const concentration = result!.checks.filter((c) => c.category === 'concentration_limit')
+    expect(concentration.length).toBeGreaterThan(0)
+    expect(concentration.every((c) => c.status === 'pass')).toBe(true)
+    expect(concentration.some((c) => c.rule === 'Concentration limit (per security kind)')).toBe(true)
+  })
+
+  it('a trade that creates a breach is distinguished from one that inherits it', async () => {
+    const [result] = await checkTradeCompliance([
+      { accountId: 'acc-006', trades: [{ symbol: 'NVDA', side: 'buy', quantity: 2_000, estimatedValue: 1_560_000 }] },
+    ])
+    const nvda = result!.checks.find((c) => c.details?.symbol === 'NVDA')!
+    expect(nvda.details!.preExisting).toBe(false)
+  })
+})
+
 describe('fix round 2 · the two compliance endpoints agree on a single severity ladder', () => {
   it('a VTI buy taking acc-001 to ~40% weight is a fail on both /api/compliance/check-trades and a block on /api/oms/orders/pre-check', async () => {
     // 40% is above the 35% fund limit on both endpoints — previously "fail" required 1.5x the

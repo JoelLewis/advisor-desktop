@@ -85,36 +85,60 @@ function checkTradesForAccount(req: TradeComplianceRequest): TradeComplianceResu
   }
 
   // ── Rule 2: Concentration limits (per security kind — single-issuer / fund / cash) ──
-  let concentrationFailed = false
+  // §9.2 · pre-trade-compliance — this loop used to visit only proposed buys, then emit "All
+  // post-trade positions within their applicable concentration limits" whenever none of THOSE
+  // buys tripped a limit. acc-002 holds SPY at 44.8% against a 35% fund limit; a clean AGG buy
+  // (which never touches SPY) certified a book with a real, unrelated breach still in it. The
+  // projection below covers every symbol the account will hold after the trade — positions the
+  // trade never touches carry their current weight forward, positions a buy or sell touches are
+  // moved by it — and each breach found is reported as pre-existing (the account was already over
+  // the limit before this trade) or trade-created, so a compliance officer sees both.
+  const projected = new Map<string, { weight: number; assetClass: string }>()
+  for (const [symbol, position] of Object.entries(positions)) {
+    projected.set(symbol, { weight: position.weight, assetClass: position.assetClass })
+  }
   for (const trade of req.trades) {
-    if (trade.side === 'buy') {
-      const existingPosition = positions[trade.symbol]
-      const currentWeight = existingPosition?.weight ?? 0
-      const kind = securityKind(trade.symbol, existingPosition?.assetClass ?? 'us_equity')
-      const limit = concentrationLimitFor(kind)
-      const additionalWeight = trade.estimatedValue / accountValue
-      const postTradeWeight = currentWeight + additionalWeight
+    const existing = projected.get(trade.symbol)
+    const assetClass = existing?.assetClass ?? 'us_equity'
+    const deltaWeight = (trade.side === 'buy' ? 1 : -1) * (trade.estimatedValue / accountValue)
+    const weight = Math.max(0, (existing?.weight ?? 0) + deltaWeight)
+    projected.set(trade.symbol, { weight, assetClass })
+  }
 
-      // Same ladder as `/api/oms/orders/pre-check` in `oms.ts`: warn approaching the limit (80% of
-      // it), fail/block at the limit itself. The two endpoints previously disagreed — this one
-      // only fired once the limit was already crossed, and called it "fail" only above 1.5x — so
-      // the same trade could be a block on one surface and a mere warning on the other.
-      if (postTradeWeight > limit * 0.8) {
-        concentrationFailed = true
-        const kindLabel = kind === 'single_name' ? 'single-name' : kind === 'fund' ? 'pooled-vehicle' : 'cash'
-        checks.push({
-          rule: `Concentration limit: ${trade.symbol}`,
-          category: 'concentration_limit',
-          status: postTradeWeight > limit ? 'fail' : 'warning',
-          message: `Post-trade weight of ${trade.symbol} would be ${(postTradeWeight * 100).toFixed(1)}%, ${postTradeWeight > limit ? 'exceeding' : 'approaching'} the ${(limit * 100).toFixed(0)}% ${kindLabel} limit.`,
-          details: {
-            symbol: trade.symbol,
-            currentWeight,
-            postTradeWeight,
-            limit,
-          },
-        })
-      }
+  let concentrationFailed = false
+  for (const [symbol, proj] of projected) {
+    const originalWeight = positions[symbol]?.weight ?? 0
+    const kind = securityKind(symbol, proj.assetClass)
+    const limit = concentrationLimitFor(kind)
+    const postTradeWeight = proj.weight
+    // Pre-existing only if the account was already over the limit before this trade's
+    // contribution — not merely because the projected (post-trade) weight is over it.
+    const preExisting = originalWeight > limit
+
+    // Same ladder as `/api/oms/orders/pre-check` in `oms.ts`: warn approaching the limit (80% of
+    // it), fail/block at the limit itself. The two endpoints previously disagreed — this one
+    // only fired once the limit was already crossed, and called it "fail" only above 1.5x — so
+    // the same trade could be a block on one surface and a mere warning on the other.
+    if (postTradeWeight > limit * 0.8) {
+      concentrationFailed = true
+      const kindLabel = kind === 'single_name' ? 'single-name' : kind === 'fund' ? 'pooled-vehicle' : 'cash'
+      const status = postTradeWeight > limit ? 'fail' : 'warning'
+      const message = preExisting
+        ? `${symbol} is already ${(originalWeight * 100).toFixed(1)}% of the account, exceeding the ${(limit * 100).toFixed(0)}% ${kindLabel} limit; this trade does not create the breach.`
+        : `Post-trade weight of ${symbol} would be ${(postTradeWeight * 100).toFixed(1)}%, ${status === 'fail' ? 'exceeding' : 'approaching'} the ${(limit * 100).toFixed(0)}% ${kindLabel} limit.`
+      checks.push({
+        rule: `Concentration limit: ${symbol}`,
+        category: 'concentration_limit',
+        status,
+        message,
+        details: {
+          symbol,
+          currentWeight: originalWeight,
+          postTradeWeight,
+          limit,
+          preExisting,
+        },
+      })
     }
   }
   if (!concentrationFailed) {

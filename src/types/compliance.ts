@@ -52,5 +52,6 @@ export type TradeComplianceCheck = {
     limit?: number
     cashBalance?: number
     minimumCash?: number
+    preExisting?: boolean
   }
 }
