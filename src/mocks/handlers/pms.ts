@@ -203,10 +203,11 @@ function getModelByIndex(index: number): ModelDefinition {
 /**
  * The four identity fields the model-governance list previously re-typed for all seven models,
  * duplicating `MODELS`. The two copies were byte-identical as of this change — there was no
- * existing drift — but two hand-typed copies of the same strings have no mechanism keeping them in
- * sync, and this file has already shipped that exact defect once (`benchmark` itself, before §9.4).
- * Governance now reads identity from `MODELS` instead of re-declaring it, so a future edit to one
- * can't leave the other stale.
+ * existing drift, and §9.4's mislabelled benchmark was present identically in both, so a single
+ * source of truth would not have prevented it. The rationale here is purely prospective: two
+ * hand-typed copies of the same strings have no mechanism keeping them in sync. Governance now
+ * reads identity from `MODELS` instead of re-declaring it, so a future edit to one can't leave
+ * the other stale.
  */
 function modelIdentity(modelId: string): Pick<ModelDefinition, 'id' | 'name' | 'benchmark' | 'benchmarkKind' | 'description'> {
   const model = MODELS.find((m) => m.id === modelId) ?? getModelByIndex(0)
