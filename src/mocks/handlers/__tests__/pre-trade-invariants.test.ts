@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { preTradeCheck, previewRebalance } from '@/services/oms'
 import { checkTradeCompliance } from '@/services/compliance'
 import { getAccounts, getTaxLots } from '@/services/custodian'
-import { getPositions } from '@/services/pms'
+import { getPositions, getDrift } from '@/services/pms'
 import { LONG_TERM_RATE, SHORT_TERM_RATE } from '@/features/portfolios/tax/shared'
 
 describe('pre-trade concentration uses the account own value', () => {
@@ -183,15 +183,135 @@ describe('fix round 2 · rebalance tax respects account tax treatment', () => {
 })
 
 describe('fix round 2 · rebalance is self-financing', () => {
-  it('acc-004: sells no longer net ~18% of the account to cash when an underweight class has no tradable candidate', async () => {
-    // acc-004 (Roth IRA, $450K) targets emerging_markets/alternatives it doesn't hold at all, so
-    // those buys have nowhere to go; before this fix the account sold $135,000 and bought only
-    // $54,000, parking the $81,000 (18%) difference in cash instead of scaling the sells down to
-    // what the buy side could actually absorb.
+  it('acc-004: sells net exactly the cash shortfall to target, not the ~18% of the account the unscaled version parked in cash', async () => {
+    // acc-004 (Roth IRA, $450K, $9,000 cash = 2.0% against a 5% target) targets
+    // emerging_markets/alternatives it doesn't hold at all, so those buys have nowhere to go;
+    // before the round-2 fix the account sold $135,000 and bought only $54,000, parking the
+    // $81,000 (18% of the account) difference in cash.
+    //
+    // Fix round 4 restated this test's invariant. It used to assert `|totalSell - totalBuy| <= 5`
+    // — sells exactly equal to buys — which is only correct for an account already *at* its cash
+    // target. acc-004 is 3.0 points *under* it, so a net sale of exactly 3.0 points ($13,500) is
+    // the correct proposal, not a defect: it lands cash on 5.00%. The invariant that actually
+    // holds is "the net sale fills the cash gap and does not exceed it".
+    const account = (await getAccounts()).find((a) => a.id === 'acc-004')!
     const [preview] = await previewRebalance({ accountIds: ['acc-004'], taxAware: true })
     const totalSell = preview!.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
     const totalBuy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
-    expect(Math.abs(totalSell - totalBuy)).toBeLessThanOrEqual(5)
+
+    expect(totalSell - totalBuy).toBeCloseTo(13_500, -1)
+    // Nowhere near the $81,000 the unscaled version stranded.
+    expect(totalSell - totalBuy).toBeLessThan(20_000)
+    // Post-trade cash lands on the 5% target, not 18 points above it.
+    expect((account.cashBalance - totalBuy + totalSell) / account.totalValue).toBeCloseTo(0.05, 3)
+  })
+})
+
+/**
+ * Critical fix round 4 · rebalancing — round 3 capped sells at `totalBuy` alone. `cash` is an
+ * asset class in every model with its own target weight, but it never yields a tradeable
+ * candidate (`p.symbol !== 'CASH'` filters it out), so cash can never contribute to `totalBuy`.
+ * Any account whose only underweight classes were ones it does not hold, plus cash, therefore got
+ * `sellScale = 0` and proposed nothing at all — 8 of 41 drifted accounts at the Rebalance page's
+ * default threshold, up from 0 of 41 in round 2.
+ *
+ * Four of those eight are *overweight* cash (acc-041/044/045/047), so refusing is right and is
+ * covered below. Four were a live regression: these accounts are **underweight** cash and hold
+ * overweight positions comfortably inside their market value that an advisor could legitimately
+ * trim. The cap is `totalBuy + max(0, cashTarget - cashActual) x totalValue` — an account can
+ * absorb proceeds into cash, up to its cash target, exactly as it can draw on cash to fund a buy.
+ *
+ * Each test below names its account, because the pre-existing acc-041 test cannot distinguish
+ * "capped correctly" from "capped too hard" — both leave acc-041 proposing nothing.
+ */
+describe('fix round 4 · sells are capped by what buys AND cash-to-target can absorb, not by buys alone', () => {
+  async function totals(accountId: string) {
+    const account = (await getAccounts()).find((a) => a.id === accountId)!
+    const [preview] = await previewRebalance({ accountIds: [accountId], taxAware: true })
+    const trades = preview!.trades
+    const totalSell = trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
+    const totalBuy = trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
+    return { account, trades, totalSell, totalBuy }
+  }
+
+  it('acc-030 (Brian O\'Brien, 2.0% cash against a 5% target) trims $22,500, not nothing', async () => {
+    // Every underweight class acc-030 has — emerging_markets, alternatives, real_estate — is one
+    // it holds nothing in, so totalBuy is exactly 0 and round 3 scaled all three sells to zero.
+    // It is overweight VTI ($63,750 of a $261,000 position), EFA ($33,750 of $108,750) and GLD
+    // ($22,500 of $37,500) — $120,000 of legitimate, in-position trims — and 3.0 points under its
+    // cash target on a $750,000 account, so $22,500 of that is fundable.
+    const { account, trades, totalSell, totalBuy } = await totals('acc-030')
+    expect(trades.length).toBeGreaterThan(0)
+    expect(totalBuy).toBe(0)
+    expect(totalSell).toBeCloseTo(22_500, -2)
+    expect((account.cashBalance + totalSell) / account.totalValue).toBeCloseTo(0.05, 3)
+  })
+
+  it('acc-037 (William Foster, 2.0% cash against a 5% target) trims $30,000, not nothing', async () => {
+    // Same shape as acc-030 on a $1,000,000 account: totalBuy is 0, raw trims are $160,000
+    // (VTI $85,000 of $348,000 · EFA $45,000 of $145,000 · GLD $30,000 of $50,000), and the cash
+    // headroom to target is 3.0 points = $30,000.
+    const { account, trades, totalSell, totalBuy } = await totals('acc-037')
+    expect(trades.length).toBeGreaterThan(0)
+    expect(totalBuy).toBe(0)
+    expect(totalSell).toBeCloseTo(30_000, -2)
+    expect((account.cashBalance + totalSell) / account.totalValue).toBeCloseTo(0.05, 3)
+  })
+
+  it('acc-014 (Williams 529, 2.0% cash against a 10% target) trims the full $36,575, not the $5,775 its lone buy could absorb', async () => {
+    // acc-014 does have one buy candidate (VTI, $5,775), so round 3 did not zero it out — it
+    // crushed it, capping $36,575 of in-position trims (EFA $17,325 of $55,825 · GLD $19,250 of
+    // $19,250) to $5,775. The $30,800 of cash headroom on a $385,000 account absorbs the rest.
+    const { account, totalSell, totalBuy } = await totals('acc-014')
+    expect(totalBuy).toBeCloseTo(5_775, -1)
+    expect(totalSell).toBeCloseTo(36_575, -2)
+    expect((account.cashBalance - totalBuy + totalSell) / account.totalValue).toBeCloseTo(0.10, 3)
+  })
+
+  it('acc-032 (O\'Brien 529, 2.0% cash against a 10% target) trims the full $27,075, not the $4,275 its lone buy could absorb', async () => {
+    const { account, totalSell, totalBuy } = await totals('acc-032')
+    expect(totalBuy).toBeCloseTo(4_275, -1)
+    expect(totalSell).toBeCloseTo(27_075, -2)
+    expect((account.cashBalance - totalBuy + totalSell) / account.totalValue).toBeCloseTo(0.10, 3)
+  })
+
+  it('acc-044 (Mueller CHF, 22.3% cash against a 5% target) still proposes nothing — it is overweight cash, so proceeds have nowhere to go', async () => {
+    // The complement: cash headroom is floored at zero, so an account already above its cash
+    // target gains no extra sell capacity from this fix. Without the floor, acc-044 would sell
+    // NESN.SW and CSBGC0.SW into an already 22.3%-cash account.
+    const [preview] = await previewRebalance({ accountIds: ['acc-044'], taxAware: true })
+    expect(preview!.trades).toEqual([])
+  })
+
+  it('acc-045 (Patel Digital Assets, 9.4% cash against a 3% target) still proposes nothing rather than a $384,625 sale of a $188,018 BTC position', async () => {
+    const [preview] = await previewRebalance({ accountIds: ['acc-045'], taxAware: true })
+    expect(preview!.trades).toEqual([])
+  })
+
+  it('acc-047 (Williams SIMPLE IRA, 8.3% cash against a 5% target) still proposes nothing', async () => {
+    const [preview] = await previewRebalance({ accountIds: ['acc-047'], taxAware: true })
+    expect(preview!.trades).toEqual([])
+  })
+
+  it('across every account, a rebalance never pushes cash above the model cash target', async () => {
+    // The invariant the cap encodes, stated once over all 47 accounts: proceeds may fill the gap
+    // to the account's own model cash target but never overshoot it, and an account already
+    // above that target is never pushed higher still. A cap that is too generous (no zero floor
+    // on the headroom, or headroom measured against the wrong side of the target) breaks this;
+    // a cap that is too tight (round 3's `totalBuy` alone) is caught by the named accounts above.
+    // The cash target is read from `getDrift`, the same drift surface the proposal derives from.
+    for (const account of await getAccounts()) {
+      const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
+      const totalSell = preview!.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
+      const totalBuy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
+      if (totalSell === 0) continue
+      const drift = await getDrift(account.id)
+      const cashTarget = drift.assetClassDrifts.find((d) => d.assetClass === 'cash')?.target ?? 0
+      const startCashPct = account.cashBalance / account.totalValue
+      const endCashPct = (account.cashBalance - totalBuy + totalSell) / account.totalValue
+      expect(endCashPct, `${account.id} target ${cashTarget} start ${startCashPct} end ${endCashPct}`)
+        .toBeLessThanOrEqual(Math.max(cashTarget, startCashPct) + 0.0005)
+    }
   })
 })
 

@@ -108,13 +108,31 @@ function estimateSaleTax(accountId: string, totalValue: number, target: Position
  *
  * Fix round 3 — self-financing applies to the **sell** side only, and only to avoid stranding
  * proceeds that have nowhere to go: `sellScale` caps sells at what the buy side can actually
- * absorb, which correctly falls to **zero** — propose nothing — when there is nothing to buy at
- * all (`totalBuy === 0`; round 2's `totalBuy > 0 &&` guard left this branch unscaled instead,
- * which read as a short sale in a long-only demo on the account's proxy holding for an asset
- * class it's overweight but can't rebalance out of). Buys are **never** capped: an account draws
- * on its own cash reserve to fund a purchase, exactly as it always could — capping buys to match
- * sells (round 2's `buyScale`) needlessly shrank purchases an account had ample cash to make
- * outright, leaving both the overweight-cash and the underweight-target gaps uncorrected.
+ * absorb, which correctly falls to **zero** — propose nothing — when there is nothing at all to
+ * absorb them (round 2's `totalBuy > 0 &&` guard left this branch unscaled instead, which read
+ * as a short sale in a long-only demo on the account's proxy holding for an asset class it's
+ * overweight but can't rebalance out of). Buys are **never** capped: an account draws on its own
+ * cash reserve to fund a purchase, exactly as it always could — capping buys to match sells
+ * (round 2's `buyScale`) needlessly shrank purchases an account had ample cash to make outright,
+ * leaving both the overweight-cash and the underweight-target gaps uncorrected.
+ *
+ * Fix round 4 — proceeds have a second home the round-3 cap ignored: **cash itself**. `cash` is
+ * an asset class in the model with its own target weight, but it never yields a tradeable
+ * candidate (the `p.symbol !== 'CASH'` filter below), so it could never contribute to
+ * `totalBuy`. Capping sells at `totalBuy` alone therefore stranded every account whose only
+ * underweight classes were ones it doesn't hold plus cash: acc-030 and acc-037 (2.0% cash
+ * against a 5% target) and acc-014 and acc-032 (2.0% against 10%) proposed nothing at all, or
+ * next to nothing, despite holding overweight positions comfortably inside their market value
+ * that an advisor could legitimately trim. The symmetric truth to "an account can draw its own
+ * cash to fund a buy" is "an account can absorb proceeds into cash, up to its cash target":
+ *
+ *     end cash = cash − totalBuy + totalSell  ≤  cashTarget x totalValue
+ *  ⇒  totalSell ≤ totalBuy + (cashTargetWeight − cashActualWeight) x totalValue
+ *
+ * so the cap is `totalBuy + cashHeadroom`, with `cashHeadroom` floored at zero — an account
+ * already **overweight** cash (acc-041, acc-044, acc-045, acc-047) has nowhere to put proceeds
+ * and still correctly proposes nothing, which for three of them is the alternative to a short
+ * sale.
  *
  * A sell also never exceeds the position actually held (`Math.min(rawNotional,
  * target.marketValue)`) — long-only, no short sales, even before self-financing scaling: the
@@ -141,7 +159,14 @@ function generateRebalanceTrades(accountId: string, taxAware: boolean, driftThre
 
   const totalSell = raw.filter((t) => t.side === 'sell').reduce((s, t) => s + t.notional, 0)
   const totalBuy = raw.filter((t) => t.side === 'buy').reduce((s, t) => s + t.notional, 0)
-  const sellScale = totalSell > 0 ? Math.min(1, totalBuy / totalSell) : 1
+  // Cash is a model asset class with its own target, but it never yields a tradeable candidate,
+  // so it can only ever absorb proceeds — never generate a buy. `cashDrift` is read from the
+  // same `computeDriftForAccount` result the trades come from, so the target and the actual
+  // weight are the same facts the drift surface shows.
+  const cashDrift = drift.assetClassDrifts.find((d) => d.assetClass === 'cash')
+  const cashHeadroom = Math.max(0, (cashDrift?.target ?? 0) - (cashDrift?.actual ?? 0)) * account.totalValue
+  const sellCapacity = totalBuy + cashHeadroom
+  const sellScale = totalSell > 0 ? Math.min(1, sellCapacity / totalSell) : 1
 
   return raw
     .map(({ target, side, notional: rawNotional }) => {
