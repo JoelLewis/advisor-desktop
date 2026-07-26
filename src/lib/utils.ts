@@ -7,6 +7,13 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/**
+ * The class pair every numeric surface carries. R13 + R14.
+ * Never write `font-mono` on a figure by hand — use this, so Phase 3's font
+ * swap is a single change inside `@utility tabular-figures` in src/index.css.
+ */
+export const TABULAR_NUMS = 'font-mono tabular-figures' as const
+
 // Cache Intl.NumberFormat instances — construction is expensive, called hundreds of times per page
 const formatterCache = new Map<string, Intl.NumberFormat>()
 

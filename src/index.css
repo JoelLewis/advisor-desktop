@@ -144,6 +144,17 @@
   font-weight: 400;
 }
 
+/* ── Tabular figures ─────────────────────────────────────────────
+   R13/R14 · every financial figure, ticker, masked account and ISO date.
+   PHASE 3: the font swap to IBM Plex Mono is this one font-family line.
+   Do not add tnum/zero anywhere else — components use TABULAR_NUMS from
+   src/lib/utils.ts, which resolves to `font-mono tabular-figures`. */
+@utility tabular-figures {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-feature-settings: "tnum" 1, "zero" 1;
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+
 /* ── Custom scrollbar utility ────────────────────────────────────── */
 @utility scrollbar-thin {
   scrollbar-width: thin;
