@@ -568,15 +568,37 @@ export const aiHandlers = [
         // live on acc-003 (Traditional IRA) and acc-014 (529, tax-free). Same predicate as
         // everywhere else this gate is applied.
         if (isTaxableAccount(account.taxTreatment)) {
-          insights.push({
-            id: `acc-${entityId}-2`,
-            severity: 'opportunity',
-            title: 'Tax-Loss Harvesting Opportunity',
-            body: 'Short-term losses available in 3 positions could offset recent gains. Wash sale window clear for all candidates.',
-            metric: { label: 'Harvestable losses', value: '$12,400' },
-            actionLabel: 'Review Harvest',
-            actionRoute: `/portfolios/accounts/${entityId}/tax`,
-          })
+          // §9.5 (coordinator follow-up) — the gate above was fixed in Task 2, but the body was
+          // not: every taxable account saw the same '3 positions', the same '$12,400', and an
+          // unconditional "wash sale window clear for all candidates" — the most-visited AI
+          // surface in the product stating figures it couldn't support. Filters the same
+          // book-wide harvestable-lot walk the dashboard's D22 insight and the chat response above
+          // both read (`harvestableLotsAcrossBook`) down to this account, and reads
+          // `TaxLot.washSaleRestricted` — itself derived from `openWashSaleWindows` inside
+          // `generateTaxLots` (custodian.ts) — rather than asserting the window is clear
+          // unconditionally. No harvestable losses means no insight, not a $0 one.
+          const accountHarvestable = harvestableLotsAcrossBook().filter((l) => l.accountId === entityId)
+          if (accountHarvestable.length > 0) {
+            const positionCount = new Set(accountHarvestable.map((l) => l.positionId)).size
+            const loss = accountHarvestable.reduce((s, l) => s + Math.abs(l.gainLoss), 0)
+            const hasRestricted = accountHarvestable.some((l) => l.washSaleRestricted)
+            insights.push({
+              id: `acc-${entityId}-2`,
+              severity: 'opportunity',
+              title: 'Tax-Loss Harvesting Opportunity',
+              body: `${positionCount} position${positionCount === 1 ? '' : 's'} with harvestable losses could offset recent gains. ${
+                hasRestricted
+                  ? 'At least one candidate sits inside an active wash-sale window — confirm clearance before repurchasing the same or a substantially identical security.'
+                  : 'Wash sale window clear for all candidates.'
+              }`,
+              metric: {
+                label: 'Harvestable losses',
+                value: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(loss),
+              },
+              actionLabel: 'Review Harvest',
+              actionRoute: `/portfolios/accounts/${entityId}/tax`,
+            })
+          }
         }
       }
     }

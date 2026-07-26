@@ -108,9 +108,18 @@ describe('§9.5 · Position Concentration Alert reflects real single-name breach
   // losses (trust_taxable is taxable-for-this-purpose) and holds no single-name positions at all
   // (its top position is a 16.5% SPY allocation, a fund). A permanent assertion, replacing the
   // scratch tests that re-review used and deleted.
-  it('acc-006 (trust_taxable, no single-name holdings) gets no concentration alert but still gets its harvesting insight', async () => {
+  //
+  // The harvesting insight's own figures were fixed alongside the concentration alert
+  // (coordinator follow-up): acc-006's real harvestable set is 3 positions / $36,400, and none of
+  // its harvestable lots sit inside an open wash-sale window, so "clear for all candidates" is
+  // true for this account specifically — not asserted unconditionally.
+  it('acc-006 (trust_taxable, no single-name holdings) gets no concentration alert but still gets its harvesting insight, with the real derived figure', async () => {
     const insights = await getAIInsights('account_detail', 'acc-006')
     expect(insights.find((i) => i.title === 'Position Concentration Alert')).toBeUndefined()
-    expect(insights.find((i) => i.title === 'Tax-Loss Harvesting Opportunity')).toBeDefined()
+    const harvest = insights.find((i) => i.title === 'Tax-Loss Harvesting Opportunity')
+    expect(harvest).toBeDefined()
+    expect(harvest?.metric?.value).toBe('$36,400')
+    expect(harvest?.body).toContain('3 positions')
+    expect(harvest?.body).toContain('clear for all candidates')
   })
 })

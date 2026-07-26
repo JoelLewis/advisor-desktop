@@ -29,6 +29,12 @@ describe('AI insight invariants — contact gap', () => {
 // `taxTreatment` check — a hardcoded string literal, so the sweep that found and fixed
 // TaxManagementPage and OverviewTab (both derived from `estimatedTaxBenefit`/`isHarvestable`)
 // never caught it. Confirmed live on acc-003 (Traditional IRA) and acc-014 (529, tax-free).
+//
+// §9.5 (coordinator follow-up, Task 6) — the gate was the only half of that finding fixed at the
+// time. The body/metric were still hand-typed for every taxable account regardless of its real
+// harvestable lots, including an unconditional "wash sale window clear for all candidates" — so
+// acc-005's expected figure below is now the real derived one ($21,525, 2 positions), not the old
+// coincidental '$12,400'.
 describe('AI insight invariants — account_detail tax-loss-harvesting insight gates on tax treatment', () => {
   it('acc-003 (Traditional IRA, tax-deferred) does not get the harvesting insight', async () => {
     const insights = await getAIInsights('account_detail', 'acc-003')
@@ -41,10 +47,25 @@ describe('AI insight invariants — account_detail tax-loss-harvesting insight g
   })
 
   // The over-gating control: the gate must not suppress the taxable case.
-  it('acc-005 (individual, taxable) still gets the harvesting insight', async () => {
+  it('acc-005 (individual, taxable) still gets the harvesting insight, with the real derived figure', async () => {
     const insights = await getAIInsights('account_detail', 'acc-005')
     const harvest = insights.find((i) => i.title === 'Tax-Loss Harvesting Opportunity')
     expect(harvest).toBeDefined()
-    expect(harvest?.metric?.value).toBe('$12,400')
+    expect(harvest?.metric?.value).toBe('$21,525')
+    expect(harvest?.body).toContain('2 positions')
+    expect(harvest?.body).toContain('clear for all candidates')
+  })
+
+  // acc-002 sold INTC at a loss (rs-001, realised-sales.ts) — opening its own household's
+  // wash-sale window — and still holds 7,000 remaining INTC shares (D28). Those shares are one of
+  // its two harvestable positions, so this account's real lots include a genuinely
+  // wash-sale-restricted candidate: the insight must not claim the window is clear for it.
+  it('acc-002 (holds a harvestable position inside its own open wash-sale window) does not claim the window is clear', async () => {
+    const insights = await getAIInsights('account_detail', 'acc-002')
+    const harvest = insights.find((i) => i.title === 'Tax-Loss Harvesting Opportunity')
+    expect(harvest).toBeDefined()
+    expect(harvest?.metric?.value).toBe('$48,804')
+    expect(harvest?.body).not.toContain('clear for all candidates')
+    expect(harvest?.body).toContain('wash-sale window')
   })
 })
