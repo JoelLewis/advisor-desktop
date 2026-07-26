@@ -671,3 +671,363 @@ arithmetic in-file**, and each restatement is a correction, not a weakening.
 | 10 | acc-045 σ / mu | 0.589 / 0.3868 | 0.5892 / 0.3869 | digital_assets 385,130/425,000 = 0.906188235 and cash 39,870/425,000 = 0.093811765, against 0.905/0.999 and 0.094/0.999. Variance 0.34714099, √ = 0.58918669 |
 | 10 | Rebalance totals, **thirteen** accounts | acc-001, acc-002, acc-006, acc-011, acc-015, acc-029, acc-033, acc-041, acc-042, acc-043, acc-044, acc-046, acc-047 | see the task-10 report's two-tree table | The drift the legs are sized from is now derived. e.g. acc-006's private_equity is 542,500/12,000,000 = 0.045208, so the trim is $542,400 rather than $540,000. Only acc-006/033/044/047 and acc-002's us_equity leg are pinned; the other eight moved silently. Genuinely unmoved among the brief's named accounts: acc-004, acc-014, acc-030, acc-032, acc-037, acc-045 |
 
+---
+
+## 11. The Phase 1b register — written by the phase gate
+
+Phase 1b spans `d5cd505..6327561`, 25 commits on `phase-1-data-integrity`. Section 10 above was
+written by Task 10 while the phase was still running. **This section is written by the phase gate,
+after all ten tasks closed, and it is the one that re-proves them.** It extends §10 rather than
+replacing it: §10.1's status table stands, and everything below either adds evidence to it or adds
+what it did not carry.
+
+Full working notes, including every pasted command:
+`.superpowers/sdd/2026-07-25-phase-1b-integrity-carryforward/phase-gate-report.md`.
+
+### 11.1 Gate evidence
+
+Run at `6327561`, pasted from the terminal, not asserted:
+
+```
+ Test Files  84 passed (84)
+      Tests  2265 passed (2265)
+   Duration  16.15s
+```
+
+`pnpm type-check` → `$ tsc --noEmit`, exit 0, no diagnostics.
+`pnpm lint --max-warnings 0` → `$ eslint src --ext .ts,.tsx --max-warnings 0 --max-warnings 0`,
+exit 0, no output. (The flag is doubled because the package script already carries it and one more
+was passed on the command line; harmless, and pasted as it printed rather than tidied.)
+
+**The test count is part of the evidence, not decoration.** Phase 1's gate discovered on its first
+action that `pnpm test:run` was executing **zero** tests — a stale `node_modules/.modules.yaml`
+pointed at a deleted worktree, and pnpm aborted while looking successful. Had that gate asserted
+rather than pasted, it would have certified a suite that never ran. This gate's first invocation
+returned 2265, so no `CI=true pnpm install` was needed; the number is recorded so the next reader
+can tell a green run from an empty one.
+
+### 11.2 The phase gate file is intact
+
+```
+$ git diff d5cd505 6327561 -- src/mocks/data/__tests__/rollup-invariants.test.ts | wc -c
+       0
+```
+
+Zero bytes. The file's last modification anywhere in the repository is `c2938d2`, **46 commits
+before `d5cd505`** — inside Phase 1. It is byte-identical across both phases. Re-run alone:
+`234 tests, 234 passed`.
+
+**`max|Σ weight − 1| = 2.220446049250313e-16`**, measured on this tree across all 47 accounts
+(worst at acc-001). That is one ULP of 1.0, and confirms Task 10's improvement from
+`1.000000000000112e-3` — thirteen orders of magnitude.
+
+**One honest qualification on how much credit the frozen gate should take for that.** Mutation M10
+below re-rounds every weight to three decimals — precisely the precision of the literals Task 10
+removed — and kills **30** tests, *none of them in `rollup-invariants.test.ts`*. The gate's own
+`toBeCloseTo(1, 2)` band (±0.005) cannot see the defect it is quoted as protecting against. The
+invariant is genuinely held; it is held by `position-weight-invariants.test.ts`, not by the frozen
+file. That is the substance of deferred item **M30**.
+
+### 11.3 The ten findings, re-proved by mutation
+
+Every mutation below was applied to this tree, reconstructed from the pre-fix source at `d5cd505`
+where it still shows the defect, and run against the **full** suite rather than a targeted file, so
+each kill list is complete rather than curated. The tree was restored after each.
+
+**Ten findings, eleven mutations, eleven kills. No survivors. No finding is un-closed.**
+
+| # | Finding | Closing commit(s) | Mutation | Kills | Named test that died |
+|---|---|---|---|---|---|
+| 1 | model-governance hand-typed AUM ($118.67M/40 against a real $91.32M/47) | `e6e3fbf` | `modelBookFor` returns `d5cd505`'s hand-typed pairs instead of `deriveBookAUM(own)` | 3 | `model-governance-invariants.test.ts` › *each model individually matches its own assigned accounts, in USD* — failing with `mod-001 account count: expected 14 to be 1` and a `$27,349,175.96` AUM overstatement, i.e. the finding's own arithmetic |
+| 2 | tax-loss harvesting offered inside IRAs and 529s | `e540e30`, `7938e0f` | `isTaxableAccount` → always true | 16 | `TaxManagementPage.test.tsx` › *acc-003 (Traditional IRA, tax-deferred) is told harvesting does not apply, and shows no benefit figure*; and *acc-014 (529 plan, tax-free) is gated the same way a Roth IRA is* |
+| 3 | compliance certifying "all post-trade positions" while checking only proposed buys | `b2ab167`, `d97de70` | projection stops seeding existing holdings and visits only `side === 'buy'` | 7 | `pre-trade-invariants.test.ts` › *acc-002: a clean AGG buy does not certify SPY, which is already over the fund limit* |
+| 4 | native-currency amounts labelled and summed as USD | `d0572ca` | `PreviewTradesStep.tsx` passes literal `'USD'` as source currency at all three sites | 2 | `PreviewTradesStep.test.tsx` › *acc-043 (EUR): the buy notional renders at its correctly converted USD figure, not the raw EUR number read as dollars* |
+| 5 | a benchmark named "S&P 500" computed as a model-policy blend | `845190c`, `03045ec`, `eb3edaa` | `mod-002.benchmark` → `'S&P 500'` | 3 | `benchmark-identity.test.tsx` › *no model claims a bare external index name while blending multiple asset classes* |
+| 6 | AI answers contradicting the data they cite | `603b201`, `0ea6ff8` | `DRIFT_COUNT` → `'4'`, the original hand-typed claim | 1 | `ai-citation-invariants.test.ts` › *the drifted-account count matches the drift surface (computeDriftForAccount)* |
+| 6b | — the same finding's second cited figure | as above | `WASH_SALE_COUNT` → `'2'`, the original "2 accounts … through March 15" | 1 | `ai-citation-invariants.test.ts` › *the wash-sale count and date match openWashSaleWindows* |
+| 7 | a sell cap with a ceiling and no floor | `ff537ea`, corrected by `d3d63c5`/`f30e570` | `buyScaleFor` → `() => 1`, removing the `cashAboveTarget` cap | 48 | `pre-trade-invariants.test.ts` › *§9.6 · buys are capped by available cash above target, symmetric to the sell cap › every account: post-trade cash lands within its own target band, from both directions, in money at zero tolerance* |
+| 8a | rebalancing unable to reach unheld classes | `04ad3cc`, `b3d382d`, `82c297d`, `d3d63c5`, `f30e570` | `pickBuyCandidate` returns `undefined` when the account holds nothing in the class | 20 | `pre-trade-invariants.test.ts` › *acc-041: 94.4% international equity against a 15% target proposes real trades, including buys* |
+| 8b | `candidates[0]` security selection | as above | sell branch iterates `held.slice(0, 1)` instead of `orderSellCandidates(...)` | 7 | `pre-trade-invariants.test.ts` › *tax-aware selection exhausts the loss position before touching the large-gain one, and still fills the whole sleeve* |
+| 9 | a fully fabricated model-trade preview (drift from `accId.charCodeAt(...)`) | `beca068`, `2a786e9` | `currentDrift` → `+((id.charCodeAt(id.length-1) % 5) + 1.2).toFixed(1)` | 3 | `model-trade-invariants.test.ts` › *it is not the character-code sequence it used to be* |
+| 10 | hand-typed position weights disagreeing with market value | `a0f7475`, `6327561` | `weight` re-rounded to three decimals — the exact precision of the removed literals | 30 | `position-weight-invariants.test.ts` › *every position weight equals its own market value over the account total* |
+
+§9.7 was mutated in two halves deliberately: "cannot reach unheld classes" and "picks
+`candidates[0]`" are separately falsifiable, and one mutation covering both would have proved less
+than two covering one each.
+
+Mutation 7's 48 kills reach well past the §9.6 surface because Task 9's Finding-2 guard now
+**throws** rather than silently returning an unfundable proposal. That cascade is the guard
+working: an uncapped buy side can no longer produce a quietly wrong answer anywhere in the book.
+
+### 11.3b The one coverage gap this gate found — **destination: Phase 2**
+
+My first attempt at finding 6 mutated two things: the chat's `DRIFT_COUNT` **and** `ai.ts`'s
+trading-desk briefing `restrictedAccounts`, hardcoding the latter to `2`. Only the drift test died.
+I checked whether `2` was simply the true value, and it is not: measured on this tree,
+`openWashSaleWindows(MOCK_TODAY_ISO)` yields **4 windows across 4 distinct accounts** (acc-022,
+acc-007, acc-015, acc-002). So that was a real defect injection, and it **survived**.
+
+This is **not** a §9.5 closure failure. §9.5 named the *chat* claims, and both are guarded —
+mutations 6 and 6b each kill their own named test. The unguarded surface is the trading-desk
+briefing's "Trade Restrictions" metric, one of three adjacent same-screen restatements Task 6's
+implementer fixed **beyond the brief** and which no test was written for.
+
+The code is correct. Nothing user-visible is wrong today. But **a correct fix with no test is
+indistinguishable from an absent one under mutation**, and that is the whole basis on which this
+register claims anything. Recorded rather than fixed, because fixing it in the gate task would mean
+the gate certifying its own work. **Destination: Phase 2 test hygiene** — one assertion that
+`ai.ts`'s trading briefing reads `openWashSaleWindows` rather than a literal.
+
+### 11.4 What moved, and why — the record Phase 2 inherits
+
+Task 10's derivation of `Position.weight` from `marketValue` shifted figures across the book. That
+partition was established by **two-tree measurement** (a `git worktree` at `2a786e9` compared field
+by field against the current tree, across all 47 accounts) — first by the implementer, then
+independently by the re-reviewer, who confirmed it on **every** field. Both runs agree:
+
+| Partition | Count | Accounts |
+|---|---|---|
+| `singleNameWeight` moved | **6** | acc-011, acc-041, acc-042, acc-043, acc-044, acc-045 |
+| Rebalance totals moved | **13** | acc-001, acc-002, acc-006, acc-011, acc-015, acc-029, acc-033, acc-041, acc-042, acc-043, acc-044, acc-046, acc-047 |
+| **Fully unmoved** | **33** | the remaining accounts |
+
+Per-figure arithmetic is in §10.3 above and in the task-10 report's two-tree table.
+
+**What this gate did with it.** I did **not** rebuild the worktree and re-measure. I verified the
+partition's internal consistency instead: the union of the two moved sets is
+13 ∪ {acc-045} = **14**, and 47 − 14 = **33**, which closes exactly against the "fully unmoved"
+count. That is an arithmetic check on a measurement, not a re-measurement, and it is cited here as
+what it is. The measurement itself is the two independent two-tree runs recorded in `progress.md`.
+
+**Two of the six `singleNameWeight` moves were invisible to everyone, including the controller.**
+Only the four international accounts are pinned by a test; acc-011 and acc-045 moved silently. The
+controller's own correction to the register initially named **two** moved accounts when thirteen
+had moved, and **four** `singleNameWeight` moves when there were six. Both errors were caught by
+the implementer, which is recorded in §11.7 because it is the same class as the errors this phase
+existed to remove.
+
+### 11.5 Fixture-realism findings — true data reading oddly, **not defects**
+
+These must not be presented as defects, and must not be "fixed" by softening the copy that reports
+them. Each is the fixtures being unrealistic, surfaced only because Phase 1b stopped the figures
+being decorative. All four were re-measured by this gate rather than quoted.
+
+| Finding | Measured on this tree | Why it is not a defect |
+|---|---|---|
+| **The model library is lopsided.** mod-001 "Balanced Growth" holds **1** account; mod-002 holds **17** | `mod-001=1 mod-002=17 mod-003=11 mod-004=10 mod-005=1 mod-006=3 mod-007=4` (Σ = 47) | The derivation is correct — it is the hand-typed figures that claimed 14 for mod-001. A showcase library whose flagship model has one account is a **fixture-design** question |
+| **The AI honestly reports "40 accounts have drifted."** 40 of 47 accounts — 85% of the book — are out of tolerance | Held by `ai-citation-invariants.test.ts`; mutation 6 kills it | The number is **true**. If 85% is wrong, the fixtures are wrong, not the copy. **Do not soften the copy to hide it** |
+| **Account fixtures are duplicated.** Four account pairs receive byte-identical trade lists | **5 groups covering 12 of 47 accounts** share identical holdings; of these, **exactly 4 pairs** also share a model, and it is those four that collide on trade lists | Task 9's implementer hit this as a failing "no two accounts get the same trade list" test and **corrected its own claim rather than loosening it**, replacing it with the honest converse: a shared trade list must be explained by shared holdings |
+| **180 of 350 served positions have `marketValue ≠ quantity × price`**, worst **$233.20** | `RECON 180/350 violate marketValue===qty*price, worst 233.20 at acc-030 QQQ` — confirmed to the cent | The generator rounds the share count *after* computing market value, so the **quantity is decorative** on the 30 generated accounts. Weights are unaffected: they derive from `marketValue`, which is exact. No consumer multiplies the generated quantity by the price |
+
+**Refinement to the third row, found by this gate.** The ledger's "four byte-identical account
+pairs" is correct *for the claim it makes* — trade-list collisions require identical holdings **and**
+the same model. But the underlying duplication is wider:
+
+```
+acc-008(mod-003) acc-017(mod-002) acc-026(mod-002)   -> 1 same-model pair
+acc-013(mod-004) acc-031(mod-004)                    -> 1
+acc-016(mod-003) acc-023(mod-003) acc-028(mod-002)   -> 1
+acc-019(mod-002) acc-027(mod-003)                    -> 0 (different models)
+acc-021(mod-004) acc-038(mod-004)                    -> 1
+```
+
+Four same-model pairs, matching Task 9 exactly — but **12 accounts**, not 8, hold duplicated data.
+Whoever sizes the Phase 2 fixture work should size it off 12.
+
+### 11.6 Deferred items — every one with a named destination
+
+Collected from `progress.md` and the task reviews. Nothing below is dropped; each row names where
+it goes.
+
+#### Phase 2 — fixture review
+
+| # | Item | Source |
+|---|---|---|
+| F1 | The derived model distribution is lopsided — mod-001 "Balanced Growth" holds 1 account, mod-002 holds 17. The derivation is right; the fixtures look odd | Task 1 |
+| F2 | 40 of 47 accounts (85%) are out of tolerance, so the honest AI copy says so. If that is wrong, the fixtures are wrong | Task 6 |
+| F3 | 12 of 47 accounts fall into 5 identical-holdings groups; 4 same-model pairs receive identical trade lists | Task 9, resized by this gate |
+| M31 | The generated path emits `marketValue` from a rounded share count, so 180 of 350 served positions fail `marketValue === quantity × price` (worst acc-030 QQQ, $233.20). The quantity is decorative there | Task 10; also §10.2 |
+| F4 | `reports.ts` and `calendar.ts` carry hardcoded tax-loss-harvesting dollar figures that never vary by account — part of a larger "reports and briefings are fully static" class | Task 2 |
+
+#### Phase 2 — test hygiene
+
+| # | Item | Source |
+|---|---|---|
+| T1 | **`ai.ts`'s trading-desk briefing `restrictedAccounts` is unguarded** — hardcoding it back to `2` against a true value of `4` survives the full suite. Found by this gate | §11.3b |
+| T2 | The six `RiskMetricCard`s (Beta, Sharpe, Sortino, drawdown, std-dev, VaR) have **zero** coverage; mutating a grid label or a value's precision leaves the suite green. Pre-existing in both source files, now shared across both pages by the extraction | Task 5 |
+| T3 | `SelectAccountsStep.test.tsx` has no USD control of its own (the underlying primitives are controlled elsewhere) | Task 4 |
+| T4 | acc-006's AI-insight surface and acc-032's page-level surface were verified with temporary scratch tests that were then deleted. Both remain permanently unguarded. acc-006 is the $12M trust the Task 2 brief would have wrongly gated, so it is the surface most worth a standing test | Task 2 re-review |
+| T5 | Chat-response routing is `message.length % array.length` — a length-parity switch, not routing. Tests reach the two `trading:` responses via `'x'.repeat(4)`/`'x'.repeat(5)`, brittle by construction though it fails loudly. Replace the switch and the test idiom together | Task 6 |
+| M30 | `rollup-invariants.test.ts:257-268` asserts `Σ weight === 1` at `toBeCloseTo(1, 2)` (±0.005), a band sized for hand-typed weights. Frozen by Global Constraint 8, so the tight bound lives in `position-weight-invariants.test.ts`; the loose one is redundant rather than wrong. **This gate confirmed it: mutation M10 kills 30 tests and none of them is in the frozen file.** Goes with M8 | Task 10, confirmed here |
+
+#### Phase 2 — code and design
+
+| # | Item | Source |
+|---|---|---|
+| D1 | `TaxManagementPage`'s `{!disclosure && view === 'harvest' && …}` guard has a conjunct no test proves necessary — real-app-reachable by account switching without remount, unreachable from any fresh-mount test | Task 2 |
+| D2 | Chat templates that are **not entity-bound** (client_detail TWR, the AAPL 8.2%/5% scenario, household asset-location, workflows/RMD/compliance) cannot be honestly derived without threading `entityId` through chat generation. Recorded as an **architectural limit, not an oversight**, so a later phase decides deliberately rather than rediscovering it | Task 6 |
+| D3 | Drift-count restatements outside the `trading:` context (dashboard, portfolios, keyword-rebalance) | Task 6 |
+| D4 | Tax-aware is a named constant with no UI toggle; `ModelTradeView` still filters accounts to the model they are already on, so the **migration path the endpoint now handles correctly is not reachable from the UI**; and `/api/oms/rebalance` carries three new per-trade fields nothing reads yet | Task 9 |
+| D5 | The cap loop's fixed-point proof is **inexact**: `B(s) ≤ s + cashAboveTarget` holds for the notional, not the executed total, and `Math.round` adds ≤$0.50/leg. Two constructed cases exit FIXPOINT with $0.39/$0.26 breaches — unreachable in fixtures, and the Finding-2 throw guard makes the unbounded tail fail loudly rather than silently. Plus the nit that drift is computed twice per preview | Task 9 |
+| D6 | The `1e-9` tolerance in `isMaterialWeight` is ~9 orders larger than the ~1 ULP (4e-18) of actual float noise. The band it opens is worth **$0.0125** on the largest account in the book — harmless, and it correctly restores pre-derivation exact-2% behaviour — but it is a chosen number, recorded as one | Task 10 |
+| D7 | The next brief written against this data layer must not repeat the **wrong-layer citation**: the Task 10 brief quoted stored weights of 6.006% and 5.606% that appear nowhere in `positions.ts`. They are `pms.ts:575-578`'s renormaliser output (`0.060/0.999`) — real numbers from the drift-row layer, quoted as position weights | Task 10 |
+
+#### Still open from §9 — unchanged by Phase 1b
+
+| # | Item | Destination |
+|---|---|---|
+| 9.4 (data half) | The benchmark **copy** is fixed; a real external index return series is not in the fixtures | **Phase 2**, as §9.4 always said |
+| 9.8 | `bond-math.ts:53` fixes the bisection bracket at `[0.0001%, 40%]` and never validates the root is bracketed. Latent — every fixture bond prices inside it — but it is an exported `lib/` primitive | **Phase 2**, with the formatting/validation spine |
+
+Phase 1's own deferred register (§§3–5, §7) is unchanged by Phase 1b and still governs.
+
+### 11.7 Process — what Phase 1b actually taught
+
+#### The defining lesson: tolerances that hide what they were written to catch
+
+At least **seven** instances, and they are the reason this phase took the rounds it did.
+
+| # | The tolerance | What it hid |
+|---|---|---|
+| 1 | A **`+1` share tolerance** carried from a value check into a quantity check | `23 > 22.5 + 1` is false. acc-045 holds fractional crypto (2.15 BTC, 22.5 ETH, 15,231.5 USDC) and the engine proposed selling 23 of 22.5 held — an order a custodian rejects. The same `+1` was in **both** the implementer's sweep **and** the in-repo assertion, so neither line of defence could speak. The check ran, found both violations, and stayed silent |
+| 2 | An **absolute one-unit-price threshold** on a reconciliation sweep | For BTC that is **$87,450** — wide enough to swallow the exact case being investigated. It printed zero gaps. Switching to a relative threshold found **25 legs** off by >0.5%, worst acc-032 VTI at 5.8%. This was the **controller's own** verification, one message after raising #1 with the implementer |
+| 3 | **`toBeCloseTo(0.05, 3)`** margins on post-trade cash | Accounts were squeaking under: acc-004 at 0.00042, acc-037 at 0.0002. Passing, but with no room — the same class as #1, one step from silent |
+| 4 | Whole-book **weight** bands (±0.0005, ±0.0002) plus the controller's own **$700 money slack** | Hid acc-033 being made **more** overweight cash by the fix: `end 45937.00 above ceiling 45861.00 by 76.00`. A **$76 money error** invisible behind a weight band. Per-account tolerances had been converted from weight to money; whole-book ones were left on weight — inverted from where the risk lives |
+| 5 | A **`< 5_000_000` magic number** bounding a sell | Would have passed a 4,999,999 sell against a 4,560,000 holding. Replaced by the fixture position itself |
+| 6 | **`NaN > 1e-9` is false** | A missing weight passed the invariant **silently** — inside the test written to catch exactly that class. All three per-position checks now test `Number.isFinite` first, on **both** sides: `Math.abs(0 − NaN) > 1e-9` is also false, so a zero-total account would otherwise have passed |
+| 7 | A **vacuous `.every()`** over an empty array | The controller's own brief shipped a clean pass: "affirmative pass emitted never" survived all 48 tests, because `[].every(...)` is `true`. Killed only after a length>0 guard and an explicit rule-name check were added |
+
+Two more, recorded because they were the *controller's*, and the standard must apply symmetrically:
+a **relative** bound applied to a `Math.round` residual produced 4 false positives (0.026–0.041% on
+small legs, which is just ±0.5 rounding) — wrong basis again, though failing **loud** rather than
+silent; and a **USD lot-sum of 348.50 used as a CHF money tolerance** on acc-044.
+
+**The rule that emerged, and it is the one to carry forward:**
+
+> **Match the bound to the operation, not to intuition about scale.** A rounding residual is
+> bounded **absolutely, in the unit rounded**. A money quantity is bounded **in money**. A
+> tolerance chosen for one asset class silently exempts another; a tolerance chosen for one
+> operation cannot certify a different one.
+
+And its corollary, which is what actually caught things:
+
+> **A check that cannot fail and a check that passes are indistinguishable in a report.** Run every
+> "zero violations across N items" claim against a deliberately broken case *first*, so you know
+> the check can speak.
+
+#### Three more, recorded honestly, because they cost real time
+
+**1. The controller's briefs were wrong seven times.** Five API/type errors: the wrong endpoint
+(`getModels` vs `getModelGovernance`, whose type has no `assignedAccounts` at all); a hand-declared
+**3-value** `TaxTreatment` against the real **4-value** one, which would have gated a $12,000,000
+irrevocable trust out of harvesting it is genuinely entitled to; `checkTradeCompliance`'s
+**array-in/array-out** signature written as a single object; `TradeComplianceCheck.details` treated
+as open when it is a **closed** type with no `preExisting` field; and `RebalancePreview`/
+`ProposedTrade` located in `src/types/` when they are declared in `src/services/oms.ts`.
+
+Plus **two logic errors**, which are the more dangerous kind: the **vacuous `.every()`** above, and
+a `queryByText(/against S&P 500/i)` regex **spanning a JSX boundary** — the text is split across
+JSX expressions, so the regex could never match, and the assertion would have passed by never
+running. Both were well-typed, plausible, and wrong about what they proved.
+
+The remedy split cleanly by kind. **Type errors** are solved by reading `src/types/` before
+dispatch and quoting the real declaration verbatim — that rule held from Task 3 onward and caught
+three further errors *before* an implementer hit them. **Logic errors are not** — reading
+declarations cannot see them. Only running the mutation caught the `.every()`. That produced Global
+Constraint 10 (a vacuity guard on every collection assertion) and a standing instruction that
+reviewers audit new assertions for vacuity.
+
+**2. Three of the controller's own verification sweeps were complete in one dimension and absent in
+another.** A **diagonal-only** rebalance sweep — every account against *its own* model — across
+four fix rounds and a zero-tolerance check, which is why an off-diagonal defect survived until Task
+9 found it (acc-045 onto mod-003 finished $436 *below* its own starting cash, the loop still
+converging when it quit). A **relative** bound on a rounding residual, where an absolute one in the
+unit rounded was correct. And an **explicit-rows-only** identity check that told a brief
+`marketValue === quantity × price` "holds exactly" — true for the 140 explicit rows, false for 180
+of the 350 served positions.
+
+> **"I verified X" is only as strong as the enumeration of what X ranges over, and that enumeration
+> is the part nobody writes down.**
+
+**3. Two implementer claims did not survive independent checking, and one masked a live defect.**
+A reported mutation kill for the RiskTab label **did not reproduce** — a verbatim revert left all
+three tests passing, because the third test's assertions were satisfied by the interpolated
+`risk.benchmark` value alone and depended on nothing the prose contributed; the "Ex-ante tracking
+error / 0.35 correlation" copy was entirely unguarded. And "zero long-only violations (checked per
+leg on both value and share count)" was false: sweeping all 273 legs independently found **two**,
+the fractional-crypto oversell of #1 above.
+
+The method rests entirely on such claims being true. **Reviewers must reproduce claimed kills
+rather than read the log** — that instruction is what caught the first — and the controller must
+independently probe every "zero violations across N" claim before dispatching a review. Both false
+claims were of that exact shape.
+
+A related habit, worth naming because it is correctable rather than an exhortation: the implementer
+who made two record errors in Task 10 **diagnosed their common cause** — both were read off a
+**truncated tail** of probe output instead of a re-run aggregate.
+
+#### The practice that worked
+
+> **Prove an equivalent mutant by measurement across the full configuration space, and never write
+> code purely to make a mutation bite.**
+
+This was got **wrong once** and then right four times. The wrong call: a reviewer argued that a
+provably-zero `+ cashAboveTarget` term should be written into production so a surviving mutant
+would die. Ruled wrong — the decision was never unguarded, and writing `+ 0` into production
+optimises the mutation score, not safety. (It was replaced by a shared `buyScaleFor` helper, which
+removes the duplication instead.) The framing that survives from it is the implementer's own: *an
+expression that is zero today is still what a future reader deletes, and folding it away retires
+the test guarding it.*
+
+The four correct applications:
+
+| # | Mutant | How equivalence was proved |
+|---|---|---|
+| 1–2 | Task 8 round 4, **MK** and **MM** | Measured across **940** combinations (47 accounts × 2 tax-aware states × 10 thresholds) — zero output differences. The fresh implementer measured them equivalent **unprompted**, which is exactly what the rounds-4-5 fresh-eyes rule exists to buy |
+| 3 | Task 9, **M19** | **MD5-identical** leg dumps across **7,238** configurations (47 × 7 × 2 × 11) |
+| 4 | Task 10, **M2a** | Restoring the generated path's literals gave a max deviation of **5.55e-17** — one ULP — across 210 positions. Every genuinely drifting position was an explicit row |
+
+The same discipline answered the reachable-space question properly rather than by assertion. Asked
+whether a loop bound of 32 was safe, a reviewer **constructed** inputs reaching it instead of
+reporting that it could not: over ~28,000 synthetic pairs, 7 exhausted `MAX_PASSES` and returned
+real band violations, worst **$5,412** below the account's own starting cash. Then the space was
+widened again — the UI slider exposes 20 threshold values, not the 11 first measured, so 13,160
+configurations were run (worst case did not move) — and, decisively, `/api/oms/rebalance` takes
+`driftThreshold` from the request body with **no server-side clamping**, so a direct API call
+leaves the UI grid entirely. **Bound what you can; where you cannot, fail loudly** — which is what
+the Finding-2 throw guard does.
+
+### 11.8 What this phase gate did **not** verify
+
+The equivalent of §8's caveat, for Phase 1b. It should not be read as stronger than it is.
+
+**What this gate did prove.** Eleven mutations against the full suite, re-proving ten findings, each
+naming the test that died. The three gate commands, pasted. The phase gate file byte-identical
+across both phases and its invariant measured directly. Four fixture-realism claims re-measured on
+this tree.
+
+**What it did not.**
+
+- **It re-proved ten findings; it did not re-derive every figure in the book.** Where §10.1 and
+  §11.3 say "closed", that means *a task recorded it closed, the gate is green, and one mutation
+  reconstructing the original defect kills a named test*. It does **not** mean the gate re-derived
+  the fix from first principles. A mutation kill proves a test discriminates against **that**
+  mutation — not that the implementation is correct across every reachable configuration.
+- **The Task 10 two-tree partition was not re-measured.** No worktree was built at `2a786e9`. The
+  6/13/33 partition is cited from two independent measurements recorded in `progress.md`; this gate
+  added only an arithmetic consistency check (13 ∪ {acc-045} = 14; 47 − 14 = 33).
+- **Nothing from Phase 1 was re-verified.** §8's caveat still governs all 48 + 2 findings Phase 1
+  recorded closed, and the deferred items in §§3–5 and §7 were not re-checked against the code.
+- **Coverage was not measured, and one gap was found by accident.** §11.3b's unguarded briefing
+  metric surfaced only because a compound mutation happened to touch it. There has been no
+  systematic sweep for correct-but-untested code, and Task 6's *three* adjacent fixes beyond the
+  brief mean there is no reason to believe that one is unique.
+- **The app was not run.** Every check here is against fixtures under Vitest at the frozen
+  `MOCK_TODAY_ISO`. Nothing in this section is evidence about the rendered application, about
+  behaviour at any other date, or about anything outside the mock service layer.
+- **Nothing was merged, tagged or pushed.** This gate commits the register and stops.
+
+The distinction §8 drew is the one that matters, and it holds here: **this is a register, not a
+claim.** Given that Phase 1 found fourteen separate instances of tests passing while certifying the
+defect they were written to catch, and Phase 1b found at least seven more tolerances doing the
+same, a green suite is the beginning of the evidence and not the end of it.
