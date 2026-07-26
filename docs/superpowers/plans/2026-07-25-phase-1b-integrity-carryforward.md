@@ -25,6 +25,7 @@ Every task below traces to a verified finding. Section numbers refer to
 | 7 | §9.6 — sell cap has a ceiling but no floor | High | Codex; reproduced in controller sweep |
 | 8 | §9.7 — cannot buy an unheld class; picks `candidates[0]` | Medium | Controller sweep + Codex |
 | 9 | Fabricated model-trade preview (found in Task 4) | Critical | Controller |
+| 10 | Hand-typed position weights disagree with market value (found in Task 8) | High | Controller |
 
 ## Global Constraints
 
@@ -1036,6 +1037,79 @@ mutations survived until real render tests were added. At least one test here mu
 ```bash
 git add -A && git commit -m "fix(models): model-trade preview derives from the account, not a hash of its id"
 ```
+
+---
+
+### Task 10: Position weights are derived, not hand-typed
+
+**Found during Task 8, verified by the controller.** `src/mocks/data/positions.ts` carries a
+hand-typed `weight` on every position alongside its `marketValue`. The two disagree: the stored
+weights are rounded to three decimals, so they differ from `marketValue / account.totalValue` by up
+to ~0.06 percentage points — worth up to **$4,695** on a single account.
+
+That slack is not cosmetic. Task 8 found the rebalance cash cap reading `cashDrift.actual ×
+totalValue` (a stored weight) rather than the CASH position's real market value, and the difference
+landed in post-trade cash — genuinely breaking Task 7's two-sided invariant on acc-001 (4.943%),
+acc-044 (4.977%), acc-045 (2.972%) and acc-046 (9.959%). Task 8 fixed the cap's cash side as a
+required scope addition. **Every other consumer of a stored `weight` still carries the same error.**
+
+Verified instances: acc-029's cash reads 12.600% stored against 12.588% real; acc-002 6.006% against
+5.992%; acc-041 5.606% against 5.600%.
+
+This is the Phase 1 charter defect — a stored figure that duplicates a derivable one and disagrees
+with it — and it is the root cause behind three separate symptoms already patched downstream.
+
+**Files:**
+- Modify: `src/mocks/data/positions.ts` (remove the stored `weight`, or derive it)
+- Modify: every consumer TypeScript strict mode surfaces
+- Test: `src/mocks/data/__tests__/position-weight-invariants.test.ts` (create)
+
+**Interfaces:**
+- Read the real `Position` declaration in `src/types/portfolio.ts` and quote it into your report
+  before writing any test. Five briefs in this plan contained a type written from memory that turned
+  out to be wrong.
+
+- [ ] **Step 1: Establish the blast radius first**
+
+`grep -rn "\.weight" src/ --include=*.ts --include=*.tsx` and list every consumer with a verdict:
+does it want the stored value or a derived one? **Report the list before changing anything** — if
+any consumer needs the rounded value for display, that is a formatting concern, not a storage one.
+
+- [ ] **Step 2: Write the failing invariant**
+
+```ts
+it('every position weight equals its own market value over the account total', async () => {
+  const accounts = await getAccounts()
+  let checked = 0
+  const drift: string[] = []
+  for (const account of accounts) {
+    const positions = await getPositions(account.id)
+    for (const position of positions) {
+      checked++
+      const derived = position.marketValue / account.totalValue
+      if (Math.abs(position.weight - derived) > 1e-9) {
+        drift.push(`${account.id} ${position.symbol}: stored ${position.weight} vs derived ${derived.toFixed(6)}`)
+      }
+    }
+  }
+  expect(checked, 'vacuity guard').toBeGreaterThan(100)
+  expect(drift).toEqual([])
+})
+```
+
+- [ ] **Step 3: Run it and confirm it fails**, naming the accounts above.
+
+- [ ] **Step 4: Derive the weight** at the point positions are served, and delete the stored field.
+
+- [ ] **Step 5: Re-verify every downstream figure Phase 1b pinned.** Drift percentages, the
+  rebalance figures for acc-006/014/029/030/032/037, concentration percentages, and Task 7's
+  two-sided cash invariant. Any that move must be re-derived and restated with arithmetic, never
+  deleted. Expect several to move by small amounts — that is the point of the task.
+
+- [ ] **Step 6: Mutation-verify** — reintroduce a rounded weight for one position and confirm the
+  invariant names it.
+
+- [ ] **Step 7: Commit.**
 
 ## Phase gate
 
