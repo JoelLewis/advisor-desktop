@@ -315,6 +315,65 @@ describe('fix round 4 · sells are capped by what buys AND cash-to-target can ab
   })
 })
 
+describe('§9.6 · buys are capped by available cash above target, symmetric to the sell cap', () => {
+  it('acc-043: rebalancing does not drive cash from 13.69% to 5.56% against a 10% target', async () => {
+    const [preview] = await previewRebalance({ accountIds: ['acc-043'], taxAware: true })
+    const positions = await getPositions('acc-043')
+    const account = (await getAccounts()).find((a) => a.id === 'acc-043')!
+    const cash = positions.find((p) => p.symbol === 'CASH')!.marketValue
+    const sell = preview!.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
+    const buy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
+    const endWeight = (cash - buy + sell) / account.totalValue
+    const target = (await getDrift('acc-043')).assetClassDrifts.find((d) => d.assetClass === 'cash')!.target
+    expect(endWeight).toBeGreaterThanOrEqual(target - 0.0002)
+  })
+
+  it('every account: post-trade cash lands within its own target band, from both directions', async () => {
+    const accounts = await getAccounts()
+    const violations: string[] = []
+    let examined = 0
+    for (const account of accounts) {
+      const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
+      if (!preview?.trades.length) continue
+      examined++
+      const positions = await getPositions(account.id)
+      const cash = positions.find((p) => p.symbol === 'CASH')?.marketValue ?? 0
+      const sell = preview.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
+      const buy = preview.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
+      const startW = cash / account.totalValue
+      const endW = (cash - buy + sell) / account.totalValue
+      const target = (await getDrift(account.id)).assetClassDrifts.find((d) => d.assetClass === 'cash')?.target ?? 0
+      // FLOOR — the assertion the Phase 1 sweep was missing.
+      if (endW < Math.min(startW, target) - 0.0002) {
+        violations.push(`${account.id}: cash fell to ${(endW * 100).toFixed(2)}% below min(start ${(startW * 100).toFixed(2)}%, target ${(target * 100).toFixed(2)}%)`)
+      }
+      // CEILING — the assertion it did make; both must hold.
+      if (endW > Math.max(startW, target) + 0.0002) {
+        violations.push(`${account.id}: cash rose to ${(endW * 100).toFixed(2)}% above max(start, target)`)
+      }
+    }
+    // Vacuity guard: prove accounts were actually examined, not that every preview was empty.
+    expect(examined).toBeGreaterThan(0)
+    expect(violations).toEqual([])
+  })
+
+  // The named-account tests above and the whole-book sweep never actually exercise the
+  // `Math.max(0, …)` floor on `cashAboveTarget`: at the Rebalance page's default 0.005
+  // threshold, no account's raw buy total is large enough, relative to its cash-to-target gap,
+  // for the floored and unfloored figures to diverge. A tighter threshold (more asset classes
+  // clear the drift bar, so `totalBuy` grows) surfaces it. acc-015 is 0.6 points under its 3%
+  // cash target on a $4.2M account (a $25,301 gap) with $113,820 of raw buys at
+  // `driftThreshold: 0.001` — without the floor, `cashAboveTarget` goes negative
+  // (-$25,301 instead of $0), pulling `buyCapacity` from $135,240 down to $109,939 and scaling
+  // every buy to 96.59 cents on the dollar. With the floor, `buyCapacity` stays at $135,240 — the
+  // full $113,820 goes through, unscaled.
+  it('acc-015 at a tight drift threshold: the floor on cashAboveTarget lets the full $113,820 buy through, not 96.59 cents on the dollar', async () => {
+    const [preview] = await previewRebalance({ accountIds: ['acc-015'], taxAware: true, driftThreshold: 0.001 })
+    const totalBuy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
+    expect(totalBuy).toBeCloseTo(113_820, -1)
+  })
+})
+
 describe('fix round 3 · self-financing applies to sells only — buys are never capped to match sells', () => {
   it('acc-041: proposes nothing when nothing can absorb the sell proceeds, rather than a 2.2x short sale on 0700.HK', async () => {
     // acc-041 (HKD) is underweight every class it doesn't hold at all (us_equity, emerging_markets,

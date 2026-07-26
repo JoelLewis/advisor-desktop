@@ -179,9 +179,21 @@ function generateRebalanceTrades(accountId: string, taxAware: boolean, driftThre
   const sellCapacity = totalBuy + cashHeadroom
   const sellScale = totalSell > 0 ? Math.min(1, sellCapacity / totalSell) : 1
 
+  // §9.6 · the round-4 cap above stops sells pushing cash above target. Nothing stopped
+  // uncapped buys pulling it below — acc-043 sold €648,900, bought €909,760, and its cash fell
+  // 13.69% -> 5.56% against a 10% target. The mirror bound: buys draw on cash, and an account
+  // may not spend below its own cash target to fund them. `buyCapacity` is what sells raise
+  // plus the cash genuinely available above target — the `cashAboveTarget` term is what makes
+  // this correct where a round-2 attempt (`buyScale = totalSell / totalBuy`, capping buys to
+  // match sells alone, reverted in round 3) was not: acc-006 legitimately funds $912,000 of
+  // buys from its own cash against only $540,000 of sells, and must continue to.
+  const cashAboveTarget = Math.max(0, (cashDrift?.actual ?? 0) - (cashDrift?.target ?? 0)) * account.totalValue
+  const buyCapacity = totalSell + cashAboveTarget
+  const buyScale = totalBuy > 0 ? Math.min(1, buyCapacity / totalBuy) : 1
+
   return raw
     .map(({ target, side, notional: rawNotional }) => {
-      const notional = side === 'sell' ? rawNotional * sellScale : rawNotional
+      const notional = side === 'sell' ? rawNotional * sellScale : rawNotional * buyScale
       const taxImpact = side === 'sell' && taxable
         ? estimateSaleTax(account.id, account.totalValue, target, notional, taxAware)
         : 0

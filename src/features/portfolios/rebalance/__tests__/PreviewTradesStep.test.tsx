@@ -53,8 +53,10 @@ describe('PreviewTradesStep renders each trade at its own account currency, not 
     const sell = preview!.trades.find((t) => t.side === 'sell')
     expect(buy).toBeDefined()
     expect(sell).toBeDefined()
-    // Ground truth for the scenario cited in the brief: a ~910K-EUR buy must NOT render as $910K.
-    expect(buy!.estimatedValue).toBe(909_760)
+    // Ground truth for the scenario cited in the brief: a ~767K-EUR buy must NOT render as $767K.
+    // (§9.6 capped this from the pre-fix 909,760 — the round-4 sell cap had no buy-side mirror,
+    // so buys were uncapped and this fixture's raw notional is smaller now that they are.)
+    expect(buy!.estimatedValue).toBe(766_862)
 
     render(<Harness previews={[preview!]} />, { wrapper: createWrapper() })
     await waitFor(() => expect(screen.queryByTestId('fx-loading')).not.toBeInTheDocument())
