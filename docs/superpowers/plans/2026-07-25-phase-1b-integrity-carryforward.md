@@ -429,7 +429,18 @@ git commit -m "fix(compliance): certify the whole projected book, and say which 
 - Modify: `src/types/` wherever `ProposedTrade` / `RebalancePreview` are declared
 - Modify: `src/features/portfolios/rebalance/PreviewTradesStep.tsx:38, 65, 67, 86`
 - Modify: `src/features/portfolios/RebalancePage.tsx:175` (batch total)
+- Modify: `src/features/portfolios/rebalance/SelectAccountsStep.tsx:153` (same `'USD'`-as-source bug)
+- Modify: `src/features/portfolios/rebalance/SelectAccountsStep.tsx:230, 267` (unconverted `totalValue` sums)
+- Modify: `src/features/portfolios/models/ModelsView.tsx:24` (unconverted `totalValue` sum)
 - Test: `src/features/portfolios/rebalance/__tests__/PreviewTradesStep.test.tsx` (create)
+- Test: `src/features/portfolios/rebalance/__tests__/SelectAccountsStep.test.tsx` (create)
+
+**Scope amendment (added after Task 1).** Task 1's implementer surfaced three sites that sum
+`a.totalValue` with no FX conversion — `ModelsView.tsx:24`, `SelectAccountsStep.tsx:230` and `:267` —
+and I then found a fourth, `SelectAccountsStep.tsx:153`, which passes the literal `'USD'` as the
+source currency exactly as `PreviewTradesStep` does. All four are verified. They are the same two
+defect classes this task already owns, on a different screen, so they belong here rather than in a
+ninth task: a native-currency figure that is summed or displayed as though it were dollars.
 
 **Interfaces:**
 - Consumes: `account.baseCurrency` (the field already driving `harvestNeedsFx` in `tax/shared.tsx` — confirm its exact name before use), `FX_RATES_USD_BASE` from `src/mocks/data/currencies.ts`, `useFormatCurrency()` from `src/hooks/use-format-currency.ts`.
@@ -485,12 +496,30 @@ In `oms.ts`, resolve the account's currency once and attach it to the preview an
 
 In `PreviewTradesStep.tsx`, replace each `formatWithConversion(x, 'USD', …)` with `formatWithConversion(x, preview.currency, …)` — four sites: 38, 65, 67, 86. In `RebalancePage.tsx:175`, convert each preview's total to the reporting currency **before** summing.
 
+- [ ] **Step 4b: Fix the four sites the scope amendment added**
+
+`SelectAccountsStep.tsx:153` renders `formatWithConversion(acc.totalValue, 'USD', …)` where
+`acc.totalValue` is native — pass `acc.baseCurrency`.
+
+`SelectAccountsStep.tsx:230`, `:267` and `ModelsView.tsx:24` each compute
+`modelAccounts.reduce((sum, a) => sum + a.totalValue, 0)`. Replace each with
+`deriveBookAUM(modelAccounts, FX_RATES_USD_BASE)` — the same primitive Task 1 used, imported from
+`@/lib/aum` and `@/mocks/data/currencies`. Do not write a fourth reduce.
+
+Add a test asserting that a model containing acc-041 (HKD) reports an AUM strictly below the naive
+sum of its accounts' `totalValue`, and that a USD-only model reports a figure equal to it. The second
+assertion is what stops a conversion that is applied unconditionally from passing.
+
 - [ ] **Step 5: Run the full suite and mutation-verify**
 
 Run: `pnpm test:run`. Then:
 1. Hardcode `currency: 'USD'` in the handler → the acc-043 and four-account tests must fail.
 2. Restore `formatWithConversion(x, 'USD', …)` at line 65 → a display test must fail. If none does, **your tests only cover the handler and not the component** — add a render test asserting the rendered string for acc-043 carries a euro amount.
 3. Sum before converting in the batch total → the mixed-currency test must fail.
+4. Restore the naive reduce at `ModelsView.tsx:24` → the HKD model test must fail.
+5. Restore `formatWithConversion(acc.totalValue, 'USD', …)` at `SelectAccountsStep.tsx:153` → a
+   SelectAccountsStep render test must fail. If none does, the test covers only the aggregate and
+   not the row, and the row is what an advisor reads.
 
 - [ ] **Step 6: Commit**
 
