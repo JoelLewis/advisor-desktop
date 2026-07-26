@@ -1,3 +1,5 @@
+import type { CurrencyCode } from '@/types/currency'
+
 // ── Asset class discriminant ──────────────────────────────────────────
 
 export type TradableAssetClass = 'equity' | 'option' | 'mutual_fund' | 'fixed_income' | 'digital_asset'
@@ -116,13 +118,28 @@ export type OptionChain = {
   expirations: OptionExpiration[]
 }
 
-// ── Model trade types (unchanged) ─────────────────────────────────────
+// ── Model trade types ─────────────────────────────────────────────────
 
 export type ModelTradePreview = {
   accountId: string
   accountName: string
   modelId: string
   modelName: string
+  /**
+   * §9.3 · currencies-and-fx — the account's own base currency, the same tag `RebalancePreview`
+   * carries and resolved by the same function (`currencyForAccount`). Every notional on this
+   * preview — `estimatedTaxImpact` and each trade's `estimatedValue` — is denominated in it, not
+   * USD, because the engine underneath derives them from `account.totalValue`, which is native
+   * currency. It lives on the preview as well as on each trade so a preview with **zero** trades
+   * still states what its tax figure is denominated in.
+   */
+  currency: CurrencyCode
+  /**
+   * The worst single asset-class breach against `modelId`, **in percentage points** (5.2 means
+   * 5.2%, not 520%). Same quantity and same unit convention as every other drift readout in the
+   * app — `DriftStatus.maxAbsDrift × 100`, which is what `needsRebalance` gates on and what the
+   * rebalance account list, the account overview and the household table all render.
+   */
   currentDrift: number
   trades: ModelProposedTrade[]
   estimatedTaxImpact: number
@@ -135,5 +152,7 @@ export type ModelProposedTrade = {
   side: 'buy' | 'sell'
   quantity: number
   estimatedValue: number
+  /** Same account-native currency as the parent preview — see `ModelTradePreview.currency`. */
+  currency: CurrencyCode
   reason: string
 }

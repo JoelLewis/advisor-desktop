@@ -5,10 +5,12 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { DataTable } from '@/components/ui/DataTable'
 import { useAccounts } from '@/hooks/use-accounts'
-import { useModelGovernance } from '@/hooks/use-portfolio'
+import { useModelGovernance, useDriftSummary } from '@/hooks/use-portfolio'
 import { useModelTradePreview, useExecuteModelTrades } from '@/hooks/use-trading'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { CurrencyValue } from '@/components/ui/CurrencyValue'
+import { convertToBase } from '@/lib/currency'
+import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
 import { cn } from '@/lib/utils'
 import type { Account } from '@/types/account'
 import type { ModelGovernanceDetail } from '@/types/portfolio'
@@ -33,6 +35,7 @@ export function ModelTradeView() {
   const { formatWithConversion } = useFormatCurrency()
   const { data: models } = useModelGovernance()
   const { data: allAccounts } = useAccounts({})
+  const { data: driftSummary } = useDriftSummary()
   const previewMutation = useModelTradePreview()
   const executeMutation = useExecuteModelTrades()
 
@@ -42,6 +45,11 @@ export function ModelTradeView() {
   const [previews, setPreviews] = useState<ModelTradePreview[]>([])
   const [expandedPreviews, setExpandedPreviews] = useState<Set<string>>(new Set())
   const [ordersCreated, setOrdersCreated] = useState(0)
+
+  const driftMap = useMemo(
+    () => new Map((driftSummary ?? []).map((d) => [d.accountId, d])),
+    [driftSummary],
+  )
 
   // Filter accounts by selected model
   const modelAccounts = useMemo(() => {
@@ -123,8 +131,18 @@ export function ModelTradeView() {
   }
 
   const totalTrades = previews.reduce((sum, p) => sum + p.trades.length, 0)
-  const totalValue = previews.reduce((sum, p) => sum + p.trades.reduce((ts, t) => ts + t.estimatedValue, 0), 0)
-  const totalTaxImpact = previews.reduce((sum, p) => sum + p.estimatedTaxImpact, 0)
+  // §9.3 — each preview's notionals are denominated in that account's own currency, so a batch
+  // spanning acc-001 (USD) and acc-041 (HKD) cannot be summed before converting. Both totals are
+  // rendered by `formatWithConversion(total, 'USD', …)` below, which assumes its input already IS
+  // USD — the same conversion boundary RebalancePage applies to its own batch total.
+  const totalValue = previews.reduce(
+    (sum, p) => sum + p.trades.reduce((ts, t) => ts + convertToBase(t.estimatedValue, t.currency, FX_RATES_USD_BASE), 0),
+    0,
+  )
+  const totalTaxImpact = previews.reduce(
+    (sum, p) => sum + convertToBase(p.estimatedTaxImpact, p.currency, FX_RATES_USD_BASE),
+    0,
+  )
 
   // Account columns for step 2
   const accountColumns: ColumnDef<Account, unknown>[] = [
@@ -164,9 +182,20 @@ export function ModelTradeView() {
       id: 'drift',
       header: 'Drift %',
       cell: ({ row }) => {
-        // Deterministic mock drift based on account ID
-        const drift = ((row.original.id.charCodeAt(row.original.id.length - 1) % 5) + 1.2).toFixed(1)
-        return <span className="font-mono text-mono-sm text-accent-red">{drift}%</span>
+        // The account's real drift, from the same `/pms/drift/summary` every other drift readout
+        // reads. This column used to derive a number from a character code of the account id
+        // (`id.charCodeAt(id.length - 1) % 5 + 1.2`) — the same fabrication the preview handler
+        // committed, on the step immediately before it. `maxAbsDrift` is the worst single
+        // asset-class breach, which is what `needsRebalance` gates on; red is reserved for
+        // accounts that are actually outside their model's own band rather than applied to every
+        // row unconditionally.
+        const drift = driftMap.get(row.original.id)
+        if (!drift) return <span className="font-mono text-mono-sm text-text-tertiary">&mdash;</span>
+        return (
+          <span className={cn('font-mono text-mono-sm', drift.needsRebalance ? 'text-accent-red' : 'text-text-secondary')}>
+            {(drift.maxAbsDrift * 100).toFixed(1)}%
+          </span>
+        )
       },
     },
   ]
@@ -332,7 +361,9 @@ export function ModelTradeView() {
                     <div>
                       <span className="text-body-strong text-text-primary">{preview.accountName}</span>
                       <span className="ml-2 text-caption text-text-secondary">
-                        Drift: {preview.currentDrift}%
+                        {/* Percentage points already (see `ModelTradePreview.currentDrift`), shown
+                            to 1dp like every other drift readout in the app. */}
+                        Drift: {preview.currentDrift.toFixed(1)}%
                       </span>
                     </div>
                   </div>
@@ -341,7 +372,9 @@ export function ModelTradeView() {
                       {preview.trades.length} trades
                     </span>
                     <span className="font-mono text-mono-sm text-text-secondary">
-                      Tax: {formatWithConversion(preview.estimatedTaxImpact, 'USD')}
+                      {/* §9.3 — the preview's own currency, not USD: acc-041's tax figure is HKD,
+                          and reading HK$ as $ overstates it by 7.82x. */}
+                      Tax: {formatWithConversion(preview.estimatedTaxImpact, preview.currency)}
                     </span>
                   </div>
                 </button>
@@ -359,15 +392,17 @@ export function ModelTradeView() {
                       </thead>
                       <tbody>
                         {preview.trades.map((trade) => (
-                          <tr key={`${preview.accountId}-${trade.symbol}`} className="border-t border-border-primary">
+                          <tr key={`${preview.accountId}-${trade.assetClass}-${trade.symbol}`} className="border-t border-border-primary">
                             <td className="py-2 font-mono text-mono-sm font-medium">{trade.symbol}</td>
                             <td className="py-2">
                               <Badge variant={trade.side === 'buy' ? 'green' : 'red'}>
                                 {trade.side.toUpperCase()}
                               </Badge>
                             </td>
-                            <td className="py-2 font-mono text-mono-sm">{trade.quantity}</td>
-                            <td className="py-2 font-mono text-mono-sm">{formatWithConversion(trade.estimatedValue, 'USD')}</td>
+                            <td className="py-2 font-mono text-mono-sm">{trade.quantity.toLocaleString()}</td>
+                            {/* §9.3 — the trade's own currency, matching the rebalance wizard's
+                                PreviewTradesStep after Task 4. */}
+                            <td className="py-2 font-mono text-mono-sm">{formatWithConversion(trade.estimatedValue, trade.currency)}</td>
                             <td className="py-2 text-caption text-text-secondary">{trade.reason}</td>
                           </tr>
                         ))}

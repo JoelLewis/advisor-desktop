@@ -556,9 +556,18 @@ const MODEL_BANDS: Record<string, { driftTolerance: number; rebalanceFrequency: 
 
 // Exported so `oms.ts`'s rebalance trade generator reads the same drift the drift surface does,
 // rather than a second computation.
-export function computeDriftForAccount(account: typeof accounts[0]): DriftStatus {
+//
+// §9.7 / Task 9 · `modelIdOverride` answers "what would this account's drift be against *that*
+// model" — the question the model-trade screen exists to ask, since it can propose migrating an
+// account onto a model it is not currently assigned to. Omitted, it is the account's own model
+// and every existing caller is unchanged. The override is deliberately the **only** thing that
+// varies: the positions, the renormalisation and the two drift metrics are the same derivation
+// the drift surface publishes, so a migration preview and the drift page cannot disagree about
+// what drift means. An unknown model id throws rather than falling back to mod-001 — a silently
+// substituted model here would be a trade instruction against a policy nobody chose.
+export function computeDriftForAccount(account: typeof accounts[0], modelIdOverride?: string): DriftStatus {
   const positions = getPositionsForAccount(account.id, account.totalValue)
-  const modelId = account.modelId ?? 'mod-001'
+  const modelId = modelIdOverride ?? account.modelId ?? 'mod-001'
   const targets = getModelTargets(modelId)
   const band = MODEL_BANDS[modelId]
   if (!band) throw new Error(`no drift band defined for model ${modelId}`)
@@ -697,7 +706,7 @@ export const pmsHandlers = [
   }),
 
   http.get('/api/pms/drift/summary', () => {
-    return HttpResponse.json(accounts.map(computeDriftForAccount))
+    return HttpResponse.json(accounts.map((a) => computeDriftForAccount(a)))
   }),
 
   http.get('/api/pms/accounts/:accountId/positions', ({ params }) => {
@@ -1019,7 +1028,7 @@ export const pmsHandlers = [
   http.get('/api/pms/households/:householdId/drift', ({ params }) => {
     const hhAccounts = accounts.filter((a) => a.householdId === params.householdId)
     if (hhAccounts.length === 0) return notFound()
-    return HttpResponse.json(hhAccounts.map(computeDriftForAccount))
+    return HttpResponse.json(hhAccounts.map((a) => computeDriftForAccount(a)))
   }),
 
   http.get('/api/pms/households/:householdId/allocation', ({ params }) => {

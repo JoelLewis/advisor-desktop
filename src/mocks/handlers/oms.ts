@@ -72,7 +72,7 @@ export const orders: Order[] = [
  * re-deriving (and potentially disagreeing on) the USD fallback for an account with no
  * `baseCurrency` set.
  */
-function currencyForAccount(accountId: string): CurrencyCode {
+export function currencyForAccount(accountId: string): CurrencyCode {
   return accounts.find((a) => a.id === accountId)?.baseCurrency ?? 'USD'
 }
 
@@ -111,6 +111,28 @@ function estimateSaleTax(accountId: string, totalValue: number, target: Position
  * nothing in has no position, which is precisely §9.7's point.
  */
 type TradeCandidate = { symbol: string; name: string; price: number; position?: Position }
+
+/**
+ * The model sleeve a leg is trading, carried alongside the leg rather than re-derived by whoever
+ * needs it.
+ *
+ * Task 9 · the model-trade preview has to say *why* it proposes each trade, and its `reason`
+ * string is exactly this sleeve's drift stated in words ("US Equity 47.2% against a 42.0%
+ * target"). Recomputing the weights in `trading.ts` to write that sentence would put the
+ * rebalance engine's arithmetic and the sentence describing it in two files, free to disagree —
+ * the "one fact, two places" failure this phase exists to remove, and the one the fabricated
+ * handler committed most visibly by printing "from 47% to 42%" for all 47 accounts. The engine
+ * already knows these three numbers; it now hands them on instead of dropping them.
+ */
+type Sleeve = {
+  assetClass: string
+  /** The account's own weight in this class, renormalised — `computeDriftForAccount`'s `actual`. */
+  actualWeight: number
+  /** The model's target weight for it — the same figure the drift surface bands against. */
+  targetWeight: number
+}
+
+export type ProposedTradeLeg = ProposedTrade & Sleeve
 
 /**
  * §9.7 · the order in which an overweight class is sold down. The engine used to take
@@ -214,20 +236,28 @@ function pickBuyCandidate(held: Position[], modelId: string, assetClass: string,
  * target.marketValue)`) — long-only, no short sales, even before self-financing scaling: the
  * asset-class drift can imply selling more than any one proxy position is worth.
  */
-function generateRebalanceTrades(accountId: string, taxAware: boolean, driftThreshold = 0.005): ProposedTrade[] {
+export function generateRebalanceTrades(
+  accountId: string,
+  taxAware: boolean,
+  driftThreshold = 0.005,
+  modelId?: string,
+): ProposedTradeLeg[] {
   const account = accounts.find((a) => a.id === accountId)
   if (!account) return []
   const positions = getPositionsForAccount(account.id, account.totalValue)
-  const drift = computeDriftForAccount(account)
+  const drift = computeDriftForAccount(account, modelId)
   const taxable = isTaxableAccount(account.taxTreatment)
   const currency = currencyForAccount(accountId)
 
+  type RawLeg = { target: TradeCandidate; side: 'buy' | 'sell'; notional: number; sleeve: Sleeve }
+
   const raw = drift.assetClassDrifts
     .filter((d) => Math.abs(d.drift) > driftThreshold)
-    .flatMap((d): { target: TradeCandidate; side: 'buy' | 'sell'; notional: number }[] => {
+    .flatMap((d): RawLeg[] => {
       const held = positions.filter((p) => p.assetClass === d.assetClass && p.symbol !== 'CASH')
       const side: 'buy' | 'sell' = d.actual > d.target ? 'sell' : 'buy'
       const rawNotional = Math.abs(d.drift) * account.totalValue
+      const sleeve: Sleeve = { assetClass: d.assetClass, actualWeight: d.actual, targetWeight: d.target }
 
       if (side === 'sell') {
         // A sell can only ever come from a position actually held — there is no short side here.
@@ -235,7 +265,7 @@ function generateRebalanceTrades(accountId: string, taxAware: boolean, driftThre
         // or the candidates are exhausted; each leg is still capped at its own position's market
         // value, so long-only holds leg by leg as well as in aggregate.
         let remaining = rawNotional
-        const legs: { target: TradeCandidate; side: 'buy' | 'sell'; notional: number }[] = []
+        const legs: RawLeg[] = []
         for (const position of orderSellCandidates(held, taxAware && taxable)) {
           if (remaining <= 0) break
           const notional = Math.min(remaining, position.marketValue)
@@ -244,6 +274,7 @@ function generateRebalanceTrades(accountId: string, taxAware: boolean, driftThre
             target: { symbol: position.symbol, name: position.name, price: position.price, position },
             side,
             notional,
+            sleeve,
           })
           remaining -= notional
         }
@@ -252,7 +283,7 @@ function generateRebalanceTrades(accountId: string, taxAware: boolean, driftThre
 
       const target = pickBuyCandidate(held, drift.modelId, d.assetClass, currency)
       if (!target) return []
-      return [{ target, side, notional: rawNotional }]
+      return [{ target, side, notional: rawNotional, sleeve }]
     })
 
   const totalSell = raw.filter((t) => t.side === 'sell').reduce((s, t) => s + t.notional, 0)
@@ -318,7 +349,7 @@ function generateRebalanceTrades(accountId: string, taxAware: boolean, driftThre
    * Build one executable leg: scale the notional, convert it to a tradeable lot, and take the
    * value **from the lot** rather than from the notional the lot came from.
    */
-  const toTrade = ({ target, side, notional: rawNotional }: (typeof raw)[number], scale: number): ProposedTrade => {
+  const toTrade = ({ target, side, notional: rawNotional, sleeve }: RawLeg, scale: number): ProposedTradeLeg => {
     const notional = rawNotional * scale
       // §9.7 · `Math.round(notional / price)` rounded a share count **up**, so a sell could name
       // more units than the account owns: acc-045 holds 22.5 ETH and 15,231.5 USDC (fractional
@@ -371,13 +402,14 @@ function generateRebalanceTrades(accountId: string, taxAware: boolean, driftThre
         taxImpact,
         washSaleRisk: false,
         currency,
+        ...sleeve,
       }
   }
 
   // Build one side of the proposal at a given scale and report the money it **actually** moves —
   // the sum of the executed leg values, not of the un-floored notionals they came from. That
   // figure is what both cash caps below are sized against.
-  const built = new Map<(typeof raw)[number], ProposedTrade>()
+  const built = new Map<RawLeg, ProposedTradeLeg>()
   const build = (side: 'buy' | 'sell', scale: number): number => {
     let executed = 0
     for (const leg of raw) {
@@ -430,18 +462,39 @@ function generateRebalanceTrades(accountId: string, taxAware: boolean, driftThre
   //    the gap to target. Buys first, sells against `executedBuy`. Reading the pre-floor
   //    `totalBuy` there pushed seven accounts past their cash target by $58–$205 apiece.
   //
-  // The two caps each read the other side's executed figure, so they are resolved by iterating to
-  // a fixed point rather than in one shot. The iteration terminates: a cap re-read on an executed
-  // total is never larger than the same cap read on the pre-floor total it replaces, so every
-  // pass weakly shrinks both sides, and the all-zero proposal satisfies both bounds. Every
-  // account in the book settles on the first pass except acc-033, which settles on the second;
-  // the loop bound is a guard, not a working limit.
+  // The two caps each read the other side's executed figure, so they are resolved by iterating
+  // rather than in one shot. Two distinct stopping conditions, and the difference between them is
+  // the point:
+  //
+  //  - **The band holds.** Done — this is the answer, and it is what every account reaches on the
+  //    first or second pass when it is measured against its own model.
+  //  - **The pair stops moving.** A genuine fixed point `b = B(s), s = S(b)` also satisfies the
+  //    band, because a scaled side can only ever execute *less* than the cap it was scaled to:
+  //    `B(s) ≤ s + cashAboveTarget` and `S(b) ≤ b + cashHeadroom` by construction.
+  //
+  // Task 9 · the previous form ran a fixed **four** passes and then simply returned whatever it
+  // held, band or no band. That was sound while the only reachable inputs were each account
+  // against its own model — but the model-trade screen previews an account against *any* model,
+  // and acc-045 onto mod-003 (or mod-006) converges too slowly for four passes: the gap closed
+  // 12,088 -> 6,870 -> 2,142 -> 436 and the function returned the $436 breach. Every pass strictly
+  // shrinks both sides (a cap re-read on an executed total is never larger than the same cap read
+  // on the pre-floor total it replaces) and both are non-negative integer sums, so the iteration
+  // is a decreasing integer sequence bounded below — it terminates at a fixed point in finitely
+  // many steps, and the all-zero proposal satisfies both bounds in the worst case. The bound below
+  // is therefore an assertion about termination, not a tuning knob. Measured over all 329
+  // account/model pairs: 326 settle on the first pass, acc-033 on the second, acc-045 onto mod-003
+  // on the fifth and acc-045 onto mod-006 on the sixth — every one of them on the band, none on
+  // the fixed-point condition and none anywhere near the bound. `model-trade-invariants` sweeps
+  // all 47 x 7 combinations for the band in money at zero tolerance.
   const withinCashBand = (executedSell: number, executedBuy: number) =>
     executedSell - executedBuy <= cashHeadroom && executedBuy - executedSell <= cashAboveTarget
   const sellsFirst = cashAboveTarget > 0
+  const MAX_PASSES = 32
   let executedSell = 0
   let executedBuy = 0
-  for (let pass = 0; pass < 4; pass++) {
+  for (let pass = 0; pass < MAX_PASSES; pass++) {
+    const priorSell = executedSell
+    const priorBuy = executedBuy
     if (sellsFirst) {
       executedSell = build('sell', sellScaleFor(pass === 0 ? totalBuy : executedBuy))
       executedBuy = build('buy', buyScaleFor(executedSell))
@@ -450,11 +503,12 @@ function generateRebalanceTrades(accountId: string, taxAware: boolean, driftThre
       executedSell = build('sell', sellScaleFor(executedBuy))
     }
     if (withinCashBand(executedSell, executedBuy)) break
+    if (pass > 0 && executedSell === priorSell && executedBuy === priorBuy) break
   }
 
   // Emitted in the drift surface's own asset-class order, so a preview reads the same way it did
   // before sells and buys were built in separate passes.
-  return raw.map((leg) => built.get(leg)).filter((t): t is ProposedTrade => t !== undefined)
+  return raw.map((leg) => built.get(leg)).filter((t): t is ProposedTradeLeg => t !== undefined)
 }
 
 export const omsHandlers = [
