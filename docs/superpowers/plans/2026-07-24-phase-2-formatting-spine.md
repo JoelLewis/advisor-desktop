@@ -1,5 +1,54 @@
 # Phase 2 — The Formatting Spine: Implementation Plan
 
+> ## PRE-FLIGHT CORRECTIONS — read before Task 1
+>
+> This plan was authored on 2026-07-24, **before Phase 1b** (10 tasks, 29 commits, `d5cd505..8a87ffe`).
+> Phase 1b changed the render surface substantially. Audited against the live tree at `8a87ffe`;
+> where this block disagrees with the plan below, **this block governs.**
+>
+> **1. The 218 figure is the count of sites needing an INDIVIDUAL edit, and it excludes a much larger
+> inheriting population.** The full formatting surface is now **416 sites**. The difference is
+> `formatWithConversion` / `<CurrencyValue>` — **183 sites**, most of them created or touched during
+> Phase 1b's currency work (Tasks 4, 9, 10).
+>
+> **Those 183 must NOT be migrated individually.** Verified routing: `CurrencyValue` →
+> `useFormatCurrency` → `formatCurrency` from `@/lib/utils` (`use-format-currency.ts:4,28,42`;
+> `CurrencyValue.tsx:1,3,24,32`). They inherit the Task 3 rewrite automatically. Editing them
+> would create a second formatting path — the exact "one fact, two places" defect Phase 1b spent
+> ten tasks removing. If a batch's diff touches a `formatWithConversion` call for any reason other
+> than a genuinely wrong `from` argument, that is a finding.
+>
+> **2. The per-directory table has not been re-counted since Phase 1b.** Its totals (71 formatter
+> calls / 53 hand-coloured / 94 raw `toFixed` = 218) predate ~29 commits that added files
+> (`RiskMetricsPanel`, `ModelTradeView` tests, `model-trade-invariants`, `position-weight-invariants`)
+> and changed others. My independent count at `8a87ffe`: **80** named-formatter calls, **146** raw
+> `.toFixed(`, **12** `toLocaleString`. The `toFixed` figure alone is ~55% above the table's 94.
+>
+> **Task 1 must re-run the counting grep and publish a corrected table**, reporting the deviation per
+> directory rather than adjusting silently. Batch tasks size their work off the corrected table, not
+> the one below. A batch that finds materially more sites than its row claims should say so and
+> proceed — the row is an estimate, not a budget.
+>
+> **3. Two Phase 1b register items land inside this phase's scope** and should be closed by whichever
+> batch touches their file, not deferred again:
+> - `ConcentrationView`'s materiality bar now calls `isMaterialWeight` from `lib/security-master.ts`
+>   (Phase 1b Task 10). Do not reintroduce an inline `weight > 0.02`.
+> - The `1e-9` tolerance in that helper is ~9 orders above float noise, deliberately. Leave it.
+>
+> **4. The phase gate `src/mocks/data/__tests__/rollup-invariants.test.ts` is frozen.** Byte-identical
+> across Phase 1 and Phase 1b — 234 assertions, last modified 46 commits before Phase 1b opened. Its
+> `toBeCloseTo(1, 2)` band is now ~13 orders looser than needed (`max|Σw − 1|` is `2.220e-16` after
+> Task 10). **Do not tighten it and do not touch it.** Recorded as register item M30.
+>
+> **5. The lesson Phase 1b paid for, which applies directly to a 400-site mechanical migration:**
+> **match the bound to the operation.** At least seven tolerances in that phase hid what they were
+> written to catch — a `+1` share tolerance that silenced both a sweep and an in-repo assertion, an
+> absolute one-unit-price threshold worth $87,450 for BTC, whole-book *weight* bands hiding a $76
+> money error, and `NaN > 1e-9` being false so a missing value passed silently. This phase's gate
+> greps for hyphen-minus and unmasked account numbers: **prove each grep can fail before trusting an
+> empty result.** Phase 1's gate shipped a grep whose five literals matched nothing at any revision.
+
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make `src/lib/utils.ts` the single, correct place where a number, a date or an account
