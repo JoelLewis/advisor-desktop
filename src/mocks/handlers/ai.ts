@@ -8,7 +8,6 @@ import { customPrompts } from './settings'
 import type { ChatMessage, ActionConfirmation, DocumentGeneration, ContextBriefingData, BriefingMetric, AIInsight, ActionTemplate, SuggestedPrompt } from '@/types/ai'
 import type { CustomPromptCategory } from '@/types/settings'
 import type { TaxLot } from '@/types/portfolio'
-import type { TaxTreatment } from '@/types/account'
 import { formatAUM, computeTotalAUM } from './utils'
 import { now, MOCK_TODAY_ISO } from '@/lib/clock'
 import { computeMetrics } from './pms'
@@ -18,14 +17,7 @@ import { FX_RATES_USD_BASE } from '../data/currencies'
 import { convertToBase } from '@/lib/currency'
 import { formatDate } from '@/lib/utils'
 import { estimatedTaxBenefit, isHarvestable } from '@/features/portfolios/tax/shared'
-
-/**
- * Fix round 1, Important #2 — a loss inside a tax-deferred or tax-free wrapper (traditional/SEP/
- * inherited IRA, Roth IRA, 529) produces no deduction at all: there is no realisation event to
- * harvest. `trust_taxable` stays in — the trust itself owes tax on it. Gating on this (rather than
- * `taxTreatment === 'taxable'` alone) is what keeps acc-006, a taxable trust, in the aggregate.
- */
-const HARVEST_ELIGIBLE_TREATMENTS = new Set<TaxTreatment>(['taxable', 'trust_taxable'])
+import { isTaxableAccount } from '@/lib/tax-treatment'
 
 /**
  * D22 · tax-loss-harvesting — the book-wide harvestable lot set, walked once here so the dashboard
@@ -41,7 +33,7 @@ const HARVEST_ELIGIBLE_TREATMENTS = new Set<TaxTreatment>(['taxable', 'trust_tax
  */
 function harvestableLotsAcrossBook(): (TaxLot & { accountId: string })[] {
   return accounts
-    .filter((account) => HARVEST_ELIGIBLE_TREATMENTS.has(account.taxTreatment))
+    .filter((account) => isTaxableAccount(account.taxTreatment))
     .flatMap((account) => {
       const currency = account.baseCurrency ?? 'USD'
       return generateTaxLots(account.id, account.totalValue)
@@ -465,15 +457,22 @@ export const aiHandlers = [
           actionLabel: 'View Concentration',
           actionAI: `Analyze concentration risk in ${account.name} and suggest trades to reduce single-stock exposure`,
         })
-        insights.push({
-          id: `acc-${entityId}-2`,
-          severity: 'opportunity',
-          title: 'Tax-Loss Harvesting Opportunity',
-          body: 'Short-term losses available in 3 positions could offset recent gains. Wash sale window clear for all candidates.',
-          metric: { label: 'Harvestable losses', value: '$12,400' },
-          actionLabel: 'Review Harvest',
-          actionRoute: `/portfolios/accounts/${entityId}/tax`,
-        })
+        // §9.1 (Task 2, review round 2) — this canned insight was pushed for every account with
+        // no `taxTreatment` check, hardcoded rather than derived, so the "grep for the shared
+        // helper names" sweep in this file's `harvestableLotsAcrossBook` never found it. Confirmed
+        // live on acc-003 (Traditional IRA) and acc-014 (529, tax-free). Same predicate as
+        // everywhere else this gate is applied.
+        if (isTaxableAccount(account.taxTreatment)) {
+          insights.push({
+            id: `acc-${entityId}-2`,
+            severity: 'opportunity',
+            title: 'Tax-Loss Harvesting Opportunity',
+            body: 'Short-term losses available in 3 positions could offset recent gains. Wash sale window clear for all candidates.',
+            metric: { label: 'Harvestable losses', value: '$12,400' },
+            actionLabel: 'Review Harvest',
+            actionRoute: `/portfolios/accounts/${entityId}/tax`,
+          })
+        }
       }
     }
 

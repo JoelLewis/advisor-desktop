@@ -159,4 +159,22 @@ describe('AccountDetailPage', () => {
       expect(await screen.findByText(/consider tax-loss harvesting/i)).toBeInTheDocument()
     })
   })
+
+  // §9.1 (Task 2, review round 2, Finding 1) — the AI-generated insight card rendered a separate,
+  // hardcoded "Tax-Loss Harvesting Opportunity" insight (fetched via `useAIInsights`) for every
+  // account, independent of the OverviewTab sentence fixed above. Render-level check that it does
+  // not reach the screen for a gated account, and still does for a taxable one.
+  describe('AI-generated "Tax-Loss Harvesting Opportunity" insight gates on tax treatment (Finding 1)', () => {
+    it('acc-003 (Traditional IRA) does not render the AI harvesting insight card', async () => {
+      renderPage('acc-003')
+      await screen.findByText('Robert Johnson Traditional IRA')
+      expect(screen.queryByText('Tax-Loss Harvesting Opportunity')).not.toBeInTheDocument()
+    })
+
+    it('acc-005 (taxable) still renders the AI harvesting insight card', async () => {
+      renderPage('acc-005')
+      await screen.findByText('Patricia Johnson Individual')
+      expect(await screen.findByText('Tax-Loss Harvesting Opportunity')).toBeInTheDocument()
+    })
+  })
 })
