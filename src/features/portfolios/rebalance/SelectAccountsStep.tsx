@@ -5,7 +5,10 @@ import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { cn } from '@/lib/utils'
+import { deriveBookAUM } from '@/lib/aum'
+import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
 import type { ModelAssignment } from '@/types/portfolio'
+import type { CurrencyCode } from '@/types/currency'
 
 export type SelectionMode = 'accounts' | 'model'
 
@@ -14,9 +17,24 @@ export const SELECTION_MODE_OPTIONS: { id: SelectionMode; label: string }[] = [
   { id: 'model', label: 'Model' },
 ]
 
+// §9.3 — the row shape this step renders. `householdId`/`clientId` are only here so
+// `deriveBookAUM` (an `AUMAccount[]` consumer) can be called directly on these rows rather than
+// inventing a second AUM-summing reduce (Global Constraint 2); `baseCurrency` is what lets each
+// row's own native-currency `totalValue` be formatted correctly instead of assumed USD.
+type RebalanceCandidateAccount = {
+  id: string
+  name: string
+  accountNumber: string
+  totalValue: number
+  modelId: string
+  householdId: string
+  clientId: string
+  baseCurrency?: CurrencyCode
+}
+
 type SelectAccountsStepProps = {
-  accounts: { id: string; name: string; accountNumber: string; totalValue: number; modelId: string }[] | undefined
-  driftedAccounts: { id: string; name: string; accountNumber: string; totalValue: number; modelId: string }[]
+  accounts: RebalanceCandidateAccount[] | undefined
+  driftedAccounts: RebalanceCandidateAccount[]
   driftMap: Map<string, { maxAbsDrift: number; needsRebalance: boolean }>
   selectedIds: Set<string>
   toggleSelect: (id: string) => void
@@ -150,7 +168,7 @@ export function SelectAccountsStep({
                       </div>
                     </div>
                     <div className="flex items-center gap-6">
-                      <span className="font-mono text-body">{formatWithConversion(acc.totalValue, 'USD', { compact: true })}</span>
+                      <span className="font-mono text-body">{formatWithConversion(acc.totalValue, acc.baseCurrency ?? 'USD', { compact: true })}</span>
                       <span className="font-mono text-caption text-accent-red">
                         {drift ? `${(drift.maxAbsDrift * 100).toFixed(1)}% drift` : ''}
                       </span>
@@ -198,7 +216,7 @@ function ModelSelectionView({
 }: {
   models: ModelAssignment[]
   driftedAccountsByModel: Map<string, string[]>
-  accounts: { id: string; name: string; accountNumber: string; totalValue: number; modelId: string }[]
+  accounts: RebalanceCandidateAccount[]
   driftMap: Map<string, { maxAbsDrift: number; needsRebalance: boolean }>
   selectedModelId: string | null
   selectedIds: Set<string>
@@ -227,7 +245,7 @@ function ModelSelectionView({
         {modelsWithDrift.map((model) => {
           const driftedCount = driftedAccountsByModel.get(model.id)?.length ?? 0
           const modelAccounts = accounts.filter((a) => a.modelId === model.id)
-          const totalAUM = modelAccounts.reduce((sum, a) => sum + a.totalValue, 0)
+          const totalAUM = deriveBookAUM(modelAccounts, FX_RATES_USD_BASE)
           const isSelected = selectedModelId === model.id
 
           return (
@@ -264,7 +282,7 @@ function ModelSelectionView({
         })}
         {modelsWithoutDrift.map((model) => {
           const modelAccounts = accounts.filter((a) => a.modelId === model.id)
-          const totalAUM = modelAccounts.reduce((sum, a) => sum + a.totalValue, 0)
+          const totalAUM = deriveBookAUM(modelAccounts, FX_RATES_USD_BASE)
 
           return (
             <div
@@ -315,7 +333,7 @@ function ModelSelectionView({
                   </div>
                 </div>
                 <div className="flex items-center gap-6">
-                  <span className="font-mono text-body">{formatWithConversion(acc.totalValue, 'USD', { compact: true })}</span>
+                  <span className="font-mono text-body">{formatWithConversion(acc.totalValue, acc.baseCurrency ?? 'USD', { compact: true })}</span>
                   <span className="font-mono text-caption text-accent-red">
                     {drift ? `${(drift.maxAbsDrift * 100).toFixed(1)}% drift` : ''}
                   </span>

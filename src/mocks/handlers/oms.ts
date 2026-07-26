@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw'
-import type { Order, RebalancePreview, ProposedTrade, ComplianceCheck, TradeRequest, PreTradeCheckRequest, PreTradeViolation } from '@/services/oms'
+import type { Order, RebalancePreview, ProposedTrade, TradeRequest, PreTradeCheckRequest, PreTradeViolation } from '@/services/oms'
 import { notFound } from './utils'
 import { RESTRICTED_SECURITIES, CASH_MINIMUM_PCT } from './compliance'
 import { computeDriftForAccount } from './pms'
@@ -12,6 +12,7 @@ import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { generateTaxLots } from './custodian'
 import { taxRateFor } from '@/features/portfolios/tax/shared'
 import type { Position } from '@/types/portfolio'
+import type { CurrencyCode } from '@/types/currency'
 
 /** Pooled/individual tech names used by the sector-concentration check below. */
 const TECH_SYMBOLS = ['AAPL', 'MSFT', 'NVDA', 'GOOGL', 'META', 'AMZN', 'TSLA']
@@ -60,6 +61,16 @@ const orders: Order[] = [
   { id: 'ord-015', accountId: 'acc-045', symbol: 'BTC', side: 'buy', quantity: 0.25, orderType: 'market', status: 'filled', filledQuantity: 0.25, filledPrice: 87_450.00, submittedAt: '2026-02-21T14:15:00Z', filledAt: '2026-02-21T14:15:01Z', assetClass: 'digital_asset', fractionalQuantity: true },
   { id: 'ord-016', accountId: 'acc-006', symbol: 'AAPLC185', side: 'buy_to_open', quantity: 5, orderType: 'limit', limitPrice: 8.50, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-25T11:00:00Z', assetClass: 'option', underlying: 'AAPL', optionType: 'call', strikePrice: 185, expirationDate: '2026-03-21', contractMultiplier: 100 },
 ]
+
+/**
+ * §9.3 · currencies-and-fx — the one place an account's native currency is resolved for the
+ * rebalance surface, so the preview and every trade on it read the same fact instead of each
+ * re-deriving (and potentially disagreeing on) the USD fallback for an account with no
+ * `baseCurrency` set.
+ */
+function currencyForAccount(accountId: string): CurrencyCode {
+  return accounts.find((a) => a.id === accountId)?.baseCurrency ?? 'USD'
+}
 
 /**
  * Estimate the capital-gains tax on selling `notional` dollars out of `target`, using the same
@@ -141,6 +152,7 @@ function generateRebalanceTrades(accountId: string, taxAware: boolean, driftThre
   const positions = getPositionsForAccount(account.id, account.totalValue)
   const drift = computeDriftForAccount(account)
   const taxable = isTaxableAccount(account.taxTreatment)
+  const currency = currencyForAccount(accountId)
 
   const raw = drift.assetClassDrifts
     .filter((d) => Math.abs(d.drift) > driftThreshold)
@@ -179,18 +191,10 @@ function generateRebalanceTrades(accountId: string, taxAware: boolean, driftThre
         estimatedValue: Math.round(notional),
         taxImpact,
         washSaleRisk: false,
+        currency,
       }
     })
     .filter((t) => t.estimatedValue > 0)
-}
-
-function generateComplianceChecks(): ComplianceCheck[] {
-  return [
-    { rule: 'Concentration limit (10% single name)', status: 'pass', message: 'No single position exceeds 10% of portfolio' },
-    { rule: 'Restricted securities list', status: 'pass', message: 'No restricted securities in proposed trades' },
-    { rule: 'Cash reserve minimum (2%)', status: 'pass', message: 'Post-trade cash balance meets minimum reserve' },
-    { rule: 'Wash sale (61-day window)', status: 'warning', message: 'VTI sold within 30 days of purchase — verify no wash sale' },
-  ]
 }
 
 export const omsHandlers = [
@@ -374,11 +378,14 @@ export const omsHandlers = [
       const trades = generateRebalanceTrades(accountId, body.taxAware, body.driftThreshold)
       return {
         accountId,
+        // §9.3 — same source as every trade on this preview (`currencyForAccount`), so a preview
+        // with zero proposed trades still carries a correct currency tag rather than an implicit
+        // USD default.
+        currency: currencyForAccount(accountId),
         trades,
         // C26 — the total is the sum of the trades' own tax impacts, not a second literal that
         // could (and did) disagree with them.
         estimatedTaxImpact: trades.reduce((sum, t) => sum + t.taxImpact, 0),
-        complianceChecks: generateComplianceChecks(),
       }
     })
     return HttpResponse.json(previews)

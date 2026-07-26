@@ -1,5 +1,6 @@
 import { get, post } from './api-client'
 import type { TradableAssetClass, TradeSide, TradeOrderType, TimeInForce, BondPriceType, MutualFundAmountType } from '@/types/trading'
+import type { CurrencyCode } from '@/types/currency'
 
 export type Order = {
   id: string
@@ -78,9 +79,14 @@ export type RebalanceRequest = {
 
 export type RebalancePreview = {
   accountId: string
+  // §9.3 · currencies-and-fx — the account's own base currency (`accounts.ts`'s `baseCurrency`,
+  // defaulting to USD). Every trade in `trades` carries the same tag, and every notional on this
+  // preview (`estimatedTaxImpact`, each trade's `estimatedValue`/`taxImpact`) is denominated in it,
+  // not USD — `oms.ts`'s trade generator derives everything from `account.totalValue`, which is
+  // native currency. A consumer must convert before summing across previews of different accounts.
+  currency: CurrencyCode
   trades: ProposedTrade[]
   estimatedTaxImpact: number
-  complianceChecks: ComplianceCheck[]
 }
 
 export type ProposedTrade = {
@@ -91,12 +97,9 @@ export type ProposedTrade = {
   estimatedValue: number
   taxImpact: number
   washSaleRisk: boolean
-}
-
-export type ComplianceCheck = {
-  rule: string
-  status: 'pass' | 'warning' | 'fail'
-  message: string
+  // Same account-native currency as the parent `RebalancePreview.currency` — carried on the trade
+  // itself so a consumer that only has the trade (not the preview) still knows what it's reading.
+  currency: CurrencyCode
 }
 
 export type RebalanceExecution = {

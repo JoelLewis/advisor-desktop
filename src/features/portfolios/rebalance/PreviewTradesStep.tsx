@@ -35,7 +35,7 @@ export function PreviewTradesStep({
           <Card key={preview.accountId}>
             <CardHeader action={
               <span className="font-mono text-caption text-text-secondary">
-                {preview.trades.length} trades &middot; Tax impact: {formatWithConversion(preview.estimatedTaxImpact, 'USD', { compact: true })}
+                {preview.trades.length} trades &middot; Tax impact: {formatWithConversion(preview.estimatedTaxImpact, preview.currency, { compact: true })}
               </span>
             }>
               {acc?.name ?? preview.accountId}
@@ -62,9 +62,9 @@ export function PreviewTradesStep({
                         <Badge variant={trade.side === 'buy' ? 'green' : 'red'}>{trade.side}</Badge>
                       </td>
                       <td className="py-2 text-right font-mono">{trade.quantity.toLocaleString()}</td>
-                      <td className="py-2 text-right font-mono">{formatWithConversion(trade.estimatedValue, 'USD', { compact: true })}</td>
+                      <td className="py-2 text-right font-mono">{formatWithConversion(trade.estimatedValue, trade.currency, { compact: true })}</td>
                       <td className={cn('py-2 text-right font-mono', trade.taxImpact > 0 ? 'text-accent-red' : 'text-text-secondary')}>
-                        {trade.taxImpact > 0 ? formatWithConversion(trade.taxImpact, 'USD', { compact: true }) : '\u2014'}
+                        {trade.taxImpact > 0 ? formatWithConversion(trade.taxImpact, trade.currency, { compact: true }) : '\u2014'}
                       </td>
                       <td className="py-2">
                         {trade.washSaleRisk && (
@@ -83,6 +83,10 @@ export function PreviewTradesStep({
       <div className="flex items-center justify-between rounded-lg border border-border-primary bg-surface-tertiary p-4">
         <div className="flex items-center gap-6 text-body">
           <span><strong>{totalTrades}</strong> total trades</span>
+          {/* §9.3 — `totalTaxImpact` sums across previews that may carry different account
+              currencies; RebalancePage converts each preview's own-currency figure to USD before
+              summing (Global Constraint 2's one conversion boundary), so this really is USD by the
+              time it reaches this prop — not a leftover unconverted literal. */}
           <span>Tax impact: <strong className="font-mono text-accent-red">{formatWithConversion(totalTaxImpact, 'USD', { compact: true })}</strong></span>
         </div>
       </div>

@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/Badge'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { cn } from '@/lib/utils'
 import type { TradeComplianceResult, TradeComplianceCheck } from '@/types/compliance'
+import type { CurrencyCode } from '@/types/currency'
 import type { WizardStep } from './types'
 
 type ComplianceStatus = TradeComplianceCheck['status']
@@ -43,7 +44,11 @@ const CHECK_ICON_COLORS: Record<ComplianceStatus, string> = {
 
 type ComplianceReviewStepProps = {
   complianceResults: TradeComplianceResult[]
-  accounts: { id: string; name: string }[] | undefined
+  // §9.3 sweep — `baseCurrency` is what lets each account's own compliance-check dollar figures
+  // (`check.details.cashBalance`/`minimumCash`, both derived from `account.cashBalance`/
+  // `totalValue` in `mocks/handlers/compliance.ts`, native currency) render correctly instead of
+  // being read as USD.
+  accounts: { id: string; name: string; baseCurrency?: CurrencyCode }[] | undefined
   allComplianceChecks: TradeComplianceCheck[]
   hasComplianceFailure: boolean
   executeMutation: { isPending: boolean }
@@ -65,6 +70,7 @@ export function ComplianceReviewStep({
       {/* Per-account compliance results */}
       {complianceResults.map((result) => {
         const acc = accounts?.find((a) => a.id === result.accountId)
+        const currency = acc?.baseCurrency ?? 'USD'
         return (
           <Card key={result.accountId}>
             <CardHeader action={
@@ -77,7 +83,7 @@ export function ComplianceReviewStep({
             </CardHeader>
             <CardContent className="space-y-2">
               {result.checks.map((check, i) => (
-                <ComplianceCheckRow key={i} check={check} />
+                <ComplianceCheckRow key={i} check={check} currency={currency} />
               ))}
             </CardContent>
           </Card>
@@ -142,7 +148,7 @@ function ComplianceSummaryBanner({ checks }: { checks: TradeComplianceCheck[] })
   )
 }
 
-const ComplianceCheckRow = memo(function ComplianceCheckRow({ check }: { check: TradeComplianceCheck }) {
+const ComplianceCheckRow = memo(function ComplianceCheckRow({ check, currency }: { check: TradeComplianceCheck; currency: CurrencyCode }) {
   const { formatWithConversion } = useFormatCurrency()
   const StatusIcon = CHECK_ICONS[check.status] ?? AlertTriangle
 
@@ -172,10 +178,10 @@ const ComplianceCheckRow = memo(function ComplianceCheckRow({ check }: { check: 
               <span>Limit: <span className="font-mono font-medium">{(check.details.limit * 100).toFixed(0)}%</span></span>
             )}
             {check.details.cashBalance !== undefined && (
-              <span>Cash: <span className="font-mono font-medium">{formatWithConversion(check.details.cashBalance, 'USD')}</span></span>
+              <span>Cash: <span className="font-mono font-medium">{formatWithConversion(check.details.cashBalance, currency)}</span></span>
             )}
             {check.details.minimumCash !== undefined && (
-              <span>Min: <span className="font-mono font-medium">{formatWithConversion(check.details.minimumCash, 'USD')}</span></span>
+              <span>Min: <span className="font-mono font-medium">{formatWithConversion(check.details.minimumCash, currency)}</span></span>
             )}
           </div>
         )}

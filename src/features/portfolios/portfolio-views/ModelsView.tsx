@@ -2,6 +2,8 @@ import { AlertTriangle, Layers, RefreshCw } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { cn } from '@/lib/utils'
+import { deriveBookAUM } from '@/lib/aum'
+import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
 import type { Account } from '@/types/account'
 import type { DriftStatus, ModelAssignment } from '@/types/portfolio'
 
@@ -21,7 +23,10 @@ export function ModelsView({
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
       {models.map((model) => {
         const modelAccounts = accountsByModel.get(model.id) ?? []
-        const totalAUM = modelAccounts.reduce((sum, a) => sum + a.totalValue, 0)
+        // §9.3 — `deriveBookAUM` (Task 1's `lib/aum.ts` primitive), not a fourth hand-rolled
+        // `totalValue` reduce: `acc-041` (HKD) and `acc-042` (SGD) both sit in mod-002, and a naive
+        // sum would count their native-currency figures as if they were dollars.
+        const totalAUM = deriveBookAUM(modelAccounts, FX_RATES_USD_BASE)
         const driftedCount = modelAccounts.filter((a) => driftMap.get(a.id)?.needsRebalance).length
         const avgDrift = modelAccounts.length > 0
           ? modelAccounts.reduce((sum, a) => sum + (driftMap.get(a.id)?.totalDrift ?? 0), 0) / modelAccounts.length

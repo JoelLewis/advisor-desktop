@@ -5,6 +5,8 @@ import { useAccounts } from '@/hooks/use-accounts'
 import { useDriftSummary, useModels } from '@/hooks/use-portfolio'
 import { useRebalancePreview, useExecuteRebalance, useTradeComplianceCheck } from '@/hooks/use-orders'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
+import { convertToBase } from '@/lib/currency'
+import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
 import type { RebalancePreview } from '@/services/oms'
 import type { TradeComplianceResult } from '@/types/compliance'
 import type { WizardStep } from './rebalance/types'
@@ -172,7 +174,14 @@ export function RebalancePage() {
   const allComplianceChecks = complianceResults.flatMap((r) => r.checks)
   const hasComplianceFailure = allComplianceChecks.some((c) => c.status === 'fail')
   const totalTrades = previews.reduce((sum, p) => sum + p.trades.length, 0)
-  const totalTaxImpact = previews.reduce((sum, p) => sum + p.estimatedTaxImpact, 0)
+  // §9.3 — each preview's `estimatedTaxImpact` is denominated in that account's own currency
+  // (`preview.currency`); a batch spanning e.g. acc-001 (USD) and acc-043 (EUR) cannot be summed
+  // before converting to one currency. `convertToBase` is the same primitive `deriveBookAUM`
+  // (Task 1) uses — one conversion boundary, not a second hand-rolled FX calculation.
+  const totalTaxImpact = previews.reduce(
+    (sum, p) => sum + convertToBase(p.estimatedTaxImpact, p.currency, FX_RATES_USD_BASE),
+    0,
+  )
 
   return (
     <div className="flex flex-col gap-6">
