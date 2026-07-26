@@ -176,7 +176,19 @@ export function ModelTradeView() {
     {
       accessorKey: 'totalValue',
       header: 'Value',
-      cell: ({ getValue }) => <CurrencyValue value={getValue<number>()} className="font-mono text-mono-sm" />,
+      // §9.3 — `totalValue` is native currency, so the row must say which one. `CurrencyValue`
+      // defaults `from` to USD, which rendered acc-041's HK$12,500,000 as "$12.5M" against a true
+      // $1,598,465.47 — a 7.82x overstatement, on the row an advisor picks accounts from. Every
+      // peer renderer of this same field already passes it (`columns.tsx:54`,
+      // `ClientDetailPage:66`, `HouseholdDetailPage:66`), including `SelectAccountsStep.tsx:171`,
+      // the rebalance wizard's equivalent step — three lines from the drift cell beside this one.
+      cell: ({ row }) => (
+        <CurrencyValue
+          value={row.original.totalValue}
+          from={row.original.baseCurrency ?? 'USD'}
+          className="font-mono text-mono-sm"
+        />
+      ),
     },
     {
       id: 'drift',

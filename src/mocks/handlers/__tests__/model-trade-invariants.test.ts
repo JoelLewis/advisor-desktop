@@ -3,6 +3,7 @@ import { previewModelTrades, executeModelTrades } from '@/services/trading'
 import { getDrift, getPositions } from '@/services/pms'
 import { getAccounts } from '@/services/custodian'
 import { MODEL_DEFINITIONS, modelImplementationSecurity } from '@/mocks/handlers/pms'
+import { generateRebalanceTrades } from '@/mocks/handlers/oms'
 import { convertCurrency } from '@/lib/currency'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
 import type { Account } from '@/types/account'
@@ -382,6 +383,61 @@ describe('the shared engine\'s money invariants hold across the whole migration 
       }
     }
     expect(checked, 'vacuity guard — sells must exist across the migration space').toBeGreaterThan(200)
+    expect(failures).toEqual([])
+  })
+})
+
+describe('the cap resolution reaches the cash band across the whole reachable configuration space', () => {
+  // The endpoint sweep above fixes `taxAware` and the drift threshold at what the model-trade
+  // screen sends. Both are real parameters of the shared engine — the rebalance wizard exposes a
+  // threshold control and a tax toggle — so the space that can actually reach
+  // `generateRebalanceTrades` is 47 accounts x 7 models x 2 tax modes x 11 thresholds = 7,238,
+  // not 329. Measuring only the 329 is how the previous four-pass cutoff looked adequate.
+  const THRESHOLDS = [0, 0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.04, 0.05, 0.07, 0.10]
+
+  it('7,238 configurations: no throw, and post-trade cash lands inside the band in money at zero tolerance', async () => {
+    const accounts = await getAccounts()
+    const cashByAccount = new Map<string, number>()
+    for (const account of accounts) {
+      const positions = await getPositions(account.id)
+      cashByAccount.set(account.id, positions.find((p) => p.symbol === 'CASH')?.marketValue ?? account.cashBalance)
+    }
+
+    let combos = 0
+    let withTrades = 0
+    const failures: string[] = []
+    for (const account of accounts) {
+      const cashValue = cashByAccount.get(account.id)!
+      for (const model of MODEL_DEFINITIONS) {
+        for (const taxAware of [true, false]) {
+          for (const threshold of THRESHOLDS) {
+            const where = `${account.id}/${model.id}/tax=${taxAware}/thr=${threshold}`
+            combos++
+            let trades
+            try {
+              // The engine throws rather than returning an unvalidated proposal if the cap
+              // resolution fails to reach the band. Catching it here turns "it threw" into a
+              // named failure instead of aborting the sweep at the first one.
+              trades = generateRebalanceTrades(account.id, taxAware, threshold, model.id)
+            } catch (error) {
+              failures.push(`${where}: threw — ${(error as Error).message}`)
+              continue
+            }
+            if (trades.length > 0) withTrades++
+            const bought = trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
+            const sold = trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
+            const endCash = cashValue - bought + sold
+            const target = cashTargetWeight(model.id) * account.totalValue
+            if (endCash < Math.min(cashValue, target)) failures.push(`${where}: end cash ${endCash} below ${Math.min(cashValue, target)}`)
+            if (endCash > Math.max(cashValue, target)) failures.push(`${where}: end cash ${endCash} above ${Math.max(cashValue, target)}`)
+            if (endCash < 0) failures.push(`${where}: end cash ${endCash} is negative`)
+          }
+        }
+      }
+    }
+    expect(combos).toBe(accounts.length * MODEL_DEFINITIONS.length * 2 * THRESHOLDS.length)
+    expect(combos).toBe(7238)
+    expect(withTrades, 'vacuity guard — most configurations must actually propose trades').toBeGreaterThan(4000)
     expect(failures).toEqual([])
   })
 })

@@ -5,6 +5,7 @@ import { renderWithProviders } from '@/test/render'
 import { ModelTradeView } from '../ModelTradeView'
 import { previewModelTrades } from '@/services/trading'
 import { getDrift } from '@/services/pms'
+import { getAccounts } from '@/services/custodian'
 import { formatCurrency } from '@/lib/utils'
 import { convertCurrency } from '@/lib/currency'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
@@ -59,6 +60,38 @@ describe('ModelTradeView renders the account\'s own data, not a hash of its id',
     expect(real).not.toBe(fabricatedDrift('acc-041'))
     expect(within(row).getByText(real)).toBeInTheDocument()
     expect(within(row).queryByText(fabricatedDrift('acc-041'))).not.toBeInTheDocument()
+  })
+
+  it('step 2 renders each account\'s value in its own currency — acc-041 (HKD) converted, acc-002 (USD) untouched', async () => {
+    const user = userEvent.setup()
+    await openModel(user, 'Growth')
+
+    const accounts = await getAccounts()
+    const hk = accounts.find((a) => a.id === 'acc-041')!
+    const us = accounts.find((a) => a.id === 'acc-002')!
+    expect(hk.baseCurrency).toBe('HKD')
+    expect(us.baseCurrency).toBeUndefined()
+
+    // HKD row: the converted figure, never the raw HK$ number wearing a dollar sign. `CurrencyValue`
+    // defaults `from` to USD, so an omitted prop renders HK$12,500,000 as "$12,500,000".
+    const converted = formatCurrency(
+      convertCurrency(hk.totalValue, 'HKD', 'USD', FX_RATES_USD_BASE),
+      { compact: true, currency: 'USD' },
+    )
+    const unconverted = formatCurrency(hk.totalValue, { compact: true, currency: 'USD' })
+    expect(converted).not.toBe(unconverted)
+    const hkRow = screen.getByText(hk.name).closest('tr')!
+    expect(within(hkRow).getByText(converted)).toBeInTheDocument()
+    expect(within(hkRow).queryByText(unconverted)).not.toBeInTheDocument()
+
+    // USD control — the point of the pair. A row that converts *unconditionally* (a hardcoded
+    // `from="HKD"`, say) would satisfy the assertion above and fail here, so "passes" cannot mean
+    // "converts everything".
+    const usRow = screen.getByText(us.name).closest('tr')!
+    expect(within(usRow).getByText(formatCurrency(us.totalValue, { compact: true, currency: 'USD' }))).toBeInTheDocument()
+    expect(within(usRow).queryByText(
+      formatCurrency(convertCurrency(us.totalValue, 'HKD', 'USD', FX_RATES_USD_BASE), { compact: true, currency: 'USD' }),
+    )).not.toBeInTheDocument()
   })
 
   it('acc-041 (HKD): the preview names the account, quotes its own drift and reasons, and converts its notionals', async () => {

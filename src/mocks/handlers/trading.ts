@@ -102,6 +102,13 @@ export const tradingHandlers = [
       if (!account) return notFound()
       // The screen previews migrating an account **onto** `model`, which may not be the model it
       // is assigned to today, so both the drift and the trades are measured against `model.id`.
+      //
+      // Recorded, deliberately not optimised: this computes the drift that `generateRebalanceTrades`
+      // computes again internally, so each preview derives it twice. It is pure and cheap (the whole
+      // 7,238-configuration sweep runs in under two seconds), and threading a precomputed
+      // `DriftStatus` into the engine would widen its signature to save nothing a user can perceive.
+      // The single source of truth matters here and is intact — both calls are the same function
+      // with the same arguments, so they cannot disagree; only the work is duplicated, not the fact.
       const drift = computeDriftForAccount(account, model.id)
       const trades = generateRebalanceTrades(account.id, MODEL_TRADE_TAX_AWARE, undefined, model.id)
       previews.push({

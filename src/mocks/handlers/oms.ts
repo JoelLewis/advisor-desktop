@@ -468,24 +468,41 @@ export function generateRebalanceTrades(
   //
   //  - **The band holds.** Done — this is the answer, and it is what every account reaches on the
   //    first or second pass when it is measured against its own model.
-  //  - **The pair stops moving.** A genuine fixed point `b = B(s), s = S(b)` also satisfies the
-  //    band, because a scaled side can only ever execute *less* than the cap it was scaled to:
-  //    `B(s) ≤ s + cashAboveTarget` and `S(b) ≤ b + cashHeadroom` by construction.
+  //  - **The pair stops moving.** A fixed point `b = B(s), s = S(b)`. See the caveat on this one
+  //    below — it is very nearly, but not exactly, a proof that the band holds.
   //
   // Task 9 · the previous form ran a fixed **four** passes and then simply returned whatever it
   // held, band or no band. That was sound while the only reachable inputs were each account
   // against its own model — but the model-trade screen previews an account against *any* model,
   // and acc-045 onto mod-003 (or mod-006) converges too slowly for four passes: the gap closed
-  // 12,088 -> 6,870 -> 2,142 -> 436 and the function returned the $436 breach. Every pass strictly
-  // shrinks both sides (a cap re-read on an executed total is never larger than the same cap read
-  // on the pre-floor total it replaces) and both are non-negative integer sums, so the iteration
-  // is a decreasing integer sequence bounded below — it terminates at a fixed point in finitely
-  // many steps, and the all-zero proposal satisfies both bounds in the worst case. The bound below
-  // is therefore an assertion about termination, not a tuning knob. Measured over all 329
-  // account/model pairs: 326 settle on the first pass, acc-033 on the second, acc-045 onto mod-003
-  // on the fifth and acc-045 onto mod-006 on the sixth — every one of them on the band, none on
-  // the fixed-point condition and none anywhere near the bound. `model-trade-invariants` sweeps
-  // all 47 x 7 combinations for the band in money at zero tolerance.
+  // 12,088 -> 6,870 -> 2,142 -> 436 and the function returned the $436 breach.
+  //
+  // Every pass strictly shrinks both sides (a cap re-read on an executed total is never larger
+  // than the same cap read on the pre-floor total it replaces) and both are non-negative integer
+  // sums, so the iteration is a decreasing integer sequence bounded below and the fixed-point
+  // break must eventually fire. **But that bound is `executedSell₀ + executedBuy₀` — hundreds of
+  // thousands — not `MAX_PASSES`.** `MAX_PASSES` is a heuristic cutoff, and the whole lesson of
+  // the `4` it replaced is that a cutoff which returns a plausible-looking wrong answer is worse
+  // than one that fails. So the band is **asserted** after the loop rather than assumed. A demo
+  // that errors is honest; a demo that proposes a trade set the account cannot fund is the defect
+  // class this phase exists to remove. Review of this task constructed the case: across ~28,000
+  // synthetic account/model pairs, 7 exhausted a 32-pass loop and returned real breaches, the
+  // worst $5,412 below the account's own starting cash.
+  //
+  // Two known-inexact edges the post-loop assertion also backstops, neither reachable in the
+  // fixtures — it is the assertion, not the argument, that makes them safe:
+  //  - The fixed-point argument (`B(s) ≤ s + cashAboveTarget`) holds for the **notional** a side
+  //    is scaled to, not for its executed total: `estimatedValue` is `Math.round(quantity ×
+  //    price)`, which can round *up* by up to $0.50 per leg. Two constructed cases exit on the
+  //    fixed-point condition with $0.39 and $0.26 breaches.
+  //  - `MAX_PASSES` is measured, not derived. Over the whole reachable configuration space —
+  //    47 accounts x 7 models x 2 tax modes x 11 drift thresholds = 7,238 — 7,194 settle on the
+  //    first or second pass and the slowest is acc-045 onto mod-006 at a 0.10 threshold, settling
+  //    on the **tenth** (acc-045 onto mod-003 at 0.05 settles on the ninth). Every one settles on
+  //    the band: none on the fixed-point condition, none exhausted.
+  //    `model-trade-invariants` sweeps that whole space for the band in money at zero tolerance,
+  //    so a regression that pushes any configuration past the cutoff fails loudly rather than
+  //    quietly returning a proposal nobody bounded.
   const withinCashBand = (executedSell: number, executedBuy: number) =>
     executedSell - executedBuy <= cashHeadroom && executedBuy - executedSell <= cashAboveTarget
   const sellsFirst = cashAboveTarget > 0
@@ -504,6 +521,13 @@ export function generateRebalanceTrades(
     }
     if (withinCashBand(executedSell, executedBuy)) break
     if (pass > 0 && executedSell === priorSell && executedBuy === priorBuy) break
+  }
+  if (!withinCashBand(executedSell, executedBuy)) {
+    throw new Error(
+      `rebalance cap resolution did not reach the cash band for ${account.id} on ${drift.modelId}: `
+      + `sold ${executedSell}, bought ${executedBuy}, headroom ${Math.round(cashHeadroom)}, `
+      + `surplus ${Math.round(cashAboveTarget)} — refusing to propose trades the account cannot fund`,
+    )
   }
 
   // Emitted in the drift surface's own asset-class order, so a preview reads the same way it did
