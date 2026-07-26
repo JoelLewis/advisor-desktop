@@ -436,7 +436,18 @@ git commit -m "fix(compliance): certify the whole projected book, and say which 
 - Test: `src/features/portfolios/rebalance/__tests__/PreviewTradesStep.test.tsx` (create)
 - Test: `src/features/portfolios/rebalance/__tests__/SelectAccountsStep.test.tsx` (create)
 
-**Scope amendment (added after Task 1).** Task 1's implementer surfaced three sites that sum
+**Scope amendment 2 (added after Task 3).** `generateComplianceChecks()` at
+`src/mocks/handlers/oms.ts:187-194` returns four **fully hardcoded** compliance checks, including a
+"VTI sold within 30 days — verify no wash sale" warning that fires for every account whether or not
+it holds VTI. It backs `RebalancePreview.complianceChecks`, but `RebalancePage.tsx` never reads that
+field — it calls `/api/compliance/check-trades` and renders that instead — so it is currently dead
+code rather than a live false certification. It is a landmine for whoever wires the field into a
+view later. This task already changes `RebalancePreview`'s shape, so it owns the decision: either
+delete the field and the function, or derive the checks from `checkTradeCompliance`. **Deleting is
+preferred** — a second compliance path is a "one fact, two places" violation by construction. State
+which you chose and why.
+
+**Scope amendment 1 (added after Task 1).** Task 1's implementer surfaced three sites that sum
 `a.totalValue` with no FX conversion — `ModelsView.tsx:24`, `SelectAccountsStep.tsx:230` and `:267` —
 and I then found a fourth, `SelectAccountsStep.tsx:153`, which passes the literal `'USD'` as the
 source currency exactly as `PreviewTradesStep` does. All four are verified. They are the same two
