@@ -130,7 +130,21 @@ function generatePerformanceSeries(months: number, p: SeriesParams): Performance
   return series
 }
 
-type AssetClassAllocation = { assetClass: string; targetWeight: number }
+/**
+ * §9.7 · rebalancing — `implementationSymbol` is the security a model actually buys to fill this
+ * sleeve. Without it the rebalance engine could only ever trade what an account already held, so
+ * an underweight class the account holds *nothing* in was unreachable: acc-041 sat at 94.4%
+ * international equity against a 15% target and proposed no trades at all, because every class it
+ * needed to buy (us_equity, emerging_markets, fixed_income, alternatives, commodities) was one it
+ * held zero of.
+ *
+ * `cash` deliberately carries none — cash is the residual an account settles into, not something
+ * the engine buys, and `oms.ts` filters the `CASH` pseudo-position out of every candidate list.
+ * Every other sleeve must name one; `model-implementation-invariants.test.ts` pins that, and pins
+ * that each named symbol resolves to a real, positive, USD-denominated price in `positions.ts`
+ * rather than a plausible-looking ticker with no quote behind it.
+ */
+type AssetClassAllocation = { assetClass: string; targetWeight: number; implementationSymbol?: string }
 
 type ModelDefinition = {
   id: string
@@ -155,44 +169,107 @@ type ModelDefinition = {
  */
 const MODELS: ModelDefinition[] = [
   { id: 'mod-001', name: 'Balanced Growth', benchmark: 'Model policy blend (Balanced Growth)', benchmarkKind: 'model_policy', description: 'Core 60/40 model with growth tilt', assetClasses: [
-    { assetClass: 'us_equity', targetWeight: 0.40 }, { assetClass: 'intl_equity', targetWeight: 0.12 },
-    { assetClass: 'emerging_markets', targetWeight: 0.03 }, { assetClass: 'fixed_income', targetWeight: 0.30 },
-    { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'real_estate', targetWeight: 0.03 },
-    { assetClass: 'commodities', targetWeight: 0.02 }, { assetClass: 'cash', targetWeight: 0.05 },
+    { assetClass: 'us_equity', targetWeight: 0.40, implementationSymbol: 'VTI' }, { assetClass: 'intl_equity', targetWeight: 0.12, implementationSymbol: 'EFA' },
+    { assetClass: 'emerging_markets', targetWeight: 0.03, implementationSymbol: 'VWO' }, { assetClass: 'fixed_income', targetWeight: 0.30, implementationSymbol: 'AGG' },
+    { assetClass: 'alternatives', targetWeight: 0.05, implementationSymbol: 'QAI' }, { assetClass: 'real_estate', targetWeight: 0.03, implementationSymbol: 'VNQ' },
+    { assetClass: 'commodities', targetWeight: 0.02, implementationSymbol: 'GLD' }, { assetClass: 'cash', targetWeight: 0.05 },
   ]},
   { id: 'mod-002', name: 'Growth', benchmark: 'Model policy blend (Growth)', benchmarkKind: 'model_policy', description: 'Equity-focused growth model', assetClasses: [
-    { assetClass: 'us_equity', targetWeight: 0.55 }, { assetClass: 'intl_equity', targetWeight: 0.15 },
-    { assetClass: 'emerging_markets', targetWeight: 0.05 }, { assetClass: 'fixed_income', targetWeight: 0.15 },
-    { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'commodities', targetWeight: 0.02 },
+    { assetClass: 'us_equity', targetWeight: 0.55, implementationSymbol: 'VTI' }, { assetClass: 'intl_equity', targetWeight: 0.15, implementationSymbol: 'EFA' },
+    { assetClass: 'emerging_markets', targetWeight: 0.05, implementationSymbol: 'VWO' }, { assetClass: 'fixed_income', targetWeight: 0.15, implementationSymbol: 'AGG' },
+    { assetClass: 'alternatives', targetWeight: 0.05, implementationSymbol: 'QAI' }, { assetClass: 'commodities', targetWeight: 0.02, implementationSymbol: 'GLD' },
     { assetClass: 'cash', targetWeight: 0.03 },
   ]},
   { id: 'mod-003', name: 'Conservative Income', benchmark: 'Barclays Agg', benchmarkKind: 'model_policy', description: 'Income-focused with capital preservation', assetClasses: [
-    { assetClass: 'us_equity', targetWeight: 0.20 }, { assetClass: 'intl_equity', targetWeight: 0.05 },
-    { assetClass: 'fixed_income', targetWeight: 0.55 }, { assetClass: 'alternatives', targetWeight: 0.05 },
-    { assetClass: 'real_estate', targetWeight: 0.05 }, { assetClass: 'cash', targetWeight: 0.10 },
+    { assetClass: 'us_equity', targetWeight: 0.20, implementationSymbol: 'VTI' }, { assetClass: 'intl_equity', targetWeight: 0.05, implementationSymbol: 'VXUS' },
+    { assetClass: 'fixed_income', targetWeight: 0.55, implementationSymbol: 'AGG' }, { assetClass: 'alternatives', targetWeight: 0.05, implementationSymbol: 'QAI' },
+    { assetClass: 'real_estate', targetWeight: 0.05, implementationSymbol: 'VNQ' }, { assetClass: 'cash', targetWeight: 0.10 },
   ]},
   { id: 'mod-004', name: 'Aggressive Growth', benchmark: 'MSCI ACWI', benchmarkKind: 'model_policy', description: 'High-growth equity allocation', assetClasses: [
-    { assetClass: 'us_equity', targetWeight: 0.50 }, { assetClass: 'intl_equity', targetWeight: 0.20 },
-    { assetClass: 'emerging_markets', targetWeight: 0.10 }, { assetClass: 'fixed_income', targetWeight: 0.10 },
-    { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'cash', targetWeight: 0.05 },
+    { assetClass: 'us_equity', targetWeight: 0.50, implementationSymbol: 'VTI' }, { assetClass: 'intl_equity', targetWeight: 0.20, implementationSymbol: 'EFA' },
+    { assetClass: 'emerging_markets', targetWeight: 0.10, implementationSymbol: 'VWO' }, { assetClass: 'fixed_income', targetWeight: 0.10, implementationSymbol: 'AGG' },
+    { assetClass: 'alternatives', targetWeight: 0.05, implementationSymbol: 'QAI' }, { assetClass: 'cash', targetWeight: 0.05 },
   ]},
   { id: 'mod-005', name: 'Ultra-HNW Multi-Strategy', benchmark: 'Custom Blended', benchmarkKind: 'model_policy', description: 'Multi-strategy for large accounts', assetClasses: [
-    { assetClass: 'us_equity', targetWeight: 0.35 }, { assetClass: 'intl_equity', targetWeight: 0.15 },
-    { assetClass: 'emerging_markets', targetWeight: 0.05 }, { assetClass: 'fixed_income', targetWeight: 0.20 },
-    { assetClass: 'alternatives', targetWeight: 0.15 }, { assetClass: 'real_estate', targetWeight: 0.05 },
+    { assetClass: 'us_equity', targetWeight: 0.35, implementationSymbol: 'VTI' }, { assetClass: 'intl_equity', targetWeight: 0.15, implementationSymbol: 'EFA' },
+    { assetClass: 'emerging_markets', targetWeight: 0.05, implementationSymbol: 'VWO' }, { assetClass: 'fixed_income', targetWeight: 0.20, implementationSymbol: 'AGG' },
+    { assetClass: 'alternatives', targetWeight: 0.15, implementationSymbol: 'QAI' }, { assetClass: 'real_estate', targetWeight: 0.05, implementationSymbol: 'VNQ' },
     { assetClass: 'cash', targetWeight: 0.05 },
   ]},
   { id: 'mod-006', name: 'Education 529', benchmark: 'Age-Based Glide', benchmarkKind: 'model_policy', description: 'Age-based education savings glide path', assetClasses: [
-    { assetClass: 'us_equity', targetWeight: 0.45 }, { assetClass: 'intl_equity', targetWeight: 0.10 },
-    { assetClass: 'fixed_income', targetWeight: 0.35 }, { assetClass: 'cash', targetWeight: 0.10 },
+    { assetClass: 'us_equity', targetWeight: 0.45, implementationSymbol: 'VTI' }, { assetClass: 'intl_equity', targetWeight: 0.10, implementationSymbol: 'VXUS' },
+    { assetClass: 'fixed_income', targetWeight: 0.35, implementationSymbol: 'AGG' }, { assetClass: 'cash', targetWeight: 0.10 },
   ]},
   { id: 'mod-007', name: 'Moderate Balanced', benchmark: 'Model policy blend (Moderate Balanced)', benchmarkKind: 'model_policy', description: 'Balanced 50/50 equity-bond split', assetClasses: [
-    { assetClass: 'us_equity', targetWeight: 0.35 }, { assetClass: 'intl_equity', targetWeight: 0.10 },
-    { assetClass: 'emerging_markets', targetWeight: 0.05 }, { assetClass: 'fixed_income', targetWeight: 0.35 },
-    { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'real_estate', targetWeight: 0.03 },
-    { assetClass: 'commodities', targetWeight: 0.02 }, { assetClass: 'cash', targetWeight: 0.05 },
+    { assetClass: 'us_equity', targetWeight: 0.35, implementationSymbol: 'VTI' }, { assetClass: 'intl_equity', targetWeight: 0.10, implementationSymbol: 'EFA' },
+    { assetClass: 'emerging_markets', targetWeight: 0.05, implementationSymbol: 'VWO' }, { assetClass: 'fixed_income', targetWeight: 0.35, implementationSymbol: 'AGG' },
+    { assetClass: 'alternatives', targetWeight: 0.05, implementationSymbol: 'QAI' }, { assetClass: 'real_estate', targetWeight: 0.03, implementationSymbol: 'VNQ' },
+    { assetClass: 'commodities', targetWeight: 0.02, implementationSymbol: 'GLD' }, { assetClass: 'cash', targetWeight: 0.05 },
   ]},
 ]
+
+/**
+ * Exported for `model-implementation-invariants.test.ts`, which pins the two properties the
+ * rebalance engine depends on and neither the type system nor a grep can enforce: every non-cash
+ * sleeve names a symbol, and every symbol named resolves to a real USD price below.
+ */
+export const MODEL_DEFINITIONS: readonly ModelDefinition[] = MODELS
+
+/**
+ * The sleeve vehicles repeat across models because the firm runs one lineup — the same broad-market
+ * ETF fills the same sleeve wherever it appears; that is the fact, not an accident of copying. The
+ * one deliberate difference is `intl_equity`: models that carry a **separate** emerging-markets
+ * sleeve implement it with EFA (MSCI EAFE — developed ex-North-America), because a total-ex-US fund
+ * would double-count the EM sleeve sitting beside it. mod-003 and mod-006 have no EM sleeve, so
+ * they use VXUS (FTSE Global All Cap ex-US, EM included) and get their emerging-markets exposure
+ * inside the international allocation, which is what a 5%/10% international target in an
+ * income or education model is meant to hold.
+ */
+function resolveModel(modelId: string): ModelDefinition {
+  return MODELS.find((m) => m.id === modelId) ?? getModelByIndex(0)
+}
+
+/**
+ * Symbol -> quote, built from the positions of **USD-denominated accounts only**. The restriction
+ * is the point: `positions.ts` prices each account's holdings in that account's own currency
+ * (0700.HK at HK$380, SIE.DE at EUR 185.40), so a master built over every account would hand the
+ * rebalance engine a mix of currencies wearing no label. Every symbol here is therefore a USD
+ * quote, and `oms.ts` converts it into the buying account's currency exactly once.
+ */
+const USD_SECURITY_QUOTES: ReadonlyMap<string, { name: string; price: number }> = (() => {
+  const quotes = new Map<string, { name: string; price: number }>()
+  for (const account of accounts) {
+    if ((account.baseCurrency ?? 'USD') !== 'USD') continue
+    for (const position of getPositionsForAccount(account.id, account.totalValue)) {
+      // CASH is a per-account balance masquerading as a price, not a quote for a tradeable security.
+      if (position.symbol === 'CASH' || position.price <= 0) continue
+      quotes.set(position.symbol, { name: position.name, price: position.price })
+    }
+  }
+  return quotes
+})()
+
+export type ModelSecurity = { symbol: string; name: string; price: number }
+
+/**
+ * §9.7 · the security a model buys to fill `assetClass` when the account holds nothing in it, with
+ * its **USD** price and name read from `positions.ts` rather than re-typed here — a hand-typed
+ * price alongside the symbol is exactly the second copy Global Constraint 1 forbids, and a symbol
+ * with no quote behind it produces a zero notional that the engine's `estimatedValue > 0` filter
+ * drops silently, which looks identical to the bug this fixes.
+ */
+export function modelImplementationSecurity(modelId: string, assetClass: string): ModelSecurity | undefined {
+  const symbol = resolveModel(modelId).assetClasses.find((ac) => ac.assetClass === assetClass)?.implementationSymbol
+  if (!symbol) return undefined
+  const quote = USD_SECURITY_QUOTES.get(symbol)
+  if (!quote) return undefined
+  return { symbol, name: quote.name, price: quote.price }
+}
+
+/** Exported so the invariant test checks the same map the engine reads, not a re-derivation. */
+export function usdQuoteFor(symbol: string): { name: string; price: number } | undefined {
+  return USD_SECURITY_QUOTES.get(symbol)
+}
 
 function getModelByIndex(index: number): ModelDefinition {
   const model = MODELS[index]
@@ -210,8 +287,7 @@ function getModelByIndex(index: number): ModelDefinition {
  * the other stale.
  */
 function modelIdentity(modelId: string): Pick<ModelDefinition, 'id' | 'name' | 'benchmark' | 'benchmarkKind' | 'description'> {
-  const model = MODELS.find((m) => m.id === modelId) ?? getModelByIndex(0)
-  const { id, name, benchmark, benchmarkKind, description } = model
+  const { id, name, benchmark, benchmarkKind, description } = resolveModel(modelId)
   return { id, name, benchmark, benchmarkKind, description }
 }
 
@@ -227,7 +303,9 @@ function modelBookFor(modelId: string): { assignedAccounts: number; totalAUM: nu
 }
 
 function getModelTargets(modelId: string): Record<string, number> {
-  const model = MODELS.find((m) => m.id === modelId) ?? getModelByIndex(0)
+  // Same `resolveModel` the implementation-security lookup uses, so a sleeve's target weight and
+  // the security that fills it can never be read off two different models.
+  const model = resolveModel(modelId)
   const targets: Record<string, number> = {}
   for (const ac of model.assetClasses) {
     targets[ac.assetClass] = ac.targetWeight

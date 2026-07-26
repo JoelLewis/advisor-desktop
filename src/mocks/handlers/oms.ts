@@ -2,10 +2,12 @@ import { http, HttpResponse } from 'msw'
 import type { Order, RebalancePreview, ProposedTrade, TradeRequest, PreTradeCheckRequest, PreTradeViolation } from '@/services/oms'
 import { notFound } from './utils'
 import { RESTRICTED_SECURITIES, CASH_MINIMUM_PCT } from './compliance'
-import { computeDriftForAccount } from './pms'
+import { computeDriftForAccount, modelImplementationSecurity } from './pms'
 import { accounts } from '../data/accounts'
 import { getPositionsForAccount } from '../data/positions'
 import { openWashSaleWindows } from '../data/realised-sales'
+import { FX_RATES_USD_BASE } from '../data/currencies'
+import { convertCurrency } from '@/lib/currency'
 import { securityKind, concentrationLimitFor } from '@/lib/security-master'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
@@ -104,6 +106,63 @@ function estimateSaleTax(accountId: string, totalValue: number, target: Position
 }
 
 /**
+ * What a proposed trade executes against: a symbol, its price **in the account's own currency**,
+ * and — for a sell — the position being trimmed. A buy into an asset class the account holds
+ * nothing in has no position, which is precisely §9.7's point.
+ */
+type TradeCandidate = { symbol: string; name: string; price: number; position?: Position }
+
+/**
+ * §9.7 · which security to sell out of an overweight class. The engine used to take
+ * `candidates[0]` — the fixture's declaration order — so acc-002 trimmed SPY, carrying a
+ * $355,206.70 embedded gain, while INTC sat in the same asset class with a $45,850 unrealised
+ * loss. A "tax-aware" toggle that picks a materially worse tax outcome than an obvious loss lot
+ * already in the account is worse than no toggle.
+ *
+ * Ranking is by **gain per dollar of market value** — gain per dollar *sold*, the same
+ * per-dollar logic `estimateSaleTax` applies across lots — not by absolute gain, which would
+ * simply prefer whichever position happens to be biggest. Ascending order puts losses first
+ * (harvestable), then the smallest embedded gains.
+ *
+ * Gated on `taxable`: in an IRA or a Roth, gains are not taxed at all (`estimateSaleTax` already
+ * returns 0 there), so re-ordering by embedded gain would be an arbitrary preference dressed up
+ * as tax awareness. Those accounts keep the held order under either toggle setting.
+ */
+function pickSellCandidate(held: Position[], taxAware: boolean): Position | undefined {
+  if (!taxAware) return held[0]
+  const gainPerDollar = (p: Position) => (p.marketValue > 0 ? p.gainLoss / p.marketValue : 0)
+  return [...held].sort((a, b) => gainPerDollar(a) - gainPerDollar(b))[0]
+}
+
+/**
+ * §9.7 · which security to buy into an underweight class. An account that already holds the class
+ * adds to what it holds; an account that holds **nothing** in it buys the model's own
+ * implementation security, which is the case the engine previously could not express at all —
+ * acc-041 was 94.4% international equity against a 15% target and proposed nothing, because every
+ * class it needed to buy was one it held zero of.
+ *
+ * The currency trap this closes: notionals derive from `account.totalValue`, which is **native
+ * currency** (HK$12.5M for acc-041), while a model implementation symbol is quoted in USD (VTI at
+ * $268.50). Dividing an HKD notional by a USD price yields a quantity that is 7.82x too large and
+ * means nothing in either currency. The price is therefore converted into the account's currency
+ * once, here, at the same `FX_RATES_USD_BASE` the rest of the app reads — so `estimatedValue`
+ * stays native (matching the trade's own `currency` tag, §9.3) and `quantity` is a real share
+ * count. A held position needs no conversion: `positions.ts` already prices each account's
+ * holdings in that account's currency.
+ */
+function pickBuyCandidate(held: Position[], modelId: string, assetClass: string, currency: CurrencyCode): TradeCandidate | undefined {
+  const position = held[0]
+  if (position) return { symbol: position.symbol, name: position.name, price: position.price, position }
+  const security = modelImplementationSecurity(modelId, assetClass)
+  if (!security) return undefined
+  return {
+    symbol: security.symbol,
+    name: security.name,
+    price: convertCurrency(security.price, 'USD', currency, FX_RATES_USD_BASE),
+  }
+}
+
+/**
  * C26 · rebalancing / tax-efficiency — `taxImpact: taxAware ? 3_800 : 0` made the riskier setting
  * display as free. Tax is estimated per-lot from the account's actual embedded gains at the
  * lot's own holding-period rate, so a tax-unaware rebalance realises MORE than a tax-aware one,
@@ -158,24 +217,49 @@ function generateRebalanceTrades(accountId: string, taxAware: boolean, driftThre
 
   const raw = drift.assetClassDrifts
     .filter((d) => Math.abs(d.drift) > driftThreshold)
-    .flatMap((d) => {
-      const candidates = positions.filter((p) => p.assetClass === d.assetClass && p.symbol !== 'CASH')
-      const target = candidates[0]
-      if (!target) return []
+    .flatMap((d): { target: TradeCandidate; side: 'buy' | 'sell'; notional: number }[] => {
+      const held = positions.filter((p) => p.assetClass === d.assetClass && p.symbol !== 'CASH')
       const side: 'buy' | 'sell' = d.actual > d.target ? 'sell' : 'buy'
       const rawNotional = Math.abs(d.drift) * account.totalValue
-      const notional = side === 'sell' ? Math.min(rawNotional, target.marketValue) : rawNotional
-      return [{ target, side, notional }]
+
+      if (side === 'sell') {
+        // A sell can only ever come from a position actually held — there is no short side here.
+        const position = pickSellCandidate(held, taxAware && taxable)
+        if (!position) return []
+        return [{
+          target: { symbol: position.symbol, name: position.name, price: position.price, position },
+          side,
+          notional: Math.min(rawNotional, position.marketValue),
+        }]
+      }
+
+      const target = pickBuyCandidate(held, drift.modelId, d.assetClass, currency)
+      if (!target) return []
+      return [{ target, side, notional: rawNotional }]
     })
 
   const totalSell = raw.filter((t) => t.side === 'sell').reduce((s, t) => s + t.notional, 0)
   const totalBuy = raw.filter((t) => t.side === 'buy').reduce((s, t) => s + t.notional, 0)
   // Cash is a model asset class with its own target, but it never yields a tradeable candidate,
-  // so it can only ever absorb proceeds — never generate a buy. `cashDrift` is read from the
-  // same `computeDriftForAccount` result the trades come from, so the target and the actual
-  // weight are the same facts the drift surface shows.
+  // so it can only ever absorb proceeds — never generate a buy. The **target** weight is read
+  // from the same `computeDriftForAccount` result the trades come from, so the band shown on the
+  // drift surface is the band the cap enforces.
+  //
+  // The **actual** side is deliberately taken in money, from the CASH position itself, not from
+  // `cashDrift.actual`. `positions.ts` hand-types each position's `weight` to three decimals and
+  // `computeDriftForAccount` renormalises them, so the cash weight it reports differs from
+  // `cashBalance / totalValue` by up to ~0.06 of a point — $4,695 on acc-001, $4,470 on acc-006.
+  // While buys were small that slack never bound; once §9.7 lets an account buy the classes it
+  // holds nothing in, `buyCapacity` is consumed to the last dollar and the slack lands straight
+  // in the post-trade cash balance: acc-001 spent down to 4.943% actual cash against a 5% target,
+  // acc-044 to 4.977%, acc-045 to 2.972%, acc-046 to 9.959% — real breaches of the model's own
+  // cash floor, sized by a rounding artefact in a display weight. Cash to spend is cash, so it is
+  // measured in cash. The CASH position's market value equals `account.cashBalance` for all 47
+  // accounts (`cash-cap-invariants` pins it); the fallback covers an account with no CASH row.
   const cashDrift = drift.assetClassDrifts.find((d) => d.assetClass === 'cash')
-  const cashHeadroom = Math.max(0, (cashDrift?.target ?? 0) - (cashDrift?.actual ?? 0)) * account.totalValue
+  const cashValue = positions.find((p) => p.symbol === 'CASH')?.marketValue ?? account.cashBalance
+  const cashTargetValue = (cashDrift?.target ?? 0) * account.totalValue
+  const cashHeadroom = Math.max(0, cashTargetValue - cashValue)
   const sellCapacity = totalBuy + cashHeadroom
   const sellScale = totalSell > 0 ? Math.min(1, sellCapacity / totalSell) : 1
 
@@ -187,15 +271,15 @@ function generateRebalanceTrades(accountId: string, taxAware: boolean, driftThre
   // this correct where a round-2 attempt (`buyScale = totalSell / totalBuy`, capping buys to
   // match sells alone, reverted in round 3) was not: acc-006 legitimately funds $912,000 of
   // buys from its own cash against only $540,000 of sells, and must continue to.
-  const cashAboveTarget = Math.max(0, (cashDrift?.actual ?? 0) - (cashDrift?.target ?? 0)) * account.totalValue
+  const cashAboveTarget = Math.max(0, cashValue - cashTargetValue)
   const buyCapacity = totalSell + cashAboveTarget
   const buyScale = totalBuy > 0 ? Math.min(1, buyCapacity / totalBuy) : 1
 
   return raw
     .map(({ target, side, notional: rawNotional }) => {
       const notional = side === 'sell' ? rawNotional * sellScale : rawNotional * buyScale
-      const taxImpact = side === 'sell' && taxable
-        ? estimateSaleTax(account.id, account.totalValue, target, notional, taxAware)
+      const taxImpact = side === 'sell' && taxable && target.position
+        ? estimateSaleTax(account.id, account.totalValue, target.position, notional, taxAware)
         : 0
       return {
         symbol: target.symbol,

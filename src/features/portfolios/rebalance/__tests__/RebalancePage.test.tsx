@@ -4,6 +4,7 @@ import { renderWithProviders } from '@/test/render'
 import { RebalancePage } from '../../RebalancePage'
 import { formatCurrency } from '@/lib/utils'
 import { convertCurrency } from '@/lib/currency'
+import { previewRebalance } from '@/services/oms'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
 
 /**
@@ -28,10 +29,18 @@ describe('RebalancePage: batch tax-impact total converts before summing (real pa
     // effect) — wait for the preview step's content rather than driving any UI interaction.
     await waitFor(() => expect(screen.getByText('Mueller EUR Balanced Account')).toBeInTheDocument(), { timeout: 5000 })
 
-    // acc-043's real fixture trades (mocks/handlers/oms.ts, deterministic given frozen clock +
-    // fixtures): sell SIE.DE €648,900 (taxImpact €16,398), buy CSBGU0.SW €909,760 (taxImpact 0).
-    // estimatedTaxImpact is therefore exactly €16,398 — the whole page's batch total.
-    const rawEurTaxImpact = 16_398
+    // acc-043's tax impact is read from the same handler call the page makes (its own state
+    // defaults: `driftThreshold` 10.0 -> 0.10, `taxAware` true) rather than re-typed here. It was
+    // hardcoded at €16,398 — the tax on selling SIE.DE — and §9.7's tax-aware candidate selection
+    // legitimately moved it to the lower-embedded-gain VWRL.AS. What this test exists to pin is
+    // RebalancePage's *aggregation* (convert each preview's own-currency figure before summing);
+    // a hand-typed EUR figure makes it fail for reasons that have nothing to do with that.
+    // acc-001 contributes nothing at the 10% default threshold, so this is the whole batch total.
+    const [, eurPreview] = await previewRebalance({ accountIds: ['acc-001', 'acc-043'], taxAware: true, driftThreshold: 0.10 })
+    const rawEurTaxImpact = eurPreview!.estimatedTaxImpact
+    // Vacuity guard: a zero tax impact would make every string below identical and this test
+    // would pass while proving nothing.
+    expect(rawEurTaxImpact).toBeGreaterThan(0)
     const correctUsd = convertCurrency(rawEurTaxImpact, 'EUR', 'USD', FX_RATES_USD_BASE)
     const expected = formatCurrency(correctUsd, { compact: true, currency: 'USD' })
     const mislabeled = formatCurrency(rawEurTaxImpact, { compact: true, currency: 'USD' })

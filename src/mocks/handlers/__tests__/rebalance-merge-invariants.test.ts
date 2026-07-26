@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { previewRebalance } from '@/services/oms'
 import { getPositions, getDrift } from '@/services/pms'
+import { modelImplementationSecurity } from '@/mocks/handlers/pms'
 import { getAccounts } from '@/services/custodian'
 
 /**
@@ -44,20 +45,25 @@ describe('rebalance consumes signed drift correctly (Task 21 x Task 22 merge bou
   it('every proposed trade sizes to the magnitude of its own drift, in the direction of its sign', async () => {
     const accounts = await getAccounts()
     const mismatches: string[] = []
+    let tradesChecked = 0
     for (const account of accounts) {
       const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
       if (!preview?.trades.length) continue
       const drift = await getDrift(account.id)
       const positions = await getPositions(account.id)
       for (const trade of preview.trades) {
+        tradesChecked++
+        // §9.7 · a buy may now be in a security the account holds nothing of — that is the whole
+        // point of the model's `implementationSymbol`. This test used to treat an unheld symbol
+        // as a mismatch outright; it now resolves the asset class the same way `oms.ts` does,
+        // from the position where one exists and from the model's own sleeve where it does not,
+        // so the drift-direction and drift-magnitude bounds below still apply to every trade.
         const position = positions.find((p) => p.symbol === trade.symbol)
-        if (!position) {
-          mismatches.push(`${account.id} ${trade.symbol}: trade in a security the account does not hold`)
-          continue
-        }
-        const row = drift.assetClassDrifts?.find((d) => d.assetClass === position.assetClass)
+        const row = position
+          ? drift.assetClassDrifts?.find((d) => d.assetClass === position.assetClass)
+          : drift.assetClassDrifts?.find((d) => modelImplementationSecurity(drift.modelId, d.assetClass)?.symbol === trade.symbol)
         if (!row) {
-          mismatches.push(`${account.id} ${trade.symbol}: no drift row for ${position.assetClass}`)
+          mismatches.push(`${account.id} ${trade.symbol}: no drift row — neither a held position nor a ${drift.modelId} sleeve security`)
           continue
         }
         // Sign governs direction: overweight (positive drift) sells, underweight buys.
@@ -77,6 +83,9 @@ describe('rebalance consumes signed drift correctly (Task 21 x Task 22 merge bou
         }
       }
     }
+    // Vacuity guard (Global Constraint 10) — `mismatches` is empty both when every trade is
+    // correct and when no trade was examined at all.
+    expect(tradesChecked).toBeGreaterThan(100)
     expect(mismatches).toEqual([])
   })
 })

@@ -38,16 +38,17 @@ describe('§9.3 · rebalance previews carry their account currency', () => {
       const [preview] = await previewRebalance({ accountIds: [id], taxAware: true })
       expect(preview, id).toBeDefined()
       expect(preview!.currency, id).toBe(currency)
-      // acc-041 and acc-044 are cash-overweight and legitimately propose no trades at all (oms.ts's
-      // self-financing cap has nowhere to put proceeds) — the preview-level tag must still be
-      // correct on an empty preview, so per-trade tagging is only checked where trades exist.
-      if (preview!.trades.length > 0) {
-        sawATrade = true
-        expect(preview!.trades.every((t) => t.currency === currency), id).toBe(true)
-      }
+      // §9.7 · all four now propose trades. acc-041 and acc-044 used to propose none — both are
+      // cash-overweight, so the self-financing cap gave proceeds nowhere to go, and every sleeve
+      // they were underweight was one they held nothing in, so there was nothing to buy either.
+      // Model implementation securities close the second half of that, and the per-trade tag now
+      // runs for every one of the four rather than only the two that happened to trade.
+      expect(preview!.trades.length, `${id} must propose trades`).toBeGreaterThan(0)
+      sawATrade = true
+      expect(preview!.trades.every((t) => t.currency === currency), id).toBe(true)
     }
-    // Vacuity guard for the loop as a whole (Global Constraint 10) — at least one of the four must
-    // have produced a trade, or the per-trade assertion above never actually ran.
+    // Vacuity guard for the loop as a whole (Global Constraint 10) — the per-trade assertion
+    // above must actually have run.
     expect(sawATrade).toBe(true)
   })
 

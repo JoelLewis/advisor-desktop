@@ -53,10 +53,15 @@ describe('PreviewTradesStep renders each trade at its own account currency, not 
     const sell = preview!.trades.find((t) => t.side === 'sell')
     expect(buy).toBeDefined()
     expect(sell).toBeDefined()
-    // Ground truth for the scenario cited in the brief: a ~767K-EUR buy must NOT render as $767K.
-    // (§9.6 capped this from the pre-fix 909,760 — the round-4 sell cap had no buy-side mirror,
-    // so buys were uncapped and this fixture's raw notional is smaller now that they are.)
-    expect(buy!.estimatedValue).toBe(766_862)
+    // Ground truth for the scenario cited in the brief: a six-figure EUR buy must NOT render as
+    // the same number of dollars. The figure itself is read from the handler rather than
+    // re-typed here — §9.6 capped it once (909,760 -> 766,862, when the round-4 sell cap gained
+    // its buy-side mirror) and §9.7 moved it again (acc-043 can now buy the us_equity,
+    // alternatives and real-estate sleeves it holds nothing of, so each individual buy is
+    // smaller). What this test exists to pin is the *rendering*, and a hand-typed notional makes
+    // it fail for reasons that have nothing to do with the component. The magnitude bound below
+    // keeps it honest: the two formatted strings must still be distinguishable.
+    expect(buy!.estimatedValue).toBeGreaterThan(100_000)
 
     render(<Harness previews={[preview!]} />, { wrapper: createWrapper() })
     await waitFor(() => expect(screen.queryByTestId('fx-loading')).not.toBeInTheDocument())
