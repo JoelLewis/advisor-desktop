@@ -8,6 +8,7 @@ type TaxStats = {
   shortTermGain: number
   longTermGain: number
   harvestableAmount: number
+  estimatedBenefit: number
 }
 
 type TaxSummaryCardsProps = {
@@ -64,6 +65,12 @@ export function TaxSummaryCards({
             <>
               <p className="font-mono text-section-header text-accent-blue">{formatWithConversion(stats.harvestableAmount, baseCurrency, { compact: true })}</p>
               <p className="mt-1 text-caption text-text-tertiary">{harvestOpportunitiesLength} lot{harvestOpportunitiesLength !== 1 ? 's' : ''}</p>
+              <p className="mt-1 text-caption text-text-tertiary">
+                Est. tax benefit{' '}
+                <span data-testid="estimated-tax-benefit" className="font-mono font-medium text-accent-green">
+                  {formatWithConversion(stats.estimatedBenefit, baseCurrency, { compact: true })}
+                </span>
+              </p>
             </>
           )}
         </CardContent>

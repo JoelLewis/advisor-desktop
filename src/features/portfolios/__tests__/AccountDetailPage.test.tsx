@@ -141,4 +141,22 @@ describe('AccountDetailPage', () => {
     expect(await screen.findByText(/trade blocked/i, {}, { timeout: 3000 })).toBeInTheDocument()
     expect(screen.queryByText('All compliance checks passed')).not.toBeInTheDocument()
   })
+
+  // §9.1 (Task 2 sweep) — the Overview tab's "AI Insight" card suggested tax-loss harvesting for
+  // any account with an overall unrealized gain, regardless of whether a loss realised in it is
+  // deductible at all. acc-003 (Traditional IRA) has a genuinely positive unrealized gain
+  // (+$32,830 across its 9 positions) and would have shown this exact suggestion.
+  describe('OverviewTab AI insight gates its tax-loss-harvesting suggestion on tax treatment (Task 2 sweep)', () => {
+    it('acc-003 (Traditional IRA, positive unrealized gain) does not suggest tax-loss harvesting', async () => {
+      renderPage('acc-003')
+      await screen.findByText('Robert Johnson Traditional IRA')
+      expect(screen.queryByText(/consider tax-loss harvesting/i)).not.toBeInTheDocument()
+    })
+
+    it('acc-001 (taxable, positive unrealized gain) still suggests it — the gate must not suppress the taxable case', async () => {
+      renderPage('acc-001')
+      await screen.findByText('Johnson Family Trust')
+      expect(await screen.findByText(/consider tax-loss harvesting/i)).toBeInTheDocument()
+    })
+  })
 })

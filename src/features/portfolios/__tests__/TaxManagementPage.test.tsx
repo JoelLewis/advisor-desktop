@@ -62,12 +62,19 @@ describe('TaxManagementPage', () => {
     expect(within(select).getByRole('option', { name: 'AvgCost' })).toBeInTheDocument()
   })
 
-  it('acc-004 (Roth IRA): no cost-basis method is elected, so AvgCost is not offered', async () => {
+  // §9.1 (Task 2) restates this test's premise. It previously asserted that AvgCost specifically
+  // was withheld from the combobox — correct as far as it went, but it still rendered a
+  // cost-basis-method *selector* for a Roth IRA, implying an election that has no tax consequence
+  // in an account where no disposition is ever taxable. Task 2 gates the whole cost-basis
+  // simulator off for tax-deferred/tax-free accounts (see `TaxManagementPage`'s `disclosure`
+  // branch), so the combobox this test queried no longer renders for acc-004 at all — a stronger
+  // form of the same fact the original assertion was reaching for.
+  it('acc-004 (Roth IRA): the cost-basis method simulator does not render at all, not merely without AvgCost', async () => {
     renderPage('acc-004')
     await screen.findByText('Patricia Johnson Roth IRA')
 
-    const select = screen.getByRole('combobox')
-    expect(within(select).queryByRole('option', { name: 'AvgCost' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+    expect(screen.queryByText('Cost Basis Method')).not.toBeInTheDocument()
   })
 
   // Fix-round-1 review, Important #3: an earlier version of this fix gated the page's own
@@ -221,5 +228,69 @@ describe('TaxManagementPage', () => {
     // page-level banner text, which (correctly) also renders during this transient loading
     // window, so it isn't a safe thing to assert absent here.
     expect(screen.queryByText(/Try again shortly/)).not.toBeInTheDocument()
+  })
+})
+
+// §9.1 · `TaxManagementPage` had no `account.taxTreatment` gating anywhere: a Traditional IRA
+// (acc-003) or a Roth IRA (acc-004) was shown harvest opportunities and dollar "estimated tax
+// benefit" figures for losses that produce no current-year deduction at all (IRS Pub 590-A). Same
+// defect class as Task 17's dashboard fix; the per-account surface was never in that task's scope.
+describe('TaxManagementPage gates on tax treatment', () => {
+  it('acc-003 (Traditional IRA, tax-deferred) is told harvesting does not apply, and shows no benefit figure', async () => {
+    renderPage('acc-003')
+    expect(await screen.findByText(/not applicable in a tax-deferred account/i)).toBeInTheDocument()
+    // The direction that matters: no dollar benefit is claimed anywhere on the page.
+    expect(screen.queryByTestId('estimated-tax-benefit')).not.toBeInTheDocument()
+    expect(screen.queryByText(/estimated tax benefit/i)).not.toBeInTheDocument()
+    // The harvest scanner tab itself is not reachable — not merely empty behind it.
+    expect(screen.queryByRole('button', { name: /harvest scanner/i })).not.toBeInTheDocument()
+  })
+
+  it('acc-004 (Roth IRA, tax-free) is likewise gated', async () => {
+    renderPage('acc-004')
+    expect(await screen.findByText(/not applicable in a tax-free account/i)).toBeInTheDocument()
+    expect(screen.queryByTestId('estimated-tax-benefit')).not.toBeInTheDocument()
+  })
+
+  it('acc-005 (individual, taxable) still shows harvest opportunities and a benefit figure', async () => {
+    renderPage('acc-005')
+    // The gate must not suppress the taxable case — this is the test that fails if you gate
+    // everything, which is the cheap and wrong way to make the two tests above pass.
+    expect(await screen.findByTestId('estimated-tax-benefit')).toBeInTheDocument()
+    expect(screen.queryByText(/not applicable in a tax-/i)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /harvest scanner/i })).toBeInTheDocument()
+  })
+
+  // acc-006 is an irrevocable trust: `taxTreatment: 'trust_taxable'`. It files its own return and
+  // pays its own tax, so a loss realised in it is exactly as deductible as one in a taxable
+  // individual account — `oms.ts`'s pre-existing rebalance tax estimator and `ai.ts`'s
+  // `HARVEST_ELIGIBLE_TREATMENTS` (the Task 17 dashboard fix) both already draw this line the same
+  // way. A predicate that only matched `'taxable'` would gate acc-006 too — passing the acc-003
+  // and acc-004 tests above for the wrong reason, by suppressing a real benefit alongside the two
+  // fake ones, silently.
+  it('acc-006 (irrevocable trust, trust_taxable) is not gated — the trust pays its own tax', async () => {
+    renderPage('acc-006')
+    expect(await screen.findByTestId('estimated-tax-benefit')).toBeInTheDocument()
+    expect(screen.queryByText(/not applicable in a tax-/i)).not.toBeInTheDocument()
+  })
+
+  // 529 plans carry `taxTreatment: 'tax_free'` in the fixtures (acc-014, acc-032) — the same value
+  // a Roth IRA carries. Confirms the gate covers them without a 529-specific branch.
+  it('acc-014 (529 plan, tax-free) is gated the same way a Roth IRA is', async () => {
+    renderPage('acc-014')
+    expect(await screen.findByText(/not applicable in a tax-free account/i)).toBeInTheDocument()
+    expect(screen.queryByTestId('estimated-tax-benefit')).not.toBeInTheDocument()
+  })
+
+  it('acc-003: the tax lot table still renders — a record of what is held, not a claim about a benefit', async () => {
+    renderPage('acc-003')
+    await screen.findByText(/not applicable in a tax-deferred account/i)
+    expect(screen.getByText(/Tax Lots \(/i)).toBeInTheDocument()
+  })
+
+  it('acc-003: the cost-basis method simulator does not render', async () => {
+    renderPage('acc-003')
+    await screen.findByText(/not applicable in a tax-deferred account/i)
+    expect(screen.queryByText('Cost Basis Method')).not.toBeInTheDocument()
   })
 })

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, AlertTriangle, Info } from 'lucide-react'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { QueryErrorBanner } from '@/components/ui/QueryErrorBanner'
 import { useAccount } from '@/hooks/use-accounts'
@@ -10,7 +10,8 @@ import { useOpenWashSaleWindows } from '@/hooks/use-open-wash-sale-windows'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { useCurrencyConverter } from '@/hooks/use-fx'
 import { cn } from '@/lib/utils'
-import { isHarvestable, computeCostBasisImpact, fxStatusFrom, harvestFxStatus } from './tax/shared'
+import { harvestingDisclosureFor } from '@/lib/tax-treatment'
+import { isHarvestable, estimatedTaxBenefit, computeCostBasisImpact, fxStatusFrom, harvestFxStatus } from './tax/shared'
 import { COST_BASIS_METHODS, type CostBasisMethod } from './tax/CostBasisMethodCard'
 import { TaxSummaryCards } from './tax/TaxSummaryCards'
 import { CostBasisMethodCard } from './tax/CostBasisMethodCard'
@@ -104,7 +105,12 @@ export function TaxManagementPage() {
     const shortTermGain = taxLots.filter((l) => l.holdingPeriod === 'short' && l.gainLoss > 0).reduce((s, l) => s + l.gainLoss, 0)
     const longTermGain = taxLots.filter((l) => l.holdingPeriod === 'long' && l.gainLoss > 0).reduce((s, l) => s + l.gainLoss, 0)
     const harvestableAmount = harvestOpportunities.reduce((s, l) => s + Math.abs(l.gainLoss), 0)
-    return { totalUnrealizedGain, totalUnrealizedLoss, shortTermGain, longTermGain, harvestableAmount }
+    // §9.1 · the page-level "estimated tax benefit" total. Only ever rendered in the taxable
+    // branch below (see `disclosure`) — a tax-deferred or tax-free account never computes past
+    // `harvestOpportunities === []` in the first place, but the gate on *rendering* this value is
+    // what a component test can actually observe, so that is where it is enforced.
+    const estimatedBenefit = harvestOpportunities.reduce((s, l) => s + estimatedTaxBenefit(l), 0)
+    return { totalUnrealizedGain, totalUnrealizedLoss, shortTermGain, longTermGain, harvestableAmount, estimatedBenefit }
   }, [taxLots, harvestOpportunities])
 
   // Cost basis method impact simulation — computeCostBasisImpact lives in tax/shared.tsx (not
@@ -138,6 +144,13 @@ export function TaxManagementPage() {
   if (!account) {
     return <div className="py-12 text-center text-text-tertiary">Account not found</div>
   }
+
+  // §9.1 · non-null only for a tax-deferred or tax-free wrapper (Traditional/SEP/SIMPLE/Inherited
+  // IRA, Roth IRA, 529) — never for `taxable` or `trust_taxable` (an irrevocable trust files its
+  // own return). This is the single gate every harvesting-adjacent surface below branches on;
+  // nothing re-derives "is this account taxable" a second way.
+  const disclosure = harvestingDisclosureFor(account.taxTreatment)
+  const visibleTabs = disclosure ? VIEW_TABS.filter((t) => t.id !== 'harvest') : VIEW_TABS
 
   function toggleLot(lotId: string) {
     setSelectedLots((prev) => {
@@ -182,8 +195,20 @@ export function TaxManagementPage() {
         </div>
       )}
 
+      {/* §9.1 · a tax-deferred or tax-free account never gets the harvest scanner, the benefit
+          total, or the cost-basis simulator — a loss here produces no current-year deduction, so
+          those surfaces have nothing true to show. The tax lot table and wash sale calendar still
+          render: they are a record of what the account holds and what has already happened to it,
+          not a claim about a benefit. */}
+      {disclosure && (
+        <div className="flex items-center gap-3 rounded-lg border border-accent-blue/30 bg-accent-blue/5 px-4 py-3">
+          <Info className="h-5 w-5 shrink-0 text-accent-blue" />
+          <p className="text-body text-text-primary">{disclosure}</p>
+        </div>
+      )}
+
       {/* Summary cards */}
-      {stats && (
+      {!disclosure && stats && (
         <TaxSummaryCards
           stats={stats}
           washSaleWindowsCount={washSaleWindows?.length ?? 0}
@@ -195,18 +220,20 @@ export function TaxManagementPage() {
       )}
 
       {/* Cost Basis Method */}
-      <CostBasisMethodCard
-        account={account}
-        costBasisMethod={costBasisMethod}
-        setCostBasisMethod={setCostBasisMethod}
-        methodImpact={methodImpact}
-        formatWithConversion={formatWithConversion}
-        baseCurrency={baseCurrency}
-      />
+      {!disclosure && (
+        <CostBasisMethodCard
+          account={account}
+          costBasisMethod={costBasisMethod}
+          setCostBasisMethod={setCostBasisMethod}
+          methodImpact={methodImpact}
+          formatWithConversion={formatWithConversion}
+          baseCurrency={baseCurrency}
+        />
+      )}
 
       {/* View toggle */}
       <div className="flex items-center gap-1 rounded-lg border border-border-primary bg-surface-primary p-1">
-        {VIEW_TABS.map((tab) => (
+        {visibleTabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setView(tab.id)}
@@ -232,7 +259,7 @@ export function TaxManagementPage() {
       )}
 
       {/* Harvest Scanner */}
-      {view === 'harvest' && (
+      {!disclosure && view === 'harvest' && (
         <HarvestScannerView
           harvestOpportunities={harvestOpportunities}
           selectedLots={selectedLots}

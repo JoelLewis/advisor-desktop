@@ -5,6 +5,7 @@ import { ActionMenu } from '@/components/ui/ActionMenu'
 import { AIInsightStack } from '@/components/ui/AIInsightCard'
 import { cn, formatDate } from '@/lib/utils'
 import { ASSET_CLASS_LABELS, ACCOUNT_TYPE_LABELS, TAX_TREATMENT_LABELS } from '@/lib/labels'
+import { isTaxableAccount } from '@/lib/tax-treatment'
 import { COST_BASIS_LABELS } from './columns'
 import { InfoRow, StatCell } from './shared'
 import type { NavigateFunction } from 'react-router-dom'
@@ -173,7 +174,12 @@ export function OverviewTab({ account, positions, allocation, totalGainLoss, dri
               <p className="text-body-strong text-text-primary">AI Insight</p>
               <p className="mt-1 text-caption text-text-secondary">
                 This account has {drift?.needsRebalance ? 'drifted beyond threshold and should be rebalanced' : 'acceptable drift levels'}.
-                {totalGainLoss > 0 && ` Unrealized gains of ${formatWithConversion(totalGainLoss, account.baseCurrency ?? 'USD', { compact: true })} — consider tax-loss harvesting opportunities in underperforming positions.`}
+                {/* §9.1 (Task 2 sweep) — this sentence suggested tax-loss harvesting for any
+                    account with an overall unrealized gain, with no regard for whether a loss
+                    realised in it is deductible at all. Gated the same way TaxManagementPage is:
+                    a Traditional/SEP/SIMPLE/Inherited IRA, a Roth IRA, or a 529 never gets this
+                    suggestion, regardless of its unrealized position. */}
+                {totalGainLoss > 0 && isTaxableAccount(account.taxTreatment) && ` Unrealized gains of ${formatWithConversion(totalGainLoss, account.baseCurrency ?? 'USD', { compact: true })} — consider tax-loss harvesting opportunities in underperforming positions.`}
                 {risk && ` Sharpe ratio of ${risk.sharpe.toFixed(2)} indicates ${risk.sharpe > 1.2 ? 'strong' : 'moderate'} risk-adjusted returns.`}
               </p>
               <div className="mt-2">

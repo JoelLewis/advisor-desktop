@@ -7,6 +7,7 @@ import { accounts } from '../data/accounts'
 import { getPositionsForAccount } from '../data/positions'
 import { openWashSaleWindows } from '../data/realised-sales'
 import { securityKind, concentrationLimitFor } from '@/lib/security-master'
+import { isTaxableAccount } from '@/lib/tax-treatment'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { generateTaxLots } from './custodian'
 import { taxRateFor } from '@/features/portfolios/tax/shared'
@@ -59,11 +60,6 @@ const orders: Order[] = [
   { id: 'ord-015', accountId: 'acc-045', symbol: 'BTC', side: 'buy', quantity: 0.25, orderType: 'market', status: 'filled', filledQuantity: 0.25, filledPrice: 87_450.00, submittedAt: '2026-02-21T14:15:00Z', filledAt: '2026-02-21T14:15:01Z', assetClass: 'digital_asset', fractionalQuantity: true },
   { id: 'ord-016', accountId: 'acc-006', symbol: 'AAPLC185', side: 'buy_to_open', quantity: 5, orderType: 'limit', limitPrice: 8.50, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-25T11:00:00Z', assetClass: 'option', underlying: 'AAPL', optionType: 'call', strikePrice: 185, expirationDate: '2026-03-21', contractMultiplier: 100 },
 ]
-
-/** Roth IRAs and tax-deferred accounts realise no reportable capital gain on a sale. */
-function isTaxableAccount(taxTreatment: string): boolean {
-  return taxTreatment === 'taxable' || taxTreatment === 'trust_taxable'
-}
 
 /**
  * Estimate the capital-gains tax on selling `notional` dollars out of `target`, using the same
