@@ -18,7 +18,9 @@ import type { CurrencyCode } from '@/types/currency'
 const TECH_SYMBOLS = ['AAPL', 'MSFT', 'NVDA', 'GOOGL', 'META', 'AMZN', 'TSLA']
 const SECTOR_LIMIT = 0.40
 
-const orders: Order[] = [
+// Exported so `ai.ts`'s trading-desk chat response reads the same pending-order counts this
+// handler serves, rather than a second, independently hand-typed "3 open orders" figure.
+export const orders: Order[] = [
   // ── Recent orders for Johnson Family Trust (acc-001) ──
   { id: 'ord-001', accountId: 'acc-001', symbol: 'VTI', side: 'buy', quantity: 150, orderType: 'market', status: 'filled', filledQuantity: 150, filledPrice: 268.35, submittedAt: '2026-02-24T14:30:00Z', filledAt: '2026-02-24T14:30:02Z', assetClass: 'equity' },
   { id: 'ord-002', accountId: 'acc-001', symbol: 'AGG', side: 'buy', quantity: 500, orderType: 'market', status: 'filled', filledQuantity: 500, filledPrice: 98.42, submittedAt: '2026-02-24T14:30:00Z', filledAt: '2026-02-24T14:30:01Z', assetClass: 'equity' },

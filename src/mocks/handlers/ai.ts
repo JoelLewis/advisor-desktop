@@ -10,7 +10,7 @@ import type { CustomPromptCategory } from '@/types/settings'
 import type { TaxLot } from '@/types/portfolio'
 import { formatAUM, computeTotalAUM } from './utils'
 import { now, MOCK_TODAY_ISO } from '@/lib/clock'
-import { computeMetrics } from './pms'
+import { computeMetrics, computeDriftForAccount } from './pms'
 import { generateTaxLots } from './custodian'
 import { openWashSaleWindows } from '../data/realised-sales'
 import { FX_RATES_USD_BASE } from '../data/currencies'
@@ -18,6 +18,9 @@ import { convertToBase } from '@/lib/currency'
 import { formatDate } from '@/lib/utils'
 import { estimatedTaxBenefit, isHarvestable } from '@/features/portfolios/tax/shared'
 import { isTaxableAccount } from '@/lib/tax-treatment'
+import { getPositionsForAccount } from '../data/positions'
+import { securityKind, concentrationLimitFor } from '@/lib/security-master'
+import { orders } from './oms'
 
 /**
  * D22 · tax-loss-harvesting — the book-wide harvestable lot set, walked once here so the dashboard
@@ -55,6 +58,65 @@ function makeBriefing(
   return { title, entityType, metrics, highlights, asOf: new Date().toISOString() }
 }
 
+/**
+ * §9.5 · one book-wide "which account is drifted" fact, read by the drift-count claim in the
+ * `trading:` chat response and (via `needsRebalance`) the same predicate the rebalance queue and
+ * `oms.ts`'s trade generator gate on — so the chat answer can never disagree with the surface a
+ * click-through would land on.
+ */
+function driftedAccountsCount(): number {
+  return accounts.filter((a) => computeDriftForAccount(a).needsRebalance).length
+}
+
+/**
+ * §9.5 · the account carrying the single largest harvestable loss across the book, walked from
+ * the same `harvestableLotsAcrossBook()` set the dashboard's "Tax-loss harvesting window" insight
+ * uses — so "the largest opportunity is in account X" and the total figure quoted alongside it
+ * are two views of one pass over the real lots, not an independently hand-typed household name.
+ */
+function topHarvestableAccount(harvestable: ReturnType<typeof harvestableLotsAcrossBook>): { accountId: string; accountName: string; amount: number } | null {
+  const byAccount = new Map<string, number>()
+  for (const lot of harvestable) {
+    byAccount.set(lot.accountId, (byAccount.get(lot.accountId) ?? 0) + Math.abs(lot.gainLoss))
+  }
+  let best: { accountId: string; amount: number } | null = null
+  for (const [accountId, amount] of byAccount) {
+    if (!best || amount > best.amount) best = { accountId, amount }
+  }
+  if (!best) return null
+  const account = accounts.find((a) => a.id === best!.accountId)
+  return { accountId: best.accountId, accountName: account?.name ?? best.accountId, amount: best.amount }
+}
+
+/** "March 15, 2026" — long-month style, matching `proposals.ts`'s date prose. */
+function formatLongDate(iso: string): string {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-US', {
+    year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC',
+  })
+}
+
+/**
+ * §9.5 · the static response bodies in `data/ai.ts` carry `{{TOKEN}}` placeholders rather than
+ * hand-typed figures. Filling them in here, at request time, from the canonical selectors above
+ * means the number that lands in `content` and the number that lands in its `citations` are
+ * always the same value — derived once (see the `facts` map below), used everywhere the token
+ * appears, rather than two independently hand-typed numbers that happen to agree today.
+ */
+function interpolateFacts<T>(value: T, facts: Record<string, string>): T {
+  if (typeof value === 'string') {
+    return value.replace(/\{\{(\w+)\}\}/g, (match, key: string) => facts[key] ?? match) as unknown as T
+  }
+  if (Array.isArray(value)) {
+    return value.map((v) => interpolateFacts(v, facts)) as unknown as T
+  }
+  if (value !== null && typeof value === 'object') {
+    const out: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) out[k] = interpolateFacts(v, facts)
+    return out as T
+  }
+  return value
+}
+
 export const aiHandlers = [
   http.post('/api/ai/message', async ({ request }) => {
     const body = (await request.json()) as {
@@ -66,16 +128,41 @@ export const aiHandlers = [
 
     const template = getAIResponse(body.message, body.context.screenType, body.context.entityType)
 
+    // §9.5 · one fact, one place — every figure below is read from the same selector the screen
+    // it cites would show, so a token that appears in both `content` and a `citations[].text`
+    // (e.g. `{{DRIFT_COUNT}}`) always resolves to the identical value.
+    const washWindows = openWashSaleWindows(MOCK_TODAY_ISO)
+    const sortedWashSaleEnds = washWindows.map((w) => w.end).sort()
+    const latestWashSaleEnd = sortedWashSaleEnds[sortedWashSaleEnds.length - 1]
+    const pendingOrders = orders.filter((o) => o.status === 'pending')
+    const harvestable = harvestableLotsAcrossBook()
+    const topHarvest = topHarvestableAccount(harvestable)
+
+    const facts: Record<string, string> = {
+      OPEN_ORDERS_COUNT: String(pendingOrders.length),
+      LIMIT_ORDERS_COUNT: String(pendingOrders.filter((o) => o.orderType === 'limit').length),
+      MARKET_ORDERS_COUNT: String(pendingOrders.filter((o) => o.orderType === 'market').length),
+      WASH_SALE_COUNT: String(new Set(washWindows.map((w) => w.accountId)).size),
+      WASH_SALE_DATE: latestWashSaleEnd ? formatLongDate(latestWashSaleEnd) : 'no open windows',
+      DRIFT_COUNT: String(driftedAccountsCount()),
+      TLH_TOTAL: formatAUM(harvestable.reduce((s, l) => s + Math.abs(l.gainLoss), 0)),
+      TLH_ACCOUNT_COUNT: String(new Set(harvestable.map((l) => l.accountId)).size),
+      TOP_HARVEST_ACCOUNT: topHarvest?.accountName ?? 'no account',
+      TOP_HARVEST_AMOUNT: topHarvest ? formatAUM(topHarvest.amount) : '$0',
+    }
+
+    const filled = interpolateFacts(template, facts)
+
     const response: ChatMessage = {
       id: `msg-${Date.now()}`,
       role: 'assistant',
-      content: template.content,
+      content: filled.content,
       timestamp: new Date().toISOString(),
-      citations: template.citations,
-      actions: template.actions,
-      documentPreview: template.documentPreview,
-      richCards: template.richCards,
-      tradeSuggestions: template.tradeSuggestions,
+      citations: filled.citations,
+      actions: filled.actions,
+      documentPreview: filled.documentPreview,
+      richCards: filled.richCards,
+      tradeSuggestions: filled.tradeSuggestions,
     }
 
     return HttpResponse.json(response)
@@ -225,14 +312,19 @@ export const aiHandlers = [
     }
 
     if (screenType === 'trading') {
+      // §9.5 · "Open Orders" and "Trade Restrictions" previously hand-typed 3 and "2 securities" —
+      // this briefing sits on the same screen as the chat's wash-sale/open-orders claims, so it
+      // now reads the same `orders` list and `openWashSaleWindows` result they do.
+      const openOrders = orders.filter((o) => o.status === 'pending')
+      const restrictedAccounts = new Set(openWashSaleWindows(MOCK_TODAY_ISO).map((w) => w.accountId)).size
       return HttpResponse.json(makeBriefing(
         'Trading Desk',
         'trading',
         [
           { label: 'Book AUM', value: formatAUM(computeTotalAUM()) },
-          { label: 'Open Orders', value: '3' },
+          { label: 'Open Orders', value: String(openOrders.length) },
           { label: "Today's Trades", value: '7' },
-          { label: 'Trade Restrictions', value: '2 securities' },
+          { label: 'Trade Restrictions', value: `${restrictedAccounts} account${restrictedAccounts === 1 ? '' : 's'}` },
         ],
         [
           'VIX at 14.2 — low volatility environment',
@@ -448,15 +540,28 @@ export const aiHandlers = [
     if (screenType === 'account_detail' && entityId) {
       const account = accounts.find((a) => a.id === entityId)
       if (account) {
-        insights.push({
-          id: `acc-${entityId}-1`,
-          severity: 'warning',
-          title: 'Position Concentration Alert',
-          body: `This account has a position exceeding the 5% single-stock IPS limit. Review and consider a phased reduction plan.`,
-          metric: { label: 'Largest position weight', value: '8.2%' },
-          actionLabel: 'View Concentration',
-          actionAI: `Analyze concentration risk in ${account.name} and suggest trades to reduce single-stock exposure`,
-        })
+        // §9.5 (scope amendment) — this insight pushed a hardcoded '8.2%' weight against an
+        // invented "5% single-stock limit" for every account, always. The real single-name limit
+        // is `SINGLE_NAME_LIMIT` (10%, security-master.ts) — funds and cash carry their own,
+        // higher limits (`concentrationLimitFor`) and are not single-stock concentration risk.
+        // Only single-name positions are considered, and only the largest breach (if any) is
+        // reported; an account with no breach — e.g. acc-006, whose largest position is a 16.5%
+        // SPY allocation, a fund — gets no alert at all.
+        const breach = getPositionsForAccount(account.id, account.totalValue)
+          .map((p) => ({ ...p, kind: securityKind(p.symbol, p.assetClass), limit: concentrationLimitFor(securityKind(p.symbol, p.assetClass)) }))
+          .filter((p) => p.kind === 'single_name' && p.weight > p.limit)
+          .sort((a, b) => b.weight - a.weight)[0]
+        if (breach) {
+          insights.push({
+            id: `acc-${entityId}-1`,
+            severity: 'warning',
+            title: 'Position Concentration Alert',
+            body: `${breach.symbol} is ${(breach.weight * 100).toFixed(1)}% of this account, exceeding the ${(breach.limit * 100).toFixed(0)}% single-stock IPS limit. Review and consider a phased reduction plan.`,
+            metric: { label: 'Largest position weight', value: `${(breach.weight * 100).toFixed(1)}%` },
+            actionLabel: 'View Concentration',
+            actionAI: `Analyze concentration risk in ${account.name} and suggest trades to reduce single-stock exposure`,
+          })
+        }
         // §9.1 (Task 2, review round 2) — this canned insight was pushed for every account with
         // no `taxTreatment` check, hardcoded rather than derived, so the "grep for the shared
         // helper names" sweep in this file's `harvestableLotsAcrossBook` never found it. Confirmed
@@ -547,14 +652,24 @@ export const aiHandlers = [
         body: 'S&P 500 +0.4% today, VIX 14.2 (low vol). Treasury yields stable. No significant earnings announcements affecting your book positions.',
         metric: { label: 'Book beta-adjusted exposure', value: '1.02x' },
       })
-      insights.push({
-        id: 'trade-2',
-        severity: 'warning',
-        title: 'Trade Restrictions Active',
-        body: '2 securities have active trade restrictions. VXUS — wash sale window in Johnson IRA (sold Jan 14, restricted through Feb 13). EFA — compliance hold pending quarterly certification. Check restrictions before placing orders in these or substantially identical securities.',
-        actionLabel: 'View Restricted Securities',
-        actionAI: 'Show me all securities with active trade restrictions and their details',
-      })
+      // §9.5 · previously named a fabricated "VXUS — Johnson IRA" window and an unverifiable
+      // "EFA — compliance hold." Read from `openWashSaleWindows` instead — the same selector the
+      // chat's trading-desk answer and the wash-sale calendar citation read — so this insight
+      // can't name a restriction the account's own screen doesn't show.
+      const activeWashWindows = openWashSaleWindows(MOCK_TODAY_ISO)
+      if (activeWashWindows.length > 0) {
+        const detail = activeWashWindows
+          .map((w) => `${w.symbol} in ${accounts.find((a) => a.id === w.accountId)?.name ?? w.accountId} (through ${formatDate(w.end)})`)
+          .join('; ')
+        insights.push({
+          id: 'trade-2',
+          severity: 'warning',
+          title: 'Trade Restrictions Active',
+          body: `${activeWashWindows.length} account${activeWashWindows.length === 1 ? '' : 's'} carrying an active wash-sale restriction: ${detail}. Check restrictions before placing orders in these or substantially identical securities.`,
+          actionLabel: 'View Restricted Securities',
+          actionAI: 'Show me all securities with active trade restrictions and their details',
+        })
+      }
     }
 
     return HttpResponse.json(insights)

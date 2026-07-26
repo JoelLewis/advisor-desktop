@@ -118,21 +118,27 @@ const responsesByContext: Record<string, ResponseTemplate[]> = {
         'Your AI assistant settings are configured for balanced automation. Currently, I auto-generate meeting prep notes and flag rebalancing opportunities, but require approval before executing trades or sending client communications. Would you like to adjust these thresholds?',
     },
   ],
+  // §9.5 · the figures below are tokens (`{{...}}`), not prose — `aiHandlers` in
+  // `mocks/handlers/ai.ts` fills them in at request time from `openWashSaleWindows`,
+  // `computeDriftForAccount`, the book-wide harvestable-lot derivation, and the live `orders`
+  // list, so the number in the sentence and the number in its citation are always the same
+  // value, derived once. Previously these were independently hand-typed and none of them agreed
+  // with the screens their citations named (finding §9.5).
   'trading:': [
     {
       content:
-        'Your trading desk is ready. You have 3 open orders pending execution and 2 accounts with wash sale restrictions active through March 15. The S&P 500 is up 0.4% today with low volatility (VIX 14.2). I can help with pre-trade compliance checks, tax impact analysis, or suggest replacement securities.',
+        'Your trading desk is ready. You have {{OPEN_ORDERS_COUNT}} open orders pending execution and {{WASH_SALE_COUNT}} accounts with wash sale restrictions active through {{WASH_SALE_DATE}}. The S&P 500 is up 0.4% today with low volatility (VIX 14.2). I can help with pre-trade compliance checks, tax impact analysis, or suggest replacement securities.',
       citations: [
-        { source: 'OMS — Open Orders', text: '3 orders pending: 2 limit orders, 1 market order' },
-        { source: 'Tax — Wash Sale Calendar', text: '2 securities restricted through March 15, 2026' },
+        { source: 'OMS — Open Orders', text: '{{OPEN_ORDERS_COUNT}} orders pending: {{LIMIT_ORDERS_COUNT}} limit orders, {{MARKET_ORDERS_COUNT}} market orders' },
+        { source: 'Tax — Wash Sale Calendar', text: '{{WASH_SALE_COUNT}} accounts restricted through {{WASH_SALE_DATE}}' },
       ],
     },
     {
       content:
-        'I see some opportunities across your book today: 4 accounts have drifted beyond their rebalancing thresholds, and there are $18,600 in harvestable losses in the Chen-Wong taxable account. Want me to generate trade suggestions for any of these?',
+        'I see some opportunities across your book today: {{DRIFT_COUNT}} accounts have drifted beyond their rebalancing thresholds, and there are {{TOP_HARVEST_AMOUNT}} in harvestable losses in the {{TOP_HARVEST_ACCOUNT}} account. Want me to generate trade suggestions for any of these?',
       citations: [
-        { source: 'PMS — Drift Report', text: '4 accounts beyond rebalancing threshold' },
-        { source: 'Tax Analysis', text: 'Chen-Wong taxable: $18,600 harvestable losses' },
+        { source: 'PMS — Drift Report', text: '{{DRIFT_COUNT}} accounts beyond rebalancing threshold' },
+        { source: 'Tax Analysis', text: '{{TOP_HARVEST_ACCOUNT}}: {{TOP_HARVEST_AMOUNT}} harvestable losses' },
       ],
     },
   ],
@@ -202,13 +208,16 @@ const keywordResponses: Array<{ keywords: string[]; response: ResponseTemplate }
   {
     keywords: ['tax', 'harvest', 'loss'],
     response: {
+      // §9.5 · tokens filled from the same book-wide harvestable-lot walk the dashboard's
+      // "Tax-loss harvesting window" insight uses (`harvestableLotsAcrossBook` in
+      // `mocks/handlers/ai.ts`), so this answer and that insight always quote the same total.
       content:
-        'I\'ve identified $47,200 in harvestable losses across your book. The largest opportunity is in the Chen-Wong taxable account with $18,600 in short-term losses. I can generate a tax-loss harvesting proposal that includes replacement security suggestions to maintain market exposure.',
+        'I\'ve identified {{TLH_TOTAL}} in harvestable losses across {{TLH_ACCOUNT_COUNT}} accounts in your book. The largest single opportunity is in the {{TOP_HARVEST_ACCOUNT}} account with {{TOP_HARVEST_AMOUNT}} in harvestable losses. I can generate a tax-loss harvesting proposal that includes replacement security suggestions to maintain market exposure.',
       citations: [
-        { source: 'Tax Analysis — Book Summary', text: 'Total harvestable losses: $47,200 across 8 accounts' },
+        { source: 'Tax Analysis — Book Summary', text: 'Total harvestable losses: {{TLH_TOTAL}} across {{TLH_ACCOUNT_COUNT}} accounts' },
       ],
       actions: [
-        { id: 'act-011', action: 'Generate TLH Report', description: 'Create comprehensive tax-loss harvesting report', impact: '$47,200 in potential harvested losses', status: 'pending' },
+        { id: 'act-011', action: 'Generate TLH Report', description: 'Create comprehensive tax-loss harvesting report', impact: '{{TLH_TOTAL}} in potential harvested losses', status: 'pending' },
       ],
     },
   },
