@@ -614,7 +614,25 @@ A citation naming an internal screen implies a reconciliation that did not happe
 **Files:**
 - Modify: `src/mocks/data/ai.ts` (the static response bodies and their citations)
 - Modify: `src/mocks/handlers/ai.ts` (interpolate at read time)
+- Modify: `src/mocks/handlers/ai.ts:462-467` (the per-account "Position Concentration Alert" insight)
 - Test: `src/mocks/handlers/__tests__/ai-citation-invariants.test.ts` (create)
+
+**Scope amendment (added after Task 2).** Task 2's review found the `/api/ai/insights`
+`account_detail` branch pushing a hardcoded harvesting insight for every account; that half was
+fixed there. Its sibling at `:462-467` is equally invented and is left for this task, which owns
+this file: `title: 'Position Concentration Alert'`, `metric: { value: '8.2%' }`, and body text
+claiming a position "exceeding the 5% single-stock IPS limit" — **all three hardcoded for every
+account, and the 5% contradicts the real `SINGLE_NAME_LIMIT` of 10% in `src/lib/security-master.ts`.**
+Derive the largest position weight and the limit from the account's own positions and
+`concentrationLimitFor`, and emit the insight only when a position actually breaches. An account
+with no breach must get no alert — assert that, or a "fix" that always fires still passes.
+
+**A method note that governs this task's sweep.** Task 2's sweep grepped for the helper names
+(`estimatedTaxBenefit`, `isHarvestable`, `HARVEST_LOSS_THRESHOLD`) and missed the defect above,
+because a hardcoded `'$12,400'` in a template string calls none of them. **Grepping for helper
+names finds derived defects and is blind to invented ones.** Sweep this file by reading every
+template literal and every `metric:` / `value:` / `citations:` field, not by grepping for
+functions. Numeric and currency literals are the signal.
 
 **Interfaces:**
 - Consumes: `openWashSaleWindows(asOf, householdId?)` from `src/mocks/data/realised-sales.ts`; `computeDriftForAccount` from `src/mocks/handlers/pms.ts`; the harvestable-benefit derivation Task 17 built for the dashboard — **find it and reuse it, do not write a second one**.
