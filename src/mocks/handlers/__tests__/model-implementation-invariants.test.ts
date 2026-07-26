@@ -45,6 +45,24 @@ describe('§9.7 · every model sleeve names a priced implementation security', (
     expect(MODEL_DEFINITIONS.every((m) => modelImplementationSecurity(m.id, 'cash') === undefined)).toBe(true)
   })
 
+  it('an unknown model resolves to no security at all, rather than silently to mod-001 lineup', () => {
+    // `resolveModel` falls back to the first model — defensible where the consequence is a
+    // rendered target set, and not defensible here, where the consequence is a trade instruction.
+    // An account on a model that cannot be found would be told to buy mod-001's Growth-equity
+    // lineup with nothing anywhere saying the model was never located. No fixture reaches this,
+    // which is exactly why it needs a synthetic check: the fallback is invisible until the day a
+    // model id is renamed.
+    const knownIds = new Set(MODEL_DEFINITIONS.map((m) => m.id))
+    expect(knownIds.has('mod-000-does-not-exist')).toBe(false)
+    for (const assetClass of ['us_equity', 'intl_equity', 'fixed_income', 'alternatives']) {
+      expect(modelImplementationSecurity('mod-000-does-not-exist', assetClass), assetClass).toBeUndefined()
+    }
+    // Vacuity guard: the same asset classes DO resolve for a model that exists, so `undefined`
+    // above is the unknown model talking and not an unreachable asset class.
+    const real = MODEL_DEFINITIONS[0]!
+    expect(modelImplementationSecurity(real.id, 'us_equity')).toBeDefined()
+  })
+
   it('every named symbol resolves to a real, positive price', () => {
     const unpriced: string[] = []
     let resolved = 0

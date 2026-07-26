@@ -230,6 +230,19 @@ function resolveModel(modelId: string): ModelDefinition {
 }
 
 /**
+ * The same lookup **without** the fallback, for the one caller where guessing is not a display
+ * degradation but a trade instruction. `resolveModel`'s `?? getModelByIndex(0)` is pre-existing and
+ * defensible for `getModelTargets` and `modelIdentity` — an unrecognised model there renders a
+ * plausible target set rather than an empty page. Extending it to **security selection** is not the
+ * same thing: an account on an unknown model would be told to buy mod-001's lineup, a Growth
+ * equity lineup, with no signal that the model behind it was never found. It returns `undefined`
+ * instead, and the engine proposes nothing for that sleeve.
+ */
+function findModel(modelId: string): ModelDefinition | undefined {
+  return MODELS.find((m) => m.id === modelId)
+}
+
+/**
  * Symbol -> quote, built from the positions of **USD-denominated accounts only**. The restriction
  * is the point: `positions.ts` prices each account's holdings in that account's own currency
  * (0700.HK at HK$380, SIE.DE at EUR 185.40), so a master built over every account would hand the
@@ -259,7 +272,7 @@ export type ModelSecurity = { symbol: string; name: string; price: number }
  * drops silently, which looks identical to the bug this fixes.
  */
 export function modelImplementationSecurity(modelId: string, assetClass: string): ModelSecurity | undefined {
-  const symbol = resolveModel(modelId).assetClasses.find((ac) => ac.assetClass === assetClass)?.implementationSymbol
+  const symbol = findModel(modelId)?.assetClasses.find((ac) => ac.assetClass === assetClass)?.implementationSymbol
   if (!symbol) return undefined
   const quote = USD_SECURITY_QUOTES.get(symbol)
   if (!quote) return undefined
@@ -303,8 +316,9 @@ function modelBookFor(modelId: string): { assignedAccounts: number; totalAUM: nu
 }
 
 function getModelTargets(modelId: string): Record<string, number> {
-  // Same `resolveModel` the implementation-security lookup uses, so a sleeve's target weight and
-  // the security that fills it can never be read off two different models.
+  // Same `MODELS` lookup the implementation-security resolver uses, so a sleeve's target weight
+  // and the security that fills it can never be read off two different models. The two differ
+  // only in what they do when the model is not found — see `findModel`.
   const model = resolveModel(modelId)
   const targets: Record<string, number> = {}
   for (const ac of model.assetClasses) {

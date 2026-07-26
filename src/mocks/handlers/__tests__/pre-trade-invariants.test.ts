@@ -6,7 +6,7 @@ import { getPositions, getDrift } from '@/services/pms'
 import { modelImplementationSecurity } from '@/mocks/handlers/pms'
 import { convertCurrency } from '@/lib/currency'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
-import { LONG_TERM_RATE, SHORT_TERM_RATE } from '@/features/portfolios/tax/shared'
+import { LONG_TERM_RATE, SHORT_TERM_RATE, taxRateFor } from '@/features/portfolios/tax/shared'
 
 describe('pre-trade concentration uses the account own value', () => {
   it('C27: a $600K trade is 5% of the $12M Chen Trust, not 24% — no violation, trade passes', async () => {
@@ -373,8 +373,13 @@ describe('fix round 4 · sells are capped by what buys AND cash-to-target can ab
     // from above and never overshot. Every leg stays inside the position behind it (long-only).
     // Executed at the lots traded: sells NESN.SW 2,500 + NOVN.SW 397 + SRFCHA.SW 2,000 +
     // CSBGC0.SW 2,043 = CHF 715,064 (136 under the CHF 715,200 notional; four legs whose unit
-    // prices sum to 407.00), and buys VTI 3,172 + VWO 3,803 + QAI 2,420 = CHF 974,371 (319 under;
-    // unit prices summing to 348.50). Cash lands at 5.012%, inside [5.00%, 22.30%].
+    // prices sum to 407.00), and buys VTI 3,172 + VWO 3,803 + QAI 2,420 = CHF 974,371, which is
+    // 183 under the cap those buys were actually built against — executedSell 715,064 + cash above
+    // target (334,490 - 75,000 = 259,490) = 974,554 — against three legs whose unit prices sum to
+    // **CHF** 306.68 (VTI 236.28 + VWO 39.424 + QAI 30.976). The bound here was previously the
+    // USD lot-sum 348.50 guarding a CHF quantity, 14% looser than it read: the same
+    // wrong-unit error as bounding a money invariant in weight, one currency further down.
+    // Cash lands at 5.012%, inside [5.00%, 22.30%].
     const { account, trades, totalSell, totalBuy } = await totals('acc-044')
     expect(trades.length).toBeGreaterThan(0)
     expect(totalSell).toBe(715_064)
@@ -383,7 +388,7 @@ describe('fix round 4 · sells are capped by what buys AND cash-to-target can ab
     expect(715_200 - totalSell).toBeLessThan(407.00)
     const endCash = account.cashBalance - totalBuy + totalSell
     expect(endCash - 0.05 * account.totalValue).toBeGreaterThanOrEqual(0)
-    expect(endCash - 0.05 * account.totalValue).toBeLessThan(348.50)
+    expect(endCash - 0.05 * account.totalValue).toBeLessThan(306.68)
     // The round-4 property, restated: cash falls toward target, it is never pushed up.
     expect(account.cashBalance - totalBuy + totalSell).toBeLessThan(account.cashBalance)
   })
@@ -401,7 +406,10 @@ describe('fix round 4 · sells are capped by what buys AND cash-to-target can ab
     // Loss lots first, and the largest embedded gain last — the ordering, not just the membership.
     expect(sells.map((t) => t.symbol)).toEqual(['DOT', 'SOL', 'USDC', 'ETH', 'AVAX', 'LINK', 'BTC'])
     const btc = sells.find((t) => t.symbol === 'BTC')!
-    expect(btc.estimatedValue).toBeLessThanOrEqual(188_017.50)
+    // Read from the fixture rather than re-typed: the position is worth $188,017.50, and a
+    // hand-copied bound is a second copy that can drift from the thing it guards.
+    const btcPosition = (await getPositions('acc-045')).find((p) => p.symbol === 'BTC')!
+    expect(btc.estimatedValue).toBeLessThanOrEqual(Math.round(btcPosition.marketValue))
     // This account is where lot granularity bites hardest, and legibly so: BTC's leg wants
     // 2.1487 units and one unit is $87,450, so it trades 2 and the sleeve executes at $370,372
     // against a $385,050 notional. That single leg is $13,003 of the $14,636 gap; the seven sell
@@ -440,25 +448,42 @@ describe('fix round 4 · sells are capped by what buys AND cash-to-target can ab
     expect(endCash).toBeLessThan(account.cashBalance)
   })
 
-  it('across every account, a rebalance never pushes cash above the model cash target', async () => {
+  it('across every account, a rebalance never pushes cash above the model cash target — in money, at zero tolerance', async () => {
     // The invariant the cap encodes, stated once over all 47 accounts: proceeds may fill the gap
     // to the account's own model cash target but never overshoot it, and an account already
     // above that target is never pushed higher still. A cap that is too generous (no zero floor
     // on the headroom, or headroom measured against the wrong side of the target) breaks this;
     // a cap that is too tight (round 3's `totalBuy` alone) is caught by the named accounts above.
     // The cash target is read from `getDrift`, the same drift surface the proposal derives from.
+    //
+    // Stated in **money with no tolerance**. This assertion carried a `± 0.0005` *weight*
+    // tolerance, which is a different amount of money on every account it covers — $4,100 on
+    // acc-001, $6,250 on acc-041, $156 on acc-033 — and it is the whole-book sweeps, not the
+    // named-account tests, that this book relies on to be exhaustive. Round 3 converted the
+    // named accounts' bounds from weight to money and left these two on weight, which is
+    // inverted from where the risk lives: it let acc-033 finish 0.0098 of a point **more**
+    // overweight cash than it started (45,937 against a 45,861 ceiling, $76 the wrong way)
+    // while both sweeps reported clean. Nothing needs a tolerance here — `estimatedValue` is an
+    // integer number of currency units and the bound is a product of two exact fixture figures.
+    const violations: string[] = []
+    let examined = 0
     for (const account of await getAccounts()) {
       const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
       const totalSell = preview!.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
       const totalBuy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
       if (totalSell === 0) continue
+      examined++
       const drift = await getDrift(account.id)
       const cashTarget = drift.assetClassDrifts.find((d) => d.assetClass === 'cash')?.target ?? 0
-      const startCashPct = account.cashBalance / account.totalValue
-      const endCashPct = (account.cashBalance - totalBuy + totalSell) / account.totalValue
-      expect(endCashPct, `${account.id} target ${cashTarget} start ${startCashPct} end ${endCashPct}`)
-        .toBeLessThanOrEqual(Math.max(cashTarget, startCashPct) + 0.0005)
+      const ceiling = Math.max(cashTarget * account.totalValue, account.cashBalance)
+      const endCash = account.cashBalance - totalBuy + totalSell
+      if (endCash > ceiling) {
+        violations.push(`${account.id}: end ${endCash.toFixed(2)} above ceiling ${ceiling.toFixed(2)} by ${(endCash - ceiling).toFixed(2)}`)
+      }
     }
+    // Vacuity guard: an empty book would satisfy the loop above without examining anything.
+    expect(examined).toBeGreaterThan(30)
+    expect(violations).toEqual([])
   })
 })
 
@@ -470,12 +495,21 @@ describe('§9.6 · buys are capped by available cash above target, symmetric to 
     const cash = positions.find((p) => p.symbol === 'CASH')!.marketValue
     const sell = preview!.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
     const buy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
-    const endWeight = (cash - buy + sell) / account.totalValue
     const target = (await getDrift('acc-043')).assetClassDrifts.find((d) => d.assetClass === 'cash')!.target
-    expect(endWeight).toBeGreaterThanOrEqual(target - 0.0002)
+    // In money, at zero tolerance. The `- 0.0002` weight tolerance this replaces was worth €640
+    // on this account — more than three CSBGU0.SW lots — for an invariant whose whole content is
+    // "cash does not fall below the target". There is nothing for a tolerance to absorb: both
+    // sides are exact fixture arithmetic.
+    expect(cash - buy + sell).toBeGreaterThanOrEqual(target * account.totalValue)
   })
 
-  it('every account: post-trade cash lands within its own target band, from both directions', async () => {
+  it('every account: post-trade cash lands within its own target band, from both directions, in money at zero tolerance', async () => {
+    // Both halves in **money**, with no tolerance. This is the sweep that is supposed to be
+    // exhaustive, and it carried a `± 0.0002` weight tolerance — $20 on acc-040, $156 on
+    // acc-033, $900 on acc-002, $2,500 on acc-041, i.e. more than three whole VTI lots on the
+    // largest account in the book. It reported clean while acc-033 ended $76 above its own
+    // starting cash balance, moving *away* from a target it was already overweight against.
+    // A weight tolerance is the wrong unit for a money invariant.
     const accounts = await getAccounts()
     const violations: string[] = []
     let examined = 0
@@ -487,21 +521,56 @@ describe('§9.6 · buys are capped by available cash above target, symmetric to 
       const cash = positions.find((p) => p.symbol === 'CASH')?.marketValue ?? 0
       const sell = preview.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
       const buy = preview.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
-      const startW = cash / account.totalValue
-      const endW = (cash - buy + sell) / account.totalValue
       const target = (await getDrift(account.id)).assetClassDrifts.find((d) => d.assetClass === 'cash')?.target ?? 0
+      const targetValue = target * account.totalValue
+      const floor = Math.min(cash, targetValue)
+      const ceiling = Math.max(cash, targetValue)
+      const end = cash - buy + sell
       // FLOOR — the assertion the Phase 1 sweep was missing.
-      if (endW < Math.min(startW, target) - 0.0002) {
-        violations.push(`${account.id}: cash fell to ${(endW * 100).toFixed(2)}% below min(start ${(startW * 100).toFixed(2)}%, target ${(target * 100).toFixed(2)}%)`)
+      if (end < floor) {
+        violations.push(`${account.id}: end ${end.toFixed(2)} below floor ${floor.toFixed(2)} by ${(floor - end).toFixed(2)}`)
       }
       // CEILING — the assertion it did make; both must hold.
-      if (endW > Math.max(startW, target) + 0.0002) {
-        violations.push(`${account.id}: cash rose to ${(endW * 100).toFixed(2)}% above max(start, target)`)
+      if (end > ceiling) {
+        violations.push(`${account.id}: end ${end.toFixed(2)} above ceiling ${ceiling.toFixed(2)} by ${(end - ceiling).toFixed(2)}`)
       }
     }
     // Vacuity guard: prove accounts were actually examined, not that every preview was empty.
-    expect(examined).toBeGreaterThan(0)
+    expect(examined).toBeGreaterThan(30)
     expect(violations).toEqual([])
+  })
+
+  it('acc-033: an account already overweight cash is not made MORE overweight by the flooring on the other side', async () => {
+    // The case both whole-book sweeps missed while they were stated in weight. acc-033 holds
+    // $45,861 of cash on a $780,000 account — 5.8796% against a 5.00% target, so it is *already*
+    // overweight and the only legal direction for its cash is down (or, at worst, nowhere).
+    //
+    //   raw   totalSell = 4,602 (intl_equity, EFA)     totalBuy = 4,134 (fixed_income, AGG)
+    //   buy   AGG  floor(4,134 / 98.50) = 41  ->  41 x 98.50  = 4,039
+    //   sell  EFA  floor(4,039 / 82.30) = 49  ->  49 x 82.30  = 4,033
+    //   end   45,861 - 4,039 + 4,033 = 45,855   (6 below the start, and 6,855 above the target)
+    //
+    // Sizing the sell cap on the pre-floor `totalBuy` of 4,134 instead sold 50 EFA for 4,115
+    // against 4,039 of buys and left the account at $45,937 — $76 *above* where it started, on
+    // an overweight of only 0.88 of a point. Both bounds are the executed figure now.
+    const account = (await getAccounts()).find((a) => a.id === 'acc-033')!
+    const [preview] = await previewRebalance({ accountIds: ['acc-033'], taxAware: true })
+    const trades = preview!.trades
+    const totalSell = trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
+    const totalBuy = trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
+    expect(trades.length).toBeGreaterThan(0)
+    expect(totalBuy).toBe(4_039)
+    expect(totalSell).toBe(4_033)
+    const endCash = account.cashBalance - totalBuy + totalSell
+    expect(endCash).toBeLessThanOrEqual(account.cashBalance)
+    expect(endCash).toBeGreaterThanOrEqual(0.05 * account.totalValue)
+    // Vacuity guard on the premise: it really does start overweight, so "cash may only fall" is
+    // the live constraint and not a statement about an account moving the other way.
+    expect(account.cashBalance).toBeGreaterThan(0.05 * account.totalValue)
+    // And the sells really are bounded by the *executed* buys, not by the 4,134 notional: one
+    // more EFA lot (82.30) would have cleared 4,115, which is what the pre-floor cap allowed.
+    expect(totalSell).toBeLessThanOrEqual(totalBuy)
+    expect(totalBuy - totalSell).toBeLessThan(82.30)
   })
 
   // The named-account tests above and the whole-book sweep never actually exercise the
@@ -586,10 +655,14 @@ describe('fix round 3 · self-financing applies to sells only — buys are never
     for (const sell of sells) {
       const position = positions.find((p) => p.symbol === sell.symbol)
       expect(position, `acc-041 ${sell.symbol} sell with no position`).toBeDefined()
-      expect(sell.estimatedValue).toBeLessThanOrEqual(position!.marketValue + 1)
+      expect(sell.estimatedValue).toBeLessThanOrEqual(Math.round(position!.marketValue))
     }
-    // And specifically: not the 9,912,500 the unscaled version proposed.
-    expect(Math.max(...sells.map((s) => s.estimatedValue))).toBeLessThan(5_000_000)
+    // And specifically: not the 9,912,500 the unscaled version proposed against 0700.HK. The bound
+    // is that position's own market value, read from the fixture — the previous `5_000_000` was
+    // above the HK$4,560,000 position it was protecting, so a 4.9M sell would have breached
+    // long-only and still passed this line.
+    const largestPosition = positions.find((p) => p.symbol === '0700.HK')!
+    expect(Math.max(...sells.map((s) => s.estimatedValue))).toBeLessThanOrEqual(Math.round(largestPosition.marketValue))
   })
 
   it('acc-006: buys the full $912,000 (funded from its own $1,012,470 cash balance), not scaled down to the $540,000 raised from selling BXPE', async () => {
@@ -624,7 +697,15 @@ describe('fix round 3 · rebalance sells never exceed the position actually held
       for (const trade of sells) {
         const position = positions.find((p) => p.symbol === trade.symbol)
         if (!position) continue
-        expect(trade.estimatedValue, `${account.id} ${trade.symbol}`).toBeLessThanOrEqual(position.marketValue + 1)
+        // Exact, with no tolerance at all. The `+ 1` this replaces was worth **one whole unit of
+        // USDC** ($1.00) and 0.12 of a DOT — an absolute threshold spanning asset classes, the
+        // same shape as the `+ 1` share tolerance that hid a live oversell. No tolerance is
+        // needed: `estimatedValue` is `Math.round(quantity x price)` and `quantity x price` is
+        // capped at the position's market value, and `Math.round` is monotone, so
+        // `estimatedValue <= Math.round(marketValue)` holds identically. It is the rounding that
+        // needed accounting for, not slack — acc-002's ETHE leg is 71,623 against a 71,622.90
+        // position, and 71,623 is exactly `Math.round(71,622.90)`.
+        expect(trade.estimatedValue, `${account.id} ${trade.symbol}`).toBeLessThanOrEqual(Math.round(position.marketValue))
       }
     }
   })
@@ -686,6 +767,84 @@ describe('fix round 3 · rebalance tax uses each lot\'s own holding-period rate,
       remaining -= lot.currentValue * portion
     }
     expect(vti!.taxImpact).toBeLessThan(Math.round(naiveShortTermTax))
+  })
+})
+
+/**
+ * §9.7 round 4 · the rendered row carries three numbers for one trade — `quantity`, `estimatedValue`
+ * and `taxImpact` — and all three must describe the *same* trade. Round 3 moved `estimatedValue`
+ * onto executed money (`Math.round(quantity x price)`) and left `taxImpact` on the pre-floor
+ * notional, so acc-045's BTC leg rendered `quantity 2 · $174,900 · tax $10,231` with the tax
+ * estimated on $187,895 — 7.4% more BTC than the row says is being sold. 48 taxed sell legs were
+ * affected book-wide; the per-leg exposure is bounded by `unitPrice / estimatedValue`, which is
+ * 50.0% on acc-045's BTC, 7.7% on acc-040's GLD and 4.6% on acc-045's ETH.
+ *
+ * These run **tax-unaware** on purpose: `estimateSaleTax` re-orders lots by tax-per-dollar when
+ * the toggle is on, and reproducing that sort in the test would make this a copy of the function
+ * rather than a check on it. Unaware, the walk is the fixture's own lot order, so what is actually
+ * under test is the *argument* — which figure the tax is computed from — and not the algorithm.
+ * The ordering itself is pinned separately (the acc-002 and toggle tests above).
+ */
+describe('§9.7 round 4 · the tax on a row is the tax on the value that row states', () => {
+  const taxOnLots = (lots: { currentValue: number; gainLoss: number; holdingPeriod: 'short' | 'long' }[], value: number) => {
+    let remaining = value
+    let tax = 0
+    for (const lot of lots) {
+      if (remaining <= 0 || lot.currentValue <= 0) continue
+      const portion = Math.min(1, remaining / lot.currentValue)
+      const gain = lot.gainLoss * portion
+      if (gain > 0) tax += gain * taxRateFor(lot.holdingPeriod)
+      remaining -= lot.currentValue * portion
+    }
+    return Math.max(0, Math.round(tax))
+  }
+
+  it('acc-045 BTC: 2 units at $174,900, taxed on $174,900 — not on the notional the lot was floored from', async () => {
+    const [preview] = await previewRebalance({ accountIds: ['acc-045'], taxAware: false })
+    const btc = preview!.trades.find((t) => t.symbol === 'BTC' && t.side === 'sell')!
+    const position = (await getPositions('acc-045')).find((p) => p.symbol === 'BTC')!
+    const lots = (await getTaxLots('acc-045')).filter((l) => l.positionId === position.id)
+    expect(lots.length).toBeGreaterThan(0)
+    expect(btc.quantity).toBe(2)
+    expect(btc.estimatedValue).toBe(174_900)
+    expect(btc.taxImpact).toBe(taxOnLots(lots, btc.estimatedValue))
+    // The direction that makes the assertion above mean something: one BTC unit is $87,450, half
+    // this leg's executed value, so the walk is anything but insensitive to the figure it is
+    // handed. Taxing the whole position instead of the two units traded is a different number.
+    expect(taxOnLots(lots, position.marketValue)).toBeGreaterThan(btc.taxImpact)
+  })
+
+  it('every taxed account book-wide: each sell leg\'s tax is the lot walk over that leg\'s own estimatedValue', async () => {
+    const mismatches: string[] = []
+    let legsChecked = 0
+    let lotSensitiveLegs = 0
+    for (const account of await getAccounts()) {
+      const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: false })
+      // Tax-exempt accounts are zero on every leg by design (`isTaxableAccount`), and a lot walk
+      // over their positions would not be; they are covered by their own tests above.
+      if (!preview || preview.estimatedTaxImpact <= 0) continue
+      const positions = await getPositions(account.id)
+      const allLots = await getTaxLots(account.id)
+      for (const trade of preview.trades) {
+        if (trade.side !== 'sell') continue
+        const position = positions.find((p) => p.symbol === trade.symbol)
+        if (!position) continue
+        const lots = allLots.filter((l) => l.positionId === position.id)
+        if (lots.length === 0) continue
+        legsChecked++
+        const onTheRow = taxOnLots(lots, trade.estimatedValue)
+        if (trade.taxImpact !== onTheRow) {
+          mismatches.push(`${account.id} ${trade.symbol}: tax ${trade.taxImpact}, but the row's own ${trade.estimatedValue} implies ${onTheRow}`)
+        }
+        // Sensitivity: adding a single lot's worth of value changes the answer, so equality above
+        // is a real constraint on the argument rather than a walk that returns the same number
+        // for any input near it.
+        if (taxOnLots(lots, trade.estimatedValue + position.price) !== onTheRow) lotSensitiveLegs++
+      }
+    }
+    expect(legsChecked).toBeGreaterThan(30)
+    expect(lotSensitiveLegs).toBeGreaterThan(20)
+    expect(mismatches).toEqual([])
   })
 })
 
@@ -1101,12 +1260,16 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
         if (trade.side === 'sell') {
           const position = positions.find((p) => p.symbol === trade.symbol)
           expect(position, `${account.id} ${trade.symbol} sell with no position`).toBeDefined()
-          // The value bound carries a $1 tolerance for cent-level rounding. The **share count**
-          // carries none, deliberately: a whole share of slack is not rounding, it is an
-          // overshoot. This assertion was written with `+ 1` and reported clean while acc-045
-          // proposed selling 23 ETH against a 22.5 ETH holding and 15,232 USDC against
-          // 15,231.5 — a custodian rejection, hidden by a tolerance wide enough to swallow it.
-          expect(trade.estimatedValue).toBeLessThanOrEqual(position!.marketValue + 1)
+          // Neither bound carries a tolerance now. The share count never did — a whole share of
+          // slack is not rounding, it is an overshoot, and this assertion was written with `+ 1`
+          // and reported clean while acc-045 proposed selling 23 ETH against a 22.5 ETH holding
+          // and 15,232 USDC against 15,231.5. The **value** bound kept a `$1` tolerance for
+          // cent-level rounding, and $1 is exactly one whole unit of USDC and 0.12 of a DOT — the
+          // same absolute-threshold-across-asset-classes shape, surviving one line down. Rounding
+          // is accounted for by rounding the bound rather than by widening it: `estimatedValue`
+          // is `Math.round(quantity x price)`, `quantity x price <= marketValue`, and `Math.round`
+          // is monotone.
+          expect(trade.estimatedValue).toBeLessThanOrEqual(Math.round(position!.marketValue))
           expect(trade.quantity, `${account.id} ${trade.symbol} sells more units than held`)
             .toBeLessThanOrEqual(position!.quantity)
         }

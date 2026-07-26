@@ -159,7 +159,7 @@ describe('tax lots partition their positions', () => {
     for (const cap of subUnitCaps) {
       for (const rawQty of rawQtys) {
         for (const fraction of fractions) {
-          const qty = boundedTradeQty(cap, rawQty, fraction)
+          const qty = boundedTradeQty(cap, rawQty, fraction, 1)
           expect(qty, `cap=${cap} rawQty=${rawQty} fraction=${fraction}`).toBeLessThanOrEqual(cap)
           expect(qty).toBeGreaterThan(0)
         }
@@ -168,8 +168,8 @@ describe('tax lots partition their positions', () => {
   })
 
   it('boundedTradeQty returns 0 for a non-positive cap', () => {
-    expect(boundedTradeQty(0, 100, 0.2)).toBe(0)
-    expect(boundedTradeQty(-1, 100, 0.2)).toBe(0)
+    expect(boundedTradeQty(0, 100, 0.2, 1)).toBe(0)
+    expect(boundedTradeQty(-1, 100, 0.2, 1)).toBe(0)
   })
 
   /**
@@ -181,14 +181,36 @@ describe('tax lots partition their positions', () => {
    */
   it('boundedTradeQty clamps out-of-domain input instead of returning it', () => {
     for (const bad of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
-      expect(boundedTradeQty(bad, 100, 0.2), `cap ${bad}`).toBe(0)
-      expect(boundedTradeQty(0.5, bad, 0.2), `rawQty ${bad}`).toBe(0)
-      expect(boundedTradeQty(0.5, 100, bad), `fraction ${bad}`).toBe(0)
+      expect(boundedTradeQty(bad, 100, 0.2, 1), `cap ${bad}`).toBe(0)
+      expect(boundedTradeQty(0.5, bad, 0.2, 1), `rawQty ${bad}`).toBe(0)
+      expect(boundedTradeQty(0.5, 100, bad, 1), `fraction ${bad}`).toBe(0)
     }
-    expect(boundedTradeQty(0.5, -5, 0.2)).toBe(0)
-    expect(boundedTradeQty(0.5, 10, -0.2)).toBe(0)
+    expect(boundedTradeQty(0.5, -5, 0.2, 1)).toBe(0)
+    expect(boundedTradeQty(0.5, 10, -0.2, 1)).toBe(0)
     // A fraction above 1 must not let the draw exceed the cap on the whole-share branch either.
-    expect(boundedTradeQty(1.5, 100, 2)).toBeLessThanOrEqual(1.5)
+    expect(boundedTradeQty(1.5, 100, 2, 1)).toBeLessThanOrEqual(1.5)
+  })
+
+  /**
+   * Round 4 · the only direction the clamp did NOT close. On the whole-share branch the old
+   * `Math.max(1, …)` rounded **up** whenever the draw afforded less than one unit, so a caller
+   * asking for 0.2287 of a BTC against a 2.1487 BTC holding was handed a whole BTC — $87,450
+   * against a $20,000 notional, breaching both the long-only value bound and the rebalance cash
+   * band by up to a full unit. Whether that is right depends entirely on the caller, so
+   * `minimumUnits` is now theirs to state: a statement row for a trade that happened names at
+   * least one share; a rebalance sleeve that cannot afford one lot trades nothing.
+   */
+  it('boundedTradeQty rounds a sub-unit draw up or down according to the caller minimum, and never past the cap', () => {
+    // The live shape: acc-045's BTC leg, the smallest quantity anywhere in the book.
+    expect(boundedTradeQty(2.1487, 0.2287, 1, 1)).toBe(1)
+    expect(boundedTradeQty(2.1487, 0.2287, 1, 0)).toBe(0)
+    expect(boundedTradeQty(5, 0.3, 1, 1)).toBe(1)
+    expect(boundedTradeQty(5, 0.3, 1, 0)).toBe(0)
+    // A draw that does afford whole units is unaffected by the policy either way.
+    expect(boundedTradeQty(5, 2.9, 1, 0)).toBe(2)
+    expect(boundedTradeQty(5, 2.9, 1, 1)).toBe(2)
+    // And the minimum never overrides the cap: a sub-1-unit cap still takes the fractional branch.
+    expect(boundedTradeQty(0.4, 0.3, 1, 1)).toBeLessThanOrEqual(0.4)
   })
 })
 

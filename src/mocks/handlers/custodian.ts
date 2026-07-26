@@ -54,8 +54,20 @@ function quarterLabel(date: Date): string {
  * sub-1-unit position (a fractional crypto holding below 1 unit) — the forced minimum of 1 would
  * exceed the cap. Whole-share positions trade in whole shares; a cap below one unit trades in
  * fractional units instead of flooring to zero and forcing an out-of-bounds minimum.
+ *
+ * `minimumUnits` is required rather than defaulted, because the two callers genuinely differ and
+ * a default would hand one of them the other's policy silently. The transaction-history generator
+ * passes **1**: it is inventing a trade that is known to have happened, and a zero-share row in a
+ * statement is meaningless noise. The rebalance engine passes **0**: a sleeve whose notional
+ * cannot afford one whole lot must trade *nothing*, not one lot. With `1`, whenever `rough < 1`
+ * and `cap >= 1` the function rounds **up** — `boundedTradeQty(2.1487, 0.2287, 1, 1) === 1`, one
+ * whole BTC ($87,450) against a $20,000 notional — which would breach both the long-only value
+ * bound and the cash band by up to a full unit. No fixture reaches that today (the smallest leg
+ * in the book is acc-045's BTC at 2 units, a genuine floor from 2.1487), but that leg is the
+ * *last* in its sleeve's draw-down, so any fixture or threshold change leaving under $87,450 of
+ * remaining notional at it flips the case live.
  */
-export function boundedTradeQty(cap: number, rawQty: number, fraction: number): number {
+export function boundedTradeQty(cap: number, rawQty: number, fraction: number, minimumUnits: 0 | 1): number {
   // Guarded uniformly rather than only where today's caller happens to be safe. The sole caller
   // always passes finite positives, but this is exported for reuse and its whole purpose is to
   // clamp — a caller deriving `cap` from a running balance can reach zero from the negative side
@@ -64,7 +76,7 @@ export function boundedTradeQty(cap: number, rawQty: number, fraction: number): 
   if (!Number.isFinite(cap) || !Number.isFinite(rawQty) || !Number.isFinite(fraction)) return 0
   if (cap <= 0 || rawQty <= 0 || fraction <= 0) return 0
   const rough = Math.min(rawQty, cap * fraction)
-  return cap >= 1 ? Math.min(cap, Math.max(1, Math.floor(rough))) : Math.round(rough * 1e6) / 1e6
+  return cap >= 1 ? Math.min(cap, Math.max(minimumUnits, Math.floor(rough))) : Math.round(rough * 1e6) / 1e6
 }
 
 type TradeShell = {
@@ -217,7 +229,8 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
     const balance = balances.get(symbol) ?? 0
     const side = trade.side === 'sell' && balance <= 0 ? 'buy' : trade.side
     const cap = side === 'sell' ? balance : trade.pos.quantity
-    const qty = boundedTradeQty(cap, trade.rawQty, trade.fraction)
+    // 1: a statement row for a trade that happened names at least one share.
+    const qty = boundedTradeQty(cap, trade.rawQty, trade.fraction, 1)
     balances.set(symbol, side === 'buy' ? balance + qty : balance - qty)
 
     const price = trade.pos.price
