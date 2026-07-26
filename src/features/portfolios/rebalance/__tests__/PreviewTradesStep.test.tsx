@@ -88,11 +88,13 @@ describe('PreviewTradesStep renders each trade at its own account currency, not 
     const [preview] = await previewRebalance({ accountIds: ['acc-043'], taxAware: true })
     expect(preview).toBeDefined()
     expect(preview!.estimatedTaxImpact).toBeGreaterThan(0)
-    const taxedTrade = preview!.trades.find((t) => t.taxImpact > 0)
-    expect(taxedTrade).toBeDefined()
-    // The single taxed trade IS the whole account's tax impact in this fixture, so both the
-    // per-row figure (line 67) and the account-header figure (line 38) render the same amount.
-    expect(taxedTrade!.taxImpact).toBe(preview!.estimatedTaxImpact)
+    const taxedTrades = preview!.trades.filter((t) => t.taxImpact > 0)
+    expect(taxedTrades.length).toBeGreaterThan(0)
+    // §9.7 · acc-043's intl_equity overweight is now drawn down across four positions rather than
+    // stopping at the first, so there are several taxed rows. The header figure (line 38) is the
+    // sum of them, which is what `estimatedTaxImpact` must equal — and it is the same amount the
+    // footer's batch total converts, since this harness holds a single EUR preview.
+    expect(taxedTrades.reduce((sum, t) => sum + t.taxImpact, 0)).toBe(preview!.estimatedTaxImpact)
 
     const { container } = render(<Harness previews={[preview!]} />, { wrapper: createWrapper() })
     await waitFor(() => expect(screen.queryByTestId('fx-loading')).not.toBeInTheDocument())
@@ -102,13 +104,23 @@ describe('PreviewTradesStep renders each trade at its own account currency, not 
     const expected = formatCurrency(correctUsd, { compact: true, currency: 'USD' })
     expect(expected).not.toBe(mislabeledUsd)
 
-    // Three sites render this figure: the per-account header (line 38, inline text), the taxed
-    // row's own <td> (line 67, isolated), and the footer's batch total (which, with a single EUR
-    // preview in this harness, converts to the same amount). All three must show the converted
-    // figure, and the mislabeled (unconverted-EUR-read-as-USD) string must appear nowhere.
+    // Two sites render the account total: the per-account header (line 38, inline text) and the
+    // footer's batch total (which, with a single EUR preview in this harness, converts to the
+    // same amount). Both must show the converted figure, and the mislabeled
+    // (unconverted-EUR-read-as-USD) string must appear nowhere on the page.
+    // Header (line 38) — inline text inside a mixed-content span, so matched via textContent.
     expect(container.textContent).toContain(`Tax impact: ${expected}`)
-    expect(screen.getAllByText(expected).length).toBeGreaterThanOrEqual(2)
+    // Footer batch total — the only `<strong class="font-mono text-accent-red">` on the step.
+    expect(container.querySelector('strong.font-mono.text-accent-red')?.textContent).toBe(expected)
     expect(container.textContent).not.toContain(mislabeledUsd)
+
+    // Line 67 · the per-row taxImpact cells must be converted too. They are individual legs of
+    // the sleeve draw-down now, so each is checked on its own rather than coinciding with the
+    // account total.
+    for (const trade of taxedTrades) {
+      const rowExpected = formatCurrency(convertCurrency(trade.taxImpact, 'EUR', 'USD', FX_RATES_USD_BASE), { compact: true, currency: 'USD' })
+      expect(screen.getAllByText(rowExpected).length).toBeGreaterThan(0)
+    }
   })
 
   it('acc-001 (USD): unchanged — the fix does not alter the already-correct USD case', async () => {

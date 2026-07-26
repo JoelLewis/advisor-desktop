@@ -113,7 +113,7 @@ function estimateSaleTax(accountId: string, totalValue: number, target: Position
 type TradeCandidate = { symbol: string; name: string; price: number; position?: Position }
 
 /**
- * §9.7 · which security to sell out of an overweight class. The engine used to take
+ * §9.7 · the order in which an overweight class is sold down. The engine used to take
  * `candidates[0]` — the fixture's declaration order — so acc-002 trimmed SPY, carrying a
  * $355,206.70 embedded gain, while INTC sat in the same asset class with a $45,850 unrealised
  * loss. A "tax-aware" toggle that picks a materially worse tax outcome than an obvious loss lot
@@ -124,14 +124,21 @@ type TradeCandidate = { symbol: string; name: string; price: number; position?: 
  * simply prefer whichever position happens to be biggest. Ascending order puts losses first
  * (harvestable), then the smallest embedded gains.
  *
+ * This returns the whole ordered sequence, not a single pick, because "prefer losses, then the
+ * smallest embedded gain" is an ordering you draw from until the sleeve's notional is filled.
+ * Stopping at the first candidate made the tax answer better and the *rebalance* worse: acc-002's
+ * us_equity trim fell from $547,650 to INTC's whole $199,150 position and stopped there, leaving
+ * the account overweight us_equity after a rebalance that reported success, while SPY sat in the
+ * same sleeve able to absorb the rest. Sell INTC out first, then top up from SPY.
+ *
  * Gated on `taxable`: in an IRA or a Roth, gains are not taxed at all (`estimateSaleTax` already
  * returns 0 there), so re-ordering by embedded gain would be an arbitrary preference dressed up
  * as tax awareness. Those accounts keep the held order under either toggle setting.
  */
-function pickSellCandidate(held: Position[], taxAware: boolean): Position | undefined {
-  if (!taxAware) return held[0]
+function orderSellCandidates(held: Position[], taxAware: boolean): Position[] {
+  if (!taxAware) return held
   const gainPerDollar = (p: Position) => (p.marketValue > 0 ? p.gainLoss / p.marketValue : 0)
-  return [...held].sort((a, b) => gainPerDollar(a) - gainPerDollar(b))[0]
+  return [...held].sort((a, b) => gainPerDollar(a) - gainPerDollar(b))
 }
 
 /**
@@ -224,13 +231,23 @@ function generateRebalanceTrades(accountId: string, taxAware: boolean, driftThre
 
       if (side === 'sell') {
         // A sell can only ever come from a position actually held — there is no short side here.
-        const position = pickSellCandidate(held, taxAware && taxable)
-        if (!position) return []
-        return [{
-          target: { symbol: position.symbol, name: position.name, price: position.price, position },
-          side,
-          notional: Math.min(rawNotional, position.marketValue),
-        }]
+        // Draw candidates in preference order and keep filling until the sleeve's notional is met
+        // or the candidates are exhausted; each leg is still capped at its own position's market
+        // value, so long-only holds leg by leg as well as in aggregate.
+        let remaining = rawNotional
+        const legs: { target: TradeCandidate; side: 'buy' | 'sell'; notional: number }[] = []
+        for (const position of orderSellCandidates(held, taxAware && taxable)) {
+          if (remaining <= 0) break
+          const notional = Math.min(remaining, position.marketValue)
+          if (notional <= 0) continue
+          legs.push({
+            target: { symbol: position.symbol, name: position.name, price: position.price, position },
+            side,
+            notional,
+          })
+          remaining -= notional
+        }
+        return legs
       }
 
       const target = pickBuyCandidate(held, drift.modelId, d.assetClass, currency)
@@ -271,6 +288,32 @@ function generateRebalanceTrades(accountId: string, taxAware: boolean, driftThre
   // this correct where a round-2 attempt (`buyScale = totalSell / totalBuy`, capping buys to
   // match sells alone, reverted in round 3) was not: acc-006 legitimately funds $912,000 of
   // buys from its own cash against only $540,000 of sells, and must continue to.
+  //
+  // ── Funding priority, stated deliberately ──────────────────────────────────────────────────
+  // When proceeds cannot cover both the underweight return-seeking sleeves and an underweight
+  // cash target, something has to give, and the answer must be a decision rather than a side
+  // effect of ordering. **Cash is funded last: it absorbs whatever the sleeves cannot take, and
+  // is never reserved out of proceeds ahead of them.** That is what the `Math.max(0, …)` floor
+  // below encodes — an account *below* its cash target contributes 0 to `buyCapacity` (it may
+  // not spend cash it does not have above target) but is never made to *withhold* proceeds to
+  // top cash up either.
+  //
+  // Why, and what was rejected:
+  //  - A rebalance moves an account's **invested** exposure toward policy; cash is the balancing
+  //    item that absorbs what cannot be placed. Reserving cash ahead of the sleeves inverts that
+  //    — an account underweight both would shrink its own asset purchases in order to sit in
+  //    cash, the opposite of what its model asks for.
+  //  - The liquidity floor that genuinely *is* a constraint is enforced elsewhere and separately:
+  //    `CASH_MINIMUM_PCT` (2%) hard-blocks a buy in the pre-trade check. A model's cash *target*
+  //    is a policy weight, not that floor.
+  //  - Pro-rata (split the shortfall across cash and the sleeves) was considered and rejected: it
+  //    under-funds every sleeve AND still misses the cash target — worse on both axes than fully
+  //    funding what the proceeds can reach.
+  //  - Cash remains bounded on both sides regardless: it can rise only to target (`cashHeadroom`)
+  //    and fall only to target (`cashAboveTarget`), which is Task 7's two-sided invariant.
+  // This is not new behaviour — it is the choice the floor already made, now named. The existing
+  // acc-015 test below ('the floor on cashAboveTarget lets the full $113,820 buy through') is its
+  // pin: acc-015 is 0.6 points *under* its cash target and still deploys the full buy.
   const cashAboveTarget = Math.max(0, cashValue - cashTargetValue)
   const buyCapacity = totalSell + cashAboveTarget
   const buyScale = totalBuy > 0 ? Math.min(1, buyCapacity / totalBuy) : 1

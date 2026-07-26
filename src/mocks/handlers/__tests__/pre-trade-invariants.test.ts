@@ -186,38 +186,35 @@ describe('fix round 2 · rebalance tax respects account tax treatment', () => {
 })
 
 describe('fix round 2 · rebalance is self-financing', () => {
-  it('acc-004: proceeds are fully deployed and never stranded — the ~18% of the account the unscaled version parked in cash is gone', async () => {
-    // acc-004 (Roth IRA, $450K, $9,000 cash = 2.0% against a 5% target). Before the round-2 fix
+  it('acc-004: sells net exactly the cash shortfall to target, not the ~18% of the account the unscaled version parked in cash', async () => {
+    // acc-004 (Roth IRA, $450K, $9,000 cash = 2.0% against a 5% target) — before the round-2 fix
     // the account sold $135,000 and bought only $54,000, parking the $81,000 (18% of the account)
-    // difference in cash.
+    // difference in cash. Round 4 restated the invariant to "the net sale fills the cash gap and
+    // does not exceed it": acc-004 is 3.0 points under its cash target, so a net sale of exactly
+    // $13,500 lands cash on 5.00%.
     //
-    // §9.7 restates this test's figure, and shows the arithmetic (Global Constraint 7). Round 4
-    // pinned `totalSell - totalBuy === 13,500` — the cash gap to a 5% target — because acc-004's
-    // emerging_markets and alternatives sleeves were unreachable: it holds nothing in either, so
-    // raw buys were only $54,000 (us_equity $29,250 + intl_equity $24,750) while raw sells were
-    // $117,000 (AGG $94,500, capped by the position, + GLD $22,500), and the buy cap left
-    // $13,500 of proceeds to top cash up to target.
+    // §9.7 leaves that figure intact and shows why (Global Constraint 7). Raw buys grew from
+    // $54,000 to $121,500 — the emerging_markets ($45,000) and alternatives ($22,500) sleeves are
+    // now reachable — and raw sells grew to match, because an overweight sleeve is now drawn down
+    // across its candidates in preference order instead of stopping at the first: fixed income is
+    // 25.0 points overweight, an implied $112,500, and AGG's $94,500 position no longer caps it —
+    // BND absorbs the remaining $18,000. Raw sells are therefore $135,000, not $117,000.
     //
-    // With the sleeves reachable, raw buys are $121,500 (+ VWO $45,000 + QAI $22,500) — MORE
-    // than the $117,000 the account can raise, because both sells are already capped at the full
-    // market value of the positions behind them. `buyCapacity = totalSell + cashAboveTarget` =
-    // $117,000 + $0, so buys scale to exactly what sells raise and the net is $0: an account
-    // that is underweight cash AND underweight four sleeves, with only $117,000 of sellable
-    // overweight, cannot fund both. Cash stays at 2.0%, which is inside the two-sided band
-    // [min(start, target), max(start, target)] = [2.0%, 5.0%] — it is not pushed further below
-    // its own target, which is the invariant §9.6 established.
+    //   sellCapacity = totalBuy $121,500 + cash headroom $13,500 = $135,000 -> nothing scales
+    //   buyCapacity  = totalSell $135,000 + cash above target $0 = $135,000 > $121,500 -> ditto
+    //   net = 135,000 - 121,500 = 13,500 -> cash 2.00% -> 5.00% exactly
     const account = (await getAccounts()).find((a) => a.id === 'acc-004')!
     const [preview] = await previewRebalance({ accountIds: ['acc-004'], taxAware: true })
     const totalSell = preview!.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
     const totalBuy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
 
-    expect(totalSell).toBeCloseTo(117_000, -1)
-    expect(totalBuy).toBeCloseTo(117_000, -1)
-    // Nothing is stranded: nowhere near the $81,000 the unscaled version left sitting in cash.
+    expect(totalSell).toBeCloseTo(135_000, -1)
+    expect(totalBuy).toBeCloseTo(121_500, -1)
+    expect(totalSell - totalBuy).toBeCloseTo(13_500, -1)
+    // Nowhere near the $81,000 the unscaled version stranded.
     expect(totalSell - totalBuy).toBeLessThan(20_000)
-    // Post-trade cash is unchanged at 2.0% — inside its band, and 18 points below where the
-    // unscaled version left it.
-    expect((account.cashBalance - totalBuy + totalSell) / account.totalValue).toBeCloseTo(0.02, 3)
+    // Post-trade cash lands on the 5% target, not 18 points above it.
+    expect((account.cashBalance - totalBuy + totalSell) / account.totalValue).toBeCloseTo(0.05, 3)
   })
 })
 
@@ -315,31 +312,40 @@ describe('fix round 4 · sells are capped by what buys AND cash-to-target can ab
     // mod-004 wants 50% us_equity, 10% emerging markets and 5% alternatives; acc-044 holds none
     // of the three, and is overweight intl_equity (38.9% vs 20%) and fixed income (38.7% vs 10%).
     //   raw buys  = (0.50 + 0.10 + 0.05) x CHF 1,500,000 = CHF 975,000 (VTI, VWO, QAI)
-    //   raw sells = NESN.SW CHF 246,250 + SRFCHA.SW CHF 221,000 = CHF 467,250, each capped at the
-    //               full market value of the position behind it (long-only)
-    //   buyCapacity = totalSell 467,250 + cash above target (334,490 - 75,000) = CHF 726,740
-    // so buys scale to CHF 726,740 and post-trade cash is 334,490 - 726,740 + 467,250 = CHF
-    // 75,000 — exactly the 5% target, reached from above, never overshot.
+    //   raw sells = intl_equity 0.1894 x 1,500,000 = CHF 283,500, drawn NESN.SW 246,250 (whole
+    //               position) then NOVN.SW 37,250; fixed income 0.2874 x 1,500,000 = CHF 431,100,
+    //               drawn SRFCHA.SW 221,000 (whole position) then CSBGC0.SW 210,100
+    //                                                          = CHF 714,600
+    //   buyCapacity = totalSell + cash above target (334,490 - 75,000 = 259,490)
+    // so buys scale to that and post-trade cash is exactly CHF 75,000 — the 5% target, reached
+    // from above and never overshot. Every leg stays inside the position behind it (long-only).
     const { account, trades, totalSell, totalBuy } = await totals('acc-044')
     expect(trades.length).toBeGreaterThan(0)
-    expect(totalSell).toBeCloseTo(467_250, -2)
-    expect(totalBuy).toBeCloseTo(726_740, -2)
+    expect(totalSell).toBeCloseTo(715_200, -2)
+    expect(totalBuy).toBeCloseTo(974_690, -2)
+    expect(totalBuy - totalSell).toBeCloseTo(259_490, -2)
     expect((account.cashBalance - totalBuy + totalSell) / account.totalValue).toBeCloseTo(0.05, 4)
     // The round-4 property, restated: cash falls toward target, it is never pushed up.
     expect(account.cashBalance - totalBuy + totalSell).toBeLessThan(account.cashBalance)
   })
 
-  it('acc-045 (Patel Digital Assets, 9.4% cash against a 3% target) sells $18,480 of DOT — not the $384,625 sale of a $188,018 BTC position round 3 would have proposed', async () => {
-    // The long-only cap is what keeps this honest: digital_assets is 90.6% of the account against
-    // a 0% target in mod-002, an implied $384,625 trim, and every candidate is capped at its own
-    // market value. Tax-aware selection picks DOT first (-16.0%, the deepest unrealised loss per
-    // dollar held), so the sell is $18,480 — the whole DOT position, and no more.
+  it('acc-045 (Patel Digital Assets, 9.4% cash against a 3% target) exits its whole digital-asset overweight in loss-first order — never a $384,625 sale of a $188,018 BTC position', async () => {
+    // digital_assets is 90.6% of the account against a 0% target in mod-002, an implied $385,050
+    // trim. Round 3 would have proposed all of it against BTC alone — a $384,625 sell of a
+    // $188,018 position. The long-only cap is per leg, so the sleeve is drawn down across all
+    // seven holdings in ascending gain-per-dollar order, BTC (+22.9%, the largest embedded gain
+    // per dollar held) last and only partially:
+    //   DOT -19.0% · SOL -17.0% · USDC 0.0% · ETH +16.0% · AVAX +16.0% · LINK +18.3% · BTC +22.9%
     const { account, trades, totalSell, totalBuy } = await totals('acc-045')
+    const sells = trades.filter((t) => t.side === 'sell')
     expect(trades.length).toBeGreaterThan(0)
-    expect(trades.filter((t) => t.side === 'sell').map((t) => t.symbol)).toEqual(['DOT'])
-    expect(totalSell).toBeCloseTo(18_480, 0)
-    // buyCapacity = 18,480 raised + (39,870 - 12,750) of cash above target = 45,600.
-    expect(totalBuy).toBeCloseTo(45_602, -1)
+    // Loss lots first, and the largest embedded gain last — the ordering, not just the membership.
+    expect(sells.map((t) => t.symbol)).toEqual(['DOT', 'SOL', 'USDC', 'ETH', 'AVAX', 'LINK', 'BTC'])
+    const btc = sells.find((t) => t.symbol === 'BTC')!
+    expect(btc.estimatedValue).toBeLessThanOrEqual(188_017.50)
+    expect(totalSell).toBeCloseTo(385_008, -2)
+    // buyCapacity = 385,008 raised + (39,870 - 12,750) of cash above target.
+    expect(totalBuy).toBeCloseTo(412_128, -2)
     expect((account.cashBalance - totalBuy + totalSell) / account.totalValue).toBeCloseTo(0.03, 4)
   })
 
@@ -436,6 +442,41 @@ describe('§9.6 · buys are capped by available cash above target, symmetric to 
     const [preview] = await previewRebalance({ accountIds: ['acc-015'], taxAware: true, driftThreshold: 0.001 })
     const totalBuy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
     expect(totalBuy).toBeCloseTo(113_820, -1)
+  })
+
+  /**
+   * §9.7 · the funding-priority decision, named. When proceeds cannot cover both the underweight
+   * return-seeking sleeves and an underweight cash target, **cash is funded last** — it absorbs
+   * what the sleeves cannot take and is never reserved out of proceeds ahead of them. This is
+   * what the `Math.max(0, …)` floor on `cashAboveTarget` encodes; the test above pins the dollar
+   * figure, this one pins the *reason*, so the choice cannot revert as a silent side effect of
+   * re-ordering. The full rationale (and the pro-rata alternative that was rejected) is in
+   * `oms.ts` at the `cashAboveTarget` definition.
+   */
+  it('acc-015 at a tight drift threshold: cash is funded LAST — the sleeves are filled in full and cash lands wherever the residual leaves it, below its own target', async () => {
+    // acc-015 holds $101,365 of cash on a $4.2M account: 2.413% against a 3% target, a $24,635
+    // shortfall. At `driftThreshold: 0.001` it raises $135,240 and its sleeves want $113,820.
+    // Reserving the cash shortfall first would cap buys at $135,240 - $24,635 = $110,605
+    // (96.59 cents on the dollar) and land cash on exactly 3.00%. It does not: every sleeve
+    // dollar goes through and cash ends at 2.923%, still under target — moving toward it, never
+    // past it, and never at the sleeves' expense.
+    const account = (await getAccounts()).find((a) => a.id === 'acc-015')!
+    const [preview] = await previewRebalance({ accountIds: ['acc-015'], taxAware: true, driftThreshold: 0.001 })
+    const totalSell = preview!.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
+    const totalBuy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
+    const target = (await getDrift('acc-015')).assetClassDrifts.find((d) => d.assetClass === 'cash')!.target
+    const startCashPct = account.cashBalance / account.totalValue
+    const endCashPct = (account.cashBalance - totalBuy + totalSell) / account.totalValue
+
+    // The premise: this account really is short of its cash target, or the test proves nothing.
+    expect(startCashPct).toBeLessThan(target)
+    expect(totalSell).toBeCloseTo(135_240, -1)
+    // Sleeves first: the full raw buy, not the $110,605 a cash-first reservation would allow.
+    expect(totalBuy).toBeCloseTo(113_820, -1)
+    expect(totalBuy).toBeGreaterThan(111_000)
+    // Cash last: it rises toward target and stops short of it, rather than being topped up.
+    expect(endCashPct).toBeGreaterThan(startCashPct)
+    expect(endCashPct).toBeLessThan(target)
   })
 })
 
@@ -790,15 +831,30 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     expect(unconvertedQuantity / vti!.quantity).toBeCloseTo(FX_RATES_USD_BASE.HKD, 1)
   })
 
-  it('tax-aware selection prefers a loss position within the class over one with a large gain', async () => {
+  it('tax-aware selection exhausts the loss position before touching the large-gain one, and still fills the whole sleeve', async () => {
+    // acc-002 is 12.17 points overweight us_equity on a $4.5M account — an implied $547,650 trim,
+    // against INTC ($199,150, a $45,850 unrealised loss), SPY ($2,018,243.70, a $355,206.70 gain)
+    // and QQQ ($807,372.80, a $179,114.80 gain). Ranked by gain per dollar of market value:
+    // INTC -23.0%, SPY +17.6%, QQQ +22.2%.
+    //
+    // "Prefer losses, then the smallest embedded gain" is an ordering drawn from until the
+    // sleeve is filled, not a single pick: INTC sells out entirely ($199,150), then SPY tops the
+    // rest up ($348,500). Stopping at INTC would leave the account overweight us_equity after a
+    // rebalance that reported success — tax-better and rebalance-worse, which is not the trade
+    // an advisor would accept when both are available.
     const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
     const usEquitySells = preview!.trades.filter((t) => t.side === 'sell' && ['SPY', 'QQQ', 'INTC'].includes(t.symbol))
-    // Vacuity guard — `.some` over an empty list is false, but an empty list would mean the
-    // us_equity sleeve produced no sell at all and this test would be testing nothing.
+    // Vacuity guard — an empty list would mean the sleeve produced no sell at all and every
+    // assertion below would be testing nothing.
     expect(usEquitySells.length).toBeGreaterThan(0)
-    // INTC carries a $45,850 unrealised loss; SPY a $355,206.70 gain. Tax-aware must reach INTC.
-    expect(usEquitySells.some((t) => t.symbol === 'INTC')).toBe(true)
-    expect(usEquitySells.some((t) => t.symbol === 'SPY')).toBe(false)
+    // Order, not just membership: the loss lot is reached first.
+    expect(usEquitySells.map((t) => t.symbol)).toEqual(['INTC', 'SPY'])
+    // INTC goes in full before SPY is touched at all.
+    expect(usEquitySells[0]!.estimatedValue).toBeCloseTo(199_150, -1)
+    // ...and the sleeve is filled to its drift, not left short at the loss position's size.
+    expect(usEquitySells.reduce((s, t) => s + t.estimatedValue, 0)).toBeCloseTo(547_650, -2)
+    // QQQ, the largest gain per dollar, is never reached — the ordering has to mean something.
+    expect(usEquitySells.some((t) => t.symbol === 'QQQ')).toBe(false)
   })
 
   it('tax-aware off does not silently produce the same selection', async () => {
@@ -807,9 +863,13 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     const [aware] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
     const [unaware] = await previewRebalance({ accountIds: ['acc-002'], taxAware: false })
     expect(JSON.stringify(aware!.trades)).not.toBe(JSON.stringify(unaware!.trades))
-    // Named, not just different: tax-unaware keeps the fixture's declaration order and reaches SPY.
-    expect(unaware!.trades.some((t) => t.side === 'sell' && t.symbol === 'SPY')).toBe(true)
-    expect(aware!.trades.some((t) => t.side === 'sell' && t.symbol === 'SPY')).toBe(false)
+    // Named, not just different. Tax-unaware keeps the fixture's declaration order — SPY, QQQ,
+    // INTC — so SPY alone absorbs the whole $547,650 trim and the loss lot is never reached.
+    const unawareUsEquity = unaware!.trades.filter((t) => t.side === 'sell' && ['SPY', 'QQQ', 'INTC'].includes(t.symbol))
+    expect(unawareUsEquity.map((t) => t.symbol)).toEqual(['SPY'])
+    expect(unawareUsEquity[0]!.estimatedValue).toBeCloseTo(547_650, -2)
+    expect(aware!.trades.some((t) => t.side === 'sell' && t.symbol === 'INTC')).toBe(true)
+    expect(unaware!.trades.some((t) => t.side === 'sell' && t.symbol === 'INTC')).toBe(false)
   })
 
   it('the tax-aware ordering is confined to taxable accounts — a tax-deferred account is unmoved by the toggle', async () => {
