@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Close the seven integrity-class defects that survived Phase 1 — one the phase gate found in itself, six an independent adversarial domain review found — so that no screen in the showcase states a financial figure that contradicts the data layer or asserts a benefit that cannot exist.
+**Goal:** Close the seven integrity-class defects that survived Phase 1, plus two more of the same class discovered while closing them (Tasks 8 and 9 below), — one the phase gate found in itself, six an independent adversarial domain review found — so that no screen in the showcase states a financial figure that contradicts the data layer or asserts a benefit that cannot exist.
 
 **Architecture:** Same as Phase 1. `src/mocks/` **is** the data layer; there is no backend. Every figure a screen shows must be derived from the fixtures at read time, never hand-typed alongside them. Pure derivation lives in `src/lib/` with zero imports; handlers in `src/mocks/handlers/` compose those primitives; components render what the handlers return and compute nothing financial themselves.
 
@@ -24,6 +24,7 @@ Every task below traces to a verified finding. Section numbers refer to
 | 6 | §9.5 — static AI answers contradict canonical data | Medium | Controller |
 | 7 | §9.6 — sell cap has a ceiling but no floor | High | Codex; reproduced in controller sweep |
 | 8 | §9.7 — cannot buy an unheld class; picks `candidates[0]` | Medium | Controller sweep + Codex |
+| 9 | Fabricated model-trade preview (found in Task 4) | Critical | Controller |
 
 ## Global Constraints
 
@@ -907,6 +908,134 @@ git add -A && git commit -m "fix(rebalance): reach unheld model classes, and cho
 ```
 
 ---
+
+---
+
+### Task 9: The model-trade preview stops inventing its data
+
+**Found during Task 4, verified by the controller.** Not one of the original seven findings — a new
+one of the same class, discovered because Task 4's implementer read a call site instead of grepping
+for one.
+
+`src/mocks/handlers/trading.ts:44-86` serves `POST /api/oms/model-trade/preview`, which
+`ModelTradeView.tsx` renders. Every field is fabricated:
+
+- `accountName: \`Account ${accId}\`` — not the account's real name
+- `modelName: 'Growth Balanced'` — hardcoded, ignoring the `modelId` the caller asked for
+- `currentDrift: +((accId.charCodeAt(accId.length - 1) % 5) + 1.2).toFixed(1)` — **drift derived
+  from a character code of the account id**
+- an identical AAPL sell (15 shares, $2,775) and AGG buy (25 units, $2,500) for *every* account,
+  with quantities and values that reference no position the account holds
+- `reason: 'Reduce US Equity overweight from 47% to 42%'` — the same percentages for every account
+
+This is the Phase 1 charter defect in its purest form, and unlike `generateComplianceChecks()` it is
+**live**: the view renders it. It is also the natural home for the currency correctness Task 4
+established, since these trades carry no currency either.
+
+**Files:**
+- Modify: `src/mocks/handlers/trading.ts:44-86`
+- Modify: `src/features/portfolios/ModelTradeView.tsx:344, 370` (currency formatting)
+- Test: `src/mocks/handlers/__tests__/model-trade-invariants.test.ts` (create)
+
+**Interfaces:**
+- Consumes: `computeDriftForAccount(account)` from `src/mocks/handlers/pms.ts` — the same function
+  the drift surface and the rebalance engine read, returning **signed** drift. `getModelGovernance`
+  for the model's real name. `getPositionsForAccount` for what the account actually holds.
+  `deriveBookAUM` / `FX_RATES_USD_BASE` if you aggregate.
+- Produces: `ModelTradePreview[]` — read its real declaration in `src/services/trading.ts` before
+  writing any test, and add `currency: CurrencyCode` to the trade shape as Task 4 did for
+  `ProposedTrade`.
+
+- [ ] **Step 1: Read the real type first**
+
+Open `src/services/trading.ts` and quote `ModelTradePreview`'s actual declaration into your report.
+Do not reconstruct it. Four of this plan's briefs contained a type written from memory that turned
+out to be wrong; this step exists because of that.
+
+- [ ] **Step 2: Write the failing tests**
+
+```ts
+describe('model-trade preview reads the account, not a hash of its id', () => {
+  it('names the account and the model it was actually asked for', async () => {
+    const [preview] = await previewModelTrade('mod-003', ['acc-003'])
+    expect(preview.accountName).toBe('Robert Johnson Traditional IRA')
+    expect(preview.modelName).not.toBe('Growth Balanced')
+    expect(preview.modelId).toBe('mod-003')
+  })
+
+  it('reports the same drift the drift surface reports', async () => {
+    for (const id of ['acc-001', 'acc-011', 'acc-041']) {
+      const [preview] = await previewModelTrade('mod-002', [id])
+      const drift = await getDrift(id)
+      expect(Math.abs(preview.currentDrift - drift.maxAbsDrift * 100), id).toBeLessThan(0.05)
+    }
+  })
+
+  it('two different accounts do not receive identical trade lists', async () => {
+    const [a] = await previewModelTrade('mod-002', ['acc-001'])
+    const [b] = await previewModelTrade('mod-002', ['acc-006'])
+    expect(a.trades.length).toBeGreaterThan(0)
+    expect(b.trades.length).toBeGreaterThan(0)
+    expect(JSON.stringify(a.trades)).not.toBe(JSON.stringify(b.trades))
+  })
+
+  it('every sell names a security the account actually holds', async () => {
+    const accounts = await getAccounts()
+    let checked = 0
+    for (const account of accounts) {
+      const [preview] = await previewModelTrade(account.modelId ?? 'mod-001', [account.id])
+      const positions = await getPositions(account.id)
+      for (const trade of preview?.trades ?? []) {
+        if (trade.side !== 'sell') continue
+        checked++
+        expect(positions.some((p) => p.symbol === trade.symbol), `${account.id} ${trade.symbol}`).toBe(true)
+      }
+    }
+    expect(checked, 'vacuity guard — some sells must exist to check').toBeGreaterThan(5)
+  })
+
+  it('trades carry their account currency', async () => {
+    const [preview] = await previewModelTrade('mod-002', ['acc-041'])
+    expect(preview.trades.length).toBeGreaterThan(0)
+    expect(preview.trades.every((t) => t.currency === 'HKD')).toBe(true)
+    const [usd] = await previewModelTrade('mod-002', ['acc-001'])
+    expect(usd.trades.every((t) => t.currency === 'USD')).toBe(true)
+  })
+})
+```
+
+- [ ] **Step 3: Run them and confirm they fail** — expect the name, drift, identical-trades and
+  holdings assertions all to fail against the current handler.
+
+- [ ] **Step 4: Derive the preview**
+
+Replace the fabricated object with one built from `computeDriftForAccount`, the account's real
+name and model, and its actual positions. Reuse the rebalance engine's candidate selection if the
+shapes allow — a second, divergent trade generator would be a "one fact, two places" violation
+against `generateRebalanceTrades`. If you cannot reuse it, say why in your report.
+
+- [ ] **Step 5: Fix the currency formatting** at `ModelTradeView.tsx:344, 370`, exactly as Task 4
+  did for the rebalance wizard.
+
+- [ ] **Step 6: Mutation-verify**
+
+1. Restore the `charCodeAt` drift → the drift test must fail.
+2. Restore the hardcoded `'Growth Balanced'` → the naming test must fail.
+3. Return the same trade list for every account → the identical-trades test must fail.
+4. Emit a sell for a symbol the account does not hold → the holdings test must fail.
+5. Hardcode `currency: 'USD'` → the HKD test must fail, and the USD control must still pass.
+
+- [ ] **Step 7: Render the real component, not a replica**
+
+Task 4 shipped two tests that proved a formula while nothing proved the component called it; both
+mutations survived until real render tests were added. At least one test here must render
+`ModelTradeView` itself and assert on what it displays.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add -A && git commit -m "fix(models): model-trade preview derives from the account, not a hash of its id"
+```
 
 ## Phase gate
 
