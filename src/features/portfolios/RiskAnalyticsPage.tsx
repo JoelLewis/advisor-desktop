@@ -8,11 +8,11 @@ import {
 import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { RiskMetricCard, StressScenarioRow } from './account-detail/shared'
+import { RiskMetricsPanel, StressScenarioRow } from './account-detail/shared'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useRiskMetrics, useSensitivity, useStressScenarios } from '@/hooks/use-portfolio'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
-import { formatDate, formatPercent, cn } from '@/lib/utils'
+import { formatPercent, cn } from '@/lib/utils'
 
 type SensitivityTab = 'interestRate' | 'equity' | 'credit'
 
@@ -126,33 +126,7 @@ export function RiskAnalyticsPage() {
           ))}
         </div>
       ) : risk ? (
-        <div className="flex flex-col gap-3">
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-            {/* Beta is not benchmark-relative — it is sensitivity to the global equity market.
-                Only tracking error is measured against the account's model benchmark. */}
-            <RiskMetricCard label="Beta vs global equity market" value={risk.beta.toFixed(2)} />
-            <RiskMetricCard label="Sharpe ratio" value={risk.sharpe.toFixed(2)} />
-            <RiskMetricCard label="Sortino ratio" value={risk.sortino.toFixed(2)} />
-            <RiskMetricCard label="Max drawdown (modelled, 3y)" value={`${(risk.maxDrawdown * 100).toFixed(1)}%`} negative />
-            <RiskMetricCard label="Standard deviation (annualised)" value={`${(risk.standardDeviation * 100).toFixed(1)}%`} />
-            <RiskMetricCard
-              label={`VaR (${(risk.var95Confidence * 100).toFixed(0)}%), ${risk.var95Horizon}, ${risk.var95Method}`}
-              value={formatWithConversion(risk.var95, 'USD', { compact: true })}
-              negative
-            />
-          </div>
-          <p className="text-caption text-text-tertiary">
-            Value at risk is an estimate: {(risk.var95Confidence * 100).toFixed(0)}% confidence,
-            {' '}{risk.var95Horizon} horizon, {risk.var95Method} method
-            {' '}({(risk.var95Percent * 100).toFixed(2)}% of account value). Sharpe and Sortino use a
-            {' '}{(risk.riskFreeRate * 100).toFixed(1)}% risk-free rate; Sortino divides by
-            {' '}{(risk.downsideDeviation * 100).toFixed(2)}% downside deviation. Ex-ante tracking
-            {' '}error against {risk.benchmark} is {(risk.trackingError * 100).toFixed(2)}% — modelled
-            {' '}active risk from the account's active weights against the model's target weights,
-            {' '}assuming 0.35 correlation across asset classes, not realised return dispersion. As of{' '}
-            {formatDate(risk.asOf)}. Hypothetical — not a prediction.
-          </p>
-        </div>
+        <RiskMetricsPanel risk={risk} formatWithConversion={formatWithConversion} />
       ) : null}
 
       {/* Sensitivity Analysis */}

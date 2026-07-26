@@ -76,4 +76,27 @@ describe('§9.4 · a benchmark label describes what is computed', () => {
     expect(text).not.toMatch(/against s&p 500/i)
     expect(text).toMatch(/model polic(y|ies)/i)
   })
+
+  // The test above only pins the *value* of `risk.benchmark` — both its assertions are satisfied
+  // by that string alone, regardless of what surrounding prose RiskTab writes around it. It does
+  // not exercise the "ex-ante" characterisation prose at all: that copy could be deleted entirely
+  // and the suite above would stay green. This test targets the prose itself, independent of the
+  // benchmark string's value.
+  it('characterises the tracking-error figure as ex-ante and states its correlation assumption', async () => {
+    // `trackingError()` in `risk-model.ts` is a forward-looking active-risk statistic — active
+    // weights run through a fixed cross-asset-class correlation assumption (0.35) — not a measured
+    // dispersion of realised returns. The copy has to say so, not just name the benchmark correctly.
+    const risk = await getRiskMetrics('acc-002')
+    const { container } = render(
+      <RiskTab
+        risk={risk}
+        factors={undefined}
+        stress={undefined}
+        formatWithConversion={(value) => `$${value.toFixed(2)}`}
+      />,
+    )
+    const text = normalizedText(container)
+    expect(text).toMatch(/ex-ante tracking/i)
+    expect(text).toMatch(/0\.35 correlation/i)
+  })
 })
