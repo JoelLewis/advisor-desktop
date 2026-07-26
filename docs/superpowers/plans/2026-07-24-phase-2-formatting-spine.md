@@ -6,10 +6,17 @@
 > Phase 1b changed the render surface substantially. Audited against the live tree at `8a87ffe`;
 > where this block disagrees with the plan below, **this block governs.**
 >
-> **1. The 218 figure is the count of sites needing an INDIVIDUAL edit, and it excludes a much larger
-> inheriting population.** The full formatting surface is now **416 sites**. The difference is
-> `formatWithConversion` / `<CurrencyValue>` — **183 sites**, most of them created or touched during
-> Phase 1b's currency work (Tasks 4, 9, 10).
+> **1. The 218 figure is the count of sites needing an INDIVIDUAL edit, and it excludes a separate
+> inheriting population.** That population is `formatWithConversion` / `<CurrencyValue>` — **115 real
+> call sites** (94 invocations + 21 renders), most created or touched during Phase 1b's currency work
+> (Tasks 4, 9, 10).
+>
+> *Correction, recorded because it propagated into this block once already:* my first pass reported
+> **183**, and **416** for the whole surface. Both were **grep output-line counts, not call sites** —
+> they included import lines, the `const { formatWithConversion } = useFormatCurrency()` destructuring,
+> type declarations and the definitions themselves. Task 1 re-measured and reported the discrepancy
+> rather than adopting my figure, which is the correct response to a number handed down from above.
+> The architectural point is unaffected: these sites inherit and must not be migrated.
 >
 > **Those 183 must NOT be migrated individually.** Verified routing: `CurrencyValue` →
 > `useFormatCurrency` → `formatCurrency` from `@/lib/utils` (`use-format-currency.ts:4,28,42`;
@@ -21,8 +28,17 @@
 > **2. The per-directory table has not been re-counted since Phase 1b.** Its totals (71 formatter
 > calls / 53 hand-coloured / 94 raw `toFixed` = 218) predate ~29 commits that added files
 > (`RiskMetricsPanel`, `ModelTradeView` tests, `model-trade-invariants`, `position-weight-invariants`)
-> and changed others. My independent count at `8a87ffe`: **80** named-formatter calls, **146** raw
-> `.toFixed(`, **12** `toLocaleString`. The `toFixed` figure alone is ~55% above the table's 94.
+> and changed others. Independent counts at `8a87ffe`: **73** named-formatter call sites (my first
+> pass said 80 — it counted 7 import lines), **146** raw `.toFixed(`, **12** `toLocaleString`. The
+> `toFixed` figure alone is ~55% above the table's 94.
+>
+> **Task 1's corrected table is the one batch tasks size off** — `.superpowers/sdd/2026-07-24-phase-2-formatting-spine/task-1-report.md`.
+> Its total is **222** against the plan's 218, and that near-match is misleading: the aggregate is
+> close while the *distribution* is not. `trade-fields` **+10** (23→33), `account-detail` **+8**
+> (29→37), `growth` **+5** (16→21), against `rebalance` **−4**, `dashboard` **−3**,
+> `portfolio-views` **−3`. Batches 21 and 19 are materially larger than their rows claim; batches 16,
+> 20 and part of 18 are smaller, most likely because Phase 1b's currency work moved those sites into
+> the inheriting population. **An aggregate that reconciles can hide a distribution that does not.**
 >
 > **Task 1 must re-run the counting grep and publish a corrected table**, reporting the deviation per
 > directory rather than adjusting silently. Batch tasks size their work off the corrected table, not
