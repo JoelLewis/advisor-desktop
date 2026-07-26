@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import type { MetricsSummary, AllocationSlice } from '@/services/pms'
-import type { DriftStatus } from '@/types/portfolio'
+import type { DriftStatus, BenchmarkKind } from '@/types/portfolio'
 import type { RiskMetrics, FactorExposure, StressScenario } from '@/types/risk'
 import type {
   BenchmarkComparison, PerformanceSeries, AttributionResult, AttributionResponse,
@@ -136,44 +136,57 @@ type ModelDefinition = {
   id: string
   name: string
   benchmark: string
+  benchmarkKind: BenchmarkKind
   description: string
   assetClasses: AssetClassAllocation[]
 }
 
+/**
+ * §9.4 · `benchmark` is not a real external index return series for any model — `weightsFor` below
+ * always derives the "benchmark" return from the model's own `assetClasses` target weights
+ * (`benchWeights`), never from a fetched index. `benchmark` is therefore the model's own policy
+ * blend, named as such (`benchmarkKind: 'model_policy'`), not a bare index name implying an
+ * external return series. mod-001, mod-002 and mod-007 previously named a single equity index (or
+ * an equity/bond pair) for blends that also carry international equity, emerging markets,
+ * alternatives, real estate, commodities and cash — publishing e.g. an "S&P 500" return of ~11.11%
+ * against a 14.5% US-equity-only proxy return. The fix is naming, not the arithmetic (Task 12
+ * verified the Brinson-Fachler math reconciles): describe the blend instead of borrowing an index's
+ * identity for it.
+ */
 const MODELS: ModelDefinition[] = [
-  { id: 'mod-001', name: 'Balanced Growth', benchmark: 'S&P 500 / Agg 60/40', description: 'Core 60/40 model with growth tilt', assetClasses: [
+  { id: 'mod-001', name: 'Balanced Growth', benchmark: 'Model policy blend (Balanced Growth)', benchmarkKind: 'model_policy', description: 'Core 60/40 model with growth tilt', assetClasses: [
     { assetClass: 'us_equity', targetWeight: 0.40 }, { assetClass: 'intl_equity', targetWeight: 0.12 },
     { assetClass: 'emerging_markets', targetWeight: 0.03 }, { assetClass: 'fixed_income', targetWeight: 0.30 },
     { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'real_estate', targetWeight: 0.03 },
     { assetClass: 'commodities', targetWeight: 0.02 }, { assetClass: 'cash', targetWeight: 0.05 },
   ]},
-  { id: 'mod-002', name: 'Growth', benchmark: 'S&P 500', description: 'Equity-focused growth model', assetClasses: [
+  { id: 'mod-002', name: 'Growth', benchmark: 'Model policy blend (Growth)', benchmarkKind: 'model_policy', description: 'Equity-focused growth model', assetClasses: [
     { assetClass: 'us_equity', targetWeight: 0.55 }, { assetClass: 'intl_equity', targetWeight: 0.15 },
     { assetClass: 'emerging_markets', targetWeight: 0.05 }, { assetClass: 'fixed_income', targetWeight: 0.15 },
     { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'commodities', targetWeight: 0.02 },
     { assetClass: 'cash', targetWeight: 0.03 },
   ]},
-  { id: 'mod-003', name: 'Conservative Income', benchmark: 'Barclays Agg', description: 'Income-focused with capital preservation', assetClasses: [
+  { id: 'mod-003', name: 'Conservative Income', benchmark: 'Barclays Agg', benchmarkKind: 'model_policy', description: 'Income-focused with capital preservation', assetClasses: [
     { assetClass: 'us_equity', targetWeight: 0.20 }, { assetClass: 'intl_equity', targetWeight: 0.05 },
     { assetClass: 'fixed_income', targetWeight: 0.55 }, { assetClass: 'alternatives', targetWeight: 0.05 },
     { assetClass: 'real_estate', targetWeight: 0.05 }, { assetClass: 'cash', targetWeight: 0.10 },
   ]},
-  { id: 'mod-004', name: 'Aggressive Growth', benchmark: 'MSCI ACWI', description: 'High-growth equity allocation', assetClasses: [
+  { id: 'mod-004', name: 'Aggressive Growth', benchmark: 'MSCI ACWI', benchmarkKind: 'model_policy', description: 'High-growth equity allocation', assetClasses: [
     { assetClass: 'us_equity', targetWeight: 0.50 }, { assetClass: 'intl_equity', targetWeight: 0.20 },
     { assetClass: 'emerging_markets', targetWeight: 0.10 }, { assetClass: 'fixed_income', targetWeight: 0.10 },
     { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'cash', targetWeight: 0.05 },
   ]},
-  { id: 'mod-005', name: 'Ultra-HNW Multi-Strategy', benchmark: 'Custom Blended', description: 'Multi-strategy for large accounts', assetClasses: [
+  { id: 'mod-005', name: 'Ultra-HNW Multi-Strategy', benchmark: 'Custom Blended', benchmarkKind: 'model_policy', description: 'Multi-strategy for large accounts', assetClasses: [
     { assetClass: 'us_equity', targetWeight: 0.35 }, { assetClass: 'intl_equity', targetWeight: 0.15 },
     { assetClass: 'emerging_markets', targetWeight: 0.05 }, { assetClass: 'fixed_income', targetWeight: 0.20 },
     { assetClass: 'alternatives', targetWeight: 0.15 }, { assetClass: 'real_estate', targetWeight: 0.05 },
     { assetClass: 'cash', targetWeight: 0.05 },
   ]},
-  { id: 'mod-006', name: 'Education 529', benchmark: 'Age-Based Glide', description: 'Age-based education savings glide path', assetClasses: [
+  { id: 'mod-006', name: 'Education 529', benchmark: 'Age-Based Glide', benchmarkKind: 'model_policy', description: 'Age-based education savings glide path', assetClasses: [
     { assetClass: 'us_equity', targetWeight: 0.45 }, { assetClass: 'intl_equity', targetWeight: 0.10 },
     { assetClass: 'fixed_income', targetWeight: 0.35 }, { assetClass: 'cash', targetWeight: 0.10 },
   ]},
-  { id: 'mod-007', name: 'Moderate Balanced', benchmark: 'S&P 500 / Agg 50/50', description: 'Balanced 50/50 equity-bond split', assetClasses: [
+  { id: 'mod-007', name: 'Moderate Balanced', benchmark: 'Model policy blend (Moderate Balanced)', benchmarkKind: 'model_policy', description: 'Balanced 50/50 equity-bond split', assetClasses: [
     { assetClass: 'us_equity', targetWeight: 0.35 }, { assetClass: 'intl_equity', targetWeight: 0.10 },
     { assetClass: 'emerging_markets', targetWeight: 0.05 }, { assetClass: 'fixed_income', targetWeight: 0.35 },
     { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'real_estate', targetWeight: 0.03 },
@@ -185,6 +198,18 @@ function getModelByIndex(index: number): ModelDefinition {
   const model = MODELS[index]
   if (!model) throw new Error(`Model at index ${index} not found`)
   return model
+}
+
+/**
+ * The four identity fields the model-governance list previously re-typed for all seven models,
+ * duplicating `MODELS` and risking the two drifting apart (as `benchmark` did: `:150` and the old
+ * `:963` disagreed with each other about mod-002's benchmark string until it was fixed here).
+ * Governance now reads identity from `MODELS` instead of re-declaring it.
+ */
+function modelIdentity(modelId: string): Pick<ModelDefinition, 'id' | 'name' | 'benchmark' | 'benchmarkKind' | 'description'> {
+  const model = MODELS.find((m) => m.id === modelId) ?? getModelByIndex(0)
+  const { id, name, benchmark, benchmarkKind, description } = model
+  return { id, name, benchmark, benchmarkKind, description }
 }
 
 /** §5.2 · model-governance — these were hand-typed and summed to $118.67M across 40 accounts
@@ -917,8 +942,7 @@ export const pmsHandlers = [
   http.get('/api/pms/models/governance', () => {
     const modelGovernance = [
       {
-        id: 'mod-001', name: 'Balanced Growth', benchmark: 'S&P 500 / Agg 60/40',
-        description: 'Core 60/40 model with growth tilt',
+        ...modelIdentity('mod-001'),
         riskProfile: 'moderate', currentVersion: 3, ...modelBookFor('mod-001'),
         lastRebalanceDate: '2026-02-10', ...MODEL_BANDS['mod-001'],
         assetClasses: getModelByIndex(0).assetClasses,
@@ -960,8 +984,7 @@ export const pmsHandlers = [
         ],
       },
       {
-        id: 'mod-002', name: 'Growth', benchmark: 'S&P 500',
-        description: 'Equity-focused growth model',
+        ...modelIdentity('mod-002'),
         riskProfile: 'moderate_aggressive', currentVersion: 2, ...modelBookFor('mod-002'),
         lastRebalanceDate: '2026-02-12', ...MODEL_BANDS['mod-002'],
         assetClasses: getModelByIndex(1).assetClasses,
@@ -989,8 +1012,7 @@ export const pmsHandlers = [
         ],
       },
       {
-        id: 'mod-003', name: 'Conservative Income', benchmark: 'Barclays Agg',
-        description: 'Income-focused with capital preservation',
+        ...modelIdentity('mod-003'),
         riskProfile: 'conservative', currentVersion: 2, ...modelBookFor('mod-003'),
         lastRebalanceDate: '2026-01-28', ...MODEL_BANDS['mod-003'],
         assetClasses: getModelByIndex(2).assetClasses,
@@ -1017,8 +1039,7 @@ export const pmsHandlers = [
         ],
       },
       {
-        id: 'mod-004', name: 'Aggressive Growth', benchmark: 'MSCI ACWI',
-        description: 'High-growth equity allocation',
+        ...modelIdentity('mod-004'),
         riskProfile: 'aggressive', currentVersion: 1, ...modelBookFor('mod-004'),
         lastRebalanceDate: '2026-02-05', ...MODEL_BANDS['mod-004'],
         assetClasses: getModelByIndex(3).assetClasses,
@@ -1032,8 +1053,7 @@ export const pmsHandlers = [
         ],
       },
       {
-        id: 'mod-005', name: 'Ultra-HNW Multi-Strategy', benchmark: 'Custom Blended',
-        description: 'Multi-strategy for large accounts',
+        ...modelIdentity('mod-005'),
         riskProfile: 'moderate_aggressive', currentVersion: 3, ...modelBookFor('mod-005'),
         lastRebalanceDate: '2026-01-20', ...MODEL_BANDS['mod-005'],
         assetClasses: getModelByIndex(4).assetClasses,
@@ -1074,8 +1094,7 @@ export const pmsHandlers = [
         ],
       },
       {
-        id: 'mod-006', name: 'Education 529', benchmark: 'Age-Based Glide',
-        description: 'Age-based education savings glide path',
+        ...modelIdentity('mod-006'),
         riskProfile: 'moderate', currentVersion: 1, ...modelBookFor('mod-006'),
         lastRebalanceDate: '2026-01-15', ...MODEL_BANDS['mod-006'],
         assetClasses: getModelByIndex(5).assetClasses,
@@ -1089,8 +1108,7 @@ export const pmsHandlers = [
         ],
       },
       {
-        id: 'mod-007', name: 'Moderate Balanced', benchmark: 'S&P 500 / Agg 50/50',
-        description: 'Balanced 50/50 equity-bond split',
+        ...modelIdentity('mod-007'),
         riskProfile: 'moderate_conservative', currentVersion: 2, ...modelBookFor('mod-007'),
         lastRebalanceDate: '2026-02-01', ...MODEL_BANDS['mod-007'],
         assetClasses: getModelByIndex(6).assetClasses,

@@ -120,7 +120,7 @@ describe('Brinson attribution identity', () => {
     expect(result.model).toBe('Brinson-Fachler')
     expect(result.linking).toBe('single-period arithmetic')
     expect(result.basis).toBe('gross of fees')
-    expect(result.benchmark).toBe('S&P 500 / Agg 60/40')
+    expect(result.benchmark).toBe('Model policy blend (Balanced Growth)')
   })
 
   // The identity is the acceptance test for this model, so it is asserted where it is exact —

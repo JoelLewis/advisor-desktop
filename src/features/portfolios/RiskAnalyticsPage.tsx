@@ -146,8 +146,10 @@ export function RiskAnalyticsPage() {
             {' '}{risk.var95Horizon} horizon, {risk.var95Method} method
             {' '}({(risk.var95Percent * 100).toFixed(2)}% of account value). Sharpe and Sortino use a
             {' '}{(risk.riskFreeRate * 100).toFixed(1)}% risk-free rate; Sortino divides by
-            {' '}{(risk.downsideDeviation * 100).toFixed(2)}% downside deviation. Tracking error
-            {' '}against {risk.benchmark} is {(risk.trackingError * 100).toFixed(2)}%. As of{' '}
+            {' '}{(risk.downsideDeviation * 100).toFixed(2)}% downside deviation. Ex-ante tracking
+            {' '}error against {risk.benchmark} is {(risk.trackingError * 100).toFixed(2)}% — modelled
+            {' '}active risk from the account's active weights against the model's target weights,
+            {' '}assuming 0.35 correlation across asset classes, not realised return dispersion. As of{' '}
             {formatDate(risk.asOf)}. Hypothetical — not a prediction.
           </p>
         </div>

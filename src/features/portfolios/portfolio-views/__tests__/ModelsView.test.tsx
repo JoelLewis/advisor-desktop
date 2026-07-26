@@ -46,7 +46,8 @@ const HKD_ACCOUNT: Account = {
 const MODEL: ModelAssignment = {
   id: 'mod-test',
   name: 'Test Model',
-  benchmark: 'S&P 500',
+  benchmark: 'Model policy blend (Test Model)',
+  benchmarkKind: 'model_policy',
   description: 'A model with a non-USD account, for currency coverage only',
   assetClasses: [],
 }

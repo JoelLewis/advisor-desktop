@@ -32,6 +32,7 @@ const MODEL: ModelAssignment = {
   id: 'mod-003',
   name: 'Balanced',
   benchmark: '60/40 Blend',
+  benchmarkKind: 'model_policy',
   description: 'Balanced allocation model',
   assetClasses: [],
 }

@@ -54,10 +54,20 @@ type AssetClassTarget = {
   targetWeight: Percentage;
 };
 
+/**
+ * What `benchmark` actually is. Every model here computes its "benchmark" return from its own
+ * target weights (`Σ wb·Rb,i` in the attribution) — there is no real external index return series
+ * behind any of them yet. `'model_policy'` says so explicitly, so a future model that *does* carry
+ * a real external index's returns can be added as `'external_index'` without the two being
+ * confused for each other.
+ */
+type BenchmarkKind = 'model_policy' | 'external_index';
+
 type ModelAssignment = {
   id: string;
   name: string;
   benchmark: string;
+  benchmarkKind: BenchmarkKind;
   description: string;
   assetClasses: AssetClassTarget[];
 };
@@ -133,6 +143,7 @@ type ModelGovernanceDetail = {
   id: string;
   name: string;
   benchmark: string;
+  benchmarkKind: BenchmarkKind;
   description: string;
   riskProfile: 'conservative' | 'moderate_conservative' | 'moderate' | 'moderate_aggressive' | 'aggressive';
   currentVersion: number;
@@ -152,6 +163,7 @@ export type {
   Position,
   HoldingGroup,
   AssetClassTarget,
+  BenchmarkKind,
   ModelAssignment,
   AssetClassDrift,
   DriftStatus,

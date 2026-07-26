@@ -68,7 +68,7 @@ describe('risk metrics are per account', () => {
       expect(row).not.toHaveProperty('alpha')
       expect(row).not.toHaveProperty('trackingError')
     }
-    expect(risk.benchmark).toBe('S&P 500 / Agg 60/40')
+    expect(risk.benchmark).toBe('Model policy blend (Balanced Growth)')
     expect(risk.trackingError).toBeCloseTo(0.0126, 4)
   })
 })
