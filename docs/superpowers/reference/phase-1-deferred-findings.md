@@ -480,3 +480,105 @@ It did **not** re-derive all 48 closed C/D findings from first principles. Where
 it". That distinction is the difference between a register and a claim, and given that fourteen
 separate instances were found on this branch of tests passing while certifying the defect they were
 written to catch, it should not be read as stronger than it is.
+
+---
+
+## 9. Adversarial domain review — findings the gate did not generate
+
+Commissioned by the controller in parallel with this gate: an independent Codex pass over `71c2109`,
+scoped to the question a green suite structurally cannot answer. Not "does the code match what its
+authors believed", but "were they right". Full controller verification notes, including what was
+checked against live fixtures and what was not, are in
+`.superpowers/sdd/2026-07-24-phase-1-data-integrity/codex-adversarial-findings.md`.
+
+**These are additions to the register, not to the closed list.** The gate task was explicitly told
+this review was not its to run or to summarise, so §§1–8 above are complete and honest as written.
+
+### 9.1 Tax-loss harvesting is still offered inside IRAs — **CRITICAL, destination: Phase 1b**
+
+`src/features/portfolios/TaxManagementPage.tsx` has no `account.taxTreatment` gating anywhere.
+`isTaxableAccount` exists and has exactly one consumer: the rebalance tax estimator in `oms.ts`.
+`acc-003` (`tax_deferred`, Robert Johnson Traditional IRA, $3.55M) is shown harvest opportunities
+and dollar "estimated tax benefit" figures for losses that produce no current-year deduction.
+
+This is the **same defect class Task 17 closed on the dashboard**, where IRAs and 529s were counted
+in a harvestable-benefit total. Task 17 fixed the aggregate surface; the per-account surface was
+never in its scope, and nothing flagged the gap. Verified structurally by the controller; Codex's
+specific dollar figures were not re-derived and are not relied on.
+
+### 9.2 Compliance certifies "all post-trade positions" while checking only proposed buys — **HIGH, destination: Phase 1b**
+
+`compliance.ts:87` enters the concentration loop only `if (trade.side === 'buy')`; `:125` then emits
+`pass` with "All post-trade positions within their applicable concentration limits." `acc-002` holds
+SPY at 44.8% (`positions.ts:29`) against a 35% `FUND_LIMIT` — a proposed AGG buy returns that
+affirmative pass with SPY 9.8 points over. The check is sound; the claim it makes about itself is
+not. Verified.
+
+### 9.3 Rebalance preview labels native-currency amounts as USD — **HIGH, destination: Phase 1b**
+
+`formatWithConversion(value, from, opts)` takes `from` as the **source** currency
+(`use-format-currency.ts:36`). `PreviewTradesStep.tsx:38,65,67,86` passes the literal `'USD'` for
+notionals that `oms.ts` derived from `account.totalValue` — native currency. acc-043's €909,760 buy
+displays as $909,760. Batch totals across mixed-currency accounts are dimensionally meaningless.
+Lands on acc-041/042/043/044, which have now carried a defect in seven consecutive tasks. Verified.
+
+### 9.4 The named benchmark is not the benchmark used — **HIGH, destination: Phase 1b (copy) / Phase 2 (data)**
+
+`pms.ts:150` declares `mod-002.benchmark = 'S&P 500'` while the blend is 55% US equity, giving a
+published "S&P 500" return of ~11.11% against a 14.5% US-equity proxy. Task 12's Brinson-Fachler
+arithmetic is correct and reconciles — the defect is the benchmark's *identity*, which active
+return, attribution and the risk tab's "tracking error against S&P 500" all inherit. Cheapest
+correct fix is copy: call it the model-policy benchmark. Verified.
+
+### 9.5 Static AI answers contradict the canonical data they cite — **MEDIUM, destination: Phase 1b**
+
+`ai.ts:124,127,132,206` asserts "2 accounts with wash sale restrictions through March 15", "4
+accounts drifted beyond thresholds", "$47,200 across 8 accounts" — each citing an internal screen.
+`realised-sales.ts` yields four open windows through March 23; the drift surface flags far more than
+four accounts; the TLH figures are static while the dashboard derives its own. A direct "one fact,
+one place" violation, and worse than an uncited estimate because the citation implies a
+reconciliation that did not happen. Verified.
+
+### 9.6 The sell cap is one-sided — buys can drive cash below target — **HIGH, destination: Phase 1b**
+
+Task 22's round-4 cap stops sells pushing cash **above** target; nothing stops buys pulling it
+**below**. acc-043: sells €648,900, buys €909,760, cash 13.69% → 5.56% against a 10% target.
+
+Recorded with the process point attached: the controller's own 47-account verification sweep
+printed these exact figures and **passed them**, because the invariant it asserted had a ceiling and
+no floor. A one-sided invariant is indistinguishable from a satisfied one.
+
+### 9.7 Rebalance cannot buy an unheld class, and picks `candidates[0]` — **MEDIUM, destination: Phase 1b**
+
+Supersedes and sharpens the Task 22 Minor at §7. Not only does acc-041 propose nothing at ~94%
+international equity against a 15% target; when the engine *does* propose, it never chooses which
+security to trade within the class. acc-002 trims SPY (embedded gain) while INTC sits in the same
+class with a $45,850 unrealised loss — so the "tax-aware" toggle can select a materially worse tax
+outcome than an obvious loss lot already in the account.
+
+### 9.8 Bond YTM bisection never validates its bracket — **LOW, destination: Phase 2**
+
+`bond-math.ts:53` fixes `[0.0001%, 40%]` and iterates without checking the root is bracketed;
+out-of-range prices return a plausible boundary value rather than an error. Every current fixture
+bond prices inside the bracket and is correct, so this is latent — but it is an exported `lib/`
+primitive, so the next caller owns the risk.
+
+### 9.9 Reported but not independently verified
+
+Recorded as leads, not facts: the book waterfall may be back-solved from current AUM
+(`pms.ts:1143`) so that it reconciles by construction; households marked `feeType: 'tiered'` may
+carry a single flat `annualRate`; and the wash-sale model records only loss *sales*, never testing
+pre-sale acquisitions, while scoping by `householdId` rather than taxpayer identity (an irrevocable
+trust may be a separate taxpayer). The 61-day arithmetic is confirmed correct. The scoping critique
+is a design question, not a bug fix.
+
+### 9.10 Areas the adversarial pass audited and found correct
+
+Brinson-Fachler formulas and reconciliation, with interaction kept separate rather than folded into
+selection; the 61-day wash-sale window; acquisition rather than sale as the checked operation for
+proposed buys; exactly-12-months treated as short-term; per-lot holding-period rates returning zero
+for tax-advantaged accounts in the rebalance estimator; the modified-duration denominator;
+parametric VaR's confidence, horizon and sign convention matching its UI label; constant-correlation
+covariance arithmetic; marginal tier arithmetic in `blendedTieredFee`; FX-aware AUM aggregation;
+asset-weighted effective fee; HHI and effective-N; waterfall chart-domain math; security
+classification; frozen-clock behaviour.
