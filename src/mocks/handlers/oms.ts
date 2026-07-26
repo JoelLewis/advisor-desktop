@@ -315,15 +315,16 @@ function generateRebalanceTrades(accountId: string, taxAware: boolean, driftThre
   // acc-015 test below ('the floor on cashAboveTarget lets the full $113,820 buy through') is its
   // pin: acc-015 is 0.6 points *under* its cash target and still deploys the full buy.
   const cashAboveTarget = Math.max(0, cashValue - cashTargetValue)
-  const buyCapacity = totalSell + cashAboveTarget
-  const buyScale = totalBuy > 0 ? Math.min(1, buyCapacity / totalBuy) : 1
 
-  return raw
-    .map(({ target, side, notional: rawNotional }) => {
-      const notional = side === 'sell' ? rawNotional * sellScale : rawNotional * buyScale
-      const taxImpact = side === 'sell' && taxable && target.position
-        ? estimateSaleTax(account.id, account.totalValue, target.position, notional, taxAware)
-        : 0
+  /**
+   * Build one executable leg: scale the notional, convert it to a tradeable lot, and take the
+   * value **from the lot** rather than from the notional the lot came from.
+   */
+  const toTrade = ({ target, side, notional: rawNotional }: (typeof raw)[number], scale: number): ProposedTrade => {
+    const notional = rawNotional * scale
+    const taxImpact = side === 'sell' && taxable && target.position
+      ? estimateSaleTax(account.id, account.totalValue, target.position, notional, taxAware)
+      : 0
       // §9.7 · `Math.round(notional / price)` rounded a share count **up**, so a sell could name
       // more units than the account owns: acc-045 holds 22.5 ETH and 15,231.5 USDC (fractional
       // crypto), and rounding 22.5 to 23 emitted an order to sell more ETH than exists — a
@@ -338,20 +339,85 @@ function generateRebalanceTrades(accountId: string, taxAware: boolean, driftThre
       // this phase exists to remove. The cap is the shares actually held for a sell, and what the
       // notional affords for a buy (so a buy can never name more units than it pays for either,
       // which `Math.round` also allowed).
+      //
+      // `estimatedValue` follows from the quantity actually being traded — `quantity x price`,
+      // rounded once — rather than from the un-floored notional. The preview renders both on the
+      // same row, so a row that does not multiply out is two numbers describing one trade and
+      // disagreeing on screen: "buy 15 VTI · $4,275" against 15 x $268.50 = $4,028 is $247 that
+      // is not there. Flooring made that systematic (25 of 273 legs were off by more than 0.5%,
+      // up to 5.8%) where `Math.round` had been symmetric and cost at most half a share. The
+      // notional is what the *drift* asks for; the trade is what can actually be executed, and
+      // the row must state the latter.
       const rawQuantity = notional / target.price
       const quantityCap = side === 'sell' && target.position ? target.position.quantity : rawQuantity
+      const quantity = boundedTradeQty(quantityCap, rawQuantity, 1)
       return {
         symbol: target.symbol,
         name: target.name,
         side,
-        quantity: boundedTradeQty(quantityCap, rawQuantity, 1),
-        estimatedValue: Math.round(notional),
+        quantity,
+        estimatedValue: Math.round(quantity * target.price),
         taxImpact,
         washSaleRisk: false,
         currency,
       }
-    })
-    .filter((t) => t.estimatedValue > 0)
+  }
+
+  // §9.7 · the two caps are stated in money, so they have to be measured against the money the
+  // proposal actually moves — the **executed** leg values, not the un-floored notionals they were
+  // derived from. Sells are built first, at the cap that reads raw buys (that side is not yet
+  // known); buys are then capped by what the sells **actually** raised. Reading `totalSell`
+  // (pre-floor) here instead let acc-045 buy $411,894 against $370,372 genuinely raised — BTC's
+  // leg alone floors from 2.1487 units to 2, dropping $13,003 — and drove its cash to **−0.39%**,
+  // a proposal the account cannot pay for. The whole point of §9.6's mirror bound is that buys may
+  // not spend cash the account does not have; proceeds it never received are exactly that.
+  const built = new Map<(typeof raw)[number], ProposedTrade>()
+  const build = (side: 'buy' | 'sell', scale: number): number => {
+    let executed = 0
+    for (const leg of raw) {
+      if (leg.side !== side) continue
+      const trade = toTrade(leg, scale)
+      if (trade.estimatedValue <= 0) continue
+      built.set(leg, trade)
+      executed += trade.estimatedValue
+    }
+    return executed
+  }
+
+  // Which side is built first is not arbitrary: **the binding cap's side is built second**, so it
+  // can be measured against money the other side actually moved rather than the un-floored
+  // notional it was derived from.
+  //
+  //  - Overweight cash (`cashAboveTarget > 0`): the model's cash *target* is the floor the account
+  //    is falling toward, so the binding cap is the buy cap — buys may not spend past what sells
+  //    raise plus the surplus. Sells first, buys against `executedSell`. Reading the pre-floor
+  //    `totalSell` here let acc-045 buy $411,894 against $370,372 genuinely raised (BTC alone
+  //    floors 2.1487 units to 2, dropping $13,003) and drove its cash to **-0.39%** — a proposal
+  //    the account cannot pay for.
+  //  - Underweight cash (`cashHeadroom > 0`): the target is the ceiling the account is rising
+  //    toward, so the binding cap is the sell cap — proceeds may not exceed what buys absorb plus
+  //    the gap to target. Buys first, sells against `executedBuy`. Reading the pre-floor
+  //    `totalBuy` here pushed seven accounts past their cash target by $58-$205 apiece, because
+  //    the buy side floored below the figure the sell cap had been sized against.
+  //
+  // In each case the *non*-binding bound is the account's starting cash weight, which the
+  // proposal is moving away from and which sits far from either result.
+  if (cashAboveTarget > 0) {
+    const executedSell = build('sell', sellScale)
+    build('buy', totalBuy > 0 ? Math.min(1, (executedSell + cashAboveTarget) / totalBuy) : 1)
+  } else {
+    // `+ cashAboveTarget` is zero on this branch by construction, and is written out rather than
+    // folded away on purpose: it keeps the buy cap one expression with one meaning on both
+    // branches, and it keeps the `Math.max(0, …)` floor — the funding-priority decision — load
+    // bearing here. Folding it away made removing that floor a no-op on every underweight-cash
+    // account, so the mutation that is supposed to prove "cash is funded last" survived.
+    const executedBuy = build('buy', totalBuy > 0 ? Math.min(1, (totalSell + cashAboveTarget) / totalBuy) : 1)
+    build('sell', totalSell > 0 ? Math.min(1, (executedBuy + cashHeadroom) / totalSell) : 1)
+  }
+
+  // Emitted in the drift surface's own asset-class order, so a preview reads the same way it did
+  // before sells and buys were built in separate passes.
+  return raw.map((leg) => built.get(leg)).filter((t): t is ProposedTrade => t !== undefined)
 }
 
 export const omsHandlers = [
