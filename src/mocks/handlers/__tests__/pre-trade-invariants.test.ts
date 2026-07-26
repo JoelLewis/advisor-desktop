@@ -484,6 +484,10 @@ describe('compliance.ts /api/compliance/check-trades concentration uses per-kind
     const concentrationCheck = result!.checks.find((c) => c.category === 'concentration_limit')!
     expect(concentrationCheck.status).toBe('warning')
     expect(result!.overallStatus).toBe('warning')
+    // §9.2, pinning current semantics deliberately (not a defect either way): a warning-severity
+    // breach — a position approaching, not yet over, its limit — still suppresses the affirmative
+    // "All post-trade positions..." pass. Only a fully clean projection gets the affirmative pass.
+    expect(result!.checks.some((c) => c.category === 'concentration_limit' && c.status === 'pass')).toBe(false)
   })
 
   it('C11: a $400K single-name buy of the same size in the same account fails the 10% limit outright', async () => {
@@ -559,6 +563,24 @@ describe('§9.2 · compliance reports the whole projected book, not only propose
     ])
     const nvda = result!.checks.find((c) => c.details?.symbol === 'NVDA')!
     expect(nvda.details!.preExisting).toBe(false)
+  })
+
+  it('a sell that reduces a pre-existing breach below its limit is reported as cured, not still breaching', async () => {
+    // acc-002 SPY: weight 0.448 against the 35% fund limit ($2,018,243.70 of the $4.5M account).
+    // Selling $666,000 (0.148 of the account) projects SPY to exactly 0.300 — below the 35% limit
+    // but still above the 28% warn threshold, so the check must survive as a 'warning', not a
+    // 'fail' and not vanish. A sell-blind projection (one that only applies buys, carrying every
+    // held position's weight forward unchanged) would leave SPY at 0.448 and still report 'fail'
+    // here — that is exactly the mutation this test exists to kill.
+    const [result] = await checkTradeCompliance([
+      { accountId: 'acc-002', trades: [{ symbol: 'SPY', side: 'sell', quantity: 1_280, estimatedValue: 666_000 }] },
+    ])
+    const concentration = result!.checks.filter((c) => c.category === 'concentration_limit')
+    const spy = concentration.find((c) => c.details?.symbol === 'SPY')
+    expect(spy, 'SPY concentration check must be reported').toBeDefined()
+    expect(spy!.status).toBe('warning')
+    expect(spy!.details!.postTradeWeight).toBeCloseTo(0.300, 3)
+    expect(spy!.details!.postTradeWeight).toBeLessThan(0.35)
   })
 })
 
