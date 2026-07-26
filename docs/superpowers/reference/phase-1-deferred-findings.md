@@ -591,8 +591,9 @@ Phase 1b (`2026-07-25-phase-1b-integrity-carryforward`, ten tasks) exists to clo
 is written at the end of the phase, on the branch `phase-1-data-integrity`, and records the status
 of each §9 finding with the commit that closed it and the mutation that proves the closure bites.
 
-**Gate at Task 10.** `pnpm test:run` — **84 files, 2258 tests, 0 failed**. `pnpm type-check` and
-`pnpm lint --max-warnings 0` both exit 0. `git diff phase-1-data-integrity -- src/mocks/data/__tests__/rollup-invariants.test.ts`
+**Gate at Task 10** (after its review round). `pnpm test:run` — **84 files, 2265 tests, 0 failed**.
+`pnpm type-check` and `pnpm lint --max-warnings 0` both exit 0.
+`git diff phase-1-data-integrity -- src/mocks/data/__tests__/rollup-invariants.test.ts`
 is empty: the roll-up gate is byte-identical to its Phase 1 form.
 
 ### 10.1 §9 findings — status
@@ -616,10 +617,14 @@ preview (`beca068`, `2a786e9`) and Task 10's hand-typed position weights (below)
 
 `src/mocks/data/positions.ts` stored a hand-typed three-decimal `weight` beside each `marketValue`.
 Measured before the fix: **135 of 350 served positions** disagreed with `marketValue / totalValue`,
-worst **acc-006 AGG at 0.0500pp = $6,000** on a $12,000,000 account. The stored field is gone; the
-`Position` type is unchanged and `getPositionsForAccount` derives the weight at the single point
-positions are served. New file `src/mocks/data/__tests__/position-weight-invariants.test.ts` (51
-tests) bounds the agreement at **1e-9**, not a percentage band.
+worst **acc-006 AGG at 0.0500pp = $6,000** on a $12,000,000 account, and **ten** accounts' stored
+weights failed to sum to 1 (acc-001/002/003/041/044/045 at 0.999, acc-015/033/042/043 at 1.001).
+`max|Σw − 1|` improves from **1.000000000000112e-3** to **2.220446049250313e-16**. The stored field
+is gone; the `Position` type is unchanged and `getPositionsForAccount` derives the weight at the
+single point positions are served. New file
+`src/mocks/data/__tests__/position-weight-invariants.test.ts` (51 tests) bounds the agreement at
+**1e-9**, not a percentage band, and guards **both** sides of the comparison for finiteness —
+`Math.abs(0 − NaN) > 1e-9` is false, so a zero-total account would otherwise pass.
 
 **Closed by Task 10, so removed from the open list:**
 
@@ -632,7 +637,24 @@ tests) bounds the agreement at **1e-9**, not a percentage band.
 | # | Finding | Destination |
 |---|---|---|
 | M30 | `rollup-invariants.test.ts:257-268` asserts `Σ position weight === 1` at `toBeCloseTo(1, 2)` (±0.005). That band was sized for the hand-typed weights; derived weights sum to 1 to float precision. The file is frozen by Global Constraint 8, so the tight bound (`toBeCloseTo(1, 10)`) lives in `position-weight-invariants.test.ts` instead, and the loose one is now redundant rather than wrong | **Phase 2**, with M8 — the same assertion, the same reason, and now the same fix |
-| M31 | `getPositionsForAccount`'s generated path emits `marketValue` from a *rounded* share count (`Math.round(equity * 0.6 / 268.5) * 268.50 ≠ equity * 0.6`), so the 30 generated accounts do not satisfy `marketValue === quantity × price` the way all 140 explicit rows do. **Measured: 180 of 210 generated positions violate it, worst acc-030 QQQ at $233.20.** Weights are unaffected — they derive from `marketValue`, which is exact — but the quantity is decorative | **Phase 2** (fixture review). Recorded as a fixture-realism gap, not a live arithmetic defect: no consumer multiplies the generated quantity by the price. Note `portfolio-invariants.test.ts` asserts `marketValue === quantity × price` over `allPositions` only, so it does not cover — or contradict — this |
+| M31 | `getPositionsForAccount`'s generated path emits `marketValue` from a *rounded* share count (`Math.round(equity * 0.6 / 268.5) * 268.50 ≠ equity * 0.6`), so the 30 generated accounts do not satisfy `marketValue === quantity × price` the way all 140 explicit rows do. **Measured: 180 of the 210 generated positions violate it — 180 of 350 served positions book-wide — worst acc-030 QQQ at $233.20.** Independently verified by the controller. Weights are unaffected — they derive from `marketValue`, which is exact — but the quantity is decorative | **Phase 2** (fixture review). Recorded as a fixture-realism gap, not a live arithmetic defect: no consumer multiplies the generated quantity by the price. Note `portfolio-invariants.test.ts` asserts `marketValue === quantity × price` over `allPositions` only, so it does not cover — or contradict — this |
+
+### 10.2b Task 10 review round — four corrections, none a shipped defect
+
+| # | Item | Resolution |
+|---|---|---|
+| 1 | `ConcentrationView`'s `> 0.02` materiality bar sat on a derived weight, and **thirty** generated CASH lines land at exactly 2%. `(totalValue * 0.02) / totalValue !== 0.02` for **645 of 16,166 sampled totals (3.99%)** | **Fixed.** `isMaterialWeight` in `src/lib/security-master.ts` compares against `0.02 + 1e-9`, restoring the pre-derivation behaviour independently of how the division lands. Excluding cash by asset class was **rejected**: acc-042 (20.7%), acc-044 (22.3%) and acc-046 (18.8%) hold genuinely breaching CASH lines against cash's own 15% limit, and that table's Limit/Status columns exist to show them. The smallest breach in the book is 10.16%, so the bar cannot hide one either way |
+| 2 | The task report's "did not move" list contained assumptions | **Corrected**, from a `git worktree` at `2a786e9` measured against the current tree across all 47 accounts. See the corrected §10.3 rows |
+| 3 | The new invariant guarded `position.weight` for finiteness but not `derived` | **Fixed.** A zero-total account yields a finite `weight` of 0 against a `NaN` derived, and `Math.abs(0 − NaN) > 1e-9` is false. Both sides are now guarded |
+| 4 | `security-master.test.ts` checked ten international fund positions against a `>= 8` floor, so losing an account entirely would pass | **Fixed.** Each of the four accounts is asserted present by name, and the count is asserted per account (`acc-041: 1, acc-042: 4, acc-043: 3, acc-044: 2`) |
+
+**A defect pattern worth carrying forward.** The Task 10 brief cited stored weights of `6.006%`
+(acc-002) and `5.606%` (acc-041). Neither appears in `positions.ts` — the stored values are `0.060`
+and `0.056`. The reviewer traced them to `pms.ts:575-578`, which renormalises by `1/Σweight`: on an
+account whose stored weights sum to 0.999, `0.060/0.999 = 6.006%`. **Real numbers from the wrong
+layer** — drift rows, not position weights. A figure can be arithmetically correct and still be
+evidence for a different claim than the one it is quoted for. **Destination: Phase 2**, as a note
+for whoever writes the next brief against this data layer.
 
 ### 10.3 Phase 1 expectations that Tasks 7, 8 and 10 deliberately changed
 
@@ -644,8 +666,8 @@ arithmetic in-file**, and each restatement is a correction, not a weakening.
 | 7 | acc-043 buy total (`PreviewTradesStep.test.tsx`) | 909,760 | 766,862 | The old number encoded the *uncapped* buy — the §9.6 defect itself — as ground truth in an unrelated FX-rendering test. 766,862 is what the cash-above-target cap produces |
 | 8 | Whole-book sell **share count** bound | `≤ position.quantity + 1` | exact | A whole share of slack is not rounding. The $1 tolerance stays on the *value* bound, where cent-level rounding is real |
 | 8 | acc-004/030/037/041/044/045/047 rebalance figures | Task 7's values | executed-money values | Task 7 sized the caps on *notional* money; Task 8 sizes them on *executed* money, so the trade row multiplies out and the caps bound what actually settles |
-| 10 | acc-041/042/043/044 `singleNameWeight` | 0.801 / 0.304 / 0.489 / 0.389 | 0.802 / 0.303 / 0.488 / 0.390 | Sums of derived weights, not of three-decimal literals. e.g. acc-041: 10,028,000 of 12,500,000 = 0.80224 |
+| 10 | `singleNameWeight`, **six** accounts | acc-011 0.220, acc-041 0.801, acc-042 0.304, acc-043 0.489, acc-044 0.389, acc-045 0.905 | 0.221 / 0.802 / 0.303 / 0.488 / 0.390 / 0.906 | Sums of derived weights, not of three-decimal literals. e.g. acc-041: 10,028,000 of 12,500,000 = 0.80224. Only the four international accounts are pinned by a test; acc-011 and acc-045 moved silently |
 | 10 | acc-001 Sharpe / TE / mu | 0.66 / 0.0126 / 0.1021 | 0.67 / 0.0127 / 0.1022 | acc-001's stored weights summed to 0.999, so `assetClassWeights` renormalised by 1/0.999. Σw·rp moves 0.10210209 → 0.10214623; (0.1022 − 0.04)/0.0935 = 0.665241 → 0.67 |
 | 10 | acc-045 σ / mu | 0.589 / 0.3868 | 0.5892 / 0.3869 | digital_assets 385,130/425,000 = 0.906188235 and cash 39,870/425,000 = 0.093811765, against 0.905/0.999 and 0.094/0.999. Variance 0.34714099, √ = 0.58918669 |
-| 10 | acc-006/015/033/044/047 rebalance totals, acc-002 us_equity trim | Task 8's values | derived-drift values | The drift the legs are sized from is now derived. e.g. acc-006's private_equity is 542,500/12,000,000 = 0.045208, so the trim is $542,400 rather than $540,000 |
+| 10 | Rebalance totals, **thirteen** accounts | acc-001, acc-002, acc-006, acc-011, acc-015, acc-029, acc-033, acc-041, acc-042, acc-043, acc-044, acc-046, acc-047 | see the task-10 report's two-tree table | The drift the legs are sized from is now derived. e.g. acc-006's private_equity is 542,500/12,000,000 = 0.045208, so the trim is $542,400 rather than $540,000. Only acc-006/033/044/047 and acc-002's us_equity leg are pinned; the other eight moved silently. Genuinely unmoved among the brief's named accounts: acc-004, acc-014, acc-030, acc-032, acc-037, acc-045 |
 

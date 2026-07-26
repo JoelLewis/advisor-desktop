@@ -7,7 +7,7 @@ import { useConcentration } from '@/hooks/use-portfolio'
 import { useContainerWidth } from '@/hooks/use-container-width'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { cn } from '@/lib/utils'
-import { SINGLE_NAME_LIMIT, FUND_LIMIT } from '@/lib/security-master'
+import { SINGLE_NAME_LIMIT, FUND_LIMIT, isMaterialWeight } from '@/lib/security-master'
 import { describeBreaches } from '@/lib/concentration-copy'
 
 const KIND_LABELS: Record<string, string> = {
@@ -63,7 +63,7 @@ export function ConcentrationView({ accountId }: ConcentrationViewProps) {
 
   const { positions, summary } = data
   const breachCount = summary.breachCount
-  const topPositions = positions.filter((p) => p.weight > 0.02)
+  const topPositions = positions.filter((p) => isMaterialWeight(p.weight))
 
   const treemapData = positions.map((p) => ({
     id: p.positionId,

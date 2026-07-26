@@ -27,10 +27,16 @@ describe('Position weight is derived from market value', () => {
       for (const position of positions) {
         checked++
         const derived = position.marketValue / account.totalValue
-        // `NaN > 1e-9` is false, so a missing or non-numeric weight would slip through the
-        // comparison below without being named. Checked explicitly rather than trusted.
-        if (!Number.isFinite(position.weight)) {
-          drift.push(`${account.id} ${position.symbol}: weight is ${String(position.weight)}, not a finite number.`)
+        // `NaN > 1e-9` is false, so a non-finite value on *either* side would slip through the
+        // comparison below without being named. Both are checked explicitly rather than trusted:
+        // a zero-value account makes `derived` NaN while `weight` is a perfectly finite 0, which
+        // is the same failure mode one variable over.
+        if (!Number.isFinite(position.weight) || !Number.isFinite(derived)) {
+          drift.push(
+            `${account.id} ${position.symbol}: weight is ${String(position.weight)} and ` +
+              `marketValue / totalValue is ${String(derived)} (${position.marketValue} / ` +
+              `${account.totalValue}) — one of them is not a finite number.`,
+          )
         } else if (Math.abs(position.weight - derived) > 1e-9) {
           drift.push(
             `${account.id} ${position.symbol}: stored ${position.weight} vs derived ` +
@@ -62,8 +68,9 @@ describe('Position weight is derived from market value', () => {
       for (const position of positions) {
         checked++
         const derived = position.marketValue / account.totalValue
-        if (!Number.isFinite(position.weight) || Math.abs(position.weight - derived) > 1e-9) {
-          drift.push(`${account.id} ${position.symbol}: ${String(position.weight)} vs ${derived}`)
+        if (!Number.isFinite(position.weight) || !Number.isFinite(derived)
+          || Math.abs(position.weight - derived) > 1e-9) {
+          drift.push(`${account.id} ${position.symbol}: ${String(position.weight)} vs ${String(derived)}`)
         }
       }
     }
@@ -80,8 +87,9 @@ describe('Position weight is derived from market value', () => {
       for (const position of getPositionsForAccount(account.id, account.totalValue)) {
         checked++
         const derived = position.marketValue / account.totalValue
-        if (!Number.isFinite(position.weight) || Math.abs(position.weight - derived) > 1e-9) {
-          drift.push(`${account.id} ${position.symbol}: ${String(position.weight)} vs ${derived}`)
+        if (!Number.isFinite(position.weight) || !Number.isFinite(derived)
+          || Math.abs(position.weight - derived) > 1e-9) {
+          drift.push(`${account.id} ${position.symbol}: ${String(position.weight)} vs ${String(derived)}`)
         }
       }
     }

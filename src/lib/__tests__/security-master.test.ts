@@ -112,14 +112,33 @@ describe('C23 fix round 1: no pooled vehicle in the international accounts reads
   // Task 10 — read through `getPositionsForAccount`, which derives the weight from the account's
   // total. `allPositions` no longer stores one, and the served weight is the one compliance,
   // `/concentration` and the AI insight all test against the limit.
-  const internationalFundPositions = ['acc-041', 'acc-042', 'acc-043', 'acc-044']
-    .map((id) => accounts.find((a) => a.id === id))
+  const INTERNATIONAL_ACCOUNT_IDS = ['acc-041', 'acc-042', 'acc-043', 'acc-044'] as const
+  const internationalAccounts = INTERNATIONAL_ACCOUNT_IDS.map((id) => accounts.find((a) => a.id === id))
+  const internationalFundPositions = internationalAccounts
     .filter((a): a is NonNullable<typeof a> => a !== undefined)
     .flatMap((a) => getPositionsForAccount(a.id, a.totalValue))
     .filter((p) => securityKind(p.symbol, p.assetClass) === 'fund')
 
-  it('has fund positions to check in all four accounts (sanity check on the fixture)', () => {
-    expect(internationalFundPositions.length).toBeGreaterThanOrEqual(8)
+  // Task 10 review — a silently dropped account is the failure this guard exists to catch. Ten fund
+  // positions against a `>= 8` floor means losing acc-041 or acc-044 entirely would still pass, so
+  // the accounts are named first and the count is asserted per account, not only in aggregate.
+  it.each(INTERNATIONAL_ACCOUNT_IDS)('%s is present in the fixture', (id) => {
+    expect(accounts.find((a) => a.id === id), `no account fixture for ${id}`).toBeDefined()
+  })
+
+  it('has fund positions to check in every one of the four accounts (sanity check on the fixture)', () => {
+    const perAccount = INTERNATIONAL_ACCOUNT_IDS.map((id) => [
+      id,
+      internationalFundPositions.filter((p) => p.accountId === id).length,
+    ] as const)
+    expect(
+      perAccount.filter(([, n]) => n === 0).map(([id]) => id),
+      'every international account must contribute at least one fund position',
+    ).toEqual([])
+    expect(Object.fromEntries(perAccount)).toEqual({
+      'acc-041': 1, 'acc-042': 4, 'acc-043': 3, 'acc-044': 2,
+    })
+    expect(internationalFundPositions.length).toBe(10)
   })
 
   it.each(internationalFundPositions.map((p) => ({ label: `${p.accountId} ${p.symbol} at weight ${p.weight}`, weight: p.weight })))(
