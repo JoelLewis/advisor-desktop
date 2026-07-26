@@ -423,7 +423,9 @@ const MODEL_BANDS: Record<string, { driftTolerance: number; rebalanceFrequency: 
   'mod-007': { driftTolerance: 0.05, rebalanceFrequency: 'quarterly' },
 }
 
-function computeDriftForAccount(account: typeof accounts[0]): DriftStatus {
+// Exported so `oms.ts`'s rebalance trade generator reads the same drift the drift surface does,
+// rather than a second computation.
+export function computeDriftForAccount(account: typeof accounts[0]): DriftStatus {
   const positions = getPositionsForAccount(account.id, account.totalValue)
   const modelId = account.modelId ?? 'mod-001'
   const targets = getModelTargets(modelId)

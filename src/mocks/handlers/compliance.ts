@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import type { ComplianceAlert, SupervisionRecord, TradeComplianceRequest, TradeComplianceCheck, TradeComplianceResult } from '@/types/compliance'
-import { startOfToday } from '@/lib/clock'
+import { todayISO } from '@/lib/clock'
+import { securityKind, concentrationLimitFor } from '@/lib/security-master'
 
 /**
  * D29 · pre-trade compliance / conflicts of interest — one list, used by both the trade ticket
@@ -20,13 +21,16 @@ export const RESTRICTED_SECURITIES = new Set([
 ])
 
 // ── Concentration limits ──
-const SINGLE_NAME_LIMIT = 0.10      // 10% single position
-const CASH_MINIMUM_PCT = 0.02       // 2% cash minimum
+// C23 · diversification — per-kind limits (single-issuer / fund / cash), imported from the one
+// place they are defined (`security-master.ts`), not a blanket 10% restated here.
+// Exported so `oms.ts`'s pre-check handler reads the same 2% floor, rather than a second literal.
+export const CASH_MINIMUM_PCT = 0.02       // 2% cash minimum
 
 // ── Account data derived from accounts.ts for compliance checks ──
 // Values must match the canonical account data
 import { accounts } from '../data/accounts'
-import { realisedSales } from '../data/realised-sales'
+import { openWashSaleWindows } from '../data/realised-sales'
+import { getPositionsForAccount } from '../data/positions'
 
 const ACCOUNT_VALUES: Record<string, number> = Object.fromEntries(
   accounts.map((a) => [a.id, a.totalValue])
@@ -35,30 +39,29 @@ const ACCOUNT_CASH: Record<string, number> = Object.fromEntries(
   accounts.map((a) => [a.id, a.cashBalance])
 )
 
-// Existing large positions per account (for concentration check)
-const EXISTING_POSITIONS: Record<string, Record<string, number>> = {
-  'acc-001': { VTI: 0.32, AGG: 0.18, AAPL: 0.076, NVDA: 0.05, VXUS: 0.12, BND: 0.10, VNQ: 0.04, CASH: 0.035 },
-  'acc-002': { VTI: 0.25, QQQ: 0.15, INTC: 0.06, IBIT: 0.03, ETHE: 0.02, BND: 0.14, EFA: 0.10, BXPE: 0.04, CASH: 0.023 },
-  'acc-006': { VTI: 0.30, VXUS: 0.15, AGG: 0.20, TLT: 0.08, VNQ: 0.05, EFA: 0.09, GLD: 0.04, CASH: 0.034 },
-  'acc-011': { SPY: 0.35, BND: 0.20, EFA: 0.12, VNQ: 0.06, CASH: 0.023 },
-  'acc-015': { VTI: 0.28, EFA: 0.14, GLD: 0.06, AGG: 0.18, VNQ: 0.08, CASH: 0.024 },
-}
-
-// C10 — one source for realised loss sales: recent sells for wash sale detection are derived
-// from `realisedSales`, not a second hand-typed list.
-const RECENT_SELLS: Record<string, Record<string, string>> = realisedSales
-  .filter((s) => s.realisedGainLoss < 0)
-  .reduce<Record<string, Record<string, string>>>((acc, s) => {
-    acc[s.accountId] = { ...(acc[s.accountId] ?? {}), [s.symbol]: s.saleDate }
-    return acc
-  }, {})
+// C11 · pre-trade-compliance — existing position weight (and asset class, for the per-kind
+// concentration check) derived from `positions.ts`, the same fixture the rest of the product
+// reads, rather than a hand-typed map that disagreed with it on every account it covered.
+const EXISTING_POSITIONS: Record<string, Record<string, { weight: number; assetClass: string }>> =
+  Object.fromEntries(
+    accounts.map((a) => [
+      a.id,
+      Object.fromEntries(
+        getPositionsForAccount(a.id, a.totalValue).map((p) => [p.symbol, { weight: p.weight, assetClass: p.assetClass }]),
+      ),
+    ]),
+  )
 
 function checkTradesForAccount(req: TradeComplianceRequest): TradeComplianceResult {
   const checks: TradeComplianceCheck[] = []
+  const account = accounts.find((a) => a.id === req.accountId)
   const accountValue = ACCOUNT_VALUES[req.accountId] ?? 1_000_000
   const currentCash = ACCOUNT_CASH[req.accountId] ?? 20_000
   const positions = EXISTING_POSITIONS[req.accountId] ?? {}
-  const recentSells = RECENT_SELLS[req.accountId] ?? {}
+  // C10 · tax-loss-harvesting — wash-sale windows are household-scoped (Task 14), not
+  // account-scoped: a loss sale in one household account restricts a repurchase in a sibling
+  // account. `realisedSales` carries `householdId`, so `openWashSaleWindows` already derives this.
+  const openWindows = account ? openWashSaleWindows(todayISO(), account.householdId) : []
 
   // ── Rule 1: Restricted securities ──
   const restrictedTrades = req.trades.filter((t) => RESTRICTED_SECURITIES.has(t.symbol))
@@ -81,26 +84,34 @@ function checkTradesForAccount(req: TradeComplianceRequest): TradeComplianceResu
     })
   }
 
-  // ── Rule 2: Concentration limits (>10% single name post-trade) ──
+  // ── Rule 2: Concentration limits (per security kind — single-issuer / fund / cash) ──
   let concentrationFailed = false
   for (const trade of req.trades) {
     if (trade.side === 'buy') {
-      const currentWeight = positions[trade.symbol] ?? 0
+      const existingPosition = positions[trade.symbol]
+      const currentWeight = existingPosition?.weight ?? 0
+      const kind = securityKind(trade.symbol, existingPosition?.assetClass ?? 'us_equity')
+      const limit = concentrationLimitFor(kind)
       const additionalWeight = trade.estimatedValue / accountValue
       const postTradeWeight = currentWeight + additionalWeight
 
-      if (postTradeWeight > SINGLE_NAME_LIMIT) {
+      // Same ladder as `/api/oms/orders/pre-check` in `oms.ts`: warn approaching the limit (80% of
+      // it), fail/block at the limit itself. The two endpoints previously disagreed — this one
+      // only fired once the limit was already crossed, and called it "fail" only above 1.5x — so
+      // the same trade could be a block on one surface and a mere warning on the other.
+      if (postTradeWeight > limit * 0.8) {
         concentrationFailed = true
+        const kindLabel = kind === 'single_name' ? 'single-name' : kind === 'fund' ? 'pooled-vehicle' : 'cash'
         checks.push({
           rule: `Concentration limit: ${trade.symbol}`,
           category: 'concentration_limit',
-          status: postTradeWeight > 0.15 ? 'fail' : 'warning',
-          message: `Post-trade weight of ${trade.symbol} would be ${(postTradeWeight * 100).toFixed(1)}%, ${postTradeWeight > 0.15 ? 'exceeding' : 'approaching'} the ${(SINGLE_NAME_LIMIT * 100).toFixed(0)}% single-name limit.`,
+          status: postTradeWeight > limit ? 'fail' : 'warning',
+          message: `Post-trade weight of ${trade.symbol} would be ${(postTradeWeight * 100).toFixed(1)}%, ${postTradeWeight > limit ? 'exceeding' : 'approaching'} the ${(limit * 100).toFixed(0)}% ${kindLabel} limit.`,
           details: {
             symbol: trade.symbol,
             currentWeight,
             postTradeWeight,
-            limit: SINGLE_NAME_LIMIT,
+            limit,
           },
         })
       }
@@ -108,10 +119,10 @@ function checkTradesForAccount(req: TradeComplianceRequest): TradeComplianceResu
   }
   if (!concentrationFailed) {
     checks.push({
-      rule: 'Concentration limit (10% single name)',
+      rule: 'Concentration limit (per security kind)',
       category: 'concentration_limit',
       status: 'pass',
-      message: 'All post-trade positions within single-name concentration limits.',
+      message: 'All post-trade positions within their applicable concentration limits.',
     })
   }
 
@@ -147,32 +158,28 @@ function checkTradesForAccount(req: TradeComplianceRequest): TradeComplianceResu
     })
   }
 
-  // ── Rule 4: Wash sale detection ──
-  const today = startOfToday()
+  // ── Rule 4: Wash sale detection (household-scoped, 61-day window — Task 14 / C10) ──
   let washSaleDetected = false
   for (const trade of req.trades) {
-    const sellDateStr = recentSells[trade.symbol]
-    if (trade.side === 'buy' && sellDateStr) {
-      const sellDate = new Date(sellDateStr)
-      const daysSinceSell = Math.floor((today.getTime() - sellDate.getTime()) / 86_400_000)
-      if (daysSinceSell <= 30) {
-        washSaleDetected = true
-        checks.push({
-          rule: `Wash sale window: ${trade.symbol}`,
-          category: 'wash_sale',
-          status: 'warning',
-          message: `${trade.symbol} was sold ${daysSinceSell} days ago. Repurchase within 30 days may trigger wash sale rules and disallow the realized loss.`,
-          details: { symbol: trade.symbol },
-        })
-      }
+    if (trade.side !== 'buy') continue
+    const openWindow = openWindows.find((w) => w.symbol === trade.symbol)
+    if (openWindow) {
+      washSaleDetected = true
+      checks.push({
+        rule: `Wash sale window: ${trade.symbol}`,
+        category: 'wash_sale',
+        status: 'warning',
+        message: `${trade.symbol} was sold at a loss in this household on ${openWindow.saleDate}. Repurchase before ${openWindow.end} may trigger wash sale rules and disallow the realized loss.`,
+        details: { symbol: trade.symbol },
+      })
     }
   }
   if (!washSaleDetected) {
     checks.push({
-      rule: 'Wash sale window (30-day)',
+      rule: 'Wash sale window (61-day)',
       category: 'wash_sale',
       status: 'pass',
-      message: 'No proposed buys conflict with recent sells within the 30-day wash sale window.',
+      message: "No proposed buys conflict with the household's recent loss sales within the 61-day wash sale window.",
     })
   }
 

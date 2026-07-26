@@ -114,8 +114,16 @@ export function getOrders(params?: Record<string, string>) {
   return get<Order[]>('/oms/orders', params)
 }
 
-export function submitRebalance(request: RebalanceRequest) {
+/**
+ * Preview a rebalance without executing it. `submitRebalance` is the same request — one
+ * endpoint, one function underneath both names.
+ */
+export function previewRebalance(request: { accountIds: string[]; taxAware: boolean; driftThreshold?: number }) {
   return post<RebalancePreview[]>('/oms/rebalance', request)
+}
+
+export function submitRebalance(request: RebalanceRequest) {
+  return previewRebalance(request)
 }
 
 export function getExecutionStatus(orderId: string) {
@@ -146,7 +154,9 @@ export type PreTradeCheckRequest = {
   symbol: string
   side: string
   quantity: number
-  estimatedValue?: number
+  // C28 · pre-trade-compliance — required, not inferred. A missing notional previously fell back
+  // to `quantity * 100`, making concentration limits evadable by trading high-priced securities.
+  estimatedValue: number
 }
 
 export function preTradeCheck(request: PreTradeCheckRequest) {

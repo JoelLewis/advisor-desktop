@@ -15,7 +15,7 @@ export const COST_BASIS_LABELS: Record<string, string> = {
   not_applicable: 'Not applicable (tax-advantaged account)',
 }
 
-export function makePositionColumns(onTrade?: (symbol: string, side: 'buy' | 'sell', assetClass?: string) => void, currencyCode?: CurrencyCode): ColumnDef<Position, unknown>[] {
+export function makePositionColumns(onTrade?: (symbol: string, side: 'buy' | 'sell', assetClass?: string, price?: number) => void, currencyCode?: CurrencyCode): ColumnDef<Position, unknown>[] {
   const cols: ColumnDef<Position, unknown>[] = [
     {
       accessorKey: 'symbol', header: 'Symbol',
@@ -71,13 +71,13 @@ export function makePositionColumns(onTrade?: (symbol: string, side: 'buy' | 'se
       cell: ({ row }) => (
         <div className="flex justify-end gap-1">
           <button
-            onClick={() => onTrade(row.original.symbol, 'buy', row.original.assetClass)}
+            onClick={() => onTrade(row.original.symbol, 'buy', row.original.assetClass, row.original.price)}
             className="rounded px-2 py-0.5 text-[11px] font-medium text-accent-green transition-colors hover:bg-accent-green/10"
           >
             Buy
           </button>
           <button
-            onClick={() => onTrade(row.original.symbol, 'sell', row.original.assetClass)}
+            onClick={() => onTrade(row.original.symbol, 'sell', row.original.assetClass, row.original.price)}
             className="rounded px-2 py-0.5 text-[11px] font-medium text-accent-red transition-colors hover:bg-accent-red/10"
           >
             Sell
