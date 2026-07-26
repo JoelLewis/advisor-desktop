@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { sendMessage, getAIInsights } from '@/services/ai'
+import { sendMessage, getAIInsights, getContextBriefing } from '@/services/ai'
 import { accounts } from '@/mocks/data/accounts'
 import { openWashSaleWindows } from '@/mocks/data/realised-sales'
 import { computeDriftForAccount } from '@/mocks/handlers/pms'
@@ -121,5 +121,25 @@ describe('§9.5 · Position Concentration Alert reflects real single-name breach
     expect(harvest?.metric?.value).toBe('$36,400')
     expect(harvest?.body).toContain('3 positions')
     expect(harvest?.body).toContain('clear for all candidates')
+  })
+
+  // Phase 1b gate, T1 · The trading-desk briefing's "Trade Restrictions" metric derives its count
+  // from `openWashSaleWindows`, correctly — but nothing pinned it, so hardcoding it back to the
+  // pre-Task-6 literal `2` survived all 2,265 tests. The value was right and the guard was absent,
+  // which is indistinguishable from the value being wrong until someone edits it. Asserts the
+  // count against the selector AND the accounts behind it, so a constant that happens to match
+  // today still fails the moment the fixtures change.
+  it('the trading-desk briefing restriction count matches openWashSaleWindows', async () => {
+    const windows = openWashSaleWindows(MOCK_TODAY_ISO)
+    const restricted = new Set(windows.map((w) => w.accountId))
+    // Vacuity guard — an empty fixture set would satisfy any count assertion below.
+    expect(restricted.size, 'fixtures must contain open wash-sale windows').toBeGreaterThan(0)
+
+    const briefing = await getContextBriefing('trading')
+    expect(briefing, 'trading briefing must exist').not.toBeNull()
+
+    const metric = briefing!.metrics?.find((m) => /trade restrictions/i.test(m.label))
+    expect(metric, 'briefing must carry a Trade Restrictions metric').toBeDefined()
+    expect(metric!.value).toBe(`${restricted.size} account${restricted.size === 1 ? '' : 's'}`)
   })
 })
