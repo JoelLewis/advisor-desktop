@@ -38,7 +38,8 @@ Every task's requirements implicitly include this section.
 7. **Do not weaken an existing test to make your change pass.** If an existing expectation is genuinely wrong, say so explicitly in your report, show the arithmetic proving it wrong, and restate it — never delete it or loosen a bound.
 8. **Do not touch `src/mocks/data/__tests__/rollup-invariants.test.ts`.** It is the phase gate, 234 assertions, byte-identical across all of Phase 1. If your change breaks it, your change is wrong.
 9. **Run tests with `pnpm test:run`** from the repo root. If it reports zero tests or a dangling-symlink error, run `CI=true pnpm install` first — a stale `node_modules/.modules.yaml` from a removed worktree causes pnpm to abort while looking successful.
-10. **Verify your commands can fail.** Before trusting a grep that returns empty, prove it can still find something — run it against a revision where the defect existed. Before trusting an invariant that passes, check it constrains both directions. Phase 1 shipped a gate grep that matched nothing at any revision, and a 47-account sweep whose invariant had a ceiling but no floor.
+10. **Every assertion over a collection needs a vacuity guard.** `.every()`, `.some(... )` inside a loop, and `for (const x of xs)` all pass trivially when the collection is empty. Assert the collection is non-empty *first*. This is not hypothetical: Task 3's "never emit the affirmative pass" mutation survived all 48 tests because the brief's `.every()` ran over an empty array — a false clean pass inside the very test written to prevent one.
+11. **Verify your commands can fail.** Before trusting a grep that returns empty, prove it can still find something — run it against a revision where the defect existed. Before trusting an invariant that passes, check it constrains both directions. Phase 1 shipped a gate grep that matched nothing at any revision, and a 47-account sweep whose invariant had a ceiling but no floor.
 
 ---
 
@@ -453,6 +454,10 @@ describe('§9.3 · rebalance previews carry their account currency', () => {
   it('acc-043 (EUR): proposed trades are tagged EUR, not USD', async () => {
     const [preview] = await previewRebalance({ accountIds: ['acc-043'], taxAware: true })
     expect(preview.currency).toBe('EUR')
+    // `.every()` is vacuously true on an empty array — assert there is something to check FIRST.
+    // Task 3 shipped exactly this bug: a "never emit the pass" mutation survived all 48 tests
+    // because the assertion ran over an empty list.
+    expect(preview.trades.length).toBeGreaterThan(0)
     expect(preview.trades.every((t) => t.currency === 'EUR')).toBe(true)
   })
 
@@ -662,6 +667,13 @@ describe('§9.5 · AI answers agree with the data they cite', () => {
     // A citation that states a number the answer does not is the failure mode being fixed.
     for (const key of ['trading', 'opportunities', 'tax']) {
       const answer = await askAi(key)
+      // Vacuity guard: an answer with no citations, or a citation with no digits, would let this
+      // loop pass without comparing anything. Both must be non-empty for the test to mean anything.
+      expect(answer.citations.length, `${key} has citations`).toBeGreaterThan(0)
+      expect(
+        answer.citations.some((c) => /\d/.test(c.text)),
+        `${key} has at least one citation stating a number`,
+      ).toBe(true)
       for (const citation of answer.citations) {
         const numbers = citation.text.match(/[\d,]+(?:\.\d+)?/g) ?? []
         for (const n of numbers) {
@@ -835,10 +847,12 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
 
   it('no proposed sell exceeds the position held, and no buy targets a symbol with no price', async () => {
     const accounts = await getAccounts()
+    let tradesChecked = 0
     for (const account of accounts) {
       const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
       const positions = await getPositions(account.id)
       for (const trade of preview?.trades ?? []) {
+        tradesChecked++
         expect(trade.estimatedValue, `${account.id} ${trade.symbol}`).toBeGreaterThan(0)
         if (trade.side === 'sell') {
           const position = positions.find((p) => p.symbol === trade.symbol)
@@ -847,6 +861,9 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
         }
       }
     }
+    // Vacuity guard — if the engine proposed nothing anywhere, every assertion above ran zero
+    // times and this test would pass while proving nothing.
+    expect(tradesChecked).toBeGreaterThan(100)
   })
 })
 ```
