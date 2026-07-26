@@ -907,6 +907,32 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     expect(buysChecked).toBeGreaterThan(50)
   })
 
+  it('acc-045: a sell out of a fractional crypto position never names more units than the account owns', async () => {
+    // The defect a `+ 1` tolerance in the sweep above hid. `Math.round(notional / price)` rounds
+    // a share count UP: acc-045 holds 22.5 ETH and 15,231.5 USDC, and the engine proposed selling
+    // 23 ETH and 15,232 USDC — more than exists, which a custodian rejects. The value cap held
+    // throughout ($73,800 of ETH is exactly its market value), so only the share count was wrong.
+    // `boundedTradeQty` (custodian.ts) is the codebase's one rounding policy for this and floors
+    // to the cap instead.
+    const positions = await getPositions('acc-045')
+    const fractional = positions.filter((p) => !Number.isInteger(p.quantity))
+    // Vacuity guard: this account must really hold fractional units, or the test proves nothing.
+    expect(fractional.map((p) => p.symbol)).toEqual(expect.arrayContaining(['BTC', 'ETH', 'USDC']))
+
+    const [preview] = await previewRebalance({ accountIds: ['acc-045'], taxAware: true })
+    const sells = preview!.trades.filter((t) => t.side === 'sell')
+    expect(sells.length).toBeGreaterThan(0)
+    for (const sell of sells) {
+      const position = positions.find((p) => p.symbol === sell.symbol)!
+      expect(sell.quantity, `${sell.symbol}: ${sell.quantity} units against ${position.quantity} held`)
+        .toBeLessThanOrEqual(position.quantity)
+    }
+    // The two legs that were wrong, named: 22 ETH of the 22.5 held (not 23), 15,231 USDC of the
+    // 15,231.5 held (not 15,232).
+    expect(sells.find((t) => t.symbol === 'ETH')!.quantity).toBe(22)
+    expect(sells.find((t) => t.symbol === 'USDC')!.quantity).toBe(15_231)
+  })
+
   it('no proposed sell exceeds the position held, no trade is a zero-share order, and no preview repeats a symbol', async () => {
     const accountList = await getAccounts()
     let tradesChecked = 0
@@ -926,8 +952,14 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
         if (trade.side === 'sell') {
           const position = positions.find((p) => p.symbol === trade.symbol)
           expect(position, `${account.id} ${trade.symbol} sell with no position`).toBeDefined()
+          // The value bound carries a $1 tolerance for cent-level rounding. The **share count**
+          // carries none, deliberately: a whole share of slack is not rounding, it is an
+          // overshoot. This assertion was written with `+ 1` and reported clean while acc-045
+          // proposed selling 23 ETH against a 22.5 ETH holding and 15,232 USDC against
+          // 15,231.5 — a custodian rejection, hidden by a tolerance wide enough to swallow it.
           expect(trade.estimatedValue).toBeLessThanOrEqual(position!.marketValue + 1)
-          expect(trade.quantity).toBeLessThanOrEqual(position!.quantity + 1)
+          expect(trade.quantity, `${account.id} ${trade.symbol} sells more units than held`)
+            .toBeLessThanOrEqual(position!.quantity)
         }
       }
     }

@@ -11,7 +11,7 @@ import { convertCurrency } from '@/lib/currency'
 import { securityKind, concentrationLimitFor } from '@/lib/security-master'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
-import { generateTaxLots } from './custodian'
+import { generateTaxLots, boundedTradeQty } from './custodian'
 import { taxRateFor } from '@/features/portfolios/tax/shared'
 import type { Position } from '@/types/portfolio'
 import type { CurrencyCode } from '@/types/currency'
@@ -324,11 +324,27 @@ function generateRebalanceTrades(accountId: string, taxAware: boolean, driftThre
       const taxImpact = side === 'sell' && taxable && target.position
         ? estimateSaleTax(account.id, account.totalValue, target.position, notional, taxAware)
         : 0
+      // §9.7 · `Math.round(notional / price)` rounded a share count **up**, so a sell could name
+      // more units than the account owns: acc-045 holds 22.5 ETH and 15,231.5 USDC (fractional
+      // crypto), and rounding 22.5 to 23 emitted an order to sell more ETH than exists — a
+      // custodian rejection. The value cap (`Math.min(rawNotional, position.marketValue)`) held
+      // throughout; only the rounded quantity broke it, which is why a sweep that tolerated a
+      // whole share of slack reported clean.
+      //
+      // `boundedTradeQty` in `custodian.ts` already is this codebase's rounding policy for "how
+      // many units may this trade name" — whole units floored and clamped to the cap, sub-unit
+      // caps kept to six decimals — and it was written for exactly this fractional-crypto case.
+      // Reused rather than restated: a second rounding rule in a second file is the divergence
+      // this phase exists to remove. The cap is the shares actually held for a sell, and what the
+      // notional affords for a buy (so a buy can never name more units than it pays for either,
+      // which `Math.round` also allowed).
+      const rawQuantity = notional / target.price
+      const quantityCap = side === 'sell' && target.position ? target.position.quantity : rawQuantity
       return {
         symbol: target.symbol,
         name: target.name,
         side,
-        quantity: Math.round(notional / target.price),
+        quantity: boundedTradeQty(quantityCap, rawQuantity, 1),
         estimatedValue: Math.round(notional),
         taxImpact,
         washSaleRisk: false,
