@@ -39,11 +39,17 @@ describe('risk metrics are per account', () => {
     expect(risk.sharpe).toBeCloseTo(
       (oneYear.portfolioReturn - RISK_FREE_RATE) / risk.standardDeviation, 2,
     )
-    // 0.66, not the 0.63 frozen here before Task 12: the account's return now includes the
+    // 0.67, not the 0.66 frozen here before Task 10 (itself 0.63 before Task 12, which added the
     // manager edge inside each asset class that the attribution counts as selection and
-    // interaction. Excluding it here while the attribution page counted it was the same figure
-    // quoted two ways. The invariant above is the assertion that matters; this pins the value.
-    expect(risk.sharpe).toBe(0.66)
+    // interaction). Task 10 derives every position weight from `marketValue / totalValue` instead
+    // of reading a hand-typed three-decimal figure. acc-001's stored weights summed to 0.999, so
+    // `assetClassWeights` renormalised by 1/0.999 and shifted every class: us_equity 0.470470 ->
+    // 0.470585 (3,858,800 / 8,200,000), cash 0.081081 -> 0.080509 (660,170 / 8,200,000). Sw.rp
+    // rises from 0.10210209 to 0.10214623 — 0.44 bp of a percentage point — which carries the
+    // reported 1Y return across the 0.10215 four-decimal boundary from 0.1021 to 0.1022. Then
+    // (0.1022 - 0.04) / 0.0935 = 0.665241 -> 0.67. Sigma is unmoved: 0.09353998 -> 0.0935.
+    // The invariant above is the assertion that matters; this pins the value.
+    expect(risk.sharpe).toBe(0.67)
     expect(risk.standardDeviation).toBe(0.0935)
     expect(risk.beta).toBe(0.64)
   })
@@ -52,11 +58,17 @@ describe('risk metrics are per account', () => {
     const thompsonIRA = await getRiskMetrics('acc-020')
     const crypto = await getRiskMetrics('acc-045')
     expect(thompsonIRA.standardDeviation).toBe(0.061)
-    // 0.589, not the 0.636 frozen here before Task 18. acc-045's positions summed to $393,630
-    // against a $425,000 balance (D4) and its weights to 0.925; `assetClassWeights` normalised
-    // that gap away, so the account was modelled as 97.8% digital assets. The missing $31,370 is
-    // cash, which makes the real mix 90.5% digital assets and 9.4% cash and lowers sigma.
-    expect(crypto.standardDeviation).toBe(0.589)
+    // 0.5892, not the 0.589 frozen here before Task 10 (itself 0.636 before Task 18, when
+    // acc-045's positions summed to $393,630 against a $425,000 balance and `assetClassWeights`
+    // normalised the gap away, modelling the account as 97.8% digital assets).
+    // Task 10 derives the weights: digital_assets 385,130 / 425,000 = 0.906188235 and cash
+    // 39,870 / 425,000 = 0.093811765, against the stored 0.905/0.999 = 0.9059059 and
+    // 0.094/0.999 = 0.0940941. With s_digital 0.650, s_cash 0.005 and rho 0.35:
+    //   var = 0.906188235^2 x 0.4225 + 0.093811765^2 x 0.000025
+    //       + 2 x 0.906188235 x 0.093811765 x 0.65 x 0.005 x 0.35
+    //       = 0.34694735 + 0.00000022 + 0.00019342 = 0.34714099,  sqrt = 0.58918669 -> 0.5892
+    // The same arithmetic on the stored weights gives 0.34692519, sqrt 0.58900351 -> 0.589.
+    expect(crypto.standardDeviation).toBe(0.5892)
     expect(crypto.beta).toBeGreaterThan(thompsonIRA.beta * 3)
   })
 
@@ -69,7 +81,9 @@ describe('risk metrics are per account', () => {
       expect(row).not.toHaveProperty('trackingError')
     }
     expect(risk.benchmark).toBe('Model policy blend (Balanced Growth)')
-    expect(risk.trackingError).toBeCloseTo(0.0126, 4)
+    // 0.0127, not 0.0126 — the same Task 10 weight shift behind the Sharpe above; TE is computed
+    // from the account's own weights against the model's target weights.
+    expect(risk.trackingError).toBeCloseTo(0.0127, 4)
   })
 })
 
@@ -155,8 +169,9 @@ describe('the modelled return distribution', () => {
 
   // Task 18 note: acc-045 used to force the percentile floor to bite (sigma 0.636, mu 0.4041 gave
   // a 1st percentile of -0.0755 of value). Correcting D4 — the account's positions summed to
-  // $393,630 against a $425,000 balance, and the missing $31,370 is cash — dropped sigma to 0.589,
-  // just under the 0.596 at which `1 + mu - 2.3263 * sigma` turns negative. No fixture account
+  // $393,630 against a $425,000 balance, and the missing $31,370 is cash — dropped sigma to 0.589
+  // (0.5892 after Task 10 derived the weights), just under the 0.596 at which
+  // `1 + mu - 2.3263 * sigma` turns negative. No fixture account
   // reaches the floor any more, so this asserts the invariant across the whole book rather than
   // the single account that happened to breach it, plus how close the sharpest account now comes.
   it('never projects a percentile below zero, on any account in the book', async () => {
@@ -170,10 +185,14 @@ describe('the modelled return distribution', () => {
 
   it('acc-045 is the account that comes closest to the floor', async () => {
     const { monteCarlo } = await getSensitivity('acc-045')
-    expect(monteCarlo.volatility).toBe(0.589)
+    // Task 10 — 0.5892/0.3869 from the derived weights (digital_assets 385,130 / 425,000 =
+    // 0.906188235, cash 39,870 / 425,000 = 0.093811765), where the stored three-decimal weights
+    // renormalised to 0.9059059 / 0.0940941 and gave 0.589/0.3868. mu = 0.906188235 x 0.422 +
+    // 0.093811765 x 0.048 = 0.38241143 + 0.00450296 = 0.38691440 -> 0.3869.
+    expect(monteCarlo.volatility).toBe(0.5892)
     const p1 = monteCarlo.percentiles.find((p) => p.percentile === 1)!
-    // 1 + 0.3868 - 0.589 * 2.3263 = 0.0166 of a $425,000 base: a 98.3% loss, positive by a hair.
-    expect(p1.value / monteCarlo.baseValue).toBeCloseTo(0.0166, 4)
+    // 1 + 0.3869 - 0.5892 * 2.3263 = 0.0162 of a $425,000 base: a 98.4% loss, positive by a hair.
+    expect(p1.value / monteCarlo.baseValue).toBeCloseTo(0.0162, 4)
     expect(monteCarlo.percentiles.find((p) => p.percentile === 5)!.value).toBeGreaterThan(p1.value)
   })
 
@@ -191,27 +210,31 @@ describe('the modelled return distribution', () => {
   // raw density, so the truncated mass is dropped rather than redistributed. Unlike the percentile
   // floor above, this clamp still bites after Task 18's D4 correction.
   //
-  // mu is 0.3868 rather than the 0.4139 frozen here before Task 18 (itself 0.4041 before Task 12,
-  // which added the manager edge inside each asset class). The move is the same D4 correction: the
-  // account's real 9.4% cash weight had been normalised away. Only the constants moved.
+  // mu is 0.3869 rather than the 0.3868 frozen here before Task 10 (itself 0.4139 before Task 18
+  // and 0.4041 before Task 12, which added the manager edge inside each asset class). Task 10's
+  // move is the derived weight: 0.906188235 x 0.422 + 0.093811765 x 0.048 = 0.38691440 against
+  // the stored-weight 0.9059059 x 0.422 + 0.0940941 x 0.048 = 0.38680881. Only the constants
+  // moved. acc-001's mu moves 0.1021 -> 0.1022 for the same reason.
   it('bounds the domain at total loss without reshaping the density', async () => {
     const { monteCarlo } = await getSensitivity('acc-045')
     const buckets = monteCarlo.histogram.map((b) => b.returnBucket)
     expect(buckets[0]).toBe(-1)
-    expect(buckets[buckets.length - 1]).toBeCloseTo(0.3868 + 3 * 0.589, 3)
+    // 0.3869 + 3 x 0.5892 = 0.3869 + 1.7676 = 2.1545
+    expect(buckets[buckets.length - 1]).toBeCloseTo(0.3869 + 3 * 0.5892, 3)
     // A lower-sigma account is unaffected — the clamp only bites where the domain runs past -100%.
     const calm = await getSensitivity('acc-001')
-    expect(calm.monteCarlo.histogram[0]!.returnBucket).toBeCloseTo(0.1021 - 3 * 0.0935, 4)
+    // 0.1022 - 3 x 0.0935 = 0.1022 - 0.2805 = -0.1783
+    expect(calm.monteCarlo.histogram[0]!.returnBucket).toBeCloseTo(0.1022 - 3 * 0.0935, 4)
   })
 })
 
 describe('monte carlo', () => {
   it('C7: percentiles and histogram come from the same distribution', async () => {
     const { monteCarlo } = await getSensitivity('acc-001')
-    // 0.1021, not the 0.0985 frozen here before Task 12 — see SELECTION_EDGE in pms.ts. The
-    // curve's mu is the account's own one-year return, and that return now includes the manager
-    // edge the attribution attributes to selection and interaction.
-    expect(monteCarlo.expectedReturn).toBeCloseTo(0.1021, 4)
+    // 0.1022, not the 0.1021 frozen here before Task 10 (itself 0.0985 before Task 12 — see
+    // SELECTION_EDGE in pms.ts). The curve's mu is the account's own one-year return; Task 10
+    // derives the weights it is built from, moving Sw.rp from 0.10210209 to 0.10214623.
+    expect(monteCarlo.expectedReturn).toBeCloseTo(0.1022, 4)
     expect(monteCarlo.volatility).toBeCloseTo(0.0935, 4)
     // p5 = exp of (mu + z5*sigma) applied to the account value; recover sigma from p5 and p95
     const p5 = monteCarlo.percentiles.find((p) => p.percentile === 5)!.value

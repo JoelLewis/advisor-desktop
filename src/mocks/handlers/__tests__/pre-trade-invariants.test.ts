@@ -364,28 +364,35 @@ describe('fix round 4 · sells are capped by what buys AND cash-to-target can ab
     // mod-004 wants 50% us_equity, 10% emerging markets and 5% alternatives; acc-044 holds none
     // of the three, and is overweight intl_equity (38.9% vs 20%) and fixed income (38.7% vs 10%).
     //   raw buys  = (0.50 + 0.10 + 0.05) x CHF 1,500,000 = CHF 975,000 (VTI, VWO, QAI)
-    //   raw sells = intl_equity 0.1894 x 1,500,000 = CHF 283,500, drawn NESN.SW 246,250 (whole
-    //               position) then NOVN.SW 37,250; fixed income 0.2874 x 1,500,000 = CHF 431,100,
-    //               drawn SRFCHA.SW 221,000 (whole position) then CSBGC0.SW 210,100
-    //                                                          = CHF 714,600
+    //   raw sells = intl_equity 0.1898 x 1,500,000 = CHF 284,700, drawn NESN.SW 246,250 (whole
+    //               position) then NOVN.SW 38,450; fixed income 0.2872 x 1,500,000 = CHF 430,800,
+    //               drawn SRFCHA.SW 221,000 (whole position) then CSBGC0.SW 209,800
+    //                                                          = CHF 715,500
     //   buyCapacity = totalSell + cash above target (334,490 - 75,000 = 259,490)
     // so buys scale to that and post-trade cash is exactly CHF 75,000 — the 5% target, reached
     // from above and never overshot. Every leg stays inside the position behind it (long-only).
-    // Executed at the lots traded: sells NESN.SW 2,500 + NOVN.SW 397 + SRFCHA.SW 2,000 +
-    // CSBGC0.SW 2,043 = CHF 715,064 (136 under the CHF 715,200 notional; four legs whose unit
-    // prices sum to 407.00), and buys VTI 3,172 + VWO 3,803 + QAI 2,420 = CHF 974,371, which is
-    // 183 under the cap those buys were actually built against — executedSell 715,064 + cash above
-    // target (334,490 - 75,000 = 259,490) = 974,554 — against three legs whose unit prices sum to
+    //
+    // Task 10 — the two drifts are 0.1898/0.2872, not the 0.1894/0.2874 the stored three-decimal
+    // weights produced. acc-044's stored weights summed to 0.999, so `computeDriftForAccount`
+    // renormalised by 1/0.999; derived, intl_equity is 584,710 / 1,500,000 = 0.389807 and fixed
+    // income 580,800 / 1,500,000 = 0.387200 exactly, against targets of 0.20 and 0.10.
+    //
+    // Executed at the lots traded: sells NESN.SW 2,500 + NOVN.SW 403 + SRFCHA.SW 2,000 +
+    // CSBGC0.SW 2,040 = 246,250 + 38,366 + 221,000 + 209,712 = CHF 715,328 (172 under the
+    // CHF 715,500 notional; four legs whose unit prices sum to 407.00), and buys VTI 3,173 +
+    // VWO 3,804 + QAI 2,420 = 749,716 + 149,969 + 74,962 = CHF 974,647, which is
+    // 171 under the cap those buys were actually built against — executedSell 715,328 + cash above
+    // target (334,490 - 75,000 = 259,490) = 974,818 — against three legs whose unit prices sum to
     // **CHF** 306.68 (VTI 236.28 + VWO 39.424 + QAI 30.976). The bound here was previously the
     // USD lot-sum 348.50 guarding a CHF quantity, 14% looser than it read: the same
     // wrong-unit error as bounding a money invariant in weight, one currency further down.
-    // Cash lands at 5.012%, inside [5.00%, 22.30%].
+    // Cash lands at 334,490 - 974,647 + 715,328 = CHF 75,171, i.e. 5.0114%, inside [5.00%, 22.30%].
     const { account, trades, totalSell, totalBuy } = await totals('acc-044')
     expect(trades.length).toBeGreaterThan(0)
-    expect(totalSell).toBe(715_064)
-    expect(totalBuy).toBe(974_371)
-    expect(totalBuy - totalSell).toBe(259_307)
-    expect(715_200 - totalSell).toBeLessThan(407.00)
+    expect(totalSell).toBe(715_328)
+    expect(totalBuy).toBe(974_647)
+    expect(totalBuy - totalSell).toBe(259_319)
+    expect(715_500 - totalSell).toBeLessThan(407.00)
     const endCash = account.cashBalance - totalBuy + totalSell
     expect(endCash - 0.05 * account.totalValue).toBeGreaterThanOrEqual(0)
     expect(endCash - 0.05 * account.totalValue).toBeLessThan(306.68)
@@ -428,19 +435,27 @@ describe('fix round 4 · sells are capped by what buys AND cash-to-target can ab
     expect(endCash - 0.03 * account.totalValue).toBeLessThan(744.90)
   })
 
-  it('acc-047 (Williams SIMPLE IRA, 8.3% cash against a 5% target) trims $24,570 and redeploys $31,500 into the four sleeves it holds nothing in', async () => {
+  it('acc-047 (Williams SIMPLE IRA, 8.3% cash against a 5% target) trims $24,507 and redeploys $31,500 into the four sleeves it holds nothing in', async () => {
     // mod-007 asks for emerging markets (5%), alternatives (5%), real estate (3%) and commodities
     // (2%); acc-047 holds VTI, EFA, AGG and BND only. Raw buys = 0.15 x $210,000 = $31,500; raw
-    // sells = VTI $7,140 + EFA $7,770 + AGG $9,660 = $24,570; cash above target = $17,510 -
-    // $10,500 = $7,010, so buyCapacity = $31,580 and nothing scales.
-    // Executed at the lots traded: sells VTI 26 + EFA 94 + AGG 98 = 24,370 (200 under the 24,570
-    // notional; unit prices summing to 449.30) and buys VWO 233 + QAI 297 + VNQ 70 + GLD 19 =
-    // 31,232 (268 under; unit prices summing to 384.80).
+    // sells = us_equity 0.0336 + intl_equity 0.0372 + fixed_income 0.0459 = 0.1167 x $210,000 =
+    // $24,507; cash above target = $17,510 - $10,500 = $7,010, so buyCapacity = $31,517 and
+    // nothing scales.
+    //
+    // Task 10 — $24,507, not the $24,570 the stored three-decimal weights implied (0.034 + 0.037
+    // + 0.046 = 0.117). Derived: VTI 80,550 / 210,000 = 0.383571 (drift 0.0336 against a 0.35
+    // target), EFA 28,805 / 210,000 = 0.137167 (0.0372 against 0.10), AGG+BND 83,135 / 210,000 =
+    // 0.395881 (0.0459 against 0.35).
+    //
+    // Executed at the lots traded: sells VTI 26 + EFA 94 + AGG 97 = 6,981 + 7,736 + 9,555 =
+    // 24,272 (235 under the 24,507 notional; unit prices summing to 449.30) and buys VWO 232 +
+    // QAI 296 + VNQ 70 + GLD 19 = 10,394 + 10,419 + 6,244 + 4,096 = 31,153 (347 under; unit
+    // prices summing to 384.80). Cash ends at 17,510 - 31,153 + 24,272 = 10,629, i.e. 5.0614%.
     const { account, trades, totalSell, totalBuy } = await totals('acc-047')
     expect(trades.length).toBeGreaterThan(0)
-    expect(totalSell).toBe(24_370)
-    expect(totalBuy).toBe(31_232)
-    expect(24_570 - totalSell).toBeLessThan(449.30)
+    expect(totalSell).toBe(24_272)
+    expect(totalBuy).toBe(31_153)
+    expect(24_507 - totalSell).toBeLessThan(449.30)
     expect(31_500 - totalBuy).toBeLessThan(384.80)
     // Cash falls from 8.34% toward — and not below — its 5% target.
     const endCash = account.cashBalance - totalBuy + totalSell
@@ -545,10 +560,16 @@ describe('§9.6 · buys are capped by available cash above target, symmetric to 
     // $45,861 of cash on a $780,000 account — 5.8796% against a 5.00% target, so it is *already*
     // overweight and the only legal direction for its cash is down (or, at worst, nowhere).
     //
-    //   raw   totalSell = 4,602 (intl_equity, EFA)     totalBuy = 4,134 (fixed_income, AGG)
-    //   buy   AGG  floor(4,134 / 98.50) = 41  ->  41 x 98.50  = 4,039
-    //   sell  EFA  floor(4,039 / 82.30) = 49  ->  49 x 82.30  = 4,033
-    //   end   45,861 - 4,039 + 4,033 = 45,855   (6 below the start, and 6,855 above the target)
+    //   raw   totalSell = 4,290 (intl_equity, EFA)     totalBuy = 4,212 (fixed_income, AGG)
+    //   buy   AGG  floor(4,212 / 98.50) = 42  ->  42 x 98.50  = 4,137
+    //   sell  EFA  floor(4,137 / 82.30) = 50  ->  50 x 82.30  = 4,115
+    //   end   45,861 - 4,137 + 4,115 = 45,839   (22 below the start, and 6,839 above the target)
+    //
+    // Task 10 — the two notionals are 4,290 and 4,212, not the 4,602 and 4,134 the stored
+    // three-decimal weights gave. acc-033's stored weights summed to 1.001, so
+    // `computeDriftForAccount` renormalised by 1/1.001; derived, intl_equity is 82,300 / 780,000
+    // = 0.105513 (drift +0.0055 against a 0.10 target, x 780,000 = 4,290) and fixed_income is
+    // 268,810 / 780,000 = 0.344628 (drift -0.0054 against 0.35, x 780,000 = 4,212).
     //
     // Sizing the sell cap on the pre-floor `totalBuy` of 4,134 instead sold 50 EFA for 4,115
     // against 4,039 of buys and left the account at $45,937 — $76 *above* where it started, on
@@ -559,16 +580,16 @@ describe('§9.6 · buys are capped by available cash above target, symmetric to 
     const totalSell = trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
     const totalBuy = trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
     expect(trades.length).toBeGreaterThan(0)
-    expect(totalBuy).toBe(4_039)
-    expect(totalSell).toBe(4_033)
+    expect(totalBuy).toBe(4_137)
+    expect(totalSell).toBe(4_115)
     const endCash = account.cashBalance - totalBuy + totalSell
     expect(endCash).toBeLessThanOrEqual(account.cashBalance)
     expect(endCash).toBeGreaterThanOrEqual(0.05 * account.totalValue)
     // Vacuity guard on the premise: it really does start overweight, so "cash may only fall" is
     // the live constraint and not a statement about an account moving the other way.
     expect(account.cashBalance).toBeGreaterThan(0.05 * account.totalValue)
-    // And the sells really are bounded by the *executed* buys, not by the 4,134 notional: one
-    // more EFA lot (82.30) would have cleared 4,115, which is what the pre-floor cap allowed.
+    // And the sells really are bounded by the *executed* buys, not by the 4,212 notional: one
+    // more EFA lot (82.30) would have cleared 4,197, which is what the pre-floor cap allowed.
     expect(totalSell).toBeLessThanOrEqual(totalBuy)
     expect(totalBuy - totalSell).toBeLessThan(82.30)
   })
@@ -577,19 +598,27 @@ describe('§9.6 · buys are capped by available cash above target, symmetric to 
   // `Math.max(0, …)` floor on `cashAboveTarget`: at the Rebalance page's default 0.005
   // threshold, no account's raw buy total is large enough, relative to its cash-to-target gap,
   // for the floored and unfloored figures to diverge. A tighter threshold (more asset classes
-  // clear the drift bar, so `totalBuy` grows) surfaces it. acc-015 is 0.6 points under its 3%
-  // cash target on a $4.2M account (a $25,301 gap) with $113,820 of raw buys at
+  // clear the drift bar, so `totalBuy` grows) surfaces it. acc-015 is 0.59 points under its 3%
+  // cash target on a $4.2M account (a $24,635 gap: 101,365 of CASH against 0.03 x 4,200,000 =
+  // 126,000) with $113,820 of raw buys at
   // `driftThreshold: 0.001` — without the floor, `cashAboveTarget` goes negative
-  // (-$25,301 instead of $0), pulling `buyCapacity` from $135,240 down to $109,939 and scaling
-  // every buy to 96.59 cents on the dollar. With the floor, `buyCapacity` stays at $135,240 — the
+  // (-$24,635 instead of $0), pulling `buyCapacity` from $136,488 down to $111,853 and scaling
+  // every buy to 98.27 cents on the dollar. With the floor, `buyCapacity` stays at $136,488 — the
   // full $113,820 goes through, unscaled.
-  it('acc-015 at a tight drift threshold: the floor on cashAboveTarget lets the whole buy through, not 96.59 cents on the dollar', async () => {
-    // $113,820 of notional buys, executed as EFA 668 + VWO 187 + QAI 1,431 = $113,725 — 95 under,
-    // against three legs whose unit prices sum to 162.30. The figure this test defends is the
-    // *unscaled* one: a cash-first reservation would cap it at $110,605, more than a lot-sum away.
+  it('acc-015 at a tight drift threshold: the floor on cashAboveTarget lets the whole buy through, not 98.27 cents on the dollar', async () => {
+    // $113,820 of notional buys (intl_equity 0.0128 + emerging_markets 0.0020 + alternatives
+    // 0.0123 = 0.0271 x $4,200,000), executed as EFA 653 + VWO 187 + QAI 1,467 = 53,742 + 8,378
+    // + 51,638 = $113,758 — 62 under, against three legs whose unit prices sum to 162.30. The
+    // figure this test defends is the *unscaled* one: a cash-first reservation would cap it at
+    // $111,853, more than a lot-sum away.
+    //
+    // Task 10 — the executed split moved (EFA 668 / QAI 1,431 before) because the drifts the legs
+    // are sized from are now derived: intl_equity 575,900 / 4,200,000 = 0.137167 against a 0.15
+    // target, alternatives 158,400 / 4,200,000 = 0.037714 against 0.05. The $113,820 total is
+    // unchanged; only its distribution across the three sleeves is.
     const [preview] = await previewRebalance({ accountIds: ['acc-015'], taxAware: true, driftThreshold: 0.001 })
     const totalBuy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
-    expect(totalBuy).toBe(113_725)
+    expect(totalBuy).toBe(113_758)
     expect(113_820 - totalBuy).toBeLessThan(162.30)
   })
 
@@ -603,12 +632,16 @@ describe('§9.6 · buys are capped by available cash above target, symmetric to 
    * `oms.ts` at the `cashAboveTarget` definition.
    */
   it('acc-015 at a tight drift threshold: cash is funded LAST — the sleeves are filled in full and cash lands wherever the residual leaves it, below its own target', async () => {
-    // acc-015 holds $101,365 of cash on a $4.2M account: 2.413% against a 3% target, a $24,635
-    // shortfall. At `driftThreshold: 0.001` it raises $135,240 and its sleeves want $113,820.
-    // Reserving the cash shortfall first would cap buys at $135,240 - $24,635 = $110,605
-    // (96.59 cents on the dollar) and land cash on exactly 3.00%. It does not: every sleeve
-    // dollar goes through and cash ends at 2.923%, still under target — moving toward it, never
-    // past it, and never at the sleeves' expense.
+    // acc-015 holds $101,365 of cash on a $4.2M account: 2.4135% against a 3% target, a $24,635
+    // shortfall. At `driftThreshold: 0.001` it raises $136,488 and its sleeves want $113,820.
+    // Reserving the cash shortfall first would cap buys at $136,488 - $24,635 = $111,853
+    // (98.27 cents on the dollar) and land cash on exactly 3.00%. It does not: every sleeve
+    // dollar goes through and cash ends at (101,365 - 113,758 + 136,488) / 4,200,000 = 2.9546%,
+    // still under target — moving toward it, never past it, and never at the sleeves' expense.
+    //
+    // Task 10 — $136,488 raised, not $135,185: the sell notional is us_equity 0.0104 +
+    // fixed_income 0.0221 = 0.0325 x $4,200,000 = $136,500, executed as INTC 1,535 x 28.45 =
+    // 43,671 and BND 1,282 x 72.40 = 92,817.
     const account = (await getAccounts()).find((a) => a.id === 'acc-015')!
     const [preview] = await previewRebalance({ accountIds: ['acc-015'], taxAware: true, driftThreshold: 0.001 })
     const totalSell = preview!.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
@@ -619,12 +652,14 @@ describe('§9.6 · buys are capped by available cash above target, symmetric to 
 
     // The premise: this account really is short of its cash target, or the test proves nothing.
     expect(startCashPct).toBeLessThan(target)
-    expect(totalSell).toBe(135_185)
-    // Sleeves first: the whole buy, not the $110,605 a cash-first reservation would allow. The
-    // $95 shortfall against the $113,820 notional is lot granularity (three legs, unit prices
-    // summing to 162.30); the $3,215 a cash-first cap would remove is not.
-    expect(totalBuy).toBe(113_725)
-    expect(totalBuy).toBeGreaterThan(111_000)
+    expect(totalSell).toBe(136_488)
+    // Sleeves first: the whole buy, not the $111,853 a cash-first reservation would allow. The
+    // $62 shortfall against the $113,820 notional is lot granularity (three legs, unit prices
+    // summing to 162.30); the $1,967 a cash-first cap would remove is not. The lower bound is the
+    // cash-first cap itself, so this discriminates against exactly the behaviour it names — a
+    // round number below it would pass on the wrong answer.
+    expect(totalBuy).toBe(113_758)
+    expect(totalBuy).toBeGreaterThan(111_853)
     // Cash last: it rises toward target and stops short of it, rather than being topped up.
     expect(endCashPct).toBeGreaterThan(startCashPct)
     expect(endCashPct).toBeLessThan(target)
@@ -665,24 +700,32 @@ describe('fix round 3 · self-financing applies to sells only — buys are never
     expect(Math.max(...sells.map((s) => s.estimatedValue))).toBeLessThanOrEqual(Math.round(largestPosition.marketValue))
   })
 
-  it('acc-006: buys the full $912,000 (funded from its own $1,012,470 cash balance), not scaled down to the $540,000 raised from selling BXPE', async () => {
+  it('acc-006: buys the full $920,400 (funded from its own $1,012,470 cash balance), not scaled down to the $542,400 raised from selling BXPE', async () => {
     // acc-006's model (mod-005) is underweight us_equity/intl_equity/alternatives and overweight
-    // private_equity (BXPE, not in the model at all) and cash. Raw sells: $540,000 (BXPE). Raw
-    // buys: $912,000 (SPY $72,000 + EFA $96,000 + QAI $744,000). The regression scaled buys down
-    // to match the $540,000 raised from selling, leaving both the cash overweight (8.4% vs 5%
+    // private_equity (BXPE, not in the model at all) and cash. Raw sells: $542,400 (BXPE). Raw
+    // buys: $920,400 (SPY $82,800 + EFA $93,600 + QAI $744,000). The regression scaled buys down
+    // to match the money raised from selling, leaving both the cash overweight (8.4% vs 5%
     // target) and the alternatives underweight (8.8% vs 15% target) uncorrected.
+    //
+    // Task 10 — the notionals are $542,400 and $920,400, not the $540,000 and $912,000 the stored
+    // three-decimal weights gave. Derived, on a $12,000,000 account: private_equity 542,500 /
+    // 12,000,000 = 0.045208 (drift +0.0452, x 12,000,000 = 542,400); us_equity 4,116,680 /
+    // 12,000,000 = 0.343057 (drift -0.0069 against a 0.35 target, x 12,000,000 = 82,800);
+    // intl_equity 1,706,750 / 12,000,000 = 0.142229 (drift -0.0078 against 0.15 = 93,600);
+    // alternatives 1,056,000 / 12,000,000 = 0.088 (drift -0.062 against 0.15 = 744,000).
+    //
     // Executed at the lots traded — pinned exactly rather than to the nearest $500, because a
     // $500-wide tolerance on the plan's headline figure could hide a real regression behind what
-    // looks like rounding. BXPE 4,976 x 108.50 = 539,896 (104 under the 540,000 notional, one leg
-    // at 108.50); SPY 138 + EFA 1,166 + QAI 21,136 = 911,750 (250 under, three legs whose unit
-    // prices sum to 637.80).
+    // looks like rounding. BXPE 4,999 x 108.50 = 542,392 (8 under the 542,400 notional, one leg
+    // at 108.50, and inside the 542,500 position); SPY 159 + EFA 1,137 + QAI 21,136 = 82,728 +
+    // 93,575 + 743,987 = 920,290 (110 under, three legs whose unit prices sum to 637.80).
     const [preview] = await previewRebalance({ accountIds: ['acc-006'], taxAware: true })
     const totalSell = preview!.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
     const totalBuy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
-    expect(totalSell).toBe(539_896)
-    expect(totalBuy).toBe(911_750)
-    expect(540_000 - totalSell).toBeLessThan(108.50)
-    expect(912_000 - totalBuy).toBeLessThan(637.80)
+    expect(totalSell).toBe(542_392)
+    expect(totalBuy).toBe(920_290)
+    expect(542_400 - totalSell).toBeLessThan(108.50)
+    expect(920_400 - totalBuy).toBeLessThan(637.80)
   })
 })
 
@@ -1080,14 +1123,14 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
   })
 
   it('tax-aware selection exhausts the loss position before touching the large-gain one, and still fills the whole sleeve', async () => {
-    // acc-002 is 12.17 points overweight us_equity on a $4.5M account — an implied $547,650 trim,
+    // acc-002 is 12.22 points overweight us_equity on a $4.5M account — an implied $549,900 trim,
     // against INTC ($199,150, a $45,850 unrealised loss), SPY ($2,018,243.70, a $355,206.70 gain)
     // and QQQ ($807,372.80, a $179,114.80 gain). Ranked by gain per dollar of market value:
     // INTC -23.0%, SPY +17.6%, QQQ +22.2%.
     //
     // "Prefer losses, then the smallest embedded gain" is an ordering drawn from until the
     // sleeve is filled, not a single pick: INTC sells out entirely ($199,150), then SPY tops the
-    // rest up ($348,500). Stopping at INTC would leave the account overweight us_equity after a
+    // rest up ($350,682). Stopping at INTC would leave the account overweight us_equity after a
     // rebalance that reported success — tax-better and rebalance-worse, which is not the trade
     // an advisor would accept when both are available.
     const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
@@ -1101,11 +1144,15 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     expect(usEquitySells[0]!.estimatedValue).toBe(199_150)
     expect(usEquitySells[0]!.quantity).toBe(7_000)
     // ...and the sleeve is filled to its drift, not left short at the loss position's size.
-    // Executed: 199,150 + SPY 669 x 520.30 = 547,231, which is 419 under the 547,650 notional —
-    // two legs whose unit prices sum to 548.75, so that is lot granularity, not a short fill.
+    // Task 10 — the trim is 0.1222 x 4,500,000 = 549,900, not the 547,650 the stored
+    // three-decimal weights gave: us_equity is SPY 2,018,243.70 + QQQ 807,372.80 + INTC 199,150 =
+    // 3,024,766.50 of 4,500,000 = 0.672170, and 0.672170 - 0.55 = 0.1222 to four places.
+    // Executed: 199,150 + SPY 674 x 520.30 = 350,682, total 549,832, which is 68 under the
+    // 549,900 notional — two legs whose unit prices sum to 548.75, so that is lot granularity,
+    // not a short fill.
     const usEquityTotal = usEquitySells.reduce((s, t) => s + t.estimatedValue, 0)
-    expect(usEquityTotal).toBe(547_231)
-    expect(547_650 - usEquityTotal).toBeLessThan(28.45 + 520.30)
+    expect(usEquityTotal).toBe(549_832)
+    expect(549_900 - usEquityTotal).toBeLessThan(28.45 + 520.30)
     // QQQ, the largest gain per dollar, is never reached — the ordering has to mean something.
     expect(usEquitySells.some((t) => t.symbol === 'QQQ')).toBe(false)
   })
@@ -1117,11 +1164,15 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     const [unaware] = await previewRebalance({ accountIds: ['acc-002'], taxAware: false })
     expect(JSON.stringify(aware!.trades)).not.toBe(JSON.stringify(unaware!.trades))
     // Named, not just different. Tax-unaware keeps the fixture's declaration order — SPY, QQQ,
-    // INTC — so SPY alone absorbs the whole $547,650 trim and the loss lot is never reached.
+    // INTC — so SPY alone absorbs the whole $549,900 trim and the loss lot is never reached.
     const unawareUsEquity = unaware!.trades.filter((t) => t.side === 'sell' && ['SPY', 'QQQ', 'INTC'].includes(t.symbol))
     expect(unawareUsEquity.map((t) => t.symbol)).toEqual(['SPY'])
-    // 1,052 shares x 520.30 = 547,356, within one SPY lot of the 547,650 notional.
-    expect(547_650 - unawareUsEquity[0]!.estimatedValue).toBeLessThan(520.30)
+    // Task 10 — 1,056 shares x 520.30 = 549,437, within one SPY lot of the 549,900 notional. The
+    // bound is restated against the new notional: left at 547,650 it would have been satisfied by
+    // a *negative* difference and stopped discriminating at all.
+    expect(unawareUsEquity[0]!.estimatedValue).toBe(549_437)
+    expect(549_900 - unawareUsEquity[0]!.estimatedValue).toBeLessThan(520.30)
+    expect(549_900 - unawareUsEquity[0]!.estimatedValue).toBeGreaterThan(0)
     expect(aware!.trades.some((t) => t.side === 'sell' && t.symbol === 'INTC')).toBe(true)
     expect(unaware!.trades.some((t) => t.side === 'sell' && t.symbol === 'INTC')).toBe(false)
   })

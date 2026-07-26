@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { accounts } from '@/mocks/data/accounts'
 import { allPositions, getPositionsForAccount } from '@/mocks/data/positions'
 
 describe('Portfolio Invariants', () => {
@@ -60,13 +61,25 @@ describe('Portfolio Invariants', () => {
     })
   })
 
+  // Task 10 — `allPositions` no longer stores a weight, so this block reads the served position
+  // through `getPositionsForAccount`, which derives it. The original ±0.02 band was sized for the
+  // hand-typed three-decimal weights it used to check; derived weights sum to 1 to float precision,
+  // and the tight form of this assertion now lives in position-weight-invariants.test.ts. The loose
+  // band is kept here only so this file still fails if the derivation is ever unwired.
   describe('Weight consistency', () => {
     const accountIds = [...new Set(allPositions.map((p) => p.accountId))]
+
+    it('covers every account that carries explicit positions', () => {
+      expect(accountIds).toHaveLength(17)
+    })
 
     it.each(accountIds)(
       'account %s: position weights sum to approximately 1.0 (within 0.02)',
       (accountId) => {
-        const positions = allPositions.filter((p) => p.accountId === accountId)
+        const account = accounts.find((a) => a.id === accountId)
+        expect(account, `no account fixture for ${accountId}`).toBeDefined()
+        const positions = getPositionsForAccount(accountId, account!.totalValue)
+        expect(positions.length, `${accountId} served no positions`).toBeGreaterThan(0)
         const weightSum = positions.reduce((sum, p) => sum + p.weight, 0)
         expect(Math.abs(weightSum - 1.0)).toBeLessThan(0.02)
       },

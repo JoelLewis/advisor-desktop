@@ -94,7 +94,10 @@ describe('concentration & compliance invariants', () => {
     expect(tracker.limit).toBe(0.35)
     expect(tracker.breached).toBe(false)
 
-    expect(data.summary.singleNameWeight).toBeCloseTo(0.801, 3)
+    // Task 10 — 0.802, not the 0.801 the hand-typed three-decimal weights summed to. The
+    // single names are 0700.HK 4,560,000 + 9988.HK 1,593,000 + 0005.HK 1,705,000 + 1299.HK
+    // 1,092,000 + 2388.HK 1,078,000 = 10,028,000 of HKD 12,500,000 = 0.80224 -> 0.802.
+    expect(data.summary.singleNameWeight).toBeCloseTo(0.802, 3)
   })
 
   it('C23 fix round 1: acc-042 (SGD) breaches only on individual stocks and cash, not the STI/bond funds or the REIT', async () => {
@@ -111,7 +114,9 @@ describe('concentration & compliance invariants', () => {
       expect(fund.breached).toBe(false)
     }
 
-    expect(data.summary.singleNameWeight).toBeCloseTo(0.304, 3)
+    // Task 10 — 0.303, not 0.304. D05.SI 477,600 + O39.SI 371,250 = 848,850 of SGD 2,800,000
+    // = 0.303161 -> 0.303; the stored 0.171 + 0.133 rounded to 0.304.
+    expect(data.summary.singleNameWeight).toBeCloseTo(0.303, 3)
   })
 
   it('C23 fix round 1: acc-043 (EUR) breaches only on individual stocks, not the govt/corp bond ETFs or the all-world fund', async () => {
@@ -127,7 +132,9 @@ describe('concentration & compliance invariants', () => {
       expect(fund.breached).toBe(false)
     }
 
-    expect(data.summary.singleNameWeight).toBeCloseTo(0.489, 3)
+    // Task 10 — 0.488, not 0.489. SIE.DE 648,900 + ASML.AS 552,400 + MC.PA 360,000 = 1,561,300
+    // of EUR 3,200,000 = 0.487906 -> 0.488; the stored 0.203 + 0.173 + 0.113 rounded to 0.489.
+    expect(data.summary.singleNameWeight).toBeCloseTo(0.488, 3)
   })
 
   it('C23 fix round 1: acc-044 (CHF) breaches only on individual stocks and cash, not the corp/govt bond ETFs', async () => {
@@ -144,7 +151,9 @@ describe('concentration & compliance invariants', () => {
       expect(fund.breached).toBe(false)
     }
 
-    expect(data.summary.singleNameWeight).toBeCloseTo(0.389, 3)
+    // Task 10 — 0.390, not 0.389. NESN.SW 246,250 + NOVN.SW 171,360 + ROG.SW 167,100 = 584,710
+    // of CHF 1,500,000 = 0.389807 -> 0.390; the stored 0.164 + 0.114 + 0.111 rounded to 0.389.
+    expect(data.summary.singleNameWeight).toBeCloseTo(0.390, 3)
   })
 
   it('C23 fix round 1: no account produces a breach on a pooled vehicle among the international funds', async () => {

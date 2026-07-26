@@ -41,6 +41,16 @@ type Position = {
   gainLossPercent: Percentage;
 };
 
+/**
+ * A position as it is stored, before a weight exists.
+ *
+ * `weight` is `marketValue / account.totalValue` and nothing else, so storing it beside
+ * `marketValue` stores the same fact twice. It was stored, hand-typed to three decimals, and the
+ * two disagreed on 135 of 350 served positions — by up to 0.0500pp, $6,000 on acc-006's AGG line.
+ * A seed carries the facts that cannot be derived; `getPositionsForAccount` divides.
+ */
+type PositionSeed = Omit<Position, 'weight'>;
+
 type HoldingGroup = {
   assetClass: AssetClass;
   targetWeight: Percentage;
@@ -161,6 +171,7 @@ export type {
   HoldingPeriod,
   TaxLot,
   Position,
+  PositionSeed,
   HoldingGroup,
   AssetClassTarget,
   BenchmarkKind,

@@ -582,3 +582,70 @@ parametric VaR's confidence, horizon and sign convention matching its UI label; 
 covariance arithmetic; marginal tier arithmetic in `blendedTieredFee`; FX-aware AUM aggregation;
 asset-weighted effective fee; HHI and effective-N; waterfall chart-domain math; security
 classification; frozen-clock behaviour.
+
+---
+
+## 10. Phase 1b closure — the §9 adversarial findings, re-verified at Task 10
+
+Phase 1b (`2026-07-25-phase-1b-integrity-carryforward`, ten tasks) exists to close §9. This section
+is written at the end of the phase, on the branch `phase-1-data-integrity`, and records the status
+of each §9 finding with the commit that closed it and the mutation that proves the closure bites.
+
+**Gate at Task 10.** `pnpm test:run` — **84 files, 2258 tests, 0 failed**. `pnpm type-check` and
+`pnpm lint --max-warnings 0` both exit 0. `git diff phase-1-data-integrity -- src/mocks/data/__tests__/rollup-invariants.test.ts`
+is empty: the roll-up gate is byte-identical to its Phase 1 form.
+
+### 10.1 §9 findings — status
+
+| § | Finding | Status | Commit(s) | The mutation that proves it |
+|---|---|---|---|---|
+| 9.1 | Tax-loss harvesting offered inside IRAs | **Closed** (Task 2) | `e540e30`, `7938e0f` | `isTaxableAccount → true` kills six named gate tests; making `harvestingDisclosureFor` unconditional kills the acc-005 and acc-006 controls, proving the gate is a gate and not blanket suppression |
+| 9.2 | Compliance certifies "all post-trade positions" while checking only proposed buys | **Closed** (Task 3) | `b2ab167`, `d97de70` | Reverting the projection to visit only buys re-certifies acc-002's 44.8% SPY against a 35% fund limit |
+| 9.3 | Rebalance preview labels native-currency amounts as USD | **Closed** (Task 4) | `d0572ca` | Passing a literal `'USD'` source currency restores the eight-fold HKD misstatement |
+| 9.4 | The named benchmark is not the benchmark used | **Closed** (Task 5, copy half) | `845190c`, `03045ec`, `eb3edaa` | Data half (a real external index return series) remains **Phase 2**, as §9.4 always said |
+| 9.5 | Static AI answers contradict the canonical data they cite | **Closed** (Task 6) | `603b201`, `0ea6ff8` | Re-hardcoding a cited count breaks `ai-citation-invariants.test.ts`, including the standing acc-006 assertion |
+| 9.6 | The sell cap is one-sided — buys can drive cash below target | **Closed** (Task 7, corrected by Task 8) | `ff537ea`, then `d3d63c5`/`f30e570` | `sellScale = 1` fires the sweep's ceiling branch on 28 accounts; the floor branch is fired by removing `cashAboveTarget` |
+| 9.7 | Rebalance cannot buy an unheld class, and picks `candidates[0]` | **Closed** (Task 8) | `04ad3cc`, `b3d382d`, `82c297d`, `d3d63c5`, `f30e570` | Reverting the ordering makes acc-002 trim SPY while INTC's $45,850 loss sits untouched in the same class |
+| 9.8 | Bond YTM bisection never validates its bracket | **Open — Phase 2** | — | Unchanged by Phase 1b. `bond-math.ts:53` still fixes `[0.0001%, 40%]` and iterates without checking the root is bracketed. Every current fixture bond prices inside the bracket, so it is latent, but it is an exported `lib/` primitive. **Destination: Phase 2**, with the formatting/validation spine |
+
+Two findings were raised **during** Phase 1b and closed inside it: Task 9's fabricated model-trade
+preview (`beca068`, `2a786e9`) and Task 10's hand-typed position weights (below). Neither appears in
+§9 — the adversarial pass did not reach them.
+
+### 10.2 Task 10 — position weights are derived
+
+`src/mocks/data/positions.ts` stored a hand-typed three-decimal `weight` beside each `marketValue`.
+Measured before the fix: **135 of 350 served positions** disagreed with `marketValue / totalValue`,
+worst **acc-006 AGG at 0.0500pp = $6,000** on a $12,000,000 account. The stored field is gone; the
+`Position` type is unchanged and `getPositionsForAccount` derives the weight at the single point
+positions are served. New file `src/mocks/data/__tests__/position-weight-invariants.test.ts` (51
+tests) bounds the agreement at **1e-9**, not a percentage band.
+
+**Closed by Task 10, so removed from the open list:**
+
+| Source | Item | Status |
+|---|---|---|
+| Task 8 report, Concern 2 | "`positions.ts` weight fields — `computeDriftForAccount` still renormalises hand-typed 3-decimal weights, so every *drift* figure carries up to ~0.06 of a point of error." | **Closed**, this commit. Every drift figure is now derived. |
+
+**Carried forward from Task 10, with destinations:**
+
+| # | Finding | Destination |
+|---|---|---|
+| M30 | `rollup-invariants.test.ts:257-268` asserts `Σ position weight === 1` at `toBeCloseTo(1, 2)` (±0.005). That band was sized for the hand-typed weights; derived weights sum to 1 to float precision. The file is frozen by Global Constraint 8, so the tight bound (`toBeCloseTo(1, 10)`) lives in `position-weight-invariants.test.ts` instead, and the loose one is now redundant rather than wrong | **Phase 2**, with M8 — the same assertion, the same reason, and now the same fix |
+| M31 | `getPositionsForAccount`'s generated path emits `marketValue` from a *rounded* share count (`Math.round(equity * 0.6 / 268.5) * 268.50 ≠ equity * 0.6`), so the 30 generated accounts do not satisfy `marketValue === quantity × price` the way all 140 explicit rows do. **Measured: 180 of 210 generated positions violate it, worst acc-030 QQQ at $233.20.** Weights are unaffected — they derive from `marketValue`, which is exact — but the quantity is decorative | **Phase 2** (fixture review). Recorded as a fixture-realism gap, not a live arithmetic defect: no consumer multiplies the generated quantity by the price. Note `portfolio-invariants.test.ts` asserts `marketValue === quantity × price` over `allPositions` only, so it does not cover — or contradict — this |
+
+### 10.3 Phase 1 expectations that Tasks 7, 8 and 10 deliberately changed
+
+Global Constraint 7 forbids deleting a test that fails; every figure below was **restated with its
+arithmetic in-file**, and each restatement is a correction, not a weakening.
+
+| Task | Figure | Was | Is | Why the new figure is correct |
+|---|---|---|---|---|
+| 7 | acc-043 buy total (`PreviewTradesStep.test.tsx`) | 909,760 | 766,862 | The old number encoded the *uncapped* buy — the §9.6 defect itself — as ground truth in an unrelated FX-rendering test. 766,862 is what the cash-above-target cap produces |
+| 8 | Whole-book sell **share count** bound | `≤ position.quantity + 1` | exact | A whole share of slack is not rounding. The $1 tolerance stays on the *value* bound, where cent-level rounding is real |
+| 8 | acc-004/030/037/041/044/045/047 rebalance figures | Task 7's values | executed-money values | Task 7 sized the caps on *notional* money; Task 8 sizes them on *executed* money, so the trade row multiplies out and the caps bound what actually settles |
+| 10 | acc-041/042/043/044 `singleNameWeight` | 0.801 / 0.304 / 0.489 / 0.389 | 0.802 / 0.303 / 0.488 / 0.390 | Sums of derived weights, not of three-decimal literals. e.g. acc-041: 10,028,000 of 12,500,000 = 0.80224 |
+| 10 | acc-001 Sharpe / TE / mu | 0.66 / 0.0126 / 0.1021 | 0.67 / 0.0127 / 0.1022 | acc-001's stored weights summed to 0.999, so `assetClassWeights` renormalised by 1/0.999. Σw·rp moves 0.10210209 → 0.10214623; (0.1022 − 0.04)/0.0935 = 0.665241 → 0.67 |
+| 10 | acc-045 σ / mu | 0.589 / 0.3868 | 0.5892 / 0.3869 | digital_assets 385,130/425,000 = 0.906188235 and cash 39,870/425,000 = 0.093811765, against 0.905/0.999 and 0.094/0.999. Variance 0.34714099, √ = 0.58918669 |
+| 10 | acc-006/015/033/044/047 rebalance totals, acc-002 us_equity trim | Task 8's values | derived-drift values | The drift the legs are sized from is now derived. e.g. acc-006's private_equity is 542,500/12,000,000 = 0.045208, so the trim is $542,400 rather than $540,000 |
+

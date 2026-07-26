@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { securityKind, concentrationLimitFor, SINGLE_NAME_LIMIT, FUND_LIMIT, CASH_LIMIT, type SecurityKind } from '@/lib/security-master'
-import { allPositions } from '@/mocks/data/positions'
+import { accounts } from '@/mocks/data/accounts'
+import { allPositions, getPositionsForAccount } from '@/mocks/data/positions'
 
 describe('securityKind', () => {
   it.each(['VTI', 'SPY', 'QQQ', 'AGG', 'BND', 'TLT', 'TIP', 'EFA', 'VWO', 'VXUS', 'BNDX', 'LQD', 'VCIT', 'GLD', 'VNQ', 'QAI', 'IBIT', 'ETHE', 'BXPE', 'VFIAX'])(
@@ -108,10 +109,14 @@ describe('C23 fix round 1: no pooled vehicle in the international accounts reads
   // the book — the same four Task 10's FX fix had to touch — and were the accounts silently
   // corrupted by the fund-symbol gap. None of their fund positions exceed the 35% fund limit, so
   // none should ever be flagged.
-  const internationalFundPositions = allPositions.filter(
-    (p) => ['acc-041', 'acc-042', 'acc-043', 'acc-044'].includes(p.accountId)
-      && securityKind(p.symbol, p.assetClass) === 'fund',
-  )
+  // Task 10 — read through `getPositionsForAccount`, which derives the weight from the account's
+  // total. `allPositions` no longer stores one, and the served weight is the one compliance,
+  // `/concentration` and the AI insight all test against the limit.
+  const internationalFundPositions = ['acc-041', 'acc-042', 'acc-043', 'acc-044']
+    .map((id) => accounts.find((a) => a.id === id))
+    .filter((a): a is NonNullable<typeof a> => a !== undefined)
+    .flatMap((a) => getPositionsForAccount(a.id, a.totalValue))
+    .filter((p) => securityKind(p.symbol, p.assetClass) === 'fund')
 
   it('has fund positions to check in all four accounts (sanity check on the fixture)', () => {
     expect(internationalFundPositions.length).toBeGreaterThanOrEqual(8)
