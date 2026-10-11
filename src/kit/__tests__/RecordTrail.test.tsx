@@ -14,3 +14,8 @@ it('lists ordered steps with state and actor', () => {
   expect(items[1]).toHaveTextContent('Not yet recorded')
   expect(within(items[0]!).getByText('2026-02-25 12:03 UTC')).toBeInTheDocument()
 })
+
+it('says so when a step has no named actor, rather than inventing one', () => {
+  render(<RecordTrail steps={[{ label: 'Review opened', state: 'DONE', at: '2026-02-21T14:00:00Z' }]} />)
+  expect(screen.getByRole('listitem')).toHaveTextContent('No named actor')
+})

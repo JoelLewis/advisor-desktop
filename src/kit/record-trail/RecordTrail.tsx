@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils'
 import { fmtTimestamp } from '@/kit/measure'
 
 export type TrailState = 'DONE' | 'PENDING' | 'NOT STARTED'
-type TrailStep = { label: string; actor: string; state: TrailState; at?: string }
+type TrailStep = { label: string; actor?: string; state: TrailState; at?: string }
 
 const STATE: Record<TrailState, string> = {
   DONE: 'bg-ink text-face',
@@ -19,7 +19,9 @@ export function RecordTrail({ steps }: { steps: TrailStep[] }) {
             {s.at ? fmtTimestamp(s.at) : (<><span aria-hidden="true">—</span><span className="sr-only">Not yet recorded</span></>)}
           </span>
           <span>{s.label}</span>
-          <span className="text-ink-2">{s.actor}</span>
+          <span className="text-ink-2">
+            {s.actor ?? (<><span aria-hidden="true">—</span><span className="sr-only">No named actor</span></>)}
+          </span>
           <span className={cn('justify-self-start px-1.5 text-label uppercase', STATE[s.state])}>{s.state}</span>
         </li>
       ))}

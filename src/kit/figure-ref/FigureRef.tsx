@@ -1,13 +1,15 @@
 import { useId } from 'react'
 import * as Tooltip from '@radix-ui/react-tooltip'
 
-export function FigureRef({ children, source, note }: { children: string; source: string; note?: number }) {
+type FigureRefProps = { children: string; source: string; path?: string; note?: number }
+
+export function FigureRef({ children, source, path, note }: FigureRefProps) {
   const descId = useId()
   return (
     <Tooltip.Provider delayDuration={200}>
       <Tooltip.Root>
         <Tooltip.Trigger asChild>
-          <span data-figure role="group" aria-label={children} tabIndex={0} aria-describedby={descId}
+          <span data-figure data-source={path} role="group" aria-label={children} tabIndex={0} aria-describedby={descId}
             className="tabular underline decoration-ink-3 decoration-dotted underline-offset-4">
             {children}
             {note !== undefined ? <sup className="ml-0.5 text-label text-ink-3"><span className="sr-only">note </span>{note}</sup> : null}

@@ -9,6 +9,7 @@ import { Attestation } from '@/kit/attestation/Attestation'
 import { Stepper } from '@/kit/stepper/Stepper'
 import { DataTable } from '@/kit/data-table/DataTable'
 import { Num } from '@/kit/data-table/Num'
+import { NotApplicable } from '@/kit/data-table/NotApplicable'
 import { Gauge } from '@/kit/gauge/Gauge'
 import { WindowRuler } from '@/kit/window-ruler/WindowRuler'
 import { TaxTape } from '@/kit/tax-tape/TaxTape'
@@ -18,17 +19,21 @@ import { Stamp } from '@/kit/stamp/Stamp'
 import { RecordSlip } from '@/kit/record-slip/RecordSlip'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
 import { RecordTrail } from '@/kit/record-trail/RecordTrail'
-import { clientMoney, fmtDrift, fmtMoney, fmtPrice, fmtQuantity, fmtResult, fmtTolerance, fmtWeight } from '@/kit/measure'
+import { MeasureError, clientMoney, fmtDate, fmtDrift, fmtMoney, fmtPrice, fmtQuantity, fmtResult, fmtTimestamp, fmtTolerance, fmtWeight } from '@/kit/measure'
 import { todayISO, now } from '@/lib/clock'
 import { RATE_DISCLOSURE } from '@/lib/tax-rules'
 import type { Status } from '@/kit/status/status'
+import type { Position, TaxLot } from '@/types/portfolio'
 import { assetClassLabel } from './asset-class-label'
+import { splitReviewer } from './reviewer'
 import type { KitData } from './use-kit-data'
 
 const STATUSES: Status[] = ['OUT', 'AT LIMIT', 'IN', 'BLOCK', 'WARN', 'CLEAR', 'OPEN']
+const TAX_SOURCE = 'Rebalance preview · estimated tax'
+const isCash = (p: Position) => p.assetClass === 'cash'
 
 export function KitSections({ data }: { data: KitData }) {
-  const { account, positions, drift, lots, windows, preview } = data
+  const { account, positions, drift, lots, windows, preview, approval } = data
   const [attested, setAttested] = useState(false)
   const worst = [...drift.assetClassDrifts].sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift))[0]
   const symbolOf = new Map(positions.map((p) => [p.id, p.symbol]))
@@ -38,6 +43,13 @@ export function KitSections({ data }: { data: KitData }) {
   const netLongTerm = preview.trades.reduce((s, t) => s + t.realisedLongTerm, 0)
   const restriction = windows[0]
   const stamp = now().toISOString()
+  const { alert, record } = approval
+  const reviewer = splitReviewer(record.reviewer)
+  const symbolFor = (lot: TaxLot) => {
+    const symbol = symbolOf.get(lot.positionId)
+    if (!symbol) throw new MeasureError('A tax lot belongs to no position in this account')
+    return symbol
+  }
 
   return (
     <Grid>
@@ -64,8 +76,8 @@ export function KitSections({ data }: { data: KitData }) {
             noun={{ singular: 'position', plural: 'positions' }}
             columns={[
               { id: 'symbol', header: 'Symbol', cell: (p) => p.symbol, sortValue: (p) => p.symbol },
-              { id: 'qty', header: 'Qty', unit: 'sh', align: 'right', cell: (p) => <Num text={fmtQuantity(p.quantity)} />, sortValue: (p) => p.quantity },
-              { id: 'price', header: 'Price', unit: 'USD', align: 'right', cell: (p) => fmtPrice(p.price), sortValue: (p) => p.price },
+              { id: 'qty', header: 'Qty', unit: 'sh', align: 'right', cell: (p) => (isCash(p) ? <NotApplicable /> : <Num text={fmtQuantity(p.quantity)} />), sortValue: (p) => p.quantity },
+              { id: 'price', header: 'Price', unit: 'USD', align: 'right', cell: (p) => (isCash(p) ? <NotApplicable /> : fmtPrice(p.price)), sortValue: (p) => p.price },
               { id: 'value', header: 'Value', unit: 'USD', align: 'right', cell: (p) => fmtMoney(p.marketValue), sortValue: (p) => p.marketValue, proportion: (p) => p.weight },
               { id: 'weight', header: 'Weight', unit: '%', align: 'right', cell: (p) => fmtWeight(p.weight), sortValue: (p) => p.weight },
               { id: 'gain', header: 'Unrealized', unit: 'USD', align: 'right', cell: (p) => fmtResult(p.gainLoss), sortValue: (p) => p.gainLoss },
@@ -76,8 +88,8 @@ export function KitSections({ data }: { data: KitData }) {
           <DataTable caption="Tax lots" density="dense" rows={lots} getRowId={(l) => l.id} total={lots.length}
             noun={{ singular: 'lot', plural: 'lots' }}
             columns={[
-              { id: 'symbol', header: 'Symbol', cell: (l) => symbolOf.get(l.positionId) ?? l.positionId, sortValue: (l) => symbolOf.get(l.positionId) ?? '' },
-              { id: 'acquired', header: 'Acquired', cell: (l) => l.purchaseDate, sortValue: (l) => l.purchaseDate },
+              { id: 'symbol', header: 'Symbol', cell: symbolFor, sortValue: symbolFor },
+              { id: 'acquired', header: 'Acquired', cell: (l) => fmtDate(l.purchaseDate), sortValue: (l) => l.purchaseDate },
               { id: 'term', header: 'Term', cell: (l) => (l.holdingPeriod === 'long' ? 'Long-term' : 'Short-term'), sortValue: (l) => l.holdingPeriod },
               { id: 'qty', header: 'Qty', unit: 'sh', align: 'right', cell: (l) => <Num text={fmtQuantity(l.quantity)} />, sortValue: (l) => l.quantity },
               { id: 'gain', header: 'Unrealized', unit: 'USD', align: 'right', cell: (l) => fmtResult(l.gainLoss), sortValue: (l) => l.gainLoss },
@@ -98,30 +110,37 @@ export function KitSections({ data }: { data: KitData }) {
           ))}
         </Pane>
         <Pane title="Records">
-          <Stamp state="awaiting" person="Advisor of record" />
-          <RecordSlip kind="Approval · binding" title={`Rebalance of ${account.name}`} recordId="REC-EXAMPLE"
-            recordedBy={{ name: 'Advisor of record', role: 'Approver' }} at={stamp} archive="Non-rewritable · supervisory review">
-            {`${preview.trades.length} legs, estimated net tax ${clientMoney(preview.estimatedTaxImpact)}.`}
-          </RecordSlip>
-          <RecordTrail steps={[
-            { label: 'Rebalance preview built', actor: 'Rebalance engine', state: 'DONE', at: stamp },
-            { label: 'Compliance exception review', actor: 'Compliance', state: 'PENDING' },
-            { label: 'Release to the custodian', actor: 'Trading', state: 'NOT STARTED' },
-          ]} />
-          <Stepper label="Rebalance this account" currentId="approve" steps={[
-            { id: 'drift', label: 'Drift and lots', state: 'DONE' },
-            { id: 'preview', label: 'Proposal', state: 'PREVIEWED' },
-            { id: 'approve', label: 'Approve', state: 'OPEN' },
-            { id: 'message', label: 'Client message', state: 'DRAFT' },
-          ]} />
-          <Attestation id="kit-attest" checked={attested} onChange={setAttested}>I reviewed every leg and its pre-trade reading.</Attestation>
+          <section aria-labelledby="kit-preview-approval" className="flex flex-col gap-4">
+            <h3 id="kit-preview-approval" className="text-label uppercase text-ink-2">Rebalance preview · not yet approved</h3>
+            <Stamp state="awaiting" />
+            <Stepper label="Rebalance this account" currentId="approve" steps={[
+              { id: 'drift', label: 'Drift and lots', state: 'DONE' },
+              { id: 'preview', label: 'Proposal', state: 'PREVIEWED' },
+              { id: 'approve', label: 'Approve', state: 'OPEN' },
+              { id: 'message', label: 'Client message', state: 'DRAFT' },
+            ]} />
+            <Attestation id="kit-attest" checked={attested} onChange={setAttested}>I reviewed every leg and its pre-trade reading.</Attestation>
+          </section>
+          <section aria-labelledby="kit-review-approval" className="flex flex-col gap-4">
+            <h3 id="kit-review-approval" className="text-label uppercase text-ink-2">{`${alert.type} review · on record`}</h3>
+            <Stamp state="approved" person={reviewer.name} role={reviewer.role} at={record.timestamp} />
+            <RecordSlip kind={`Supervisory review · ${record.action}`} title={alert.title} recordId={record.id}
+              recordedBy={reviewer} at={record.timestamp} archive="Compliance supervision log">
+              {record.notes}
+            </RecordSlip>
+            <RecordTrail steps={[
+              { label: `${alert.type} review opened`, state: 'DONE', at: alert.createdAt },
+              { label: record.action, actor: `${reviewer.name}, ${reviewer.role}`, state: 'DONE', at: record.timestamp },
+            ]} />
+          </section>
         </Pane>
       </MainColumn>
       <SidePanel label="Tax effect">
         <TaxTape gains={gains} losses={losses} netShortTerm={netShortTerm} netLongTerm={netLongTerm}
           grossTax={preview.grossTaxOnGains} netTax={preview.estimatedTaxImpact}
           scope="Nets this proposal's legs only." rateBasis={RATE_DISCLOSURE} />
-        <p className="text-body">Estimated tax of about <FigureRef source="rebalance.estimatedTaxImpact" note={1}>{clientMoney(preview.estimatedTaxImpact)}</FigureRef>.</p>
+        <p className="text-body">Estimated tax of about <FigureRef source={TAX_SOURCE} path="rebalance.estimatedTaxImpact" note={1}>{clientMoney(preview.estimatedTaxImpact)}</FigureRef>.</p>
+        <p className="text-label normal-case text-ink-3"><span aria-hidden="true">1. </span>{`Source: ${TAX_SOURCE} for ${account.name}, as of ${fmtTimestamp(stamp)}.`}</p>
         <SourceChips sources={[{ label: 'Rebalance preview', detail: account.name, asOf: stamp }, { label: 'Drift calculation', detail: `${drift.assetClassDrifts.length} asset classes`, asOf: stamp }]} />
       </SidePanel>
     </Grid>

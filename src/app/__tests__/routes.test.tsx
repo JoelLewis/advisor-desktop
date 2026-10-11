@@ -32,7 +32,7 @@ describe('routes', () => {
   it('the kit is not ready while loading', () => {
     const { container } = renderAt('/kit')
     expect(container.querySelector('[data-kit-ready="true"]')).toBeNull()
-    expect(screen.getByRole('status')).toBeTruthy()
+    expect(screen.getByRole('status')).toHaveTextContent('Loading the account from the engine…')
   })
   it('the kit becomes ready on acc-002 data', async () => {
     await renderKitReady()
@@ -45,5 +45,34 @@ describe('routes', () => {
     for (const w of ['Only you', "Firm only · client can't see", 'CLIENT CAN SEE']) {
       expect(screen.getAllByText(w).length).toBeGreaterThanOrEqual(2)
     }
+  })
+  it('records: the approval is a real engine record, the preview awaits a signature', async () => {
+    await renderKitReady()
+    const records = screen.getByRole('heading', { name: 'Records' }).closest('section') as HTMLElement
+    const r = within(records)
+    expect(r.getByText('AWAITING YOUR SIGNATURE')).toBeInTheDocument()
+    expect(r.getByText('APPROVED')).toBeInTheDocument()
+    expect(r.getAllByText('Mark Davis').length).toBeGreaterThanOrEqual(1)
+    expect(r.getByText('sr-002')).toBeInTheDocument()
+    expect(r.getAllByText('2026-02-21 14:10 UTC').length).toBeGreaterThanOrEqual(2)
+    expect(r.getByRole('article', { name: 'Potential wash sale cleared — Johnson INTC/SMH' })).toBeInTheDocument()
+    expect(records).not.toHaveTextContent('Advisor of record')
+    expect(records).not.toHaveTextContent('REC-EXAMPLE')
+  })
+  it('the cash line has no share count or price', async () => {
+    await renderKitReady()
+    const holdings = screen.getByRole('table', { name: 'Holdings' })
+    const cash = within(holdings).getByRole('cell', { name: 'CASH' }).closest('tr') as HTMLElement
+    const cells = within(cash).getAllByRole('cell')
+    expect(cells[1]).toHaveTextContent('—')
+    expect(cells[2]).toHaveTextContent('—')
+    expect(cash).toHaveTextContent('225,504')
+    expect(cash).not.toHaveTextContent('225,504.00')
+  })
+  it('the footnote the tax figure points to is on the page', async () => {
+    await renderKitReady()
+    const fig = screen.getByRole('group', { name: /^\$/ })
+    expect(fig).toHaveAccessibleDescription(/^Source: Rebalance preview · estimated tax/)
+    expect(screen.getByText(/^Source: Rebalance preview · estimated tax for Robert Johnson Individual/)).toBeInTheDocument()
   })
 })
