@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
-import { useMemo } from 'react'
-import { act, render, screen } from '@testing-library/react'
+import { useMemo, useState } from 'react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { KeyboardProvider } from '@/kit/keyboard/KeyboardProvider'
 import { useJumpKeys } from '@/kit/keyboard/use-jump-keys'
@@ -8,6 +8,7 @@ import { useFocusAfter } from '@/kit/keyboard/use-focus-after'
 import { isEditableTarget, matchDestinations } from '@/kit/keyboard/keys'
 import { Page } from '@/kit/page/Page'
 import { Button } from '@/kit/button/Button'
+import { Dialog } from '@/kit/dialog/Dialog'
 import { DataTable } from '@/kit/data-table/DataTable'
 
 function Jumps({ onT, keyName = 't' }: { onT: () => void; keyName?: string }) {
@@ -83,5 +84,94 @@ describe('keyboard', () => {
     act(() => (document.activeElement as HTMLElement).blur())
     await userEvent.keyboard('j')
     expect(onJ).toHaveBeenCalledOnce()
+  })
+
+  it('accepts an inline bindings array without looping, and calls the latest run closure', async () => {
+    const seen: string[] = []
+    function Inline() {
+      const [n, setN] = useState(0)
+      useJumpKeys('inline', [{ key: 't', label: 'Toggle', run: () => seen.push(`run${n}`) }])
+      return <Button onClick={() => setN(1)}>Bump</Button>
+    }
+    render(<KeyboardProvider destinations={[]}><Inline /></KeyboardProvider>)
+    await userEvent.keyboard('t')
+    expect(seen).toEqual(['run0'])
+    await userEvent.click(screen.getByRole('button', { name: 'Bump' }))
+    await userEvent.keyboard('t')
+    expect(seen).toEqual(['run0', 'run1'])
+  })
+  it('first-registered binding wins a duplicate key, and warns', async () => {
+    const first = vi.fn()
+    const second = vi.fn()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    function A() { useJumpKeys('a', useMemo(() => [{ key: 'x', label: 'A', run: first }], [])); return null }
+    function B() { useJumpKeys('b', useMemo(() => [{ key: 'x', label: 'B', run: second }], [])); return null }
+    render(<KeyboardProvider destinations={[]}><A /><B /></KeyboardProvider>)
+    await userEvent.keyboard('x')
+    expect(first).toHaveBeenCalledOnce()
+    expect(second).not.toHaveBeenCalled()
+    expect(warn).toHaveBeenCalled()
+    warn.mockRestore()
+  })
+  it('? with Shift opens the sheet', async () => {
+    render(<KeyboardProvider destinations={[]}><p>x</p></KeyboardProvider>)
+    await userEvent.keyboard('{Shift>}?{/Shift}')
+    expect(screen.getByRole('dialog', { name: 'Keyboard' })).toBeInTheDocument()
+  })
+  it('ignores / and ? while typing in an input', async () => {
+    render(<KeyboardProvider destinations={[]}><Jumps onT={() => {}} /></KeyboardProvider>)
+    await userEvent.click(screen.getByLabelText('Notes'))
+    await userEvent.keyboard('/?')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+  it('does not fire a jump key while a consumer dialog is open', async () => {
+    const onT = vi.fn()
+    render(
+      <KeyboardProvider destinations={[]}>
+        <Jumps onT={onT} />
+        <Dialog open onOpenChange={() => {}} title="Other"><p>Body</p></Dialog>
+      </KeyboardProvider>,
+    )
+    await userEvent.keyboard('t')
+    expect(onT).not.toHaveBeenCalled()
+  })
+  it('returns focus to the element focused when / was pressed', async () => {
+    render(<KeyboardProvider destinations={[]}><Button>Anchor</Button></KeyboardProvider>)
+    const anchor = screen.getByRole('button', { name: 'Anchor' })
+    act(() => anchor.focus())
+    await userEvent.keyboard('/')
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Go to' })).toHaveFocus())
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(anchor).toHaveFocus())
+  })
+  describe('command line', () => {
+    const destinations = [
+      { id: 'home', label: 'Workspace home', aliases: ['home'], run: vi.fn() },
+      { id: 'kit', label: 'Component kit', aliases: ['kit'], run: vi.fn() },
+    ]
+    it('Enter with no matches does nothing, and states the empty result outside the listbox', async () => {
+      render(<KeyboardProvider destinations={destinations}><p>x</p></KeyboardProvider>)
+      await userEvent.keyboard('/')
+      await userEvent.type(screen.getByRole('combobox', { name: 'Go to' }), 'zzz{Enter}{ArrowDown}')
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+      expect(screen.getByRole('status')).toHaveTextContent('No destination matches.')
+      expect(screen.getByRole('listbox')).not.toContainElement(screen.getByRole('status'))
+      expect(destinations[0]!.run).not.toHaveBeenCalled()
+    })
+    it('resets the query on reopen and moves selection with the arrows', async () => {
+      render(<KeyboardProvider destinations={destinations}><p>x</p></KeyboardProvider>)
+      await userEvent.keyboard('/')
+      await userEvent.type(screen.getByRole('combobox', { name: 'Go to' }), 'ki{Escape}')
+      await userEvent.keyboard('/')
+      const box = screen.getByRole('combobox', { name: 'Go to' })
+      expect(box).toHaveValue('')
+      expect(box).toHaveAttribute('aria-autocomplete', 'list')
+      const options = screen.getAllByRole('option')
+      expect(options[0]).toHaveAttribute('aria-selected', 'true')
+      await userEvent.keyboard('{ArrowDown}')
+      expect(options[1]).toHaveAttribute('aria-selected', 'true')
+      await userEvent.keyboard('{ArrowUp}')
+      expect(options[0]).toHaveAttribute('aria-selected', 'true')
+    })
   })
 })

@@ -13,7 +13,7 @@ export function CommandLine({ open, onOpenChange, destinations }: CommandLinePro
 
   const close = () => { setQuery(''); setIndex(0); onOpenChange(false) }
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'ArrowDown') { e.preventDefault(); setIndex((i) => Math.min(matches.length - 1, i + 1)) }
+    if (e.key === 'ArrowDown') { e.preventDefault(); setIndex((i) => Math.max(0, Math.min(matches.length - 1, i + 1))) }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setIndex((i) => Math.max(0, i - 1)) }
     else if (e.key === 'Enter') {
       e.preventDefault()
@@ -30,14 +30,14 @@ export function CommandLine({ open, onOpenChange, destinations }: CommandLinePro
         aria-expanded="true"
         aria-controls={listId}
         aria-activedescendant={matches[index] ? `${listId}-${matches[index].id}` : undefined}
-        autoFocus
+        aria-autocomplete="list"
         value={query}
         onChange={(e) => { setQuery(e.target.value); setIndex(0) }}
         onKeyDown={onKeyDown}
         className="w-full border border-ink bg-bg px-3 py-2 text-body text-ink"
       />
+      {matches.length === 0 ? <p role="status" className="mt-2 px-3 py-2 text-body text-ink-3">No destination matches.</p> : null}
       <ul id={listId} role="listbox" aria-label="Destinations" className="mt-2 flex flex-col">
-        {matches.length === 0 ? <li className="px-3 py-2 text-body text-ink-3">No destination matches.</li> : null}
         {matches.map((d, i) => (
           <li key={d.id} id={`${listId}-${d.id}`} role="option" aria-selected={i === index}
             className={cn('px-3 py-2 text-body', i === index && 'bg-band font-semibold')}>

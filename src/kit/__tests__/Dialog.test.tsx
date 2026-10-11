@@ -47,3 +47,19 @@ it('falls back to the page heading when the opener left the DOM while open', asy
   await userEvent.keyboard('{Escape}')
   await waitFor(() => expect(screen.getByRole('heading', { level: 1 })).toHaveFocus())
 })
+
+it('falls back to the page heading when the opener was document.body', async () => {
+  function FromBody() {
+    const [open, setOpen] = useState(false)
+    return (
+      <Page title="Kit">
+        <Button onClick={() => { (document.activeElement as HTMLElement).blur(); setOpen(true) }}>Open keys</Button>
+        <Dialog open={open} onOpenChange={setOpen} title="Keyboard"><p>Body</p></Dialog>
+      </Page>
+    )
+  }
+  render(<FromBody />)
+  await userEvent.click(screen.getByRole('button', { name: 'Open keys' }))
+  await userEvent.keyboard('{Escape}')
+  await waitFor(() => expect(screen.getByRole('heading', { level: 1 })).toHaveFocus())
+})
