@@ -37,13 +37,16 @@ const OWN_MODEL = (a: Account) => a.modelId ?? 'mod-001'
  * 377-request migration sweeps crossed the 5s test timeout. The endpoint takes an `accountIds` list
  * (the screen previews several accounts at once), so the whole book is now previewed in one
  * request per model; 'a batched preview is the same answer as previewing each account alone' pins
- * that this changes the transport, not the answer.
+ * that this changes the transport, not the answer — except the tax estimate, which by design nets
+ * an account against earlier accounts in the batch on the same tax return (`nettedWithAccountIds`).
+ * `alone` holds each account previewed on its own model by itself, for the tax sweep.
  */
 type Book = {
   accounts: Account[]
   positions: Map<string, Position[]>
   drift: Map<string, DriftStatus>
   previews: Map<string, Map<string, ModelTradePreview>>
+  alone: Map<string, ModelTradePreview>
 }
 
 let book: Book
@@ -51,20 +54,31 @@ let book: Book
 beforeAll(async () => {
   const accounts = await getAccounts()
   const ids = accounts.map((a) => a.id)
-  const [positions, drift, previews] = await Promise.all([
+  const [positions, drift, previews, alone] = await Promise.all([
     Promise.all(ids.map(async (id) => [id, await getPositions(id)] as const)),
     Promise.all(ids.map(async (id) => [id, await getDrift(id)] as const)),
     Promise.all(MODEL_DEFINITIONS.map(async (m) => {
       const batch = await previewModelTrades(m.id, ids)
       return [m.id, new Map(batch.map((p) => [p.accountId, p]))] as const
     })),
+    Promise.all(accounts.map(async (a) => {
+      const [preview] = await previewModelTrades(OWN_MODEL(a), [a.id])
+      if (!preview) throw new Error(`no preview for ${a.id} alone`)
+      return [a.id, preview] as const
+    })),
   ])
-  book = { accounts, positions: new Map(positions), drift: new Map(drift), previews: new Map(previews) }
+  book = { accounts, positions: new Map(positions), drift: new Map(drift), previews: new Map(previews), alone: new Map(alone) }
 })
 
 function previewOf(account: Account, modelId = OWN_MODEL(account)): ModelTradePreview {
   const preview = book.previews.get(modelId)?.get(account.id)
   if (!preview) throw new Error(`no preview for ${account.id} on ${modelId}`)
+  return preview
+}
+
+function previewAlone(account: Account): ModelTradePreview {
+  const preview = book.alone.get(account.id)
+  if (!preview) throw new Error(`no preview for ${account.id} alone`)
   return preview
 }
 
@@ -77,10 +91,18 @@ function positionsOf(account: Account): Position[] {
 describe('the book snapshot the sweeps read', () => {
   it('a batched preview is the same answer as previewing each account alone', async () => {
     expect(book.accounts.length).toBeGreaterThan(40)
+    let nettedInBatch = 0
     for (const account of book.accounts) {
-      const [single] = await previewModelTrades(OWN_MODEL(account), [account.id])
-      expect(single, account.id).toEqual(previewOf(account))
+      const { estimatedTaxImpact: aloneTax, nettedWithAccountIds: aloneNetted, ...single } = previewAlone(account)
+      const { estimatedTaxImpact: batchTax, nettedWithAccountIds: batchNetted, ...batched } = previewOf(account)
+      expect(single, account.id).toEqual(batched)
+      expect(aloneNetted, account.id).toEqual([])
+      // The tax figure differs only where the batch netted an earlier account on the same return in.
+      if (batchNetted.length === 0) expect(aloneTax, account.id).toBe(batchTax)
+      else nettedInBatch++
     }
+    // hh-001 files jointly, so its later taxable accounts net against acc-001 in a whole-book batch.
+    expect(nettedInBatch, 'vacuity guard — some account must net against an earlier one').toBeGreaterThan(0)
   })
 })
 
@@ -365,7 +387,7 @@ describe('tax follows the account\'s own treatment and its own trades', () => {
     let shelteredWithTrades = 0
     let taxableWithTax = 0
     for (const account of accounts) {
-      const preview = previewOf(account)
+      const preview = previewAlone(account)
       const sheltered = account.taxTreatment === 'tax_deferred' || account.taxTreatment === 'tax_free'
       if (sheltered) {
         if (preview.trades.length > 0) shelteredWithTrades++
