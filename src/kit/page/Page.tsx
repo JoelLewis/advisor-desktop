@@ -5,7 +5,7 @@ type PageProps = { title: string; eyebrow?: string; meta?: ReactNode; children: 
 
 export function Page({ title, eyebrow, meta, children }: PageProps) {
   return (
-    <div className="min-h-screen bg-bg text-ink">
+    <div className="flex-1 bg-bg text-ink">
       <a href={`#${MAIN_ID}`} className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:bg-face focus:px-3 focus:py-2">
         Skip to content
       </a>

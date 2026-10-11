@@ -12,8 +12,10 @@ export function RootLayout() {
   ], [navigate])
   return (
     <KeyboardProvider destinations={destinations}>
-      <Outlet />
-      <KeyLegend />
+      <div className="flex min-h-screen flex-col">
+        <Outlet />
+        <KeyLegend />
+      </div>
     </KeyboardProvider>
   )
 }

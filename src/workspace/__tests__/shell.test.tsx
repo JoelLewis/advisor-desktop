@@ -121,6 +121,8 @@ describe('workspace shell', () => {
     renderRoutes(table, '/t/th-brief')
     const current = await within(threadNav()).findByRole('link', { name: 'Brief' })
     expect(current).toHaveAttribute('aria-current', 'page')
+    expect(current).not.toHaveClass('font-semibold')
+    expect(within(current).getByText('Brief')).toHaveClass('font-semibold')
     expect(within(threadNav()).getByRole('link', { name: 'Robert Johnson' })).not.toHaveAttribute('aria-current')
     const aside = screen.getByRole('complementary', { name: 'Who can see' })
     expect(aside).toHaveTextContent('Adrian Hale · Advisor')

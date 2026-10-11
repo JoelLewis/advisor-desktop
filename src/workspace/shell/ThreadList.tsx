@@ -34,10 +34,14 @@ function ThreadGroup({ title, threads }: { title: string; threads: Thread[] }) {
           <li key={t.id}>
             <NavLink to={`/t/${t.id}`} className={({ isActive }) => cn(
               'flex flex-col gap-1.5 border-l-2 py-2 pl-3 pr-2 hover:bg-face',
-              isActive ? 'border-ink bg-face font-semibold' : 'border-transparent',
+              isActive ? 'border-ink bg-face' : 'border-transparent',
             )}>
-              <div aria-hidden="true"><VisibilityBand visibility={t.visibility} scale="message" /></div>
-              <span className="text-body">{t.title}</span>
+              {({ isActive }) => (
+                <>
+                  <div aria-hidden="true"><VisibilityBand visibility={t.visibility} scale="message" /></div>
+                  <span className={cn('text-body', isActive && 'font-semibold')}>{t.title}</span>
+                </>
+              )}
             </NavLink>
           </li>
         ))}

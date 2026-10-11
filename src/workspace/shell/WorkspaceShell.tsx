@@ -11,7 +11,7 @@ import { ViewAs } from './ViewAs'
 export function WorkspaceShell() {
   const context = contextColumnOf(useMatches())
   return (
-    <div className="min-h-screen bg-bg text-ink">
+    <div className="flex-1 bg-bg text-ink">
       <a href={`#${MAIN_ID}`} className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:bg-face focus:px-3 focus:py-2">
         Skip to content
       </a>
@@ -23,14 +23,14 @@ export function WorkspaceShell() {
         </div>
       </header>
       <div className="mx-auto grid max-w-(--breakpoint-wide) grid-cols-12 gap-x-6 gap-y-10 px-6 py-8">
-        <nav id={THREAD_LIST_ID} aria-label="Threads" className="col-span-12 min-w-0 split:col-span-3">
+        <nav id={THREAD_LIST_ID} aria-label="Threads" className="col-span-12 min-w-0 narrow:col-span-4 narrow:row-span-2 split:col-span-3 split:row-span-1">
           <ThreadList />
         </nav>
-        <main id={MAIN_ID} tabIndex={-1} className={cn('col-span-12 min-w-0', context ? 'split:col-span-6' : 'split:col-span-9')}>
+        <main id={MAIN_ID} tabIndex={-1} className={cn('col-span-12 min-w-0 narrow:col-span-8', context ? 'split:col-span-6' : 'split:col-span-9')}>
           <Outlet />
         </main>
         {context ? (
-          <div id={CONTEXT_COLUMN_ID} className="col-span-12 min-w-0 split:col-span-3">
+          <div id={CONTEXT_COLUMN_ID} className="col-span-12 min-w-0 narrow:col-span-8 narrow:col-start-5 split:col-span-3 split:col-start-auto">
             <SidePanel label={context.label}><context.Content /></SidePanel>
           </div>
         ) : null}
