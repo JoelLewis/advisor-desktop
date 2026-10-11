@@ -123,7 +123,11 @@ describe('AccountDetailPage', () => {
   // never received the position's own known price), so any quantity sent `estimatedValue: 0`
   // to the pre-check and came back an affirmative "all compliance checks passed" — a
   // 1,000,000-share VTI order in an $8.2M account showing as clean.
-  it('fix round 2: clicking Buy on the VTI row and entering a huge quantity does not falsely pass compliance', async () => {
+  //
+  // 15s rather than the 5s default: the full page, a tab switch, the trade dialog and a typed
+  // quantity make this ~1.3s on an idle machine, six times this file's other tests, so it is the
+  // one that crosses 5s when other worktrees' suites share the CPU.
+  it('fix round 2: clicking Buy on the VTI row and entering a huge quantity does not falsely pass compliance', { timeout: 15_000 }, async () => {
     const user = userEvent.setup()
     renderPage()
     await screen.findByText('Johnson Family Trust')
