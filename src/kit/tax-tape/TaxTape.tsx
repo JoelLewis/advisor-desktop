@@ -8,9 +8,18 @@ type TaxTapeProps = {
 
 const RECONCILIATION_TOLERANCE_USD = 1
 
-function Line({ label, value, subItem }: { label: string; value: string; subItem?: boolean }) {
+type RuleAbove = 'none' | 'rule' | 'ink' | 'heavy'
+
+const RULE_ABOVE: Record<RuleAbove, string> = {
+  none: '',
+  rule: 'border-t border-rule',
+  ink: 'mt-2 border-t border-ink pt-2',
+  heavy: 'mt-2 border-t-2 border-ink pt-2',
+}
+
+function Line({ label, value, subItem, ruleAbove = 'none' }: { label: string; value: string; subItem?: boolean; ruleAbove?: RuleAbove }) {
   return (
-    <div className={cn('flex items-baseline justify-between gap-4 py-1.5', subItem && 'pl-3 text-ink-2')}>
+    <div className={cn('flex items-baseline justify-between gap-4 py-1.5', RULE_ABOVE[ruleAbove], subItem && 'pl-3 text-ink-2')}>
       <dt className="text-body">
         {subItem ? <span className="sr-only">of which </span> : null}
         {label}
@@ -38,13 +47,12 @@ export function TaxTape(props: TaxTapeProps) {
       <dl>
         <Line label="Gains realized" value={fmtResult(gains)} />
         <Line label="Losses realized" value={fmtResult(losses)} />
+        <Line label="Net realized" value={fmtResult(gains + losses)} ruleAbove="rule" />
         <Line label="Net, long-term" value={fmtResult(netLongTerm)} subItem />
         <Line label="Net, short-term" value={fmtResult(netShortTerm)} subItem />
-        <div className="my-2 border-t border-ink" />
-        <Line label="Tax on gains before netting" value={fmtMoney(grossTax)} />
+        <Line label="Tax on gains before netting" value={fmtMoney(grossTax)} ruleAbove="ink" />
         <Line label="Reduced by netting the losses" value={fmtResult(netTax - grossTax)} />
-        <div className="my-2 border-t-2 border-ink" />
-        <div className="flex items-baseline justify-between gap-4">
+        <div className={cn('flex items-baseline justify-between gap-4', RULE_ABOVE.heavy)}>
           <dt className="text-body font-semibold">Estimated net tax</dt>
           <dd className="inline-flex items-baseline gap-1.5">
             <span className="tabular text-total stretch-wide">{fmtMoney(netTax)}</span>

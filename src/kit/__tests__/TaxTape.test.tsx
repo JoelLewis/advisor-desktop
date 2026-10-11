@@ -15,7 +15,7 @@ it('pairs every label with its own value and unit', () => {
   render(<TaxTape {...figures} />)
   expect(screen.getByRole('region', { name: 'Tax effect estimate' })).toBeInTheDocument()
   const expected: [string, string][] = [
-    ['Gains realized', '+122,388'], ['Losses realized', `${MINUS}45,850`],
+    ['Gains realized', '+122,388'], ['Losses realized', `${MINUS}45,850`], ['Net realized', '+76,538'],
     ['Net, long-term', '+76,538'], ['Net, short-term', '0'],
     ['Tax on gains before netting', '29,128'], ['Reduced by netting the losses', `${MINUS}10,912`],
     ['Estimated net tax', '18,216'],
@@ -30,9 +30,23 @@ it('pairs every label with its own value and unit', () => {
   expect(screen.getByText(/state tax excluded/)).toBeInTheDocument()
 })
 
-it('marks the net rows as sub-items for screen readers', () => {
+it('nests the term split under Net realized, not under Losses', () => {
   render(<TaxTape {...figures} />)
-  expect(valueOf('Net, long-term').previousElementSibling).toHaveTextContent('of which Net, long-term')
+  expect(valueOf('Net realized').previousElementSibling).toHaveTextContent(/^Net realized$/)
+  expect(valueOf('Losses realized').previousElementSibling).toHaveTextContent(/^Losses realized$/)
+  for (const term of ['Net, long-term', 'Net, short-term']) {
+    expect(valueOf(term).previousElementSibling).toHaveTextContent(`of which ${term}`)
+  }
+})
+
+it('keeps the description list valid: every child is a row holding one term and its value', () => {
+  const { container } = render(<TaxTape {...figures} />)
+  const rows = [...container.querySelector('dl')!.children]
+  expect(rows).toHaveLength(8)
+  for (const row of rows) {
+    expect(row.tagName).toBe('DIV')
+    expect([...row.children].map((c) => c.tagName)).toEqual(['DT', 'DD'])
+  }
 })
 
 it('refuses to render a tape that does not reconcile', () => {
