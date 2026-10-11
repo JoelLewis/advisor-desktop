@@ -182,6 +182,17 @@ main session.
 - The comparison page lets Joel choose without opening the code.
 - `main` is untouched.
 
+## Engine defects found while planning (fixed on `main` first)
+
+Probing the engine for acc-002 showed the scenario's Construct beat would be wrong without four fixes:
+
+1. acc-002 holds no SMH, although the activity feed, note-002 and comp-006 record buying 180 SMH on
+   2026-02-21 as the INTC replacement.
+2. The rebalance proposes a market sale of all BXPE, a periodic-liquidity private-equity fund.
+3. `washSaleRisk` is hard-coded `false` on every proposed leg.
+4. Realised losses are ignored when estimating tax (INTC's loss shows $0 and never offsets the SPY
+   gain), so the preview's net tax is overstated.
+
 ## Out of scope
 
 - Migrating any production page to a chosen direction (that is the follow-on spec).
