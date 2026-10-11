@@ -6,6 +6,7 @@ const isolated = process.env.VISUAL_PORT !== undefined
 
 export default defineConfig({
   testDir: './e2e-visual',
+  snapshotPathTemplate: 'e2e-visual/__baselines__/{arg}{ext}',
   reporter: 'list',
   use: { baseURL: `http://localhost:${port}` },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],

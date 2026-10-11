@@ -16,6 +16,7 @@
     "test:e2e": "npx playwright test",
     "test:e2e:headed": "npx playwright test --headed",
     "visual": "playwright test -c playwright.visual.config.ts",
+    "visual:update": "playwright test -c playwright.visual.config.ts --update-snapshots",
     "deploy": "pnpm build && wrangler deploy"
   },
   "dependencies": {
