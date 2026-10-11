@@ -92,9 +92,11 @@ describe('PreviewTradesStep renders each trade at its own account currency, not 
     expect(taxedTrades.length).toBeGreaterThan(0)
     // §9.7 · acc-043's intl_equity overweight is now drawn down across four positions rather than
     // stopping at the first, so there are several taxed rows. The header figure (line 38) is the
-    // sum of them, which is what `estimatedTaxImpact` must equal — and it is the same amount the
-    // footer's batch total converts, since this harness holds a single EUR preview.
-    expect(taxedTrades.reduce((sum, t) => sum + t.taxImpact, 0)).toBe(preview!.estimatedTaxImpact)
+    // sum of them, which is `grossTaxOnGains`; this account realises no loss, so nothing is netted
+    // and `estimatedTaxImpact` equals it — the same amount the footer's batch total converts,
+    // since this harness holds a single EUR preview.
+    expect(taxedTrades.reduce((sum, t) => sum + t.taxImpact, 0)).toBe(preview!.grossTaxOnGains)
+    expect(preview!.estimatedTaxImpact).toBe(preview!.grossTaxOnGains)
 
     const { container } = render(<Harness previews={[preview!]} />, { wrapper: createWrapper() })
     await waitFor(() => expect(screen.queryByTestId('fx-loading')).not.toBeInTheDocument())
@@ -109,7 +111,7 @@ describe('PreviewTradesStep renders each trade at its own account currency, not 
     // same amount). Both must show the converted figure, and the mislabeled
     // (unconverted-EUR-read-as-USD) string must appear nowhere on the page.
     // Header (line 38) — inline text inside a mixed-content span, so matched via textContent.
-    expect(container.textContent).toContain(`Tax impact: ${expected}`)
+    expect(container.textContent).toContain(`Tax impact (after netting): ${expected}`)
     // Footer batch total — the only `<strong class="font-mono text-accent-red">` on the step.
     expect(container.querySelector('strong.font-mono.text-accent-red')?.textContent).toBe(expected)
     expect(container.textContent).not.toContain(mislabeledUsd)
@@ -121,6 +123,27 @@ describe('PreviewTradesStep renders each trade at its own account currency, not 
       const rowExpected = formatCurrency(convertCurrency(trade.taxImpact, 'EUR', 'USD', FX_RATES_USD_BASE), { compact: true, currency: 'USD' })
       expect(screen.getAllByText(rowExpected).length).toBeGreaterThan(0)
     }
+  })
+
+  it('acc-002 (USD): the INTC loss leg renders as a harvested loss, and the header shows both netted and gross tax', async () => {
+    const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
+    const intc = preview!.trades.find((t) => t.symbol === 'INTC' && t.side === 'sell')!
+    const loss = intc.realisedShortTerm + intc.realisedLongTerm
+    expect(loss).toBeLessThan(0)
+    expect(preview!.estimatedTaxImpact).toBeLessThan(preview!.grossTaxOnGains)
+
+    const { container } = render(<Harness previews={[preview!]} />, { wrapper: createWrapper() })
+    await waitFor(() => expect(screen.queryByTestId('fx-loading')).not.toBeInTheDocument())
+
+    const usd = (n: number) => formatCurrency(n, { compact: true, currency: 'USD' })
+    const intcRow = screen.getByText('INTC').closest('tr')!
+    expect(intcRow.textContent).toContain(`Harvested loss ${usd(Math.abs(loss))}`)
+    expect(container.textContent).toContain(`Tax impact (after netting): ${usd(preview!.estimatedTaxImpact)}`)
+    expect(container.textContent).toContain(`Gross on gains: ${usd(preview!.grossTaxOnGains)}`)
+    // Buys realise nothing, so their Realised cell is a dash, not a figure.
+    const buyRow = screen.getByText(preview!.trades.find((t) => t.side === 'buy')!.symbol).closest('tr')!
+    expect(buyRow.textContent).not.toContain('Harvested loss')
+    expect(buyRow.textContent).not.toContain('Gain ')
   })
 
   it('acc-001 (USD): unchanged — the fix does not alter the already-correct USD case', async () => {

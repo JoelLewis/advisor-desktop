@@ -3,7 +3,7 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { cn } from '@/lib/utils'
-import type { RebalancePreview } from '@/services/oms'
+import type { ProposedTrade, RebalancePreview } from '@/services/oms'
 import type { WizardStep } from './types'
 
 type PreviewTradesStepProps = {
@@ -15,6 +15,19 @@ type PreviewTradesStepProps = {
   complianceMutation: { isPending: boolean }
   handleReviewCompliance: () => void
   setStep: (step: WizardStep) => void
+}
+
+type RealisedResultProps = {
+  trade: ProposedTrade
+  formatWithConversion: PreviewTradesStepProps['formatWithConversion']
+}
+
+function RealisedResult({ trade, formatWithConversion }: RealisedResultProps) {
+  const realised = trade.realisedShortTerm + trade.realisedLongTerm
+  if (trade.side === 'buy') return <span className="text-text-secondary">{'\u2014'}</span>
+  const amount = formatWithConversion(Math.abs(realised), trade.currency, { compact: true })
+  if (realised < 0) return <span className="text-accent-green">Harvested loss {amount}</span>
+  return <span className="text-text-secondary">Gain {amount}</span>
 }
 
 export function PreviewTradesStep({
@@ -35,7 +48,8 @@ export function PreviewTradesStep({
           <Card key={preview.accountId}>
             <CardHeader action={
               <span className="font-mono text-caption text-text-secondary">
-                {preview.trades.length} trades &middot; Tax impact: {formatWithConversion(preview.estimatedTaxImpact, preview.currency, { compact: true })}
+                {preview.trades.length} trades &middot; Tax impact (after netting): {formatWithConversion(preview.estimatedTaxImpact, preview.currency, { compact: true })}
+                {' '}&middot; Gross on gains: {formatWithConversion(preview.grossTaxOnGains, preview.currency, { compact: true })}
               </span>
             }>
               {acc?.name ?? preview.accountId}
@@ -49,6 +63,7 @@ export function PreviewTradesStep({
                     <th className="pb-2">Side</th>
                     <th className="pb-2 text-right">Qty</th>
                     <th className="pb-2 text-right">Est. Value</th>
+                    <th className="pb-2 text-right">Realised</th>
                     <th className="pb-2 text-right">Tax Impact</th>
                     <th className="pb-2">Wash Sale</th>
                   </tr>
@@ -63,6 +78,9 @@ export function PreviewTradesStep({
                       </td>
                       <td className="py-2 text-right font-mono">{trade.quantity.toLocaleString()}</td>
                       <td className="py-2 text-right font-mono">{formatWithConversion(trade.estimatedValue, trade.currency, { compact: true })}</td>
+                      <td className="py-2 text-right font-mono">
+                        <RealisedResult trade={trade} formatWithConversion={formatWithConversion} />
+                      </td>
                       <td className={cn('py-2 text-right font-mono', trade.taxImpact > 0 ? 'text-accent-red' : 'text-text-secondary')}>
                         {trade.taxImpact > 0 ? formatWithConversion(trade.taxImpact, trade.currency, { compact: true }) : '\u2014'}
                       </td>
@@ -87,7 +105,7 @@ export function PreviewTradesStep({
               currencies; RebalancePage converts each preview's own-currency figure to USD before
               summing (Global Constraint 2's one conversion boundary), so this really is USD by the
               time it reaches this prop — not a leftover unconverted literal. */}
-          <span>Tax impact: <strong className="font-mono text-accent-red">{formatWithConversion(totalTaxImpact, 'USD', { compact: true })}</strong></span>
+          <span>Tax impact (after netting): <strong className="font-mono text-accent-red">{formatWithConversion(totalTaxImpact, 'USD', { compact: true })}</strong></span>
         </div>
       </div>
 

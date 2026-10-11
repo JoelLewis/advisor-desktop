@@ -10,8 +10,13 @@ import { MOCK_TODAY_ISO } from '@/lib/clock'
 function householdAcquisitions(householdId: string) {
   return accounts.filter((a) => a.householdId === householdId).flatMap((a) => {
     const bySymbol = new Map(getPositionsForAccount(a.id, a.totalValue).map((p) => [p.id, p.symbol]))
-    return generateTaxLots(a.id, a.totalValue).map((l) => ({ symbol: bySymbol.get(l.positionId)!, date: l.purchaseDate }))
+    return generateTaxLots(a.id, a.totalValue).map((l) => ({ symbol: bySymbol.get(l.positionId)!, date: l.purchaseDate, lotId: l.id }))
   })
+}
+
+function lotIdsOfSymbol(accountId: string, totalValue: number, symbol: string): string[] {
+  const ids = new Set(getPositionsForAccount(accountId, totalValue).filter((p) => p.symbol === symbol).map((p) => p.id))
+  return generateTaxLots(accountId, totalValue).filter((l) => ids.has(l.positionId)).map((l) => l.id)
 }
 
 describe('washSaleRisk on every proposed leg equals §1091 recomputed independently', () => {
@@ -21,13 +26,17 @@ describe('washSaleRisk on every proposed leg equals §1091 recomputed independen
       const acquisitions = householdAcquisitions(a.householdId)
       for (const leg of generateRebalanceTrades(a.id, true)) {
         const realisesLoss = leg.realisedShortTerm + leg.realisedLongTerm < 0
+        // The legs do not expose which lots they consume, so the recompute treats every lot of the
+        // sold symbol in this account as sold: the conservative reading, identical to the engine
+        // whenever a sale exhausts the position's recent lots.
+        const soldLotIds = leg.side === 'sell' ? lotIdsOfSymbol(a.id, a.totalValue, leg.symbol) : []
         expect(leg.washSaleRisk, `${a.id} ${leg.side} ${leg.symbol}`)
-          .toBe(hasWashSaleRisk({ symbol: leg.symbol, side: leg.side, realisesLoss }, windows, acquisitions, MOCK_TODAY_ISO))
+          .toBe(hasWashSaleRisk({ symbol: leg.symbol, side: leg.side, realisesLoss, soldLotIds }, windows, acquisitions, MOCK_TODAY_ISO))
       }
     }
   })
 
-  it('acc-002 proposes no INTC buy while the household INTC window is open', () => {
+  it('acc-002 does not propose an INTC buy (INTC is overweight there; the engine does not suppress window buys)', () => {
     expect(generateRebalanceTrades('acc-002', true).some((l) => l.symbol === 'INTC' && l.side === 'buy')).toBe(false)
   })
 })

@@ -136,10 +136,13 @@ export const tradingHandlers = [
         })),
         // §1222-netted from the trades' own realised results, not a second literal that can
         // disagree with them — the same rule `/api/oms/rebalance` follows.
-        estimatedTaxImpact: netCapitalGainsTax(
-          trades.reduce((s, t) => s + t.realisedShortTerm, 0),
-          trades.reduce((s, t) => s + t.realisedLongTerm, 0),
-          taxRateFor,
+        estimatedTaxImpact: Math.min(
+          netCapitalGainsTax(
+            trades.reduce((s, t) => s + t.realisedShortTerm, 0),
+            trades.reduce((s, t) => s + t.realisedLongTerm, 0),
+            taxRateFor,
+          ),
+          trades.reduce((sum, t) => sum + t.taxImpact, 0),
         ),
       })
     }

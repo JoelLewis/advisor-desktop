@@ -166,9 +166,11 @@ describe('rebalance tax estimation', () => {
     const [preview] = await previewRebalance({ accountIds: ['acc-001'], taxAware: true })
     expect(preview!.grossTaxOnGains)
       .toBeCloseTo(preview!.trades.reduce((s, t) => s + t.taxImpact, 0), 0)
-    // The netted figure rounds once, the gross one rounds per leg, so they can differ by up to a
-    // dollar per leg when nothing is netted away (acc-001 realises only gains: 32,402 vs 32,401).
-    expect(preview!.estimatedTaxImpact).toBeLessThanOrEqual(preview!.grossTaxOnGains + preview!.trades.length)
+    expect(preview!.estimatedTaxImpact).toBeLessThanOrEqual(preview!.grossTaxOnGains)
+    // acc-001 realises no loss, so there is nothing to net and the two agree exactly.
+    if (preview!.trades.every((t) => t.realisedShortTerm + t.realisedLongTerm >= 0)) {
+      expect(preview!.estimatedTaxImpact).toBe(preview!.grossTaxOnGains)
+    }
   })
 })
 

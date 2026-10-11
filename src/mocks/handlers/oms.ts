@@ -78,8 +78,8 @@ export function currencyForAccount(accountId: string): CurrencyCode {
   return accounts.find((a) => a.id === accountId)?.baseCurrency ?? 'USD'
 }
 
-type RealisedSale = { shortTerm: number; longTerm: number; tax: number }
-const NOTHING_REALISED: RealisedSale = { shortTerm: 0, longTerm: 0, tax: 0 }
+type RealisedSale = { shortTerm: number; longTerm: number; tax: number; consumedLotIds: string[] }
+const NOTHING_REALISED: RealisedSale = { shortTerm: 0, longTerm: 0, tax: 0, consumedLotIds: [] }
 
 /**
  * Realise a sale of `notional` dollars out of `target`: the signed short- and long-term result
@@ -102,16 +102,18 @@ function realiseSale(accountId: string, totalValue: number, target: Position, no
   let shortTerm = 0
   let longTerm = 0
   let tax = 0
+  const consumedLotIds: string[] = []
   for (const lot of ordered) {
     if (remaining <= 0 || lot.currentValue <= 0) continue
     const portion = Math.min(1, remaining / lot.currentValue)
+    consumedLotIds.push(lot.id)
     const realised = lot.gainLoss * portion
     if (lot.holdingPeriod === 'short') shortTerm += realised
     else longTerm += realised
     if (realised > 0) tax += realised * taxRateFor(lot.holdingPeriod)
     remaining -= lot.currentValue * portion
   }
-  return { shortTerm: Math.round(shortTerm), longTerm: Math.round(longTerm), tax: Math.max(0, Math.round(tax)) }
+  return { shortTerm: Math.round(shortTerm), longTerm: Math.round(longTerm), tax: Math.max(0, Math.round(tax)), consumedLotIds }
 }
 
 /**
@@ -260,7 +262,7 @@ export function generateRebalanceTrades(
   const lossWindows = openWashSaleWindows(MOCK_TODAY_ISO, account.householdId)
   const acquisitions = accounts.filter((a) => a.householdId === account.householdId).flatMap((a) => {
     const symbolOf = new Map(getPositionsForAccount(a.id, a.totalValue).map((p) => [p.id, p.symbol]))
-    return generateTaxLots(a.id, a.totalValue).map((l) => ({ symbol: symbolOf.get(l.positionId) ?? '', date: l.purchaseDate }))
+    return generateTaxLots(a.id, a.totalValue).map((l) => ({ symbol: symbolOf.get(l.positionId) ?? '', date: l.purchaseDate, lotId: l.id }))
   })
 
   type RawLeg = { target: TradeCandidate; side: 'buy' | 'sell'; notional: number; sleeve: Sleeve }
@@ -418,7 +420,7 @@ export function generateRebalanceTrades(
         realisedShortTerm: realised.shortTerm,
         realisedLongTerm: realised.longTerm,
         washSaleRisk: hasWashSaleRisk(
-          { symbol: target.symbol, side, realisesLoss: realised.shortTerm + realised.longTerm < 0 },
+          { symbol: target.symbol, side, realisesLoss: realised.shortTerm + realised.longTerm < 0, soldLotIds: realised.consumedLotIds },
           lossWindows, acquisitions, MOCK_TODAY_ISO,
         ),
         currency,
@@ -743,10 +745,15 @@ export const omsHandlers = [
         trades,
         // §1222 — net short- and long-term results across legs before applying rates; the gross
         // figure is kept so a surface can show what netting saved.
-        estimatedTaxImpact: netCapitalGainsTax(
-          trades.reduce((s, t) => s + t.realisedShortTerm, 0),
-          trades.reduce((s, t) => s + t.realisedLongTerm, 0),
-          taxRateFor,
+        // Clamped to gross: the netted figure rounds once and gross rounds per leg, so with nothing
+        // to net the two can differ by a dollar, and netting never raises a bill.
+        estimatedTaxImpact: Math.min(
+          netCapitalGainsTax(
+            trades.reduce((s, t) => s + t.realisedShortTerm, 0),
+            trades.reduce((s, t) => s + t.realisedLongTerm, 0),
+            taxRateFor,
+          ),
+          trades.reduce((sum, t) => sum + t.taxImpact, 0),
         ),
         grossTaxOnGains: trades.reduce((sum, t) => sum + t.taxImpact, 0),
       }
