@@ -23,6 +23,8 @@ import { RATE_DISCLOSURE } from '@/lib/tax-rules'
 import type { Status } from '@/kit/status/status'
 import { HoldingsTable, TaxLotsTable } from '@/workspace/full-views/account-columns'
 import { assetClassLabel } from '@/workspace/asset-class-label'
+import { RebalanceEmbed } from '@/workspace/thread/embeds/RebalanceEmbed'
+import { AgentFindingView } from '@/workspace/thread/AgentFindingView'
 import { splitReviewer } from './reviewer'
 import type { KitData } from './use-kit-data'
 
@@ -30,7 +32,7 @@ const STATUSES: Status[] = ['OUT', 'AT LIMIT', 'IN', 'BLOCK', 'WARN', 'CLEAR', '
 const TAX_SOURCE = 'Rebalance preview · estimated tax'
 
 export function KitSections({ data }: { data: KitData }) {
-  const { account, positions, drift, lots, windows, preview, approval } = data
+  const { account, positions, drift, lots, windows, preview, approval, agentFinding } = data
   const [attested, setAttested] = useState(false)
   const worst = [...drift.assetClassDrifts].sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift))[0]
   const gains = preview.trades.reduce((s, t) => s + Math.max(0, t.realisedShortTerm) + Math.max(0, t.realisedLongTerm), 0)
@@ -82,6 +84,12 @@ export function KitSections({ data }: { data: KitData }) {
               <div className="pl-6"><VisibilityBand visibility={v} scale="message" /></div>
             </Fragment>
           ))}
+        </Pane>
+        <Pane title="Workspace embeds" meta={account.name}>
+          <div className="flex flex-col gap-6">
+            <RebalanceEmbed subject={{ type: 'account', id: account.id }} />
+            <AgentFindingView finding={agentFinding.finding} agent={agentFinding.agent} />
+          </div>
         </Pane>
         <Pane title="Records">
           <section aria-labelledby="kit-preview-approval" className="flex flex-col gap-4">

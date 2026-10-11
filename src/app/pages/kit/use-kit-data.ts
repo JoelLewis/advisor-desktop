@@ -3,8 +3,25 @@ import { getAccount, getTaxLots, getOpenWashSaleWindows } from '@/services/custo
 import { getDrift, getPositions } from '@/services/pms'
 import { previewRebalance } from '@/services/oms'
 import { getAlerts, getSupervisionRecords } from '@/services/compliance'
+import { getDirectory, runAgent } from '@/services/workspace'
+import type { Message } from '@/types/workspace'
 
 const ACCOUNT_ID = 'acc-002'
+const ADVISOR_ID = 'user-001'
+const REVIEW_THREAD_ID = 'th-johnson-review'
+const DRIFT_MONITOR = 'drift-monitor'
+
+type AgentFinding = Extract<Message, { kind: 'agent_finding' }>
+
+/** A real Drift Monitor run on the Johnson review thread (idempotent: re-running returns the same finding). */
+async function loadDriftFinding() {
+  const [messages, directory] = await Promise.all([runAgent(ADVISOR_ID, REVIEW_THREAD_ID, DRIFT_MONITOR), getDirectory(ADVISOR_ID)])
+  const finding = messages.find((m): m is AgentFinding => m.kind === 'agent_finding' && m.agentId === DRIFT_MONITOR)
+  if (!finding) throw new Error(`The Drift Monitor run on ${REVIEW_THREAD_ID} produced no finding`)
+  const agent = directory.agents.find((a) => a.id === DRIFT_MONITOR)
+  if (!agent) throw new Error(`No agent "${DRIFT_MONITOR}" in the directory`)
+  return { finding, agent }
+}
 
 async function loadApproval(accountId: string) {
   const alerts = await getAlerts({ status: 'approved' })
@@ -17,13 +34,13 @@ async function loadApproval(accountId: string) {
 }
 
 async function loadKitData() {
-  const [account, positions, drift, lots, windows, previews, approval] = await Promise.all([
+  const [account, positions, drift, lots, windows, previews, approval, agentFinding] = await Promise.all([
     getAccount(ACCOUNT_ID), getPositions(ACCOUNT_ID), getDrift(ACCOUNT_ID), getTaxLots(ACCOUNT_ID),
-    getOpenWashSaleWindows(ACCOUNT_ID), previewRebalance({ accountIds: [ACCOUNT_ID], taxAware: true }), loadApproval(ACCOUNT_ID),
+    getOpenWashSaleWindows(ACCOUNT_ID), previewRebalance({ accountIds: [ACCOUNT_ID], taxAware: true }), loadApproval(ACCOUNT_ID), loadDriftFinding(),
   ])
   const preview = previews.find((p) => p.accountId === ACCOUNT_ID)
   if (!preview) throw new Error(`No rebalance preview returned for ${account.name}`)
-  return { account, positions, drift, lots, windows, preview, approval }
+  return { account, positions, drift, lots, windows, preview, approval, agentFinding }
 }
 
 export type KitData = Awaited<ReturnType<typeof loadKitData>>

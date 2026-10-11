@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import { routes } from '@/app/routes'
+import { http, HttpResponse } from 'msw'
 import { renderRoutes } from '@/test/render'
+import { server } from '@/test/server'
 
 const renderAt = (path: string) => renderRoutes(routes, path)
 
@@ -82,5 +84,22 @@ describe('routes', () => {
     const legend = screen.getByRole('contentinfo')
     expect(within(legend).getByText('t')).toBeInTheDocument()
     expect(within(legend).getByText('Cycle theme')).toBeInTheDocument()
+  })
+  it('the kit shows the engine error message when its data fails to load', async () => {
+    server.use(http.get('/api/workspace/people', () => HttpResponse.json({ message: 'Directory offline' }, { status: 500 })))
+    renderAt('/kit')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Directory offline')
+  })
+  it('the shell shows the engine error message when threads fail with a 500', async () => {
+    server.use(http.get('/api/workspace/threads', () => HttpResponse.json({ message: 'Threads store unavailable' }, { status: 500 })))
+    renderAt('/')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Threads store unavailable')
+  })
+  it('the kit shows a Workspace embeds pane: the rebalance preview and a real Drift Monitor finding', async () => {
+    await renderKitReady()
+    const pane = screen.getByRole('heading', { name: 'Workspace embeds' }).closest('section') as HTMLElement
+    const p = within(pane)
+    expect(await p.findByRole('region', { name: 'Rebalance preview · Robert Johnson Individual' })).toBeInTheDocument()
+    expect(p.getByRole('article', { name: /^Drift Monitor: .* is outside its tolerance band\.$/ })).toBeInTheDocument()
   })
 })
