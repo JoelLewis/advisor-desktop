@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw'
-import type { Order, RebalancePreview, ProposedTrade, TradeRequest, PreTradeCheckRequest, PreTradeViolation } from '@/services/oms'
+import type { Order, RebalancePreview, ProposedTrade, TradeRequest, PreTradeCheckRequest, PreTradeViolation, PreTradeCheckProposalRequest } from '@/services/oms'
 import { notFound } from './utils'
-import { RESTRICTED_SECURITIES, CASH_MINIMUM_PCT } from './compliance'
+import { RESTRICTED_SECURITIES, CASH_MINIMUM_PCT, TECH_SYMBOLS, SECTOR_LIMIT, evaluateProposal, invalidProposal } from './compliance'
 import { computeDriftForAccount, modelImplementationSecurity } from './pms'
 import { accounts } from '../data/accounts'
 import { getPositionsForAccount } from '../data/positions'
@@ -17,10 +17,6 @@ import { generateTaxLots, boundedTradeQty } from './custodian'
 import { taxRateFor } from '@/features/portfolios/tax/shared'
 import type { Position, TaxLot } from '@/types/portfolio'
 import type { CurrencyCode } from '@/types/currency'
-
-/** Pooled/individual tech names used by the sector-concentration check below. */
-const TECH_SYMBOLS = ['AAPL', 'MSFT', 'NVDA', 'GOOGL', 'META', 'AMZN', 'TSLA']
-const SECTOR_LIMIT = 0.40
 
 // Exported so `ai.ts`'s trading-desk chat response reads the same pending-order counts this
 // handler serves, rather than a second, independently hand-typed "3 open orders" figure.
@@ -674,13 +670,18 @@ export const omsHandlers = [
     const isBuy = body.side.startsWith('buy') || body.side === 'purchase'
     const postTradeWeight = (existing + (isBuy ? estValue : -estValue)) / accountValue
 
+    // A sale only moves the weight down, toward the limit. It cannot cause a breach, so it is never
+    // the block — at most a warning that the limit remains breached after it.
     if (postTradeWeight > limit * 0.8) {
+      const stillOver = !isBuy && postTradeWeight > limit
       violations.push({
         constraint: kind === 'single_name' ? 'Single-issuer concentration limit' : 'Pooled-vehicle concentration limit',
-        severity: postTradeWeight > limit ? 'block' : 'warning',
+        severity: postTradeWeight > limit && isBuy ? 'block' : 'warning',
         currentValue: `${(postTradeWeight * 100).toFixed(1)}%`,
         limit: `${(limit * 100).toFixed(1)}%`,
-        message: `${sym} would be ${(postTradeWeight * 100).toFixed(1)}% of this account against a ${(limit * 100).toFixed(1)}% IPS limit.`,
+        message: stillOver
+          ? `${sym} remains above the ${(limit * 100).toFixed(1)}% IPS limit after this sale, at ${(postTradeWeight * 100).toFixed(1)}% of this account. The sale reduces the breach; it does not cause it.`
+          : `${sym} would be ${(postTradeWeight * 100).toFixed(1)}% of this account against a ${(limit * 100).toFixed(1)}% IPS limit.`,
       })
     }
 
@@ -754,6 +755,17 @@ export const omsHandlers = [
       passed: violations.every((v) => v.severity !== 'block'),
       violations,
     })
+  }),
+
+  // Proposal-level pre-trade check — all legs applied to one projected portfolio, end state checked,
+  // each violation attributed to its legs. See `evaluateProposal` in `compliance.ts`.
+  http.post('/api/oms/orders/pre-check-proposal', async ({ request }) => {
+    const body = await request.json() as PreTradeCheckProposalRequest
+    const invalid = invalidProposal(body.trades)
+    if (invalid) return HttpResponse.json({ error: invalid }, { status: 400 })
+    const result = evaluateProposal(body.accountId, body.trades)
+    if (!result) return notFound()
+    return HttpResponse.json(result)
   }),
 
   http.post('/api/oms/rebalance', async ({ request }) => {

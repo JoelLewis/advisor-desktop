@@ -19,6 +19,7 @@ const COMPLIANCE_STATUS_BADGE: Record<ComplianceStatus, 'green' | 'yellow' | 're
 const CATEGORY_LABELS: Record<TradeComplianceCheck['category'], string> = {
   restricted_securities: 'Restricted',
   concentration_limit: 'Concentration',
+  sector_limit: 'Sector',
   cash_minimum: 'Cash Reserve',
   wash_sale: 'Wash Sale',
   position_limit: 'Position Limit',

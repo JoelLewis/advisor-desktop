@@ -173,3 +173,66 @@ export type PreTradeCheckRequest = {
 export function preTradeCheck(request: PreTradeCheckRequest) {
   return post<PreTradeCheckResult>('/oms/orders/pre-check', request)
 }
+
+// Proposal-level pre-trade compliance — every leg of a multi-leg proposal (a rebalance) applied
+// to one projected portfolio, then the end state checked. `preTradeCheck` above reads one order
+// against current holdings, which is right for the single-trade ticket and wrong for a proposal:
+// a buy cannot see the proposal's own sale proceeds, and a trim cannot see that it moves a
+// position toward its limit.
+
+export type ProposalTradeLeg = {
+  symbol: string
+  side: 'buy' | 'sell'
+  quantity: number
+  /** Required and positive, as on `PreTradeCheckRequest` (C28). Account currency. */
+  estimatedValue: number
+}
+
+export type PreTradeCheckProposalRequest = {
+  accountId: string
+  trades: ProposalTradeLeg[]
+}
+
+export type ProposalConstraint =
+  | 'restricted_securities'
+  | 'concentration_limit'
+  | 'sector_limit'
+  | 'cash_minimum'
+  | 'wash_sale'
+
+export type ProposalViolation = PreTradeViolation & {
+  category: ProposalConstraint
+  /** Indexes into the request's `trades` that cause or add to this violation. Empty when no leg does (a pre-existing breach the proposal leaves alone). */
+  legs: number[]
+  /** The account was already over the limit before the proposal. */
+  preExisting: boolean
+  symbol?: string
+  /** Weights as fractions of account value. Absent for rules that are not a weight. */
+  currentWeight?: number
+  projectedWeight?: number
+  limitWeight?: number
+}
+
+export type ProposalLegResult = {
+  index: number
+  symbol: string
+  side: 'buy' | 'sell'
+  /** The worst severity among the violations this leg is attributed to. */
+  severity: 'pass' | 'warning' | 'block'
+}
+
+export type PreTradeCheckProposalResult = {
+  accountId: string
+  passed: boolean
+  violations: ProposalViolation[]
+  legs: ProposalLegResult[]
+  /** End-state cash after sells settle and buys are paid for, account currency. */
+  projectedCash: number
+  projectedCashPct: number
+  /** The 2% reserve floor, account currency. */
+  minimumCash: number
+}
+
+export function preTradeCheckProposal(request: PreTradeCheckProposalRequest) {
+  return post<PreTradeCheckProposalResult>('/oms/orders/pre-check-proposal', request)
+}
