@@ -8,7 +8,7 @@ import { getPositionsForAccount } from '../data/positions'
 import { openWashSaleWindows } from '../data/realised-sales'
 import { FX_RATES_USD_BASE } from '../data/currencies'
 import { convertCurrency } from '@/lib/currency'
-import { securityKind, concentrationLimitFor } from '@/lib/security-master'
+import { securityKind, concentrationLimitFor, isMarketTradable } from '@/lib/security-master'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { generateTaxLots, boundedTradeQty } from './custodian'
@@ -254,7 +254,7 @@ export function generateRebalanceTrades(
   const raw = drift.assetClassDrifts
     .filter((d) => Math.abs(d.drift) > driftThreshold)
     .flatMap((d): RawLeg[] => {
-      const held = positions.filter((p) => p.assetClass === d.assetClass && p.symbol !== 'CASH')
+      const held = positions.filter((p) => p.assetClass === d.assetClass && p.symbol !== 'CASH' && isMarketTradable(p.symbol))
       const side: 'buy' | 'sell' = d.actual > d.target ? 'sell' : 'buy'
       const rawNotional = Math.abs(d.drift) * account.totalValue
       const sleeve: Sleeve = { assetClass: d.assetClass, actualWeight: d.actual, targetWeight: d.target }
@@ -315,8 +315,9 @@ export function generateRebalanceTrades(
   // may not spend below its own cash target to fund them. `buyCapacity` is what sells raise
   // plus the cash genuinely available above target — the `cashAboveTarget` term is what makes
   // this correct where a round-2 attempt (`buyScale = totalSell / totalBuy`, capping buys to
-  // match sells alone, reverted in round 3) was not: acc-006 legitimately funds $912,000 of
-  // buys from its own cash against only $540,000 of sells, and must continue to.
+  // match sells alone, reverted in round 3) was not: acc-006 legitimately funds buys from its
+  // own cash above target — now with no sells at all, since BXPE is periodic-liquidity and never
+  // sold — and must continue to.
   //
   // ── Funding priority, stated deliberately ──────────────────────────────────────────────────
   // When proceeds cannot cover both the underweight return-seeking sleeves and an underweight

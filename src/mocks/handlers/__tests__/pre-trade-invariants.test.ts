@@ -700,32 +700,27 @@ describe('fix round 3 · self-financing applies to sells only — buys are never
     expect(Math.max(...sells.map((s) => s.estimatedValue))).toBeLessThanOrEqual(Math.round(largestPosition.marketValue))
   })
 
-  it('acc-006: buys the full $920,400 (funded from its own $1,012,470 cash balance), not scaled down to the $542,400 raised from selling BXPE', async () => {
+  it('acc-006: sells nothing (BXPE is periodic-liquidity) and funds its buys from the $412,470 of cash above its 5% target', async () => {
     // acc-006's model (mod-005) is underweight us_equity/intl_equity/alternatives and overweight
-    // private_equity (BXPE, not in the model at all) and cash. Raw sells: $542,400 (BXPE). Raw
-    // buys: $920,400 (SPY $82,800 + EFA $93,600 + QAI $744,000). The regression scaled buys down
-    // to match the money raised from selling, leaving both the cash overweight (8.4% vs 5%
-    // target) and the alternatives underweight (8.8% vs 15% target) uncorrected.
+    // private_equity (BXPE, not in the model at all) and cash. The only raw sell was $542,400 of
+    // BXPE, but BXPE redeems only at periodic repurchase windows, so a rebalance does not sell it
+    // (isMarketTradable) — sells are $0. Raw buys are unchanged at $920,400 (SPY $82,800 + EFA
+    // $93,600 + QAI $744,000, derived on the $12,000,000 account from the sleeve drifts below).
     //
-    // Task 10 — the notionals are $542,400 and $920,400, not the $540,000 and $912,000 the stored
-    // three-decimal weights gave. Derived, on a $12,000,000 account: private_equity 542,500 /
-    // 12,000,000 = 0.045208 (drift +0.0452, x 12,000,000 = 542,400); us_equity 4,116,680 /
-    // 12,000,000 = 0.343057 (drift -0.0069 against a 0.35 target, x 12,000,000 = 82,800);
-    // intl_equity 1,706,750 / 12,000,000 = 0.142229 (drift -0.0078 against 0.15 = 93,600);
-    // alternatives 1,056,000 / 12,000,000 = 0.088 (drift -0.062 against 0.15 = 744,000).
-    //
-    // Executed at the lots traded — pinned exactly rather than to the nearest $500, because a
-    // $500-wide tolerance on the plan's headline figure could hide a real regression behind what
-    // looks like rounding. BXPE 4,999 x 108.50 = 542,392 (8 under the 542,400 notional, one leg
-    // at 108.50, and inside the 542,500 position); SPY 159 + EFA 1,137 + QAI 21,136 = 82,728 +
-    // 93,575 + 743,987 = 920,290 (110 under, three legs whose unit prices sum to 637.80).
+    // The buy capacity is what sells raise plus cash above target: $0 + (1,012,470 - 5% x
+    // 12,000,000 = 600,000) = $412,470. Buys scale by 412,470 / 920,400 = 0.4482, and each leg
+    // rounds down to whole shares: SPY 71 x 520.30 = 36,941 + EFA 509 x 82.30 = 41,891 + QAI
+    // 9,472 x 35.20 = 333,414 = 412,246 (224 under the capacity, inside one share of each leg).
+    // Sleeve drifts: us_equity 4,116,680 / 12,000,000 = 0.343057 (-0.0069 vs 0.35 = 82,800);
+    // intl_equity 1,706,750 / 12,000,000 = 0.142229 (-0.0078 vs 0.15 = 93,600); alternatives
+    // 1,056,000 / 12,000,000 = 0.088 (-0.062 vs 0.15 = 744,000).
     const [preview] = await previewRebalance({ accountIds: ['acc-006'], taxAware: true })
     const totalSell = preview!.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
     const totalBuy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
-    expect(totalSell).toBe(542_392)
-    expect(totalBuy).toBe(920_290)
-    expect(542_400 - totalSell).toBeLessThan(108.50)
-    expect(920_400 - totalBuy).toBeLessThan(637.80)
+    expect(totalSell).toBe(0)
+    expect(totalBuy).toBe(412_246)
+    expect(412_470 - totalBuy).toBeGreaterThanOrEqual(0)
+    expect(412_470 - totalBuy).toBeLessThan(520.30)
   })
 })
 
