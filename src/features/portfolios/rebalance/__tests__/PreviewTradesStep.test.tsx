@@ -45,6 +45,11 @@ function Harness({ previews }: { previews: RebalancePreview[] }) {
   )
 }
 
+/** The "Realised" column — sixth of the row's cells. */
+function realisedCell(row: HTMLElement): HTMLElement {
+  return row.querySelectorAll('td')[5]!
+}
+
 describe('PreviewTradesStep renders each trade at its own account currency, not USD', () => {
   it("acc-043 (EUR): the buy notional renders at its correctly converted USD figure, not the raw EUR number read as dollars", async () => {
     const [preview] = await previewRebalance({ accountIds: ['acc-043'], taxAware: true })
@@ -111,9 +116,11 @@ describe('PreviewTradesStep renders each trade at its own account currency, not 
     // same amount). Both must show the converted figure, and the mislabeled
     // (unconverted-EUR-read-as-USD) string must appear nowhere on the page.
     // Header (line 38) — inline text inside a mixed-content span, so matched via textContent.
-    expect(container.textContent).toContain(`Tax impact (after netting): ${expected}`)
-    // Footer batch total — the only `<strong class="font-mono text-accent-red">` on the step.
+    expect(container.textContent).toContain(`Est. tax, this proposal (gains net of losses): ${expected}`)
+    // Footer batch total — the only `<strong class="font-mono text-accent-red">` on the step. It
+    // adds separately netted account figures, so it is labelled as a sum of them.
     expect(container.querySelector('strong.font-mono.text-accent-red')?.textContent).toBe(expected)
+    expect(container.textContent).toContain(`Est. tax, sum of account estimates: ${expected}`)
     expect(container.textContent).not.toContain(mislabeledUsd)
 
     // Line 67 · the per-row taxImpact cells must be converted too. They are individual legs of
@@ -138,12 +145,48 @@ describe('PreviewTradesStep renders each trade at its own account currency, not 
     const usd = (n: number) => formatCurrency(n, { compact: true, currency: 'USD' })
     const intcRow = screen.getByText('INTC').closest('tr')!
     expect(intcRow.textContent).toContain(`Harvested loss ${usd(Math.abs(loss))}`)
-    expect(container.textContent).toContain(`Tax impact (after netting): ${usd(preview!.estimatedTaxImpact)}`)
+    expect(container.textContent).toContain(`Est. tax, this proposal (gains net of losses): ${usd(preview!.estimatedTaxImpact)}`)
     expect(container.textContent).toContain(`Gross on gains: ${usd(preview!.grossTaxOnGains)}`)
     // Buys realise nothing, so their Realised cell is a dash, not a figure.
     const buyRow = screen.getByText(preview!.trades.find((t) => t.side === 'buy')!.symbol).closest('tr')!
     expect(buyRow.textContent).not.toContain('Harvested loss')
     expect(buyRow.textContent).not.toContain('Gain ')
+  })
+
+  it('acc-004 (Roth IRA): a sell realises nothing taxable, so its Realised cell is a dash, never "Gain $0"', async () => {
+    const [preview] = await previewRebalance({ accountIds: ['acc-004'], taxAware: true })
+    expect(preview!.taxable).toBe(false)
+    const sells = preview!.trades.filter((t) => t.side === 'sell')
+    expect(sells.length).toBeGreaterThan(0)
+
+    render(<Harness previews={[preview!]} />, { wrapper: createWrapper() })
+    await waitFor(() => expect(screen.queryByTestId('fx-loading')).not.toBeInTheDocument())
+
+    for (const sell of sells) {
+      const row = screen.getAllByText(sell.symbol).map((el) => el.closest('tr')!).find((tr) => tr.textContent!.includes('sell'))!
+      expect(realisedCell(row).textContent, sell.symbol).toBe('\u2014')
+    }
+    expect(document.body.textContent).not.toContain('Gain ')
+  })
+
+  it('a taxable sell that realises exactly nothing reads "$0", not "Gain $0"', async () => {
+    const zeroResult: RebalancePreview = {
+      accountId: 'acc-002',
+      currency: 'USD',
+      taxable: true,
+      estimatedTaxImpact: 0,
+      grossTaxOnGains: 0,
+      trades: [{
+        symbol: 'SMH', name: 'VanEck Semiconductor ETF', side: 'sell', quantity: 180, estimatedValue: 44_136,
+        taxImpact: 0, realisedShortTerm: 0, realisedLongTerm: 0, washSaleRisk: false, currency: 'USD',
+      }],
+    }
+    render(<Harness previews={[zeroResult]} />, { wrapper: createWrapper() })
+    await waitFor(() => expect(screen.queryByTestId('fx-loading')).not.toBeInTheDocument())
+
+    const row = screen.getByText('SMH').closest('tr')!
+    expect(realisedCell(row).textContent).toBe(formatCurrency(0, { compact: true, currency: 'USD' }))
+    expect(row.textContent).not.toContain('Gain')
   })
 
   it('acc-001 (USD): unchanged — the fix does not alter the already-correct USD case', async () => {

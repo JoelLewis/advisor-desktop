@@ -350,7 +350,7 @@ export function ModelTradeView() {
             </Card>
             <Card>
               <CardContent className="p-4 text-center">
-                <p className="text-caption text-text-secondary">Est. Tax Impact</p>
+                <p className="text-caption text-text-secondary">Est. tax, sum of account estimates</p>
                 <p className="mt-1 font-mono text-page-title text-accent-red">{formatWithConversion(totalTaxImpact, 'USD')}</p>
               </CardContent>
             </Card>
@@ -386,7 +386,7 @@ export function ModelTradeView() {
                     <span className="font-mono text-mono-sm text-text-secondary">
                       {/* §9.3 — the preview's own currency, not USD: acc-041's tax figure is HKD,
                           and reading HK$ as $ overstates it by 7.82x. */}
-                      Tax: {formatWithConversion(preview.estimatedTaxImpact, preview.currency)}
+                      Est. tax, net of losses: {formatWithConversion(preview.estimatedTaxImpact, preview.currency)}
                     </span>
                   </div>
                 </button>
