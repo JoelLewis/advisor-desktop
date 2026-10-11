@@ -26,6 +26,7 @@ import { billingHandlers } from './billing'
 import { reportHandlers } from './reports'
 import { archiveHandlers } from './archives'
 import { emailTemplateHandlers } from './email-templates'
+import { workspaceHandlers } from './workspace'
 
 export const handlers = [
   ...crmHandlers,
@@ -56,4 +57,5 @@ export const handlers = [
   ...reportHandlers,
   ...archiveHandlers,
   ...emailTemplateHandlers,
+  ...workspaceHandlers,
 ]
