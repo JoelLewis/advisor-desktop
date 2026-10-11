@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  MINUS, normaliseMinus, isNegative, fmtMoney, fmtResult, fmtPrice, fmtWeight, fmtReturn, fmtDrift,
+  MINUS, MeasureError, normaliseMinus, isNegative, fmtMoney, fmtResult, fmtPrice, fmtWeight, fmtReturn, fmtDrift,
   fmtTolerance, fmtQuantity, splitFraction, fmtDays, fmtScore, fmtDate, fmtTimestamp, clientMoney,
   clientPercent, clientDate,
 } from '@/kit/measure'
@@ -54,5 +54,78 @@ describe('measure', () => {
     expect(normaliseMinus('2026-03-23')).toBe('2026-03-23')
     expect(isNegative(`${MINUS}45,850`)).toBe(true)
     expect(isNegative('+69,411')).toBe(false)
+  })
+
+  describe('rounds the decimal value, not the binary one', () => {
+    it('half-way cases round up in magnitude', () => {
+      expect(fmtPrice(1.005)).toBe('1.01')
+      expect(fmtPrice(2.675)).toBe('2.68')
+      expect(fmtQuantity(0.0045)).toBe('0.005')
+      expect(fmtReturn(0.0705)).toBe('+7.1')
+    })
+    it('negative mirrors round the same way', () => {
+      expect(fmtPrice(-1.005)).toBe(`${MINUS}1.01`)
+      expect(fmtPrice(-2.675)).toBe(`${MINUS}2.68`)
+      expect(fmtQuantity(-0.0045)).toBe(`${MINUS}0.005`)
+      expect(fmtReturn(-0.0705)).toBe(`${MINUS}7.1`)
+    })
+  })
+
+  describe('negative zero', () => {
+    const formatters: ReadonlyArray<readonly [string, (v: number) => string]> = [
+      ['fmtMoney', fmtMoney],
+      ['fmtResult', fmtResult],
+      ['fmtPrice', fmtPrice],
+      ['fmtWeight', (v) => fmtWeight(v)],
+      ['fmtReturn', (v) => fmtReturn(v)],
+      ['fmtDrift', (v) => fmtDrift(v)],
+      ['fmtTolerance', (v) => fmtTolerance(v)],
+      ['fmtQuantity', fmtQuantity],
+      ['fmtDays', fmtDays],
+      ['fmtScore', (v) => fmtScore(v)],
+      ['clientMoney', clientMoney],
+      ['clientPercent', (v) => clientPercent(v)],
+    ]
+    it.each(formatters)('%s never prints a minus for a value that rounds to zero', (_name, fmt) => {
+      for (const v of [-0, -0.0004]) {
+        expect(fmt(v).startsWith(MINUS)).toBe(false)
+      }
+    })
+    it.each(formatters.filter(([name]) => ['fmtMoney', 'fmtResult', 'fmtDays', 'clientMoney'].includes(name)))(
+      '%s never prints a minus for -0.4 at whole-unit precision',
+      (_name, fmt) => {
+        expect(fmt(-0.4).startsWith(MINUS)).toBe(false)
+      },
+    )
+    it('fmtWeight shows a negative weight rather than hiding it', () => {
+      expect(fmtWeight(-0.015)).toBe(`${MINUS}1.5`)
+    })
+  })
+
+  describe('normaliseMinus leaves non-negative hyphens alone', () => {
+    it.each(['3-5', 'acc-002', '2026-03-23'])('%s is unchanged', (s) => {
+      expect(normaliseMinus(s)).toBe(s)
+    })
+  })
+
+  describe('MeasureError', () => {
+    it.each([NaN, Infinity, -Infinity, 'garbage' as unknown as number])('number formatter throws for %s', (v) => {
+      expect(() => fmtMoney(v)).toThrow(MeasureError)
+      expect(() => clientMoney(v)).toThrow(MeasureError)
+    })
+    it.each(['garbage', '2026-03-23T12:00:00', '2026-02-30'])('date formatter throws for %s', (iso) => {
+      expect(() => fmtDate(iso)).toThrow(MeasureError)
+      expect(() => fmtTimestamp(iso)).toThrow(MeasureError)
+      expect(() => clientDate(iso)).toThrow(MeasureError)
+    })
+    it('carries the error name', () => {
+      expect(new MeasureError('x').name).toBe('MeasureError')
+    })
+  })
+
+  describe('time zones', () => {
+    it('converts an offset datetime to UTC', () => {
+      expect(fmtTimestamp('2026-02-25T07:00:00-05:00')).toBe('2026-02-25 12:00 UTC')
+    })
   })
 })
