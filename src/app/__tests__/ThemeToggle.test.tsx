@@ -21,6 +21,12 @@ async function cycle() {
 }
 
 describe('ThemeToggle', () => {
+  it('starts from the theme the URL applied', () => {
+    window.history.pushState({}, '', '/kit?theme=dark')
+    render(<ThemeToggle />)
+    window.history.pushState({}, '', '/')
+    expect(screen.getByRole('button', { name: 'Theme: dark' })).toBeTruthy()
+  })
   it('cycles system, light, dark, system and sets data-theme', async () => {
     expect(await cycle()).toEqual(['light', 'dark', undefined])
     expect(screen.getByRole('button', { name: 'Theme: system' })).toBeTruthy()

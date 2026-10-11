@@ -6,7 +6,7 @@ export function Attestation({ id, checked, onChange, children, disabled }: Attes
       <input
         id={id}
         type="checkbox"
-        className="mt-0.5 size-4 accent-ink"
+        className="mt-0.5 size-4 appearance-none border border-ink-2 bg-face accent-ink checked:bg-ink checked:shadow-[inset_0_0_0_3px_var(--ws-face)]"
         checked={checked}
         disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}

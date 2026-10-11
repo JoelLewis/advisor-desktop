@@ -22,6 +22,7 @@ import { clientMoney, fmtDrift, fmtMoney, fmtPrice, fmtQuantity, fmtResult, fmtT
 import { todayISO, now } from '@/lib/clock'
 import { RATE_DISCLOSURE } from '@/lib/tax-rules'
 import type { Status } from '@/kit/status/status'
+import { assetClassLabel } from './asset-class-label'
 import type { KitData } from './use-kit-data'
 
 const STATUSES: Status[] = ['OUT', 'AT LIMIT', 'IN', 'BLOCK', 'WARN', 'CLEAR', 'OPEN']
@@ -43,7 +44,7 @@ export function KitSections({ data }: { data: KitData }) {
       <MainColumn>
         <Pane title="Readings" meta={account.name}>
           <div className="flex flex-wrap gap-10">
-            {worst ? <Reading label={`Max drift · ${worst.assetClass}`} value={fmtDrift(worst.drift)} unit="pp" size="readout-md"
+            {worst ? <Reading label={`Max drift · ${assetClassLabel(worst.assetClass)}`} value={fmtDrift(worst.drift)} unit="pp" size="readout-md"
               limit={`tol ${fmtTolerance(drift.driftTolerance)} pp`} status={Math.abs(worst.drift) > drift.driftTolerance ? 'OUT' : 'IN'} /> : null}
             <Reading label="Account value" value={fmtMoney(account.totalValue)} unit="USD" size="total" />
           </div>
@@ -55,7 +56,7 @@ export function KitSections({ data }: { data: KitData }) {
         </Pane>
         <Pane title="Drift against model" meta={`band ${fmtTolerance(drift.driftTolerance)} pp`}>
           <div className="flex flex-col gap-2">
-            {drift.assetClassDrifts.map((d) => <Gauge key={d.assetClass} label={d.assetClass} drift={d.drift} band={drift.driftTolerance} />)}
+            {drift.assetClassDrifts.map((d) => <Gauge key={d.assetClass} label={assetClassLabel(d.assetClass)} drift={d.drift} band={drift.driftTolerance} />)}
           </div>
         </Pane>
         <Pane title="Holdings" meta={`${positions.length} positions`}>
@@ -69,7 +70,7 @@ export function KitSections({ data }: { data: KitData }) {
               { id: 'weight', header: 'Weight', unit: '%', align: 'right', cell: (p) => fmtWeight(p.weight), sortValue: (p) => p.weight },
               { id: 'gain', header: 'Unrealized', unit: 'USD', align: 'right', cell: (p) => fmtResult(p.gainLoss), sortValue: (p) => p.gainLoss },
             ]}
-            totals={{ label: 'Total', tiesTo: 'account value', cells: { value: fmtMoney(positions.reduce((s, p) => s + p.marketValue, 0)) } }} />
+            totals={{ label: 'Total', tiesTo: 'account value', cells: { value: fmtMoney(positions.reduce((s, p) => s + p.marketValue, 0)), weight: fmtWeight(positions.reduce((s, p) => s + p.weight, 0)) } }} />
         </Pane>
         <Pane title="Tax lots" meta={`${lots.length} lots`}>
           <DataTable caption="Tax lots" density="dense" rows={lots} getRowId={(l) => l.id} total={lots.length}

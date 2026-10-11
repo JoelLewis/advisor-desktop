@@ -21,12 +21,36 @@ test('no page-level horizontal scroll at 1024px', async ({ page }) => {
   expect(overflow).toBeLessThanOrEqual(0)
 })
 
-test('no clipped labels at 1440px', async ({ page }) => {
-  await openKit(page, 'light', 1440)
-  const clipped = await page.evaluate(() =>
-    [...document.querySelectorAll<HTMLElement>('th, [data-status], [data-tone], [data-stamp]')]
-      .filter((el) => el.scrollWidth > el.clientWidth + 1)
-      .map((el) => el.textContent ?? ''),
-  )
-  expect(clipped).toEqual([])
-})
+const LABEL_SELECTOR = 'th, [data-status], [data-tone], [data-stamp], [data-part="label"], [data-visibility] span'
+
+// Text extent (Range over the contents) against the element's own box and its nearest overflow-clipping ancestor.
+async function clippedLabels(page: Page) {
+  return page.evaluate((selector) => {
+    const clipper = (el: HTMLElement): HTMLElement | null => {
+      for (let node = el.parentElement; node; node = node.parentElement) {
+        if (getComputedStyle(node).overflowX !== 'visible') return node
+      }
+      return null
+    }
+    const out: string[] = []
+    for (const el of document.querySelectorAll<HTMLElement>(selector)) {
+      const range = document.createRange()
+      range.selectNodeContents(el)
+      const text = range.getBoundingClientRect()
+      if (text.width === 0) continue
+      const own = el.getBoundingClientRect()
+      const ancestor = clipper(el)?.getBoundingClientRect()
+      const beyondOwn = text.right > own.right + 1 || text.left < own.left - 1
+      const beyondAncestor = ancestor !== undefined && (text.right > ancestor.right + 1 || text.left < ancestor.left - 1)
+      if (beyondOwn || beyondAncestor) out.push(el.textContent ?? '')
+    }
+    return out
+  }, LABEL_SELECTOR)
+}
+
+for (const [theme, width] of [['light', 1440], ['dark', 1440], ['light', 1024]] as const) {
+  test(`no clipped labels · ${theme} ${width}px`, async ({ page }) => {
+    await openKit(page, theme, width)
+    expect(await clippedLabels(page)).toEqual([])
+  })
+}

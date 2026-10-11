@@ -24,6 +24,7 @@ export function Gauge({ label, drift, band }: { label: string; drift: number; ba
 
   return (
     <div className="inline-flex items-center gap-3">
+      <span aria-hidden data-part="label" className="w-40 shrink-0 text-table">{label}</span>
       <svg role="img" aria-label={description} viewBox={`0 0 ${W} ${H}`} width={W} height={H} className="animate-gauge-in text-rule-2">
         <defs>
           <pattern id={patternId} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">

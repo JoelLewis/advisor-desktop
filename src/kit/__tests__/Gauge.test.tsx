@@ -33,6 +33,10 @@ describe('Gauge', () => {
     expect(screen.getByText('+13.2')).toBeInTheDocument()
     expect(screen.getByText('OUT')).toBeInTheDocument()
   })
+  it('prints its label visibly, hidden from assistive tech (the svg names it)', () => {
+    render(<Gauge label="US equity" drift={0.132} band={0.05} />)
+    expect(screen.getByText('US equity').closest('[aria-hidden="true"]')).not.toBeNull()
+  })
   it('clamps an off-scale bar inside the drawing', () => {
     const { container } = render(<Gauge label="Digital" drift={0.9} band={0.05} />)
     const bar = container.querySelector('[data-part="bar"]')!
