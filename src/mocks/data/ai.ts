@@ -24,7 +24,7 @@ const responsesByContext: Record<string, ResponseTemplate[]> = {
         { source: 'Compliance Calendar', text: 'Thompson RMD deadline: March 3, 2026' },
       ],
       actions: [
-        { id: 'act-001', action: 'Review Johnson Rebalance', description: 'Generate rebalance proposal for Johnson household to reduce US equity overweight', impact: 'Affects $12.4M across 3 accounts', status: 'pending' },
+        { id: 'act-001', action: 'Review Johnson Rebalance', description: 'Generate rebalance proposals for the Johnson household accounts overweight US equity', impact: 'Affects {{HH_001_US_EQUITY_REBALANCE_VALUE}} across {{HH_001_US_EQUITY_REBALANCE_COUNT}} accounts', status: 'pending' },
       ],
     },
     {

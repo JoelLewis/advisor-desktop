@@ -4,6 +4,7 @@ import { accounts } from '@/mocks/data/accounts'
 import { openWashSaleWindows } from '@/mocks/data/realised-sales'
 import { computeDriftForAccount } from '@/mocks/handlers/pms'
 import { generateRebalanceTrades } from '@/mocks/handlers/oms'
+import { formatAUM } from '@/mocks/handlers/utils'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 
 /**
@@ -216,5 +217,29 @@ describe('§9.5 · AI drift figures for acc-001 match computeDriftForAccount', (
       expect(d, `${s.symbol} names an asset class the engine reports`).toBeDefined()
       expect(s.side, `${s.symbol}: overweight sells, underweight buys`).toBe(d!.drift > 0 ? 'sell' : 'buy')
     }
+  })
+})
+
+/**
+ * §9.5 · the dashboard's "Review Johnson Rebalance" action claimed "$12.4M across 3 accounts".
+ * No set of hh-001 accounts gives that: the household has 5 accounts, and the two that are
+ * overweight US equity and outside their band (acc-001, acc-002) hold $12.7M.
+ */
+describe('§9.5 · Johnson household rebalance action matches household data', () => {
+  it('the action\'s value and account count are the hh-001 accounts overweight US equity and needing rebalance', async () => {
+    const targets = accounts.filter((a) => {
+      if (a.householdId !== 'hh-001') return false
+      const d = computeDriftForAccount(a)
+      const us = d.assetClassDrifts.find((x) => x.assetClass === 'us_equity')
+      return d.needsRebalance && (us?.drift ?? 0) > 0
+    })
+    // Vacuity guard: an empty set would make "$0 across 0 accounts" pass.
+    expect(targets.length).toBeGreaterThan(0)
+    const value = formatAUM(targets.reduce((s, a) => s + a.totalValue, 0))
+
+    const answer = await sendMessage('x'.repeat(4), { screenType: 'dashboard' })
+    const action = answer.actions?.find((a) => a.action === 'Review Johnson Rebalance')
+    expect(action, 'dashboard answer carries the Johnson rebalance action').toBeDefined()
+    expect(action!.impact).toBe(`Affects ${value} across ${targets.length} accounts`)
   })
 })

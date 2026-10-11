@@ -15,6 +15,7 @@ import { generateTaxLots } from './custodian'
 import { openWashSaleWindows } from '../data/realised-sales'
 import { FX_RATES_USD_BASE } from '../data/currencies'
 import { convertToBase } from '@/lib/currency'
+import { sumAccountsUSD } from '@/lib/aum'
 import { formatDate } from '@/lib/utils'
 import { estimatedTaxBenefit, isHarvestable } from '@/features/portfolios/tax/shared'
 import { isTaxableAccount } from '@/lib/tax-treatment'
@@ -87,6 +88,20 @@ function topHarvestableAccount(harvestable: ReturnType<typeof harvestableLotsAcr
   if (!best) return null
   const account = accounts.find((a) => a.id === best!.accountId)
   return { accountId: best.accountId, accountName: account?.name ?? best.accountId, amount: best.amount }
+}
+
+/**
+ * §9.5 · a household's accounts that need a rebalance *and* are overweight US equity — the set
+ * the dashboard's "Review Johnson Rebalance" action acts on. It was hand-typed as "$12.4M across
+ * 3 accounts"; hh-001 has 5 accounts, and the 2 that fit (acc-001, acc-002) hold $12.7M.
+ */
+function usEquityRebalanceAccounts(householdId: string) {
+  return accounts.filter((a) => {
+    if (a.householdId !== householdId) return false
+    const drift = computeDriftForAccount(a)
+    const usEquity = drift.assetClassDrifts.find((d) => d.assetClass === 'us_equity')
+    return drift.needsRebalance && (usEquity?.drift ?? 0) > 0
+  })
 }
 
 /** "7.1%" — max asset-class drift, formatted as the drift surfaces show it (SelectAccountsStep, OverviewTab). */
@@ -183,6 +198,15 @@ export const aiHandlers = [
       TLH_ACCOUNT_COUNT: String(new Set(harvestable.map((l) => l.accountId)).size),
       TOP_HARVEST_ACCOUNT: topHarvest?.accountName ?? 'no account',
       TOP_HARVEST_AMOUNT: topHarvest ? formatAUM(topHarvest.amount) : '$0',
+      // §9.5 · per-household US equity rebalance set, e.g. `{{HH_001_US_EQUITY_REBALANCE_VALUE}}` → "$12.7M".
+      ...Object.fromEntries(households.flatMap((h) => {
+        const key = h.id.toUpperCase().replace(/-/g, '_')
+        const set = usEquityRebalanceAccounts(h.id)
+        return [
+          [`${key}_US_EQUITY_REBALANCE_VALUE`, formatAUM(sumAccountsUSD(set, FX_RATES_USD_BASE))],
+          [`${key}_US_EQUITY_REBALANCE_COUNT`, String(set.length)],
+        ]
+      })),
       // §9.5 · per-account max drift, e.g. `{{MAX_DRIFT_ACC_001}}` → "7.1%".
       ...Object.fromEntries(accounts.map((a) => [
         `MAX_DRIFT_${a.id.toUpperCase().replace(/-/g, '_')}`,
