@@ -1,5 +1,5 @@
 import type { BindingAct, Message } from '@/types/workspace'
-import { can } from '@/mocks/data/people'
+import { can, personById } from '@/mocks/data/people'
 import { commitActId, nextAt, nextId, store } from '@/mocks/data/workspace-store'
 import { fingerprint } from '@/lib/fingerprint'
 import { canSeeThread } from './visibility'
@@ -8,15 +8,19 @@ type Failure = { ok: false; status: 403 | 404 | 409; code: string; message: stri
 
 export function sendToClient(viewerId: string, draftId: string): { ok: true; act: BindingAct } | Failure {
   const s = store()
+  const isClient = personById(viewerId)?.role === 'client'
+  const noDraft: Failure = { ok: false, status: 404, code: 'NO_DRAFT', message: 'Draft not found.' }
+  if (isClient) return noDraft
   const draft = s.drafts.find((d) => d.id === draftId)
   if (!draft) {
     const sent = s.acts.find((a) => a.kind === 'send_to_client' && a.subject?.type === 'draft' && a.subject.id === draftId)
-    return sent
+    const sentThread = sent && s.threads.find((t) => t.id === sent.threadId)
+    return sent && sentThread && canSeeThread(viewerId, sentThread)
       ? { ok: false, status: 409, code: 'ALREADY_SENT', message: `This draft was already sent (${sent.id}).` }
-      : { ok: false, status: 404, code: 'NO_DRAFT', message: 'Draft not found.' }
+      : noDraft
   }
   const thread = s.threads.find((t) => t.id === draft.clientThreadId)
-  if (!thread || !canSeeThread(viewerId, thread)) return { ok: false, status: 404, code: 'NO_DRAFT', message: 'Draft not found.' }
+  if (!thread || !canSeeThread(viewerId, thread)) return noDraft
   if (!can(viewerId, 'send_to_client')) return { ok: false, status: 403, code: 'NOT_PERMITTED', message: 'Only the advisor of record can send to a client.' }
 
   const at = nextAt()

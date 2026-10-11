@@ -17,8 +17,8 @@ describe('client thread invariant (books and records)', () => {
     await call('POST', '/acts', 'user-001', { kind: 'send_to_client', draftId: draft.id })
 
     const { messages, acts } = store()
-    const clientThreadIds = new Set(store().threads.filter((t) => t.visibility === 'client').map((t) => t.id))
-    const firmTexts = messages.filter((m) => m.kind === 'text' && clientThreadIds.has(m.threadId) && m.authorId !== 'cli-001')
+    const clientIdByThread = new Map(store().threads.filter((t) => t.visibility === 'client').map((t) => [t.id, t.clientId]))
+    const firmTexts = messages.filter((m) => m.kind === 'text' && clientIdByThread.has(m.threadId) && m.authorId !== clientIdByThread.get(m.threadId))
     expect(firmTexts.length).toBeGreaterThan(0)
     for (const m of firmTexts) {
       if (m.kind !== 'text') continue

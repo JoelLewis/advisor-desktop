@@ -74,3 +74,25 @@ describe('send to client (rules 5–6)', () => {
     }
   })
 })
+
+describe('information leaks and malformed input', () => {
+  it('a client gets 404 for a real pending draft', async () => {
+    const draft = (await call('POST', '/threads/th-robert/drafts', 'user-001', { body: 'x' })).body
+    expect((await call('POST', '/acts', 'cli-001', { kind: 'send_to_client', draftId: draft.id })).status).toBe(404)
+  })
+  it('a consumed draft is 409 only for those who can see its thread', async () => {
+    const draft = (await call('POST', '/threads/th-robert/drafts', 'user-001', { body: 'x' })).body
+    await call('POST', '/acts', 'user-001', { kind: 'send_to_client', draftId: draft.id })
+    expect((await call('POST', '/acts', 'user-003', { kind: 'send_to_client', draftId: draft.id })).status).toBe(404)
+    expect((await call('POST', '/acts', 'cli-001', { kind: 'send_to_client', draftId: draft.id })).status).toBe(404)
+    expect((await call('POST', '/acts', 'user-001', { kind: 'send_to_client', draftId: draft.id })).status).toBe(409)
+  })
+  it('malformed bodies are 400 with a code', async () => {
+    const bad = async (path: string, viewer: string, body: unknown) => (await call('POST', path, viewer, body))
+    expect((await bad('/threads/th-johnson-review/messages', 'user-003', { body: '   ' })).status).toBe(400)
+    expect((await bad('/threads/th-robert/drafts', 'user-001', { body: 5 })).body.code).toBe('BAD_REQUEST')
+    expect((await bad('/acts', 'user-001', { kind: 7 })).status).toBe(400)
+    const raw = await fetch('/api/workspace/threads/th-robert/drafts', { method: 'POST', headers: { 'X-Viewer': 'user-001' }, body: '{nope' })
+    expect(raw.status).toBe(400)
+  })
+})
