@@ -137,7 +137,7 @@ describe('ModelTradeView renders the account\'s own data, not a hash of its id',
       { compact: true, currency: 'USD' },
     )
     expect(preview!.estimatedTaxImpact).toBeGreaterThan(0)
-    expect(screen.getByText(`Tax: ${convertedTax}`)).toBeInTheDocument()
+    expect(screen.getByText(`Est. tax, net of losses: ${convertedTax}`)).toBeInTheDocument()
 
     // ── the batch summary cards convert before summing ──
     // With one HKD preview selected, the "Total Value" and "Est. Tax Impact" cards are that
@@ -153,6 +153,8 @@ describe('ModelTradeView renders the account\'s own data, not a hash of its id',
     expect(screen.getAllByText(expectedTotal).length).toBeGreaterThan(0)
     expect(screen.queryByText(unconvertedTotal)).not.toBeInTheDocument()
     expect(screen.getAllByText(convertedTax).length).toBeGreaterThan(0)
+    // The card adds separately netted account figures, so it says so.
+    expect(screen.getByText('Est. tax, sum of account estimates')).toBeInTheDocument()
 
     // ── the hardcoded basket is gone ──
     expect(screen.queryByText('AAPL')).not.toBeInTheDocument()

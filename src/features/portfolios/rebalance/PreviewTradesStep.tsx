@@ -3,7 +3,7 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { cn } from '@/lib/utils'
-import type { RebalancePreview } from '@/services/oms'
+import type { ProposedTrade, RebalancePreview } from '@/services/oms'
 import type { WizardStep } from './types'
 
 type PreviewTradesStepProps = {
@@ -15,6 +15,26 @@ type PreviewTradesStepProps = {
   complianceMutation: { isPending: boolean }
   handleReviewCompliance: () => void
   setStep: (step: WizardStep) => void
+}
+
+type RealisedResultProps = {
+  trade: ProposedTrade
+  taxable: boolean
+  formatWithConversion: PreviewTradesStepProps['formatWithConversion']
+}
+
+/**
+ * A buy realises nothing, and neither does a sale inside an IRA or Roth — there the realised
+ * fields are 0 because nothing is taxed, not because the sale broke even, so both read as a dash.
+ * A taxable sale that genuinely realises zero shows the bare amount, without calling it a gain.
+ */
+function RealisedResult({ trade, taxable, formatWithConversion }: RealisedResultProps) {
+  if (trade.side === 'buy' || !taxable) return <span className="text-text-secondary">{'\u2014'}</span>
+  const realised = trade.realisedShortTerm + trade.realisedLongTerm
+  const amount = formatWithConversion(Math.abs(realised), trade.currency, { compact: true })
+  if (realised < 0) return <span className="text-accent-green">Harvested loss {amount}</span>
+  if (realised === 0) return <span className="text-text-secondary">{amount}</span>
+  return <span className="text-text-secondary">Gain {amount}</span>
 }
 
 export function PreviewTradesStep({
@@ -35,7 +55,10 @@ export function PreviewTradesStep({
           <Card key={preview.accountId}>
             <CardHeader action={
               <span className="font-mono text-caption text-text-secondary">
-                {preview.trades.length} trades &middot; Tax impact: {formatWithConversion(preview.estimatedTaxImpact, preview.currency, { compact: true })}
+                {/* Nets this proposal's own legs only — not year-to-date realised results, not
+                    the household's other accounts — and the label says so. */}
+                {preview.trades.length} trades &middot; Est. tax, this proposal (gains net of losses): {formatWithConversion(preview.estimatedTaxImpact, preview.currency, { compact: true })}
+                {' '}&middot; Gross on gains: {formatWithConversion(preview.grossTaxOnGains, preview.currency, { compact: true })}
               </span>
             }>
               {acc?.name ?? preview.accountId}
@@ -49,6 +72,7 @@ export function PreviewTradesStep({
                     <th className="pb-2">Side</th>
                     <th className="pb-2 text-right">Qty</th>
                     <th className="pb-2 text-right">Est. Value</th>
+                    <th className="pb-2 text-right">Realised</th>
                     <th className="pb-2 text-right">Tax Impact</th>
                     <th className="pb-2">Wash Sale</th>
                   </tr>
@@ -63,6 +87,9 @@ export function PreviewTradesStep({
                       </td>
                       <td className="py-2 text-right font-mono">{trade.quantity.toLocaleString()}</td>
                       <td className="py-2 text-right font-mono">{formatWithConversion(trade.estimatedValue, trade.currency, { compact: true })}</td>
+                      <td className="py-2 text-right font-mono">
+                        <RealisedResult trade={trade} taxable={preview.taxable} formatWithConversion={formatWithConversion} />
+                      </td>
                       <td className={cn('py-2 text-right font-mono', trade.taxImpact > 0 ? 'text-accent-red' : 'text-text-secondary')}>
                         {trade.taxImpact > 0 ? formatWithConversion(trade.taxImpact, trade.currency, { compact: true }) : '\u2014'}
                       </td>
@@ -86,8 +113,9 @@ export function PreviewTradesStep({
           {/* §9.3 — `totalTaxImpact` sums across previews that may carry different account
               currencies; RebalancePage converts each preview's own-currency figure to USD before
               summing (Global Constraint 2's one conversion boundary), so this really is USD by the
-              time it reaches this prop — not a leftover unconverted literal. */}
-          <span>Tax impact: <strong className="font-mono text-accent-red">{formatWithConversion(totalTaxImpact, 'USD', { compact: true })}</strong></span>
+              time it reaches this prop — not a leftover unconverted literal. Each account is
+              netted on its own, so this is a sum of separate estimates, not a household netting. */}
+          <span>Est. tax, sum of account estimates: <strong className="font-mono text-accent-red">{formatWithConversion(totalTaxImpact, 'USD', { compact: true })}</strong></span>
         </div>
       </div>
 

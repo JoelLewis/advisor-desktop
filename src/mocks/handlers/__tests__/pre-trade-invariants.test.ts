@@ -162,10 +162,15 @@ describe('rebalance tax estimation', () => {
     expect(unaware[0]!.estimatedTaxImpact).toBeGreaterThanOrEqual(aware[0]!.estimatedTaxImpact)
   })
 
-  it('C26: the preview total equals the sum of its trade-level tax impacts', async () => {
+  it('C26: the gross tax equals the sum of its trade-level tax impacts, and netting never raises it', async () => {
     const [preview] = await previewRebalance({ accountIds: ['acc-001'], taxAware: true })
-    expect(preview!.estimatedTaxImpact)
+    expect(preview!.grossTaxOnGains)
       .toBeCloseTo(preview!.trades.reduce((s, t) => s + t.taxImpact, 0), 0)
+    expect(preview!.estimatedTaxImpact).toBeLessThanOrEqual(preview!.grossTaxOnGains)
+    // acc-001 realises no loss, so there is nothing to net and the two agree exactly.
+    if (preview!.trades.every((t) => t.realisedShortTerm + t.realisedLongTerm >= 0)) {
+      expect(preview!.estimatedTaxImpact).toBe(preview!.grossTaxOnGains)
+    }
   })
 })
 
@@ -700,32 +705,27 @@ describe('fix round 3 · self-financing applies to sells only — buys are never
     expect(Math.max(...sells.map((s) => s.estimatedValue))).toBeLessThanOrEqual(Math.round(largestPosition.marketValue))
   })
 
-  it('acc-006: buys the full $920,400 (funded from its own $1,012,470 cash balance), not scaled down to the $542,400 raised from selling BXPE', async () => {
+  it('acc-006: sells nothing (BXPE is periodic-liquidity) and funds its buys from the $412,470 of cash above its 5% target', async () => {
     // acc-006's model (mod-005) is underweight us_equity/intl_equity/alternatives and overweight
-    // private_equity (BXPE, not in the model at all) and cash. Raw sells: $542,400 (BXPE). Raw
-    // buys: $920,400 (SPY $82,800 + EFA $93,600 + QAI $744,000). The regression scaled buys down
-    // to match the money raised from selling, leaving both the cash overweight (8.4% vs 5%
-    // target) and the alternatives underweight (8.8% vs 15% target) uncorrected.
+    // private_equity (BXPE, not in the model at all) and cash. The only raw sell was $542,400 of
+    // BXPE, but BXPE redeems only at periodic repurchase windows, so a rebalance does not sell it
+    // (isMarketTradable) — sells are $0. Raw buys are unchanged at $920,400 (SPY $82,800 + EFA
+    // $93,600 + QAI $744,000, derived on the $12,000,000 account from the sleeve drifts below).
     //
-    // Task 10 — the notionals are $542,400 and $920,400, not the $540,000 and $912,000 the stored
-    // three-decimal weights gave. Derived, on a $12,000,000 account: private_equity 542,500 /
-    // 12,000,000 = 0.045208 (drift +0.0452, x 12,000,000 = 542,400); us_equity 4,116,680 /
-    // 12,000,000 = 0.343057 (drift -0.0069 against a 0.35 target, x 12,000,000 = 82,800);
-    // intl_equity 1,706,750 / 12,000,000 = 0.142229 (drift -0.0078 against 0.15 = 93,600);
-    // alternatives 1,056,000 / 12,000,000 = 0.088 (drift -0.062 against 0.15 = 744,000).
-    //
-    // Executed at the lots traded — pinned exactly rather than to the nearest $500, because a
-    // $500-wide tolerance on the plan's headline figure could hide a real regression behind what
-    // looks like rounding. BXPE 4,999 x 108.50 = 542,392 (8 under the 542,400 notional, one leg
-    // at 108.50, and inside the 542,500 position); SPY 159 + EFA 1,137 + QAI 21,136 = 82,728 +
-    // 93,575 + 743,987 = 920,290 (110 under, three legs whose unit prices sum to 637.80).
+    // The buy capacity is what sells raise plus cash above target: $0 + (1,012,470 - 5% x
+    // 12,000,000 = 600,000) = $412,470. Buys scale by 412,470 / 920,400 = 0.4482, and each leg
+    // rounds down to whole shares: SPY 71 x 520.30 = 36,941 + EFA 509 x 82.30 = 41,891 + QAI
+    // 9,472 x 35.20 = 333,414 = 412,246 (224 under the capacity, inside one share of each leg).
+    // Sleeve drifts: us_equity 4,116,680 / 12,000,000 = 0.343057 (-0.0069 vs 0.35 = 82,800);
+    // intl_equity 1,706,750 / 12,000,000 = 0.142229 (-0.0078 vs 0.15 = 93,600); alternatives
+    // 1,056,000 / 12,000,000 = 0.088 (-0.062 vs 0.15 = 744,000).
     const [preview] = await previewRebalance({ accountIds: ['acc-006'], taxAware: true })
     const totalSell = preview!.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
     const totalBuy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
-    expect(totalSell).toBe(542_392)
-    expect(totalBuy).toBe(920_290)
-    expect(542_400 - totalSell).toBeLessThan(108.50)
-    expect(920_400 - totalBuy).toBeLessThan(637.80)
+    expect(totalSell).toBe(0)
+    expect(totalBuy).toBe(412_246)
+    expect(412_470 - totalBuy).toBeGreaterThanOrEqual(0)
+    expect(412_470 - totalBuy).toBeLessThan(520.30)
   })
 })
 
@@ -760,7 +760,7 @@ describe('fix round 3 · rebalance sells never exceed the position actually held
  * aware/unaware comparison can't distinguish a flat rate from a per-lot one because both branches
  * read the same `taxRateFor`. These are golden-model cross-checks (the same pattern
  * `drift-invariants.test.ts` uses) against a *fixed*, single rate applied to the same lot-by-lot
- * notional walk the production code performs — not a re-statement of `estimateSaleTax` itself.
+ * notional walk the production code performs — not a re-statement of `realiseSale` itself.
  */
 describe('fix round 3 · rebalance tax uses each lot\'s own holding-period rate, not a flat rate', () => {
   it('acc-040: GLD has only short-term lots, so its sell tax must exceed what a flat 23.8% long-term rate would produce', async () => {
@@ -822,7 +822,7 @@ describe('fix round 3 · rebalance tax uses each lot\'s own holding-period rate,
  * affected book-wide; the per-leg exposure is bounded by `unitPrice / estimatedValue`, which is
  * 50.0% on acc-045's BTC, 7.7% on acc-040's GLD and 4.6% on acc-045's ETH.
  *
- * These run **tax-unaware** on purpose: `estimateSaleTax` re-orders lots by tax-per-dollar when
+ * These run **tax-unaware** on purpose: `realiseSale` re-orders lots by tax-per-dollar when
  * the toggle is on, and reproducing that sort in the test would make this a copy of the function
  * rather than a check on it. Unaware, the walk is the fixture's own lot order, so what is actually
  * under test is the *argument* — which figure the tax is computed from — and not the algorithm.
@@ -865,7 +865,9 @@ describe('§9.7 round 4 · the tax on a row is the tax on the value that row sta
       const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: false })
       // Tax-exempt accounts are zero on every leg by design (`isTaxableAccount`), and a lot walk
       // over their positions would not be; they are covered by their own tests above.
-      if (!preview || preview.estimatedTaxImpact <= 0) continue
+      // Gated on the gross figure: netting can offset an account's gains entirely (net estimate 0)
+      // while its legs still carry per-leg tax that this test checks.
+      if (!preview || preview.grossTaxOnGains <= 0) continue
       const positions = await getPositions(account.id)
       const allLots = await getTaxLots(account.id)
       for (const trade of preview.trades) {
@@ -1122,37 +1124,37 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     expect(unconvertedQuantity / vti!.quantity).toBeCloseTo(FX_RATES_USD_BASE.HKD, 1)
   })
 
-  it('tax-aware selection exhausts the loss position before touching the large-gain one, and still fills the whole sleeve', async () => {
-    // acc-002 is 12.22 points overweight us_equity on a $4.5M account — an implied $549,900 trim,
-    // against INTC ($199,150, a $45,850 unrealised loss), SPY ($2,018,243.70, a $355,206.70 gain)
-    // and QQQ ($807,372.80, a $179,114.80 gain). Ranked by gain per dollar of market value:
-    // INTC -23.0%, SPY +17.6%, QQQ +22.2%.
+  it('tax-aware selection exhausts the loss position, holds the recent harvest replacement, and fills the sleeve from SPY', async () => {
+    // acc-002 is 13.20 points overweight us_equity on a $4.5M account: the sleeve is SPY
+    // 2,018,243.70 + QQQ 807,372.80 + INTC 199,150 + SMH 44,136 = 3,068,902.50 of 4,500,000 =
+    // 0.681978 against a 0.55 target, an implied 0.1320 x 4,500,000 = $594,000 trim. Ranked by gain
+    // per dollar of market value: INTC -23.0%, SMH 0.0%, SPY +17.6%, QQQ +22.2%.
     //
     // "Prefer losses, then the smallest embedded gain" is an ordering drawn from until the
-    // sleeve is filled, not a single pick: INTC sells out entirely ($199,150), then SPY tops the
-    // rest up ($350,682). Stopping at INTC would leave the account overweight us_equity after a
-    // rebalance that reported success — tax-better and rebalance-worse, which is not the trade
-    // an advisor would accept when both are available.
+    // sleeve is filled, not a single pick — with one exclusion. The 180 SMH (pos-265) were bought
+    // 2026-02-21 as the INTC harvest replacement (note-002, comp-006, nba-002); selling them four
+    // days later at zero gain would undo the harvest, and TLH practice is to hold the replacement
+    // past the 31st day. A position whose every lot is that recent is not a tax-aware sell
+    // candidate, so the sequence is INTC in full ($199,150), then SPY for the rest.
     const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
-    const usEquitySells = preview!.trades.filter((t) => t.side === 'sell' && ['SPY', 'QQQ', 'INTC'].includes(t.symbol))
+    const usEquitySells = preview!.trades.filter((t) => t.side === 'sell' && ['SPY', 'QQQ', 'INTC', 'SMH'].includes(t.symbol))
     // Vacuity guard — an empty list would mean the sleeve produced no sell at all and every
     // assertion below would be testing nothing.
     expect(usEquitySells.length).toBeGreaterThan(0)
-    // Order, not just membership: the loss lot is reached first.
+    // Order, not just membership: the loss lot is reached first, SMH never.
     expect(usEquitySells.map((t) => t.symbol)).toEqual(['INTC', 'SPY'])
+    expect(preview!.trades.some((t) => t.symbol === 'SMH')).toBe(false)
     // INTC goes in full before SPY is touched at all — 7,000 shares, the whole position.
     expect(usEquitySells[0]!.estimatedValue).toBe(199_150)
     expect(usEquitySells[0]!.quantity).toBe(7_000)
-    // ...and the sleeve is filled to its drift, not left short at the loss position's size.
-    // Task 10 — the trim is 0.1222 x 4,500,000 = 549,900, not the 547,650 the stored
-    // three-decimal weights gave: us_equity is SPY 2,018,243.70 + QQQ 807,372.80 + INTC 199,150 =
-    // 3,024,766.50 of 4,500,000 = 0.672170, and 0.672170 - 0.55 = 0.1222 to four places.
-    // Executed: 199,150 + SPY 674 x 520.30 = 350,682, total 549,832, which is 68 under the
-    // 549,900 notional — two legs whose unit prices sum to 548.75, so that is lot granularity,
-    // not a short fill.
+    // SPY absorbs what SMH no longer takes: 594,000 - 199,150 = 394,850 of notional, floored to
+    // 758 shares x 520.30 = 394,387.40 -> 394,387. Total 593,537, which is 463 under the notional
+    // — lot granularity on two legs whose unit prices sum to 548.75, not a short fill.
+    expect(usEquitySells[1]!.quantity).toBe(758)
+    expect(usEquitySells[1]!.estimatedValue).toBe(394_387)
     const usEquityTotal = usEquitySells.reduce((s, t) => s + t.estimatedValue, 0)
-    expect(usEquityTotal).toBe(549_832)
-    expect(549_900 - usEquityTotal).toBeLessThan(28.45 + 520.30)
+    expect(usEquityTotal).toBe(593_537)
+    expect(594_000 - usEquityTotal).toBeLessThan(28.45 + 520.30)
     // QQQ, the largest gain per dollar, is never reached — the ordering has to mean something.
     expect(usEquitySells.some((t) => t.symbol === 'QQQ')).toBe(false)
   })
@@ -1167,18 +1169,19 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     // INTC — so SPY alone absorbs the whole $549,900 trim and the loss lot is never reached.
     const unawareUsEquity = unaware!.trades.filter((t) => t.side === 'sell' && ['SPY', 'QQQ', 'INTC'].includes(t.symbol))
     expect(unawareUsEquity.map((t) => t.symbol)).toEqual(['SPY'])
-    // Task 10 — 1,056 shares x 520.30 = 549,437, within one SPY lot of the 549,900 notional. The
-    // bound is restated against the new notional: left at 547,650 it would have been satisfied by
-    // a *negative* difference and stopped discriminating at all.
-    expect(unawareUsEquity[0]!.estimatedValue).toBe(549_437)
-    expect(549_900 - unawareUsEquity[0]!.estimatedValue).toBeLessThan(520.30)
-    expect(549_900 - unawareUsEquity[0]!.estimatedValue).toBeGreaterThan(0)
+    // The 180 SMH bought 2026-02-21 (pos-265, $44,136) are us_equity, so the sleeve is 0.681978
+    // of 4,500,000 and the trim is 0.1320 x 4,500,000 = 594,000. 1,141 shares x 520.30 = 593,662,
+    // within one SPY lot of that notional. The bound is restated against the new notional: left at
+    // 549,900 it would have been satisfied by a *negative* difference and stopped discriminating.
+    expect(unawareUsEquity[0]!.estimatedValue).toBe(593_662)
+    expect(594_000 - unawareUsEquity[0]!.estimatedValue).toBeLessThan(520.30)
+    expect(594_000 - unawareUsEquity[0]!.estimatedValue).toBeGreaterThan(0)
     expect(aware!.trades.some((t) => t.side === 'sell' && t.symbol === 'INTC')).toBe(true)
     expect(unaware!.trades.some((t) => t.side === 'sell' && t.symbol === 'INTC')).toBe(false)
   })
 
   it('the tax-aware ordering is confined to taxable accounts — a tax-deferred account is unmoved by the toggle', async () => {
-    // acc-047 is a SIMPLE IRA: gains are not taxed, `estimateSaleTax` already returns 0, and
+    // acc-047 is a SIMPLE IRA: gains are not taxed, `realiseSale` already returns 0, and
     // re-ranking its sleeves by embedded gain would be an arbitrary preference wearing a
     // tax-awareness label. Its two toggle states must therefore be identical — and the toggle
     // must still bite on the taxable account above, or this is asserting that the toggle is dead.
