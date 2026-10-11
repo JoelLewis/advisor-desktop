@@ -10,15 +10,17 @@ type ResponseTemplate = {
   documentPreview?: DocumentPreview
   richCards?: RichCardData[]
   tradeSuggestions?: TradeSuggestion[]
+  /** §9.5 · account id whose `generateRebalanceTrades` legs `aiHandlers` returns as `tradeSuggestions`. */
+  rebalanceTradesFor?: string
 }
 
 const responsesByContext: Record<string, ResponseTemplate[]> = {
   'dashboard:': [
     {
       content:
-        'Good morning. Your book has $847M AUM across 42 households. Three items need attention today: the Johnson household is 4.2% over-allocated to US equity, Marcus Thompson\'s RMD deadline is in 6 days, and the Patel beneficiary update is awaiting signatures.',
+        'Good morning. Your book has $847M AUM across 42 households. Three items need attention today: the Johnson Family Trust is {{MAX_DRIFT_ACC_001}} over-allocated to US equity, Marcus Thompson\'s RMD deadline is in 6 days, and the Patel beneficiary update is awaiting signatures.',
       citations: [
-        { source: 'PMS — Drift Report', text: 'Johnson household drift: 4.2% US equity overweight vs IPS target' },
+        { source: 'PMS — Drift Report', text: 'Johnson Family Trust drift: {{MAX_DRIFT_ACC_001}} US equity overweight vs model target' },
         { source: 'Compliance Calendar', text: 'Thompson RMD deadline: March 3, 2026' },
       ],
       actions: [
@@ -27,10 +29,10 @@ const responsesByContext: Record<string, ResponseTemplate[]> = {
     },
     {
       content:
-        'Your portfolio-weighted Sharpe ratio is 1.14, which is above the 0.95 peer median. However, 6 accounts have drifted beyond their IPS thresholds this month — up from 2 last month. I recommend prioritizing the rebalancing queue.',
+        'Your portfolio-weighted Sharpe ratio is 1.14, which is above the 0.95 peer median. However, {{DRIFT_COUNT}} accounts have drifted beyond their IPS thresholds. I recommend prioritizing the rebalancing queue.',
       citations: [
         { source: 'Analytics — Book Performance', text: 'Book Sharpe: 1.14 vs peer median 0.95' },
-        { source: 'PMS — Drift Summary', text: '6 accounts beyond IPS drift threshold' },
+        { source: 'PMS — Drift Summary', text: '{{DRIFT_COUNT}} accounts beyond IPS drift threshold' },
       ],
     },
   ],
@@ -91,12 +93,12 @@ const responsesByContext: Record<string, ResponseTemplate[]> = {
   'portfolios:': [
     {
       content:
-        'Across your book, 6 accounts are currently beyond their drift thresholds. The largest drift is in the Johnson Family Trust at 4.2%, followed by the Martinez Joint Account at 3.8%. I can generate a batch rebalance proposal for all drifted accounts.',
+        'Across your book, {{DRIFT_COUNT}} accounts are currently beyond their drift thresholds. The Johnson Family Trust, for example, is {{MAX_DRIFT_ACC_001}} off target in US equity. I can generate a batch rebalance proposal for all drifted accounts.',
       citations: [
-        { source: 'PMS — Drift Summary', text: '6 accounts beyond threshold, avg drift 2.9%' },
+        { source: 'PMS — Drift Summary', text: '{{DRIFT_COUNT}} accounts beyond threshold' },
       ],
       actions: [
-        { id: 'act-006', action: 'Batch Rebalance Preview', description: 'Generate rebalance proposals for all 6 drifted accounts', impact: '~45 trades across 6 accounts', status: 'pending' },
+        { id: 'act-006', action: 'Batch Rebalance Preview', description: 'Generate rebalance proposals for all {{DRIFT_COUNT}} drifted accounts', impact: 'One proposal per drifted account', status: 'pending' },
       ],
     },
   ],
@@ -162,9 +164,9 @@ const keywordResponses: Array<{ keywords: string[]; response: ResponseTemplate }
     keywords: ['rebalance', 'drift', 'allocation'],
     response: {
       content:
-        'I found 6 accounts exceeding their drift thresholds. The most urgent is the Johnson Family Trust with 4.2% total drift. Would you like me to generate rebalance proposals? I can prioritize by drift severity or by account size. Here are specific trade suggestions for the most drifted account:',
+        'I found {{DRIFT_COUNT}} accounts exceeding their drift thresholds. The Johnson Family Trust is {{MAX_DRIFT_ACC_001}} off target, led by US equity. Would you like me to generate rebalance proposals? I can prioritize by drift severity or by account size. Here are the rebalance trades for the Johnson Family Trust:',
       citations: [
-        { source: 'PMS — Drift Report', text: '6 accounts beyond IPS drift thresholds' },
+        { source: 'PMS — Drift Report', text: '{{DRIFT_COUNT}} accounts beyond IPS drift thresholds' },
       ],
       actions: [
         { id: 'act-010', action: 'Generate Rebalance Proposals', description: 'Create proposals for top 3 drifted accounts', impact: '~25 trades across 3 accounts', status: 'pending' },
@@ -174,35 +176,15 @@ const keywordResponses: Array<{ keywords: string[]; response: ResponseTemplate }
           variant: 'rebalance_workflow' as const,
           entityId: 'acc-001',
           entityName: 'Johnson Family Trust',
-          driftPercent: 4.2,
-          needsRebalance: true,
-          accountCount: 6,
           actionLabel: 'Start Batch Rebalance',
           actionRoute: '/portfolios/rebalance',
         },
       ],
-      tradeSuggestions: [
-        {
-          symbol: 'VTI',
-          name: 'Vanguard Total Stock Market ETF',
-          side: 'sell',
-          quantity: 45,
-          rationale: 'Reduce US equity overweight by 2.1% to restore target allocation',
-          estimatedValue: 11_250,
-          accountId: 'acc-001',
-          accountName: 'Johnson Family Trust',
-        },
-        {
-          symbol: 'BND',
-          name: 'Vanguard Total Bond Market ETF',
-          side: 'buy',
-          quantity: 150,
-          rationale: 'Increase fixed income to target weight, funded by US equity reduction',
-          estimatedValue: 11_100,
-          accountId: 'acc-001',
-          accountName: 'Johnson Family Trust',
-        },
-      ],
+      // §9.5 · the card's drift, flag and account count, and the trades below it, are filled by
+      // `aiHandlers` from `computeDriftForAccount` / `generateRebalanceTrades`. They were
+      // hand-typed: 4.2% drift (engine: 7.1%) and sell 45 VTI / buy 150 BND (~$11K) against a
+      // $579K US equity overweight, buying BND where the engine buys AGG.
+      rebalanceTradesFor: 'acc-001',
     },
   },
   {
