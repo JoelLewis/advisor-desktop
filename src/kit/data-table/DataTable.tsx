@@ -24,7 +24,7 @@ export function DataTable<T>({
   caption, columns, rows, getRowId, noun, total, density = 'regular', totals, onActivate, initialSort,
 }: DataTableProps<T>) {
   const [sorting, setSorting] = useState<SortingState>(initialSort ? [initialSort] : [])
-  const [active, setActive] = useState(0)
+  const [activeId, setActiveId] = useState<string | null>(null)
   const rowRefs = useRef<(HTMLTableRowElement | null)[]>([])
 
   const defs = useMemo<ColumnDef<T>[]>(
@@ -54,15 +54,21 @@ export function DataTable<T>({
   const all = total ?? rows.length
   const byId = new Map(columns.map((c) => [c.id, c]))
 
+  const foundIndex = sorted.findIndex((r) => r.id === activeId)
+  const activeIndex = foundIndex === -1 ? 0 : foundIndex
+
   const moveTo = (index: number) => {
     const next = Math.max(0, Math.min(shown - 1, index))
-    setActive(next)
+    const target = sorted[next]
+    if (!target) return
+    setActiveId(target.id)
     rowRefs.current[next]?.focus()
   }
 
   const onKeyDown = (e: KeyboardEvent<HTMLTableRowElement>, index: number) => {
-    if (e.key === 'ArrowDown' || e.key === 'j') { e.preventDefault(); moveTo(index + 1) }
-    else if (e.key === 'ArrowUp' || e.key === 'k') { e.preventDefault(); moveTo(index - 1) }
+    if (e.target !== e.currentTarget || e.metaKey || e.ctrlKey || e.altKey) return
+    if (e.key === 'ArrowDown' || e.key === 'j' || e.key === 'J') { e.preventDefault(); moveTo(index + 1) }
+    else if (e.key === 'ArrowUp' || e.key === 'k' || e.key === 'K') { e.preventDefault(); moveTo(index - 1) }
     else if (e.key === 'Home') { e.preventDefault(); moveTo(0) }
     else if (e.key === 'End') { e.preventDefault(); moveTo(shown - 1) }
     else if (e.key === 'Enter' && onActivate) { e.preventDefault(); const r = sorted[index]; if (r) onActivate(r.original) }
@@ -89,7 +95,7 @@ export function DataTable<T>({
                     <th
                       key={header.id}
                       scope="col"
-                      aria-sort={sort === 'asc' ? 'ascending' : sort === 'desc' ? 'descending' : 'none'}
+                      aria-sort={header.column.getCanSort() ? (sort === 'asc' ? 'ascending' : sort === 'desc' ? 'descending' : 'none') : undefined}
                       className={cn('whitespace-nowrap px-2 py-2 text-label uppercase text-ink-2', col?.align === 'right' ? 'text-right' : 'text-left')}
                     >
                       {header.column.getCanSort() ? (
@@ -105,13 +111,13 @@ export function DataTable<T>({
           </thead>
           <tbody>
             {shown === 0 ? (
-              <tr><td colSpan={columns.length} className="px-2 py-3 text-body text-ink-3">No {noun.plural}.</td></tr>
+              <tr><td colSpan={columns.length} className="px-2 py-3 text-body text-ink-3">{all === 0 ? `No ${noun.plural}.` : `None of ${all} ${noun.plural} shown.`}</td></tr>
             ) : sorted.map((row, i) => (
               <tr
                 key={row.id}
                 ref={(el) => { rowRefs.current[i] = el }}
-                tabIndex={i === active ? 0 : -1}
-                onFocus={() => setActive(i)}
+                tabIndex={i === activeIndex ? 0 : -1}
+                onFocus={() => setActiveId(row.id)}
                 onKeyDown={(e) => onKeyDown(e, i)}
                 onClick={onActivate ? () => onActivate(row.original) : undefined}
                 className={cn('border-b border-rule focus-visible:bg-band', ROW_HEIGHT[density])}

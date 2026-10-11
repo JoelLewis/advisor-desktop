@@ -68,4 +68,105 @@ describe('DataTable', () => {
     expect(screen.getByText('0 of 0 positions')).toBeInTheDocument()
     expect(screen.getByText('No positions.')).toBeInTheDocument()
   })
+  it('keeps exactly one tab stop after rows shrink past the cursor', async () => {
+    const view = renderTable()
+    screen.getAllByRole('row')[1]!.focus()
+    await userEvent.keyboard('{End}')
+    view.rerender(
+      <DataTable caption="Holdings" columns={columns} rows={rows.slice(0, 1)} getRowId={(r) => r.id}
+        noun={{ singular: 'position', plural: 'positions' }} />,
+    )
+    const body = screen.getAllByRole('row').slice(1)
+    expect(body.filter((r) => r.tabIndex === 0)).toHaveLength(1)
+  })
+  it('keeps the cursor on the same row when a sort reorders rows', async () => {
+    renderTable()
+    screen.getAllByRole('row')[1]!.focus()
+    await userEvent.click(within(screen.getByRole('columnheader', { name: /Value/ })).getByRole('button'))
+    const body = screen.getAllByRole('row').slice(1)
+    expect(body.filter((r) => r.tabIndex === 0)).toHaveLength(1)
+    expect(within(body.find((r) => r.tabIndex === 0)!).getByText('SPY')).toBeInTheDocument()
+  })
+  it('jumps with Home and End', async () => {
+    renderTable()
+    const body = screen.getAllByRole('row').slice(1)
+    body[0]!.focus()
+    await userEvent.keyboard('{End}')
+    expect(body[2]).toHaveFocus()
+    await userEvent.keyboard('{Home}')
+    expect(body[0]).toHaveFocus()
+  })
+  it('activates the original object of the first sorted row', async () => {
+    const onActivate = vi.fn()
+    renderTable({ onActivate })
+    await userEvent.click(within(screen.getByRole('columnheader', { name: /Value/ })).getByRole('button'))
+    screen.getAllByRole('row')[1]!.focus()
+    await userEvent.keyboard('{Enter}')
+    expect(onActivate).toHaveBeenCalledWith(rows[2])
+  })
+  it('sorts descending on a second click', async () => {
+    renderTable()
+    const header = screen.getByRole('columnheader', { name: /Value/ })
+    await userEvent.click(within(header).getByRole('button'))
+    await userEvent.click(within(header).getByRole('button'))
+    expect(header).toHaveAttribute('aria-sort', 'descending')
+  })
+  it('omits aria-sort on unsortable columns', () => {
+    render(
+      <DataTable caption="Holdings" columns={[{ id: 'n', header: 'Note', cell: () => 'x' }, columns[0]!]} rows={rows}
+        getRowId={(r) => r.id} noun={{ singular: 'position', plural: 'positions' }} />,
+    )
+    expect(screen.getByRole('columnheader', { name: /Note/ })).not.toHaveAttribute('aria-sort')
+    expect(screen.getByRole('columnheader', { name: /Symbol/ })).toHaveAttribute('aria-sort', 'none')
+  })
+  it('does not activate a row when Enter is pressed on a header sort button', async () => {
+    const onActivate = vi.fn()
+    renderTable({ onActivate })
+    within(screen.getByRole('columnheader', { name: /Value/ })).getByRole('button').focus()
+    await userEvent.keyboard('{Enter}')
+    expect(onActivate).not.toHaveBeenCalled()
+  })
+  it('leaves keys typed into a cell input alone', async () => {
+    const withInput: Column<Row>[] = [
+      ...columns,
+      { id: 'note', header: 'Note', cell: (r) => <input aria-label={`note ${r.id}`} /> },
+    ]
+    renderTable({ columns: withInput })
+    const input = screen.getByLabelText('note b')
+    await userEvent.type(input, 'j')
+    expect(input).toHaveFocus()
+    expect(input).toHaveValue('j')
+    const body = screen.getAllByRole('row').slice(1)
+    expect(body[1]!.tabIndex).toBe(0)
+  })
+  it('ignores modifier chords', async () => {
+    renderTable()
+    const body = screen.getAllByRole('row').slice(1)
+    body[0]!.focus()
+    await userEvent.keyboard('{Control>}j{/Control}')
+    expect(body[0]).toHaveFocus()
+  })
+  it('accepts capital J and K', async () => {
+    renderTable()
+    const body = screen.getAllByRole('row').slice(1)
+    body[0]!.focus()
+    await userEvent.keyboard('J')
+    expect(body[1]).toHaveFocus()
+    await userEvent.keyboard('K')
+    expect(body[0]).toHaveFocus()
+  })
+  it('states a filtered count', () => {
+    renderTable({ rows: rows.slice(0, 1), total: 14, noun: { singular: 'lot', plural: 'lots' } })
+    expect(screen.getByText('1 of 14 lots')).toBeInTheDocument()
+  })
+  it('says when a filter hides everything', () => {
+    renderTable({ rows: [], total: 14, noun: { singular: 'lot', plural: 'lots' } })
+    expect(screen.getByText('None of 14 lots shown.')).toBeInTheDocument()
+  })
+  it('sorts a string column alphabetically', async () => {
+    renderTable()
+    await userEvent.click(within(screen.getByRole('columnheader', { name: /Symbol/ })).getByRole('button'))
+    const names = screen.getAllByRole('row').slice(1).map((r) => within(r).getAllByRole('cell')[0]!.textContent)
+    expect(names).toEqual(['ETHE', 'INTC', 'SPY'])
+  })
 })
