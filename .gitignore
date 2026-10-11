@@ -9,6 +9,7 @@ dist
 test-results/
 *.png
 !public/og-image.png
+!docs/superpowers/visual/*.png
 .wrangler/
 CLAUDE.md
 .claude/

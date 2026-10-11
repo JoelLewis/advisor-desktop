@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 const TONE = {
   outline: 'border border-ink-2 text-ink-2',
   solid: 'border border-ink bg-ink text-face',
-  hatch: 'hatch border border-rule-2 text-ink',
+  hatch: 'hatch-framed border border-rule-2 text-ink',
 } as const
 
 export function Tag({ children, tone = 'outline' }: { children: string; tone?: keyof typeof TONE }) {
