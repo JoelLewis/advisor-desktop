@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Button } from '@/kit/button/Button'
+import { contrast, darkPalette, lightPalette, readAppCss } from '@/__tests__/guardrails/contrast'
 
 describe('Button', () => {
   it('renders a button with its rank and handles clicks', async () => {
@@ -24,5 +25,19 @@ describe('Button', () => {
     const b = screen.getByRole('button')
     expect(b.dataset.rank).toBe('primary')
     expect(b).toHaveAttribute('type', 'button')
+  })
+  it('a disabled primary drops to a muted outline in contrast-checked tokens, never a faded block', () => {
+    render(<Button disabled>Send to Robert</Button>)
+    const b = screen.getByRole('button', { name: 'Send to Robert' })
+    expect(b).toBeDisabled()
+    expect(b.className).not.toMatch(/opacity/)
+    for (const token of ['disabled:bg-transparent', 'disabled:text-ink-3', 'disabled:border-rule-2']) expect(b).toHaveClass(token)
+    const css = readAppCss()
+    for (const palette of [lightPalette(css), darkPalette(css)]) {
+      for (const surface of ['bg', 'face'] as const) {
+        expect(contrast(palette.get('ink-3')!, palette.get(surface)!)).toBeGreaterThanOrEqual(4.5)
+        expect(contrast(palette.get('rule-2')!, palette.get(surface)!)).toBeGreaterThanOrEqual(3)
+      }
+    }
   })
 })
