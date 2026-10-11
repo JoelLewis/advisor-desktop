@@ -52,7 +52,7 @@ const EXPECTED_KIND: Record<string, SecurityKind> = {
   // US-domiciled pooled vehicles
   VTI: 'fund', SPY: 'fund', QQQ: 'fund', EFA: 'fund', VWO: 'fund', VXUS: 'fund',
   AGG: 'fund', BND: 'fund', BNDX: 'fund', TLT: 'fund', TIP: 'fund', LQD: 'fund', VCIT: 'fund',
-  GLD: 'fund', VNQ: 'fund', QAI: 'fund', IBIT: 'fund', ETHE: 'fund', BXPE: 'fund',
+  GLD: 'fund', VNQ: 'fund', QAI: 'fund', IBIT: 'fund', ETHE: 'fund', BXPE: 'fund', SMH: 'fund',
   // Foreign-listed pooled vehicles — the acc-041/042/043/044 gap this round closes
   '2800.HK': 'fund',   // Tracker Fund of Hong Kong (Hang Seng index ETF)
   'ES3.SI': 'fund',    // SPDR Straits Times Index ETF

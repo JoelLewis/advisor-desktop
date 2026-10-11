@@ -122,7 +122,7 @@ describe('Position weight is derived from market value', () => {
    * spread over the derived value by `getPositionsForAccount` and silently win.
    */
   it('no seed row carries a stored weight', () => {
-    expect(allPositions.length, 'vacuity guard: no seed rows').toBe(140)
+    expect(allPositions.length, 'vacuity guard: no seed rows').toBe(141)
     const withWeight = allPositions
       .filter((p) => Object.prototype.hasOwnProperty.call(p, 'weight'))
       .map((p) => `${p.id} (${p.accountId} ${p.symbol})`)

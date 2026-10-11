@@ -34,7 +34,9 @@ const robertIndividualPositions: PositionSeed[] = [
   { id: 'pos-026', accountId: 'acc-002', symbol: 'IBIT', name: 'iShares Bitcoin Trust ETF', assetClass: 'digital_assets', quantity: 3234, price: 52.80, costBasis: 129_347, marketValue: 170_755.20, gainLoss: 41_408.20, gainLossPercent: 0.320 },
   { id: 'pos-027', accountId: 'acc-002', symbol: 'ETHE', name: 'iShares Ethereum Trust ETF', assetClass: 'digital_assets', quantity: 3882, price: 18.45, costBasis: 60_054, marketValue: 71_622.90, gainLoss: 11_568.90, gainLossPercent: 0.193 },
   { id: 'pos-028', accountId: 'acc-002', symbol: 'BXPE', name: 'Blackstone Private Equity Fund', assetClass: 'private_equity', quantity: 1110, price: 108.50, costBasis: 106_250, marketValue: 120_435, gainLoss: 14_185, gainLossPercent: 0.134 },
-  { id: 'pos-025', accountId: 'acc-002', symbol: 'CASH', name: 'Money Market Fund', assetClass: 'cash', quantity: 1, price: 269_640, costBasis: 269_640, marketValue: 269_640, gainLoss: 0, gainLossPercent: 0 },
+  // Bought 2026-02-21 as the INTC tax-loss-harvest replacement (activities.ts, note-002, comp-006).
+  { id: 'pos-265', accountId: 'acc-002', symbol: 'SMH', name: 'VanEck Semiconductor ETF', assetClass: 'us_equity', quantity: 180, price: 245.20, costBasis: 44_136, marketValue: 44_136, gainLoss: 0, gainLossPercent: 0 },
+  { id: 'pos-025', accountId: 'acc-002', symbol: 'CASH', name: 'Money Market Fund', assetClass: 'cash', quantity: 1, price: 225_504, costBasis: 225_504, marketValue: 225_504, gainLoss: 0, gainLossPercent: 0 },
 ]
 
 // ─── acc-003: Robert Johnson Traditional IRA ($3.55M, mod-003 Conservative Income) ──

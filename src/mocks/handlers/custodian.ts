@@ -244,6 +244,13 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
   return txns.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 }
 
+/**
+ * Positions whose purchase date is a recorded fact rather than synthesised. pos-265 is the SMH
+ * bought on 2026-02-21 as the INTC replacement; seeding it 3–47 months old would contradict the
+ * activity feed, the note and the compliance record that all date it.
+ */
+export const KNOWN_OPEN_DATES: ReadonlyMap<string, string> = new Map([['pos-265', '2026-02-21']])
+
 export function generateTaxLots(accountId: string, totalValue: number): TaxLot[] {
   const positions = getPositionsForAccount(accountId, totalValue)
   const anchor = startOfToday()
@@ -260,6 +267,21 @@ export function generateTaxLots(accountId: string, totalValue: number): TaxLot[]
 
   for (const pos of positions) {
     if (pos.symbol === 'CASH') continue
+    const openedOn = KNOWN_OPEN_DATES.get(pos.id)
+    if (openedOn) {
+      lots.push({
+        id: `lot-${pos.id}-0`,
+        positionId: pos.id,
+        purchaseDate: openedOn,
+        quantity: pos.quantity,
+        costBasis: pos.costBasis,
+        currentValue: pos.marketValue,
+        gainLoss: pos.marketValue - pos.costBasis,
+        holdingPeriod: 'short',
+        washSaleRestricted: restrictedSymbols.has(pos.symbol),
+      })
+      continue
+    }
     const rand = seeded(`${accountId}:${pos.id}`)
     const lotCount = 1 + Math.floor(rand() * 3) // 1–3
     const shares = fractions(rand, lotCount)

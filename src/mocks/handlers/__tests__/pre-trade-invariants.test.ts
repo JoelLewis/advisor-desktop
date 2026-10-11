@@ -1167,12 +1167,13 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     // INTC — so SPY alone absorbs the whole $549,900 trim and the loss lot is never reached.
     const unawareUsEquity = unaware!.trades.filter((t) => t.side === 'sell' && ['SPY', 'QQQ', 'INTC'].includes(t.symbol))
     expect(unawareUsEquity.map((t) => t.symbol)).toEqual(['SPY'])
-    // Task 10 — 1,056 shares x 520.30 = 549,437, within one SPY lot of the 549,900 notional. The
-    // bound is restated against the new notional: left at 547,650 it would have been satisfied by
-    // a *negative* difference and stopped discriminating at all.
-    expect(unawareUsEquity[0]!.estimatedValue).toBe(549_437)
-    expect(549_900 - unawareUsEquity[0]!.estimatedValue).toBeLessThan(520.30)
-    expect(549_900 - unawareUsEquity[0]!.estimatedValue).toBeGreaterThan(0)
+    // The 180 SMH bought 2026-02-21 (pos-265, $44,136) are us_equity, so the sleeve is 0.681978
+    // of 4,500,000 and the trim is 0.1320 x 4,500,000 = 594,000. 1,141 shares x 520.30 = 593,662,
+    // within one SPY lot of that notional. The bound is restated against the new notional: left at
+    // 549,900 it would have been satisfied by a *negative* difference and stopped discriminating.
+    expect(unawareUsEquity[0]!.estimatedValue).toBe(593_662)
+    expect(594_000 - unawareUsEquity[0]!.estimatedValue).toBeLessThan(520.30)
+    expect(594_000 - unawareUsEquity[0]!.estimatedValue).toBeGreaterThan(0)
     expect(aware!.trades.some((t) => t.side === 'sell' && t.symbol === 'INTC')).toBe(true)
     expect(unaware!.trades.some((t) => t.side === 'sell' && t.symbol === 'INTC')).toBe(false)
   })
