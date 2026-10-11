@@ -104,13 +104,20 @@ export function TaxManagementPage() {
     const totalUnrealizedLoss = taxLots.filter((l) => l.gainLoss < 0).reduce((s, l) => s + l.gainLoss, 0)
     const shortTermGain = taxLots.filter((l) => l.holdingPeriod === 'short' && l.gainLoss > 0).reduce((s, l) => s + l.gainLoss, 0)
     const longTermGain = taxLots.filter((l) => l.holdingPeriod === 'long' && l.gainLoss > 0).reduce((s, l) => s + l.gainLoss, 0)
-    const harvestableAmount = harvestOpportunities.reduce((s, l) => s + Math.abs(l.gainLoss), 0)
+    // A lot whose sale would wash defers its loss into the replacement's basis (§1091(d)), so it
+    // harvests nothing this year: the card's figures leave it out. The scanner still lists it.
+    const harvestable = harvestOpportunities.filter((l) => !l.saleWashSaleRisk)
+    const washingLotCount = harvestOpportunities.length - harvestable.length
+    const harvestableAmount = harvestable.reduce((s, l) => s + Math.abs(l.gainLoss), 0)
     // §9.1 · the page-level "estimated tax benefit" total. Only ever rendered in the taxable
     // branch below (see `disclosure`) — a tax-deferred or tax-free account never computes past
     // `harvestOpportunities === []` in the first place, but the gate on *rendering* this value is
     // what a component test can actually observe, so that is where it is enforced.
-    const estimatedBenefit = harvestOpportunities.reduce((s, l) => s + estimatedTaxBenefit(l), 0)
-    return { totalUnrealizedGain, totalUnrealizedLoss, shortTermGain, longTermGain, harvestableAmount, estimatedBenefit }
+    const estimatedBenefit = harvestable.reduce((s, l) => s + estimatedTaxBenefit(l), 0)
+    return {
+      totalUnrealizedGain, totalUnrealizedLoss, shortTermGain, longTermGain,
+      harvestableAmount, harvestableLotCount: harvestable.length, washingLotCount, estimatedBenefit,
+    }
   }, [taxLots, harvestOpportunities])
 
   // Cost basis method impact simulation — computeCostBasisImpact lives in tax/shared.tsx (not
@@ -212,7 +219,6 @@ export function TaxManagementPage() {
         <TaxSummaryCards
           stats={stats}
           washSaleWindowsCount={washSaleWindows?.length ?? 0}
-          harvestOpportunitiesLength={harvestOpportunities.length}
           harvestUnavailable={harvestStatus !== 'ready'}
           formatWithConversion={formatWithConversion}
           baseCurrency={baseCurrency}

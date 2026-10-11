@@ -8,13 +8,15 @@ type TaxStats = {
   shortTermGain: number
   longTermGain: number
   harvestableAmount: number
+  harvestableLotCount: number
+  /** Harvest candidates left out of the figures above because selling them now would wash. */
+  washingLotCount: number
   estimatedBenefit: number
 }
 
 type TaxSummaryCardsProps = {
   stats: TaxStats
   washSaleWindowsCount: number
-  harvestOpportunitiesLength: number
   /**
    * Fix-round-2 review, Important #2 — while FX rates are unavailable, `harvestOpportunities`
    * fails open to `[]` (correctly — see TaxManagementPage), but rendering that as "$0.00 / 0
@@ -30,7 +32,6 @@ type TaxSummaryCardsProps = {
 export function TaxSummaryCards({
   stats,
   washSaleWindowsCount,
-  harvestOpportunitiesLength,
   harvestUnavailable = false,
   formatWithConversion,
   baseCurrency,
@@ -64,7 +65,10 @@ export function TaxSummaryCards({
           ) : (
             <>
               <p className="font-mono text-section-header text-accent-blue">{formatWithConversion(stats.harvestableAmount, baseCurrency, { compact: true })}</p>
-              <p className="mt-1 text-caption text-text-tertiary">{harvestOpportunitiesLength} lot{harvestOpportunitiesLength !== 1 ? 's' : ''}</p>
+              <p className="mt-1 text-caption text-text-tertiary">{stats.harvestableLotCount} lot{stats.harvestableLotCount !== 1 ? 's' : ''}</p>
+              {stats.washingLotCount > 0 && (
+                <p className="mt-1 text-caption text-text-tertiary">{stats.washingLotCount} excluded: sale would wash</p>
+              )}
               <p className="mt-1 text-caption text-text-tertiary">
                 Est. tax benefit{' '}
                 <span data-testid="estimated-tax-benefit" className="font-mono font-medium text-accent-green">
