@@ -3,7 +3,8 @@ import { cn } from '@/lib/utils'
 import { Pane } from '@/kit/layout/Pane'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
 import { useDirectory, useThreads } from '@/hooks/use-workspace'
-import type { AgentProfile, Thread, Visibility } from '@/types/workspace'
+import { AgentScope } from '@/workspace/people/AgentScope'
+import type { Thread, Visibility } from '@/types/workspace'
 
 const GROUPS: readonly { visibility: Visibility; title: string }[] = [
   { visibility: 'private', title: 'Private' },
@@ -63,23 +64,5 @@ function DeskAgents({ threads }: { threads: Thread[] }) {
         {agents.map((a) => <li key={a.id}><AgentScope agent={a} /></li>)}
       </ul>
     </Pane>
-  )
-}
-
-function AgentScope({ agent }: { agent: AgentProfile }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-body font-semibold">{agent.name}</span>
-      <ScopeLine verb="may" acts={agent.scope.may} />
-      <ScopeLine verb="may not" acts={agent.scope.mayNot} />
-    </div>
-  )
-}
-
-function ScopeLine({ verb, acts }: { verb: string; acts: string[] }) {
-  return (
-    <p className="text-body text-ink-2">
-      <span className="text-label uppercase text-ink-3">{verb}</span> {acts.join(' · ')}
-    </p>
   )
 }

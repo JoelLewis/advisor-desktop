@@ -1,4 +1,5 @@
 import type { Directory, Thread } from '@/types/workspace'
+import { firstNameOf } from '@/workspace/people/directory-people'
 
 export type ComposerMode =
   | { kind: 'post'; action: 'Post' | 'Send' }
@@ -16,7 +17,7 @@ export function composerModeOf(thread: Thread, viewerId: string, directory: Dire
     if (!acts.includes('draft_for_client')) return { kind: 'read-only' }
     const client = directory.people.find((p) => p.id === thread.clientId)
     if (!client) throw new Error(`The client of thread "${thread.id}" is not in the directory`)
-    return { kind: 'draft', clientFirstName: client.name.split(' ')[0] ?? client.name }
+    return { kind: 'draft', clientFirstName: firstNameOf(client) }
   }
   const belongs = thread.memberIds.includes(viewerId) || thread.ownerId === viewerId
   return belongs && acts.includes('post_firm') ? { kind: 'post', action: 'Post' } : { kind: 'read-only' }

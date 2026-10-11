@@ -1,24 +1,12 @@
 import type { ReactNode } from 'react'
 import { fmtTimestamp } from '@/kit/measure'
-import { RecordSlip } from '@/kit/record-slip/RecordSlip'
 import { useActs } from '@/hooks/use-workspace'
+import { personIn } from '@/workspace/people/directory-people'
 import { ROLE_LABEL } from '@/workspace/people/role-label'
-import type { BindingActKind, Directory, Message, Person } from '@/types/workspace'
+import type { Directory, Message, Person } from '@/types/workspace'
+import { ActRecordSlip } from './ActRecordSlip'
 import { AgentFindingView } from './AgentFindingView'
 import { embedFor } from './embeds/embed-registry'
-
-const ACT_KIND_LABEL: Readonly<Record<BindingActKind, string>> = {
-  approve_proposal: 'Approve proposal · binding',
-  withdraw_approval: 'Withdraw approval · binding',
-  dispose_exception: 'Dispose exception · binding',
-  send_to_client: 'Send to client · binding',
-}
-
-function personIn(directory: Directory, id: string): Person {
-  const person = directory.people.find((p) => p.id === id)
-  if (!person) throw new Error(`No person "${id}" in the directory`)
-  return person
-}
 
 export function MessageView({ message, directory }: { message: Message; directory: Directory }) {
   switch (message.kind) {
@@ -61,9 +49,5 @@ function ActSlip({ threadId, actId, directory }: { threadId: string; actId: stri
   if (acts.isError) return <p role="alert" className="text-body">{acts.error.message}</p>
   const act = acts.data.find((a) => a.id === actId)
   if (!act) return <p role="alert" className="text-body">{`Record ${actId} is not on file for this thread.`}</p>
-  const actor = personIn(directory, act.actorId)
-  return (
-    <RecordSlip kind={ACT_KIND_LABEL[act.kind]} title={act.summary} recordId={act.id} fingerprint={act.fingerprint}
-      recordedBy={{ name: actor.name, role: ROLE_LABEL[actor.role] }} at={act.at} archive="Supervisory review" />
-  )
+  return <ActRecordSlip act={act} directory={directory} />
 }

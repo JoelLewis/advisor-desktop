@@ -12,17 +12,17 @@ const STATE: Record<TrailState, string> = {
 
 export function RecordTrail({ steps }: { steps: TrailStep[] }) {
   return (
-    <ol aria-label="Record trail" className="border-t border-ink">
+    <ol aria-label="Record trail" className="@container border-t border-ink">
       {steps.map((s, i) => (
-        <li key={`${i}-${s.label}`} className="grid grid-cols-[10rem_1fr_8rem_auto] items-center gap-3 border-b border-rule py-2 text-body max-[700px]:grid-cols-1">
+        <li key={`${i}-${s.label}`} className="grid grid-cols-[10rem_1fr_8rem_auto] items-center gap-3 border-b border-rule py-2 text-body @max-[34rem]:grid-cols-[1fr_auto] @max-[34rem]:gap-y-0.5">
           <span className="tabular text-label text-ink-3">
             {s.at ? fmtTimestamp(s.at) : (<><span aria-hidden="true">—</span><span className="sr-only">Not yet recorded</span></>)}
           </span>
-          <span>{s.label}</span>
-          <span className="text-ink-2">
+          <span className="@max-[34rem]:col-start-1">{s.label}</span>
+          <span className="text-ink-2 @max-[34rem]:col-start-1">
             {s.actor ?? (<><span aria-hidden="true">—</span><span className="sr-only">No named actor</span></>)}
           </span>
-          <span className={cn('justify-self-start px-1.5 text-label uppercase', STATE[s.state])}>{s.state}</span>
+          <span className={cn('justify-self-start px-1.5 text-label uppercase @max-[34rem]:col-start-2 @max-[34rem]:row-start-1', STATE[s.state])}>{s.state}</span>
         </li>
       ))}
     </ol>

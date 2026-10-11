@@ -161,7 +161,7 @@ describe('thread view', () => {
     expect(screen.queryByRole('textbox')).toBeNull()
   })
 
-  it('a recorded act appears as a record slip without an anchor id', async () => {
+  it('a recorded act appears in the conversation as a record slip; only the context column anchors it', async () => {
     const draft = await createDraft(ADRIAN, 'th-robert', 'Sarah will be in touch this week.')
     const act = await sendToClient(ADRIAN, draft.id)
     viewAsOnLoad('cli-001')
@@ -173,7 +173,9 @@ describe('thread view', () => {
     expect(s.getByText('Adrian Hale, Advisor')).toBeInTheDocument()
     expect(s.getByText('Supervisory review')).toBeInTheDocument()
     expect(s.getByText(act.fingerprint)).toBeInTheDocument()
-    expect(container.querySelector(`[id="act-${act.id}"]`)).toBeNull()
+    expect(slip.closest('[id^="act-"]')).toBeNull()
+    expect(container.querySelectorAll(`[id="act-${act.id}"]`)).toHaveLength(1)
+    expect(screen.getByRole('complementary', { name: 'Thread context' })).toContainElement(container.querySelector(`[id="act-${act.id}"]`))
     expect(conversation()).toHaveTextContent('Sarah will be in touch this week.')
   })
 
