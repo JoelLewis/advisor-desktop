@@ -16,9 +16,22 @@ const PALETTE = 'red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|i
 const COLOUR_PREFIX = 'bg|text|border(?:-[trblxyse])?|ring(?:-offset)?|fill|stroke|outline|decoration|divide|from|via|to|accent|caret|shadow|placeholder'
 const PALETTE_CLASS = new RegExp(`(?<![\\w-])(?:${COLOUR_PREFIX})-(?:${PALETTE})(?:-\\d{2,3})?(?:\\/\\d+)?(?![\\w-])`, 'g')
 const ARBITRARY_COLOUR = /-\[(?:#|rgba?\(|hsla?\(|oklch\(|oklab\(|color:)/g
+const COLOUR_FROM_VARIABLE = new RegExp(
+  `(?<![\\w-])(?:${COLOUR_PREFIX})-(?:\\[(?:var|color-mix|light-dark)\\(|\\((?:color:)?--)`, 'g')
+
+const COLOUR_NAMES = `${PALETTE}|grey|silver|maroon|navy|olive|aqua|fuchsia`
+const NAMED_COLOUR_VALUE = new RegExp(
+  `(?<![\\w-])(?:fill|stroke|background|\\w*[cC]olor)\\s*[=:]\\s*\\{?\\s*["'\`](?:${COLOUR_NAMES})["'\`]`, 'g')
 
 export function findPaletteViolations(src: string): string[] {
-  return [...src.matchAll(PALETTE_CLASS), ...src.matchAll(ARBITRARY_COLOUR)].map((m) => m[0])
+  return [
+    ...src.matchAll(PALETTE_CLASS), ...src.matchAll(ARBITRARY_COLOUR),
+    ...src.matchAll(COLOUR_FROM_VARIABLE), ...src.matchAll(NAMED_COLOUR_VALUE),
+  ].map((m) => m[0])
+}
+
+export function findRawTokenVars(src: string): string[] {
+  return [...src.matchAll(/var\(\s*--ws-/g)].map((m) => m[0])
 }
 
 const HEX = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![\w-])/g
@@ -35,7 +48,7 @@ export function colourLiteralsOutsideTokens(css: string): string[] {
   return [...findColourLiterals(outside), ...[...outside.matchAll(NAMED_CSS)].map((m) => m[0])]
 }
 
-const FORMATTERS = /\.toFixed\(|\.toLocaleString\(|\bIntl\.(?:NumberFormat|DateTimeFormat)\b/g
+const FORMATTERS = /\.\s*(?:toFixed|toPrecision|toExponential|toLocale\w*String)\s*\(|\bIntl\s*\.\s*\w+/g
 
 export function findFormatterBypass(src: string): string[] {
   return [...src.matchAll(FORMATTERS)].map((m) => m[0])

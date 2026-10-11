@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  UI_ROOTS, listSourceFiles, findPaletteViolations, findColourLiterals, findFormatterBypass, findRawElements,
+  UI_ROOTS, listSourceFiles, findPaletteViolations, findColourLiterals, findFormatterBypass, findRawElements, findRawTokenVars,
   colourLiteralsOutsideTokens,
 } from './detectors'
 
@@ -14,8 +14,9 @@ describe('UI source guardrails', () => {
   it.each(files)('%s uses only instrument colours', (f) => {
     expect(findPaletteViolations(read(f))).toEqual([])
     expect(findColourLiterals(read(f))).toEqual([])
+    expect(findRawTokenVars(read(f))).toEqual([])
   })
-  it.each(files.filter((f) => !f.endsWith('src/kit/measure.ts')))('%s formats only through measure', (f) => {
+  it.each(files.filter((f) => f !== 'src/kit/measure.ts'))('%s formats only through measure', (f) => {
     expect(findFormatterBypass(read(f))).toEqual([])
   })
   it.each(files.filter((f) => !f.startsWith('src/kit/')))('%s uses kit elements', (f) => {
