@@ -1,10 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { render, waitFor } from '@testing-library/react'
-import { QueryClientProvider } from '@tanstack/react-query'
-import { RouterProvider, createMemoryRouter } from 'react-router-dom'
+import { waitFor } from '@testing-library/react'
 import { routes } from '@/app/routes'
-import { routerFuture, providerFuture } from '@/app/router-flags'
-import { createTestQueryClient } from '@/test/render'
+import { renderRoutes } from '@/test/render'
 import { assertSingleH1, countH1, routePaths } from './headings'
 
 const NOT_FOUND = '/no-such-page'
@@ -34,12 +31,7 @@ describe('routePaths', () => {
 
 describe('every route renders exactly one h1 once ready', () => {
   it.each([...routePaths(routes), NOT_FOUND])('%s', async (path) => {
-    const router = createMemoryRouter(routes, { initialEntries: [path], future: routerFuture })
-    const { container } = render(
-      <QueryClientProvider client={createTestQueryClient()}>
-        <RouterProvider router={router} future={providerFuture} />
-      </QueryClientProvider>,
-    )
+    const { container } = renderRoutes(routes, path)
     await waitFor(() => {
       expect(container.querySelector(LOADING)).toBeNull()
       expect(countH1(container)).toBeGreaterThan(0)

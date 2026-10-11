@@ -1,14 +1,13 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
-import { ViewerContext } from './viewer-context'
+import { DEFAULT_VIEWER_ID, ViewerContext } from './viewer-context'
 
 const STORAGE_KEY = 'ws-viewer'
-const DEFAULT_VIEWER = 'user-001'
 
 function readStoredViewer(): string {
   try {
-    return sessionStorage.getItem(STORAGE_KEY) ?? DEFAULT_VIEWER
+    return sessionStorage.getItem(STORAGE_KEY) ?? DEFAULT_VIEWER_ID
   } catch {
-    return DEFAULT_VIEWER
+    return DEFAULT_VIEWER_ID
   }
 }
 

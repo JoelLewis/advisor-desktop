@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { readdirSync } from 'node:fs'
 import {
-  ENGINE_ROOTS, uiRoots, listSourceFiles, findPaletteViolations, findColourLiterals, findFormatterBypass, findRawElements, findRawTokenVars,
+  ENGINE_ROOTS, uiRoots, listSourceFiles, findPaletteViolations, findColourLiterals, findFormatterBypass, findRawElements, findRawTokenVars, findBreakpointLiterals,
   colourLiteralsOutsideTokens,
 } from './detectors'
 
@@ -35,6 +35,12 @@ describe('UI source guardrails', () => {
   })
   it.each(files.filter((f) => !f.startsWith('src/kit/')))('%s uses kit elements', (f) => {
     expect(findRawElements(read(f))).toEqual([])
+  })
+  it.each(files)('%s uses the breakpoint tokens', (f) => {
+    expect(findBreakpointLiterals(read(f))).toEqual([])
+  })
+  it('app.css defines the breakpoint tokens', () => {
+    expect(read('src/styles/app.css')).toMatch(/--breakpoint-split:\s*1100px;[\s\S]*--breakpoint-wide:\s*1440px;/)
   })
   it('app.css has colour values only inside the token block', () => {
     expect(colourLiteralsOutsideTokens(read('src/styles/app.css'))).toEqual([])

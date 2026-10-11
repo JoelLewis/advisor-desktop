@@ -71,6 +71,9 @@
 
   --font-sans: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
 
+  --breakpoint-split: 1100px;
+  --breakpoint-wide: 1440px;
+
   --text-label: 10.5px;
   --text-label--line-height: 1.2;
   --text-label--letter-spacing: 0.07em;

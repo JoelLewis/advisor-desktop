@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  findPaletteViolations, findColourLiterals, findFormatterBypass, findRawElements, findRawTokenVars, colourLiteralsOutsideTokens,
+  findPaletteViolations, findColourLiterals, findFormatterBypass, findRawElements, findRawTokenVars, colourLiteralsOutsideTokens, findBreakpointLiterals,
 } from './detectors'
 
 describe('palette detector', () => {
@@ -49,4 +49,11 @@ describe('raw element detector', () => {
 describe('raw token variable detector', () => {
   it.each(['color: var(--ws-ink)', 'x = "var( --ws-rule)"'])('catches %s', (src) => expect(findRawTokenVars(src)).not.toEqual([]))
   it.each(['className="text-ink"', 'var(--x)', 'const ws = 1'])('allows %s', (src) => expect(findRawTokenVars(src)).toEqual([]))
+})
+
+describe('breakpoint literal detector', () => {
+  it.each(['className="min-[1100px]:col-span-8"', 'className="max-[1100px]:hidden"', 'className="max-w-[1440px]"'])(
+    'catches %s', (src) => expect(findBreakpointLiterals(src)).not.toEqual([]))
+  it.each(['className="split:col-span-8"', 'className="max-w-(--breakpoint-wide)"', 'className="max-w-[65ch] w-[64px]"', 'className="max-[700px]:grid-cols-1"'])(
+    'allows %s', (src) => expect(findBreakpointLiterals(src)).toEqual([]))
 })

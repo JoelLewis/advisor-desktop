@@ -11,5 +11,7 @@ it('composes a pane in the main column and a labelled side panel', () => {
     </Grid>,
   )
   expect(screen.getByRole('heading', { level: 2, name: 'Holdings' })).toBeInTheDocument()
-  expect(screen.getByRole('complementary', { name: 'What is being approved' })).toBeInTheDocument()
+  const panel = screen.getByRole('complementary', { name: 'What is being approved' })
+  expect(panel).not.toHaveAttribute('aria-label')
+  expect(panel.getAttribute('aria-labelledby')).toBe(screen.getByText('What is being approved').id)
 })

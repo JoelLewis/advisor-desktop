@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as api from '@/services/workspace'
 import { useViewer } from '@/workspace/viewer/use-viewer'
+import { DEFAULT_VIEWER_ID } from '@/workspace/viewer/viewer-context'
 import type { AgentId } from '@/types/workspace'
 
 export function useDirectory() {
@@ -8,6 +9,18 @@ export function useDirectory() {
   return useQuery({
     queryKey: ['workspace', viewerId, 'directory'],
     queryFn: () => api.getDirectory(viewerId),
+  })
+}
+
+/**
+ * Everyone the "view as" control can switch to. The control belongs to the person running the demo,
+ * not to the current viewer, so it reads the directory as the advisor: a client's own directory names
+ * only the people in their thread.
+ */
+export function useViewAsDirectory() {
+  return useQuery({
+    queryKey: ['workspace', DEFAULT_VIEWER_ID, 'directory'],
+    queryFn: () => api.getDirectory(DEFAULT_VIEWER_ID),
   })
 }
 

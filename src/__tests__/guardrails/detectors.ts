@@ -67,3 +67,10 @@ const RAW = /<(?:button|table|dialog|input|select|textarea)\b/g
 export function findRawElements(src: string): string[] {
   return [...src.matchAll(RAW)].map((m) => m[0])
 }
+
+const BREAKPOINT_LITERAL = /(?:min|max)(?:-w)?-\[(?:1100|1440)px\]/g
+
+/** The layout breakpoints are @theme tokens (`split:`, `max-w-(--breakpoint-wide)`), never literal widths. A component's own local breakpoint is its business. */
+export function findBreakpointLiterals(src: string): string[] {
+  return [...src.matchAll(BREAKPOINT_LITERAL)].map((m) => m[0])
+}

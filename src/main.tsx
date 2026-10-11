@@ -5,6 +5,7 @@ import { RouterProvider } from 'react-router-dom'
 import { router } from '@/app/routes'
 import { providerFuture } from '@/app/router-flags'
 import '@/styles/app.css'
+import { ViewerProvider } from '@/workspace/viewer/ViewerProvider'
 import { applyTheme, readThemeChoice, themeFromSearch } from '@/kit/theme'
 
 applyTheme(themeFromSearch(window.location.search) ?? readThemeChoice())
@@ -24,7 +25,9 @@ enableMocking().then(() => {
   ReactDOM.createRoot(root).render(
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} future={providerFuture} />
+        <ViewerProvider>
+          <RouterProvider router={router} future={providerFuture} />
+        </ViewerProvider>
       </QueryClientProvider>
     </React.StrictMode>,
   )

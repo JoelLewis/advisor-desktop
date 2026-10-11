@@ -12,6 +12,6 @@ export function ThemeToggle() {
     const c = NEXT[choice]
     applyTheme(c); saveThemeChoice(c); setChoice(c)
   }
-  useJumpKeys('kit', [{ key: 't', label: 'Cycle theme', run: next }])
+  useJumpKeys('theme', [{ key: 't', label: 'Cycle theme', run: next }])
   return <Button rank="secondary" onClick={next}>{LABEL[choice]}</Button>
 }

@@ -1,7 +1,7 @@
 import { afterEach, describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ThemeToggle } from '@/app/pages/kit/ThemeToggle'
+import { ThemeToggle } from '@/workspace/shell/ThemeToggle'
 import { KeyboardProvider } from '@/kit/keyboard/KeyboardProvider'
 
 const renderToggle = () => render(<KeyboardProvider destinations={[]}><ThemeToggle /></KeyboardProvider>)

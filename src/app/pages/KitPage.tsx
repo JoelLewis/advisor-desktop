@@ -1,6 +1,6 @@
 import { Page } from '@/kit/page/Page'
 import { KitSections } from './kit/KitSections'
-import { ThemeToggle } from './kit/ThemeToggle'
+import { ThemeToggle } from '@/workspace/shell/ThemeToggle'
 import { useKitData } from './kit/use-kit-data'
 
 export function KitPage() {
