@@ -7,19 +7,20 @@ import { gaugeDomain, gaugeStatus } from './gauge-math'
 const W = 200
 const H = 24
 const MID = W / 2
+const HALF = MID - 1
 
 export function Gauge({ label, drift, band }: { label: string; drift: number; band: number }) {
   const patternId = `hatch-${useId().replace(/:/g, '')}`
   const status = gaugeStatus(drift, band)
   const domain = gaugeDomain(drift, band)
-  const scale = (v: number) => MID + (Math.max(-domain, Math.min(domain, v)) / domain) * MID
+  const scale = (v: number) => MID + (Math.max(-domain, Math.min(domain, v)) / domain) * HALF
   const bandLeft = scale(-band)
   const bandRight = scale(band)
   const end = scale(drift)
   const barX = Math.min(MID, end)
   const barW = Math.abs(end - MID)
   const out = status === 'OUT'
-  const description = `${label}: drift ${fmtDrift(drift)} pp against tolerance ${fmtTolerance(band)} pp, ${status}`
+  const description = `${label}: drift ${fmtDrift(drift)} percentage points against tolerance ${fmtTolerance(band)} percentage points, ${status}`
 
   return (
     <div className="inline-flex items-center gap-3">
@@ -37,7 +38,9 @@ export function Gauge({ label, drift, band }: { label: string; drift: number; ba
       </svg>
       <span aria-hidden className={cn('tabular text-table', out && 'font-semibold')}>{fmtDrift(drift)}</span>
       <span aria-hidden className="text-label text-ink-3">pp</span>
-      <StatusCode status={status} />
+      <span aria-hidden>
+        <StatusCode status={status} />
+      </span>
     </div>
   )
 }
