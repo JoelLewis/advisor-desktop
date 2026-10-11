@@ -4,6 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from 'react-router-dom'
 import { router } from '@/app/routes'
 import '@/styles/app.css'
+import { applyTheme, readThemeChoice, themeFromSearch } from '@/kit/theme'
+
+applyTheme(themeFromSearch(window.location.search) ?? readThemeChoice())
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 5 * 60 * 1000, retry: false } },

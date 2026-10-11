@@ -1,1 +1,112 @@
 @import "tailwindcss";
+@import "@fontsource-variable/archivo/wdth.css";
+
+/* tokens:start — the only place colour values may appear (guardrail 2) */
+:root {
+  --ws-bg: oklch(0.944 0.003 250);
+  --ws-face: oklch(0.986 0.0015 250);
+  --ws-ink: oklch(0.205 0.006 250);
+  --ws-ink-2: oklch(0.39 0.006 250);
+  --ws-ink-3: oklch(0.47 0.006 250);
+  --ws-rule: oklch(0.86 0.004 250);
+  --ws-rule-2: oklch(0.6 0.005 250);
+  --ws-band: oklch(0.9 0.004 250);
+  --ws-signal: oklch(0.6 0.2 41);
+  --ws-signal-ink: oklch(0.53 0.185 39);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ws-bg: oklch(0.172 0.004 250);
+    --ws-face: oklch(0.212 0.004 250);
+    --ws-ink: oklch(0.935 0.004 250);
+    --ws-ink-2: oklch(0.8 0.005 250);
+    --ws-ink-3: oklch(0.69 0.005 250);
+    --ws-rule: oklch(0.315 0.005 250);
+    --ws-rule-2: oklch(0.55 0.005 250);
+    --ws-band: oklch(0.26 0.005 250);
+    --ws-signal: oklch(0.72 0.17 47);
+    --ws-signal-ink: oklch(0.77 0.15 52);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ws-bg: oklch(0.172 0.004 250);
+  --ws-face: oklch(0.212 0.004 250);
+  --ws-ink: oklch(0.935 0.004 250);
+  --ws-ink-2: oklch(0.8 0.005 250);
+  --ws-ink-3: oklch(0.69 0.005 250);
+  --ws-rule: oklch(0.315 0.005 250);
+  --ws-rule-2: oklch(0.55 0.005 250);
+  --ws-band: oklch(0.26 0.005 250);
+  --ws-signal: oklch(0.72 0.17 47);
+  --ws-signal-ink: oklch(0.77 0.15 52);
+  color-scheme: dark;
+}
+/* tokens:end */
+
+@theme {
+  --color-*: initial;
+  --font-*: initial;
+
+  --color-bg: var(--ws-bg);
+  --color-face: var(--ws-face);
+  --color-ink: var(--ws-ink);
+  --color-ink-2: var(--ws-ink-2);
+  --color-ink-3: var(--ws-ink-3);
+  --color-rule: var(--ws-rule);
+  --color-rule-2: var(--ws-rule-2);
+  --color-band: var(--ws-band);
+  --color-signal: var(--ws-signal);
+  --color-signal-ink: var(--ws-signal-ink);
+
+  --font-sans: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
+
+  --text-label: 10.5px;
+  --text-label--line-height: 1.2;
+  --text-label--letter-spacing: 0.07em;
+  --text-label--font-weight: 600;
+  --text-table-dense: 12.5px;
+  --text-table-dense--line-height: 1.3;
+  --text-table: 13px;
+  --text-table--line-height: 1.35;
+  --text-body: 14px;
+  --text-body--line-height: 1.5;
+  --text-copy: 15.5px;
+  --text-copy--line-height: 1.6;
+  --text-title: 22px;
+  --text-title--line-height: 1.2;
+  --text-title--font-weight: 600;
+  --text-total: 28px;
+  --text-total--line-height: 1.1;
+  --text-readout-sm: 36px;
+  --text-readout-sm--line-height: 1;
+  --text-readout-md: 56px;
+  --text-readout-md--line-height: 1;
+  --text-readout-lg: 104px;
+  --text-readout-lg--line-height: 1;
+
+  --animate-gauge-in: gauge-in 520ms cubic-bezier(0.25, 1, 0.5, 1) both;
+  @keyframes gauge-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+}
+
+@utility stretch-readout { font-stretch: 125%; }
+@utility stretch-wide { font-stretch: 118%; }
+@utility stretch-table { font-stretch: 92%; }
+@utility stretch-dense { font-stretch: 87.5%; }
+@utility tabular { font-variant-numeric: tabular-nums; }
+@utility hatch {
+  background-image: repeating-linear-gradient(135deg, var(--ws-rule-2) 0 1px, transparent 1px 6px);
+}
+
+@layer base {
+  html { background: var(--ws-bg); color: var(--ws-ink); }
+  body { font-family: var(--font-sans); font-size: 14px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+  :focus-visible { outline: 2px solid var(--ws-ink); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  }
+}
