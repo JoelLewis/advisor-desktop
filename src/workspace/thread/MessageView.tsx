@@ -23,7 +23,7 @@ export function MessageView({ message, directory }: { message: Message; director
     }
     case 'embed': {
       const Embed = embedFor(message.embed)
-      return <Authored author={personIn(directory, message.authorId)} at={message.at}><Embed subject={message.subject} /></Authored>
+      return <Authored author={personIn(directory, message.authorId)} at={message.at}><Embed subject={message.subject} threadId={message.threadId} /></Authored>
     }
     case 'act':
       return <ActSlip threadId={message.threadId} actId={message.actId} directory={directory} />

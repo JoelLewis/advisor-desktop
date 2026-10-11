@@ -3,13 +3,11 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PAGE_TITLE_ID } from '@/kit/page/ids'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
 import { useDirectory, useThread } from '@/hooks/use-workspace'
-import { ApiClientError } from '@/services/api-client'
+import { isNotFound } from '@/workspace/is-not-found'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import type { Directory, ThreadDetail } from '@/types/workspace'
 import { Composer } from './Composer'
 import { MessageView } from './MessageView'
-
-const isNotFound = (error: Error) => error instanceof ApiClientError && error.status === 404
 
 export function ThreadPage() {
   const { threadId } = useParams()

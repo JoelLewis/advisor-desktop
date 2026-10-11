@@ -7,7 +7,7 @@ import { StatusCode } from '@/kit/status/StatusCode'
 import type { Status } from '@/kit/status/status'
 import { fmtMoney, fmtQuantity } from '@/kit/measure'
 import { useAccount } from '@/hooks/use-accounts'
-import { useViewer } from '@/workspace/viewer/use-viewer'
+import { accountFullViewHref } from '@/workspace/full-views/full-view-href'
 import { preTradeCheckProposal, previewRebalance, type ProposalLegResult, type ProposedTrade } from '@/services/oms'
 import { accountIdOf, type EmbedProps } from './embed-props'
 
@@ -32,12 +32,12 @@ async function loadCheckedPreview(accountId: string) {
   return { preview, legs }
 }
 
-export function RebalanceEmbed({ subject }: EmbedProps) {
+export function RebalanceEmbed({ subject, threadId }: EmbedProps) {
   const accountId = accountIdOf(subject, 'rebalance preview')
   const titleId = useId()
-  const { viewerId } = useViewer()
   const account = useAccount(accountId)
-  const checked = useQuery({ queryKey: ['workspace', viewerId, 'rebalance-embed', accountId], queryFn: () => loadCheckedPreview(accountId) })
+  // The preview is the same for every viewer; it sits under ['workspace'] so workspace writes refresh it too.
+  const checked = useQuery({ queryKey: ['workspace', 'rebalance-embed', accountId], queryFn: () => loadCheckedPreview(accountId) })
   if (checked.isPending || account.isPending) return <p role="status" className="text-body text-ink-3">Loading the rebalance preview…</p>
   if (checked.isError) return <p role="alert" className="text-body">{checked.error.message}</p>
   if (account.isError) return <p role="alert" className="text-body">{account.error.message}</p>
@@ -59,7 +59,7 @@ export function RebalanceEmbed({ subject }: EmbedProps) {
           { id: 'check', header: 'Pre-trade', cell: (l) => <StatusCode status={l.status} /> },
         ]}
         totals={{ label: 'Gross traded', cells: { value: fmtMoney(gross) } }} />
-      <Link to={`/accounts/${accountId}`} className="self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink">Open full view</Link>
+      <Link to={accountFullViewHref(accountId, threadId)} className="self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink">Open full view</Link>
     </section>
   )
 }

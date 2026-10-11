@@ -1,6 +1,10 @@
 import { it, expect } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
+import { routes as appRoutes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
+import { server } from '@/test/server'
 import { accounts } from '@/mocks/data/accounts'
 import { getPositionsForAccount } from '@/mocks/data/positions'
 import { computeDriftForAccount } from '@/mocks/handlers/pms'
@@ -41,4 +45,41 @@ it('an unknown account is not found, with a way home', async () => {
   renderRoutes(routes, '/accounts/acc-nope')
   expect(await screen.findByRole('heading', { level: 1, name: 'Account not found' })).toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'Go to the workspace' })).toHaveAttribute('href', '/')
+})
+
+it('is firm-only: a client viewer opening the URL is told the account is not found', async () => {
+  sessionStorage.setItem('ws-viewer', 'cli-001')
+  renderRoutes(routes, '/accounts/acc-002')
+  expect(await screen.findByRole('heading', { level: 1, name: 'Account not found' })).toBeInTheDocument()
+  expect(screen.queryByRole('table', { name: 'Holdings' })).toBeNull()
+  expect(screen.queryByText(account.name)).toBeNull()
+})
+
+it('switching to a client while on the account goes home', async () => {
+  const { router } = renderRoutes(appRoutes, '/accounts/acc-002?from=th-johnson-review')
+  await screen.findByRole('heading', { level: 1, name: account.name })
+  const user = userEvent.setup()
+  const select = await screen.findByRole('combobox', { name: 'View as' })
+  await screen.findByRole('option', { name: 'Robert Johnson · Client' })
+  await user.selectOptions(select, 'Robert Johnson · Client')
+  await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+  expect(screen.queryByRole('heading', { level: 1, name: 'Account not found' })).toBeNull()
+  expect(await screen.findByRole('heading', { level: 1, name: 'Workspace' })).toBeInTheDocument()
+})
+
+it("an unknown account is not found even when a reading's 404 arrives first", async () => {
+  server.use(
+    http.get('/api/pms/accounts/:id/drift', () => HttpResponse.json({ message: 'No drift for this account' }, { status: 404 })),
+    http.get('/api/custodian/accounts/:id', async () => {
+      await new Promise((resolve) => setTimeout(resolve, 30))
+      return HttpResponse.json({ message: 'Account not found' }, { status: 404 })
+    }),
+  )
+  let alertShown = false
+  const observer = new MutationObserver(() => { if (document.body.textContent?.includes('No drift for this account')) alertShown = true })
+  observer.observe(document.body, { childList: true, subtree: true, characterData: true })
+  renderRoutes(routes, '/accounts/acc-nope')
+  expect(await screen.findByRole('heading', { level: 1, name: 'Account not found' })).toBeInTheDocument()
+  observer.disconnect()
+  expect(alertShown).toBe(false)
 })

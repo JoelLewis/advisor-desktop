@@ -41,3 +41,9 @@ it("lists the preview's legs with each leg's pre-trade status, and the gross tra
 it('a non-account subject is an explicit error', () => {
   expect(() => accountIdOf({ type: 'client', id: 'cli-001' }, 'rebalance preview')).toThrow(/rebalance preview embed needs an account subject/)
 })
+
+it('its full-view link remembers the thread it sits in', async () => {
+  renderRoutes([{ path: '/', element: <RebalanceEmbed subject={{ type: 'account', id: 'acc-002' }} threadId="th-johnson-review" /> }], '/')
+  const embed = await screen.findByRole('region', { name: 'Rebalance preview · Robert Johnson Individual' })
+  expect(within(embed).getByRole('link', { name: 'Open full view' })).toHaveAttribute('href', '/accounts/acc-002?from=th-johnson-review')
+})
