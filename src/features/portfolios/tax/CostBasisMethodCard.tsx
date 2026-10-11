@@ -5,12 +5,9 @@ import { cn } from '@/lib/utils'
 import type { CurrencyCode } from '@/types/currency'
 import type { Account } from '@/types/account'
 
-// C14 · tax-efficiency — Spec ID is not a fifth lot-selection algorithm alongside FIFO/LIFO/HIFO;
-// HIFO and LIFO are standing instructions *under* specific identification, which is how
-// custodians actually offer it. Dropping it here also drops the `case 'SpecID'` branch in
-// TaxManagementPage's `computeImpact` switch.
-export const COST_BASIS_METHODS = ['FIFO', 'LIFO', 'HIFO', 'AvgCost'] as const
-export type CostBasisMethod = (typeof COST_BASIS_METHODS)[number]
+import { COST_BASIS_METHODS, type CostBasisMethod } from '@/lib/cost-basis'
+
+export { COST_BASIS_METHODS, type CostBasisMethod }
 
 export const COST_BASIS_DESCRIPTIONS: Record<CostBasisMethod, string> = {
   FIFO: 'First In, First Out — sells oldest lots first',

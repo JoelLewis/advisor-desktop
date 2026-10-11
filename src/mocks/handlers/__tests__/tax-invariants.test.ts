@@ -460,7 +460,7 @@ describe('the harvest threshold is currency-aware (PRE-FLIGHT correction 1)', ()
 // `TaxManagementPage`'s `useMemo` — nothing in the repo imported it, so it was untestable. The
 // reviewer reverted the whole C13/C14 fix, left `TaxManagementPage.tsx` syntactically broken, and
 // the suite still reported the identical 31-failure baseline: an untested fix is indistinguishable
-// from an unfixed one. `computeCostBasisImpact` is now a standalone export in tax/shared.tsx; these
+// from an unfixed one. `computeCostBasisImpact` is now a standalone export in src/lib/tax-rules.ts; these
 // exercise it against real fixture lots (acc-011, pos-072), hand-verified independently below.
 describe('computeCostBasisImpact (fix-round-1 review, Important #1)', () => {
   it('acc-011 pos-072: FIFO, LIFO and HIFO each draw from a different lot and attribute holding period by the lot actually sold', async () => {

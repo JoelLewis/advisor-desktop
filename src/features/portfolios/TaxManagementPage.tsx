@@ -46,7 +46,7 @@ export function TaxManagementPage() {
   // Fix-round-3 review: harvestOpportunities, the summary card, and the scanner tab all derive
   // their availability from this single value rather than the raw `fxStatus` — a USD-native
   // account's harvest computation never touches the FX rate map (see `harvestFxStatus` in
-  // tax/shared.tsx), so it must read 'ready' even while the global FX query is down. All but
+  // src/lib/tax-rules.ts), so it must read 'ready' even while the global FX query is down. All but
   // four fixture accounts are USD-native; gating them on `fxStatus` directly suppressed a
   // fully-known number across nearly the whole book over an outage irrelevant to them.
   const harvestStatus = harvestFxStatus(baseCurrency, fxStatus)
@@ -113,7 +113,7 @@ export function TaxManagementPage() {
     return { totalUnrealizedGain, totalUnrealizedLoss, shortTermGain, longTermGain, harvestableAmount, estimatedBenefit }
   }, [taxLots, harvestOpportunities])
 
-  // Cost basis method impact simulation — computeCostBasisImpact lives in tax/shared.tsx (not
+  // Cost basis method impact simulation — computeCostBasisImpact lives in src/lib/tax-rules.ts (not
   // inline here) so it is independently importable and testable; see shared.tsx for why.
   const methodImpact = useMemo(() => {
     if (!taxLots || taxLots.length === 0) return null
