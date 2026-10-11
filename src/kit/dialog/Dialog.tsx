@@ -2,9 +2,13 @@ import { useRef, type ReactNode } from 'react'
 import * as RadixDialog from '@radix-ui/react-dialog'
 import { PAGE_TITLE_ID } from '@/kit/page/ids'
 
-type DialogProps = { open: boolean; onOpenChange: (open: boolean) => void; title: string; description?: string; children: ReactNode }
+type DialogProps = {
+  open: boolean; onOpenChange: (open: boolean) => void; title: string; description?: string; children: ReactNode
+  /** False when the caller moves focus itself after closing, e.g. to the page it navigated to. */
+  returnFocus?: boolean
+}
 
-export function Dialog({ open, onOpenChange, title, description, children }: DialogProps) {
+export function Dialog({ open, onOpenChange, title, description, children, returnFocus = true }: DialogProps) {
   // The opener is not a Radix Trigger, so Radix has no ref to return focus to; keep our own.
   const opener = useRef<HTMLElement | null>(null)
   return (
@@ -19,6 +23,7 @@ export function Dialog({ open, onOpenChange, title, description, children }: Dia
           }}
           onCloseAutoFocus={(event) => {
             event.preventDefault()
+            if (!returnFocus) { opener.current = null; return }
             const target = opener.current?.isConnected && opener.current !== document.body
               ? opener.current
               : document.getElementById(PAGE_TITLE_ID)

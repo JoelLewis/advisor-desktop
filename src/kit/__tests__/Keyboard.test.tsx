@@ -10,6 +10,8 @@ import { Page } from '@/kit/page/Page'
 import { Button } from '@/kit/button/Button'
 import { Dialog } from '@/kit/dialog/Dialog'
 import { DataTable } from '@/kit/data-table/DataTable'
+import { Outlet, RouterProvider, createMemoryRouter, useNavigate } from 'react-router-dom'
+import { providerFuture, routerFuture } from '@/app/routes'
 
 function Jumps({ onT, keyName = 't' }: { onT: () => void; keyName?: string }) {
   const bindings = useMemo(() => [{ key: keyName, label: 'Toggle theme', run: onT }], [onT, keyName])
@@ -173,5 +175,46 @@ describe('keyboard', () => {
       await userEvent.keyboard('{ArrowUp}')
       expect(options[0]).toHaveAttribute('aria-selected', 'true')
     })
+  })
+  it('two components sharing a scope name keep their own bindings', async () => {
+    const first = vi.fn()
+    const second = vi.fn()
+    function One() { useJumpKeys('thread', useMemo(() => [{ key: 'a', label: 'First', run: first }], [])); return null }
+    function Two() { useJumpKeys('thread', useMemo(() => [{ key: 'b', label: 'Second', run: second }], [])); return null }
+    function Harness({ showTwo }: { showTwo: boolean }) {
+      return <KeyboardProvider destinations={[]}><One />{showTwo ? <Two /> : null}</KeyboardProvider>
+    }
+    const { rerender } = render(<Harness showTwo />)
+    await userEvent.keyboard('ab')
+    expect(first).toHaveBeenCalledOnce()
+    expect(second).toHaveBeenCalledOnce()
+    rerender(<Harness showTwo={false} />)
+    await userEvent.keyboard('ab')
+    expect(first).toHaveBeenCalledTimes(2)
+    expect(second).toHaveBeenCalledOnce()
+  })
+  it('after running a destination, focus lands on the new page heading, not the opener', async () => {
+    function Layout() {
+      const navigate = useNavigate()
+      const destinations = useMemo(() => [{ id: 'kit', label: 'Component kit', aliases: ['kit'], run: () => navigate('/kit') }], [navigate])
+      return <KeyboardProvider destinations={destinations}><Button>Opener</Button><Outlet /></KeyboardProvider>
+    }
+    const router = createMemoryRouter([{ path: '/', element: <Layout />, children: [
+      { index: true, element: <Page title="Home"><p>home</p></Page> },
+      { path: 'kit', element: <Page title="Kit"><p>kit</p></Page> },
+    ] }], { future: routerFuture })
+    render(<RouterProvider router={router} future={providerFuture} />)
+    const opener = screen.getByRole('button', { name: 'Opener' })
+    act(() => opener.focus())
+    await userEvent.keyboard('/')
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Go to' })).toHaveFocus())
+    await userEvent.keyboard('kit{Enter}')
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'Kit' })).toHaveFocus())
+    expect(opener).not.toHaveFocus()
+    act(() => opener.focus())
+    await userEvent.keyboard('/')
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Go to' })).toHaveFocus())
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(opener).toHaveFocus())
   })
 })

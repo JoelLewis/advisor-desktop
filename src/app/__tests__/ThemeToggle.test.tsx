@@ -2,6 +2,9 @@ import { afterEach, describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ThemeToggle } from '@/app/pages/kit/ThemeToggle'
+import { KeyboardProvider } from '@/kit/keyboard/KeyboardProvider'
+
+const renderToggle = () => render(<KeyboardProvider destinations={[]}><ThemeToggle /></KeyboardProvider>)
 
 afterEach(() => {
   document.documentElement.removeAttribute('data-theme')
@@ -11,7 +14,7 @@ afterEach(() => {
 
 async function cycle() {
   const user = userEvent.setup()
-  render(<ThemeToggle />)
+  renderToggle()
   const seen: (string | undefined)[] = []
   for (const label of ['Theme: system', 'Theme: light', 'Theme: dark']) {
     await user.click(screen.getByRole('button', { name: label }))
@@ -23,7 +26,7 @@ async function cycle() {
 describe('ThemeToggle', () => {
   it('starts from the theme the URL applied', () => {
     window.history.pushState({}, '', '/kit?theme=dark')
-    render(<ThemeToggle />)
+    renderToggle()
     window.history.pushState({}, '', '/')
     expect(screen.getByRole('button', { name: 'Theme: dark' })).toBeTruthy()
   })
@@ -35,5 +38,13 @@ describe('ThemeToggle', () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked') })
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked') })
     expect(await cycle()).toEqual(['light', 'dark', undefined])
+  })
+  it('t cycles the theme from the keyboard and is listed in the key sheet', async () => {
+    const user = userEvent.setup()
+    renderToggle()
+    await user.keyboard('t')
+    expect(screen.getByRole('button', { name: 'Theme: light' })).toBeTruthy()
+    await user.keyboard('?')
+    expect(screen.getByRole('dialog', { name: 'Keyboard' })).toHaveTextContent('Cycle theme')
   })
 })

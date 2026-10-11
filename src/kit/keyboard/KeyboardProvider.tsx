@@ -7,35 +7,40 @@ import { KeySheet } from './KeySheet'
 const OPEN_DIALOG = '[role="dialog"][data-state="open"], [role="dialog"][aria-modal="true"]'
 const RESERVED = ['/', '?']
 
-function warnOnCollisions(scope: string, bindings: Binding[], existing: Map<string, Binding[]>) {
+type Registration = { scope: string; bindings: Binding[] }
+
+function warnOnCollisions(token: string, { scope, bindings }: Registration, existing: Map<string, Registration>) {
   for (const { key } of bindings) {
-    const owner = RESERVED.includes(key) ? 'the reserved keys' : [...existing].find(([s, list]) => s !== scope && list.some((b) => b.key === key))?.[0]
-    if (owner) console.warn(`Jump key "${key}" in scope "${scope}" collides with ${RESERVED.includes(key) ? owner : `scope "${owner}"`}.`)
+    if (RESERVED.includes(key)) { console.warn(`Jump key "${key}" in scope "${scope}" collides with the reserved keys.`); continue }
+    const owner = [...existing].find(([t, r]) => t !== token && r.bindings.some((b) => b.key === key))?.[1]
+    if (owner) console.warn(`Jump key "${key}" in scope "${scope}" collides with scope "${owner.scope}".`)
   }
 }
 
 export function KeyboardProvider({ destinations, children }: { destinations: Destination[]; children: ReactNode }) {
-  const [scopes, setScopes] = useState<Map<string, Binding[]>>(new Map())
-  const scopesRef = useRef<Map<string, Binding[]>>(new Map())
-  const scopeOrder = useRef<Map<string, number>>(new Map())
+  const [registrations, setRegistrations] = useState<Map<string, Registration>>(new Map())
+  const registrationsRef = useRef<Map<string, Registration>>(new Map())
+  const order = useRef<Map<string, number>>(new Map())
+  const nextOrder = useRef(0)
   const [commandOpen, setCommandOpen] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
 
-  const commit = useCallback(() => setScopes(new Map(scopesRef.current)), [])
+  const commit = useCallback(() => setRegistrations(new Map(registrationsRef.current)), [])
 
-  const register = useCallback((scope: string, bindings: Binding[]) => {
-    if (!scopeOrder.current.has(scope)) scopeOrder.current.set(scope, scopeOrder.current.size)
-    if (import.meta.env.DEV) warnOnCollisions(scope, bindings, scopesRef.current)
-    scopesRef.current.set(scope, bindings)
+  const register = useCallback((token: string, scope: string, bindings: Binding[]) => {
+    if (!order.current.has(token)) order.current.set(token, nextOrder.current++)
+    const registration = { scope, bindings }
+    if (import.meta.env.DEV) warnOnCollisions(token, registration, registrationsRef.current)
+    registrationsRef.current.set(token, registration)
     commit()
-    return () => { scopesRef.current.delete(scope); commit() }
+    return () => { registrationsRef.current.delete(token); commit() }
   }, [commit])
 
   const bindings = useMemo(
-    () => [...scopes.entries()]
-      .sort(([a], [b]) => (scopeOrder.current.get(a) ?? 0) - (scopeOrder.current.get(b) ?? 0))
-      .flatMap(([, list]) => list),
-    [scopes],
+    () => [...registrations.entries()]
+      .sort(([a], [b]) => (order.current.get(a) ?? 0) - (order.current.get(b) ?? 0))
+      .flatMap(([, r]) => r.bindings),
+    [registrations],
   )
 
   useEffect(() => {

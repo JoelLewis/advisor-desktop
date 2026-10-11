@@ -2,28 +2,42 @@ import { useId, useState, type KeyboardEvent } from 'react'
 import { Dialog } from '@/kit/dialog/Dialog'
 import { cn } from '@/lib/utils'
 import { matchDestinations, type Destination } from './keys'
+import { useFocusAfter } from './use-focus-after'
 
 type CommandLineProps = { open: boolean; onOpenChange: (open: boolean) => void; destinations: Destination[] }
 
 export function CommandLine({ open, onOpenChange, destinations }: CommandLineProps) {
   const [query, setQuery] = useState('')
   const [index, setIndex] = useState(0)
+  const [returnFocus, setReturnFocus] = useState(true)
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open) setReturnFocus(true)
+  }
+  const focusAfter = useFocusAfter()
   const listId = useId()
   const matches = matchDestinations(query, destinations)
 
   const close = () => { setQuery(''); setIndex(0); onOpenChange(false) }
+  const go = (target: Destination) => {
+    setReturnFocus(false)
+    close()
+    target.run()
+    focusAfter()
+  }
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowDown') { e.preventDefault(); setIndex((i) => Math.max(0, Math.min(matches.length - 1, i + 1))) }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setIndex((i) => Math.max(0, i - 1)) }
     else if (e.key === 'Enter') {
       e.preventDefault()
       const target = matches[index]
-      if (target) { close(); target.run() }
+      if (target) go(target)
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : close())} title="Command line">
+    <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : close())} title="Command line" returnFocus={returnFocus}>
       <input
         role="combobox"
         aria-label="Go to"

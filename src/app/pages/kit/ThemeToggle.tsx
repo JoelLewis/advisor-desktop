@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Button } from '@/kit/button/Button'
+import { useJumpKeys } from '@/kit/keyboard/use-jump-keys'
 import { applyTheme, readThemeChoice, saveThemeChoice, themeFromSearch, type ThemeChoice } from '@/kit/theme'
 
 const NEXT: Record<ThemeChoice, ThemeChoice> = { system: 'light', light: 'dark', dark: 'system' }
@@ -11,5 +12,6 @@ export function ThemeToggle() {
     const c = NEXT[choice]
     applyTheme(c); saveThemeChoice(c); setChoice(c)
   }
+  useJumpKeys('kit', [{ key: 't', label: 'Cycle theme', run: next }])
   return <Button rank="secondary" onClick={next}>{LABEL[choice]}</Button>
 }

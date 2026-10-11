@@ -94,4 +94,10 @@ describe('routes', () => {
     expect(losses.length).toBeGreaterThan(0)
     for (const loss of losses) expect(loss).toHaveClass('font-semibold')
   })
+  it('the key legend shows the gallery\'s own jump key', async () => {
+    await renderKitReady()
+    const legend = screen.getByRole('contentinfo')
+    expect(within(legend).getByText('t')).toBeInTheDocument()
+    expect(within(legend).getByText('Cycle theme')).toBeInTheDocument()
+  })
 })
