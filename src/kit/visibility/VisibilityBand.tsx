@@ -3,7 +3,7 @@ import { VISIBILITY_WORDS, type Visibility } from './visibility'
 
 const RULE: Record<Visibility, string> = {
   private: 'border-t-2 border-dashed border-ink-2',
-  internal: 'hatch h-2',
+  internal: 'hatch h-2 border-y border-ink-2',
   client: 'border-t-4 border-ink',
 }
 
@@ -16,7 +16,7 @@ export function VisibilityBand({ visibility, scale = 'thread', audience }: BandP
       className={cn('flex flex-col', scale === 'thread' ? 'gap-1.5' : 'gap-1')}>
       <div aria-hidden className={RULE[visibility]} />
       <div className={cn('flex items-baseline justify-between gap-3', scale === 'message' && 'justify-start')}>
-        <span className={cn('text-label', visibility === 'client' ? 'font-bold text-ink' : 'text-ink-2')}>{words}</span>
+        <span aria-hidden="true" className={cn('text-label', visibility === 'client' ? 'font-bold text-ink' : 'text-ink-2')}>{words}</span>
         {audience ? <span className="text-label normal-case text-ink-2">{audience}</span> : null}
       </div>
     </div>

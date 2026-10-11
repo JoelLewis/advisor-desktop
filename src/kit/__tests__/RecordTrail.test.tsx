@@ -11,5 +11,6 @@ it('lists ordered steps with state and actor', () => {
   const items = within(screen.getByRole('list', { name: 'Record trail' })).getAllByRole('listitem')
   expect(items).toHaveLength(3)
   expect(within(items[1]!).getByText('PENDING')).toBeInTheDocument()
+  expect(items[1]).toHaveTextContent('Not yet recorded')
   expect(within(items[0]!).getByText('2026-02-25 12:03 UTC')).toBeInTheDocument()
 })
