@@ -1,5 +1,6 @@
 import { useRef, type ReactNode } from 'react'
 import * as RadixDialog from '@radix-ui/react-dialog'
+import { PAGE_TITLE_ID } from '@/kit/page/ids'
 
 type DialogProps = { open: boolean; onOpenChange: (open: boolean) => void; title: string; description?: string; children: ReactNode }
 
@@ -18,7 +19,11 @@ export function Dialog({ open, onOpenChange, title, description, children }: Dia
           }}
           onCloseAutoFocus={(event) => {
             event.preventDefault()
-            opener.current?.focus()
+            const target = opener.current?.isConnected && opener.current !== document.body
+              ? opener.current
+              : document.getElementById(PAGE_TITLE_ID)
+            opener.current = null
+            target?.focus()
           }}
         >
           <RadixDialog.Title className="text-title">{title}</RadixDialog.Title>
