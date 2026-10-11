@@ -7,6 +7,10 @@ import { getPositionsForAccount } from '@/mocks/data/positions'
 import { estimatedTaxBenefit } from '@/lib/tax-rules'
 import { getModels } from '@/services/pms'
 
+// These tests pin NBA narratives to the mock data. The guard that every NBA `actionRoute.path`
+// resolves to a real route was removed in phase 1 with the old route tree; the roadmap's
+// "Follow-ups already identified" (Phase 3) tracks restoring it against the workspace routes.
+
 function positionsFor(accountId: string) {
   const account = accounts.find((a) => a.id === accountId)!
   return getPositionsForAccount(account.id, account.totalValue)

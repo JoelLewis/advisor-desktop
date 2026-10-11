@@ -98,7 +98,8 @@ among the jobs because the prospect boundary is the hardest visibility case. Pur
 ## Follow-ups already identified (owned by the phase named)
 
 - Phase 3: post-trade drift shown on the construct step; DRIP and held-away accounts in wash-sale
-  guidance to the client.
+  guidance to the client; restore the guard that every NBA `actionRoute.path` resolves to a real
+  workspace route (removed in phase 1 with the old route tree).
 - Phase 4: supervision queue; exception dispositions with documented rationale.
 - Phase 1: prune dependencies no longer imported once the old UI is deleted (candidates: `recharts`,
   `react-markdown`, `sonner`, `zustand`, `d3`, unused Radix packages), each removal checked by build.
