@@ -4,6 +4,11 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '@/test/render'
 import { TradeTicketDialog } from '../TradeTicketDialog'
 
+// Each test opens the Radix dialog, types into it and waits on the debounced pre-trade check —
+// ~0.7s apiece on an idle machine, among the heaviest UI flows in the suite and one of the files
+// that crossed the 5s default when other worktrees' suites shared the CPU. 15s keeps a ~10x margin.
+const DIALOG_FLOW = { timeout: 15_000 }
+
 /**
  * Minor fix round 3 · pre-trade-compliance — `priceUnavailable` is the only guard against
  * submitting a trade for which no pre-trade check ever ran (no known price means the debounced
@@ -12,7 +17,7 @@ import { TradeTicketDialog } from '../TradeTicketDialog'
  * check that never happened). Without this test, dropping the guard from the submit button's
  * `disabled` expression would pass the full suite silently.
  */
-describe('TradeTicketDialog — priceUnavailable blocks submission when no pre-trade check has run', () => {
+describe('TradeTicketDialog — priceUnavailable blocks submission when no pre-trade check has run', DIALOG_FLOW, () => {
   it('a symbol with no quote and no prefill price disables submit, rather than allowing an unchecked order', async () => {
     const user = userEvent.setup()
     // VTI has no entry in the quote-search fixture (trading.ts) — confirmed by C28's own fix
@@ -58,7 +63,7 @@ describe('TradeTicketDialog — priceUnavailable blocks submission when no pre-t
  * order sized so the *correct* notional blocks on compliance and every *broken* one passes
  * clean, then assert the block.
  */
-describe('TradeTicketDialog — non-equity notional wiring (fix round 4)', () => {
+describe('TradeTicketDialog — non-equity notional wiring (fix round 4)', DIALOG_FLOW, () => {
   it('a 2,000-bond UST-2Y buy blocks — $1,989,000 of par-adjusted notional, not the $198,900 that quantity x price would send', async () => {
     const user = userEvent.setup()
     renderWithProviders(

@@ -47,7 +47,10 @@ async function selectOnly(user: ReturnType<typeof userEvent.setup>, accountName:
   return screen.findByText('Trade Preview')
 }
 
-describe('ModelTradeView renders the account\'s own data, not a hash of its id', () => {
+// Each test walks the wizard over the full 47-account selection table (and two of them deselect,
+// reselect and preview), ~0.7–0.8s apiece on an idle machine — the heaviest renders in the suite
+// after SingleTradeView. 15s keeps a ~10x margin when other worktrees' suites share the CPU.
+describe('ModelTradeView renders the account\'s own data, not a hash of its id', { timeout: 15_000 }, () => {
   it('step 2 shows each account\'s real drift, not the character-code figure', async () => {
     const user = userEvent.setup()
     await openModel(user, 'Growth')
