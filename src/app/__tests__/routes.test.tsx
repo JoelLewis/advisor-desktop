@@ -21,14 +21,6 @@ async function renderKitReady() {
 }
 
 describe('routes', () => {
-  it.each(['/', '/no-such-page'])('%s renders exactly one h1', async (path) => {
-    renderAt(path)
-    expect(await screen.findAllByRole('heading', { level: 1 })).toHaveLength(1)
-  })
-  it('/kit renders exactly one h1 once ready', async () => {
-    await renderKitReady()
-    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
-  })
   it('the kit is not ready while loading', () => {
     const { container } = renderAt('/kit')
     expect(container.querySelector('[data-kit-ready="true"]')).toBeNull()

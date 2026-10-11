@@ -1,14 +1,22 @@
 import { readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
-export const UI_ROOTS = ['src/kit', 'src/app'] as const
+/** Everything under src is UI and scanned, except these engine and test roots. */
+export const ENGINE_ROOTS: readonly string[] = ['src/mocks', 'src/lib', 'src/services', 'src/types', 'src/hooks', 'src/test', 'src/__tests__']
+
+export function uiRoots(): string[] {
+  return readdirSync(join(process.cwd(), 'src')).map((name) => `src/${name}`).filter((root) => !ENGINE_ROOTS.includes(root))
+}
+
+const isSource = (name: string) => /\.(ts|tsx)$/.test(name)
 
 export function listSourceFiles(root: string): string[] {
   const abs = join(process.cwd(), root)
+  if (!statSync(abs).isDirectory()) return isSource(root) ? [root] : []
   return readdirSync(abs).flatMap((name) => {
     const path = join(abs, name)
     if (statSync(path).isDirectory()) return name === '__tests__' ? [] : listSourceFiles(join(root, name))
-    return /\.(ts|tsx)$/.test(name) ? [join(root, name)] : []
+    return isSource(name) ? [join(root, name)] : []
   })
 }
 
@@ -54,7 +62,7 @@ export function findFormatterBypass(src: string): string[] {
   return [...src.matchAll(FORMATTERS)].map((m) => m[0])
 }
 
-const RAW = /<(?:button|table|dialog)\b/g
+const RAW = /<(?:button|table|dialog|input|select|textarea)\b/g
 
 export function findRawElements(src: string): string[] {
   return [...src.matchAll(RAW)].map((m) => m[0])

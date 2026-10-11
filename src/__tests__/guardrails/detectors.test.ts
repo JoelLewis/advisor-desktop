@@ -42,8 +42,8 @@ describe('formatter detector', () => {
 })
 
 describe('raw element detector', () => {
-  it.each(['<button onClick={x}>', '<table>', '<dialog open>'])('catches %s', (src) => expect(findRawElements(src)).not.toEqual([]))
-  it.each(['<Button rank="primary">', '<DataTable', '<Dialog'])('allows %s', (src) => expect(findRawElements(src)).toEqual([]))
+  it.each(['<button onClick={x}>', '<table>', '<dialog open>', '<input value={q} />', '<select>', '<textarea rows={3}>'])('catches %s', (src) => expect(findRawElements(src)).not.toEqual([]))
+  it.each(['<Button rank="primary">', '<DataTable', '<Dialog', '<Attestation', '<inputs', '<Select'])('allows %s', (src) => expect(findRawElements(src)).toEqual([]))
 })
 
 describe('raw token variable detector', () => {
