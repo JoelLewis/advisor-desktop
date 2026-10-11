@@ -6,6 +6,10 @@ import { MODEL_DEFINITIONS, modelImplementationSecurity } from '@/mocks/handlers
 import { generateRebalanceTrades } from '@/mocks/handlers/oms'
 import { convertCurrency } from '@/lib/currency'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
+import { taxReturnFor, ytdRealisedOnReturn } from '@/mocks/handlers/tax-return'
+import { netCapitalGainsTax } from '@/lib/capital-gains'
+import { taxRateFor } from '@/features/portfolios/tax/shared'
+import { MOCK_TODAY_ISO } from '@/lib/clock'
 import type { Account } from '@/types/account'
 import type { ModelTradePreview } from '@/types/trading'
 
@@ -315,7 +319,13 @@ describe('tax follows the account\'s own treatment and its own trades', () => {
       } else if (preview!.estimatedTaxImpact > 0) {
         taxableWithTax++
       }
-      expect(preview!.estimatedTaxImpact, account.id).toBeGreaterThanOrEqual(0)
+      // The estimate is what the proposal adds to its return, so it is negative only when the
+      // proposal's losses offset gains already realised this year (acc-011 against rs-004), and
+      // it can never save more than that year-to-date tax. (Every account here is USD-taxed or on
+      // a return with no YTD results, so the bound needs no conversion.)
+      const returnId = taxReturnFor(account)
+      const ytd = returnId === null ? { shortTerm: 0, longTerm: 0 } : ytdRealisedOnReturn(returnId, MOCK_TODAY_ISO)
+      expect(preview!.estimatedTaxImpact, account.id).toBeGreaterThanOrEqual(-netCapitalGainsTax(ytd.shortTerm, ytd.longTerm, taxRateFor))
     }
     // Both guards matter: the first says the zero above was asserted against accounts that
     // actually traded, the second that a non-zero figure is reachable at all.

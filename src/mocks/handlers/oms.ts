@@ -12,7 +12,7 @@ import { securityKind, concentrationLimitFor, isMarketTradable } from '@/lib/sec
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { hasWashSaleRisk, isoDaysBefore } from '@/lib/wash-sale'
-import { netTaxForLegs } from '@/lib/capital-gains'
+import { estimateTaxOnReturns } from './tax-return'
 import { generateTaxLots, boundedTradeQty } from './custodian'
 import { taxRateFor } from '@/features/portfolios/tax/shared'
 import type { Position, TaxLot } from '@/types/portfolio'
@@ -758,30 +758,37 @@ export const omsHandlers = [
 
   http.post('/api/oms/rebalance', async ({ request }) => {
     const body = await request.json() as { accountIds: string[]; driftThreshold?: number; taxAware: boolean }
-    const previews: RebalancePreview[] = []
+    const batch = []
     for (const accountId of body.accountIds) {
       const account = accounts.find((a) => a.id === accountId)
       if (!account) return notFound()
       // The Rebalance page's drift-threshold control was sent and ignored; `driftThreshold` was
       // in scope one line away.
-      const trades = generateRebalanceTrades(accountId, body.taxAware, body.driftThreshold)
-      const tax = netTaxForLegs(trades, taxRateFor)
-      previews.push({
+      batch.push({ account, legs: generateRebalanceTrades(accountId, body.taxAware, body.driftThreshold) })
+    }
+    const estimates = estimateTaxOnReturns(batch, MOCK_TODAY_ISO)
+    const previews: RebalancePreview[] = batch.map(({ account, legs: trades }, i) => {
+      const tax = estimates[i]!
+      const accountId = account.id
+      return {
         accountId,
         // §9.3 — same source as every trade on this preview (`currencyForAccount`), so a preview
         // with zero proposed trades still carries a correct currency tag rather than an implicit
         // USD default.
         currency: currencyForAccount(accountId),
         trades,
-        // §1222 — this proposal's legs netted (not year-to-date results, not other accounts); the
-        // gross figure is kept so a surface can show what netting saved.
+        // §1222 — the tax this proposal adds to its owner's return, netted with that return's
+        // year-to-date results and earlier accounts in this batch on the same return; the gross
+        // figure is kept so a surface can show what netting saved.
         estimatedTaxImpact: tax.net,
         grossTaxOnGains: tax.gross,
+        ytdRealisedOnReturn: tax.ytdRealisedOnReturn,
+        nettedWithAccountIds: tax.nettedWithAccountIds,
         // Whether a sale here is a taxable event at all; a surface reads it to tell "not taxed in
         // this account" from "taxed, and the result is zero".
         taxable: isTaxableAccount(account.taxTreatment),
-      })
-    }
+      }
+    })
     return HttpResponse.json(previews)
   }),
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { netCapitalGainsTax, netTaxForLegs } from '@/lib/capital-gains'
+import { netCapitalGainsTax, netTaxForLegs, additionalCapitalGainsTax } from '@/lib/capital-gains'
 
 const rate = (p: 'short' | 'long') => (p === 'short' ? 0.37 : 0.238)
 
@@ -40,5 +40,24 @@ describe('netTaxForLegs', () => {
   })
   it('an empty proposal owes nothing', () => {
     expect(netTaxForLegs([], rate)).toEqual({ net: 0, gross: 0 })
+  })
+})
+
+describe('additionalCapitalGainsTax (a proposal on top of results already realised)', () => {
+  const none = { shortTerm: 0, longTerm: 0 }
+  it('with nothing realised yet, it is the proposal\'s own netted tax', () => {
+    expect(additionalCapitalGainsTax(none, { shortTerm: 1_000, longTerm: 2_000 }, rate)).toBe(netCapitalGainsTax(1_000, 2_000, rate))
+  })
+  it('a year-to-date long-term loss shelters a proposal\'s long-term gain (acc-002: −32,750 against +76,538)', () => {
+    expect(additionalCapitalGainsTax({ shortTerm: 0, longTerm: -32_750 }, { shortTerm: 0, longTerm: 76_538 }, rate))
+      .toBe(Math.round(43_788 * 0.238))
+  })
+  it('a gain can cost more than its own rate when it uses up a loss that was sheltering short-term gains', () => {
+    // Before: ST +10,000 sheltered by LT −10,000 → 0. After adding LT +10,000: ST +10,000 → 3,700.
+    expect(additionalCapitalGainsTax({ shortTerm: 10_000, longTerm: -10_000 }, { shortTerm: 0, longTerm: 10_000 }, rate)).toBe(3_700)
+  })
+  it('a loss against gains already realised this year is a negative change — tax saved', () => {
+    expect(additionalCapitalGainsTax({ shortTerm: 0, longTerm: 50_000 }, { shortTerm: 0, longTerm: -20_000 }, rate))
+      .toBe(Math.round(30_000 * 0.238) - Math.round(50_000 * 0.238))
   })
 })

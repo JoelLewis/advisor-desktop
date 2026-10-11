@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { previewRebalance, type RebalancePreview } from '@/services/oms'
 import { previewModelTrades } from '@/services/trading'
-import { netCapitalGainsTax } from '@/lib/capital-gains'
+import { additionalCapitalGainsTax, netTaxForLegs } from '@/lib/capital-gains'
 import { taxRateFor } from '@/features/portfolios/tax/shared'
 
 // The MSW server is started for every test file by src/test/setup.ts.
@@ -19,10 +19,10 @@ describe('the rebalance preview nets realised gains and losses', () => {
     expect(intc.taxImpact).toBe(0)
   })
 
-  it('estimatedTaxImpact is the netted tax on summed short- and long-term results', () => {
+  it('estimatedTaxImpact is the tax the summed short- and long-term results add to the return\'s YTD results', () => {
     const st = preview!.trades.reduce((s, t) => s + t.realisedShortTerm, 0)
     const lt = preview!.trades.reduce((s, t) => s + t.realisedLongTerm, 0)
-    expect(preview!.estimatedTaxImpact).toBe(netCapitalGainsTax(st, lt, taxRateFor))
+    expect(preview!.estimatedTaxImpact).toBe(additionalCapitalGainsTax(preview!.ytdRealisedOnReturn!, { shortTerm: st, longTerm: lt }, taxRateFor))
   })
 
   it('netting lowers the bill below the gross per-leg tax when a loss is realised', () => {
@@ -32,10 +32,12 @@ describe('the rebalance preview nets realised gains and losses', () => {
 
   it('acc-002 figures: the SMH replacement is held, so SPY carries the gain', () => {
     // All four sells are long-term: INTC -45,850, SPY 758 shares 69,411, ETHE 11,569, IBIT 41,408.
-    // Net LT = 76,538 x 23.8% = 18,216.04 -> 18,216. Gross = SPY 16,520 + ETHE 2,753 + IBIT 9,855
-    // = 29,128 (the INTC loss leg carries no tax of its own).
+    // The proposal alone nets to LT 76,538 x 23.8% = 18,216.04 -> 18,216. On hh-001's joint
+    // return it also meets rs-001's −32,750 YTD LT loss: 43,788 x 23.8% = 10,421.54 -> 10,422.
+    // Gross = SPY 16,520 + ETHE 2,753 + IBIT 9,855 = 29,128 (the INTC loss leg carries no tax).
     expect(preview!.trades.some((t) => t.symbol === 'SMH')).toBe(false)
-    expect(preview!.estimatedTaxImpact).toBe(18_216)
+    expect(netTaxForLegs(preview!.trades, taxRateFor).net).toBe(18_216)
+    expect(preview!.estimatedTaxImpact).toBe(10_422)
     expect(preview!.grossTaxOnGains).toBe(29_128)
   })
 
@@ -50,6 +52,6 @@ describe('the model-trade preview and the rebalance preview state one tax figure
   it('acc-002 onto its own model mod-002: both previews net to the same estimate', async () => {
     const [modelTrade] = await previewModelTrades('mod-002', ['acc-002'])
     expect(modelTrade!.estimatedTaxImpact).toBe(preview!.estimatedTaxImpact)
-    expect(modelTrade!.estimatedTaxImpact).toBe(18_216)
+    expect(modelTrade!.estimatedTaxImpact).toBe(10_422)
   })
 })

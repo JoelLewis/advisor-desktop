@@ -86,8 +86,17 @@ export type RebalancePreview = {
   // native currency. A consumer must convert before summing across previews of different accounts.
   currency: CurrencyCode
   trades: ProposedTrade[]
-  /** Estimated tax after IRC §1222 netting of this proposal's legs only (no YTD results, no other accounts). */
+  /**
+   * The tax this proposal adds to its owner's return: its legs netted under IRC §1222 with the
+   * return's year-to-date realised results and with earlier accounts in this batch on the same
+   * return (`nettedWithAccountIds`). Never another taxpayer's results. Negative when the proposal
+   * realises losses against gains already realised this year.
+   */
   estimatedTaxImpact: number
+  /** Year-to-date realised results on this account's return; `null` when it is on none (an IRA, a Roth). */
+  ytdRealisedOnReturn: { shortTerm: number; longTerm: number } | null
+  /** Accounts earlier in this batch, on the same return, whose proposals this estimate nets against. */
+  nettedWithAccountIds: string[]
   /** Sum of the legs' `taxImpact` — tax on gains before losses are netted. */
   grossTaxOnGains: number
   /** False for an IRA, Roth or other tax-advantaged account, where a sale realises nothing taxable. */

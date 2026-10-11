@@ -26,6 +26,11 @@ type Household = {
   primaryContactId: string;
   segment: ClientSegment;
   createdAt: string;
+  /**
+   * How the primary and spouse file, when the firm has it on record. Absent means not on file,
+   * and nothing assumes a joint return: each member's accounts are netted on their own.
+   */
+  filingStatus?: 'married_filing_jointly' | 'married_filing_separately';
 };
 
 /**

@@ -142,7 +142,10 @@ export type ModelTradePreview = {
    */
   currentDrift: number
   trades: ModelProposedTrade[]
+  /** The tax this proposal adds to its owner's return, netted with that return's YTD realised results. */
   estimatedTaxImpact: number
+  /** Accounts earlier in this batch, on the same return, whose proposals `estimatedTaxImpact` also nets against. */
+  nettedWithAccountIds: string[]
 }
 
 export type ModelProposedTrade = {
