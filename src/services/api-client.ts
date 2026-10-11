@@ -25,20 +25,24 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>
 }
 
-export function get<T>(path: string, params?: Record<string, string>): Promise<T> {
+export function get<T>(
+  path: string,
+  params?: Record<string, string>,
+  headers?: Record<string, string>,
+): Promise<T> {
   const url = new URL(`${BASE_URL}${path}`, window.location.origin)
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       url.searchParams.set(key, value)
     }
   }
-  return fetch(url.toString()).then(handleResponse<T>)
+  return fetch(url.toString(), { headers }).then(handleResponse<T>)
 }
 
-export function post<T>(path: string, body?: unknown): Promise<T> {
+export function post<T>(path: string, body?: unknown, headers?: Record<string, string>): Promise<T> {
   return fetch(`${BASE_URL}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...headers },
     body: body ? JSON.stringify(body) : undefined,
   }).then(handleResponse<T>)
 }

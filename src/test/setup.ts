@@ -37,6 +37,7 @@ afterEach(() => {
   server.resetHandlers()
   resetWorkspaceStore()
   cleanup()
+  sessionStorage.clear()
 })
 
 afterAll(() => server.close())
