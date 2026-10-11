@@ -9,19 +9,22 @@ import { findingStatus, formatFigure } from './figure-format'
 type AgentFinding = Extract<Message, { kind: 'agent_finding' }>
 
 export function AgentFindingView({ finding, agent }: { finding: AgentFinding; agent: AgentProfile }) {
+  const status = findingStatus(finding)
   return (
     <article aria-label={`${agent.name}: ${finding.claim}`} className="flex min-w-0 flex-col gap-3 border-l-2 border-ink pl-4">
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
-        <span className="text-body font-semibold">{agent.name}</span>
-        <span className="text-label uppercase text-ink-3">Agent</span>
-        <span className="flex flex-wrap gap-1.5">
+      <div className="flex flex-col gap-1.5">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <span className="text-body font-semibold">{agent.name}</span>
+          <span className="text-label uppercase text-ink-3">Agent</span>
+          <span className="tabular ml-auto text-label text-ink-3">{fmtTimestamp(finding.at)}</span>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
           <Tag>{`may ${agent.scope.may.join(' · ')}`}</Tag>
           <Tag>{`may not ${agent.scope.mayNot.join(' · ')}`}</Tag>
-        </span>
-        <span className="tabular ml-auto text-label text-ink-3">{fmtTimestamp(finding.at)}</span>
+        </div>
       </div>
       <p className="flex items-baseline gap-3 text-copy">
-        <StatusCode status={findingStatus(finding)} />
+        {status === 'none' ? null : <StatusCode status={status} />}
         <span>{finding.claim}</span>
       </p>
       {finding.figures.length > 0 ? (

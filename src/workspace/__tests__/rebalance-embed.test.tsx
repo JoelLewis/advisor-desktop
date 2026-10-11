@@ -8,7 +8,7 @@ import { accountIdOf } from '@/workspace/thread/embeds/embed-props'
 
 const STATUS = { block: 'BLOCK', warning: 'WARN', pass: 'CLEAR' } as const
 
-it("lists the preview's legs with each leg's pre-trade status, totals tying to the preview", async () => {
+it("lists the preview's legs with each leg's pre-trade status, and the gross traded total", async () => {
   const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
   if (!preview) throw new Error('no preview for acc-002')
   const check = await preTradeCheckProposal({
@@ -32,7 +32,7 @@ it("lists the preview's legs with each leg's pre-trade status, totals tying to t
   const allRows = within(table).getAllByRole('row')
   const totals = allRows[allRows.length - 1] as HTMLElement
   expect(totals).toHaveTextContent('Gross traded')
-  expect(totals).toHaveTextContent('ties to the preview')
+  expect(totals).not.toHaveTextContent('ties to')
   expect(totals).toHaveTextContent(fmtMoney(gross))
   expect(within(table).getByRole('columnheader', { name: `Value ${preview.currency}` })).toBeInTheDocument()
   expect(within(embed).getByRole('link', { name: 'Open full view' })).toHaveAttribute('href', '/accounts/acc-002')

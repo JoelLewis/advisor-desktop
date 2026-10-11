@@ -35,8 +35,11 @@ describe('findingStatus', () => {
   it('a warning is WARN', () => {
     expect(findingStatus(finding('Warning: A security may trigger a wash sale.', 'info'))).toBe('WARN')
   })
-  it('otherwise attention is OUT and info is IN', () => {
+  it('otherwise a finding that needs attention is OUT', () => {
     expect(findingStatus(finding('US Equity is outside its tolerance band.', 'attention'))).toBe('OUT')
-    expect(findingStatus(finding('Every asset class is inside its tolerance band.', 'info'))).toBe('IN')
+  })
+  it('an informational finding carries no status code', () => {
+    expect(findingStatus(finding('Some holdings sit outside the model.', 'info'))).toBe('none')
+    expect(findingStatus(finding('Every asset class is inside its tolerance band.', 'info'))).toBe('none')
   })
 })

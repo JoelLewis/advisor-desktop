@@ -22,9 +22,12 @@ export function formatFigure(fig: Figure): FormattedFigure {
   return { value: format(fig.value), unit }
 }
 
-/** The status code an agent finding carries: a pre-trade verdict when the claim states one, else its attention. */
-export function findingStatus({ claim, attention }: { claim: string; attention: Attention }): Status {
+/** A finding's status code, or 'none' for an informational finding that carries no code. */
+export type FindingStatus = Extract<Status, 'BLOCK' | 'WARN' | 'OUT'> | 'none'
+
+/** A pre-trade verdict when the claim states one; otherwise OUT for a finding that needs attention, and no code for information. */
+export function findingStatus({ claim, attention }: { claim: string; attention: Attention }): FindingStatus {
   if (claim.startsWith('Blocked')) return 'BLOCK'
   if (claim.startsWith('Warning')) return 'WARN'
-  return attention === 'attention' ? 'OUT' : 'IN'
+  return attention === 'attention' ? 'OUT' : 'none'
 }

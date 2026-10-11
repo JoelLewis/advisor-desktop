@@ -100,6 +100,8 @@ describe('thread view', () => {
     expect(within(tolerance).getByText(fmtTolerance(drift.driftTolerance))).toBeInTheDocument()
     expect(f.getByText('Relies on')).toBeInTheDocument()
     expect(f.getByText('Drift calculation · Robert Johnson Individual')).toBeInTheDocument()
+     const offModel = within(conversation()).getByRole('article', { name: 'Drift Monitor: Some holdings sit outside the model.' })
+    expect(offModel.querySelector('[data-status]')).toBeNull()
   })
 
   it('posting in the internal thread appends the message', async () => {
