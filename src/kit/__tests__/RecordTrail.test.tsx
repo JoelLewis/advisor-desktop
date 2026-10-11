@@ -4,7 +4,7 @@ import { RecordTrail } from '@/kit/record-trail/RecordTrail'
 
 it('lists ordered steps with state and actor', () => {
   render(<RecordTrail steps={[
-    { label: 'Plan signed', actor: 'Joel Lewis', state: 'DONE', at: '2026-02-25T12:03:00Z' },
+    { label: 'Plan signed', actor: 'Adrian Hale', state: 'DONE', at: '2026-02-25T12:03:00Z' },
     { label: 'Exception review of SPY, EFA', actor: 'Mark Davis', state: 'PENDING' },
     { label: 'Release to the custodian', actor: 'Trading', state: 'NOT STARTED' },
   ]} />)

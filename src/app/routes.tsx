@@ -5,6 +5,7 @@ import { RouteError } from './RouteError'
 import { HomePage } from './pages/HomePage'
 import { KitPage } from './pages/KitPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { routerFuture } from './router-flags'
 
 export const routes: RouteObject[] = [
   {
@@ -18,15 +19,5 @@ export const routes: RouteObject[] = [
     ],
   },
 ]
-
-export const routerFuture = {
-  v7_relativeSplatPath: true,
-  v7_fetcherPersist: true,
-  v7_normalizeFormMethod: true,
-  v7_partialHydration: true,
-  v7_skipActionErrorRevalidation: true,
-} as const
-
-export const providerFuture = { v7_startTransition: true } as const
 
 export const router = createBrowserRouter(routes, { future: routerFuture })

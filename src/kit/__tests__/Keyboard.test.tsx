@@ -11,7 +11,7 @@ import { Button } from '@/kit/button/Button'
 import { Dialog } from '@/kit/dialog/Dialog'
 import { DataTable } from '@/kit/data-table/DataTable'
 import { Outlet, RouterProvider, createMemoryRouter, useNavigate } from 'react-router-dom'
-import { providerFuture, routerFuture } from '@/app/routes'
+import { providerFuture, routerFuture } from '@/app/router-flags'
 
 function Jumps({ onT, keyName = 't' }: { onT: () => void; keyName?: string }) {
   const bindings = useMemo(() => [{ key: keyName, label: 'Toggle theme', run: onT }], [onT, keyName])

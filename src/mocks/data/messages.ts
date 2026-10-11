@@ -1,18 +1,18 @@
 import type { Participant, Thread, Message } from '@/types/messaging'
 
-const joel: Participant = { id: 'user-001', name: 'Joel Lewis', role: 'advisor' }
+const adrian: Participant = { id: 'user-001', name: 'Adrian Hale', role: 'advisor' }
 const sarah: Participant = { id: 'user-002', name: 'Sarah Mitchell', role: 'csa' }
 const mike: Participant = { id: 'user-003', name: 'Mike Chen', role: 'analyst' }
 const lisa: Participant = { id: 'user-004', name: 'Lisa Park', role: 'compliance' }
 const ada: Participant = { id: 'user-005', name: 'Ada', role: 'ai_agent' }
 
-export const teamMembers: Participant[] = [joel, sarah, mike, lisa, ada]
+export const teamMembers: Participant[] = [adrian, sarah, mike, lisa, ada]
 
 export const threads: Thread[] = [
   {
     id: 'thread-001',
     subject: 'Johnson Rebalance Review',
-    participants: [joel, sarah, mike],
+    participants: [adrian, sarah, mike],
     lastMessage: 'I ran the drift analysis — large-cap growth is 3.2% over target. Recommend trimming AAPL and MSFT to fund the fixed income sleeve.',
     lastMessageAt: '2026-02-25T10:45:00Z',
     unreadCount: 2,
@@ -21,7 +21,7 @@ export const threads: Thread[] = [
   {
     id: 'thread-002',
     subject: 'Chen Trust Tax Strategy',
-    participants: [joel, mike, ada],
+    participants: [adrian, mike, ada],
     lastMessage: 'Ada identified three additional TLH candidates in the Chen trust. Net estimated savings: $14,200. Details attached.',
     lastMessageAt: '2026-02-24T16:30:00Z',
     unreadCount: 1,
@@ -30,7 +30,7 @@ export const threads: Thread[] = [
   {
     id: 'thread-003',
     subject: 'Q1 Performance Review',
-    participants: [joel, sarah, mike, ada],
+    participants: [adrian, sarah, mike, ada],
     lastMessage: 'Draft review decks are ready for the top 10 households. I flagged two accounts where TWR lags benchmark by more than 200bps.',
     lastMessageAt: '2026-02-24T14:00:00Z',
     unreadCount: 0,
@@ -38,7 +38,7 @@ export const threads: Thread[] = [
   {
     id: 'thread-004',
     subject: 'New Client Onboarding - Williams',
-    participants: [joel, sarah, lisa],
+    participants: [adrian, sarah, lisa],
     lastMessage: 'Suitability questionnaire received and approved. We can proceed with account opening once the IPS is signed.',
     lastMessageAt: '2026-02-23T11:15:00Z',
     unreadCount: 0,
@@ -47,7 +47,7 @@ export const threads: Thread[] = [
   {
     id: 'thread-005',
     subject: 'Compliance Alert: Anderson Account',
-    participants: [joel, lisa, ada],
+    participants: [adrian, lisa, ada],
     lastMessage: 'Source-of-funds documentation cleared. No further action required on the $250K wire.',
     lastMessageAt: '2026-02-24T17:00:00Z',
     unreadCount: 3,
@@ -163,7 +163,7 @@ export const threadMessages: Record<string, Message[]> = {
       id: 'msg-010',
       threadId: 'thread-003',
       senderId: 'user-002',
-      content: 'Thanks Ada. I\'ll review and schedule the client meetings. Joel, any households you want to handle personally?',
+      content: 'Thanks Ada. I\'ll review and schedule the client meetings. Adrian, any households you want to handle personally?',
       timestamp: '2026-02-24T12:00:00Z',
       read: true,
     },
