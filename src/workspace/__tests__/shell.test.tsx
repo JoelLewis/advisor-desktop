@@ -106,7 +106,7 @@ describe('workspace shell', () => {
   })
 
   it('marks the current thread and renders a route-provided context column outside main', async () => {
-    const handle: ShellHandle = { contextColumn: { label: 'Who can see', Content: () => <p>Adrian Hale · Advisor</p> } }
+    const handle: ShellHandle = { contextColumn: { label: 'Who can see', Content: () => <p>Adrian Hale · Advisor</p>, useAvailable: () => true } }
     const table: RouteObject[] = [{
       path: '/',
       element: <RootLayout />,

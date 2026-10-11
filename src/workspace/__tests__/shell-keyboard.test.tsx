@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { http } from 'msw'
+import { http, HttpResponse } from 'msw'
 import { server } from '@/test/server'
 import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
@@ -47,7 +47,7 @@ describe('keyboard in the shell', () => {
     ])
   })
 
-  it('after a switch to Robert, offers only his thread plus home and the kit', async () => {
+  it('after a switch to Robert, offers only his thread plus home: no kit for a client', async () => {
     await renderAt('/')
     const user = userEvent.setup()
     const select = await screen.findByRole('combobox', { name: 'View as' })
@@ -56,7 +56,7 @@ describe('keyboard in the shell', () => {
     await waitFor(() => expect(within(threadNav()).queryByRole('link', { name: 'Brief' })).toBeNull())
     act(() => (document.activeElement as HTMLElement).blur())
     await openCommandLine()
-    expect(destinationNames()).toEqual(['Workspace home', 'Thread · Robert Johnson', 'Component kit'])
+    expect(destinationNames()).toEqual(['Workspace home', 'Thread · Robert Johnson'])
   })
 
   it('[ focuses the thread list, \\ the main region, ] the context column when there is one', async () => {
@@ -68,6 +68,22 @@ describe('keyboard in the shell', () => {
     expect(screen.getByRole('main')).toHaveFocus()
     await userEvent.keyboard(']')
     expect(document.getElementById('context-column')).toHaveFocus()
+  })
+
+  const failThreadLoad = (): void => { server.use(http.get('/api/workspace/threads/:id', () => HttpResponse.json({ message: 'Engine offline' }, { status: 503 }))) }
+  const noChange = (): void => undefined
+  it.each([
+    ['not found', '/t/th-nope', noChange, 'Thread not found'],
+    ['failed', '/t/th-brief', failThreadLoad, undefined],
+  ] as const)('a thread that is %s has no context column and no ] key', async (_, path, arrange, heading) => {
+    arrange()
+    await renderAt(path)
+    if (heading) await screen.findByRole('heading', { level: 1, name: heading })
+    else await within(screen.getByRole('main')).findByRole('alert')
+    await waitFor(() => expect(screen.queryByRole('complementary')).toBeNull())
+    expect(document.getElementById('context-column')).toBeNull()
+    const legend = within(screen.getByRole('banner')).getByRole('list', { name: 'Keys' })
+    expect(legend).not.toHaveTextContent('Context column')
   })
 
   it('the top bar legend shows the shell jump keys; ] only where there is a context column', async () => {

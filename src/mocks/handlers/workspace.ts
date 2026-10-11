@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw'
-import type { AgentId, Directory, Draft, Message, ThreadDetail } from '@/types/workspace'
+import type { AgentId, BindingAct, Directory, Draft, Message, ThreadDetail } from '@/types/workspace'
 import { AGENTS, PEOPLE, can, permissionsOf, personById } from '../data/people'
 import { nextAt, nextId, store } from '../data/workspace-store'
 import { sendToClient } from '../workspace/acts'
@@ -14,6 +14,8 @@ function clientDirectory(clientId: string): Directory {
   for (const thread of visibleThreads(clientId)) thread.memberIds.forEach((id) => ids.add(id))
   return { people: PEOPLE.filter((p) => ids.has(p.id)), agents: [], permissions: { [clientId]: permissionsOf(clientId) } }
 }
+
+const withoutSubject = ({ subject: _subject, ...act }: BindingAct): BindingAct => act
 
 const badRequest = (message: string) => HttpResponse.json({ code: 'BAD_REQUEST', message }, { status: 400 })
 
@@ -97,7 +99,9 @@ export const workspaceHandlers = [
     const threadId = new URL(request.url).searchParams.get('threadId')
     const thread = store().threads.find((t) => t.id === threadId)
     if (!thread || !canSeeThread(viewer, thread)) return notFound()
-    return HttpResponse.json(store().acts.filter((a) => a.threadId === thread.id))
+    const acts = store().acts.filter((a) => a.threadId === thread.id)
+    // A client sees the record of what reached them, not what it was made from (the firm's draft).
+    return HttpResponse.json(personById(viewer)?.role === 'client' ? acts.map(withoutSubject) : acts)
   }),
 
   http.post('/api/workspace/acts', async ({ request }) => {

@@ -48,4 +48,18 @@ describe('directory scoping', () => {
     expect(body.agents).toHaveLength(2)
     expect(Object.keys(body.permissions).length).toBe(body.people.length)
   })
+  it('a client is served the acts in their thread without the subject they were made from', async () => {
+    const draft = await (await fetch('/api/workspace/threads/th-robert/drafts', {
+      method: 'POST', headers: { 'X-Viewer': 'user-001', 'Content-Type': 'application/json' }, body: JSON.stringify({ body: 'Your statement is ready.' }),
+    })).json()
+    await fetch('/api/workspace/acts', {
+      method: 'POST', headers: { 'X-Viewer': 'user-001', 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'send_to_client', draftId: draft.id }),
+    })
+    const firm = await call('/acts?threadId=th-robert', 'user-001')
+    expect(firm.body[0].subject).toEqual({ type: 'draft', id: draft.id })
+    const client = await call('/acts?threadId=th-robert', 'cli-001')
+    expect(client.body).toHaveLength(1)
+    expect(client.body[0]).not.toHaveProperty('subject')
+    expect(client.body[0]).toMatchObject({ id: 'REC-0001', kind: 'send_to_client', actorId: 'user-001' })
+  })
 })

@@ -5,6 +5,7 @@ import { WorkspaceHome } from '@/workspace/shell/WorkspaceHome'
 import { AccountView } from '@/workspace/full-views/AccountView'
 import { ThreadPage } from '@/workspace/thread/ThreadPage'
 import { ContextColumn } from '@/workspace/context/ContextColumn'
+import { useThreadContextAvailable } from '@/workspace/context/use-thread-context-available'
 import type { ShellHandle } from '@/workspace/shell/context-column'
 import { RootLayout } from './RootLayout'
 import { RouteError } from './RouteError'
@@ -12,7 +13,7 @@ import { KitPage } from './pages/KitPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { routerFuture } from './router-flags'
 
-const threadHandle: ShellHandle = { contextColumn: { label: 'Thread context', Content: ContextColumn } }
+const threadHandle: ShellHandle = { contextColumn: { label: 'Thread context', Content: ContextColumn, useAvailable: useThreadContextAvailable } }
 
 export const routes: RouteObject[] = [
   {

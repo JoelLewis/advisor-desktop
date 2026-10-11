@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, Outlet, useMatches } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { SidePanel } from '@/kit/layout/Grid'
@@ -6,6 +7,7 @@ import { useJumpKeys } from '@/kit/keyboard/use-jump-keys'
 import type { Binding } from '@/kit/keyboard/keys'
 import { MAIN_ID } from '@/kit/page/ids'
 import { contextColumnOf } from './context-column'
+import { ContextAvailability } from './ContextAvailability'
 import { CONTEXT_COLUMN_ID, THREAD_LIST_ID } from './shell-ids'
 import { ThemeToggle } from './ThemeToggle'
 import { ThreadList } from './ThreadList'
@@ -15,7 +17,9 @@ import { useFocusOnRouteChange } from './use-focus-on-route-change'
 const focusRegion = (id: string) => () => document.getElementById(id)?.focus()
 
 export function WorkspaceShell() {
-  const context = contextColumnOf(useMatches())
+  const provided = contextColumnOf(useMatches())
+  const [available, setAvailable] = useState(true)
+  const context = provided && available ? provided.column : undefined
   useJumpKeys('shell', [
     { key: '[', label: 'Thread list', run: focusRegion(THREAD_LIST_ID) },
     { key: '\\', label: 'Main', run: focusRegion(MAIN_ID) },
@@ -24,6 +28,7 @@ export function WorkspaceShell() {
   useFocusOnRouteChange()
   return (
     <div className="flex-1 bg-bg text-ink">
+      {provided ? <ContextAvailability key={provided.routeId} useAvailable={provided.column.useAvailable} onChange={setAvailable} /> : null}
       <a href={`#${MAIN_ID}`} className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:bg-face focus:px-3 focus:py-2">
         Skip to content
       </a>
