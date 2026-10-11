@@ -1,6 +1,6 @@
 import type { BindingAct, Draft, Message, Thread } from '@/types/workspace'
 import { eventTime } from '@/lib/clock'
-import { SEED_MESSAGES, SEED_THREADS } from './workspace-seed'
+import { SEED_LAST_SEQUENCE, SEED_MESSAGES, SEED_THREADS } from './workspace-seed'
 
 export type WorkspaceState = { threads: Thread[]; messages: Message[]; acts: BindingAct[]; drafts: Draft[]; sequence: number; counters: Record<'msg' | 'draft' | 'act', number> }
 
@@ -10,7 +10,7 @@ function seed(): WorkspaceState {
     messages: SEED_MESSAGES.map((m) => ({ ...m })),
     acts: [],
     drafts: [],
-    sequence: 0,
+    sequence: SEED_LAST_SEQUENCE,
     counters: { msg: 0, draft: 0, act: 0 },
   }
 }
@@ -33,10 +33,6 @@ export function nextAt(): string {
 export function nextId(prefix: 'msg' | 'draft'): string {
   state.counters[prefix] += 1
   return `${prefix}-${String(state.counters[prefix]).padStart(4, '0')}`
-}
-
-export function nextActId(): string {
-  return `REC-${String(state.counters.act + 1).padStart(4, '0')}`
 }
 
 export function commitActId(): string {
