@@ -16,7 +16,7 @@ import { openWashSaleWindows } from '../data/realised-sales'
 import { FX_RATES_USD_BASE } from '../data/currencies'
 import { convertToBase } from '@/lib/currency'
 import { formatDate } from '@/lib/utils'
-import { estimatedTaxBenefit, isHarvestable } from '@/features/portfolios/tax/shared'
+import { estimatedTaxBenefit, isHarvestable, harvestsNow } from '@/features/portfolios/tax/shared'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { getPositionsForAccount } from '../data/positions'
 import { securityKind, concentrationLimitFor } from '@/lib/security-master'
@@ -49,7 +49,7 @@ export function harvestWashSaleNote(lots: readonly Pick<TaxLot, 'repurchaseBlock
   return 'Wash sale window clear for all candidates.'
 }
 
-function harvestableLotsAcrossBook(): (TaxLot & { accountId: string })[] {
+function harvestCandidatesAcrossBook(): (TaxLot & { accountId: string })[] {
   return accounts
     .filter((account) => isTaxableAccount(account.taxTreatment))
     .flatMap((account) => {
@@ -62,6 +62,11 @@ function harvestableLotsAcrossBook(): (TaxLot & { accountId: string })[] {
           gainLoss: convertToBase(lot.gainLoss, currency, FX_RATES_USD_BASE),
         }))
     })
+}
+
+/** The candidates whose loss is realised this year if sold now — what every harvest total counts. */
+function harvestableLotsAcrossBook(): (TaxLot & { accountId: string })[] {
+  return harvestCandidatesAcrossBook().filter(harvestsNow)
 }
 
 function makeBriefing(
@@ -592,7 +597,10 @@ export const aiHandlers = [
           // `TaxLot.repurchaseBlockedUntil` and `saleWashSaleRisk` through `harvestWashSaleNote` —
           // both set by `generateTaxLotsWithSaleRisk` (custodian.ts) — rather than asserting the window is clear
           // unconditionally. No harvestable losses means no insight, not a $0 one.
-          const accountHarvestable = harvestableLotsAcrossBook().filter((l) => l.accountId === entityId)
+          // Figures count only lots that harvest now; the §1091 sentence reads every candidate, so
+          // a washing one is still named.
+          const accountCandidates = harvestCandidatesAcrossBook().filter((l) => l.accountId === entityId)
+          const accountHarvestable = accountCandidates.filter(harvestsNow)
           if (accountHarvestable.length > 0) {
             const positionCount = new Set(accountHarvestable.map((l) => l.positionId)).size
             const loss = accountHarvestable.reduce((s, l) => s + Math.abs(l.gainLoss), 0)
@@ -600,7 +608,7 @@ export const aiHandlers = [
               id: `acc-${entityId}-2`,
               severity: 'opportunity',
               title: 'Tax-Loss Harvesting Opportunity',
-              body: `${positionCount} position${positionCount === 1 ? '' : 's'} with harvestable losses could offset recent gains. ${harvestWashSaleNote(accountHarvestable)}`,
+              body: `${positionCount} position${positionCount === 1 ? '' : 's'} with harvestable losses could offset recent gains. ${harvestWashSaleNote(accountCandidates)}`,
               metric: {
                 label: 'Harvestable losses',
                 value: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(loss),

@@ -71,6 +71,16 @@ export function isHarvestable(gainLoss: number, currency: CurrencyCode, rates: F
 }
 
 /**
+ * Whether a harvest candidate's loss is realised this year if sold now. A sale that washes defers
+ * its loss into the replacement's basis (§1091(d)), so every harvest total — the tax page's card,
+ * the dashboard insight, the chat answer, the account insight — leaves it out. The scanner still
+ * lists it, with its benefit shown as deferred.
+ */
+export function harvestsNow(lot: Pick<TaxLot, 'saleWashSaleRisk'>): boolean {
+  return !lot.saleWashSaleRisk
+}
+
+/**
  * Fix-round-3 review · `isHarvestable` converts through `convertToBase`, which always targets
  * USD (`HARVEST_LOSS_THRESHOLD_USD` is a fixed-USD figure, independent of the user's reporting
  * currency). `convertCurrency` (`lib/currency.ts`) short-circuits `if (from === to) return
