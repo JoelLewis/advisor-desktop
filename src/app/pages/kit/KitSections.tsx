@@ -31,9 +31,8 @@ export function KitSections({ data }: { data: KitData }) {
   const [attested, setAttested] = useState(false)
   const worst = [...drift.assetClassDrifts].sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift))[0]
   const symbolOf = new Map(positions.map((p) => [p.id, p.symbol]))
-  const sells = preview.trades.filter((t) => t.side === 'sell')
-  const gains = sells.reduce((s, t) => s + Math.max(0, t.realisedShortTerm) + Math.max(0, t.realisedLongTerm), 0)
-  const losses = sells.reduce((s, t) => s + Math.min(0, t.realisedShortTerm) + Math.min(0, t.realisedLongTerm), 0)
+  const gains = preview.trades.reduce((s, t) => s + Math.max(0, t.realisedShortTerm) + Math.max(0, t.realisedLongTerm), 0)
+  const losses = preview.trades.reduce((s, t) => s + Math.min(0, t.realisedShortTerm) + Math.min(0, t.realisedLongTerm), 0)
   const netShortTerm = preview.trades.reduce((s, t) => s + t.realisedShortTerm, 0)
   const netLongTerm = preview.trades.reduce((s, t) => s + t.realisedLongTerm, 0)
   const restriction = windows[0]
@@ -42,7 +41,7 @@ export function KitSections({ data }: { data: KitData }) {
   return (
     <Grid>
       <MainColumn>
-        <Pane title="Readings" meta={account.accountNumber}>
+        <Pane title="Readings" meta={account.name}>
           <div className="flex flex-wrap gap-10">
             {worst ? <Reading label={`Max drift · ${worst.assetClass}`} value={fmtDrift(worst.drift)} unit="pp" size="readout-md"
               limit={`tol ${fmtTolerance(drift.driftTolerance)} pp`} status={Math.abs(worst.drift) > drift.driftTolerance ? 'OUT' : 'IN'} /> : null}
@@ -122,7 +121,7 @@ export function KitSections({ data }: { data: KitData }) {
           grossTax={preview.grossTaxOnGains} netTax={preview.estimatedTaxImpact}
           scope="Nets this proposal's legs only." rateBasis={RATE_DISCLOSURE} />
         <p className="text-body">Estimated tax of about <FigureRef source="rebalance.estimatedTaxImpact" note={1}>{clientMoney(preview.estimatedTaxImpact)}</FigureRef>.</p>
-        <SourceChips sources={[{ label: 'Rebalance preview', detail: `${preview.trades.length} legs`, asOf: stamp }, { label: 'Drift calculation', detail: `${drift.assetClassDrifts.length} asset classes`, asOf: stamp }]} />
+        <SourceChips sources={[{ label: 'Rebalance preview', detail: account.name, asOf: stamp }, { label: 'Drift calculation', detail: `${drift.assetClassDrifts.length} asset classes`, asOf: stamp }]} />
       </SidePanel>
     </Grid>
   )
