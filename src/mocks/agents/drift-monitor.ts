@@ -4,6 +4,10 @@ import { getPositionsForAccount } from '@/mocks/data/positions'
 import { computeDriftForAccount } from '@/mocks/handlers/pms'
 import { ASSET_CLASS_LABELS } from '@/lib/labels'
 import { isMarketTradable } from '@/lib/security-master'
+import { todayISO } from '@/lib/clock'
+import { openWashSaleWindows } from '@/mocks/data/realised-sales'
+import type { Position } from '@/types/portfolio'
+import { claimNameOf } from './claim-name'
 
 const label = (key: string): string => {
   const name = ASSET_CLASS_LABELS[key]
@@ -54,5 +58,28 @@ export function runDriftMonitor({ asOf, subject }: AgentContext): AgentFinding[]
       })
     }
   }
+  findings.push(...replacementHolds(account.id, positions, asOf))
   return findings
+}
+
+/** Replacements bought for a loss sale whose wash-sale window is still open: a rebalance should not trim them away. */
+function replacementHolds(accountId: string, positions: readonly Position[], asOf: string): AgentFinding[] {
+  return openWashSaleWindows(todayISO())
+    .filter((w) => w.accountId === accountId && w.replacementSymbol !== undefined)
+    .flatMap((w) => {
+      const replacement = positions.find((p) => p.symbol === w.replacementSymbol && p.quantity > 0)
+      if (!replacement) return []
+      const held = claimNameOf(replacement.symbol, replacement.name)
+      const sold = claimNameOf(w.symbol, w.name)
+      return [{
+        claim: `${held} replaces ${sold}, sold at a loss, and keeps that market exposure while the wash-sale window is open. `
+          + `A ${label(replacement.assetClass)} trim should leave it in place, and ${sold} should not be bought back before the window closes, or the harvested loss would be disallowed.`,
+        attention: 'info' as const,
+        citations: [{ source: `Wash-sale window · ${w.id} · ${w.symbol} loss sale of ${w.saleDate}, open to ${w.end}`, asOf }],
+        figures: [
+          { label: `${replacement.symbol} weight`, value: replacement.weight, unit: '%' as const, source: 'positions.weight' },
+          { label: `Days until the ${w.symbol} window closes`, value: w.daysRemaining, unit: 'd' as const, source: 'openWashSaleWindows.daysRemaining' },
+        ],
+      }]
+    })
 }

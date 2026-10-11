@@ -5,15 +5,12 @@ import { accounts } from '@/mocks/data/accounts'
 import { getPositionsForAccount } from '@/mocks/data/positions'
 import { generateRebalanceTrades } from '@/mocks/handlers/oms'
 import { evaluateProposal } from '@/mocks/handlers/compliance'
+import { claimNameOf } from './claim-name'
 
 type Names = ReadonlyMap<string, string>
 
-// Claim text carries no digits and tickers can (0700.HK), so claims name the security; figure labels carry the ticker.
-function securityName(names: Names, symbol: string): string {
-  if (symbol === 'CASH') return 'Cash'
-  const name = names.get(symbol)
-  return name !== undefined && !/\d/.test(name) ? name : 'A security'
-}
+// Claims name the security (claimNameOf keeps digits out); figure labels carry the ticker.
+const securityName = (names: Names, symbol: string): string => claimNameOf(symbol, names.get(symbol))
 
 // The sector is the parenthesised part of the engine's constraint name: "Sector concentration (Technology)".
 const sectorOf = (v: ProposalViolation): string => /\(([^)]+)\)/.exec(v.constraint)?.[1] ?? 'A sector'
