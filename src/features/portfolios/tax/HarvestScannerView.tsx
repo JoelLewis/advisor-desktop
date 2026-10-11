@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/Badge'
 import { CurrencyValue } from '@/components/ui/CurrencyValue'
 import type { TaxLot } from '@/types/portfolio'
 import type { CurrencyCode } from '@/types/currency'
-import { HOLDING_LABELS, Th, estimatedTaxBenefit, RATE_DISCLOSURE, type FxStatus } from './shared'
+import { HOLDING_LABELS, Th, estimatedTaxBenefit, RATE_DISCLOSURE, type FxStatus } from '@/lib/tax-rules'
 
 type HarvestScannerViewProps = {
   harvestOpportunities: TaxLot[]

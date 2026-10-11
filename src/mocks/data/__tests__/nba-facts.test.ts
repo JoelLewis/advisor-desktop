@@ -4,7 +4,7 @@ import { accounts } from '@/mocks/data/accounts'
 import { households } from '@/mocks/data/households'
 import { householdFees } from '@/mocks/data/billing'
 import { getPositionsForAccount } from '@/mocks/data/positions'
-import { estimatedTaxBenefit } from '@/features/portfolios/tax/shared'
+import { estimatedTaxBenefit } from '@/lib/tax-rules'
 import { getModels } from '@/services/pms'
 import { router } from '@/app/routes'
 

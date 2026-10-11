@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 import { convertToBase } from '@/lib/currency'
 import type { TaxLot } from '@/types/portfolio'
 import type { CurrencyCode, FXRateMap } from '@/types/currency'
-import type { CostBasisMethod } from './CostBasisMethodCard'
+import type { CostBasisMethod } from '@/features/portfolios/tax/CostBasisMethodCard'
 
 export const HOLDING_LABELS: Record<string, string> = { short: 'Short-Term', long: 'Long-Term' }
 

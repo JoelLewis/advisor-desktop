@@ -17,7 +17,7 @@ import {
   buildRateDisclosure,
   harvestNeedsFx,
   harvestFxStatus,
-} from '@/features/portfolios/tax/shared'
+} from '@/lib/tax-rules'
 
 const ACCOUNTS = ['acc-001', 'acc-002', 'acc-011', 'acc-020', 'acc-029', 'acc-041', 'acc-042', 'acc-043', 'acc-044']
 

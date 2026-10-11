@@ -2,7 +2,7 @@ import { http, HttpResponse, delay } from 'msw'
 import { nbas } from '../data/nbas'
 import type { BatchActionRequest, NBAActionTemplate, NBAEffectivenessMetrics, NBACategory } from '@/types/nba'
 import { notFound } from './utils'
-import { SHORT_TERM_RATE, LONG_TERM_RATE, formatRatePercent } from '@/features/portfolios/tax/shared'
+import { SHORT_TERM_RATE, LONG_TERM_RATE, formatRatePercent } from '@/lib/tax-rules'
 
 /**
  * PRE-FLIGHT correction 7 — these templates previously said "at 37% bracket" / "at top marginal

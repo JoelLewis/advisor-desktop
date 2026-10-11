@@ -6,7 +6,7 @@ import { computeDriftForAccount, MODEL_DEFINITIONS } from './pms'
 import { notFound, roundTo } from './utils'
 import { ASSET_CLASS_LABELS } from '@/lib/labels'
 import { netTaxForLegs } from '@/lib/capital-gains'
-import { taxRateFor } from '@/features/portfolios/tax/shared'
+import { taxRateFor } from '@/lib/tax-rules'
 import type { ModelTradePreview } from '@/types/trading'
 
 /**

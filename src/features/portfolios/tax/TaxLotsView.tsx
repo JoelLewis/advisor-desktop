@@ -5,7 +5,7 @@ import { CurrencyValue } from '@/components/ui/CurrencyValue'
 import { formatDate, cn } from '@/lib/utils'
 import type { TaxLot } from '@/types/portfolio'
 import type { CurrencyCode } from '@/types/currency'
-import { HOLDING_LABELS, Th } from './shared'
+import { HOLDING_LABELS, Th } from '@/lib/tax-rules'
 
 const TaxLotRow = memo(function TaxLotRow({
   lot,

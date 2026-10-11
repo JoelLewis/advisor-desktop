@@ -14,7 +14,7 @@ import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { hasWashSaleRisk, isoDaysBefore } from '@/lib/wash-sale'
 import { netTaxForLegs } from '@/lib/capital-gains'
 import { generateTaxLots, boundedTradeQty } from './custodian'
-import { taxRateFor } from '@/features/portfolios/tax/shared'
+import { taxRateFor } from '@/lib/tax-rules'
 import type { Position, TaxLot } from '@/types/portfolio'
 import type { CurrencyCode } from '@/types/currency'
 
