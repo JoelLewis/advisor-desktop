@@ -31,9 +31,17 @@ describe('which accounts share a tax return', () => {
     expect(returnOf('acc-006')).not.toBe(returnOf('acc-007'))
   })
 
+  it('hh-002 files jointly: Margaret Chen\'s accounts, in any currency, and Elizabeth Wong\'s are one return', () => {
+    expect(returnOf('acc-007')).not.toBeNull()
+    expect(returnOf('acc-009')).toBe(returnOf('acc-007'))
+    expect(returnOf('acc-041')).toBe(returnOf('acc-007'))
+    expect(returnOf('acc-042')).toBe(returnOf('acc-007'))
+  })
+
   it('spouses with no filing status on file are not assumed to file jointly', () => {
-    // hh-002 records no filing status: Margaret Chen (acc-007) and Elizabeth Wong (acc-009).
-    expect(returnOf('acc-007')).not.toBe(returnOf('acc-009'))
+    // hh-013 records no filing status: Hans Mueller (acc-043) and Ingrid Mueller (acc-044).
+    expect(returnOf('acc-043')).not.toBeNull()
+    expect(returnOf('acc-043')).not.toBe(returnOf('acc-044'))
   })
 })
 
@@ -45,6 +53,10 @@ describe('year-to-date realised results on a return', () => {
   it('the Chen irrevocable trust does not carry Margaret Chen\'s own rs-002 loss', () => {
     expect(ytdRealisedOnReturn(returnOf('acc-006')!, MOCK_TODAY_ISO)).toEqual({ shortTerm: 0, longTerm: 0 })
     expect(ytdRealisedOnReturn(returnOf('acc-007')!, MOCK_TODAY_ISO)).toEqual({ shortTerm: -28_500, longTerm: 0 })
+  })
+
+  it('Elizabeth Wong\'s acc-009 carries rs-002 from Margaret Chen\'s acc-007: one joint return', () => {
+    expect(ytdRealisedOnReturn(returnOf('acc-009')!, MOCK_TODAY_ISO)).toEqual({ shortTerm: -28_500, longTerm: 0 })
   })
 
   it('a sale after the as-of date, or in an earlier tax year, is not year-to-date', () => {
