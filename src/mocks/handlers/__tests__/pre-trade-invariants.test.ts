@@ -1124,37 +1124,37 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     expect(unconvertedQuantity / vti!.quantity).toBeCloseTo(FX_RATES_USD_BASE.HKD, 1)
   })
 
-  it('tax-aware selection exhausts the loss position before touching the large-gain one, and still fills the whole sleeve', async () => {
-    // acc-002 is 12.22 points overweight us_equity on a $4.5M account — an implied $549,900 trim,
-    // against INTC ($199,150, a $45,850 unrealised loss), SPY ($2,018,243.70, a $355,206.70 gain)
-    // and QQQ ($807,372.80, a $179,114.80 gain). Ranked by gain per dollar of market value:
-    // INTC -23.0%, SPY +17.6%, QQQ +22.2%.
+  it('tax-aware selection exhausts the loss position, holds the recent harvest replacement, and fills the sleeve from SPY', async () => {
+    // acc-002 is 13.20 points overweight us_equity on a $4.5M account: the sleeve is SPY
+    // 2,018,243.70 + QQQ 807,372.80 + INTC 199,150 + SMH 44,136 = 3,068,902.50 of 4,500,000 =
+    // 0.681978 against a 0.55 target, an implied 0.1320 x 4,500,000 = $594,000 trim. Ranked by gain
+    // per dollar of market value: INTC -23.0%, SMH 0.0%, SPY +17.6%, QQQ +22.2%.
     //
     // "Prefer losses, then the smallest embedded gain" is an ordering drawn from until the
-    // sleeve is filled, not a single pick: INTC sells out entirely ($199,150), then SPY tops the
-    // rest up ($350,682). Stopping at INTC would leave the account overweight us_equity after a
-    // rebalance that reported success — tax-better and rebalance-worse, which is not the trade
-    // an advisor would accept when both are available.
+    // sleeve is filled, not a single pick — with one exclusion. The 180 SMH (pos-265) were bought
+    // 2026-02-21 as the INTC harvest replacement (note-002, comp-006, nba-002); selling them four
+    // days later at zero gain would undo the harvest, and TLH practice is to hold the replacement
+    // past the 31st day. A position whose every lot is that recent is not a tax-aware sell
+    // candidate, so the sequence is INTC in full ($199,150), then SPY for the rest.
     const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
-    const usEquitySells = preview!.trades.filter((t) => t.side === 'sell' && ['SPY', 'QQQ', 'INTC'].includes(t.symbol))
+    const usEquitySells = preview!.trades.filter((t) => t.side === 'sell' && ['SPY', 'QQQ', 'INTC', 'SMH'].includes(t.symbol))
     // Vacuity guard — an empty list would mean the sleeve produced no sell at all and every
     // assertion below would be testing nothing.
     expect(usEquitySells.length).toBeGreaterThan(0)
-    // Order, not just membership: the loss lot is reached first.
+    // Order, not just membership: the loss lot is reached first, SMH never.
     expect(usEquitySells.map((t) => t.symbol)).toEqual(['INTC', 'SPY'])
+    expect(preview!.trades.some((t) => t.symbol === 'SMH')).toBe(false)
     // INTC goes in full before SPY is touched at all — 7,000 shares, the whole position.
     expect(usEquitySells[0]!.estimatedValue).toBe(199_150)
     expect(usEquitySells[0]!.quantity).toBe(7_000)
-    // ...and the sleeve is filled to its drift, not left short at the loss position's size.
-    // Task 10 — the trim is 0.1222 x 4,500,000 = 549,900, not the 547,650 the stored
-    // three-decimal weights gave: us_equity is SPY 2,018,243.70 + QQQ 807,372.80 + INTC 199,150 =
-    // 3,024,766.50 of 4,500,000 = 0.672170, and 0.672170 - 0.55 = 0.1222 to four places.
-    // Executed: 199,150 + SPY 674 x 520.30 = 350,682, total 549,832, which is 68 under the
-    // 549,900 notional — two legs whose unit prices sum to 548.75, so that is lot granularity,
-    // not a short fill.
+    // SPY absorbs what SMH no longer takes: 594,000 - 199,150 = 394,850 of notional, floored to
+    // 758 shares x 520.30 = 394,387.40 -> 394,387. Total 593,537, which is 463 under the notional
+    // — lot granularity on two legs whose unit prices sum to 548.75, not a short fill.
+    expect(usEquitySells[1]!.quantity).toBe(758)
+    expect(usEquitySells[1]!.estimatedValue).toBe(394_387)
     const usEquityTotal = usEquitySells.reduce((s, t) => s + t.estimatedValue, 0)
-    expect(usEquityTotal).toBe(549_832)
-    expect(549_900 - usEquityTotal).toBeLessThan(28.45 + 520.30)
+    expect(usEquityTotal).toBe(593_537)
+    expect(594_000 - usEquityTotal).toBeLessThan(28.45 + 520.30)
     // QQQ, the largest gain per dollar, is never reached — the ordering has to mean something.
     expect(usEquitySells.some((t) => t.symbol === 'QQQ')).toBe(false)
   })

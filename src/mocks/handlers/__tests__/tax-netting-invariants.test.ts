@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { previewRebalance, type RebalancePreview } from '@/services/oms'
+import { previewModelTrades } from '@/services/trading'
 import { netCapitalGainsTax } from '@/lib/capital-gains'
 import { taxRateFor } from '@/features/portfolios/tax/shared'
 
@@ -29,9 +30,26 @@ describe('the rebalance preview nets realised gains and losses', () => {
     expect(preview!.estimatedTaxImpact).toBeLessThan(preview!.grossTaxOnGains)
   })
 
+  it('acc-002 figures: the SMH replacement is held, so SPY carries the gain', () => {
+    // All four sells are long-term: INTC -45,850, SPY 758 shares 69,411, ETHE 11,569, IBIT 41,408.
+    // Net LT = 76,538 x 23.8% = 18,216.04 -> 18,216. Gross = SPY 16,520 + ETHE 2,753 + IBIT 9,855
+    // = 29,128 (the INTC loss leg carries no tax of its own).
+    expect(preview!.trades.some((t) => t.symbol === 'SMH')).toBe(false)
+    expect(preview!.estimatedTaxImpact).toBe(18_216)
+    expect(preview!.grossTaxOnGains).toBe(29_128)
+  })
+
   it('a buy realises nothing', () => {
     for (const t of preview!.trades.filter((x) => x.side === 'buy')) {
       expect([t.realisedShortTerm, t.realisedLongTerm]).toEqual([0, 0])
     }
+  })
+})
+
+describe('the model-trade preview and the rebalance preview state one tax figure', () => {
+  it('acc-002 onto its own model mod-002: both previews net to the same estimate', async () => {
+    const [modelTrade] = await previewModelTrades('mod-002', ['acc-002'])
+    expect(modelTrade!.estimatedTaxImpact).toBe(preview!.estimatedTaxImpact)
+    expect(modelTrade!.estimatedTaxImpact).toBe(18_216)
   })
 })

@@ -10,7 +10,11 @@ import { MOCK_TODAY_ISO } from '@/lib/clock'
 function householdAcquisitions(householdId: string) {
   return accounts.filter((a) => a.householdId === householdId).flatMap((a) => {
     const bySymbol = new Map(getPositionsForAccount(a.id, a.totalValue).map((p) => [p.id, p.symbol]))
-    return generateTaxLots(a.id, a.totalValue).map((l) => ({ symbol: bySymbol.get(l.positionId)!, date: l.purchaseDate, lotId: l.id }))
+    return generateTaxLots(a.id, a.totalValue).map((l) => {
+      const symbol = bySymbol.get(l.positionId)
+      if (symbol === undefined) throw new Error(`tax lot ${l.id} in ${a.id} names unknown position ${l.positionId}`)
+      return { symbol, date: l.purchaseDate, lotId: l.id }
+    })
   })
 }
 

@@ -11,11 +11,11 @@ import { convertCurrency } from '@/lib/currency'
 import { securityKind, concentrationLimitFor, isMarketTradable } from '@/lib/security-master'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
-import { hasWashSaleRisk } from '@/lib/wash-sale'
-import { netCapitalGainsTax } from '@/lib/capital-gains'
+import { hasWashSaleRisk, isoDaysBefore } from '@/lib/wash-sale'
+import { netTaxForLegs } from '@/lib/capital-gains'
 import { generateTaxLots, boundedTradeQty } from './custodian'
 import { taxRateFor } from '@/features/portfolios/tax/shared'
-import type { Position } from '@/types/portfolio'
+import type { Position, TaxLot } from '@/types/portfolio'
 import type { CurrencyCode } from '@/types/currency'
 
 /** Pooled/individual tech names used by the sector-concentration check below. */
@@ -89,8 +89,8 @@ const NOTHING_REALISED: RealisedSale = { shortTerm: 0, longTerm: 0, tax: 0, cons
  * lowest-gain-fraction (highest cost basis) lots first to minimise realised gain; a tax-unaware
  * pass sells the lots in their own oldest-first order.
  */
-function realiseSale(accountId: string, totalValue: number, target: Position, notional: number, taxAware: boolean): RealisedSale {
-  const lots = generateTaxLots(accountId, totalValue).filter((l) => l.positionId === target.id)
+function realiseSale(accountLots: readonly TaxLot[], target: Position, notional: number, taxAware: boolean): RealisedSale {
+  const lots = accountLots.filter((l) => l.positionId === target.id)
   if (lots.length === 0 || notional <= 0) return NOTHING_REALISED
   // Minimise realised gain and rank by *tax per dollar sold*, not gain per dollar sold: a
   // low-gain short-term lot (37% rate) can carry more tax than a low-gain long-term lot (23.8%
@@ -167,11 +167,28 @@ export type ProposedTradeLeg = ProposedTrade & Sleeve
  * Gated on `taxable`: in an IRA or a Roth, gains are not taxed at all (`realiseSale` already
  * returns 0 there), so re-ordering by embedded gain would be an arbitrary preference dressed up
  * as tax awareness. Those accounts keep the held order under either toggle setting.
+ *
+ * A tax-aware pass also never sells a position whose every lot is `recentlyOpened` (held 31 days
+ * or fewer). Such a position is, in practice, a harvest replacement: acc-002's 180 SMH were
+ * bought 2026-02-21 to keep semiconductor exposure after the INTC loss sale (note-002, comp-006),
+ * and at zero gain they ranked ahead of SPY, so the toggle sold them four days later and undid the
+ * harvest. Holding the replacement past the 31st day is the TLH practice; the sleeve then fills
+ * from the next candidate as it always would.
  */
-function orderSellCandidates(held: Position[], taxAware: boolean): Position[] {
+function orderSellCandidates(held: Position[], taxAware: boolean, recentlyOpened: ReadonlySet<string>): Position[] {
   if (!taxAware) return held
   const gainPerDollar = (p: Position) => (p.marketValue > 0 ? p.gainLoss / p.marketValue : 0)
-  return [...held].sort((a, b) => gainPerDollar(a) - gainPerDollar(b))
+  return held.filter((p) => !recentlyOpened.has(p.id)).sort((a, b) => gainPerDollar(a) - gainPerDollar(b))
+}
+
+/** How long a harvest replacement is held before a tax-aware rebalance may sell it. */
+const REPLACEMENT_HOLD_DAYS = 31
+
+/** Positions every one of whose lots was bought within the last `REPLACEMENT_HOLD_DAYS` days. */
+function recentlyOpenedPositions(lots: readonly TaxLot[], asOfISO: string): Set<string> {
+  const since = isoDaysBefore(asOfISO, REPLACEMENT_HOLD_DAYS)
+  const hasOlderLot = new Set(lots.filter((l) => l.purchaseDate < since).map((l) => l.positionId))
+  return new Set(lots.filter((l) => !hasOlderLot.has(l.positionId)).map((l) => l.positionId))
 }
 
 /**
@@ -260,9 +277,18 @@ export function generateRebalanceTrades(
   const taxable = isTaxableAccount(account.taxTreatment)
   const currency = currencyForAccount(accountId)
   const lossWindows = openWashSaleWindows(MOCK_TODAY_ISO, account.householdId)
+  // The account's own lots are generated once and shared by the sell ordering, every leg's
+  // `realiseSale`, and the household acquisitions below.
+  const ownLots = generateTaxLots(account.id, account.totalValue)
+  const recentlyOpened = recentlyOpenedPositions(ownLots, MOCK_TODAY_ISO)
   const acquisitions = accounts.filter((a) => a.householdId === account.householdId).flatMap((a) => {
     const symbolOf = new Map(getPositionsForAccount(a.id, a.totalValue).map((p) => [p.id, p.symbol]))
-    return generateTaxLots(a.id, a.totalValue).map((l) => ({ symbol: symbolOf.get(l.positionId) ?? '', date: l.purchaseDate, lotId: l.id }))
+    const lots = a.id === account.id ? ownLots : generateTaxLots(a.id, a.totalValue)
+    return lots.map((l) => {
+      const symbol = symbolOf.get(l.positionId)
+      if (symbol === undefined) throw new Error(`tax lot ${l.id} in ${a.id} names unknown position ${l.positionId}`)
+      return { symbol, date: l.purchaseDate, lotId: l.id }
+    })
   })
 
   type RawLeg = { target: TradeCandidate; side: 'buy' | 'sell'; notional: number; sleeve: Sleeve }
@@ -282,7 +308,7 @@ export function generateRebalanceTrades(
         // value, so long-only holds leg by leg as well as in aggregate.
         let remaining = rawNotional
         const legs: RawLeg[] = []
-        for (const position of orderSellCandidates(held, taxAware && taxable)) {
+        for (const position of orderSellCandidates(held, taxAware && taxable, recentlyOpened)) {
           if (remaining <= 0) break
           const notional = Math.min(remaining, position.marketValue)
           if (notional <= 0) continue
@@ -408,7 +434,7 @@ export function generateRebalanceTrades(
       // exposure per leg is bounded by `unitPrice / estimatedValue`. All three numbers on the
       // row now describe one trade.
       const realised = side === 'sell' && taxable && target.position
-        ? realiseSale(account.id, account.totalValue, target.position, estimatedValue, taxAware)
+        ? realiseSale(ownLots, target.position, estimatedValue, taxAware)
         : NOTHING_REALISED
       return {
         symbol: target.symbol,
@@ -732,32 +758,30 @@ export const omsHandlers = [
 
   http.post('/api/oms/rebalance', async ({ request }) => {
     const body = await request.json() as { accountIds: string[]; driftThreshold?: number; taxAware: boolean }
-    const previews: RebalancePreview[] = body.accountIds.map((accountId) => {
+    const previews: RebalancePreview[] = []
+    for (const accountId of body.accountIds) {
+      const account = accounts.find((a) => a.id === accountId)
+      if (!account) return notFound()
       // The Rebalance page's drift-threshold control was sent and ignored; `driftThreshold` was
       // in scope one line away.
       const trades = generateRebalanceTrades(accountId, body.taxAware, body.driftThreshold)
-      return {
+      const tax = netTaxForLegs(trades, taxRateFor)
+      previews.push({
         accountId,
         // §9.3 — same source as every trade on this preview (`currencyForAccount`), so a preview
         // with zero proposed trades still carries a correct currency tag rather than an implicit
         // USD default.
         currency: currencyForAccount(accountId),
         trades,
-        // §1222 — net short- and long-term results across legs before applying rates; the gross
-        // figure is kept so a surface can show what netting saved.
-        // Clamped to gross: the netted figure rounds once and gross rounds per leg, so with nothing
-        // to net the two can differ by a dollar, and netting never raises a bill.
-        estimatedTaxImpact: Math.min(
-          netCapitalGainsTax(
-            trades.reduce((s, t) => s + t.realisedShortTerm, 0),
-            trades.reduce((s, t) => s + t.realisedLongTerm, 0),
-            taxRateFor,
-          ),
-          trades.reduce((sum, t) => sum + t.taxImpact, 0),
-        ),
-        grossTaxOnGains: trades.reduce((sum, t) => sum + t.taxImpact, 0),
-      }
-    })
+        // §1222 — this proposal's legs netted (not year-to-date results, not other accounts); the
+        // gross figure is kept so a surface can show what netting saved.
+        estimatedTaxImpact: tax.net,
+        grossTaxOnGains: tax.gross,
+        // Whether a sale here is a taxable event at all; a surface reads it to tell "not taxed in
+        // this account" from "taxed, and the result is zero".
+        taxable: isTaxableAccount(account.taxTreatment),
+      })
+    }
     return HttpResponse.json(previews)
   }),
 
