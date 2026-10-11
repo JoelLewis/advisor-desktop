@@ -1,3 +1,5 @@
+> **Superseded 11 October 2026.** Meridian was replaced as the design target. Phases 1 and 1b (data integrity) and the tabular-figures utility shipped; the remaining phases are replaced by `docs/superpowers/specs/2026-10-11-workspace-roadmap.md`. Kept for history.
+
 # Phase 2 — The Formatting Spine: Implementation Plan
 
 > ## PRE-FLIGHT CORRECTIONS — read before Task 1
