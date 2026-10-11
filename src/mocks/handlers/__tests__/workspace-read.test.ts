@@ -34,3 +34,18 @@ describe('workspace read API', () => {
     expect(body.permissions['user-002']).not.toContain('send_to_client')
   })
 })
+
+describe('directory scoping', () => {
+  it('a client sees only the people on their own threads, no agents, only their own permissions', async () => {
+    const { body } = await call('/people', 'cli-001')
+    expect(body.people.map((p: { id: string }) => p.id).sort()).toEqual(['cli-001', 'user-001', 'user-002'])
+    expect(body.agents).toEqual([])
+    expect(Object.keys(body.permissions)).toEqual(['cli-001'])
+  })
+  it('a firm viewer keeps the full directory', async () => {
+    const { body } = await call('/people', 'user-001')
+    expect(body.people.length).toBeGreaterThan(3)
+    expect(body.agents).toHaveLength(2)
+    expect(Object.keys(body.permissions).length).toBe(body.people.length)
+  })
+})
