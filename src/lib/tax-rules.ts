@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components -- shared utility components + constants */
 import { convertToBase } from '@/lib/currency'
 import type { TaxLot } from '@/types/portfolio'
 import type { CurrencyCode, FXRateMap } from '@/types/currency'

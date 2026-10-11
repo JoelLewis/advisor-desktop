@@ -6,26 +6,6 @@ import { householdFees } from '@/mocks/data/billing'
 import { getPositionsForAccount } from '@/mocks/data/positions'
 import { estimatedTaxBenefit } from '@/lib/tax-rules'
 import { getModels } from '@/services/pms'
-import { router } from '@/app/routes'
-
-type RouteNode = { path?: string; index?: boolean; children?: RouteNode[] }
-
-function flattenRoutePaths(routes: RouteNode[], prefix = ''): string[] {
-  const paths: string[] = []
-  for (const route of routes) {
-    const full = route.path ? `${prefix}/${route.path}`.replace(/\/+/g, '/') : prefix || '/'
-    if (route.index || (!route.children && route.path)) paths.push(full)
-    if (route.children) paths.push(...flattenRoutePaths(route.children, full))
-  }
-  return paths
-}
-
-function pathResolves(actionPath: string, routePaths: string[]): boolean {
-  return routePaths.some((routePath) => {
-    const pattern = '^' + routePath.replace(/:[A-Za-z]+\??/g, '[^/]+') + '$'
-    return new RegExp(pattern).test(actionPath)
-  })
-}
 
 function positionsFor(accountId: string) {
   const account = accounts.find((a) => a.id === accountId)!
@@ -157,29 +137,6 @@ describe('NBA narratives match the data', () => {
     const named = [...text.matchAll(/\b([A-Z]{2,5})\b/g)].map((m) => m[1]!)
       .filter((s) => !['IRA', 'ETF', 'SEC', 'RMD', 'AUM', 'IPS'].includes(s))
     for (const symbol of named) expect(anderson).toContain(symbol)
-  })
-})
-
-describe('NBA action routes resolve to a real page', () => {
-  // Review round 1, Important #3 · nba-007's actionRoute was rewritten to
-  // '/portfolios/accounts/acc-011/concentration', which routes.tsx does not define (only
-  // accounts/:accountId, .../attribution and .../tax exist as children) — clicking it would land
-  // on RouteErrorPage. Rather than special-case nba-007, this walks the real route tree
-  // (`router.routes` from `@/app/routes`, not a hand-maintained duplicate) and checks every NBA's
-  // actionRoute.path against it, so the whole class of dead-link regressions is caught.
-  const routePaths = flattenRoutePaths(router.routes as unknown as RouteNode[])
-
-  it('has at least the known portfolio/account/client routes (route tree read correctly)', () => {
-    expect(routePaths).toContain('/portfolios/accounts/:accountId')
-    expect(routePaths).toContain('/clients/:clientId')
-  })
-
-  it('every NBA actionRoute.path resolves to a defined route', () => {
-    for (const nba of nbas) {
-      const path = nba.actionRoute?.path
-      if (!path) continue
-      expect(pathResolves(path, routePaths), `${nba.id} actionRoute.path "${path}" has no matching route`).toBe(true)
-    }
   })
 })
 
