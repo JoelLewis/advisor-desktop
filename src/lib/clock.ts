@@ -19,3 +19,8 @@ export function todayISO(): string {
 export function startOfToday(): Date {
   return new Date(`${MOCK_TODAY_ISO}T00:00:00Z`)
 }
+
+/** Deterministic event clock: the frozen now plus `sequence` minutes. Recorded acts take successive sequences. */
+export function eventTime(sequence: number): string {
+  return new Date(Date.parse(MOCK_NOW_ISO) + sequence * 60_000).toISOString()
+}
