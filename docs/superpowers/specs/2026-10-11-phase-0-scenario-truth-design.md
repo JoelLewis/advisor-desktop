@@ -47,7 +47,7 @@ and their tests are updated only where a figure legitimately moves (with the ari
 
   | Person | Role | May |
   |---|---|---|
-  | Joel Lewis (`user-001`) | Advisor of record | approve proposals; send to clients |
+  | Adrian Hale (`user-001`, renamed from the former demo name) | Advisor of record | approve proposals; send to clients |
   | Sarah Mitchell (`user-002`) | Client service associate | draft; schedule; may not approve or send |
   | Mike Chen (`user-003`) | Analyst | research; may not approve or send |
   | Mark Davis | Chief compliance officer, supervisory principal | dispose of compliance exceptions; supervisory review |

@@ -65,7 +65,7 @@ The finance reviewer verifies these against the finance-skills repo rather than 
 ## The shared scenario
 
 Anchor: **acc-002, Robert Johnson Individual** — client cli-001, Johnson Household hh-001. Taxable,
-USD, Schwab, specific-ID cost basis, model mod-002 Growth with a 5% drift band. Advisor: Joel Lewis
+USD, Schwab, specific-ID cost basis, model mod-002 Growth with a 5% drift band. Advisor: Adrian Hale
 (`user-001`). Frozen today: **2026-02-25** (`src/lib/clock.ts`).
 
 Facts to verify during Setup (estimated by reading code, not yet run through the engine):
