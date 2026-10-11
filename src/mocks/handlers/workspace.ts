@@ -1,8 +1,9 @@
 import { http, HttpResponse } from 'msw'
-import type { Directory, Draft, Message, ThreadDetail } from '@/types/workspace'
+import type { AgentId, Directory, Draft, Message, ThreadDetail } from '@/types/workspace'
 import { AGENTS, PEOPLE, can, permissionsOf, personById } from '../data/people'
 import { nextAt, nextId, store } from '../data/workspace-store'
 import { sendToClient } from '../workspace/acts'
+import { runAgent } from '../workspace/run-agent'
 import { canSeeThread, viewerFrom, visibleThreads } from '../workspace/visibility'
 import { notFound } from './utils'
 
@@ -109,5 +110,13 @@ export const workspaceHandlers = [
   }),
 
   // Workspace handlers must be registered above this catch-all.
+  http.post('/api/workspace/threads/:id/agents/:agentId/run', ({ request, params }) => {
+    const viewer = viewerFrom(request)
+    if (!viewer) return unauthorised()
+    const result = runAgent(viewer, String(params.id), String(params.agentId) as AgentId)
+    if (!result.ok) return HttpResponse.json({ code: result.code, message: result.message }, { status: result.status })
+    return HttpResponse.json(result.findings)
+  }),
+
   http.all('/api/workspace/*', () => HttpResponse.json({ code: 'METHOD_NOT_ALLOWED', message: 'Workspace records cannot be edited or deleted.' }, { status: 405 })),
 ]
