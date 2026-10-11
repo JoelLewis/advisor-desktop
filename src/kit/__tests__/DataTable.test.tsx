@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { DataTable } from '@/kit/data-table/DataTable'
 import { Num } from '@/kit/data-table/Num'
 import type { Column } from '@/kit/data-table/types'
-import { fmtMoney, fmtQuantity } from '@/kit/measure'
+import { MINUS, MeasureError, fmtMoney, fmtQuantity, fmtResult } from '@/kit/measure'
 
 type Row = { id: string; symbol: string; qty: number; value: number; weight: number }
 const rows: Row[] = [
@@ -59,9 +59,23 @@ describe('DataTable', () => {
     expect(screen.getByText('.5')).toHaveAttribute('data-fraction', 'true')
   })
   it('renders totals and says what they tie to', () => {
-    renderTable({ totals: { label: 'Total', tiesTo: 'account value', cells: { value: fmtMoney(2_289_017) } } })
+    renderTable({ totals: { label: 'Total', tiesTo: { label: 'account value', expected: 2_289_017, actual: 2_289_017.6 }, cells: { value: fmtMoney(2_289_017) } } })
     expect(screen.getByText('Total')).toBeInTheDocument()
     expect(screen.getByText('ties to account value')).toBeInTheDocument()
+  })
+  it('refuses totals that do not tie to what they claim', () => {
+    const swallow = (event: ErrorEvent) => event.preventDefault()
+    window.addEventListener('error', swallow)
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(() => renderTable({ totals: { label: 'Total', tiesTo: { label: 'account value', expected: 2_289_017, actual: 2_289_019 }, cells: {} } }))
+      .toThrow(MeasureError)
+    spy.mockRestore()
+    window.removeEventListener('error', swallow)
+  })
+  it('sets a loss heavier than a gain', () => {
+    render(<p><Num text={fmtResult(-1_200)} /><Num text={fmtResult(1_200)} /></p>)
+    expect(screen.getByText(`${MINUS}1,200`)).toHaveClass('font-semibold')
+    expect(screen.getByText('+1,200')).not.toHaveClass('font-semibold')
   })
   it('handles zero rows without crashing', () => {
     renderTable({ rows: [], total: 0 })

@@ -43,6 +43,7 @@ export function KitSections({ data }: { data: KitData }) {
   const netShortTerm = preview.trades.reduce((s, t) => s + t.realisedShortTerm, 0)
   const netLongTerm = preview.trades.reduce((s, t) => s + t.realisedLongTerm, 0)
   const restriction = windows[0]
+  const holdingsValue = positions.reduce((s, p) => s + p.marketValue, 0)
   const gaugeDomain = sharedGaugeDomain(drift.assetClassDrifts.map((d) => d.drift), drift.driftTolerance)
   const stamp = now().toISOString()
   const { alert, record } = approval
@@ -82,9 +83,10 @@ export function KitSections({ data }: { data: KitData }) {
               { id: 'price', header: 'Price', unit: 'USD', align: 'right', cell: (p) => (isCash(p) ? <NotApplicable /> : fmtPrice(p.price)), sortValue: (p) => p.price },
               { id: 'value', header: 'Value', unit: 'USD', align: 'right', cell: (p) => fmtMoney(p.marketValue), sortValue: (p) => p.marketValue, proportion: (p) => p.weight },
               { id: 'weight', header: 'Weight', unit: '%', align: 'right', cell: (p) => fmtWeight(p.weight), sortValue: (p) => p.weight },
-              { id: 'gain', header: 'Unrealized', unit: 'USD', align: 'right', cell: (p) => fmtResult(p.gainLoss), sortValue: (p) => p.gainLoss },
+              { id: 'gain', header: 'Unrealized', unit: 'USD', align: 'right', cell: (p) => <Num text={fmtResult(p.gainLoss)} />, sortValue: (p) => p.gainLoss },
             ]}
-            totals={{ label: 'Total', tiesTo: 'account value', cells: { value: fmtMoney(positions.reduce((s, p) => s + p.marketValue, 0)), weight: fmtWeight(positions.reduce((s, p) => s + p.weight, 0)) } }} />
+            totals={{ label: 'Total', tiesTo: { label: 'account value', expected: account.totalValue, actual: holdingsValue },
+              cells: { value: fmtMoney(holdingsValue), weight: fmtWeight(positions.reduce((s, p) => s + p.weight, 0)) } }} />
         </Pane>
         <Pane title="Tax lots" meta={`${lots.length} lots`}>
           <DataTable caption="Tax lots" density="dense" rows={lots} getRowId={(l) => l.id} total={lots.length}
@@ -94,7 +96,7 @@ export function KitSections({ data }: { data: KitData }) {
               { id: 'acquired', header: 'Acquired', cell: (l) => fmtDate(l.purchaseDate), sortValue: (l) => l.purchaseDate },
               { id: 'term', header: 'Term', cell: (l) => (l.holdingPeriod === 'long' ? 'Long-term' : 'Short-term'), sortValue: (l) => l.holdingPeriod },
               { id: 'qty', header: 'Qty', unit: 'sh', align: 'right', cell: (l) => <Num text={fmtQuantity(l.quantity)} />, sortValue: (l) => l.quantity },
-              { id: 'gain', header: 'Unrealized', unit: 'USD', align: 'right', cell: (l) => fmtResult(l.gainLoss), sortValue: (l) => l.gainLoss },
+              { id: 'gain', header: 'Unrealized', unit: 'USD', align: 'right', cell: (l) => <Num text={fmtResult(l.gainLoss)} />, sortValue: (l) => l.gainLoss },
             ]} />
         </Pane>
         {restriction ? (

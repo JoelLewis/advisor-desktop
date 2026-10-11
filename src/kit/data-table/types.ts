@@ -12,4 +12,6 @@ export type Column<T> = {
   proportion?: (row: T) => number
 }
 
-export type Totals = { label: string; tiesTo?: string; cells: Partial<Record<string, ReactNode>> }
+export type TiesTo = { label: string; expected: number; actual: number }
+
+export type Totals = { label: string; tiesTo?: TiesTo; cells: Partial<Record<string, ReactNode>> }

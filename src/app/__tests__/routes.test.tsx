@@ -88,4 +88,10 @@ describe('routes', () => {
     expect(widths.length).toBeGreaterThan(1)
     expect(new Set(widths).size).toBe(1)
   })
+  it('sets every loss in the result columns heavier', async () => {
+    await renderKitReady()
+    const losses = screen.getAllByText(/^−/, { selector: 'td span' })
+    expect(losses.length).toBeGreaterThan(0)
+    for (const loss of losses) expect(loss).toHaveClass('font-semibold')
+  })
 })

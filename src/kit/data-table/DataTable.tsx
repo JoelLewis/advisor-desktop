@@ -3,9 +3,18 @@ import {
   flexRender, getCoreRowModel, getSortedRowModel, useReactTable, type ColumnDef, type SortingState,
 } from '@tanstack/react-table'
 import { cn } from '@/lib/utils'
-import type { Column, Density, Totals } from './types'
+import { MeasureError } from '@/kit/measure'
+import type { Column, Density, Totals, TiesTo } from './types'
 
 const ROW_HEIGHT: Record<Density, string> = { dense: 'h-6 text-table-dense stretch-dense', regular: 'h-7 text-table stretch-table', narrative: 'h-[34px] text-table stretch-table' }
+
+const TIE_TOLERANCE = 1
+
+function assertTies(tiesTo: TiesTo | undefined): void {
+  if (tiesTo && Math.abs(tiesTo.expected - tiesTo.actual) > TIE_TOLERANCE) {
+    throw new MeasureError(`Totals do not tie to ${tiesTo.label}: off by ${Math.abs(tiesTo.expected - tiesTo.actual)}`)
+  }
+}
 
 const INTERACTIVE = 'button, a, input, select, textarea, [role="button"]'
 
@@ -28,6 +37,7 @@ type DataTableProps<T> = {
 export function DataTable<T>({
   caption, columns, rows, getRowId, noun, total, density = 'regular', totals, onActivate, initialSort,
 }: DataTableProps<T>) {
+  assertTies(totals?.tiesTo)
   const [sorting, setSorting] = useState<SortingState>(initialSort ? [initialSort] : [])
   const [activeId, setActiveId] = useState<string | null>(null)
   const rowRefs = useRef<(HTMLTableRowElement | null)[]>([])
@@ -152,7 +162,7 @@ export function DataTable<T>({
                     {i === 0 ? (
                       <span className="flex flex-col">
                         <span>{totals.label}</span>
-                        {totals.tiesTo ? <span className="text-label font-normal text-ink-3">ties to {totals.tiesTo}</span> : null}
+                        {totals.tiesTo ? <span className="text-label font-normal text-ink-3">ties to {totals.tiesTo.label}</span> : null}
                       </span>
                     ) : totals.cells[c.id] ?? null}
                   </td>
