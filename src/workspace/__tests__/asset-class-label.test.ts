@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { assetClassLabel } from '@/app/pages/kit/asset-class-label'
+import { assetClassLabel } from '@/workspace/asset-class-label'
 
 describe('assetClassLabel', () => {
   it('maps engine keys case-insensitively', () => {

@@ -2,6 +2,7 @@
 import { createBrowserRouter, type RouteObject } from 'react-router-dom'
 import { WorkspaceShell } from '@/workspace/shell/WorkspaceShell'
 import { WorkspaceHome } from '@/workspace/shell/WorkspaceHome'
+import { ThreadPage } from '@/workspace/thread/ThreadPage'
 import { RootLayout } from './RootLayout'
 import { RouteError } from './RouteError'
 import { KitPage } from './pages/KitPage'
@@ -14,7 +15,13 @@ export const routes: RouteObject[] = [
     element: <RootLayout />,
     errorElement: <RouteError />,
     children: [
-      { element: <WorkspaceShell />, children: [{ index: true, element: <WorkspaceHome /> }] },
+      {
+        element: <WorkspaceShell />,
+        children: [
+          { index: true, element: <WorkspaceHome /> },
+          { path: 't/:threadId', element: <ThreadPage /> },
+        ],
+      },
       { path: 'kit', element: <KitPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],

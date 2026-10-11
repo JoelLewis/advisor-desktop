@@ -1,0 +1,71 @@
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { PAGE_TITLE_ID } from '@/kit/page/ids'
+import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
+import { useDirectory, useThread } from '@/hooks/use-workspace'
+import { ApiClientError } from '@/services/api-client'
+import { useViewer } from '@/workspace/viewer/use-viewer'
+import type { Directory, ThreadDetail } from '@/types/workspace'
+import { Composer } from './Composer'
+import { MessageView } from './MessageView'
+
+const isNotFound = (error: Error) => error instanceof ApiClientError && error.status === 404
+
+export function ThreadPage() {
+  const { threadId } = useParams()
+  if (!threadId) throw new Error('The thread route needs a thread id')
+  return <ThreadView key={threadId} threadId={threadId} />
+}
+
+function ThreadView({ threadId }: { threadId: string }) {
+  const { viewerId } = useViewer()
+  const [openedAs] = useState(viewerId)
+  const navigate = useNavigate()
+  const thread = useThread(threadId)
+  const directory = useDirectory()
+  // Switching "view as" to someone who cannot see this thread goes home rather than showing them a 404.
+  const hiddenFromNewViewer = viewerId !== openedAs && thread.isError && isNotFound(thread.error)
+  useEffect(() => {
+    if (hiddenFromNewViewer) navigate('/', { replace: true })
+  }, [hiddenFromNewViewer, navigate])
+
+  if (hiddenFromNewViewer || thread.isPending || directory.isPending) {
+    return <p role="status" className="text-body text-ink-3">Loading the thread…</p>
+  }
+  if (thread.isError) return isNotFound(thread.error) ? <ThreadNotFound /> : <p role="alert" className="text-body">{thread.error.message}</p>
+  if (directory.isError) return <p role="alert" className="text-body">{directory.error.message}</p>
+  return <Thread detail={thread.data} directory={directory.data} />
+}
+
+function Thread({ detail: { thread, messages }, directory }: { detail: ThreadDetail; directory: Directory }) {
+  const audience = thread.visibility === 'client' ? directory.people.find((p) => p.id === thread.clientId)?.name : undefined
+  if (thread.visibility === 'client' && !audience) throw new Error(`The client of thread "${thread.id}" is not in the directory`)
+  return (
+    <div className="flex min-w-0 flex-col gap-6">
+      <header className="flex flex-col gap-3">
+        <VisibilityBand visibility={thread.visibility} scale="thread" audience={audience} />
+        <h1 id={PAGE_TITLE_ID} tabIndex={-1} className="text-title">{thread.title}</h1>
+      </header>
+      {messages.length === 0 ? <p className="text-body text-ink-3">No messages yet.</p> : (
+        <ol aria-label="Messages" className="flex min-w-0 flex-col">
+          {messages.map((m) => (
+            <li key={m.id} className="min-w-0 border-b border-rule py-5 first:pt-0 last:border-b-0">
+              <MessageView message={m} directory={directory} />
+            </li>
+          ))}
+        </ol>
+      )}
+      <Composer thread={thread} directory={directory} />
+    </div>
+  )
+}
+
+function ThreadNotFound() {
+  return (
+    <div className="flex flex-col gap-2">
+      <h1 id={PAGE_TITLE_ID} tabIndex={-1} className="text-title">Thread not found</h1>
+      <p className="text-body text-ink-2">It may not exist, or this viewer may not be able to see it.</p>
+      <Link to="/" className="self-start text-body underline underline-offset-4">Go to the workspace</Link>
+    </div>
+  )
+}

@@ -25,7 +25,7 @@ import { todayISO, now } from '@/lib/clock'
 import { RATE_DISCLOSURE } from '@/lib/tax-rules'
 import type { Status } from '@/kit/status/status'
 import type { Position, TaxLot } from '@/types/portfolio'
-import { assetClassLabel } from './asset-class-label'
+import { assetClassLabel } from '@/workspace/asset-class-label'
 import { splitReviewer } from './reviewer'
 import type { KitData } from './use-kit-data'
 
