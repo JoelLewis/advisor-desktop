@@ -22,3 +22,15 @@ it('renders nothing without sources', () => {
   const { container } = render(<SourceChips sources={[]} />)
   expect(container).toBeEmptyDOMElement()
 })
+
+it('draws separators in CSS before each part, clipped at the start of a line, never as text', () => {
+  render(<SourceChips sources={[{ label: 'Rebalance preview', detail: 'Robert Johnson Individual', asOf: '2026-02-25T12:00:00Z' }]} />)
+  const item = screen.getByRole('listitem')
+  expect(item).not.toHaveTextContent('·')
+  const parts = [...item.querySelectorAll('[data-part="chip-part"]')]
+  expect(parts.map((p) => p.textContent)).toEqual(['Rebalance preview', 'Robert Johnson Individual', 'as of 2026-02-25 12:00 UTC'])
+  for (const part of parts) expect(part.className).toContain("before:content-['·'_/_'']")
+  const row = parts[0]!.parentElement!
+  expect(row.className).toContain('-ml-4')
+  expect(row.parentElement!.className).toContain('overflow-hidden')
+})

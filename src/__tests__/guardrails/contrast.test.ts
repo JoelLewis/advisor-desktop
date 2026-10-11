@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { contrast, darkPalette, lightPalette, mediaDarkPalette, readAppCss, type Palette } from './contrast'
+import { contrast, luminance, darkPalette, lightPalette, mediaDarkPalette, readAppCss, type Palette } from './contrast'
 
 const SURFACES = ['bg', 'face', 'band'] as const
 const TEXT = ['ink', 'ink-2', 'ink-3', 'signal-ink'] as const
@@ -30,10 +30,13 @@ describe('token blocks', () => {
   it('every token is defined in light and dark', () => {
     const keys = [...lightPalette(css).keys()].sort()
     expect(keys).toEqual([...darkPalette(css).keys()].sort())
-    expect(keys).toEqual(expect.arrayContaining([...SURFACES, ...TEXT, 'signal', 'rule', 'rule-2', 'band']))
+    expect(keys).toEqual(expect.arrayContaining([...SURFACES, ...TEXT, 'signal', 'rule', 'rule-2', 'band', 'scrim']))
   })
   it('the prefers-color-scheme dark block matches the explicit dark block', () => {
     expect(Object.fromEntries(mediaDarkPalette(css))).toEqual(Object.fromEntries(darkPalette(css)))
+  })
+  it.each([['light', lightPalette(css)], ['dark', darkPalette(css)]] as const)('the dialog scrim darkens the page in %s', (_, p) => {
+    for (const surface of SURFACES) expect(luminance(p.get('scrim')!)).toBeLessThan(luminance(p.get(surface)!))
   })
   it('contrast maths: ink on face in light is high, rule on face is low', () => {
     const p = lightPalette(css)

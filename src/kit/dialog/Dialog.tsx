@@ -14,7 +14,7 @@ export function Dialog({ open, onOpenChange, title, description, children, retur
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
-        <RadixDialog.Overlay className="fixed inset-0 bg-ink/40" />
+        <RadixDialog.Overlay data-part="scrim" className="fixed inset-0 bg-scrim/50" />
         <RadixDialog.Content
           className="fixed left-1/2 top-1/2 w-[min(560px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 border border-ink bg-face p-6 text-ink"
           {...(description ? {} : { 'aria-describedby': undefined })}

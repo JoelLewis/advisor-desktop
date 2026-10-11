@@ -2,6 +2,7 @@ import type { ProposalTemplate, ProposalSectionType, ProposalFeeTier } from '@/t
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { blendedTieredFee, type FeeTier } from '@/lib/fees'
 import { formatCurrency } from '@/lib/utils'
+import { commissionSchedule } from '@/lib/commission'
 
 /**
  * C33 · `blendedTieredFee` (Task 7) takes `{ upTo, rate }`; `proposalTemplates[].feeTiers` fixture
@@ -259,7 +260,7 @@ export function generateSectionContent(
         '- Tax-loss harvesting and tax-efficient rebalancing',
         '- Access to institutional share classes and alternative investments',
         '- Dedicated advisor and client service team',
-        '- Transaction costs are charged separately by the custodian: $4.95 per equity or ETF trade, $0.65 per option contract and $1.00 per bond.',
+        `- Transaction costs are charged separately by the custodian: ${commissionSchedule()}.`,
         '',
         '*Fees do not include underlying fund expense ratios, which average 0.08% – 0.25% for the recommended vehicle lineup. Custodial fees are separate and charged directly by the custodian.*',
       ].join('\n')

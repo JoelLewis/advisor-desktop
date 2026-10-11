@@ -15,6 +15,7 @@
   --ws-band: oklch(0.9 0.004 250);
   --ws-signal: oklch(0.6 0.2 41);
   --ws-signal-ink: oklch(0.5 0.17 39);
+  --ws-scrim: oklch(0.205 0.006 250);
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -29,6 +30,7 @@
     --ws-band: oklch(0.26 0.005 250);
     --ws-signal: oklch(0.72 0.17 47);
     --ws-signal-ink: oklch(0.77 0.15 52);
+    --ws-scrim: oklch(0.08 0.004 250);
     color-scheme: dark;
   }
 }
@@ -43,6 +45,7 @@
   --ws-band: oklch(0.26 0.005 250);
   --ws-signal: oklch(0.72 0.17 47);
   --ws-signal-ink: oklch(0.77 0.15 52);
+  --ws-scrim: oklch(0.08 0.004 250);
   color-scheme: dark;
 }
 /* tokens:end */
@@ -64,6 +67,7 @@
   --color-band: var(--ws-band);
   --color-signal: var(--ws-signal);
   --color-signal-ink: var(--ws-signal-ink);
+  --color-scrim: var(--ws-scrim);
 
   --font-sans: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
 

@@ -63,3 +63,9 @@ it('falls back to the page heading when the opener was document.body', async () 
   await userEvent.keyboard('{Escape}')
   await waitFor(() => expect(screen.getByRole('heading', { level: 1 })).toHaveFocus())
 })
+
+it('dims the page with the scrim token, which darkens in both themes', () => {
+  render(<Dialog open onOpenChange={() => {}} title="Scrim"><p>Body</p></Dialog>)
+  const overlay = document.querySelector('[data-part="scrim"]')
+  expect(overlay?.getAttribute('class')).toContain('bg-scrim/')
+})
