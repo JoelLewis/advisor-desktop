@@ -1,6 +1,6 @@
 import { it, expect } from 'vitest'
 import { useState } from 'react'
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Dialog } from '@/kit/dialog/Dialog'
 import { Button } from '@/kit/button/Button'
@@ -68,4 +68,14 @@ it('dims the page with the scrim token, which darkens in both themes', () => {
   render(<Dialog open onOpenChange={() => {}} title="Scrim"><p>Body</p></Dialog>)
   const overlay = document.querySelector('[data-part="scrim"]')
   expect(overlay?.getAttribute('class')).toContain('bg-scrim/')
+})
+
+it('has a visible Close button that closes and returns focus to the opener', async () => {
+  render(<Harness />)
+  const trigger = screen.getByRole('button', { name: 'Open keys' })
+  await userEvent.click(trigger)
+  const dialog = screen.getByRole('dialog', { name: 'Keyboard' })
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Close' }))
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  await waitFor(() => expect(trigger).toHaveFocus())
 })

@@ -1,9 +1,10 @@
 import { describe, it, expect, vi } from 'vitest'
-import { useMemo, useState } from 'react'
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { useContext, useMemo, useState } from 'react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { KeyboardProvider } from '@/kit/keyboard/KeyboardProvider'
 import { useJumpKeys } from '@/kit/keyboard/use-jump-keys'
+import { KeyboardContext } from '@/kit/keyboard/keyboard-context'
 import { useFocusAfter } from '@/kit/keyboard/use-focus-after'
 import { isEditableTarget, matchDestinations } from '@/kit/keyboard/keys'
 import { Page } from '@/kit/page/Page'
@@ -175,6 +176,50 @@ describe('keyboard', () => {
       await userEvent.keyboard('{ArrowUp}')
       expect(options[0]).toHaveAttribute('aria-selected', 'true')
     })
+  })
+  it('forgets a registration\'s order once it unmounts, but keeps it across a re-registration', async () => {
+    let orderSize = () => -1
+    function Probe() {
+      const ctx = useContext(KeyboardContext)
+      if (ctx) orderSize = ctx.orderSize
+      return null
+    }
+    function Changing({ label }: { label: string }) { useJumpKeys('changing', [{ key: 'c', label, run: () => {} }]); return null }
+    function Harness({ count, label }: { count: number; label: string }) {
+      return (
+        <KeyboardProvider destinations={[]}>
+          <Probe />
+          <Jumps onT={() => {}} />
+          {Array.from({ length: count }, (_, i) => <Changing key={i} label={label} />)}
+        </KeyboardProvider>
+      )
+    }
+    const { rerender } = render(<Harness count={0} label="C" />)
+    const baseline = orderSize()
+    expect(baseline).toBe(1)
+    rerender(<Harness count={3} label="C" />)
+    expect(orderSize()).toBe(baseline + 3)
+    rerender(<Harness count={3} label="Changed" />)
+    expect(orderSize()).toBe(baseline + 3)
+    await userEvent.keyboard('?')
+    const sheet = screen.getByRole('dialog', { name: 'Keyboard' })
+    expect(within(sheet).getAllByRole('definition').map((d) => d.textContent)).toEqual(
+      ['Command line', 'This key sheet', 'Toggle theme', 'Changed', 'Changed', 'Changed'],
+    )
+    await userEvent.keyboard('{Escape}')
+    rerender(<Harness count={0} label="Changed" />)
+    expect(orderSize()).toBe(baseline)
+  })
+  it('treats only an open dialog as blocking jump keys', async () => {
+    const onT = vi.fn()
+    render(
+      <KeyboardProvider destinations={[]}>
+        <Jumps onT={onT} />
+        <div role="dialog" aria-modal="true" data-state="closed" />
+      </KeyboardProvider>,
+    )
+    await userEvent.keyboard('t')
+    expect(onT).toHaveBeenCalledOnce()
   })
   it('two components sharing a scope name keep their own bindings', async () => {
     const first = vi.fn()

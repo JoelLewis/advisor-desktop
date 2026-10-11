@@ -4,7 +4,7 @@ import { isEditableTarget, type Binding, type Destination } from './keys'
 import { CommandLine } from './CommandLine'
 import { KeySheet } from './KeySheet'
 
-const OPEN_DIALOG = '[role="dialog"][data-state="open"], [role="dialog"][aria-modal="true"]'
+const OPEN_DIALOG = '[role="dialog"][data-state="open"]'
 const RESERVED = ['/', '?']
 
 type Registration = { scope: string; bindings: Binding[] }
@@ -36,6 +36,14 @@ export function KeyboardProvider({ destinations, children }: { destinations: Des
     return () => { registrationsRef.current.delete(token); commit() }
   }, [commit])
 
+  // Pruned after the commit rather than in the unregister cleanup, so a registration that only
+  // re-registers (its bindings changed) keeps its place in the legend.
+  useEffect(() => {
+    for (const token of order.current.keys()) if (!registrationsRef.current.has(token)) order.current.delete(token)
+  }, [registrations])
+
+  const orderSize = useCallback(() => order.current.size, [])
+
   const bindings = useMemo(
     () => [...registrations.entries()]
       .sort(([a], [b]) => (order.current.get(a) ?? 0) - (order.current.get(b) ?? 0))
@@ -57,7 +65,7 @@ export function KeyboardProvider({ destinations, children }: { destinations: Des
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [bindings, commandOpen, sheetOpen])
 
-  const value = useMemo(() => ({ register, bindings }), [register, bindings])
+  const value = useMemo(() => ({ register, bindings, orderSize }), [register, bindings, orderSize])
 
   return (
     <KeyboardContext.Provider value={value}>
