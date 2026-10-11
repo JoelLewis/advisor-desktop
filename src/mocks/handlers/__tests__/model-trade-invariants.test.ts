@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { beforeAll, describe, it, expect } from 'vitest'
 import { previewModelTrades, executeModelTrades } from '@/services/trading'
 import { getDrift, getPositions } from '@/services/pms'
 import { getAccounts } from '@/services/custodian'
@@ -11,6 +11,7 @@ import { netCapitalGainsTax } from '@/lib/capital-gains'
 import { taxRateFor } from '@/features/portfolios/tax/shared'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import type { Account } from '@/types/account'
+import type { DriftStatus, Position } from '@/types/portfolio'
 import type { ModelTradePreview } from '@/types/trading'
 
 /**
@@ -28,6 +29,60 @@ import type { ModelTradePreview } from '@/types/trading'
  */
 
 const OWN_MODEL = (a: Account) => a.modelId ?? 'mod-001'
+
+/**
+ * The book the sweeps read, fetched once per file. Each sweep used to issue its own round-trip per
+ * account — x7 for the migration sweeps — about 1,500 requests in this file, each ~1.5ms of
+ * fetch + MSW transport against ~0.07ms of engine work. Under full-suite CPU contention the two
+ * 377-request migration sweeps crossed the 5s test timeout. The endpoint takes an `accountIds` list
+ * (the screen previews several accounts at once), so the whole book is now previewed in one
+ * request per model; 'a batched preview is the same answer as previewing each account alone' pins
+ * that this changes the transport, not the answer.
+ */
+type Book = {
+  accounts: Account[]
+  positions: Map<string, Position[]>
+  drift: Map<string, DriftStatus>
+  previews: Map<string, Map<string, ModelTradePreview>>
+}
+
+let book: Book
+
+beforeAll(async () => {
+  const accounts = await getAccounts()
+  const ids = accounts.map((a) => a.id)
+  const [positions, drift, previews] = await Promise.all([
+    Promise.all(ids.map(async (id) => [id, await getPositions(id)] as const)),
+    Promise.all(ids.map(async (id) => [id, await getDrift(id)] as const)),
+    Promise.all(MODEL_DEFINITIONS.map(async (m) => {
+      const batch = await previewModelTrades(m.id, ids)
+      return [m.id, new Map(batch.map((p) => [p.accountId, p]))] as const
+    })),
+  ])
+  book = { accounts, positions: new Map(positions), drift: new Map(drift), previews: new Map(previews) }
+})
+
+function previewOf(account: Account, modelId = OWN_MODEL(account)): ModelTradePreview {
+  const preview = book.previews.get(modelId)?.get(account.id)
+  if (!preview) throw new Error(`no preview for ${account.id} on ${modelId}`)
+  return preview
+}
+
+function positionsOf(account: Account): Position[] {
+  const positions = book.positions.get(account.id)
+  if (!positions) throw new Error(`no positions for ${account.id}`)
+  return positions
+}
+
+describe('the book snapshot the sweeps read', () => {
+  it('a batched preview is the same answer as previewing each account alone', async () => {
+    expect(book.accounts.length).toBeGreaterThan(40)
+    for (const account of book.accounts) {
+      const [single] = await previewModelTrades(OWN_MODEL(account), [account.id])
+      expect(single, account.id).toEqual(previewOf(account))
+    }
+  })
+})
 
 /** The model's cash target weight — the same `MODELS` table the engine's drift reads. */
 function cashTargetWeight(modelId: string): number {
@@ -81,16 +136,16 @@ describe('the model-trade preview names the account and the model it was actuall
 
 describe('currentDrift is the account\'s real drift against the model asked for', () => {
   it('for every account previewed on its own model, it is exactly the drift surface\'s own figure', async () => {
-    const accounts = await getAccounts()
+    const { accounts } = book
     let checked = 0
     for (const account of accounts) {
-      const [preview] = await previewModelTrades(OWN_MODEL(account), [account.id])
-      const drift = await getDrift(account.id)
+      const preview = previewOf(account)
+      const drift = book.drift.get(account.id)!
       // Both sides are `maxAbsDrift x 100` off one 4dp-rounded value, so the only slack here is
       // binary-float representation — bounded at ~1e-13, not at the 0.05 a display rounding would
       // need. A hash of the account id, or `totalDrift` in place of `maxAbsDrift`, misses by
       // whole percentage points.
-      expect(Math.abs(preview!.currentDrift - drift.maxAbsDrift * 100), account.id).toBeLessThan(1e-9)
+      expect(Math.abs(preview.currentDrift - drift.maxAbsDrift * 100), account.id).toBeLessThan(1e-9)
       checked++
     }
     expect(checked, 'vacuity guard — the loop must have run over the whole book').toBe(accounts.length)
@@ -107,13 +162,13 @@ describe('currentDrift is the account\'s real drift against the model asked for'
     expect(Math.abs(migrated!.currentDrift - own!.currentDrift)).toBeGreaterThan(1)
   })
 
-  it('it is not the character-code sequence it used to be', async () => {
-    const accounts = await getAccounts()
+  it('it is not the character-code sequence it used to be', () => {
+    const { accounts } = book
     const fabricated = (id: string) => +((id.charCodeAt(id.length - 1) % 5) + 1.2).toFixed(1)
     let differing = 0
     for (const account of accounts) {
-      const [preview] = await previewModelTrades(OWN_MODEL(account), [account.id])
-      if (Math.abs(preview!.currentDrift - fabricated(account.id)) > 1e-9) differing++
+      const preview = previewOf(account)
+      if (Math.abs(preview.currentDrift - fabricated(account.id)) > 1e-9) differing++
     }
     // Every account, not merely most — the old formula could only ever emit 1.2–5.2.
     expect(differing).toBe(accounts.length)
@@ -132,7 +187,7 @@ describe('the proposed trades are the account\'s own', () => {
     expect(a!.trades.map((t) => t.symbol).sort()).not.toEqual(b!.trades.map((t) => t.symbol).sort())
   })
 
-  it('across the whole book, a trade list is shared only by accounts whose holdings are identical', async () => {
+  it('across the whole book, a trade list is shared only by accounts whose holdings are identical', () => {
     // Four pairs in the fixture are the same model at the same total value — acc-013/acc-031
     // (mod-004, $350K), acc-016/acc-023 (mod-003, $1.8M), acc-017/acc-026 (mod-002, $2.2M) and
     // acc-021/acc-038 (mod-004, $500K) — and `getPositionsForAccount` gives such accounts
@@ -140,19 +195,19 @@ describe('the proposed trades are the account\'s own', () => {
     // trades; a blanket "no two accounts match" would be asserting something the data does not
     // say. What must be true is the converse: a shared trade list is only ever explained by
     // shared holdings, never by one hardcoded basket.
-    const accounts = await getAccounts()
+    const { accounts } = book
     const seen = new Map<string, string>()
     const unexplained: string[] = []
     let nonEmpty = 0
     for (const account of accounts) {
-      const [preview] = await previewModelTrades(OWN_MODEL(account), [account.id])
-      if (preview!.trades.length === 0) continue
+      const preview = previewOf(account)
+      if (preview.trades.length === 0) continue
       nonEmpty++
-      const key = JSON.stringify(preview!.trades)
+      const key = JSON.stringify(preview.trades)
       const prior = seen.get(key)
       if (!prior) { seen.set(key, account.id); continue }
-      const [mine, theirs] = await Promise.all([getPositions(account.id), getPositions(prior)])
-      const shape = (ps: Awaited<ReturnType<typeof getPositions>>) =>
+      const [mine, theirs] = [positionsOf(account), book.positions.get(prior)!]
+      const shape = (ps: Position[]) =>
         JSON.stringify(ps.map((p) => [p.symbol, p.quantity, p.marketValue]).sort())
       if (shape(mine) !== shape(theirs)) unexplained.push(`${account.id} matches ${prior} but holds different positions`)
     }
@@ -162,13 +217,13 @@ describe('the proposed trades are the account\'s own', () => {
     expect(seen.size).toBeGreaterThan(38)
   })
 
-  it('every sell names a security the account actually holds', async () => {
-    const accounts = await getAccounts()
+  it('every sell names a security the account actually holds', () => {
+    const { accounts } = book
     let checked = 0
     for (const account of accounts) {
-      const [preview] = await previewModelTrades(OWN_MODEL(account), [account.id])
-      const positions = await getPositions(account.id)
-      for (const trade of preview!.trades) {
+      const preview = previewOf(account)
+      const positions = positionsOf(account)
+      for (const trade of preview.trades) {
         if (trade.side !== 'sell') continue
         checked++
         expect(
@@ -180,13 +235,13 @@ describe('the proposed trades are the account\'s own', () => {
     expect(checked, 'vacuity guard — some sells must exist to check').toBeGreaterThan(5)
   })
 
-  it('no sell exceeds the position held, in money and in share count, at zero tolerance', async () => {
-    const accounts = await getAccounts()
+  it('no sell exceeds the position held, in money and in share count, at zero tolerance', () => {
+    const { accounts } = book
     let checked = 0
     for (const account of accounts) {
-      const [preview] = await previewModelTrades(OWN_MODEL(account), [account.id])
-      const positions = await getPositions(account.id)
-      for (const trade of preview!.trades) {
+      const preview = previewOf(account)
+      const positions = positionsOf(account)
+      for (const trade of preview.trades) {
         if (trade.side !== 'sell') continue
         const position = positions.find((p) => p.symbol === trade.symbol)!
         checked++
@@ -202,15 +257,15 @@ describe('the proposed trades are the account\'s own', () => {
     expect(checked).toBeGreaterThan(5)
   })
 
-  it('every row multiplies out: estimatedValue is exactly round(quantity x price), on both sides', async () => {
-    const accounts = await getAccounts()
+  it('every row multiplies out: estimatedValue is exactly round(quantity x price), on both sides', () => {
+    const { accounts } = book
     let checked = 0
     for (const account of accounts) {
       const modelId = OWN_MODEL(account)
-      const [preview] = await previewModelTrades(modelId, [account.id])
-      const positions = await getPositions(account.id)
+      const preview = previewOf(account, modelId)
+      const positions = positionsOf(account)
       const currency = account.baseCurrency ?? 'USD'
-      for (const trade of preview!.trades) {
+      for (const trade of preview.trades) {
         const held = positions.find((p) => p.symbol === trade.symbol)
         // A buy into a class the account holds nothing of executes against the model's own
         // implementation security, quoted USD and converted into the account's currency once —
@@ -231,13 +286,13 @@ describe('the proposed trades are the account\'s own', () => {
 })
 
 describe('the reason names this account\'s own drift, not a fixed pair of percentages', () => {
-  it('every trade quotes the account\'s own weight and the model\'s own target for that sleeve', async () => {
-    const accounts = await getAccounts()
+  it('every trade quotes the account\'s own weight and the model\'s own target for that sleeve', () => {
+    const { accounts } = book
     let checked = 0
     for (const account of accounts) {
-      const [preview] = await previewModelTrades(OWN_MODEL(account), [account.id])
-      const drift = await getDrift(account.id)
-      for (const trade of preview!.trades) {
+      const preview = previewOf(account)
+      const drift = book.drift.get(account.id)!
+      for (const trade of preview.trades) {
         const sleeve = drift.assetClassDrifts.find((d) => d.assetClass === trade.assetClass)!
         checked++
         expect(trade.reason, `${account.id} ${trade.symbol}`)
@@ -248,12 +303,11 @@ describe('the reason names this account\'s own drift, not a fixed pair of percen
     expect(checked).toBeGreaterThan(100)
   })
 
-  it('the fixed "from 47% to 42%" sentence appears nowhere in the book', async () => {
-    const accounts = await getAccounts()
+  it('the fixed "from 47% to 42%" sentence appears nowhere in the book', () => {
+    const { accounts } = book
     const reasons = new Set<string>()
     for (const account of accounts) {
-      const [preview] = await previewModelTrades(OWN_MODEL(account), [account.id])
-      for (const trade of preview!.trades) reasons.add(trade.reason)
+      for (const trade of previewOf(account).trades) reasons.add(trade.reason)
     }
     expect(reasons.size, 'vacuity guard — reasons must exist').toBeGreaterThan(20)
     for (const reason of reasons) {
@@ -306,17 +360,17 @@ describe('§9.3 · the preview and its trades carry the account\'s own currency'
 })
 
 describe('tax follows the account\'s own treatment and its own trades', () => {
-  it('no tax-deferred or tax-free account is shown a capital-gains figure, and taxable ones with sells are', async () => {
-    const accounts = await getAccounts()
+  it('no tax-deferred or tax-free account is shown a capital-gains figure, and taxable ones with sells are', () => {
+    const { accounts } = book
     let shelteredWithTrades = 0
     let taxableWithTax = 0
     for (const account of accounts) {
-      const [preview] = await previewModelTrades(OWN_MODEL(account), [account.id])
+      const preview = previewOf(account)
       const sheltered = account.taxTreatment === 'tax_deferred' || account.taxTreatment === 'tax_free'
       if (sheltered) {
-        if (preview!.trades.length > 0) shelteredWithTrades++
-        expect(preview!.estimatedTaxImpact, account.id).toBe(0)
-      } else if (preview!.estimatedTaxImpact > 0) {
+        if (preview.trades.length > 0) shelteredWithTrades++
+        expect(preview.estimatedTaxImpact, account.id).toBe(0)
+      } else if (preview.estimatedTaxImpact > 0) {
         taxableWithTax++
       }
       // The estimate is what the proposal adds to its return, so it is negative only when the
@@ -325,7 +379,7 @@ describe('tax follows the account\'s own treatment and its own trades', () => {
       // a return with no YTD results, so the bound needs no conversion.)
       const returnId = taxReturnFor(account)
       const ytd = returnId === null ? { shortTerm: 0, longTerm: 0 } : ytdRealisedOnReturn(returnId, MOCK_TODAY_ISO)
-      expect(preview!.estimatedTaxImpact, account.id).toBeGreaterThanOrEqual(-netCapitalGainsTax(ytd.shortTerm, ytd.longTerm, taxRateFor))
+      expect(preview.estimatedTaxImpact, account.id).toBeGreaterThanOrEqual(-netCapitalGainsTax(ytd.shortTerm, ytd.longTerm, taxRateFor))
     }
     // Both guards matter: the first says the zero above was asserted against accounts that
     // actually traded, the second that a non-zero figure is reachable at all.
@@ -338,20 +392,19 @@ describe('the shared engine\'s money invariants hold across the whole migration 
   // 47 accounts x 7 models. The rebalance endpoint can only ever exercise each account against
   // its own model; the model-trade screen is what drives every other combination, and it is the
   // reason `generateRebalanceTrades` gained a model parameter at all.
-  it('post-trade cash stays within [start, target] and never goes negative, in money at zero tolerance', async () => {
-    const accounts = await getAccounts()
+  it('post-trade cash stays within [start, target] and never goes negative, in money at zero tolerance', () => {
+    const { accounts } = book
     let combos = 0
     let withTrades = 0
     const failures: string[] = []
     for (const account of accounts) {
-      const positions = await getPositions(account.id)
-      const cashValue = positions.find((p) => p.symbol === 'CASH')?.marketValue ?? account.cashBalance
+      const cashValue = positionsOf(account).find((p) => p.symbol === 'CASH')?.marketValue ?? account.cashBalance
       for (const model of MODEL_DEFINITIONS) {
-        const [preview] = await previewModelTrades(model.id, [account.id])
+        const preview = previewOf(account, model.id)
         combos++
-        if (preview!.trades.length > 0) withTrades++
-        const bought = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
-        const sold = preview!.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
+        if (preview.trades.length > 0) withTrades++
+        const bought = preview.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
+        const sold = preview.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
         const endCash = cashValue - bought + sold
         const target = cashTargetWeight(model.id) * account.totalValue
         const lower = Math.min(cashValue, target)
@@ -370,15 +423,14 @@ describe('the shared engine\'s money invariants hold across the whole migration 
     expect(failures).toEqual([])
   })
 
-  it('no migration proposes a short sale: every sell is inside its own position, across all 7 models', async () => {
-    const accounts = await getAccounts()
+  it('no migration proposes a short sale: every sell is inside its own position, across all 7 models', () => {
+    const { accounts } = book
     let checked = 0
     const failures: string[] = []
     for (const account of accounts) {
-      const positions = await getPositions(account.id)
+      const positions = positionsOf(account)
       for (const model of MODEL_DEFINITIONS) {
-        const [preview] = await previewModelTrades(model.id, [account.id])
-        for (const trade of preview!.trades) {
+        for (const trade of previewOf(account, model.id).trades) {
           if (trade.side !== 'sell') continue
           const position = positions.find((p) => p.symbol === trade.symbol)
           checked++
@@ -405,12 +457,11 @@ describe('the cap resolution reaches the cash band across the whole reachable co
   // not 329. Measuring only the 329 is how the previous four-pass cutoff looked adequate.
   const THRESHOLDS = [0, 0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.04, 0.05, 0.07, 0.10]
 
-  it('7,238 configurations: no throw, and post-trade cash lands inside the band in money at zero tolerance', async () => {
-    const accounts = await getAccounts()
+  it('7,238 configurations: no throw, and post-trade cash lands inside the band in money at zero tolerance', () => {
+    const { accounts } = book
     const cashByAccount = new Map<string, number>()
     for (const account of accounts) {
-      const positions = await getPositions(account.id)
-      cashByAccount.set(account.id, positions.find((p) => p.symbol === 'CASH')?.marketValue ?? account.cashBalance)
+      cashByAccount.set(account.id, positionsOf(account).find((p) => p.symbol === 'CASH')?.marketValue ?? account.cashBalance)
     }
 
     let combos = 0
