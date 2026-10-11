@@ -36,7 +36,9 @@ export function HarvestScannerView({
   fxStatus = 'ready',
 }: HarvestScannerViewProps) {
   const selectedLoss = selectedLotObjects.reduce((s, l) => s + Math.abs(l.gainLoss), 0)
-  const selectedBenefit = selectedLotObjects.reduce((s, l) => s + estimatedTaxBenefit(l), 0)
+  // A sale that washes defers its loss into the replacement's basis (§1091(d)); it saves nothing now.
+  const selectedBenefit = selectedLotObjects.reduce((s, l) => s + (l.saleWashSaleRisk ? 0 : estimatedTaxBenefit(l)), 0)
+  const selectedWashing = selectedLotObjects.filter((l) => l.saleWashSaleRisk).length
 
   return (
     <div className="space-y-4">
@@ -50,6 +52,7 @@ export function HarvestScannerView({
                 <span className="font-mono font-medium">{formatWithConversion(selectedLoss, baseCurrency, { compact: true })}</span>
                 {' · '}estimated tax benefit{' '}
                 <span className="font-mono font-medium text-accent-green">{formatWithConversion(selectedBenefit, baseCurrency, { compact: true })}</span>
+                {selectedWashing > 0 && ` · ${selectedWashing} would wash, loss deferred`}
               </p>
             </div>
             <button className="flex items-center gap-1.5 rounded-md bg-accent-blue px-4 py-2 text-body font-medium text-white hover:bg-accent-blue/90">
@@ -92,6 +95,7 @@ export function HarvestScannerView({
                   <Th align="right">Qty</Th>
                   <Th align="right">Unrealized Loss</Th>
                   <Th align="right">Est. tax benefit</Th>
+                  <Th align="center">Sale (§1091)</Th>
                   <Th align="center">Repurchase (§1091)</Th>
                 </tr>
               </thead>
@@ -119,7 +123,20 @@ export function HarvestScannerView({
                       </td>
                       <td className="px-4 py-2.5 text-right font-mono">{lot.quantity.toLocaleString()}</td>
                       <td className="px-4 py-2.5 text-right font-mono text-accent-red"><CurrencyValue value={lot.gainLoss} from={baseCurrency} /></td>
-                      <td className="px-4 py-2.5 text-right font-mono text-accent-green"><CurrencyValue value={estimatedTaxBenefit(lot)} from={baseCurrency} /></td>
+                      <td className="px-4 py-2.5 text-right font-mono text-accent-green">
+                        {lot.saleWashSaleRisk
+                          ? <span className="text-caption text-text-tertiary">Deferred</span>
+                          : <CurrencyValue value={estimatedTaxBenefit(lot)} from={baseCurrency} />}
+                      </td>
+                      <td className="px-4 py-2.5 text-center">
+                        {/* The same test the rebalance preview applies to a sell leg: a loss with
+                            the same symbol bought in the household in the last 30 days. */}
+                        {lot.saleWashSaleRisk ? (
+                          <Badge variant="red">Wash sale: bought within 30 days</Badge>
+                        ) : (
+                          <span className="text-caption text-text-tertiary">No purchase in last 30 days</span>
+                        )}
+                      </td>
                       <td className="px-4 py-2.5 text-center">
                         {/* An open household loss window blocks buying this symbol back, not selling
                             this lot — the rebalance preview sells the same lot as a harvested loss

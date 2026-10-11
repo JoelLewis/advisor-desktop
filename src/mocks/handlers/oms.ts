@@ -13,9 +13,9 @@ import { isTaxableAccount } from '@/lib/tax-treatment'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { hasWashSaleRisk, isoDaysBefore } from '@/lib/wash-sale'
 import { estimateTaxOnReturns } from './tax-return'
-import { generateTaxLots, boundedTradeQty } from './custodian'
+import { generateTaxLots, boundedTradeQty, householdAcquisitions, type CustodianLot } from './custodian'
 import { taxRateFor } from '@/features/portfolios/tax/shared'
-import type { Position, TaxLot } from '@/types/portfolio'
+import type { Position } from '@/types/portfolio'
 import type { CurrencyCode } from '@/types/currency'
 
 /** Pooled/individual tech names used by the sector-concentration check below. */
@@ -89,7 +89,7 @@ const NOTHING_REALISED: RealisedSale = { shortTerm: 0, longTerm: 0, tax: 0, cons
  * lowest-gain-fraction (highest cost basis) lots first to minimise realised gain; a tax-unaware
  * pass sells the lots in their own oldest-first order.
  */
-function realiseSale(accountLots: readonly TaxLot[], target: Position, notional: number, taxAware: boolean): RealisedSale {
+function realiseSale(accountLots: readonly CustodianLot[], target: Position, notional: number, taxAware: boolean): RealisedSale {
   const lots = accountLots.filter((l) => l.positionId === target.id)
   if (lots.length === 0 || notional <= 0) return NOTHING_REALISED
   // Minimise realised gain and rank by *tax per dollar sold*, not gain per dollar sold: a
@@ -185,7 +185,7 @@ function orderSellCandidates(held: Position[], taxAware: boolean, recentlyOpened
 const REPLACEMENT_HOLD_DAYS = 31
 
 /** Positions every one of whose lots was bought within the last `REPLACEMENT_HOLD_DAYS` days. */
-function recentlyOpenedPositions(lots: readonly TaxLot[], asOfISO: string): Set<string> {
+function recentlyOpenedPositions(lots: readonly CustodianLot[], asOfISO: string): Set<string> {
   const since = isoDaysBefore(asOfISO, REPLACEMENT_HOLD_DAYS)
   const hasOlderLot = new Set(lots.filter((l) => l.purchaseDate < since).map((l) => l.positionId))
   return new Set(lots.filter((l) => !hasOlderLot.has(l.positionId)).map((l) => l.positionId))
@@ -281,15 +281,7 @@ export function generateRebalanceTrades(
   // `realiseSale`, and the household acquisitions below.
   const ownLots = generateTaxLots(account.id, account.totalValue)
   const recentlyOpened = recentlyOpenedPositions(ownLots, MOCK_TODAY_ISO)
-  const acquisitions = accounts.filter((a) => a.householdId === account.householdId).flatMap((a) => {
-    const symbolOf = new Map(getPositionsForAccount(a.id, a.totalValue).map((p) => [p.id, p.symbol]))
-    const lots = a.id === account.id ? ownLots : generateTaxLots(a.id, a.totalValue)
-    return lots.map((l) => {
-      const symbol = symbolOf.get(l.positionId)
-      if (symbol === undefined) throw new Error(`tax lot ${l.id} in ${a.id} names unknown position ${l.positionId}`)
-      return { symbol, date: l.purchaseDate, lotId: l.id }
-    })
-  })
+  const acquisitions = householdAcquisitions(account, (a) => (a.id === account.id ? ownLots : generateTaxLots(a.id, a.totalValue)))
 
   type RawLeg = { target: TradeCandidate; side: 'buy' | 'sell'; notional: number; sleeve: Sleeve }
 

@@ -29,6 +29,11 @@ type TaxLot = {
    * selling a lot at a loss is the harvest itself.
    */
   repurchaseBlockedUntil: string | null;
+  /**
+   * Whether selling this lot alone, today, would be a wash sale: it realises a loss and
+   * substantially identical shares were bought in the household within the last 30 days.
+   */
+  saleWashSaleRisk: boolean;
 };
 
 type Position = {
