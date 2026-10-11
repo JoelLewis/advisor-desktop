@@ -24,6 +24,8 @@ async function readJson(request: Request): Promise<Record<string, unknown> | und
 
 const nonEmptyString = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0
 
+const isAgentId = (value: string): value is AgentId => AGENTS.some((a) => a.id === value)
+
 const unauthorised = () => HttpResponse.json({ code: 'NO_VIEWER', message: 'A known viewer is required.' }, { status: 401 })
 
 export const workspaceHandlers = [
@@ -109,14 +111,16 @@ export const workspaceHandlers = [
     return HttpResponse.json(result.act, { status: 201 })
   }),
 
-  // Workspace handlers must be registered above this catch-all.
   http.post('/api/workspace/threads/:id/agents/:agentId/run', ({ request, params }) => {
     const viewer = viewerFrom(request)
     if (!viewer) return unauthorised()
-    const result = runAgent(viewer, String(params.id), String(params.agentId) as AgentId)
+    const agentId = String(params.agentId)
+    if (!isAgentId(agentId)) return HttpResponse.json({ code: 'NOT_ON_THREAD', message: 'That agent is not on this thread.' }, { status: 403 })
+    const result = runAgent(viewer, String(params.id), agentId)
     if (!result.ok) return HttpResponse.json({ code: result.code, message: result.message }, { status: result.status })
     return HttpResponse.json(result.findings)
   }),
 
+  // Workspace handlers must be registered above this catch-all.
   http.all('/api/workspace/*', () => HttpResponse.json({ code: 'METHOD_NOT_ALLOWED', message: 'Workspace records cannot be edited or deleted.' }, { status: 405 })),
 ]

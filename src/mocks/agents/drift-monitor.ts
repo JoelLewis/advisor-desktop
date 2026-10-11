@@ -23,10 +23,10 @@ export function runDriftMonitor({ asOf, subject }: AgentContext): AgentFinding[]
   }
   const band = drift.driftTolerance
   const worst = drifts.reduce((a, b) => (Math.abs(b.drift) > Math.abs(a.drift) ? b : a))
-  const outside = drifts.filter((d) => Math.abs(d.drift) > band + 1e-9)
+  const outside = drifts.filter((d) => Math.abs(d.drift) > band)
   const findings: AgentFinding[] = [{
-    claim: outside.length > 0 ? `${label(worst.assetClass)} is outside its tolerance band.` : 'Every asset class is inside its tolerance band.',
-    attention: outside.length > 0 ? 'attention' : 'info',
+    claim: drift.needsRebalance ? `${label(worst.assetClass)} is outside its tolerance band.` : 'Every asset class is inside its tolerance band.',
+    attention: drift.needsRebalance ? 'attention' : 'info',
     citations: cite,
     figures: [
       { label: `Largest drift · ${label(worst.assetClass)}`, value: worst.drift, unit: 'pp', source: 'drift.assetClassDrifts' },
@@ -46,9 +46,9 @@ export function runDriftMonitor({ asOf, subject }: AgentContext): AgentFinding[]
   const positions = getPositionsForAccount(account.id, account.totalValue)
   for (const d of drifts) {
     const held = positions.filter((p) => p.assetClass === d.assetClass && p.symbol !== 'CASH')
-    if (held.length > 0 && held.every((p) => !isMarketTradable(p.symbol)) && Math.abs(d.drift) > 0) {
+    if (held.length > 0 && held.every((p) => !isMarketTradable(p.symbol)) && d.drift > 0) {
       findings.push({
-        claim: `${label(d.assetClass)} cannot be traded at market; its drift will remain until a repurchase window.`,
+        claim: `${label(d.assetClass)} cannot be sold at market; it can only be reduced at the fund's periodic repurchase windows.`,
         attention: 'info', citations: cite,
         figures: [{ label: label(d.assetClass), value: d.drift, unit: 'pp', source: 'drift.assetClassDrifts' }],
       })
