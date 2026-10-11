@@ -101,8 +101,9 @@ component in both themes on real acc-002 data. No threads, no agents, no jobs.
     base style.
 - Components follow the shadcn pattern: Radix primitive where behaviour matters (Dialog, Tabs, Tooltip,
   Popover), `cva` variants, `cn()` from `src/lib/utils.ts`. No CSS files besides `src/styles/`.
-- Archivo is self-hosted as woff2 in `public/fonts/` (SIL Open Font License file included) with
-  `font-display: swap` and a metric-compatible fallback stack.
+- Archivo is self-hosted through `@fontsource-variable/archivo` (SIL Open Font License, width and
+  weight axes), bundled by Vite: no external font host at runtime. This is the phase's one new
+  dependency and needs Joel's approval before it is added.
 
 ## 4. The kit (`src/kit/`)
 
