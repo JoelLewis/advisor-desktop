@@ -17,5 +17,6 @@ describe('Reading', () => {
     const v = screen.getByText(fmtResult(-45_850))
     expect(v).toHaveAttribute('data-negative', 'true')
     expect(v.className).not.toMatch(/signal/)
+    expect(v.className).toMatch(/font-semibold/)
   })
 })

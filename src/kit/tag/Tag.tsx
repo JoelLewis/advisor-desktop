@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils'
 
 const TONE = {
   outline: 'border border-ink-2 text-ink-2',
-  solid: 'bg-ink text-face',
+  solid: 'border border-ink bg-ink text-face',
   hatch: 'hatch border border-rule-2 text-ink',
 } as const
 

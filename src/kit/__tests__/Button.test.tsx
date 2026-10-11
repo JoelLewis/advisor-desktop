@@ -12,6 +12,13 @@ describe('Button', () => {
     await userEvent.click(b)
     expect(onClick).toHaveBeenCalledOnce()
   })
+  it('asChild renders the child element with no type and keeps the rank', () => {
+    render(<Button asChild rank="quiet"><a href="/clients">Open clients</a></Button>)
+    const link = screen.getByRole('link', { name: 'Open clients' })
+    expect(link.tagName).toBe('A')
+    expect(link).not.toHaveAttribute('type')
+    expect(link.dataset.rank).toBe('quiet')
+  })
   it('defaults to primary and type=button', () => {
     render(<Button>Approve</Button>)
     const b = screen.getByRole('button')

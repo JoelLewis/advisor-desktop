@@ -1,7 +1,18 @@
 import { clsx, type ClassValue } from 'clsx'
-import { twMerge } from 'tailwind-merge'
+import { extendTailwindMerge } from 'tailwind-merge'
 import type { CurrencyCode } from '@/types/currency'
 import { getCurrencyInfo } from '@/lib/currency'
+
+// The instrument's type scale and colour tokens are not Tailwind defaults, so tailwind-merge
+// would otherwise read `text-label` as a colour and drop it beside `text-ink`.
+const twMerge = extendTailwindMerge({
+  extend: {
+    theme: {
+      text: ['label', 'table-dense', 'table', 'body', 'copy', 'title', 'total', 'readout-sm', 'readout-md', 'readout-lg'],
+      color: ['bg', 'face', 'ink', 'ink-2', 'ink-3', 'rule', 'rule-2', 'band', 'signal', 'signal-ink'],
+    },
+  },
+})
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
