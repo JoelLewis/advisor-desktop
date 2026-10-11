@@ -13,7 +13,7 @@ type DraftsPanelProps = { thread: Thread; directory: Directory; onSent: (actId: 
 export function DraftsPanel({ thread, directory, onSent }: DraftsPanelProps) {
   const { viewerId } = useViewer()
   const drafts = useDrafts(thread.id, true)
-  const send = useSendToClient(thread.id)
+  const send = useSendToClient()
   const sending = useRef(new Set<string>())
   if (!thread.clientId) throw new Error(`Thread "${thread.id}" has no client to send to`)
   const client = personIn(directory, thread.clientId)

@@ -17,10 +17,11 @@ export function useDirectory() {
  * not to the current viewer, so it reads the directory as the advisor: a client's own directory names
  * only the people in their thread.
  */
-export function useViewAsDirectory() {
+export function useViewAsDirectory(enabled = true) {
   return useQuery({
     queryKey: ['workspace', DEFAULT_VIEWER_ID, 'directory'],
     queryFn: () => api.getDirectory(DEFAULT_VIEWER_ID),
+    enabled,
   })
 }
 
@@ -57,15 +58,18 @@ export function useActs(threadId: string) {
   })
 }
 
-function useInvalidateViewer() {
-  const { viewerId } = useViewer()
+/** Every query under this prefix is workspace state; a write can change what any viewer sees. */
+export const WORKSPACE_QUERY_PREFIX = ['workspace'] as const
+
+/** A write changes what every viewer sees (a sent draft reaches the client), so it marks the whole workspace stale, not just the writer's view. */
+function useInvalidateWorkspace() {
   const queryClient = useQueryClient()
-  return () => queryClient.invalidateQueries({ queryKey: ['workspace', viewerId] })
+  return () => queryClient.invalidateQueries({ queryKey: WORKSPACE_QUERY_PREFIX })
 }
 
 export function usePostMessage(threadId: string) {
   const { viewerId } = useViewer()
-  const invalidate = useInvalidateViewer()
+  const invalidate = useInvalidateWorkspace()
   return useMutation({
     mutationFn: (body: string) => api.postMessage(viewerId, threadId, body),
     onSuccess: invalidate,
@@ -74,16 +78,16 @@ export function usePostMessage(threadId: string) {
 
 export function useCreateDraft(threadId: string) {
   const { viewerId } = useViewer()
-  const invalidate = useInvalidateViewer()
+  const invalidate = useInvalidateWorkspace()
   return useMutation({
     mutationFn: (body: string) => api.createDraft(viewerId, threadId, body),
     onSuccess: invalidate,
   })
 }
 
-export function useSendToClient(_threadId: string) {
+export function useSendToClient() {
   const { viewerId } = useViewer()
-  const invalidate = useInvalidateViewer()
+  const invalidate = useInvalidateWorkspace()
   return useMutation({
     mutationFn: (draftId: string) => api.sendToClient(viewerId, draftId),
     onSuccess: invalidate,
@@ -92,7 +96,7 @@ export function useSendToClient(_threadId: string) {
 
 export function useRunAgent(threadId: string) {
   const { viewerId } = useViewer()
-  const invalidate = useInvalidateViewer()
+  const invalidate = useInvalidateWorkspace()
   return useMutation({
     mutationFn: (agentId: AgentId) => api.runAgent(viewerId, threadId, agentId),
     onSuccess: invalidate,
