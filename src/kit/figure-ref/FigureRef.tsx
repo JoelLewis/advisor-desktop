@@ -7,10 +7,10 @@ export function FigureRef({ children, source, note }: { children: string; source
     <Tooltip.Provider delayDuration={200}>
       <Tooltip.Root>
         <Tooltip.Trigger asChild>
-          <span data-figure tabIndex={0} aria-describedby={descId}
+          <span data-figure role="group" aria-label={children} tabIndex={0} aria-describedby={descId}
             className="tabular underline decoration-ink-3 decoration-dotted underline-offset-4">
             {children}
-            {note !== undefined ? <sup className="ml-0.5 text-label text-ink-3">{note}</sup> : null}
+            {note !== undefined ? <sup className="ml-0.5 text-label text-ink-3"><span className="sr-only">note </span>{note}</sup> : null}
           </span>
         </Tooltip.Trigger>
         <Tooltip.Portal>
