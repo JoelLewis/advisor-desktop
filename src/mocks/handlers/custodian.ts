@@ -89,6 +89,34 @@ type TradeShell = {
   fraction: number
 }
 
+/**
+ * Positions whose purchase date is a recorded fact rather than synthesised. pos-265 is the SMH
+ * bought on 2026-02-21 as the INTC replacement; seeding it 3–47 months old would contradict the
+ * activity feed, the note and the compliance record that all date it.
+ *
+ * Only the date lives here. Such a position was opened in one purchase and not traded since, so
+ * its quantity and cost basis in `positions.ts` *are* the purchase: the one lot `generateTaxLots`
+ * emits and the one buy `generateTransactions` records are both read from the position, and the
+ * three cannot drift apart.
+ */
+export const KNOWN_OPEN_DATES: ReadonlyMap<string, string> = new Map([['pos-265', '2026-02-21']])
+
+/**
+ * IRC §1222: long-term means held *more than* one year, so a lot bought exactly a year before
+ * `asOfISO` is still short-term. Dates are ISO `YYYY-MM-DD`, compared as strings.
+ */
+export function holdingPeriodOn(purchaseISO: string, asOfISO: string): 'short' | 'long' {
+  const anniversary = new Date(`${purchaseISO}T00:00:00Z`)
+  anniversary.setUTCFullYear(anniversary.getUTCFullYear() + 1)
+  return asOfISO > anniversary.toISOString().slice(0, 10) ? 'long' : 'short'
+}
+
+/** Whether `pos` was held on `dateISO` — false only before a known open date. */
+function heldOn(pos: { id: string }, dateISO: string): boolean {
+  const openedOn = KNOWN_OPEN_DATES.get(pos.id)
+  return openedOn === undefined || dateISO.slice(0, 10) >= openedOn
+}
+
 export function generateTransactions(accountId: string, totalValue: number): Transaction[] {
   const baseDate = startOfToday()
   const rand = seeded(`txn:${accountId}`)
@@ -159,6 +187,24 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
     })
   }
 
+  // A position with a recorded open date gets that purchase as its one buy — its whole quantity
+  // at its cost basis — and is kept out of the synthetic draws below.
+  for (const pos of held) {
+    const openedOn = KNOWN_OPEN_DATES.get(pos.id)
+    if (openedOn === undefined) continue
+    txns.push({
+      id: `txn-${accountId}-open-${pos.id}`,
+      accountId,
+      date: new Date(`${openedOn}T00:00:00Z`).toISOString(),
+      type: 'buy',
+      symbol: pos.symbol,
+      description: `Bought ${pos.quantity.toLocaleString()} shares ${pos.symbol}`,
+      amount: -pos.costBasis,
+      quantity: pos.quantity,
+      price: pos.costBasis / pos.quantity,
+    })
+  }
+
   // The PRNG's own buy/sell draws pick from this pool, which excludes every symbol carrying a
   // real fixture sale — so a random draw can never dilute, duplicate, or contradict a narrative
   // sale, and the opening-balance seed above never has to reconcile against an unpredictable
@@ -180,16 +226,23 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
       const pos = tradePool[Math.floor(rand() * tradePool.length)]!
       const rawQty = Math.floor(rand() * 200) + 10
       const fraction = 0.05 + rand() * 0.35
-      trades.push({ index: i, date, dateStr, side, pos, rawQty, fraction })
+      // A draw landing on a known-open position makes no trade (its history is the one recorded
+      // purchase). Dropping the draw rather than shrinking `tradePool` leaves the PRNG stream, and
+      // so every other symbol's synthetic history, exactly as it was.
+      if (!KNOWN_OPEN_DATES.has(pos.id)) trades.push({ index: i, date, dateStr, side, pos, rawQty, fraction })
     } else if (typeRoll < 0.6) {
       // Dividend — a plausible quarterly yield (0.2%–0.8%) on the position actually named,
       // rather than an arbitrary fraction of total account value.
       const pos = held[Math.floor(rand() * held.length)]!
       const amount = Math.round(pos.marketValue * (0.002 + rand() * 0.006) * 100) / 100
-      txns.push({
-        id: `txn-${accountId}-${i}`, accountId, date: dateStr,
-        type: 'dividend', symbol: pos.symbol, description: `Dividend — ${pos.symbol}`, amount,
-      })
+      // No dividend on a position before it was bought; the draw is dropped, not redrawn, for the
+      // same PRNG-stability reason as the trade draw above.
+      if (heldOn(pos, dateStr)) {
+        txns.push({
+          id: `txn-${accountId}-${i}`, accountId, date: dateStr,
+          type: 'dividend', symbol: pos.symbol, description: `Dividend — ${pos.symbol}`, amount,
+        })
+      }
     } else if (typeRoll < 0.75) {
       // Interest
       const amount = Math.round(totalValue * 0.0003 * 100) / 100
@@ -244,13 +297,6 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
   return txns.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 }
 
-/**
- * Positions whose purchase date is a recorded fact rather than synthesised. pos-265 is the SMH
- * bought on 2026-02-21 as the INTC replacement; seeding it 3–47 months old would contradict the
- * activity feed, the note and the compliance record that all date it.
- */
-export const KNOWN_OPEN_DATES: ReadonlyMap<string, string> = new Map([['pos-265', '2026-02-21']])
-
 export function generateTaxLots(accountId: string, totalValue: number): TaxLot[] {
   const positions = getPositionsForAccount(accountId, totalValue)
   const anchor = startOfToday()
@@ -277,7 +323,7 @@ export function generateTaxLots(accountId: string, totalValue: number): TaxLot[]
         costBasis: pos.costBasis,
         currentValue: pos.marketValue,
         gainLoss: pos.marketValue - pos.costBasis,
-        holdingPeriod: 'short',
+        holdingPeriod: holdingPeriodOn(openedOn, MOCK_TODAY_ISO),
         washSaleRestricted: restrictedSymbols.has(pos.symbol),
       })
       continue
@@ -321,7 +367,8 @@ export function generateTaxLots(accountId: string, totalValue: number): TaxLot[]
         currentValue,
         gainLoss: currentValue - costBasis,
         // IRC §1222 requires *more than* one year for long-term treatment, so a lot exactly
-        // 12 months old is short-term.
+        // 12 months old is short-term. A whole-month age makes this `holdingPeriodOn`'s rule
+        // without the date arithmetic, which this hot path (every rebalance sweep) would pay.
         holdingPeriod: ages[i]! > 12 ? 'long' : 'short',
         washSaleRestricted: restrictedSymbols.has(pos.symbol),
       })

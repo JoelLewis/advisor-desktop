@@ -21,10 +21,12 @@ const trustPositions: PositionSeed[] = [
 //
 // D2/D28 — the nine positions summed to $4,832,000 against a $4,500,000 balance, and INTC still
 // showed the full 12,000 shares four days after ord-004/rs-001 sold 5,000 of them. INTC is now the
-// 7,000 shares actually held (cost basis $35.00/share, matching rs-001's $175,000 on 5,000), CASH
-// is the money market balance plus that sale's $142,250 of proceeds ($127,390 + $142,250), and the
+// 7,000 shares actually held (cost basis $35.00/share, matching rs-001's $175,000 on 5,000), and the
 // remaining holdings are scaled by 0.923909 (= $4,031,210 / $4,363,210) with quantities re-derived
-// as whole shares so every market value is quantity x price and the nine sum to $4,500,000 exactly.
+// as whole shares so every market value is quantity x price. CASH is the money market balance plus
+// that sale's $142,250 of proceeds, less the $44,136 that bought 180 SMH the same day as the
+// harvest replacement: $127,390 + $142,250 − $44,136 = $225,504. The ten positions (CASH included)
+// sum to $4,500,000 exactly.
 const robertIndividualPositions: PositionSeed[] = [
   { id: 'pos-020', accountId: 'acc-002', symbol: 'SPY', name: 'SPDR S&P 500 ETF', assetClass: 'us_equity', quantity: 3879, price: 520.30, costBasis: 1_663_037, marketValue: 2_018_243.70, gainLoss: 355_206.70, gainLossPercent: 0.214 },
   { id: 'pos-021', accountId: 'acc-002', symbol: 'QQQ', name: 'Invesco QQQ Trust', assetClass: 'us_equity', quantity: 1664, price: 485.20, costBasis: 628_258, marketValue: 807_372.80, gainLoss: 179_114.80, gainLossPercent: 0.285 },
