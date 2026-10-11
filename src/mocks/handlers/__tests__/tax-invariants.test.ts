@@ -273,19 +273,24 @@ describe('wash sale windows', () => {
   })
 })
 
-describe('washSaleRestricted reflects a real restriction', () => {
-  it('C12: a lot whose symbol has an open household window is restricted', async () => {
+// `repurchaseBlockedUntil` is a fact about **buying** the symbol back, not about selling the lot:
+// selling a long-held INTC lot at a loss is not a wash sale; repurchasing INTC before hh-001's
+// rs-001 window closes (2026-03-23) would be. The field carries the date so no surface has to
+// guess what is restricted, or until when.
+describe('repurchaseBlockedUntil states what is restricted, and until when', () => {
+  it('C12: acc-002\'s INTC lots are blocked from repurchase until rs-001\'s window closes', async () => {
     const lots = await getTaxLots('acc-002')
     const positions = await getPositions('acc-002')
     const intcPositionId = positions.find((p) => p.symbol === 'INTC')!.id
     const intcLots = lots.filter((l) => l.positionId === intcPositionId)
-    expect(intcLots.every((l) => l.washSaleRestricted)).toBe(true)
+    expect(intcLots.length).toBeGreaterThan(0)
+    expect(intcLots.every((l) => l.repurchaseBlockedUntil === '2026-03-23')).toBe(true)
   })
 
-  it('C12: not every lot is Clear', async () => {
+  it('C12: a symbol with no open household window is not blocked', async () => {
     const lots = await getTaxLots('acc-002')
-    expect(lots.some((l) => l.washSaleRestricted)).toBe(true)
-    expect(lots.some((l) => !l.washSaleRestricted)).toBe(true)
+    expect(lots.some((l) => l.repurchaseBlockedUntil !== null)).toBe(true)
+    expect(lots.some((l) => l.repurchaseBlockedUntil === null)).toBe(true)
   })
 })
 

@@ -574,14 +574,14 @@ export const aiHandlers = [
           // surface in the product stating figures it couldn't support. Filters the same
           // book-wide harvestable-lot walk the dashboard's D22 insight and the chat response above
           // both read (`harvestableLotsAcrossBook`) down to this account, and reads
-          // `TaxLot.washSaleRestricted` — itself derived from `openWashSaleWindows` inside
+          // `TaxLot.repurchaseBlockedUntil` — itself derived from `openWashSaleWindows` inside
           // `generateTaxLots` (custodian.ts) — rather than asserting the window is clear
           // unconditionally. No harvestable losses means no insight, not a $0 one.
           const accountHarvestable = harvestableLotsAcrossBook().filter((l) => l.accountId === entityId)
           if (accountHarvestable.length > 0) {
             const positionCount = new Set(accountHarvestable.map((l) => l.positionId)).size
             const loss = accountHarvestable.reduce((s, l) => s + Math.abs(l.gainLoss), 0)
-            const hasRestricted = accountHarvestable.some((l) => l.washSaleRestricted)
+            const hasRestricted = accountHarvestable.some((l) => l.repurchaseBlockedUntil !== null)
             insights.push({
               id: `acc-${entityId}-2`,
               severity: 'opportunity',

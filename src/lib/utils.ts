@@ -89,6 +89,20 @@ export function formatDate(date: string | Date): string {
   }).format(new Date(date))
 }
 
+/**
+ * An ISO calendar date ("2026-03-23") as "Mar 23, 2026". Formatted in UTC because `new Date`
+ * parses a bare date as UTC midnight, which a local-time formatter west of Greenwich shows as the
+ * day before.
+ */
+export function formatCalendarDate(isoDate: string): string {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(`${isoDate}T00:00:00Z`))
+}
+
 export function formatTime(date: string | Date): string {
   return new Intl.DateTimeFormat('en-US', {
     hour: 'numeric',

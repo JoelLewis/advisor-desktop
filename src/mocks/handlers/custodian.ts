@@ -307,8 +307,9 @@ export function generateTaxLots(accountId: string, totalValue: number): TaxLot[]
   // because a repurchase in any of them triggers §1091 (the "IRA wash-sale trap"). An account
   // that can't be resolved to a household must restrict nothing, not everything — an omitted
   // `householdId` would otherwise widen `openWashSaleWindows` to every household in the firm.
-  const restrictedSymbols = new Set(
-    account ? openWashSaleWindows(MOCK_TODAY_ISO, account.householdId).map((w) => w.symbol) : [],
+  // Windows arrive sorted by `end`, so the last one written per symbol is the latest to close.
+  const repurchaseBlockedUntil = new Map(
+    account ? openWashSaleWindows(MOCK_TODAY_ISO, account.householdId).map((w) => [w.symbol, w.end]) : [],
   )
 
   for (const pos of positions) {
@@ -324,7 +325,7 @@ export function generateTaxLots(accountId: string, totalValue: number): TaxLot[]
         currentValue: pos.marketValue,
         gainLoss: pos.marketValue - pos.costBasis,
         holdingPeriod: holdingPeriodOn(openedOn, MOCK_TODAY_ISO),
-        washSaleRestricted: restrictedSymbols.has(pos.symbol),
+        repurchaseBlockedUntil: repurchaseBlockedUntil.get(pos.symbol) ?? null,
       })
       continue
     }
@@ -370,7 +371,7 @@ export function generateTaxLots(accountId: string, totalValue: number): TaxLot[]
         // 12 months old is short-term. A whole-month age makes this `holdingPeriodOn`'s rule
         // without the date arithmetic, which this hot path (every rebalance sweep) would pay.
         holdingPeriod: ages[i]! > 12 ? 'long' : 'short',
-        washSaleRestricted: restrictedSymbols.has(pos.symbol),
+        repurchaseBlockedUntil: repurchaseBlockedUntil.get(pos.symbol) ?? null,
       })
     }
   }

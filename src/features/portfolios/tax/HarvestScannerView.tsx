@@ -3,6 +3,7 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { CurrencyValue } from '@/components/ui/CurrencyValue'
 import type { TaxLot } from '@/types/portfolio'
+import { formatCalendarDate } from '@/lib/utils'
 import type { CurrencyCode } from '@/types/currency'
 import { HOLDING_LABELS, Th, estimatedTaxBenefit, RATE_DISCLOSURE, type FxStatus } from './shared'
 
@@ -91,7 +92,7 @@ export function HarvestScannerView({
                   <Th align="right">Qty</Th>
                   <Th align="right">Unrealized Loss</Th>
                   <Th align="right">Est. tax benefit</Th>
-                  <Th align="center">Wash Sale Risk</Th>
+                  <Th align="center">Repurchase (§1091)</Th>
                 </tr>
               </thead>
               <tbody>
@@ -120,10 +121,13 @@ export function HarvestScannerView({
                       <td className="px-4 py-2.5 text-right font-mono text-accent-red"><CurrencyValue value={lot.gainLoss} from={baseCurrency} /></td>
                       <td className="px-4 py-2.5 text-right font-mono text-accent-green"><CurrencyValue value={estimatedTaxBenefit(lot)} from={baseCurrency} /></td>
                       <td className="px-4 py-2.5 text-center">
-                        {lot.washSaleRestricted ? (
-                          <Badge variant="red">Restricted</Badge>
+                        {/* An open household loss window blocks buying this symbol back, not selling
+                            this lot — the rebalance preview sells the same lot as a harvested loss
+                            with no wash-sale flag. */}
+                        {lot.repurchaseBlockedUntil ? (
+                          <Badge variant="yellow">Repurchase blocked until {formatCalendarDate(lot.repurchaseBlockedUntil)}</Badge>
                         ) : (
-                          <Badge variant="green">Clear</Badge>
+                          <span className="text-caption text-text-tertiary">No open window</span>
                         )}
                       </td>
                     </tr>

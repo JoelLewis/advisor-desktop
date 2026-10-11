@@ -6,6 +6,7 @@ import { Routes, Route } from 'react-router-dom'
 import { renderWithProviders } from '@/test/render'
 import { server } from '@/test/server'
 import { TaxManagementPage } from '../TaxManagementPage'
+import { previewRebalance } from '@/services/oms'
 
 function renderPage(accountId: string) {
   return renderWithProviders(
@@ -292,5 +293,27 @@ describe('TaxManagementPage gates on tax treatment', () => {
     renderPage('acc-003')
     await screen.findByText(/not applicable in a tax-deferred account/i)
     expect(screen.queryByText('Cost Basis Method')).not.toBeInTheDocument()
+  })
+
+  // An open household loss window restricts **buying INTC back**, not selling it: selling a
+  // long-held lot at a loss is the harvest, and the rebalance preview books it as one with no
+  // wash-sale flag. The scanner previously badged that same lot "Restricted" in a "Wash Sale Risk"
+  // column, so the two surfaces disagreed about one sale.
+  it('acc-002 INTC: the scanner and the rebalance preview agree the loss sale is not a wash sale', async () => {
+    const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
+    const intcSell = preview!.trades.find((t) => t.symbol === 'INTC' && t.side === 'sell')!
+    expect(intcSell.realisedShortTerm + intcSell.realisedLongTerm).toBeLessThan(0)
+    expect(intcSell.washSaleRisk).toBe(false)
+
+    const user = userEvent.setup()
+    renderPage('acc-002')
+    await screen.findByText('Robert Johnson Individual')
+    await user.click(screen.getByRole('button', { name: 'Harvest scanner' }))
+
+    const intcCell = await screen.findByText('INTC')
+    const intcRow = intcCell.closest('tr')!
+    expect(within(intcRow).queryByText('Restricted')).not.toBeInTheDocument()
+    expect(within(intcRow).getByText('Repurchase blocked until Mar 23, 2026')).toBeInTheDocument()
+    expect(screen.queryByText('Wash Sale Risk')).not.toBeInTheDocument()
   })
 })
