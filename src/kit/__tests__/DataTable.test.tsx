@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { DataTable } from '@/kit/data-table/DataTable'
 import { Num } from '@/kit/data-table/Num'
@@ -44,7 +44,7 @@ describe('DataTable', () => {
     renderTable({ onActivate })
     const body = screen.getAllByRole('row').slice(1)
     expect(body.filter((r) => r.tabIndex === 0)).toHaveLength(1)
-    body[0]!.focus()
+    act(() => body[0]!.focus())
     await userEvent.keyboard('j')
     expect(body[1]).toHaveFocus()
     await userEvent.keyboard('{ArrowDown}')
@@ -70,18 +70,20 @@ describe('DataTable', () => {
   })
   it('keeps exactly one tab stop after rows shrink past the cursor', async () => {
     const view = renderTable()
-    screen.getAllByRole('row')[1]!.focus()
+    act(() => screen.getAllByRole('row')[1]!.focus())
     await userEvent.keyboard('{End}')
-    view.rerender(
-      <DataTable caption="Holdings" columns={columns} rows={rows.slice(0, 1)} getRowId={(r) => r.id}
-        noun={{ singular: 'position', plural: 'positions' }} />,
-    )
+    await act(async () => {
+      view.rerender(
+        <DataTable caption="Holdings" columns={columns} rows={rows.slice(0, 1)} getRowId={(r) => r.id}
+          noun={{ singular: 'position', plural: 'positions' }} />,
+      )
+    })
     const body = screen.getAllByRole('row').slice(1)
     expect(body.filter((r) => r.tabIndex === 0)).toHaveLength(1)
   })
   it('keeps the cursor on the same row when a sort reorders rows', async () => {
     renderTable()
-    screen.getAllByRole('row')[1]!.focus()
+    act(() => screen.getAllByRole('row')[1]!.focus())
     await userEvent.click(within(screen.getByRole('columnheader', { name: /Value/ })).getByRole('button'))
     const body = screen.getAllByRole('row').slice(1)
     expect(body.filter((r) => r.tabIndex === 0)).toHaveLength(1)
@@ -90,7 +92,7 @@ describe('DataTable', () => {
   it('jumps with Home and End', async () => {
     renderTable()
     const body = screen.getAllByRole('row').slice(1)
-    body[0]!.focus()
+    act(() => body[0]!.focus())
     await userEvent.keyboard('{End}')
     expect(body[2]).toHaveFocus()
     await userEvent.keyboard('{Home}')
@@ -100,7 +102,7 @@ describe('DataTable', () => {
     const onActivate = vi.fn()
     renderTable({ onActivate })
     await userEvent.click(within(screen.getByRole('columnheader', { name: /Value/ })).getByRole('button'))
-    screen.getAllByRole('row')[1]!.focus()
+    act(() => screen.getAllByRole('row')[1]!.focus())
     await userEvent.keyboard('{Enter}')
     expect(onActivate).toHaveBeenCalledWith(rows[2])
   })
@@ -122,7 +124,7 @@ describe('DataTable', () => {
   it('does not activate a row when Enter is pressed on a header sort button', async () => {
     const onActivate = vi.fn()
     renderTable({ onActivate })
-    within(screen.getByRole('columnheader', { name: /Value/ })).getByRole('button').focus()
+    act(() => within(screen.getByRole('columnheader', { name: /Value/ })).getByRole('button').focus())
     await userEvent.keyboard('{Enter}')
     expect(onActivate).not.toHaveBeenCalled()
   })
@@ -142,14 +144,14 @@ describe('DataTable', () => {
   it('ignores modifier chords', async () => {
     renderTable()
     const body = screen.getAllByRole('row').slice(1)
-    body[0]!.focus()
+    act(() => body[0]!.focus())
     await userEvent.keyboard('{Control>}j{/Control}')
     expect(body[0]).toHaveFocus()
   })
   it('accepts capital J and K', async () => {
     renderTable()
     const body = screen.getAllByRole('row').slice(1)
-    body[0]!.focus()
+    act(() => body[0]!.focus())
     await userEvent.keyboard('J')
     expect(body[1]).toHaveFocus()
     await userEvent.keyboard('K')
@@ -168,5 +170,21 @@ describe('DataTable', () => {
     await userEvent.click(within(screen.getByRole('columnheader', { name: /Symbol/ })).getByRole('button'))
     const names = screen.getAllByRole('row').slice(1).map((r) => within(r).getAllByRole('cell')[0]!.textContent)
     expect(names).toEqual(['ETHE', 'INTC', 'SPY'])
+  })
+  it('does not activate a row when an interactive cell child is clicked', async () => {
+    const onActivate = vi.fn()
+    const onRemove = vi.fn()
+    const withButton: Column<Row>[] = [
+      ...columns,
+      { id: 'x', header: 'Act', cell: (r) => <button type="button" onClick={() => onRemove(r.id)}>remove {r.id}</button> },
+    ]
+    renderTable({ columns: withButton, onActivate })
+    await userEvent.click(screen.getByRole('button', { name: 'remove a' }))
+    expect(onRemove).toHaveBeenCalledWith('a')
+    expect(onActivate).not.toHaveBeenCalled()
+  })
+  it('uses the singular when one row is hidden by a filter', () => {
+    renderTable({ rows: [], total: 1, noun: { singular: 'lot', plural: 'lots' } })
+    expect(screen.getByText('None of 1 lot shown.')).toBeInTheDocument()
   })
 })

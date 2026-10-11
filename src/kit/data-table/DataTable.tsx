@@ -7,6 +7,11 @@ import type { Column, Density, Totals } from './types'
 
 const ROW_HEIGHT: Record<Density, string> = { dense: 'h-6 text-table-dense stretch-dense', regular: 'h-7 text-table stretch-table', narrative: 'h-[34px] text-table stretch-table' }
 
+const INTERACTIVE = 'button, a, input, select, textarea, [role="button"]'
+
+const isInteractiveTarget = (target: EventTarget): boolean =>
+  target instanceof Element && target.closest(INTERACTIVE) !== null
+
 type DataTableProps<T> = {
   caption: string
   columns: Column<T>[]
@@ -111,7 +116,7 @@ export function DataTable<T>({
           </thead>
           <tbody>
             {shown === 0 ? (
-              <tr><td colSpan={columns.length} className="px-2 py-3 text-body text-ink-3">{all === 0 ? `No ${noun.plural}.` : `None of ${all} ${noun.plural} shown.`}</td></tr>
+              <tr><td colSpan={columns.length} className="px-2 py-3 text-body text-ink-3">{all === 0 ? `No ${noun.plural}.` : `None of ${all} ${all === 1 ? noun.singular : noun.plural} shown.`}</td></tr>
             ) : sorted.map((row, i) => (
               <tr
                 key={row.id}
@@ -119,7 +124,7 @@ export function DataTable<T>({
                 tabIndex={i === activeIndex ? 0 : -1}
                 onFocus={() => setActiveId(row.id)}
                 onKeyDown={(e) => onKeyDown(e, i)}
-                onClick={onActivate ? () => onActivate(row.original) : undefined}
+                onClick={onActivate ? (e) => { if (!isInteractiveTarget(e.target)) onActivate(row.original) } : undefined}
                 className={cn('border-b border-rule focus-visible:bg-band', ROW_HEIGHT[density])}
               >
                 {row.getVisibleCells().map((cell) => {
