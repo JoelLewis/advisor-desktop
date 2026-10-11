@@ -162,10 +162,13 @@ describe('rebalance tax estimation', () => {
     expect(unaware[0]!.estimatedTaxImpact).toBeGreaterThanOrEqual(aware[0]!.estimatedTaxImpact)
   })
 
-  it('C26: the preview total equals the sum of its trade-level tax impacts', async () => {
+  it('C26: the gross tax equals the sum of its trade-level tax impacts, and netting never raises it', async () => {
     const [preview] = await previewRebalance({ accountIds: ['acc-001'], taxAware: true })
-    expect(preview!.estimatedTaxImpact)
+    expect(preview!.grossTaxOnGains)
       .toBeCloseTo(preview!.trades.reduce((s, t) => s + t.taxImpact, 0), 0)
+    // The netted figure rounds once, the gross one rounds per leg, so they can differ by up to a
+    // dollar per leg when nothing is netted away (acc-001 realises only gains: 32,402 vs 32,401).
+    expect(preview!.estimatedTaxImpact).toBeLessThanOrEqual(preview!.grossTaxOnGains + preview!.trades.length)
   })
 })
 
@@ -755,7 +758,7 @@ describe('fix round 3 · rebalance sells never exceed the position actually held
  * aware/unaware comparison can't distinguish a flat rate from a per-lot one because both branches
  * read the same `taxRateFor`. These are golden-model cross-checks (the same pattern
  * `drift-invariants.test.ts` uses) against a *fixed*, single rate applied to the same lot-by-lot
- * notional walk the production code performs — not a re-statement of `estimateSaleTax` itself.
+ * notional walk the production code performs — not a re-statement of `realiseSale` itself.
  */
 describe('fix round 3 · rebalance tax uses each lot\'s own holding-period rate, not a flat rate', () => {
   it('acc-040: GLD has only short-term lots, so its sell tax must exceed what a flat 23.8% long-term rate would produce', async () => {
@@ -817,7 +820,7 @@ describe('fix round 3 · rebalance tax uses each lot\'s own holding-period rate,
  * affected book-wide; the per-leg exposure is bounded by `unitPrice / estimatedValue`, which is
  * 50.0% on acc-045's BTC, 7.7% on acc-040's GLD and 4.6% on acc-045's ETH.
  *
- * These run **tax-unaware** on purpose: `estimateSaleTax` re-orders lots by tax-per-dollar when
+ * These run **tax-unaware** on purpose: `realiseSale` re-orders lots by tax-per-dollar when
  * the toggle is on, and reproducing that sort in the test would make this a copy of the function
  * rather than a check on it. Unaware, the walk is the fixture's own lot order, so what is actually
  * under test is the *argument* — which figure the tax is computed from — and not the algorithm.
@@ -860,7 +863,9 @@ describe('§9.7 round 4 · the tax on a row is the tax on the value that row sta
       const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: false })
       // Tax-exempt accounts are zero on every leg by design (`isTaxableAccount`), and a lot walk
       // over their positions would not be; they are covered by their own tests above.
-      if (!preview || preview.estimatedTaxImpact <= 0) continue
+      // Gated on the gross figure: netting can offset an account's gains entirely (net estimate 0)
+      // while its legs still carry per-leg tax that this test checks.
+      if (!preview || preview.grossTaxOnGains <= 0) continue
       const positions = await getPositions(account.id)
       const allLots = await getTaxLots(account.id)
       for (const trade of preview.trades) {
@@ -1174,7 +1179,7 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
   })
 
   it('the tax-aware ordering is confined to taxable accounts — a tax-deferred account is unmoved by the toggle', async () => {
-    // acc-047 is a SIMPLE IRA: gains are not taxed, `estimateSaleTax` already returns 0, and
+    // acc-047 is a SIMPLE IRA: gains are not taxed, `realiseSale` already returns 0, and
     // re-ranking its sleeves by embedded gain would be an arbitrary preference wearing a
     // tax-awareness label. Its two toggle states must therefore be identical — and the toggle
     // must still bite on the taxable account above, or this is asserting that the toggle is dead.

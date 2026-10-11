@@ -11,6 +11,8 @@ import { convertCurrency } from '@/lib/currency'
 import { securityKind, concentrationLimitFor, isMarketTradable } from '@/lib/security-master'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
+import { hasWashSaleRisk } from '@/lib/wash-sale'
+import { netCapitalGainsTax } from '@/lib/capital-gains'
 import { generateTaxLots, boundedTradeQty } from './custodian'
 import { taxRateFor } from '@/features/portfolios/tax/shared'
 import type { Position } from '@/types/portfolio'
@@ -76,17 +78,20 @@ export function currencyForAccount(accountId: string): CurrencyCode {
   return accounts.find((a) => a.id === accountId)?.baseCurrency ?? 'USD'
 }
 
+type RealisedSale = { shortTerm: number; longTerm: number; tax: number }
+const NOTHING_REALISED: RealisedSale = { shortTerm: 0, longTerm: 0, tax: 0 }
+
 /**
- * Estimate the capital-gains tax on selling `notional` dollars out of `target`, using the same
- * per-lot generator the tax page reads (`generateTaxLots`) and the same rate function
+ * Realise a sale of `notional` dollars out of `target`: the signed short- and long-term result
+ * and the capital-gains tax on its gains, using the same per-lot generator the tax page reads (`generateTaxLots`) and the same rate function
  * (`taxRateFor`) it applies — a short-term-heavy sell is taxed at `SHORT_TERM_RATE` (37%), not
  * silently at the long-term rate (23.8%) for the entire position. A tax-aware pass sells the
  * lowest-gain-fraction (highest cost basis) lots first to minimise realised gain; a tax-unaware
  * pass sells the lots in their own oldest-first order.
  */
-function estimateSaleTax(accountId: string, totalValue: number, target: Position, notional: number, taxAware: boolean): number {
+function realiseSale(accountId: string, totalValue: number, target: Position, notional: number, taxAware: boolean): RealisedSale {
   const lots = generateTaxLots(accountId, totalValue).filter((l) => l.positionId === target.id)
-  if (lots.length === 0 || notional <= 0) return 0
+  if (lots.length === 0 || notional <= 0) return NOTHING_REALISED
   // Minimise realised gain and rank by *tax per dollar sold*, not gain per dollar sold: a
   // low-gain short-term lot (37% rate) can carry more tax than a low-gain long-term lot (23.8%
   // rate), so sorting by gain fraction alone can pick a worse-taxed lot first.
@@ -94,15 +99,19 @@ function estimateSaleTax(accountId: string, totalValue: number, target: Position
   const ordered = taxAware ? [...lots].sort((a, b) => taxPerDollar(a) - taxPerDollar(b)) : lots
 
   let remaining = notional
+  let shortTerm = 0
+  let longTerm = 0
   let tax = 0
   for (const lot of ordered) {
     if (remaining <= 0 || lot.currentValue <= 0) continue
     const portion = Math.min(1, remaining / lot.currentValue)
-    const realisedGain = lot.gainLoss * portion
-    if (realisedGain > 0) tax += realisedGain * taxRateFor(lot.holdingPeriod)
+    const realised = lot.gainLoss * portion
+    if (lot.holdingPeriod === 'short') shortTerm += realised
+    else longTerm += realised
+    if (realised > 0) tax += realised * taxRateFor(lot.holdingPeriod)
     remaining -= lot.currentValue * portion
   }
-  return Math.max(0, Math.round(tax))
+  return { shortTerm: Math.round(shortTerm), longTerm: Math.round(longTerm), tax: Math.max(0, Math.round(tax)) }
 }
 
 /**
@@ -142,7 +151,7 @@ export type ProposedTradeLeg = ProposedTrade & Sleeve
  * already in the account is worse than no toggle.
  *
  * Ranking is by **gain per dollar of market value** — gain per dollar *sold*, the same
- * per-dollar logic `estimateSaleTax` applies across lots — not by absolute gain, which would
+ * per-dollar logic `realiseSale` applies across lots — not by absolute gain, which would
  * simply prefer whichever position happens to be biggest. Ascending order puts losses first
  * (harvestable), then the smallest embedded gains.
  *
@@ -153,7 +162,7 @@ export type ProposedTradeLeg = ProposedTrade & Sleeve
  * the account overweight us_equity after a rebalance that reported success, while SPY sat in the
  * same sleeve able to absorb the rest. Sell INTC out first, then top up from SPY.
  *
- * Gated on `taxable`: in an IRA or a Roth, gains are not taxed at all (`estimateSaleTax` already
+ * Gated on `taxable`: in an IRA or a Roth, gains are not taxed at all (`realiseSale` already
  * returns 0 there), so re-ordering by embedded gain would be an arbitrary preference dressed up
  * as tax awareness. Those accounts keep the held order under either toggle setting.
  */
@@ -248,6 +257,11 @@ export function generateRebalanceTrades(
   const drift = computeDriftForAccount(account, modelId)
   const taxable = isTaxableAccount(account.taxTreatment)
   const currency = currencyForAccount(accountId)
+  const lossWindows = openWashSaleWindows(MOCK_TODAY_ISO, account.householdId)
+  const acquisitions = accounts.filter((a) => a.householdId === account.householdId).flatMap((a) => {
+    const symbolOf = new Map(getPositionsForAccount(a.id, a.totalValue).map((p) => [p.id, p.symbol]))
+    return generateTaxLots(a.id, a.totalValue).map((l) => ({ symbol: symbolOf.get(l.positionId) ?? '', date: l.purchaseDate }))
+  })
 
   type RawLeg = { target: TradeCandidate; side: 'buy' | 'sell'; notional: number; sleeve: Sleeve }
 
@@ -391,17 +405,22 @@ export function generateRebalanceTrades(
       // unit is half this leg's executed value. 48 taxed legs book-wide were affected; the
       // exposure per leg is bounded by `unitPrice / estimatedValue`. All three numbers on the
       // row now describe one trade.
-      const taxImpact = side === 'sell' && taxable && target.position
-        ? estimateSaleTax(account.id, account.totalValue, target.position, estimatedValue, taxAware)
-        : 0
+      const realised = side === 'sell' && taxable && target.position
+        ? realiseSale(account.id, account.totalValue, target.position, estimatedValue, taxAware)
+        : NOTHING_REALISED
       return {
         symbol: target.symbol,
         name: target.name,
         side,
         quantity,
         estimatedValue,
-        taxImpact,
-        washSaleRisk: false,
+        taxImpact: realised.tax,
+        realisedShortTerm: realised.shortTerm,
+        realisedLongTerm: realised.longTerm,
+        washSaleRisk: hasWashSaleRisk(
+          { symbol: target.symbol, side, realisesLoss: realised.shortTerm + realised.longTerm < 0 },
+          lossWindows, acquisitions, MOCK_TODAY_ISO,
+        ),
         currency,
         ...sleeve,
       }
@@ -722,9 +741,14 @@ export const omsHandlers = [
         // USD default.
         currency: currencyForAccount(accountId),
         trades,
-        // C26 — the total is the sum of the trades' own tax impacts, not a second literal that
-        // could (and did) disagree with them.
-        estimatedTaxImpact: trades.reduce((sum, t) => sum + t.taxImpact, 0),
+        // §1222 — net short- and long-term results across legs before applying rates; the gross
+        // figure is kept so a surface can show what netting saved.
+        estimatedTaxImpact: netCapitalGainsTax(
+          trades.reduce((s, t) => s + t.realisedShortTerm, 0),
+          trades.reduce((s, t) => s + t.realisedLongTerm, 0),
+          taxRateFor,
+        ),
+        grossTaxOnGains: trades.reduce((sum, t) => sum + t.taxImpact, 0),
       }
     })
     return HttpResponse.json(previews)

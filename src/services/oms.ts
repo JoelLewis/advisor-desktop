@@ -86,7 +86,10 @@ export type RebalancePreview = {
   // native currency. A consumer must convert before summing across previews of different accounts.
   currency: CurrencyCode
   trades: ProposedTrade[]
+  /** Estimated tax after IRC §1222 netting of the legs' realised gains and losses. */
   estimatedTaxImpact: number
+  /** Sum of the legs' `taxImpact` — tax on gains before losses are netted. */
+  grossTaxOnGains: number
 }
 
 export type ProposedTrade = {
@@ -96,6 +99,9 @@ export type ProposedTrade = {
   quantity: number
   estimatedValue: number
   taxImpact: number
+  /** Realised result of this leg by holding period, signed (loss < 0), account currency. 0 for buys. */
+  realisedShortTerm: number
+  realisedLongTerm: number
   washSaleRisk: boolean
   // Same account-native currency as the parent `RebalancePreview.currency` — carried on the trade
   // itself so a consumer that only has the trade (not the preview) still knows what it's reading.
