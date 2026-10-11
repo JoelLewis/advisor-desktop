@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { contrast, darkPalette, lightPalette, mediaDarkPalette, readAppCss, type Palette } from './contrast'
 
-const SURFACES = ['bg', 'face'] as const
+const SURFACES = ['bg', 'face', 'band'] as const
 const TEXT = ['ink', 'ink-2', 'ink-3', 'signal-ink'] as const
 const MARKS = ['signal', 'rule-2', 'ink'] as const // signal marks, meaningful rules, focus ring
 
