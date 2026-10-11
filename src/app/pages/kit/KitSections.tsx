@@ -11,6 +11,7 @@ import { DataTable } from '@/kit/data-table/DataTable'
 import { Num } from '@/kit/data-table/Num'
 import { NotApplicable } from '@/kit/data-table/NotApplicable'
 import { Gauge } from '@/kit/gauge/Gauge'
+import { driftStatus, sharedGaugeDomain } from '@/kit/gauge/gauge-math'
 import { WindowRuler } from '@/kit/window-ruler/WindowRuler'
 import { TaxTape } from '@/kit/tax-tape/TaxTape'
 import { FigureRef } from '@/kit/figure-ref/FigureRef'
@@ -42,6 +43,7 @@ export function KitSections({ data }: { data: KitData }) {
   const netShortTerm = preview.trades.reduce((s, t) => s + t.realisedShortTerm, 0)
   const netLongTerm = preview.trades.reduce((s, t) => s + t.realisedLongTerm, 0)
   const restriction = windows[0]
+  const gaugeDomain = sharedGaugeDomain(drift.assetClassDrifts.map((d) => d.drift), drift.driftTolerance)
   const stamp = now().toISOString()
   const { alert, record } = approval
   const reviewer = splitReviewer(record.reviewer)
@@ -57,7 +59,7 @@ export function KitSections({ data }: { data: KitData }) {
         <Pane title="Readings" meta={account.name}>
           <div className="flex flex-wrap gap-10">
             {worst ? <Reading label={`Max drift · ${assetClassLabel(worst.assetClass)}`} value={fmtDrift(worst.drift)} unit="pp" size="readout-md"
-              limit={`tol ${fmtTolerance(drift.driftTolerance)} pp`} status={Math.abs(worst.drift) > drift.driftTolerance ? 'OUT' : 'IN'} /> : null}
+              limit={`tol ${fmtTolerance(drift.driftTolerance)} pp`} status={driftStatus(worst.drift, drift.driftTolerance)} /> : null}
             <Reading label="Account value" value={fmtMoney(account.totalValue)} unit="USD" size="total" />
           </div>
         </Pane>
@@ -68,7 +70,7 @@ export function KitSections({ data }: { data: KitData }) {
         </Pane>
         <Pane title="Drift against model" meta={`band ${fmtTolerance(drift.driftTolerance)} pp`}>
           <div className="flex flex-col gap-2">
-            {drift.assetClassDrifts.map((d) => <Gauge key={d.assetClass} label={assetClassLabel(d.assetClass)} drift={d.drift} band={drift.driftTolerance} />)}
+            {drift.assetClassDrifts.map((d) => <Gauge key={d.assetClass} label={assetClassLabel(d.assetClass)} drift={d.drift} band={drift.driftTolerance} domain={gaugeDomain} />)}
           </div>
         </Pane>
         <Pane title="Holdings" meta={`${positions.length} positions`}>

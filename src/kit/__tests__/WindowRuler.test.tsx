@@ -35,10 +35,36 @@ describe('WindowRuler', () => {
     xs.forEach((x) => { expect(x).toBeGreaterThanOrEqual(0); expect(x).toBeLessThanOrEqual(480) })
   })
   it('rejects a reversed window and garbage dates', () => {
+    const swallow = (event: ErrorEvent) => event.preventDefault()
+    window.addEventListener('error', swallow)
     vi.spyOn(console, 'error').mockImplementation(() => {})
     expect(() => render(ruler({ start: '2026-03-23', end: '2026-01-22' }))).toThrow(MeasureError)
     expect(() => render(ruler({ today: 'garbage' }))).toThrow(MeasureError)
     expect(() => render(ruler({ events: [{ date: 'garbage', label: 'x' }] }))).toThrow(MeasureError)
     vi.restoreAllMocks()
+    window.removeEventListener('error', swallow)
+  })
+  it('hatches the window span', () => {
+    const { container } = render(ruler())
+    const span = container.querySelector('[data-part="span"]')!
+    const id = container.querySelector('pattern')!.getAttribute('id')
+    expect(span.getAttribute('fill')).toBe(`url(#${id})`)
+  })
+  it('sits each label at its mark, kept inside the drawing at the ends', () => {
+    const { container } = render(ruler({ events: [{ date: '2026-02-21', label: 'Loss sale' }] }))
+    const label = (mark: string) => container.querySelector<HTMLElement>(`[data-part="label"][data-mark="${mark}"]`)!
+    const lineX = (part: string) => Number(container.querySelector(`[data-part="${part}"]`)!.getAttribute('x1'))
+    expect(label('event').style.left).toBe(`${(lineX('event') / 480) * 100}%`)
+    expect(label('event')).toHaveAttribute('data-anchor', 'middle')
+    expect(label('today').style.left).toBe(`${(lineX('today') / 480) * 100}%`)
+    expect(label('start')).toHaveAttribute('data-anchor', 'start')
+    expect(label('end')).toHaveAttribute('data-anchor', 'end')
+    expect(label('start')).toHaveTextContent('2026-01-22')
+    expect(label('end')).toHaveTextContent('2026-03-23')
+    expect(label('today')).toHaveTextContent('Today 2026-02-25')
+  })
+  it('anchors a label at the edge so it does not run off the drawing', () => {
+    const { container } = render(ruler({ today: '2026-03-23' }))
+    expect(container.querySelector('[data-part="label"][data-mark="today"]')).toHaveAttribute('data-anchor', 'end')
   })
 })

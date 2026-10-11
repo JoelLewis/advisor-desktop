@@ -2,17 +2,21 @@ import { useId } from 'react'
 import { cn } from '@/lib/utils'
 import { fmtDrift, fmtTolerance } from '@/kit/measure'
 import { StatusCode } from '@/kit/status/StatusCode'
-import { gaugeDomain, gaugeStatus } from './gauge-math'
+import { MINOR_PER_BAND, driftStatus, gaugeDomain, gaugeTicks } from './gauge-math'
 
 const W = 200
 const H = 24
 const MID = W / 2
 const HALF = MID - 1
+const MIN_MINOR_SPACING = 3
 
-export function Gauge({ label, drift, band }: { label: string; drift: number; band: number }) {
+type GaugeProps = { label: string; drift: number; band: number; domain?: number }
+
+export function Gauge({ label, drift, band, domain: sharedDomain }: GaugeProps) {
   const patternId = `hatch-${useId().replace(/:/g, '')}`
-  const status = gaugeStatus(drift, band)
-  const domain = gaugeDomain(drift, band)
+  const status = driftStatus(drift, band)
+  const domain = sharedDomain ?? gaugeDomain(drift, band)
+  const ticks = gaugeTicks(domain, band)
   const scale = (v: number) => MID + (Math.max(-domain, Math.min(domain, v)) / domain) * HALF
   const bandLeft = scale(-band)
   const bandRight = scale(band)
@@ -20,6 +24,8 @@ export function Gauge({ label, drift, band }: { label: string; drift: number; ba
   const barX = Math.min(MID, end)
   const barW = Math.abs(end - MID)
   const out = status === 'OUT'
+  const minorSpacing = (band / MINOR_PER_BAND / domain) * HALF
+  const minor = minorSpacing >= MIN_MINOR_SPACING ? ticks.minor : []
   const description = `${label}: drift ${fmtDrift(drift)} percentage points against tolerance ${fmtTolerance(band)} percentage points, ${status}`
 
   return (
@@ -33,6 +39,12 @@ export function Gauge({ label, drift, band }: { label: string; drift: number; ba
         </defs>
         <rect x={bandLeft} y={4} width={bandRight - bandLeft} height={H - 8} fill={`url(#${patternId})`} />
         <line x1={0} x2={W} y1={H / 2} y2={H / 2} className="stroke-rule" strokeWidth={1} />
+        {ticks.major.map((v) => (
+          <line key={`M${v}`} data-part="tick-major" x1={scale(v)} x2={scale(v)} y1={5} y2={H - 5} className="stroke-ink-3" strokeWidth={1} />
+        ))}
+        {minor.map((v) => (
+          <line key={`m${v}`} data-part="tick-minor" x1={scale(v)} x2={scale(v)} y1={H / 2 - 2} y2={H / 2 + 2} className="stroke-rule-2" strokeWidth={1} />
+        ))}
         <line x1={MID} x2={MID} y1={2} y2={H - 2} className="stroke-ink-3" strokeWidth={1} />
         <rect data-part="bar" x={barX} y={9} width={barW} height={6} className={out ? 'fill-signal' : 'fill-ink-2'} />
         <line x1={end} x2={end} y1={2} y2={H - 2} className="stroke-ink" strokeWidth={out ? 2 : 1} />

@@ -75,4 +75,17 @@ describe('routes', () => {
     expect(fig).toHaveAccessibleDescription(/^Source: Rebalance preview · estimated tax/)
     expect(screen.getByText(/^Source: Rebalance preview · estimated tax for Robert Johnson Individual/)).toBeInTheDocument()
   })
+  it('the max drift reading and its gauge agree on status, and every gauge shares one scale', async () => {
+    const { container } = await renderKitReady()
+    const readings = screen.getByRole('heading', { name: 'Readings' }).closest('section') as HTMLElement
+    const label = within(readings).getByText(/^Max drift · /).textContent!.replace('Max drift · ', '')
+    const readingStatus = readings.querySelector('[data-status]')!.getAttribute('data-status')
+    const gauge = within(screen.getByRole('heading', { name: 'Drift against model' }).closest('section') as HTMLElement)
+      .getByText(label, { selector: '[data-part="label"]' }).parentElement as HTMLElement
+    expect(gauge.querySelector('[data-status]')!.getAttribute('data-status')).toBe(readingStatus)
+    const widths = [...container.querySelectorAll('svg[role="img"] > rect:not([data-part])')]
+      .filter((r) => r.closest('svg')!.getAttribute('width') === '200').map((r) => r.getAttribute('width'))
+    expect(widths.length).toBeGreaterThan(1)
+    expect(new Set(widths).size).toBe(1)
+  })
 })
