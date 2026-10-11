@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useFocusAfter } from '@/kit/keyboard/use-focus-after'
 import { useActs, useDirectory, useThread } from '@/hooks/use-workspace'
 import { useViewer } from '@/workspace/viewer/use-viewer'
+import { isClientViewer } from '@/workspace/people/directory-people'
 import { actAnchorId } from './act-anchor'
 import { ActsPanel } from './ActsPanel'
 import { AskAgents } from './AskAgents'
@@ -36,7 +37,7 @@ function ThreadContext({ threadId }: { threadId: string }) {
 
   const { thread: t } = thread.data
   const dir = directory.data
-  const viewerIsClient = t.clientId === viewerId
+  const viewerIsClient = isClientViewer(dir, viewerId)
   const agents = dir.agents.filter((a) => t.agentIds.includes(a.id))
   const accountId = t.subject?.type === 'account' ? t.subject.id : undefined
   return (
@@ -46,7 +47,7 @@ function ThreadContext({ threadId }: { threadId: string }) {
         ? <DraftsPanel thread={t} directory={dir} onSent={setSentActId} /> : null}
       {acts.isPending ? <p role="status" className="py-5 text-body text-ink-3">Loading the record…</p>
         : acts.isError ? <p role="alert" className="py-5 text-body">{acts.error.message}</p>
-        : <ActsPanel acts={acts.data} directory={dir} />}
+        : <ActsPanel acts={acts.data} directory={dir} viewerIsClient={viewerIsClient} />}
       {t.visibility !== 'client' && agents.length > 0 ? <AskAgents thread={t} agents={agents} /> : null}
       {accountId && !viewerIsClient ? <FullViews accountId={accountId} threadId={t.id} /> : null}
     </div>

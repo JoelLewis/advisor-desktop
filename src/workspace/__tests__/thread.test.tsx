@@ -161,10 +161,9 @@ describe('thread view', () => {
     expect(screen.queryByRole('textbox')).toBeNull()
   })
 
-  it('a recorded act appears in the conversation as a record slip; only the context column anchors it', async () => {
+  it('a recorded act appears in the conversation as a record slip in firm terms; only the context column anchors it', async () => {
     const draft = await createDraft(ADRIAN, 'th-robert', 'Sarah will be in touch this week.')
     const act = await sendToClient(ADRIAN, draft.id)
-    viewAsOnLoad('cli-001')
     const { container } = await openThread('/t/th-robert', 'Robert Johnson')
     const slip = await within(conversation()).findByRole('article', { name: act.summary })
     const s = within(slip)
@@ -177,6 +176,21 @@ describe('thread view', () => {
     expect(container.querySelectorAll(`[id="act-${act.id}"]`)).toHaveLength(1)
     expect(screen.getByRole('complementary', { name: 'Thread context' })).toContainElement(container.querySelector(`[id="act-${act.id}"]`))
     expect(conversation()).toHaveTextContent('Sarah will be in touch this week.')
+  })
+
+  it('the client sees the same record in their own terms: a message sent to them, kept as a record', async () => {
+    const draft = await createDraft(ADRIAN, 'th-robert', 'Sarah will be in touch this week.')
+    const act = await sendToClient(ADRIAN, draft.id)
+    viewAsOnLoad('cli-001')
+    await openThread('/t/th-robert', 'Robert Johnson')
+    const slip = await within(conversation()).findByRole('article', { name: 'Sent to you' })
+    const s = within(slip)
+    expect(s.getByText('Message from Adrian Hale')).toBeInTheDocument()
+    expect(s.getByText(act.id)).toBeInTheDocument()
+    expect(s.getByText('Adrian Hale, Advisor')).toBeInTheDocument()
+    expect(s.getByText('Retained as a record')).toBeInTheDocument()
+    expect(s.getByText(act.fingerprint)).toBeInTheDocument()
+    expect(conversation().textContent).not.toMatch(/binding|Supervisory review|Send to client/i)
   })
 
   it('an unknown thread is not found, with a way home', async () => {

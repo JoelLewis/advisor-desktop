@@ -5,6 +5,7 @@ import { useDrafts, useSendToClient } from '@/hooks/use-workspace'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { firstNameOf, personIn } from '@/workspace/people/directory-people'
 import type { Directory, Draft, Thread } from '@/types/workspace'
+import { ContextSection } from './ContextSection'
 
 type DraftsPanelProps = { thread: Thread; directory: Directory; onSent: (actId: string) => void }
 
@@ -28,14 +29,15 @@ export function DraftsPanel({ thread, directory, onSent }: DraftsPanelProps) {
   if (drafts.isPending) return <p role="status" className="py-5 text-body text-ink-3">Loading drafts…</p>
   if (drafts.isError) return <p role="alert" className="py-5 text-body">{drafts.error.message}</p>
   if (drafts.data.length === 0 && !send.error) return null
+  const clientFirstName = firstNameOf(client)
   return (
-    <div className="flex min-w-0 flex-col gap-4 py-5 first:pt-0">
+    <ContextSection title={`Drafts for ${clientFirstName}`}>
       {drafts.data.map((d) => (
-        <DraftView key={d.id} draft={d} directory={directory} sendLabel={canSend ? `Send to ${firstNameOf(client)}` : undefined}
+        <DraftView key={d.id} draft={d} directory={directory} sendLabel={canSend ? `Send to ${clientFirstName}` : undefined}
           sending={send.isPending} onSend={() => sendDraft(d.id)} />
       ))}
       {send.error ? <p role="alert" className="text-body">{send.error.message}</p> : null}
-    </div>
+    </ContextSection>
   )
 }
 
@@ -47,14 +49,14 @@ function DraftView({ draft, directory, sendLabel, sending, onSend }: DraftViewPr
   return (
     <article aria-labelledby={titleId} className="flex flex-col gap-3 border border-ink p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <h2 id={titleId} className="text-label uppercase text-ink">Draft · not sent</h2>
+        <h3 id={titleId} className="text-label uppercase text-ink">Draft · not sent</h3>
         <span className="tabular text-label text-ink-3">{fmtTimestamp(draft.createdAt)}</span>
       </div>
       <p className="whitespace-pre-line text-copy">{draft.body}</p>
       <p className="text-label text-ink-3">{`Drafted by ${author.name}`}</p>
       <div className="flex flex-col items-start gap-3 border-t border-rule pt-3">
         <p className="text-body text-ink-2">
-          {sendLabel ? 'Sending is recorded as a binding act by you.' : 'Not sent. Sending is recorded as a binding act by the advisor who sends it.'}
+          {sendLabel ? 'Sending is recorded as a binding act by you.' : 'Only the advisor of record can send this. Sending is recorded as a binding act.'}
         </p>
         {sendLabel ? <Button disabled={sending} onClick={onSend}>{sendLabel}</Button> : null}
       </div>

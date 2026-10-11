@@ -10,6 +10,7 @@ const STATE: Record<TrailState, string> = {
   'NOT STARTED': 'border border-dashed border-ink-3 text-ink-3',
 }
 
+// The trail collapses on its own width (@container inline-size containment), so its parent must give it a block or stretched width.
 export function RecordTrail({ steps }: { steps: TrailStep[] }) {
   return (
     <ol aria-label="Record trail" className="@container border-t border-ink">

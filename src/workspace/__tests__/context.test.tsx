@@ -55,11 +55,19 @@ describe('thread context column', () => {
     await waitFor(() => expect(conversation()).toHaveTextContent('Sarah will be in touch this week.'))
     expect(inContext().queryByRole('article', { name: 'Draft · not sent' })).toBeNull()
 
+    await createDraft(ADRIAN, 'th-robert', 'Your statement is ready.')
     await viewAs('Robert Johnson · Client')
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'Message' })).toBeInTheDocument())
-    await within(section('Binding acts')).findByText('REC-0001')
+    const record = await within(section('Records')).findByRole('article', { name: 'Sent to you' })
+    expect(record).toHaveTextContent('Message from Adrian Hale')
+    expect(record).toHaveTextContent('REC-0001')
+    expect(record).toHaveTextContent('Adrian Hale, Advisor')
     expect(conversation()).toHaveTextContent('Sarah will be in touch this week.')
-    expect(inContext().queryByText('Draft · not sent')).toBeNull()
+    expect(screen.queryByText('Draft · not sent')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Send to Robert' })).toBeNull()
+    expect(document.body).not.toHaveTextContent('Your statement is ready.')
+    expect(document.body.textContent).not.toMatch(/binding|Supervisory review|Send to client/i)
+    expect(document.body).toHaveTextContent('Retained as a record')
     expect(inContext().queryByRole('region', { name: 'Ask an agent' })).toBeNull()
     expect(inContext().queryByRole('button')).toBeNull()
     const seenBy = within(section('Who can see'))
@@ -69,11 +77,12 @@ describe('thread context column', () => {
     expect(contextColumn()).not.toHaveTextContent('Mark Davis')
     expect(contextColumn()).not.toHaveTextContent('Drift Monitor')
 
-    await createDraft(ADRIAN, 'th-robert', 'Your statement is ready.')
     await viewAs('Sarah Mitchell · Client service')
-    const sarahsView = await inContext().findByRole('article', { name: 'Draft · not sent' })
+    const sarahsView = await within(await inContext().findByRole('region', { name: 'Drafts for Robert' })).findByRole('article', { name: 'Draft · not sent' })
     expect(sarahsView).toHaveTextContent('Your statement is ready.')
+    expect(sarahsView).toHaveTextContent('Only the advisor of record can send this. Sending is recorded as a binding act.')
     expect(within(sarahsView).queryByRole('button')).toBeNull()
+    expect(within(section('Binding acts')).getByText('Send to client · binding')).toBeInTheDocument()
   })
 
   it('a double-click on Send records exactly one act', async () => {
@@ -116,6 +125,9 @@ describe('thread context column', () => {
     await userEvent.setup().click(ask.getByRole('button', { name: 'Ask Drift Monitor' }))
     expect(await within(conversation()).findAllByRole('article', { name: /^Drift Monitor: / })).not.toHaveLength(0)
     expect(router.state.location.pathname).toBe('/t/th-johnson-review')
+    expect(within(section('Ask an agent')).getByRole('status')).toHaveTextContent('Drift Monitor reported in the thread.')
+    await userEvent.setup().click(ask.getByRole('button', { name: 'Ask Drift Monitor' }))
+    expect(await within(section('Ask an agent')).findByText('Drift Monitor has already reported for this as-of.')).toBeInTheDocument()
   })
 
   it('lists the members, compliance supervision and the agents with their scopes', async () => {
