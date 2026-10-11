@@ -2,6 +2,7 @@
 import { createBrowserRouter, type RouteObject } from 'react-router-dom'
 import { WorkspaceShell } from '@/workspace/shell/WorkspaceShell'
 import { WorkspaceHome } from '@/workspace/shell/WorkspaceHome'
+import { AccountView } from '@/workspace/full-views/AccountView'
 import { ThreadPage } from '@/workspace/thread/ThreadPage'
 import { ContextColumn } from '@/workspace/context/ContextColumn'
 import type { ShellHandle } from '@/workspace/shell/context-column'
@@ -24,6 +25,7 @@ export const routes: RouteObject[] = [
         children: [
           { index: true, element: <WorkspaceHome /> },
           { path: 't/:threadId', element: <ThreadPage />, handle: threadHandle },
+          { path: 'accounts/:accountId', element: <AccountView /> },
         ],
       },
       { path: 'kit', element: <KitPage /> },

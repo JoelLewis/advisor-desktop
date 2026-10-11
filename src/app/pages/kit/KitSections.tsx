@@ -7,9 +7,6 @@ import { Tag } from '@/kit/tag/Tag'
 import { Button } from '@/kit/button/Button'
 import { Attestation } from '@/kit/attestation/Attestation'
 import { Stepper } from '@/kit/stepper/Stepper'
-import { DataTable } from '@/kit/data-table/DataTable'
-import { Num } from '@/kit/data-table/Num'
-import { NotApplicable } from '@/kit/data-table/NotApplicable'
 import { Gauge } from '@/kit/gauge/Gauge'
 import { driftStatus, sharedGaugeDomain } from '@/kit/gauge/gauge-math'
 import { WindowRuler } from '@/kit/window-ruler/WindowRuler'
@@ -20,39 +17,31 @@ import { Stamp } from '@/kit/stamp/Stamp'
 import { RecordSlip } from '@/kit/record-slip/RecordSlip'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
 import { RecordTrail } from '@/kit/record-trail/RecordTrail'
-import { MeasureError, clientMoney, fmtDate, fmtDrift, fmtMoney, fmtPrice, fmtQuantity, fmtResult, fmtTimestamp, fmtTolerance, fmtWeight } from '@/kit/measure'
+import { clientMoney, fmtDrift, fmtMoney, fmtTimestamp, fmtTolerance } from '@/kit/measure'
 import { todayISO, now } from '@/lib/clock'
 import { RATE_DISCLOSURE } from '@/lib/tax-rules'
 import type { Status } from '@/kit/status/status'
-import type { Position, TaxLot } from '@/types/portfolio'
+import { HoldingsTable, TaxLotsTable } from '@/workspace/full-views/account-columns'
 import { assetClassLabel } from '@/workspace/asset-class-label'
 import { splitReviewer } from './reviewer'
 import type { KitData } from './use-kit-data'
 
 const STATUSES: Status[] = ['OUT', 'AT LIMIT', 'IN', 'BLOCK', 'WARN', 'CLEAR', 'OPEN']
 const TAX_SOURCE = 'Rebalance preview · estimated tax'
-const isCash = (p: Position) => p.assetClass === 'cash'
 
 export function KitSections({ data }: { data: KitData }) {
   const { account, positions, drift, lots, windows, preview, approval } = data
   const [attested, setAttested] = useState(false)
   const worst = [...drift.assetClassDrifts].sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift))[0]
-  const symbolOf = new Map(positions.map((p) => [p.id, p.symbol]))
   const gains = preview.trades.reduce((s, t) => s + Math.max(0, t.realisedShortTerm) + Math.max(0, t.realisedLongTerm), 0)
   const losses = preview.trades.reduce((s, t) => s + Math.min(0, t.realisedShortTerm) + Math.min(0, t.realisedLongTerm), 0)
   const netShortTerm = preview.trades.reduce((s, t) => s + t.realisedShortTerm, 0)
   const netLongTerm = preview.trades.reduce((s, t) => s + t.realisedLongTerm, 0)
   const restriction = windows[0]
-  const holdingsValue = positions.reduce((s, p) => s + p.marketValue, 0)
   const gaugeDomain = sharedGaugeDomain(drift.assetClassDrifts.map((d) => d.drift), drift.driftTolerance)
   const stamp = now().toISOString()
   const { alert, record } = approval
   const reviewer = splitReviewer(record.reviewer)
-  const symbolFor = (lot: TaxLot) => {
-    const symbol = symbolOf.get(lot.positionId)
-    if (!symbol) throw new MeasureError('A tax lot belongs to no position in this account')
-    return symbol
-  }
 
   return (
     <Grid>
@@ -75,29 +64,10 @@ export function KitSections({ data }: { data: KitData }) {
           </div>
         </Pane>
         <Pane title="Holdings" meta={`${positions.length} positions`}>
-          <DataTable caption="Holdings" rows={positions} getRowId={(p) => p.id} total={positions.length}
-            noun={{ singular: 'position', plural: 'positions' }}
-            columns={[
-              { id: 'symbol', header: 'Symbol', cell: (p) => p.symbol, sortValue: (p) => p.symbol },
-              { id: 'qty', header: 'Qty', unit: 'sh', align: 'right', cell: (p) => (isCash(p) ? <NotApplicable /> : <Num text={fmtQuantity(p.quantity)} />), sortValue: (p) => p.quantity },
-              { id: 'price', header: 'Price', unit: 'USD', align: 'right', cell: (p) => (isCash(p) ? <NotApplicable /> : fmtPrice(p.price)), sortValue: (p) => p.price },
-              { id: 'value', header: 'Value', unit: 'USD', align: 'right', cell: (p) => fmtMoney(p.marketValue), sortValue: (p) => p.marketValue, proportion: (p) => p.weight },
-              { id: 'weight', header: 'Weight', unit: '%', align: 'right', cell: (p) => fmtWeight(p.weight), sortValue: (p) => p.weight },
-              { id: 'gain', header: 'Unrealized', unit: 'USD', align: 'right', cell: (p) => <Num text={fmtResult(p.gainLoss)} />, sortValue: (p) => p.gainLoss },
-            ]}
-            totals={{ label: 'Total', tiesTo: { label: 'account value', expected: account.totalValue, actual: holdingsValue },
-              cells: { value: fmtMoney(holdingsValue), weight: fmtWeight(positions.reduce((s, p) => s + p.weight, 0)) } }} />
+          <HoldingsTable positions={positions} accountValue={account.totalValue} />
         </Pane>
         <Pane title="Tax lots" meta={`${lots.length} lots`}>
-          <DataTable caption="Tax lots" density="dense" rows={lots} getRowId={(l) => l.id} total={lots.length}
-            noun={{ singular: 'lot', plural: 'lots' }}
-            columns={[
-              { id: 'symbol', header: 'Symbol', cell: symbolFor, sortValue: symbolFor },
-              { id: 'acquired', header: 'Acquired', cell: (l) => fmtDate(l.purchaseDate), sortValue: (l) => l.purchaseDate },
-              { id: 'term', header: 'Term', cell: (l) => (l.holdingPeriod === 'long' ? 'Long-term' : 'Short-term'), sortValue: (l) => l.holdingPeriod },
-              { id: 'qty', header: 'Qty', unit: 'sh', align: 'right', cell: (l) => <Num text={fmtQuantity(l.quantity)} />, sortValue: (l) => l.quantity },
-              { id: 'gain', header: 'Unrealized', unit: 'USD', align: 'right', cell: (l) => <Num text={fmtResult(l.gainLoss)} />, sortValue: (l) => l.gainLoss },
-            ]} />
+          <TaxLotsTable lots={lots} positions={positions} />
         </Pane>
         {restriction ? (
           <Pane title="Restriction window">

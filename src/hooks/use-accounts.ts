@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { getAccount, getAccounts } from '@/services/custodian'
+import { getAccount, getAccounts, getTaxLots } from '@/services/custodian'
 
 export function useAccount(id: string) {
   return useQuery({
@@ -14,5 +14,13 @@ export function useAccounts(params?: Record<string, string>) {
     queryKey: ['accounts', params],
     queryFn: () => getAccounts(params),
     enabled: !!params,
+  })
+}
+
+export function useTaxLots(accountId: string) {
+  return useQuery({
+    queryKey: ['tax-lots', accountId],
+    queryFn: () => getTaxLots(accountId),
+    enabled: !!accountId,
   })
 }
