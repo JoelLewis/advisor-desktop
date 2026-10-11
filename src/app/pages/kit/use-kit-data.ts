@@ -3,7 +3,7 @@ import { getAccount, getTaxLots, getOpenWashSaleWindows } from '@/services/custo
 import { getDrift, getPositions } from '@/services/pms'
 import { previewRebalance } from '@/services/oms'
 import { getAlerts, getSupervisionRecords } from '@/services/compliance'
-import { getDirectory, runAgent } from '@/services/workspace'
+import { getDirectory, previewAgent } from '@/services/workspace'
 import type { Message } from '@/types/workspace'
 
 const ACCOUNT_ID = 'acc-002'
@@ -13,11 +13,11 @@ const DRIFT_MONITOR = 'drift-monitor'
 
 type AgentFinding = Extract<Message, { kind: 'agent_finding' }>
 
-/** A real Drift Monitor run on the Johnson review thread (idempotent: re-running returns the same finding). */
+/** A real Drift Monitor run on the Johnson review thread, previewed read-only: the gallery never writes conversation state. */
 async function loadDriftFinding() {
-  const [messages, directory] = await Promise.all([runAgent(ADVISOR_ID, REVIEW_THREAD_ID, DRIFT_MONITOR), getDirectory(ADVISOR_ID)])
+  const [messages, directory] = await Promise.all([previewAgent(ADVISOR_ID, REVIEW_THREAD_ID, DRIFT_MONITOR), getDirectory(ADVISOR_ID)])
   const finding = messages.find((m): m is AgentFinding => m.kind === 'agent_finding' && m.agentId === DRIFT_MONITOR)
-  if (!finding) throw new Error(`The Drift Monitor run on ${REVIEW_THREAD_ID} produced no finding`)
+  if (!finding) throw new Error(`The Drift Monitor preview on ${REVIEW_THREAD_ID} produced no finding`)
   const agent = directory.agents.find((a) => a.id === DRIFT_MONITOR)
   if (!agent) throw new Error(`No agent "${DRIFT_MONITOR}" in the directory`)
   return { finding, agent }

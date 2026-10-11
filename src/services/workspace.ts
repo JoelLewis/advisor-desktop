@@ -21,3 +21,6 @@ export const sendToClient = (viewer: string, draftId: string) =>
   post<BindingAct>('/workspace/acts', { kind: 'send_to_client', draftId }, as(viewer))
 export const runAgent = (viewer: string, threadId: string, agentId: AgentId) =>
   post<Message[]>(`/workspace/threads/${threadId}/agents/${agentId}/run`, undefined, as(viewer))
+/** Read-only: what the agent would find on this thread, without posting anything. */
+export const previewAgent = (viewer: string, threadId: string, agentId: AgentId) =>
+  get<Message[]>(`/workspace/threads/${threadId}/agents/${agentId}/preview`, undefined, as(viewer))

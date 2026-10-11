@@ -3,7 +3,7 @@ import type { AgentId, Directory, Draft, Message, ThreadDetail } from '@/types/w
 import { AGENTS, PEOPLE, can, permissionsOf, personById } from '../data/people'
 import { nextAt, nextId, store } from '../data/workspace-store'
 import { sendToClient } from '../workspace/acts'
-import { runAgent } from '../workspace/run-agent'
+import { previewAgent, runAgent } from '../workspace/run-agent'
 import { canSeeThread, viewerFrom, visibleThreads } from '../workspace/visibility'
 import { notFound } from './utils'
 
@@ -117,6 +117,16 @@ export const workspaceHandlers = [
     const agentId = String(params.agentId)
     if (!isAgentId(agentId)) return HttpResponse.json({ code: 'NOT_ON_THREAD', message: 'That agent is not on this thread.' }, { status: 403 })
     const result = runAgent(viewer, String(params.id), agentId)
+    if (!result.ok) return HttpResponse.json({ code: result.code, message: result.message }, { status: result.status })
+    return HttpResponse.json(result.findings)
+  }),
+
+  http.get('/api/workspace/threads/:id/agents/:agentId/preview', ({ request, params }) => {
+    const viewer = viewerFrom(request)
+    if (!viewer) return unauthorised()
+    const agentId = String(params.agentId)
+    if (!isAgentId(agentId)) return HttpResponse.json({ code: 'NOT_ON_THREAD', message: 'That agent is not on this thread.' }, { status: 403 })
+    const result = previewAgent(viewer, String(params.id), agentId)
     if (!result.ok) return HttpResponse.json({ code: result.code, message: result.message }, { status: result.status })
     return HttpResponse.json(result.findings)
   }),

@@ -102,4 +102,9 @@ describe('routes', () => {
     expect(await p.findByRole('region', { name: 'Rebalance preview · Robert Johnson Individual' })).toBeInTheDocument()
     expect(p.getByRole('article', { name: /^Drift Monitor: .* is outside its tolerance band\.$/ })).toBeInTheDocument()
   })
+  it('the kit never writes conversation state: the Johnson thread has no finding after it renders', async () => {
+    await renderKitReady()
+    const thread = await (await fetch('/api/workspace/threads/th-johnson-review', { headers: { 'X-Viewer': 'user-001' } })).json()
+    expect(thread.messages.filter((m: { kind: string }) => m.kind === 'agent_finding')).toHaveLength(0)
+  })
 })
