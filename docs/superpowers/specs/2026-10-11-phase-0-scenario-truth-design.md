@@ -7,7 +7,8 @@
 ## Goal
 
 Make the engine and mock data correct and complete for every workspace job before any new screen
-displays them. All work is on `main`, test-first. No UI work: the old screens pick up engine changes,
+displays them. All work is on a short-lived branch from `main` (with this spec cherry-picked onto it),
+merged to `main` test-first, then merged into `workspace`. No UI work: the old screens pick up engine changes,
 and their tests are updated only where a figure legitimately moves (with the arithmetic in the commit).
 
 ## Scope
@@ -97,7 +98,7 @@ Each fix gets an invariant test that ties the copy to the engine.
 
 ## Out of scope
 
-- Any workspace (`/w`) code.
+- Any workspace code (that lives on branch `workspace`).
 - DRIP and held-away account guidance (client-communication content in phase 3).
 - Netting across separate taxpayers (individual vs trust) beyond what branch `funny-turing` already
   does.

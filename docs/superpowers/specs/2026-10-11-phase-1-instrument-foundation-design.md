@@ -2,17 +2,35 @@
 
 **Date:** 11 October 2026
 **Status:** approved in brainstorming, awaiting spec review
+**Branch:** `workspace`
 **Roadmap:** `docs/superpowers/specs/2026-10-11-workspace-roadmap.md`
 **Reference (not copied):** `src/lab/instrument/` and `src/lab/terminal/` on branch `design-exploration`;
 design and finance reviews in `docs/superpowers/exploration/reviews/` on that branch.
 
 ## Goal
 
-Build the design system the whole workspace uses, with tests that make it impossible to bypass. Ends
-with a gallery at `/w/kit` showing every component in both themes on real acc-002 data. No threads, no
-agents, no jobs.
+Clear the old UI off the `workspace` branch and build the design system the whole workspace uses, in
+Tailwind v4, with tests that make it hard to bypass. Ends with a gallery at `/kit` showing every
+component in both themes on real acc-002 data. No threads, no agents, no jobs.
 
-## Design language
+## 1. Retire the old UI (first task of the phase)
+
+- Delete `src/components`, `src/features`, the old shell (`AppShell`, layout, routes to old pages),
+  `src/store` if only the old UI uses it, and every test under those trees. Keep `src/mocks`,
+  `src/lib`, `src/services`, `src/types` and all their tests. In `src/hooks`, keep the hooks that wrap
+  a service query (`use-accounts`, `use-portfolio`, `use-tax-lots` and the like) and delete the ones
+  that exist only for the old UI (`use-breakpoint`, `use-container-width`, `use-command-search`, and
+  any hook whose only importers were deleted).
+- `src/app/routes.tsx` is rewritten to the new app: `/` (placeholder home inside `Page`) and `/kit`
+  (the gallery). Unknown routes render a not-found page.
+- Old e2e specs that drive deleted pages are removed; the e2e smoke test is rewritten for `/` and
+  `/kit`.
+- Dependencies no longer imported are removed, each removal proven by `pnpm build` and the full test
+  run. Candidates: `recharts`, `react-markdown`, `sonner`, `zustand`, `d3` and `@types/d3`,
+  `@tanstack/react-virtual`, `@tailwindcss/typography`, Radix packages the kit does not use.
+- The remaining suite (engine and data tests) stays green. Record the before and after test counts.
+
+## 2. Design language
 
 ### Carried over from instrument
 
@@ -31,17 +49,16 @@ agents, no jobs.
   Tabular figures everywhere. Units are smaller, in the third ink, after a space (`68.2 %`,
   `+13.2 pp`, `45,850 USD`). In tables the unit moves to the column header.
 - **Colour:** monochrome, neutrals tinted cool (hue 250), never pure black or white, plus one signal.
-  Starting values from instrument (`--bg`, `--face`, `--ink`, `--ink-2`, `--ink-3`, `--rule`,
-  `--rule-2`, `--band`/`--hatch`, `--signal`, `--signal-ink`, light and dark). Both palettes are
-  selected, not inverted.
+  Starting values from instrument (`bg`, `face`, `ink`, `ink-2`, `ink-3`, `rule`, `rule-2`, `band`,
+  `hatch`, `signal`, `signal-ink`, light and dark). Both palettes are selected, not inverted.
 - **Hatching** marks constraints that are not breaches: tolerance bands, wash-sale windows, assets that
   cannot be sold at market.
-- **Spacing:** 8px base (4, 8, 12, 16, 24, 32, 48, 64); 12-column grid, 24px gutter, 1440px max; hairline
-  rules; no cards in cards; no shadows; 2px radius.
+- **Spacing:** 8px rhythm (4, 8, 12, 16, 24, 32, 48, 64); 12-column grid, 24px gutter, 1440px max;
+  hairline rules; no cards in cards; no shadows; 2px radius.
 - **Charts are instruments:** tolerance gauge, window ruler, tax tape. No dual axes, no pies, nothing
   animated in a loop.
-- **Motion:** one fade-in for gauge marks (520ms ease-out); a single-needle loading sweep; both
-  removed under `prefers-reduced-motion`.
+- **Motion:** one fade-in for gauge marks (520ms ease-out); a single-needle loading sweep; both removed
+  under `prefers-reduced-motion`.
 - **Voice:** an instrument reports. Labels state what is measured and against what; every reading
   states its conditions; sentence case except caps labels and status codes.
 
@@ -65,12 +82,31 @@ agents, no jobs.
 - **"Waiting on you"** is shown by shape and words, never colour: an outlined `Stamp` reading
   "AWAITING YOUR SIGNATURE" where the filled "APPROVED" stamp will go.
 - **Focus ring** in ink, 2px, at least 3:1 against both themes' surfaces.
-- **No internal IDs on screen.** Components accept display names; model IDs, record IDs and account
-  IDs appear only where they are the subject (a record slip's ID).
+- **No internal IDs on screen.** Components take display names; model, record and account IDs appear
+  only where they are the subject (a record slip's ID).
 
-## The kit (`src/workspace/kit/`)
+## 3. Tailwind setup
 
-Only what phases 2–7 need. Each component: one folder with `Component.tsx`, colocated `.css`, a test.
+- `src/styles/app.css` replaces `src/index.css`:
+  - `@import "tailwindcss";`
+  - `@theme` defines the instrument tokens and **removes Tailwind's defaults for colour**
+    (`--color-*: initial;`) and fonts (`--font-*: initial;`), then declares only instrument colours
+    (`--color-bg`, `--color-face`, `--color-ink`, `--color-ink-2`, `--color-ink-3`, `--color-rule`,
+    `--color-rule-2`, `--color-band`, `--color-signal`, `--color-signal-ink`) as references to
+    runtime CSS variables, plus the type scale and Archivo width presets.
+  - Runtime variables hold the light values on `:root` and the dark values under
+    `@media (prefers-color-scheme: dark)` guarded by `:root:not([data-theme="light"])` and again under
+    `:root[data-theme="dark"]`, so components rarely need a `dark:` variant.
+  - A `@utility` for hatching (`hatch`), the tabular-figures default on `body`, and the focus-ring
+    base style.
+- Components follow the shadcn pattern: Radix primitive where behaviour matters (Dialog, Tabs, Tooltip,
+  Popover), `cva` variants, `cn()` from `src/lib/utils.ts`. No CSS files besides `src/styles/`.
+- Archivo is self-hosted as woff2 in `public/fonts/` (SIL Open Font License file included) with
+  `font-display: swap` and a metric-compatible fallback stack.
+
+## 4. The kit (`src/kit/`)
+
+Only what phases 2–7 need. Each component: one folder with `Component.tsx` and a test.
 
 **Basics**
 
@@ -81,14 +117,14 @@ Only what phases 2–7 need. Each component: one folder with `Component.tsx`, co
 | `Tag` | Word tags (`NO MARKET`, `OFF-MODEL`, `REPLACES INTC`, `HELD`) |
 | `Button` | Three ranks: primary (ink fill), secondary (outline), quiet (text) |
 | `Attestation` | Checkbox plus the sentence the person attests to |
-| `Dialog` | Modal that holds focus and returns it on close |
+| `Dialog` | Radix dialog: holds focus and returns it on close |
 | `Stepper` | Steps with a state: `READY`, `PREVIEWED`, `OPEN`, `DRAFT`, `DONE` |
 
 **Data**
 
 | Component | Purpose |
 |---|---|
-| `DataTable` | Fixed row heights (24 / 28 / 34px by density); sortable headers with `aria-sort`; a roving row cursor (one Tab stop per table, J/K and arrows move); fractional digits set fainter; optional proportion bar for weights; a count line ("14 of 14 lots"); a totals row that states what it ties to; no clipping (overflow scrolls inside the table, labels never truncate) |
+| `DataTable` | On `@tanstack/react-table`. Fixed row heights (24 / 28 / 34px by density); sortable headers with `aria-sort`; a roving row cursor (one Tab stop per table; J/K and arrows move); fractional digits set fainter; optional proportion bar for weights; a count line ("14 of 14 lots"); a totals row that states what it ties to; no clipping (overflow scrolls inside the table; labels never truncate) |
 | `Gauge` | Tolerance gauge: symmetric scale on target, hatched band, ticks, bar and needle; also renders as a table row |
 | `WindowRuler` | A dated restriction window: day ticks, events, today, hatched span |
 | `TaxTape` | Gains, losses, net by holding period, tax before netting, reduction, estimate; states its scope and rate basis |
@@ -108,8 +144,8 @@ Only what phases 2–7 need. Each component: one folder with `Component.tsx`, co
 
 | Component | Purpose |
 |---|---|
-| `Page` | Frame that renders exactly one `h1`, the preview banner and the skip link |
-| `Grid`, `Pane`, `SidePanel` | 12-column grid; the side panel drops below the main column under 1100px (spatial's reflow rule); nothing scrolls the page sideways at 1024px |
+| `Page` | Frame that renders exactly one `h1` and the skip link |
+| `Grid`, `Pane`, `SidePanel` | 12-column grid; the side panel drops below the main column under 1100px; nothing scrolls the page sideways at 1024px |
 
 **Keyboard**
 
@@ -122,59 +158,54 @@ Only what phases 2–7 need. Each component: one folder with `Component.tsx`, co
 
 **Formatting**
 
-`src/workspace/kit/measure.ts` is the only formatter. Money, results (always signed), prices, weights,
-returns, drift (`pp`), tolerances (`±`), quantities (custodian fractions to 3 dp), durations (days),
-ISO dates and UTC timestamps; a plain-language variant for client copy (`$45,850`, `68.2%`,
-`March 27, 2026`); a normaliser that turns any engine-formatted hyphen-minus into U+2212.
+`src/kit/measure.ts` is the only formatter. Money, results (always signed), prices, weights, returns,
+drift (`pp`), tolerances (`±`), quantities (custodian fractions to 3 dp), durations (days), ISO dates
+and UTC timestamps; a plain-language variant for client copy (`$45,850`, `68.2%`, `March 27, 2026`);
+a normaliser that turns any engine-formatted hyphen-minus into U+2212. The existing
+`formatCurrency`/`formatPercent` in `src/lib/utils.ts` are removed once nothing imports them.
 
-## Styling and assets
+## 5. Enforcement
 
-- Vanilla CSS colocated with each component. Tokens in `src/workspace/styles/tokens.css`, scoped to
-  the workspace root element (`[data-ws]`), light and dark, honouring `prefers-color-scheme` and an
-  explicit theme toggle.
-- No Tailwind inside `src/workspace/`.
-- Archivo self-hosted as woff2 in `public/fonts/` with `font-display: swap` and a metric-compatible
-  fallback stack. Archivo is licensed under the SIL Open Font License; the licence file ships with the
-  fonts.
+Configuration does most of it: with the default palette removed, only instrument colours exist as
+utilities. Because Tailwind silently ignores unknown classes, tests close the gaps. Under
+`src/__tests__/guardrails/`, each with a self-test proving it catches a violation:
 
-## Enforcement (tests, no new lint dependencies)
-
-Under `src/workspace/__tests__/`:
-
-1. **Imports:** no file under `src/workspace/` imports `src/components` or `src/features` (alias or
-   resolved relative path). Detector reused from the lab guardrail, generalised, with its self-test.
-2. **Colours:** no colour literal (hex, `rgb(`, `hsl(`, `oklch(`, named CSS colours) in any workspace
-   `.css` or `.ts(x)` file except `tokens.css`.
-3. **Formatting:** no `toFixed`, `toLocaleString` or `Intl.NumberFormat`/`Intl.DateTimeFormat` outside
-   `measure.ts`.
-4. **Elements:** no raw `<button>`, `<table>` or `<dialog>` outside `kit/`.
+1. **No default-palette or arbitrary colours:** no class string uses a Tailwind default colour name
+   (`red`, `blue`, `slate`, `gray`, `zinc`, `neutral`, `stone`, `amber`, `emerald`, `white`, `black`,
+   and the rest) after a colour-capable prefix, and no arbitrary colour value (`[#…]`, `[rgb(`,
+   `[oklch(`, `[color:…]`).
+2. **No colour literals outside tokens:** no hex, `rgb(`, `hsl(`, `oklch(` or named colour in any
+   `.ts(x)` file, or in any CSS outside the token block of `src/styles/app.css`.
+3. **One formatter:** no `toFixed`, `toLocaleString` or `Intl.NumberFormat`/`Intl.DateTimeFormat`
+   outside `src/kit/measure.ts`.
+4. **Kit elements only:** no raw `<button>`, `<table>` or `<dialog>` outside `src/kit/`.
 5. **Contrast:** for every text token on every surface token, in both themes, computed contrast is at
-   least 4.5:1 (3:1 for signal marks, rules that carry meaning, and the focus ring). Computed from the
-   OKLCH values in `tokens.css`.
-6. **Headings:** every `/w` route renders exactly one `h1`.
+   least 4.5:1 (3:1 for signal marks, meaningful rules and the focus ring), computed from the OKLCH
+   values in `src/styles/app.css`.
+6. **Headings:** every route renders exactly one `h1`.
 
-## Routes
+## 6. Routes
 
-- `/w` renders a placeholder home inside `Page` (the shell comes in phase 2) with the preview banner.
-- `/w/kit` is the gallery: every component, both themes, real acc-002 data via the existing services,
-  plus the visibility-indicator test view.
-- `/w` routes sit outside the old `AppShell`. Nothing in the old app links to them.
+- `/`: placeholder home inside `Page` (the shell arrives in phase 2).
+- `/kit`: the gallery. Every component, both themes, real acc-002 data via the existing services, plus
+  the visibility-indicator test view.
 
 ## Testing
 
 - Unit and component tests for every kit component, including keyboard behaviour (`DataTable` cursor
   and sort, `Dialog` focus return, `CommandLine`, `useFocusAfter`).
-- The six enforcement tests above.
-- A screenshot harness generalised from the lab's (`LAB_PORT` pattern, readiness attribute, fonts
-  ready, animations frozen) captures `/w/kit` in both themes as the visual baseline.
+- The six guardrail tests.
+- A screenshot harness generalised from the lab's (per-worktree port, readiness attribute, fonts
+  ready, animations frozen) captures `/kit` in both themes as the visual baseline.
 
 ## Out of scope
 
-Threads, agents, records storage, any job, any change to the old app's screens.
+Threads, agents, records storage, any job.
 
 ## Success criteria
 
+- Old UI and its tests removed; engine and data tests green; unused dependencies removed.
 - Every kit component exists, is tested, and appears in the gallery in both themes on acc-002 data.
-- All six enforcement tests pass, and each has a self-test proving it catches a violation.
+- All six guardrails pass and each self-test proves it catches a violation.
 - The gallery has no page-level horizontal scroll at 1024px and no clipped labels at 1440px.
 - `pnpm lint`, `pnpm build`, full `vitest run` and the screenshot harness are green.

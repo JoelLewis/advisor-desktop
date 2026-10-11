@@ -42,18 +42,34 @@ reputational.
 5. **One signal.** The signal colour means "outside its limit and stops you". Warnings are ink.
 6. **No phase merges with failing tests.** Each phase adds UI tests for the screens it builds.
 
-## Dark launch on `main`
+## Branch model
 
-- The new workspace lives under `/w/*`, in its own source tree `src/workspace/`. It shares the engine
-  layers (`src/mocks`, `src/lib`, `src/services`, `src/types`) and imports nothing from
-  `src/components` or `src/features` (enforced by test).
-- `/w` is not linked from the live app and shows a preview banner. Every phase merges to `main`, so
-  engine fixes reach both shells automatically and every phase is reviewable on the deployed site.
-- **The switch** (end of phase 7): `/` routes to the workspace, old routes redirect to their new
-  homes, and `src/components`, `src/features` and the old shell are deleted with their UI tests. Engine
-  tests stay.
+- **`workspace` branch.** All roadmap work from phase 1 onward happens on branch `workspace`, cut from
+  `main`. At the start of phase 1 the old UI is deleted on the branch: `src/components`,
+  `src/features`, the old shell and their UI tests. The engine layers (`src/mocks`, `src/lib`,
+  `src/services`, `src/types`) and their tests stay. The new workspace is the app at `/`.
+- **`main` keeps serving the current site.** Phase 0 (engine and data fixes) lands on `main`, because
+  it corrects figures the live site shows today, and is merged into `workspace`. Any later engine fix
+  follows the same route. When a merge from `main` touches a deleted file, the deletion wins.
+- **Review in context.** Each phase is reviewable on a Cloudflare preview deployment of the branch.
+- **The switch** (end of phase 7): `workspace` merges to `main` in one merge; old routes that people
+  may have bookmarked redirect to their new homes.
+- **Parallel agents** working on this roadmap must be given worktrees cut from `workspace` and must
+  verify their base commit before starting (worktree isolation defaults to `main`).
 - The lab (`/lab`, `src/lab/`) stays on branch `design-exploration` as reference material and never
   merges. Ideas are rebuilt with tests, not copied.
+
+## Styling system
+
+Tailwind v4, set up so the look is easy to change and hard to bypass:
+
+- Instrument's tokens are defined once in `@theme` (colours, fonts, type scale, spacing extras), with
+  Tailwind's default palette removed (`--color-*: initial`). Only instrument colours exist as
+  utilities; `bg-blue-500` does not compile.
+- Components follow the shadcn pattern already supported by the dependencies: Radix primitives for
+  accessible behaviour, `class-variance-authority` for variants, `cn()` (`clsx` + `tailwind-merge`)
+  for composition, `@tanstack/react-table` under the data table.
+- Changing the look later means editing tokens in one file and variants in one place per component.
 
 ## Phases
 
@@ -62,14 +78,14 @@ phases are specified when they start.
 
 | # | Phase | Ends with |
 |---|---|---|
-| 0 | Scenario truth (`2026-10-11-phase-0-scenario-truth-design.md`) | Engine and data correct for every job |
-| 1 | Instrument foundation (`2026-10-11-phase-1-instrument-foundation-design.md`) | Tokens, type, units, both themes, the kit, enforcement tests, accessibility base, keyboard layer, gallery at `/w/kit` |
+| 0 | Scenario truth (`2026-10-11-phase-0-scenario-truth-design.md`), on `main` | Engine and data correct for every job; merged into `workspace` |
+| 1 | Instrument foundation (`2026-10-11-phase-1-instrument-foundation-design.md`) | Old UI deleted on `workspace`; Tailwind tokens, type, units, both themes, the kit, enforcement tests, accessibility base, keyboard layer, gallery at `/kit` |
 | 2 | Workspace shell | Thread model with private, internal and client visibility; binding-act records; scripted-agent framework; command line; full-view routing |
 | 3 | Brief, rebalance and harvest, client thread | The acc-002 story end to end: brief → team thread → approval → client thread |
 | 4 | Compliance review | Compliance is a real participant (Mark Davis, CCO). Phase 3's pending steps become dispositions. The archive and supervision queue move over |
 | 5 | Meeting prep and review | Agenda, household summary, notes and follow-ups; household and client full views |
 | 6 | Proposals and onboarding | Long-running work with a prospect who is not yet a client: the hardest visibility case |
-| 7 | Remaining full views, then the switch | Billing, reconciliation, risk, attribution, model governance; `/` flips to the workspace; old code deleted; showcase polish |
+| 7 | Remaining full views, then the switch | Billing, reconciliation, risk, attribution, model governance; showcase polish; `workspace` merges to `main` |
 
 **Why this order.** Phase 0 first because every later screen displays the engine's figures. The
 foundation (1) and shell (2) come before any job so nothing bypasses the system. The first job (3) is
@@ -77,11 +93,12 @@ the one proven in the lab, and it establishes every thread pattern. Compliance (
 immediately because "pending compliance" in phase 3 is the largest finance objection still open.
 Meetings (5) reuse thread patterns and add the CRM views. Proposals and onboarding (6) come last
 among the jobs because the prospect boundary is the hardest visibility case. Pure reference screens
-(7) are not conversations, so they move last and trigger the switch.
+(7) are not conversations, so they move last and trigger the merge to `main`.
 
 ## Follow-ups already identified (owned by the phase named)
 
 - Phase 3: post-trade drift shown on the construct step; DRIP and held-away accounts in wash-sale
   guidance to the client.
 - Phase 4: supervision queue; exception dispositions with documented rationale.
-- Phase 7: retire the old messaging, NBA and AI panels once their jobs live in threads.
+- Phase 1: prune dependencies no longer imported once the old UI is deleted (candidates: `recharts`,
+  `react-markdown`, `sonner`, `zustand`, `d3`, unused Radix packages), each removal checked by build.
