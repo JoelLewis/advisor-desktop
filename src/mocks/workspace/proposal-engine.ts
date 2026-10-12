@@ -76,15 +76,31 @@ export function parseEdits(value: unknown): { ok: true; value: LegEdit[] } | Eng
 const CONSTRAINT_ORDER: Readonly<Record<ProposalConstraint['kind'], number>> = { avoid_self_wash: 0, harvest_only: 1, cap_realised_gains: 2, exclude_asset_class: 3 }
 const EDIT_ORDER: Readonly<Record<LegEdit['kind'], number>> = { exclude: 0, quantity: 1, lots: 2 }
 
-/** One spelling per constraint set: duplicates dropped, a fixed order. */
+/** Code-unit order, the same on every machine and locale: what feeds a fingerprint never sorts by locale. */
+const byCodeUnit = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
+
+/** A constraint as a fixed tuple, so its spelling never depends on an object's key order. */
+const constraintTuple = (c: ProposalConstraint): [string, number | string | null] =>
+  [c.kind, c.kind === 'cap_realised_gains' ? c.usd : c.kind === 'exclude_asset_class' ? c.assetClass : null]
+
+/** An edit as a fixed tuple, so its spelling never depends on an object's key order. */
+const editTuple = (e: LegEdit): [string, string, number | string[] | null] =>
+  [e.kind, e.symbol, e.kind === 'quantity' ? e.quantity : e.kind === 'lots' ? [...e.lotIds] : null]
+
+/** One spelling per constraint set: duplicates dropped, gain caps collapsed to the tightest, a fixed order. */
 export function normaliseConstraints(constraints: readonly ProposalConstraint[]): ProposalConstraint[] {
-  const unique = [...new Map(constraints.map((c) => [JSON.stringify(c), c])).values()]
-  return unique.sort((a, b) => CONSTRAINT_ORDER[a.kind] - CONSTRAINT_ORDER[b.kind] || JSON.stringify(a).localeCompare(JSON.stringify(b)))
+  const caps = constraints.flatMap((c) => (c.kind === 'cap_realised_gains' ? [c.usd] : []))
+  const collapsed: ProposalConstraint[] = [
+    ...constraints.filter((c) => c.kind !== 'cap_realised_gains'),
+    ...(caps.length > 0 ? [{ kind: 'cap_realised_gains', usd: Math.min(...caps) } as const] : []),
+  ]
+  const unique = [...new Map(collapsed.map((c) => [JSON.stringify(constraintTuple(c)), c])).values()]
+  return unique.sort((a, b) => CONSTRAINT_ORDER[a.kind] - CONSTRAINT_ORDER[b.kind] || byCodeUnit(JSON.stringify(constraintTuple(a)), JSON.stringify(constraintTuple(b))))
 }
 
 /** One spelling per edit set: by symbol, then by kind. */
 export function normaliseEdits(edits: readonly LegEdit[]): LegEdit[] {
-  return [...edits].sort((a, b) => a.symbol.localeCompare(b.symbol) || EDIT_ORDER[a.kind] - EDIT_ORDER[b.kind])
+  return [...edits].sort((a, b) => byCodeUnit(a.symbol, b.symbol) || EDIT_ORDER[a.kind] - EDIT_ORDER[b.kind])
 }
 
 export function generationConstraintsOf(constraints: readonly ProposalConstraint[]): GenerationConstraints {
@@ -108,6 +124,8 @@ export function applyEdits(accountId: string, base: RebalanceProposal, edits: re
     seen.add(key)
   }
   const excluded = new Set(edits.flatMap((e) => (e.kind === 'exclude' ? [e.symbol] : [])))
+  const conflicting = edits.find((e) => e.kind !== 'exclude' && excluded.has(e.symbol))
+  if (conflicting) return fail('CONFLICTING_EDITS', `${conflicting.symbol} is excluded, so it cannot also have a ${conflicting.kind} edit.`)
   const quantities = new Map(edits.flatMap((e) => (e.kind === 'quantity' ? [[e.symbol, e.quantity] as const] : [])))
   const lots = new Map(edits.flatMap((e) => (e.kind === 'lots' ? [[e.symbol, e.lotIds] as const] : [])))
   const legs: ProposedTradeLeg[] = []
@@ -181,8 +199,8 @@ export function buildVersion(accountId: string, constraints: readonly ProposalCo
   })
   const content = {
     accountId,
-    constraints: normaliseConstraints(constraints),
-    edits: normaliseEdits(edits),
+    constraints: normaliseConstraints(constraints).map(constraintTuple),
+    edits: normaliseEdits(edits).map(editTuple),
     legs: preview.trades.map((t) => [t.symbol, t.side, t.quantity, t.estimatedValue]),
     lots: legFacts.map((f) => [f.symbol, f.lotIds]),
   }

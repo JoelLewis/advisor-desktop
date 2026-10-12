@@ -1,8 +1,12 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { accounts } from '@/mocks/data/accounts'
+import { washSaleWindow } from '@/mocks/data/realised-sales'
+import type { Acquisition } from '@/lib/wash-sale'
+import { MOCK_TODAY_ISO } from '@/lib/clock'
 import type { LegEdit, ProposalConstraint } from '@/types/workspace-proposal'
 import { applyEdits, buildVersion, editSummary, normaliseConstraints, parseConstraints, parseEdits } from '../proposal-engine'
-import { generateRebalanceProposal } from '@/mocks/handlers/oms'
+import { buildRebalancePreviews, generateRebalanceProposal } from '@/mocks/handlers/oms'
+
 
 const AGENT: ProposalConstraint[] = [{ kind: 'avoid_self_wash' }]
 const built = (constraints: ProposalConstraint[], edits: LegEdit[] = []) => {
@@ -64,6 +68,83 @@ describe('buildVersion · acc-002', () => {
   })
 })
 
+describe('a version and the engine agree', () => {
+  it("the agent version's preview is an independent preview of the generator's own legs", () => {
+    const account = accounts.find((a) => a.id === 'acc-002')
+    if (!account) throw new Error('acc-002 missing')
+    const generated = generateRebalanceProposal('acc-002', true, 0.005, undefined, { avoidSelfWash: true })
+    const [fresh] = buildRebalancePreviews([{ account, ...generated }], true, 0.005, MOCK_TODAY_ISO)
+    expect(built(AGENT).preview).toEqual(fresh)
+  })
+
+  it('the fingerprint does not depend on the key order a constraint or edit was written in', () => {
+    const a = built(
+      [{ kind: 'exclude_asset_class', assetClass: 'digital_assets' }, { kind: 'cap_realised_gains', usd: 50_000 }],
+      [{ kind: 'quantity', symbol: 'SPY', quantity: 700 }, { kind: 'lots', symbol: 'INTC', lotIds: ['lot-pos-023-0'] }],
+    )
+    const b = built(
+      [{ assetClass: 'digital_assets', kind: 'exclude_asset_class' } as ProposalConstraint, { usd: 50_000, kind: 'cap_realised_gains' } as ProposalConstraint],
+      [{ quantity: 700, symbol: 'SPY', kind: 'quantity' } as LegEdit, { lotIds: ['lot-pos-023-0'], symbol: 'INTC', kind: 'lots' } as LegEdit],
+    )
+    expect(b.fingerprint).toBe(a.fingerprint)
+  })
+
+  it('several gain caps are the tightest of them', () => {
+    expect(normaliseConstraints([{ kind: 'cap_realised_gains', usd: 90_000 }, { kind: 'cap_realised_gains', usd: 50_000 }])).toEqual([{ kind: 'cap_realised_gains', usd: 50_000 }])
+    expect(built([{ kind: 'cap_realised_gains', usd: 90_000 }, { kind: 'cap_realised_gains', usd: 50_000 }]).fingerprint)
+      .toBe(built([{ kind: 'cap_realised_gains', usd: 50_000 }]).fingerprint)
+  })
+
+  it('a re-cut loss sale is settled again against a purchase inside its window', async () => {
+    // The book holds no purchase inside a proposed loss sale's window, and the test setup has already
+    // loaded the engine, so a fresh copy is loaded with one planted in the taxpayer's acquisitions.
+    const planted: Acquisition[] = [{ symbol: 'INTC', date: '2026-02-15', lotId: 'planted-intc', quantity: 2_000, account: 'taxable' }]
+    vi.resetModules()
+    vi.doMock('@/mocks/handlers/custodian', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('@/mocks/handlers/custodian')>()
+      return { ...actual, washSaleAcquisitions: (...args: Parameters<typeof actual.washSaleAcquisitions>) => [...actual.washSaleAcquisitions(...args), ...planted] }
+    })
+    try {
+      const engine = await import('../proposal-engine')
+      const version = (edits: LegEdit[]) => {
+        const r = engine.buildVersion('acc-002', AGENT, edits)
+        if (!r.ok) throw new Error(r.message)
+        const sale = r.built.preview.trades.find((t) => t.symbol === 'INTC')
+        if (!sale) throw new Error('no INTC sale')
+        const washed = (sale.washedLoss?.shortTerm ?? 0) + (sale.washedLoss?.longTerm ?? 0)
+        return { sale, washed, built: r.built }
+      }
+
+      // Two thousand of six thousand loss shares wash; the rest keep the repurchase window open.
+      const part = version([{ kind: 'quantity', symbol: 'INTC', quantity: 6_000 }])
+      expect(part.sale.realisedLongTerm).toBe(-39_300)
+      expect(part.washed).toBe(-13_100)
+      expect(part.built.legFacts.find((f) => f.symbol === 'INTC')?.washed).toBe(part.washed)
+      expect(part.built.summary.washed).toBe(part.washed)
+      expect(part.sale.repurchaseBlockedUntil).toBe(washSaleWindow(MOCK_TODAY_ISO).end)
+
+      // Cut to fewer shares than were bought, the whole loss washes and no window is left open.
+      const whole = version([{ kind: 'quantity', symbol: 'INTC', quantity: 1_500 }])
+      expect(whole.washed).toBe(whole.sale.realisedLongTerm)
+      expect(whole.washed).toBeLessThan(0)
+      expect(whole.built.legFacts.find((f) => f.symbol === 'INTC')?.washed).toBe(whole.washed)
+      expect(whole.built.summary.washed).toBe(whole.washed)
+      expect(whole.sale.repurchaseBlockedUntil).toBeUndefined()
+
+      // Without the purchase the same edit washes nothing.
+      planted.length = 0
+      const none = version([{ kind: 'quantity', symbol: 'INTC', quantity: 6_000 }])
+      expect(none.sale.washedLoss).toBeUndefined()
+      expect(none.built.legFacts.find((f) => f.symbol === 'INTC')?.washed).toBe(0)
+      expect(none.built.summary.washed).toBe(0)
+      expect(none.sale.repurchaseBlockedUntil).toBe(washSaleWindow(MOCK_TODAY_ISO).end)
+    } finally {
+      vi.doUnmock('@/mocks/handlers/custodian')
+      vi.resetModules()
+    }
+  })
+})
+
 describe('edits are re-validated by the engine', () => {
   it.each([
     [[{ kind: 'exclude', symbol: 'MSFT' }], 'NOT_A_LEG'],
@@ -71,6 +152,8 @@ describe('edits are re-validated by the engine', () => {
     [[{ kind: 'quantity', symbol: 'INTC', quantity: 9_000 }], 'OVER_HELD'],
     [[{ kind: 'lots', symbol: 'INTC', lotIds: ['lot-pos-020-0'] }], 'LOT_NOT_IN_POSITION'],
     [[{ kind: 'exclude', symbol: 'QAI' }, { kind: 'exclude', symbol: 'QAI' }], 'DUPLICATE_EDIT'],
+    [[{ kind: 'exclude', symbol: 'QAI' }, { kind: 'quantity', symbol: 'QAI', quantity: 100 }], 'CONFLICTING_EDITS'],
+    [[{ kind: 'lots', symbol: 'INTC', lotIds: ['lot-pos-023-0'] }, { kind: 'exclude', symbol: 'INTC' }], 'CONFLICTING_EDITS'],
   ] as const)('%j → %s', (edits, code) => {
     const r = buildVersion('acc-002', AGENT, edits.map((e) => ({ ...e })) as LegEdit[])
     expect(r.ok).toBe(false)
