@@ -40,14 +40,22 @@ describe('§0.5 · records made at runtime take the event clock, never the live 
 })
 
 describe('generated ids never meet a seed id', () => {
-  it('a custom prompt created first leaves seed cp-1 in place', async () => {
+  type Prompt = { id: string; name: string }
+  const SEED_IDS = ['cp-1', 'cp-2', 'cp-3', 'cp-4']
+  const listPrompts = () => fetch('/api/settings/ai/prompts').then((r) => r.json() as Promise<Prompt[]>)
+
+  it('a created custom prompt takes no seed id and leaves every seed prompt as it was', async () => {
+    const before = new Map((await listPrompts()).map((p) => [p.id, p.name]))
     const created = await fetch('/api/settings/ai/prompts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'n', text: 't', category: 'general' }),
-    }).then((r) => r.json() as Promise<{ id: string }>)
-    const all = await fetch('/api/settings/ai/prompts').then((r) => r.json() as Promise<{ id: string }[]>)
-    expect(created.id).not.toBe('cp-1')
-    expect(all.map((p) => p.id)).toContain('cp-1')
+      body: JSON.stringify({ name: 'new prompt', text: 't', category: 'general' }),
+    }).then((r) => r.json() as Promise<Prompt>)
+    const after = new Map((await listPrompts()).map((p) => [p.id, p.name]))
+    expect(SEED_IDS).not.toContain(created.id)
+    for (const id of SEED_IDS) {
+      expect(before.has(id), id).toBe(true)
+      expect(after.get(id), id).toBe(before.get(id))
+    }
   })
 })
