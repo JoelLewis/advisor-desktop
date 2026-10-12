@@ -1,6 +1,7 @@
 import type { BindingAct, Draft, Message, Thread } from '@/types/workspace'
 import type { ApprovalRecord, Proposal, StagedOrder } from '@/types/workspace-proposal'
 import { eventTime } from '@/lib/clock'
+import { briefMessages } from '@/mocks/workspace/brief'
 import { SEED_LAST_SEQUENCE, SEED_MESSAGES, SEED_THREADS } from './workspace-seed'
 
 type Counter = 'msg' | 'draft' | 'act' | 'proposal' | 'staged'
@@ -20,7 +21,7 @@ export type WorkspaceState = {
 function seed(): WorkspaceState {
   return {
     threads: SEED_THREADS.map((t) => ({ ...t, memberIds: [...t.memberIds], agentIds: [...t.agentIds] })),
-    messages: SEED_MESSAGES.map((m) => ({ ...m })),
+    messages: [...briefMessages(), ...SEED_MESSAGES.map((m) => ({ ...m }))],
     acts: [],
     drafts: [],
     proposals: [],
@@ -31,7 +32,7 @@ function seed(): WorkspaceState {
   }
 }
 
-// Seeded on first use, not at import: the seed reads the engine (Task 6 adds the Brief), and the
+// Seeded on first use, not at import: the seed reads the engine (the Brief), and the
 // engine must finish loading before anything runs it.
 let state: WorkspaceState | undefined
 

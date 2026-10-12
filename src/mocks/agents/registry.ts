@@ -2,12 +2,14 @@ import type { AgentId } from '@/types/workspace'
 import type { AgentDefinition } from './agent'
 import { AGENTS } from '@/mocks/data/people'
 import { runDriftMonitor } from './drift-monitor'
+import { runHarvestScanner } from './harvest-scanner'
 import { runPretradeCheck } from './pretrade-check'
 
 /** Agents that report findings in a thread. The Proposal and Client Letter agents work through their own operations. */
 const RUNNERS: ReadonlyMap<AgentId, AgentDefinition['run']> = new Map<AgentId, AgentDefinition['run']>([
   ['drift-monitor', runDriftMonitor],
   ['pretrade-check', runPretradeCheck],
+  ['harvest-scanner', runHarvestScanner],
 ])
 
 export const AGENT_DEFINITIONS: ReadonlyMap<AgentId, AgentDefinition> = new Map(

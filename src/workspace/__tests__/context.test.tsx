@@ -151,7 +151,7 @@ describe('thread context column', () => {
   it('a private thread is seen by its owner alone', async () => {
     await openThread('/t/th-brief', 'Brief')
     expect(within(section('Who can see')).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
-      'Adrian Hale · Advisor', expect.stringMatching(/^Drift Monitor/),
+      'Adrian Hale · Advisor', expect.stringMatching(/^Drift Monitor/), expect.stringMatching(/^Harvest Scanner/),
     ])
     expect(contextColumn()).not.toHaveTextContent('Mark Davis')
   })

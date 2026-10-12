@@ -3,6 +3,7 @@ import { AGENT_DEFINITIONS } from '@/mocks/agents/registry'
 import { nextAt, nextId, store } from '@/mocks/data/workspace-store'
 import { MOCK_NOW_ISO } from '@/lib/clock'
 import { canSeeThread } from './visibility'
+import { runKeyOf } from './run-key'
 
 type Failure = { ok: false; status: 400 | 403 | 404; code: string; message: string }
 
@@ -18,7 +19,7 @@ function resolveRun(viewerId: string, threadId: string, agentId: AgentId): Resol
   if (!agent || !thread.agentIds.includes(agentId)) return { ok: false, status: 403, code: 'NOT_ON_THREAD', message: 'That agent is not on this thread.' }
   const subject = thread.subject
   if (!subject) return { ok: false, status: 400, code: 'NO_SUBJECT', message: 'This thread has no subject for the agent to work on.' }
-  const runKey = `${agentId}|${thread.id}|${subject.type}:${subject.id}|${MOCK_NOW_ISO}`
+  const runKey = runKeyOf(agentId, thread.id, subject)
   return { ok: true, threadId: thread.id, runKey, run: () => agent.run({ asOf: MOCK_NOW_ISO, subject }) }
 }
 

@@ -2,7 +2,7 @@ import type { Message, Thread } from '@/types/workspace'
 import { eventTime } from '@/lib/clock'
 
 export const SEED_THREADS: readonly Thread[] = [
-  { id: 'th-brief', title: 'Brief', visibility: 'private', ownerId: 'user-001', memberIds: ['user-001'], agentIds: ['drift-monitor'],
+  { id: 'th-brief', title: 'Brief', visibility: 'private', ownerId: 'user-001', memberIds: ['user-001'], agentIds: ['drift-monitor', 'harvest-scanner'],
     subject: { type: 'account', id: 'acc-002' } },
   { id: 'th-johnson-review', title: 'Johnson Rebalance Review', visibility: 'internal', memberIds: ['user-001', 'user-002', 'user-003'],
     agentIds: ['drift-monitor', 'pretrade-check'], subject: { type: 'account', id: 'acc-002' } },
