@@ -9,6 +9,7 @@ import { isTaxableAccount } from '@/lib/tax-treatment'
 import { notFound } from './utils'
 import { startOfToday, MOCK_TODAY_ISO } from '@/lib/clock'
 import { matchWashedShares, type Acquisition } from '@/lib/wash-sale'
+import { inceptionDate } from '@/lib/security-master'
 import type { Account } from '@/types/account'
 
 const DAY_MS = 1000 * 60 * 60 * 24
@@ -113,6 +114,30 @@ export function holdingPeriodOn(purchaseISO: string, asOfISO: string): 'short' |
   const anniversary = new Date(`${purchaseISO}T00:00:00Z`)
   anniversary.setUTCFullYear(anniversary.getUTCFullYear() + 1)
   return asOfISO > anniversary.toISOString().slice(0, 10) ? 'long' : 'short'
+}
+
+/** Whole months before `anchor` that still land on or after `inceptionISO`. */
+export function monthsSinceInception(anchor: Date, inceptionISO: string): number {
+  let months = 0
+  for (;;) {
+    const earlier = new Date(anchor)
+    earlier.setUTCMonth(earlier.getUTCMonth() - (months + 1))
+    if (earlier.toISOString().slice(0, 10) < inceptionISO) return months
+    months += 1
+  }
+}
+
+/**
+ * Lot ages (whole months, oldest first) no older than `maxAge`, each a month younger than the one
+ * before it once capped, so two lots of one position are never dated the same day by the cap.
+ */
+export function capLotAges(agesOldestFirst: readonly number[], maxAge: number): number[] {
+  let ceiling = maxAge
+  return agesOldestFirst.map((age) => {
+    const capped = Math.max(0, Math.min(age, ceiling))
+    ceiling = capped - 1
+    return capped
+  })
 }
 
 /** Whether `pos` was held on `dateISO` — false only before a known open date. */
@@ -399,8 +424,13 @@ export function generateTaxLots(accountId: string, totalValue: number): Custodia
     const shares = fractions(rand, lotCount)
 
     // Older lots first, so FIFO and LIFO orderings are meaningful.
-    const ages = Array.from({ length: lotCount }, () => 3 + Math.floor(rand() * 45))
+    const drawnAges = Array.from({ length: lotCount }, () => 3 + Math.floor(rand() * 45))
       .sort((a, b) => b - a)
+    // §0.7 · no lot predates its security: IBIT drew 2022 and 2023 dates for a fund launched in
+    // January 2024. The draws are kept (the PRNG stream, and so every other lot, is unchanged)
+    // and only capped at the inception.
+    const inception = inceptionDate(pos.symbol)
+    const ages = inception === undefined ? drawnAges : capLotAges(drawnAges, monthsSinceInception(anchor, inception))
 
     let allocatedQty = 0
     let allocatedBasis = 0

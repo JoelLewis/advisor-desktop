@@ -50,6 +50,26 @@ export function isMarketTradable(symbol: string): boolean {
   return !PERIODIC_LIQUIDITY_SYMBOLS.has(symbol)
 }
 
+/**
+ * The first day each security could be bought, for every security held in the book that launched
+ * after 2022-03-25 — the earliest date the custodian's synthetic lot generator can produce
+ * (`generateTaxLots` dates lots 3 to 47 whole months before 2026-02-25). Every other held security
+ * launched before that date, so no lot can predate it.
+ *
+ * - IBIT: iShares Bitcoin Trust ETF began trading on 11 January 2024, the first day of US spot
+ *   bitcoin ETFs.
+ * - BXPE: Blackstone Private Equity Strategies Fund L.P. held its first close, its inception, on
+ *   2 January 2024.
+ */
+const INCEPTION_DATES: ReadonlyMap<string, string> = new Map([
+  ['IBIT', '2024-01-11'],
+  ['BXPE', '2024-01-02'],
+])
+
+export function inceptionDate(symbol: string): string | undefined {
+  return INCEPTION_DATES.get(symbol)
+}
+
 export const SINGLE_NAME_LIMIT = 0.10 as const
 export const FUND_LIMIT = 0.35 as const
 export const CASH_LIMIT = 0.15 as const
