@@ -9,6 +9,7 @@ export function AskAgents({ thread, agents }: { thread: Thread; agents: AgentPro
   const run = useRunAgent(thread.id)
   const detail = useThread(thread.id)
   const [report, setReport] = useState<string>()
+  const runnable = agents.filter((a) => a.produces === 'findings')
 
   // The engine returns the earlier findings when a run repeats for the same as-of, so compare against what was already here.
   const ask = (agent: AgentProfile) => {
@@ -21,10 +22,12 @@ export function AskAgents({ thread, agents }: { thread: Thread; agents: AgentPro
     })
   }
 
+  if (runnable.length === 0) return null
+
   return (
     <ContextSection title="Ask an agent">
       <div className="flex flex-wrap gap-2">
-        {agents.map((a) => (
+        {runnable.map((a) => (
           <Button key={a.id} rank="secondary" disabled={run.isPending} onClick={() => ask(a)}>{`Ask ${a.name}`}</Button>
         ))}
       </div>

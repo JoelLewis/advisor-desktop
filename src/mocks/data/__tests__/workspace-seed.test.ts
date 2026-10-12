@@ -12,7 +12,7 @@ describe('workspace seed', () => {
     const byVis = Object.fromEntries(threads.map((t) => [t.visibility, t]))
     expect(byVis.private!).toMatchObject({ ownerId: 'user-001', memberIds: ['user-001'] })
     expect(byVis.internal!).toMatchObject({ title: 'Johnson Rebalance Review', subject: { type: 'account', id: 'acc-002' } })
-    expect(byVis.internal!.agentIds).toEqual(['drift-monitor', 'pretrade-check'])
+    expect(byVis.internal!.agentIds).toEqual(['drift-monitor', 'pretrade-check', 'proposal'])
     expect(byVis.client!).toMatchObject({ clientId: 'cli-001', agentIds: [] })
     expect(byVis.client!.memberIds).toEqual(expect.arrayContaining(['cli-001', 'user-001', 'user-002']))
   })

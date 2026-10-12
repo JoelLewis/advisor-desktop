@@ -16,6 +16,9 @@ function resolveRun(viewerId: string, threadId: string, agentId: AgentId): Resol
   if (!thread || !canSeeThread(viewerId, thread)) return { ok: false, status: 404, code: 'NO_THREAD', message: 'Thread not found.' }
   if (thread.visibility === 'client') return { ok: false, status: 400, code: 'CLIENT_THREAD', message: 'Agents never post in a client thread.' }
   const agent = AGENT_DEFINITIONS.get(agentId)
+  if (!agent && thread.agentIds.includes(agentId)) {
+    return { ok: false, status: 400, code: 'NO_FINDINGS', message: 'This agent does not report findings; ask it through its own controls.' }
+  }
   if (!agent || !thread.agentIds.includes(agentId)) return { ok: false, status: 403, code: 'NOT_ON_THREAD', message: 'That agent is not on this thread.' }
   const subject = thread.subject
   if (!subject) return { ok: false, status: 400, code: 'NO_SUBJECT', message: 'This thread has no subject for the agent to work on.' }

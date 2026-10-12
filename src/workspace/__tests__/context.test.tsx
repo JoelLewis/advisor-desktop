@@ -122,6 +122,7 @@ describe('thread context column', () => {
     expect(within(conversation()).getAllByRole('listitem')).toHaveLength(3)
     const ask = within(section('Ask an agent'))
     expect(ask.getByRole('button', { name: 'Ask Pre-trade Check' })).toBeInTheDocument()
+    expect(ask.queryByRole('button', { name: /Proposal Agent/ })).toBeNull()
     await userEvent.setup().click(ask.getByRole('button', { name: 'Ask Drift Monitor' }))
     expect(await within(conversation()).findAllByRole('article', { name: /^Drift Monitor: / })).not.toHaveLength(0)
     expect(router.state.location.pathname).toBe('/t/th-johnson-review')
@@ -135,7 +136,7 @@ describe('thread context column', () => {
     const seenBy = within(section('Who can see'))
     expect(seenBy.getAllByRole('listitem').map((li) => li.textContent)).toEqual([
       'Adrian Hale · Advisor', 'Sarah Mitchell · Client service', 'Mike Chen · Analyst', 'Mark Davis · Compliance (supervision)',
-      expect.stringMatching(/^Drift Monitor/), expect.stringMatching(/^Pre-trade Check/),
+      expect.stringMatching(/^Drift Monitor/), expect.stringMatching(/^Pre-trade Check/), expect.stringMatching(/^Proposal Agent/),
     ])
     const drift = seenBy.getByText('Drift Monitor').closest('li') as HTMLElement
     expect(drift).toHaveTextContent('may measure and flag')
