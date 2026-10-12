@@ -4,7 +4,6 @@ import { getPositionsForAccount } from '@/mocks/data/positions'
 import { computeDriftForAccount } from '@/mocks/handlers/pms'
 import { ASSET_CLASS_LABELS } from '@/lib/labels'
 import { isMarketTradable } from '@/lib/security-master'
-import { todayISO } from '@/lib/clock'
 import { openWashSaleWindows } from '@/mocks/data/realised-sales'
 import type { Position } from '@/types/portfolio'
 import { claimNameOf } from './claim-name'
@@ -64,7 +63,7 @@ export function runDriftMonitor({ asOf, subject }: AgentContext): AgentFinding[]
 
 /** Replacements bought for a loss sale whose wash-sale window is still open: a rebalance should not trim them away. */
 function replacementHolds(accountId: string, positions: readonly Position[], asOf: string): AgentFinding[] {
-  return openWashSaleWindows(todayISO())
+  return openWashSaleWindows(asOf.slice(0, 10))
     .filter((w) => w.accountId === accountId && w.replacementSymbol !== undefined)
     .flatMap((w) => {
       const replacement = positions.find((p) => p.symbol === w.replacementSymbol && p.quantity > 0)
@@ -72,7 +71,7 @@ function replacementHolds(accountId: string, positions: readonly Position[], asO
       const held = claimNameOf(replacement.symbol, replacement.name)
       const sold = claimNameOf(w.symbol, w.name)
       return [{
-        claim: `${held} replaces ${sold}, sold at a loss, and keeps that market exposure while the wash-sale window is open. `
+        claim: `${held} was bought in place of the ${sold} shares sold at a loss, keeping related exposure while the wash-sale window is open. `
           + `A ${label(replacement.assetClass)} trim should leave it in place, and ${sold} should not be bought back before the window closes, or the harvested loss would be disallowed.`,
         attention: 'info' as const,
         citations: [{ source: `Wash-sale window · ${w.id} · ${w.symbol} loss sale of ${w.saleDate}, open to ${w.end}`, asOf }],

@@ -100,7 +100,7 @@ describe('drift monitor replacement holds', () => {
     const findings = drift.run(ctx('acc-002')).filter((f) => isReplacementHold(f.claim))
     expect(findings).toHaveLength(1)
     const [hold] = findings
-    expect(hold!.claim).toBe('VanEck Semiconductor ETF replaces Intel Corp., sold at a loss, and keeps that market exposure while the wash-sale window is open. '
+    expect(hold!.claim).toBe('VanEck Semiconductor ETF was bought in place of the Intel Corp. shares sold at a loss, keeping related exposure while the wash-sale window is open. '
       + 'A US Equity trim should leave it in place, and Intel Corp. should not be bought back before the window closes, or the harvested loss would be disallowed.')
     expect(hold!.attention).toBe('info')
     const account = accounts.find((a) => a.id === 'acc-002')!

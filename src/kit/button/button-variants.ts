@@ -9,8 +9,8 @@ export const buttonVariants = cva(
   {
     variants: {
       rank: {
-        primary: 'bg-ink text-face not-disabled:hover:bg-ink-2 disabled:border disabled:border-dashed disabled:border-rule-2 disabled:bg-transparent',
-        secondary: 'border border-ink bg-transparent text-ink not-disabled:hover:bg-face disabled:border-dashed disabled:border-rule-2',
+        primary: 'bg-ink text-face not-disabled:hover:bg-ink-2 disabled:border disabled:border-rule-2 disabled:bg-transparent',
+        secondary: 'border border-ink bg-transparent text-ink not-disabled:hover:bg-face disabled:border-rule-2',
         quiet: 'h-auto px-0 text-ink underline decoration-rule-2 underline-offset-4 not-disabled:hover:decoration-ink disabled:no-underline',
       },
     },
