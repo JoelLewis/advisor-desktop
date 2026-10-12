@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { Pane } from '@/kit/layout/Pane'
 import { fmtTimestamp } from '@/kit/measure'
 import { PAGE_TITLE_ID } from '@/kit/page/ids'
 import { ApprovalNote } from '@/workspace/proposal/ApprovalNote'
@@ -6,11 +8,15 @@ import { authorName } from '@/workspace/proposal/author-name'
 import { latestVersionOf } from '@/workspace/proposal/latest-version'
 import type { Directory } from '@/types/workspace'
 import type { ProposalDetail } from '@/types/workspace-proposal'
+import { LegDetail } from './LegDetail'
+import { WorkbenchLegs } from './WorkbenchLegs'
+import { WorkbenchSummary } from './WorkbenchSummary'
 
 export function Workbench({ detail, directory }: { detail: ProposalDetail; directory: Directory }) {
   const [params] = useSearchParams()
   const from = params.get('from') ?? detail.threadId
   const latest = latestVersionOf(detail)
+  const [expanded, setExpanded] = useState<string>()
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <header className="flex flex-col gap-2">
@@ -21,6 +27,11 @@ export function Workbench({ detail, directory }: { detail: ProposalDetail; direc
         <ApprovalNote state={detail.approval} />
         <p className="text-body text-ink-2">The workbench never approves. Approval is a recorded act in the thread.</p>
       </header>
+      <Pane title="Legs" meta={`v${latest.n}`}>
+        <WorkbenchLegs view={latest} caption={`Legs · v${latest.n}`} onExpand={(s) => setExpanded((open) => (open === s ? undefined : s))} />
+        {expanded ? <LegDetail accountId={detail.accountId} view={latest} symbol={expanded} excluded={latest.excludedLegs.some((l) => l.symbol === expanded)} /> : null}
+      </Pane>
+      <WorkbenchSummary detail={detail} view={latest} />
     </div>
   )
 }

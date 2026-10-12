@@ -202,3 +202,28 @@ describe('DataTable', () => {
     expect(screen.getByText('None of 1 lot shown.')).toBeInTheDocument()
   })
 })
+
+describe('DataTable row keys, muted rows, wrapping columns', () => {
+  it('runs a row key on the focused row and stops it reaching the page', async () => {
+    const run = vi.fn()
+    const pageKeys = vi.fn()
+    window.addEventListener('keydown', pageKeys)
+    renderTable({ rowKeys: [{ key: 'x', run }] })
+    const row = screen.getAllByRole('row')[2]!
+    act(() => row.focus())
+    await userEvent.keyboard('x')
+    expect(run).toHaveBeenCalledWith(rows[1])
+    expect(pageKeys).not.toHaveBeenCalled()
+    window.removeEventListener('keydown', pageKeys)
+  })
+  it('marks a muted row', () => {
+    renderTable({ mutedRow: (r) => r.symbol === 'INTC' })
+    expect(screen.getByRole('row', { name: /INTC/ })).toHaveAttribute('data-muted', 'true')
+    expect(screen.getByRole('row', { name: /SPY/ })).not.toHaveAttribute('data-muted')
+  })
+  it('lets a wrapping column wrap', () => {
+    render(<DataTable caption="Names" rows={rows} getRowId={(r) => r.id} noun={{ singular: 'row', plural: 'rows' }}
+      columns={[{ id: 'symbol', header: 'Symbol', cell: (r) => r.symbol, wrap: true }]} />)
+    expect(screen.getByRole('cell', { name: 'SPY' })).toHaveClass('whitespace-normal')
+  })
+})

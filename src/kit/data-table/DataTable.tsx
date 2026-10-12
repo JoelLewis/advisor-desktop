@@ -4,7 +4,7 @@ import {
 } from '@tanstack/react-table'
 import { cn } from '@/lib/utils'
 import { MeasureError } from '@/kit/measure'
-import type { Column, Density, Totals, TiesTo } from './types'
+import type { Column, Density, RowKey, Totals, TiesTo } from './types'
 
 const ROW_HEIGHT: Record<Density, string> = { dense: 'h-6 text-table-dense stretch-dense', regular: 'h-7 text-table stretch-table', narrative: 'h-[34px] text-table stretch-table' }
 
@@ -32,10 +32,12 @@ type DataTableProps<T> = {
   totals?: Totals
   onActivate?: (row: T) => void
   initialSort?: { id: string; desc: boolean }
+  rowKeys?: readonly RowKey<T>[]
+  mutedRow?: (row: T) => boolean
 }
 
 export function DataTable<T>({
-  caption, columns, rows, getRowId, noun, total, density = 'regular', totals, onActivate, initialSort,
+  caption, columns, rows, getRowId, noun, total, density = 'regular', totals, onActivate, initialSort, rowKeys, mutedRow,
 }: DataTableProps<T>) {
   assertTies(totals?.tiesTo)
   const [sorting, setSorting] = useState<SortingState>(initialSort ? [initialSort] : [])
@@ -87,6 +89,11 @@ export function DataTable<T>({
     else if (e.key === 'Home') { e.preventDefault(); moveTo(0) }
     else if (e.key === 'End') { e.preventDefault(); moveTo(shown - 1) }
     else if (e.key === 'Enter' && onActivate) { e.preventDefault(); const r = sorted[index]; if (r) onActivate(r.original) }
+    else {
+      const binding = rowKeys?.find((k) => k.key === e.key)
+      const r = sorted[index]
+      if (binding && r) { e.preventDefault(); e.stopPropagation(); binding.run(r.original) }
+    }
   }
 
   return (
@@ -127,32 +134,36 @@ export function DataTable<T>({
           <tbody>
             {shown === 0 ? (
               <tr><td colSpan={columns.length} className="px-2 py-3 text-body text-ink-3">{all === 0 ? `No ${noun.plural}.` : `None of ${all} ${all === 1 ? noun.singular : noun.plural} shown.`}</td></tr>
-            ) : sorted.map((row, i) => (
-              <tr
-                key={row.id}
-                ref={(el) => { rowRefs.current[i] = el }}
-                tabIndex={i === activeIndex ? 0 : -1}
-                onFocus={() => setActiveId(row.id)}
-                onKeyDown={(e) => onKeyDown(e, i)}
-                onClick={onActivate ? (e) => { if (!isInteractiveTarget(e.target)) onActivate(row.original) } : undefined}
-                className={cn('border-b border-rule focus-visible:bg-band', ROW_HEIGHT[density])}
-              >
-                {row.getVisibleCells().map((cell) => {
-                  const col = byId.get(cell.column.id)
-                  const p = col?.proportion?.(row.original)
-                  return (
-                    <td key={cell.id} className={cn('whitespace-nowrap px-2', col?.align === 'right' ? 'text-right tabular' : 'text-left')}>
-                      {p !== undefined ? (
-                        <span className="inline-flex w-full items-center justify-end gap-2">
-                          <span aria-hidden className="inline-block h-1.5 bg-ink-3" style={{ width: `${Math.round(Math.max(0, Math.min(1, p)) * 64)}px` }} />
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </span>
-                      ) : flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  )
-                })}
-              </tr>
-            ))}
+            ) : sorted.map((row, i) => {
+              const muted = mutedRow?.(row.original) === true
+              return (
+                <tr
+                  key={row.id}
+                  ref={(el) => { rowRefs.current[i] = el }}
+                  tabIndex={i === activeIndex ? 0 : -1}
+                  onFocus={() => setActiveId(row.id)}
+                  onKeyDown={(e) => onKeyDown(e, i)}
+                  onClick={onActivate ? (e) => { if (!isInteractiveTarget(e.target)) onActivate(row.original) } : undefined}
+                  data-muted={muted ? 'true' : undefined}
+                  className={cn('border-b border-rule focus-visible:bg-band', ROW_HEIGHT[density], muted && 'text-ink-3')}
+                >
+                  {row.getVisibleCells().map((cell) => {
+                    const col = byId.get(cell.column.id)
+                    const p = col?.proportion?.(row.original)
+                    return (
+                      <td key={cell.id} className={cn(col?.wrap ? 'min-w-32 whitespace-normal px-2 py-1' : 'whitespace-nowrap px-2', col?.align === 'right' ? 'text-right tabular' : 'text-left')}>
+                        {p !== undefined ? (
+                          <span className="inline-flex w-full items-center justify-end gap-2">
+                            <span aria-hidden className="inline-block h-1.5 bg-ink-3" style={{ width: `${Math.round(Math.max(0, Math.min(1, p)) * 64)}px` }} />
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </span>
+                        ) : flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    )
+                  })}
+                </tr>
+              )
+            })}
           </tbody>
           {totals ? (
             <tfoot>
