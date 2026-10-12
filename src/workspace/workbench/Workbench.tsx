@@ -3,20 +3,40 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { Pane } from '@/kit/layout/Pane'
 import { fmtTimestamp } from '@/kit/measure'
 import { PAGE_TITLE_ID } from '@/kit/page/ids'
+import { useThread } from '@/hooks/use-workspace'
+import { useViewer } from '@/workspace/viewer/use-viewer'
 import { ApprovalNote } from '@/workspace/proposal/ApprovalNote'
 import { authorName } from '@/workspace/proposal/author-name'
 import { latestVersionOf } from '@/workspace/proposal/latest-version'
+import { canPostIn } from '@/workspace/thread/can-post'
 import type { Directory } from '@/types/workspace'
 import type { ProposalDetail } from '@/types/workspace-proposal'
+import { DraftBar } from './DraftBar'
 import { LegDetail } from './LegDetail'
 import { WorkbenchLegs } from './WorkbenchLegs'
 import { WorkbenchSummary } from './WorkbenchSummary'
+import { isExcluded, lotsOf, quantityOf } from './edit-draft'
+import { useDraftVersion } from './use-draft-version'
+import { useSaveShortcut } from './use-save-shortcut'
 
 export function Workbench({ detail, directory }: { detail: ProposalDetail; directory: Directory }) {
   const [params] = useSearchParams()
+  const { viewerId } = useViewer()
+  const thread = useThread(detail.threadId)
+  const draft = useDraftVersion(detail)
+  const [expanded, setExpanded] = useState<string>()
+  const canEdit = thread.data !== undefined && canPostIn(thread.data.thread, viewerId, directory)
+  useSaveShortcut(draft.save, canEdit)
   const from = params.get('from') ?? detail.threadId
   const latest = latestVersionOf(detail)
-  const [expanded, setExpanded] = useState<string>()
+  const view = draft.view
+  const caption = draft.dirty ? 'Legs · draft' : `Legs · v${latest.n}`
+  const edit = (symbol: string) => ({
+    toggleExclude: () => draft.dispatch({ type: 'toggle_exclude', symbol }),
+    quantity: (quantity: number | undefined) => draft.dispatch({ type: 'set_quantity', symbol, quantity }),
+    lots: (lotIds: string[]) => draft.dispatch({ type: 'set_lots', symbol, lotIds }),
+  })
+  const expandedEdit = expanded && canEdit ? edit(expanded) : undefined
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <header className="flex flex-col gap-2">
@@ -27,11 +47,21 @@ export function Workbench({ detail, directory }: { detail: ProposalDetail; direc
         <ApprovalNote state={detail.approval} />
         <p className="text-body text-ink-2">The workbench never approves. Approval is a recorded act in the thread.</p>
       </header>
-      <Pane title="Legs" meta={`v${latest.n}`}>
-        <WorkbenchLegs view={latest} caption={`Legs · v${latest.n}`} onExpand={(s) => setExpanded((open) => (open === s ? undefined : s))} />
-        {expanded ? <LegDetail key={expanded} accountId={detail.accountId} view={latest} symbol={expanded} excluded={latest.excludedLegs.some((l) => l.symbol === expanded)} /> : null}
+      {canEdit ? <DraftBar draft={draft} latestVersion={latest.n} /> : null}
+      {thread.data !== undefined && !canEdit ? <p className="text-body text-ink-3">You can read this proposal but not change it.</p> : null}
+      <Pane title="Legs" meta={draft.dirty ? 'draft' : `v${latest.n}`}>
+        <WorkbenchLegs view={view} caption={caption}
+          onExpand={(s) => setExpanded((open) => (open === s ? undefined : s))}
+          onToggleExclude={canEdit ? (symbol) => edit(symbol).toggleExclude() : undefined} />
+        {expanded ? (
+          <LegDetail key={expanded} accountId={detail.accountId} view={view} symbol={expanded}
+            excluded={isExcluded(draft.edits, expanded)}
+            quantity={quantityOf(draft.edits, expanded)} lotIds={lotsOf(draft.edits, expanded)}
+            onToggleExclude={expandedEdit?.toggleExclude} onQuantity={expandedEdit?.quantity} onLots={expandedEdit?.lots}
+            refusal={draft.previewError} />
+        ) : null}
       </Pane>
-      <WorkbenchSummary detail={detail} view={latest} />
+      <WorkbenchSummary detail={detail} view={view} />
     </div>
   )
 }

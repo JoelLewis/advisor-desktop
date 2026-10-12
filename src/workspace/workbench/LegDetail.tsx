@@ -5,8 +5,10 @@ import { NumberInput } from '@/kit/number-input/NumberInput'
 import { fmtDate, fmtQuantity, fmtResult } from '@/kit/measure'
 import { useTaxLots } from '@/hooks/use-accounts'
 import { usePositions } from '@/hooks/use-portfolio'
+import { ApiClientError } from '@/services/api-client'
 import type { TaxLot } from '@/types/portfolio'
 import type { DraftPreview, LotTake } from '@/types/workspace-proposal'
+import { SAVES_DRAFT_ATTRIBUTE } from './use-save-shortcut'
 
 type LegDetailProps = {
   accountId: string
@@ -19,6 +21,16 @@ type LegDetailProps = {
   onToggleExclude?: () => void
   onQuantity?: (quantity: number | undefined) => void
   onLots?: (lotIds: string[]) => void
+  /** The engine's refusal of the draft, shown beside the control it concerns when it names this leg. */
+  refusal?: Error | null
+}
+
+const QUANTITY_REFUSALS = new Set(['BAD_QUANTITY', 'OVER_HELD'])
+
+/** Where the engine's reason belongs: the quantity field or the lots; nothing when it is about another leg. */
+function refusalPlace(refusal: Error | null | undefined, symbol: string): 'quantity' | 'lots' | undefined {
+  if (!refusal || !refusal.message.startsWith(`${symbol}:`)) return undefined
+  return refusal instanceof ApiClientError && QUANTITY_REFUSALS.has(refusal.code) ? 'quantity' : 'lots'
 }
 
 /** A lot as this version sells it: what the sale takes against what the lot holds, or the whole lot when it is not sold. */
@@ -28,7 +40,7 @@ function lotLabel(lot: TaxLot, take: LotTake | undefined): string {
   return `${head} · ${fmtQuantity(take.shares)} of ${fmtQuantity(lot.quantity)} sh · ${fmtResult(take.realised)} of ${fmtResult(lot.gainLoss)} USD`
 }
 
-export function LegDetail({ accountId, view, symbol, excluded, quantity, lotIds, onToggleExclude, onQuantity, onLots }: LegDetailProps) {
+export function LegDetail({ accountId, view, symbol, excluded, quantity, lotIds, onToggleExclude, onQuantity, onLots, refusal }: LegDetailProps) {
   const titleId = useId()
   const lots = useTaxLots(accountId)
   const positions = usePositions(accountId)
@@ -44,6 +56,7 @@ export function LegDetail({ accountId, view, symbol, excluded, quantity, lotIds,
   const facts = view.legFacts.find((f) => f.symbol === symbol)
   const selected = lotIds ?? facts?.lotIds ?? []
   const takes = new Map((facts?.lots ?? []).map((t) => [t.lotId, t]))
+  const refusedAt = refusalPlace(refusal, symbol)
   // Blank returns to the agent's quantity; an unchanged field (a blur with no edit) changes nothing.
   const commit = () => {
     if (!onQuantity) return
@@ -67,7 +80,10 @@ export function LegDetail({ accountId, view, symbol, excluded, quantity, lotIds,
         <span className="text-body">{trade.name}</span>
       </div>
       <div className="flex flex-wrap items-end gap-6">
-        <NumberInput label="Quantity" unit="sh" value={text} onChange={setText} onCommit={commit} disabled={!editable || excluded} />
+        <div {...{ [SAVES_DRAFT_ATTRIBUTE]: '' }}>
+          <NumberInput label="Quantity" unit="sh" value={text} onChange={setText} onCommit={commit} disabled={!editable || excluded}
+            error={refusedAt === 'quantity' ? refusal?.message : undefined} />
+        </div>
         {onToggleExclude ? <Button rank="secondary" onClick={onToggleExclude}>{excluded ? 'Include this leg' : 'Exclude this leg'}</Button> : null}
       </div>
       {trade.side === 'sell' ? (
@@ -81,6 +97,7 @@ export function LegDetail({ accountId, view, symbol, excluded, quantity, lotIds,
               onChange={(on) => toggleLot(lot.id, on)}
               label={lotLabel(lot, takes.get(lot.id))} />
           ))}
+          {refusedAt === 'lots' ? <p className="text-label text-ink">{refusal?.message}</p> : null}
         </fieldset>
       ) : null}
     </section>

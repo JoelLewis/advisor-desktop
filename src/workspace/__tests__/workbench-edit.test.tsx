@@ -1,0 +1,163 @@
+import { describe, it, expect } from 'vitest'
+import { act, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { routes } from '@/app/routes'
+import { renderRoutes } from '@/test/render'
+import { approveProposal, createProposal } from '@/services/workspace'
+import { store } from '@/mocks/data/workspace-store'
+
+const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
+const feed = () => within(screen.getByRole('complementary', { name: 'Live thread' })).getByRole('list', { name: 'Thread feed' })
+
+async function openWorkbench() {
+  await createProposal('user-001', 'th-johnson-review', 'acc-002')
+  renderRoutes(routes, '/proposals/prop-0001?from=th-johnson-review')
+  await screen.findByRole('heading', { level: 1, name: 'Johnson rebalance' })
+  return screen.findByRole('table', { name: 'Legs · v1' })
+}
+
+describe('editing a draft version', () => {
+  it('x excludes the focused leg, the engine previews the draft, and Save posts v2 to the live thread', async () => {
+    const legs = await openWorkbench()
+    act(() => within(legs).getByRole('row', { name: /^QAI/ }).focus())
+    await userEvent.keyboard('x')
+    const draftLegs = await screen.findByRole('table', { name: 'Legs · draft' })
+    await waitFor(() => expect(within(draftLegs).getByRole('row', { name: /^QAI/ })).toHaveAttribute('data-muted', 'true'))
+    expect(within(draftLegs).getByRole('row', { name: /^QAI/ })).toHaveTextContent('EXCLUDED')
+    const bar = screen.getByRole('group', { name: 'Draft version' })
+    expect(bar).toHaveTextContent('Draft · not saved')
+    const save = within(bar).getByRole('button', { name: 'Save as v2' })
+    await waitFor(() => expect(save).toBeEnabled())
+    await userEvent.setup().click(save)
+    expect(await within(bar).findByRole('status')).toHaveTextContent('Saved as v2 · posted to the thread.')
+    await waitFor(() => expect(feed()).toHaveTextContent('v2 · Workbench edits: excluded IQ Hedge Multi-Strategy Tracker ETF.'))
+    expect(await screen.findByRole('table', { name: 'Legs · v2' })).toBeInTheDocument()
+  })
+
+  it('an invalid quantity is refused by the engine with its reason; Save stays disabled; a valid one saves with mod+S', async () => {
+    const legs = await openWorkbench()
+    act(() => within(legs).getByRole('row', { name: /^INTC/ }).focus())
+    await userEvent.keyboard('{Enter}')
+    const detail = await screen.findByRole('region', { name: 'Leg · INTC' })
+    const quantity = within(detail).getByRole('textbox', { name: 'Quantity sh' })
+    const user = userEvent.setup()
+    await user.clear(quantity)
+    await user.type(quantity, '0{Enter}')
+    const bar = screen.getByRole('group', { name: 'Draft version' })
+    expect(await within(bar).findByRole('alert')).toHaveTextContent('INTC: the quantity must be a positive whole number of shares.')
+    expect(within(bar).getByRole('button', { name: 'Save as v2' })).toBeDisabled()
+    // Beside the edit as well: the field is marked and carries the engine's reason.
+    expect(quantity).toHaveAttribute('aria-invalid', 'true')
+    expect(quantity).toHaveAccessibleDescription('INTC: the quantity must be a positive whole number of shares.')
+    await user.clear(quantity)
+    await user.type(quantity, '6000{Enter}')
+    await waitFor(() => expect(within(bar).queryByRole('alert')).toBeNull())
+    await waitFor(() => expect(within(bar).getByRole('button', { name: 'Save as v2' })).toBeEnabled())
+    await user.keyboard('{Control>}s{/Control}')
+    await waitFor(() => expect(store().proposals[0]!.versions).toHaveLength(2))
+    expect(store().proposals[0]!.versions[1]!.edits).toEqual([{ kind: 'quantity', symbol: 'INTC', quantity: 6000 }])
+  })
+
+  it('unchecking every lot is refused; choosing the short-term SPY lot is a specific-identification edit', async () => {
+    const legs = await openWorkbench()
+    act(() => within(legs).getByRole('row', { name: /^SPY/ }).focus())
+    await userEvent.keyboard('{Enter}')
+    const detail = await screen.findByRole('region', { name: 'Leg · SPY' })
+    const user = userEvent.setup()
+    await user.click(within(detail).getByRole('checkbox', { name: /^lot-pos-020-0/ }))
+    const bar = screen.getByRole('group', { name: 'Draft version' })
+    expect(await within(bar).findByRole('alert')).toHaveTextContent('SPY: choose at least one lot.')
+    await user.click(within(detail).getByRole('checkbox', { name: /^lot-pos-020-1/ }))
+    await waitFor(() => expect(within(bar).queryByRole('alert')).toBeNull())
+    await user.click(within(bar).getByRole('button', { name: 'Save as v2' }))
+    await waitFor(() => expect(feed()).toHaveTextContent('v2 · Workbench edits: chose specific lots for SPY.'))
+  })
+
+  it('Discard returns to the latest version', async () => {
+    const legs = await openWorkbench()
+    act(() => within(legs).getByRole('row', { name: /^GLD/ }).focus())
+    await userEvent.keyboard('x')
+    const bar = screen.getByRole('group', { name: 'Draft version' })
+    await userEvent.setup().click(within(bar).getByRole('button', { name: 'Discard' }))
+    expect(await screen.findByRole('table', { name: 'Legs · v1' })).toBeInTheDocument()
+    expect(bar).toHaveTextContent('Showing v1')
+  })
+
+  it('states that an approval applies to an older version', async () => {
+    const created = await createProposal('user-001', 'th-johnson-review', 'acc-002')
+    await approveProposal('user-001', created.id, 1, created.versions[0]!.fingerprint)
+    renderRoutes(routes, '/proposals/prop-0001')
+    const legs = await screen.findByRole('table', { name: 'Legs · v1' })
+    act(() => within(legs).getByRole('row', { name: /^GLD/ }).focus())
+    await userEvent.keyboard('x')
+    const bar = screen.getByRole('group', { name: 'Draft version' })
+    await waitFor(() => expect(within(bar).getByRole('button', { name: 'Save as v2' })).toBeEnabled())
+    await userEvent.setup().click(within(bar).getByRole('button', { name: 'Save as v2' }))
+    expect(await screen.findByText('Approval applies to v1; v2 is unapproved')).toBeInTheDocument()
+  })
+
+  it('mod+S never opens the browser save dialog, and saves nothing from another text field or while a dialog is open', async () => {
+    const legs = await openWorkbench()
+    act(() => within(legs).getByRole('row', { name: /^GLD/ }).focus())
+    await userEvent.keyboard('x')
+    const bar = screen.getByRole('group', { name: 'Draft version' })
+    await waitFor(() => expect(within(bar).getByRole('button', { name: 'Save as v2' })).toBeEnabled())
+    const composer = within(screen.getByRole('complementary', { name: 'Live thread' })).getByRole('textbox')
+    act(() => composer.focus())
+    const inComposer = new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true, cancelable: true })
+    act(() => { composer.dispatchEvent(inComposer) })
+    expect(inComposer.defaultPrevented).toBe(true)
+    const dialog = document.createElement('div')
+    dialog.setAttribute('role', 'dialog')
+    dialog.setAttribute('data-state', 'open')
+    document.body.append(dialog)
+    act(() => { document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 's', metaKey: true, bubbles: true, cancelable: true })) })
+    dialog.remove()
+    await new Promise((r) => setTimeout(r, 50))
+    expect(store().proposals[0]!.versions).toHaveLength(1)
+    expect(bar).toHaveTextContent('Draft · not saved')
+  })
+
+  it('mod+S saves with focus on a lot checkbox, which is not a text field', async () => {
+    const legs = await openWorkbench()
+    act(() => within(legs).getByRole('row', { name: /^SPY/ }).focus())
+    await userEvent.keyboard('{Enter}')
+    const detail = await screen.findByRole('region', { name: 'Leg · SPY' })
+    const user = userEvent.setup()
+    await user.click(within(detail).getByRole('checkbox', { name: /^lot-pos-020-1/ }))
+    const bar = screen.getByRole('group', { name: 'Draft version' })
+    await waitFor(() => expect(within(bar).getByRole('button', { name: 'Save as v2' })).toBeEnabled())
+    expect(within(detail).getByRole('checkbox', { name: /^lot-pos-020-1/ })).toHaveFocus()
+    await user.keyboard('{Meta>}s{/Meta}')
+    await waitFor(() => expect(store().proposals[0]!.versions).toHaveLength(2))
+  })
+
+  it('a draft left behind is kept, with a quiet note on return', async () => {
+    await createProposal('user-001', 'th-johnson-review', 'acc-002')
+    const { router } = renderRoutes(routes, '/proposals/prop-0001?from=th-johnson-review')
+    const legs = await screen.findByRole('table', { name: 'Legs · v1' })
+    act(() => within(legs).getByRole('row', { name: /^GLD/ }).focus())
+    await userEvent.keyboard('x')
+    await screen.findByRole('table', { name: 'Legs · draft' })
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('link', { name: 'Back to the thread' }))
+    await screen.findByRole('heading', { level: 1, name: /Johnson/ })
+    await act(() => router.navigate(-1))
+    const bar = await screen.findByRole('group', { name: 'Draft version' })
+    expect(within(bar).getByText(/^Unsaved draft/)).toBeInTheDocument()
+    expect(await screen.findByRole('table', { name: 'Legs · draft' })).toBeInTheDocument()
+    await user.click(within(bar).getByRole('button', { name: 'Discard' }))
+    expect(within(bar).queryByText(/^Unsaved draft/)).toBeNull()
+  })
+
+  it('compliance reads the workbench but cannot edit it', async () => {
+    await createProposal('user-001', 'th-johnson-review', 'acc-002')
+    viewAsOnLoad('cco-001')
+    renderRoutes(routes, '/proposals/prop-0001')
+    const legs = await screen.findByRole('table', { name: 'Legs · v1' })
+    expect(screen.getByText('You can read this proposal but not change it.')).toBeInTheDocument()
+    act(() => within(legs).getByRole('row', { name: /^QAI/ }).focus())
+    await userEvent.keyboard('x')
+    expect(screen.queryByRole('table', { name: 'Legs · draft' })).toBeNull()
+  })
+})
