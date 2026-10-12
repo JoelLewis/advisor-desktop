@@ -16,6 +16,8 @@ export type HeldAwayAsset = {
   lastUpdated: string
   assetClasses: HeldAwayAssetClass[]
   consolidationOpportunity: boolean
+  /** Shares of a company that is not listed: never substantially identical to a listed security. */
+  isPrivateCompanyStock?: boolean
 }
 
 export type ProposalStatus = 'draft' | 'presented' | 'accepted' | 'declined'

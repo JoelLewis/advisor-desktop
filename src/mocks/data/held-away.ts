@@ -30,6 +30,7 @@ export const heldAwayAssets: HeldAwayAsset[] = [
     estimatedValue: 3_200_000, lastUpdated: '2025-10-01',
     assetClasses: [{ assetClass: 'us_equity', percentage: 1.0 }],
     consolidationOpportunity: false,
+    isPrivateCompanyStock: true,
   },
   {
     id: 'ha-004', clientId: 'cli-020', householdId: 'hh-002',

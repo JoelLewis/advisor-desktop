@@ -21,7 +21,7 @@ describe('the Brief, ready on load', () => {
     const attention = ranked.map((f) => f.attention)
     expect(attention).toEqual([...attention].sort((a, b) => Number(b === 'attention') - Number(a === 'attention')))
     expect(ranked[0]).toMatchObject({ agentId: 'drift-monitor', claim: 'US Equity is outside its tolerance band.' })
-    expect(ranked[1]).toMatchObject({ agentId: 'harvest-scanner', claim: 'Intel Corp. can be sold at a loss today, and none of the loss would be washed.' })
+    expect(ranked[1]).toMatchObject({ agentId: 'harvest-scanner', claim: 'Intel Corp. can be sold at a loss today, and nothing bought in the last thirty days would wash the loss.' })
     for (const item of summary.items) expect(item.claim).not.toMatch(/\d/)
   })
 

@@ -101,7 +101,7 @@ describe('drift monitor replacement holds', () => {
     expect(findings).toHaveLength(1)
     const [hold] = findings
     expect(hold!.claim).toBe('VanEck Semiconductor ETF was bought in place of the Intel Corp. shares sold at a loss, keeping related exposure while the wash-sale window is open. '
-      + 'A US Equity trim should leave it in place, and Intel Corp. should not be bought back before the window closes, or the harvested loss would be disallowed.')
+      + 'A US Equity trim should leave it in place, and Intel Corp. should not be bought back in any account of the same taxpayer before the window closes: a buyback in a taxable account would defer the harvested loss into the new shares, and one in an IRA or Roth would disallow it permanently.')
     expect(hold!.attention).toBe('info')
     const account = accounts.find((a) => a.id === 'acc-002')!
     const smh = getPositionsForAccount(account.id, account.totalValue).find((p) => p.symbol === 'SMH')!

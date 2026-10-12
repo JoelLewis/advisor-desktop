@@ -6,7 +6,8 @@ import { generateTaxLotsWithSaleRisk } from '@/mocks/handlers/custodian'
 import { lossAllowedNow } from '@/lib/tax-rules'
 import { convertToBase } from '@/lib/currency'
 import { MOCK_NOW_ISO } from '@/lib/clock'
-import { harvestClaim, runHarvestScanner, taxpayerHeldAway } from '../harvest-scanner'
+import { heldAwayAssets } from '@/mocks/data/held-away'
+import { canHoldSecurities, harvestClaim, runHarvestScanner, taxpayerHeldAway } from '../harvest-scanner'
 
 const ctx = (id: string) => ({ asOf: MOCK_NOW_ISO, subject: { type: 'account' as const, id } })
 const figure = (findings: ReturnType<typeof runHarvestScanner>, label: string) => findings.flatMap((f) => f.figures).find((x) => x.label === label)
@@ -46,7 +47,7 @@ describe('Harvest Scanner on acc-002', () => {
   const findings = runHarvestScanner(ctx('acc-002'))
 
   it('leads with the 7,000 INTC: the loss allowed now, nothing washed, and the window a sale today opens', () => {
-    expect(findings[0]!.claim).toBe('Intel Corp. can be sold at a loss today, and none of the loss would be washed.')
+    expect(findings[0]!.claim).toBe('Intel Corp. can be sold at a loss today, and nothing bought in the last thirty days would wash the loss.')
     expect(findings[0]!.attention).toBe('attention')
     expect(figure(findings, 'Loss allowed now · INTC')?.value).toBe(-45_850)
     expect(figure(findings, 'Washed · INTC')?.value).toBe(0)
@@ -86,3 +87,26 @@ describe('Harvest Scanner wording', () => {
       'Intel Corp. can be sold at a loss today; part of the loss would be deferred into the replacement shares, and part would be permanently disallowed because the replacement was bought in an IRA or Roth.')
   })
 })
+
+describe('held-away holdings that can wash a loss', () => {
+  const heldAwayLabels = (id: string) => runHarvestScanner(ctx(id))
+    .filter((f) => f.claim.startsWith('Held-away accounts'))
+    .flatMap((f) => f.figures.map((x) => x.label))
+  const holding = (id: string) => heldAwayAssets.find((h) => h.id === id)!
+
+  it('property and private company stock cannot be substantially identical to a listed security', () => {
+    expect(holding('ha-003').isPrivateCompanyStock).toBe(true)
+    expect(['ha-003', 'ha-004', 'ha-006'].map((id) => canHoldSecurities(holding(id)))).toEqual([false, false, false])
+    expect(['ha-001', 'ha-002', 'ha-009', 'ha-010'].map((id) => canHoldSecurities(holding(id)))).toEqual([true, true, true, true])
+  })
+  it.each(['acc-007', 'acc-015'])('%s: no real-estate or private-stock holding is listed', (id) => {
+    for (const label of heldAwayLabels(id)) {
+      expect(label).not.toContain('Real Estate Holdings')
+      expect(label).not.toContain('Company Stock (Private)')
+    }
+  })
+  it('acc-002 still lists its 401(k) and 403(b)', () => {
+    expect(heldAwayLabels('acc-002')).toEqual(['Held away · Vanguard 401(k)', 'Held away · TIAA 403(b)'])
+  })
+})
+

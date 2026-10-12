@@ -20,7 +20,7 @@ export type PositionLosses = { allowed: number; deferred: number; disallowed: nu
 /** What a sale today does to one position's loss (§1091), in words with no digits. */
 export function harvestClaim(name: string, symbol: string, { deferred, disallowed }: PositionLosses): string {
   if (!isSubjectToWashSale(symbol)) return `${name} can be sold at a loss today; as a coin held directly it is outside the wash-sale rule.`
-  if (deferred === 0 && disallowed === 0) return `${name} can be sold at a loss today, and none of the loss would be washed.`
+  if (deferred === 0 && disallowed === 0) return `${name} can be sold at a loss today, and nothing bought in the last thirty days would wash the loss.`
   const parts = [
     ...(deferred < 0 ? ['part of the loss would be deferred into the replacement shares'] : []),
     ...(disallowed < 0 ? [`${deferred < 0 ? 'part' : 'part of the loss'} would be permanently disallowed because the replacement was bought in an IRA or Roth`] : []),
@@ -33,6 +33,11 @@ export function taxpayerHeldAway(account: Account): HeldAwayAsset[] {
   if (washSaleTaxpayer(account).startsWith('account:')) return []
   const people = new Set(sameWashSaleTaxpayer(account).map((a) => a.clientId))
   return heldAwayAssets.filter((h) => people.has(h.clientId))
+}
+
+/** Whether a held-away holding can hold or acquire a security that could be substantially identical to a listed one: not property, not private company stock. */
+export function canHoldSecurities(holding: HeldAwayAsset): boolean {
+  return !holding.isPrivateCompanyStock && holding.assetClasses.some((c) => c.assetClass !== 'real_estate')
 }
 
 /** "401(k) — Former employer" → "401(k)". */
@@ -90,7 +95,7 @@ export function runHarvestScanner({ asOf, subject }: AgentContext): AgentFinding
     })
   }
 
-  const away = taxpayerHeldAway(account)
+  const away = taxpayerHeldAway(account).filter(canHoldSecurities)
   if (away.length > 0) {
     findings.push({
       claim: 'Held-away accounts are not visible to wash-sale checks; a purchase in one can still wash a loss.',

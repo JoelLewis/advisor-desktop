@@ -72,7 +72,7 @@ function replacementHolds(accountId: string, positions: readonly Position[], asO
       const sold = claimNameOf(w.symbol, w.name)
       return [{
         claim: `${held} was bought in place of the ${sold} shares sold at a loss, keeping related exposure while the wash-sale window is open. `
-          + `A ${label(replacement.assetClass)} trim should leave it in place, and ${sold} should not be bought back before the window closes, or the harvested loss would be disallowed.`,
+          + `A ${label(replacement.assetClass)} trim should leave it in place, and ${sold} should not be bought back in any account of the same taxpayer before the window closes: a buyback in a taxable account would defer the harvested loss into the new shares, and one in an IRA or Roth would disallow it permanently.`,
         attention: 'info' as const,
         citations: [{ source: `Wash-sale window · ${w.id} · ${w.symbol} loss sale of ${w.saleDate}, open to ${w.end}`, asOf }],
         figures: [
