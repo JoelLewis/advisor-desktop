@@ -43,7 +43,7 @@ describe('the client letter', () => {
     const draft = await within(drafts).findByRole('article', { name: 'Draft · not sent' })
     expect(draft).toHaveTextContent('Dear Robert,')
     expect(draft).toHaveTextContent('is expected to realize a loss of about $45,900')
-    expect(draft).toHaveTextContent('State tax is not modelled.')
+    expect(draft).toHaveTextContent('State tax is not modeled.')
     expect(draft).toHaveTextContent("Drafted by Client Letter Agent at Adrian Hale's request · from v1")
     expect(store().drafts).toHaveLength(1)
     expect(within(drafts).getByRole('status')).toHaveTextContent('The Client Letter Agent drafted a letter from v1 of the Johnson rebalance.')
