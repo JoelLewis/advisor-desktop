@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useState, type MutableRefObject } from 'react'
 import { Button } from '@/kit/button/Button'
 import { Checkbox } from '@/kit/checkbox/Checkbox'
 import { NumberInput } from '@/kit/number-input/NumberInput'
@@ -23,6 +23,12 @@ type LegDetailProps = {
   onLots?: (lotIds: string[]) => void
   /** The engine's refusal of the draft, shown beside the control it concerns when it names this leg. */
   refusal?: Error | null
+  /** The view is not this draft's preview, so what each lot gives up is unknown and is not claimed. */
+  takesUnknown?: boolean
+  /** Holds this leg's commit of typed text, so a save commits what is on screen first. */
+  pendingEdit?: MutableRefObject<(() => void) | undefined>
+  /** Told whether the field holds typed text that differs from the draft, and told false when the leg closes. */
+  onTypedText?: (differs: boolean) => void
 }
 
 const QUANTITY_REFUSALS = new Set(['BAD_QUANTITY', 'OVER_HELD'])
@@ -34,13 +40,15 @@ function refusalPlace(refusal: Error | null | undefined, symbol: string): 'quant
 }
 
 /** A lot as this version sells it: what the sale takes against what the lot holds, or the whole lot when it is not sold. */
-function lotLabel(lot: TaxLot, take: LotTake | undefined): string {
+function lotLabel(lot: TaxLot, take: LotTake | undefined, takesUnknown: boolean): string {
   const head = `${lot.id} · bought ${fmtDate(lot.purchaseDate)} · ${lot.holdingPeriod === 'long' ? 'long-term' : 'short-term'}`
+  if (takesUnknown) return `${head} · ${fmtQuantity(lot.quantity)} sh · ${fmtResult(lot.gainLoss)} USD · sold —`
   if (!take) return `${head} · ${fmtQuantity(lot.quantity)} sh · ${fmtResult(lot.gainLoss)} USD · not sold`
   return `${head} · ${fmtQuantity(take.shares)} of ${fmtQuantity(lot.quantity)} sh · ${fmtResult(take.realised)} of ${fmtResult(lot.gainLoss)} USD`
 }
 
-export function LegDetail({ accountId, view, symbol, excluded, quantity, lotIds, onToggleExclude, onQuantity, onLots, refusal }: LegDetailProps) {
+export function LegDetail({ accountId, view, symbol, excluded, quantity, lotIds, onToggleExclude, onQuantity, onLots, refusal, takesUnknown = false, pendingEdit, onTypedText }: LegDetailProps) {
+  const lotsRefusalId = useId()
   const titleId = useId()
   const lots = useTaxLots(accountId)
   const positions = usePositions(accountId)
@@ -49,6 +57,25 @@ export function LegDetail({ accountId, view, symbol, excluded, quantity, lotIds,
   const [text, setText] = useState(shownQuantity === undefined ? '' : String(shownQuantity))
   // Keeps the field in step when the version on screen changes; typing is held until it is committed.
   useEffect(() => setText(shownQuantity === undefined ? '' : String(shownQuantity)), [shownQuantity])
+  // Blank returns to the agent's quantity; an unchanged field (a blur with no edit) changes nothing.
+  const commit = () => {
+    if (!onQuantity || !trade) return
+    const typed = text.trim() === '' ? undefined : Number(text.replace(/,/g, ''))
+    if (typed !== undefined && !Number.isFinite(typed)) return
+    if (typed === shownQuantity && quantity !== undefined) return
+    if (typed === trade.quantity && quantity === undefined) return
+    onQuantity(typed)
+  }
+  const textDiffers = text !== (shownQuantity === undefined ? '' : String(shownQuantity))
+  useEffect(() => {
+    onTypedText?.(textDiffers)
+  }, [onTypedText, textDiffers])
+  useEffect(() => () => onTypedText?.(false), [onTypedText])
+  useEffect(() => {
+    if (!pendingEdit) return
+    pendingEdit.current = commit
+    return () => { pendingEdit.current = undefined }
+  })
   if (!trade) return null
   const editable = onQuantity !== undefined
   const position = positions.data?.find((p) => p.symbol === symbol)
@@ -57,15 +84,6 @@ export function LegDetail({ accountId, view, symbol, excluded, quantity, lotIds,
   const selected = lotIds ?? facts?.lotIds ?? []
   const takes = new Map((facts?.lots ?? []).map((t) => [t.lotId, t]))
   const refusedAt = refusalPlace(refusal, symbol)
-  // Blank returns to the agent's quantity; an unchanged field (a blur with no edit) changes nothing.
-  const commit = () => {
-    if (!onQuantity) return
-    const typed = text.trim() === '' ? undefined : Number(text.replace(/,/g, ''))
-    if (typed !== undefined && !Number.isFinite(typed)) return
-    if (typed === shownQuantity && quantity !== undefined) return
-    if (typed === trade.quantity && quantity === undefined) return
-    onQuantity(typed)
-  }
   const toggleLot = (lotId: string, on: boolean) => {
     if (!onLots) return
     const next = new Set(selected)
@@ -87,7 +105,7 @@ export function LegDetail({ accountId, view, symbol, excluded, quantity, lotIds,
         {onToggleExclude ? <Button rank="secondary" onClick={onToggleExclude}>{excluded ? 'Include this leg' : 'Exclude this leg'}</Button> : null}
       </div>
       {trade.side === 'sell' ? (
-        <fieldset className="flex flex-col gap-2">
+        <fieldset className="flex flex-col gap-2" aria-describedby={refusedAt === 'lots' ? lotsRefusalId : undefined}>
           <legend className="text-label uppercase text-ink-3">Lots sold · specific identification</legend>
           {lots.isPending || positions.isPending ? <p role="status" className="text-body text-ink-3">Loading the lots…</p> : null}
           {lots.isError ? <p role="alert" className="text-body">{lots.error.message}</p> : null}
@@ -95,9 +113,9 @@ export function LegDetail({ accountId, view, symbol, excluded, quantity, lotIds,
           {positionLots.map((lot) => (
             <Checkbox key={lot.id} checked={selected.includes(lot.id)} disabled={!onLots || excluded}
               onChange={(on) => toggleLot(lot.id, on)}
-              label={lotLabel(lot, takes.get(lot.id))} />
+              label={lotLabel(lot, takes.get(lot.id), takesUnknown)} />
           ))}
-          {refusedAt === 'lots' ? <p className="text-label text-ink">{refusal?.message}</p> : null}
+          {refusedAt === 'lots' ? <p id={lotsRefusalId} className="text-label text-ink">{refusal?.message}</p> : null}
         </fieldset>
       ) : null}
     </section>

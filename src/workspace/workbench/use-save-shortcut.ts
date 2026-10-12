@@ -14,23 +14,23 @@ const savesFrom = (target: EventTarget | null) =>
   !(target instanceof HTMLElement) || !isTextField(target) || target.closest(`[${SAVES_DRAFT_ATTRIBUTE}]`) !== null
 
 /**
- * ⌘S / Ctrl+S saves the draft. The browser's save dialog never opens on this page; the draft saves only
- * from outside text fields (the quantity field excepted) and never while a dialog is open.
+ * ⌘S / Ctrl+S on the workbench. The browser's save dialog never opens here, read-only viewers included;
+ * the draft saves only when `canSave`, from outside text fields (the quantity field excepted), and never
+ * while a dialog is open.
  */
-export function useSaveShortcut(onSave: () => void, enabled: boolean): void {
-  const latest = useRef(onSave)
+export function useSaveShortcut(onSave: () => void, canSave: boolean): void {
+  const latest = useRef({ onSave, canSave })
   useEffect(() => {
-    latest.current = onSave
+    latest.current = { onSave, canSave }
   })
   useEffect(() => {
-    if (!enabled) return
     const onKeyDown = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== 's') return
       e.preventDefault()
-      if (e.repeat || document.querySelector(OPEN_DIALOG) || !savesFrom(e.target)) return
-      latest.current()
+      if (!latest.current.canSave || e.repeat || document.querySelector(OPEN_DIALOG) || !savesFrom(e.target)) return
+      latest.current.onSave()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [enabled])
+  }, [])
 }

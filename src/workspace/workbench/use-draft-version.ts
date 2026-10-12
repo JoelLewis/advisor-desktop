@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useReducer, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
+import { ApiClientError } from '@/services/api-client'
 import { useProposalPreview, useSaveVersion } from '@/hooks/use-workspace'
 import type { DraftPreview, LegEdit, ProposalDetail } from '@/types/workspace-proposal'
 import { latestVersionOf } from '@/workspace/proposal/latest-version'
@@ -7,8 +8,14 @@ import { draftReducer, normaliseDraftEdits, sameEdits, type DraftAction, type Dr
 
 export type DraftVersion = {
   edits: LegEdit[]; dispatch: (a: DraftAction) => void; dirty: boolean; view: DraftPreview
+  /** Whose figures `view` holds: the draft's preview, or the latest version's while the draft has none (refused or not yet back). */
+  viewSource: 'draft' | 'latest'
   previewPending: boolean; previewError: Error | null; newerArrived: boolean
-  canSave: boolean; save: () => void; saving: boolean; saveError: Error | null; savedVersion?: number; discard: () => void; nextVersion: number
+  /** Save asks for a save; it happens once the engine has previewed the draft as it stands, or not at all if it refuses it. */
+  canSave: boolean; save: () => void; saveRequested: boolean
+  saving: boolean; saveError: Error | null; savedVersion?: number; discard: () => void; nextVersion: number
+  /** Typing has begun a change, so the last "saved" note no longer describes the screen. */
+  noteTyping: () => void
   /** The draft was left unsaved on an earlier visit and is shown again. */
   keptFromEarlier: boolean
 }
@@ -66,11 +73,17 @@ export function useDraftVersion(detail: ProposalDetail): DraftVersion {
   const edits = useMemo(() => normaliseDraftEdits(state.edits), [state.edits])
   const preview = useProposalPreview(detail.id, edits, dirty)
   const saveVersion = useSaveVersion(detail.id)
+  const [saveRequested, setSaveRequested] = useState(false)
+  const noteTyping = useCallback(() => setSavedVersion(undefined), [])
+  const previewError = dirty ? preview.error : null
   const previewReady = dirty && preview.data !== undefined && !preview.isPlaceholderData && !preview.isError
-  const canSave = previewReady && !saveVersion.isPending
-  const save = () => {
-    if (!canSave) return
-    setSavedVersion(undefined)
+  const unchanged = saveVersion.error instanceof ApiClientError && saveVersion.error.code === 'NO_CHANGE'
+  // Saves the edits that are on screen, once their preview is back: a pending preview never swallows a save.
+  useEffect(() => {
+    if (!saveRequested) return
+    if (!dirty || previewError) { setSaveRequested(false); return }
+    if (!previewReady || saveVersion.isPending) return
+    setSaveRequested(false)
     saveVersion.mutate(edits, {
       onSuccess: (saved) => {
         const v = saved.versions[saved.versions.length - 1]
@@ -80,7 +93,13 @@ export function useDraftVersion(detail: ProposalDetail): DraftVersion {
         dispatch({ type: 'reset', base: v.n, edits: v.edits })
       },
     })
+  }, [saveRequested, dirty, previewError, previewReady, saveVersion, edits])
+  const canSave = dirty && !previewError && !unchanged && !saveVersion.isPending
+  const save = () => {
+    setSavedVersion(undefined)
+    setSaveRequested(true)
   }
+  const viewSource = dirty && preview.data !== undefined && !preview.isError ? 'draft' : 'latest'
   return {
     edits: state.edits,
     dispatch: (a) => {
@@ -89,22 +108,26 @@ export function useDraftVersion(detail: ProposalDetail): DraftVersion {
       dispatch(a)
     },
     dirty,
-    view: dirty && preview.data ? preview.data : latest,
+    view: viewSource === 'draft' && preview.data ? preview.data : latest,
+    viewSource,
     previewPending: dirty && preview.isFetching,
-    previewError: dirty ? preview.error : null,
+    previewError,
     newerArrived: dirty && state.base !== latest.n,
     canSave,
     save,
+    saveRequested,
     saving: saveVersion.isPending,
     saveError: saveVersion.error,
     savedVersion,
     discard: () => {
+      setSaveRequested(false)
       setSavedVersion(undefined)
       setKeptFromEarlier(false)
       saveVersion.reset()
       dispatch({ type: 'reset', base: latest.n, edits: latest.edits })
     },
     nextVersion: latest.n + 1,
+    noteTyping,
     keptFromEarlier: keptFromEarlier && dirty,
   }
 }

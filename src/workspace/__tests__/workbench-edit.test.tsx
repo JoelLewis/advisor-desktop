@@ -3,7 +3,7 @@ import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
-import { approveProposal, createProposal } from '@/services/workspace'
+import { approveProposal, createProposal, saveProposalVersion } from '@/services/workspace'
 import { store } from '@/mocks/data/workspace-store'
 
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
@@ -148,6 +148,127 @@ describe('editing a draft version', () => {
     expect(await screen.findByRole('table', { name: 'Legs · draft' })).toBeInTheDocument()
     await user.click(within(bar).getByRole('button', { name: 'Discard' }))
     expect(within(bar).queryByText(/^Unsaved draft/)).toBeNull()
+  })
+
+  async function openLeg(symbol: string) {
+    const legs = await openWorkbench()
+    act(() => within(legs).getByRole('row', { name: new RegExp(`^${symbol}`) }).focus())
+    await userEvent.keyboard('{Enter}')
+    return screen.findByRole('region', { name: `Leg · ${symbol}` })
+  }
+  const savedEdits = () => store().proposals[0]!.versions[1]?.edits
+
+  it('a typed quantity saves with mod+S without Enter or blur: what is on screen is what saves', async () => {
+    const detail = await openLeg('INTC')
+    const quantity = within(detail).getByRole('textbox', { name: 'Quantity sh' })
+    const user = userEvent.setup()
+    await user.clear(quantity)
+    await user.type(quantity, '700')
+    await user.keyboard('{Control>}s{/Control}')
+    await waitFor(() => expect(savedEdits()).toEqual([{ kind: 'quantity', symbol: 'INTC', quantity: 700 }]))
+  })
+
+  it('a quantity committed, then retyped, saves the retyped value', async () => {
+    const detail = await openLeg('INTC')
+    const quantity = within(detail).getByRole('textbox', { name: 'Quantity sh' })
+    const user = userEvent.setup()
+    await user.clear(quantity)
+    await user.type(quantity, '700')
+    await user.tab()
+    await user.clear(quantity)
+    await user.type(quantity, '650')
+    await user.keyboard('{Control>}s{/Control}')
+    await waitFor(() => expect(savedEdits()).toEqual([{ kind: 'quantity', symbol: 'INTC', quantity: 650 }]))
+  })
+
+  it('typing then clicking Save saves the typed value, waiting for its preview', async () => {
+    const detail = await openLeg('INTC')
+    const quantity = within(detail).getByRole('textbox', { name: 'Quantity sh' })
+    const user = userEvent.setup()
+    await user.clear(quantity)
+    await user.type(quantity, '450')
+    const bar = screen.getByRole('group', { name: 'Draft version' })
+    // Typed but not committed: Save is already pressable, and commits the field first.
+    expect(within(bar).getByRole('button', { name: 'Save as v2' })).toBeEnabled()
+    await user.click(within(bar).getByRole('button', { name: 'Save as v2' }))
+    await waitFor(() => expect(savedEdits()).toEqual([{ kind: 'quantity', symbol: 'INTC', quantity: 450 }]))
+    expect(await within(bar).findByText('Saved as v2 · posted to the thread.')).toBeInTheDocument()
+  })
+
+  it('typing 0 then mod+S is refused by the engine and saves nothing', async () => {
+    const detail = await openLeg('INTC')
+    const quantity = within(detail).getByRole('textbox', { name: 'Quantity sh' })
+    const user = userEvent.setup()
+    await user.clear(quantity)
+    await user.type(quantity, '0')
+    await user.keyboard('{Control>}s{/Control}')
+    const bar = screen.getByRole('group', { name: 'Draft version' })
+    expect(await within(bar).findByRole('alert')).toHaveTextContent('INTC: the quantity must be a positive whole number of shares.')
+    await waitFor(() => expect(within(bar).queryByText('Saving once the preview is ready…')).toBeNull())
+    expect(store().proposals[0]!.versions).toHaveLength(1)
+  })
+
+  it('the saved note goes as soon as the typed quantity changes', async () => {
+    const detail = await openLeg('INTC')
+    const quantity = within(detail).getByRole('textbox', { name: 'Quantity sh' })
+    const user = userEvent.setup()
+    await user.clear(quantity)
+    await user.type(quantity, '700{Enter}')
+    await user.keyboard('{Control>}s{/Control}')
+    const bar = screen.getByRole('group', { name: 'Draft version' })
+    expect(await within(bar).findByText('Saved as v2 · posted to the thread.')).toBeInTheDocument()
+    await user.type(quantity, '5')
+    expect(within(bar).queryByText('Saved as v2 · posted to the thread.')).toBeNull()
+  })
+
+  it('a refused draft shows the latest version under its own caption, and claims no lot takes or tax figures', async () => {
+    const detail = await openLeg('SPY')
+    const quantity = within(detail).getByRole('textbox', { name: 'Quantity sh' })
+    const user = userEvent.setup()
+    await user.clear(quantity)
+    await user.type(quantity, '5000{Enter}')
+    const bar = screen.getByRole('group', { name: 'Draft version' })
+    expect(await within(bar).findByRole('alert')).toHaveTextContent('SPY: the account holds fewer shares than that.')
+    expect(await screen.findByRole('table', { name: 'Legs · v1 · the engine refused the draft' })).toBeInTheDocument()
+    expect(screen.queryByRole('table', { name: 'Legs · draft' })).toBeNull()
+    for (const lot of within(detail).getAllByRole('checkbox')) expect(lot).not.toHaveAccessibleName(/ of /)
+    expect(screen.queryByRole('region', { name: 'Tax effect estimate' })).toBeNull()
+    expect(screen.getAllByText('Shown once the engine previews the draft.').length).toBeGreaterThan(0)
+  })
+
+  it('a draft that changes nothing is refused on save (NO_CHANGE), and Save stays disabled until the next edit', async () => {
+    const detail = await openLeg('SPY')
+    const user = userEvent.setup()
+    await user.click(within(detail).getByRole('checkbox', { name: /^lot-pos-020-1/ }))
+    const bar = screen.getByRole('group', { name: 'Draft version' })
+    const save = within(bar).getByRole('button', { name: 'Save as v2' })
+    await waitFor(() => expect(save).toBeEnabled())
+    // Someone saves the same edits first: edits are part of a version's fingerprint, so only an identical edit set changes nothing.
+    await saveProposalVersion('user-001', 'prop-0001', [{ kind: 'lots', symbol: 'SPY', lotIds: ['lot-pos-020-0', 'lot-pos-020-1'] }])
+    await user.click(save)
+    expect(await within(bar).findByRole('alert')).toHaveTextContent('Nothing differs from v2.')
+    const next = await within(bar).findByRole('button', { name: 'Save as v3' })
+    expect(next).toBeDisabled()
+    expect(store().proposals[0]!.versions).toHaveLength(2)
+    await user.click(within(detail).getByRole('checkbox', { name: /^lot-pos-020-1/ }))
+    await waitFor(() => expect(next).toBeEnabled())
+    expect(within(bar).queryByRole('alert')).toBeNull()
+  })
+
+  it('the lots refusal describes the lots it concerns', async () => {
+    const detail = await openLeg('SPY')
+    await userEvent.setup().click(within(detail).getByRole('checkbox', { name: /^lot-pos-020-0/ }))
+    await waitFor(() => expect(within(detail).getByRole('group', { name: /Lots sold/ })).toHaveAccessibleDescription('SPY: choose at least one lot.'))
+  })
+
+  it('compliance gets no browser save dialog either', async () => {
+    await createProposal('user-001', 'th-johnson-review', 'acc-002')
+    viewAsOnLoad('cco-001')
+    renderRoutes(routes, '/proposals/prop-0001')
+    await screen.findByText('You can read this proposal but not change it.')
+    const press = new KeyboardEvent('keydown', { key: 's', metaKey: true, bubbles: true, cancelable: true })
+    act(() => { document.body.dispatchEvent(press) })
+    expect(press.defaultPrevented).toBe(true)
   })
 
   it('compliance reads the workbench but cannot edit it', async () => {

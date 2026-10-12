@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Pane } from '@/kit/layout/Pane'
 import { fmtTimestamp } from '@/kit/measure'
@@ -26,11 +26,27 @@ export function Workbench({ detail, directory }: { detail: ProposalDetail; direc
   const draft = useDraftVersion(detail)
   const [expanded, setExpanded] = useState<string>()
   const canEdit = thread.data !== undefined && canPostIn(thread.data.thread, viewerId, directory)
-  useSaveShortcut(draft.save, canEdit)
+  // The open leg's typed-but-uncommitted quantity: committed before any save, so what is on screen is what saves.
+  const pendingEdit = useRef<() => void>(undefined)
+  const commitTyping = () => pendingEdit.current?.()
+  const [typedText, setTypedText] = useState(false)
+  const { noteTyping } = draft
+  const onTypedText = useCallback((differs: boolean) => {
+    setTypedText(differs)
+    if (differs) noteTyping()
+  }, [noteTyping])
+  const saveOnScreen = () => {
+    commitTyping()
+    draft.save()
+  }
+  useSaveShortcut(saveOnScreen, canEdit)
   const from = params.get('from') ?? detail.threadId
   const latest = latestVersionOf(detail)
   const view = draft.view
-  const caption = draft.dirty ? 'Legs · draft' : `Legs · v${latest.n}`
+  const notPreviewed = draft.dirty && draft.viewSource === 'latest'
+  const caption = !draft.dirty ? `Legs · v${latest.n}`
+    : !notPreviewed ? 'Legs · draft'
+    : draft.previewError ? `Legs · v${latest.n} · the engine refused the draft` : `Legs · v${latest.n} · previewing the draft`
   const edit = (symbol: string) => ({
     toggleExclude: () => draft.dispatch({ type: 'toggle_exclude', symbol }),
     quantity: (quantity: number | undefined) => draft.dispatch({ type: 'set_quantity', symbol, quantity }),
@@ -47,9 +63,9 @@ export function Workbench({ detail, directory }: { detail: ProposalDetail; direc
         <ApprovalNote state={detail.approval} />
         <p className="text-body text-ink-2">The workbench never approves. Approval is a recorded act in the thread.</p>
       </header>
-      {canEdit ? <DraftBar draft={draft} latestVersion={latest.n} /> : null}
+      {canEdit ? <DraftBar draft={draft} latestVersion={latest.n} typedText={typedText} onBeforeSave={commitTyping} /> : null}
       {thread.data !== undefined && !canEdit ? <p className="text-body text-ink-3">You can read this proposal but not change it.</p> : null}
-      <Pane title="Legs" meta={draft.dirty ? 'draft' : `v${latest.n}`}>
+      <Pane title="Legs" meta={draft.dirty && !notPreviewed ? 'draft' : `v${latest.n}`}>
         <WorkbenchLegs view={view} caption={caption}
           onExpand={(s) => setExpanded((open) => (open === s ? undefined : s))}
           onToggleExclude={canEdit ? (symbol) => edit(symbol).toggleExclude() : undefined} />
@@ -58,10 +74,11 @@ export function Workbench({ detail, directory }: { detail: ProposalDetail; direc
             excluded={isExcluded(draft.edits, expanded)}
             quantity={quantityOf(draft.edits, expanded)} lotIds={lotsOf(draft.edits, expanded)}
             onToggleExclude={expandedEdit?.toggleExclude} onQuantity={expandedEdit?.quantity} onLots={expandedEdit?.lots}
-            refusal={draft.previewError} />
+            refusal={draft.previewError} takesUnknown={notPreviewed}
+            pendingEdit={canEdit ? pendingEdit : undefined} onTypedText={canEdit ? onTypedText : undefined} />
         ) : null}
       </Pane>
-      <WorkbenchSummary detail={detail} view={view} />
+      <WorkbenchSummary detail={detail} view={view} notPreviewed={notPreviewed} />
     </div>
   )
 }
