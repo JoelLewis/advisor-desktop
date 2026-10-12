@@ -1949,7 +1949,7 @@ export function projectDrift(
 In the `POST /api/oms/rebalance` handler, replace
 
 ```ts
-        repurchaseRestrictions: householdRepurchaseRestrictions(account.householdId, MOCK_TODAY_ISO, proposals),
+        repurchaseRestrictions: repurchaseRestrictionsFor(account, MOCK_TODAY_ISO, proposals),
       }
     })
 ```
@@ -1957,7 +1957,7 @@ In the `POST /api/oms/rebalance` handler, replace
 with
 
 ```ts
-        repurchaseRestrictions: householdRepurchaseRestrictions(account.householdId, MOCK_TODAY_ISO, proposals),
+        repurchaseRestrictions: repurchaseRestrictionsFor(account, MOCK_TODAY_ISO, proposals),
         projectedDrift: projectDrift(accountId, trades, body.taxAware, body.driftThreshold),
       }
     })
