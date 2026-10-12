@@ -5,7 +5,7 @@ import { can, personById } from '@/mocks/data/people'
 import { nextAt, nextId, store } from '@/mocks/data/workspace-store'
 import { detailOf, latestVersion, nextProposalId, proposalsInThread } from '@/mocks/data/proposals-store'
 import { agentConstraints, draftSummary, proposalTitle, revisionSummary } from '@/mocks/agents/proposal-agent'
-import { buildVersion, editSummary, normaliseConstraints, normaliseEdits } from './proposal-engine'
+import { buildVersion, editSummary, normaliseEdits } from './proposal-engine'
 import { visibleProposal } from './proposal-acts'
 import { canSeeThread } from './visibility'
 
@@ -70,16 +70,16 @@ export function reviseProposal(viewerId: string, proposalId: string, requested: 
   if (!guard.ok) return guard
   const latest = latestVersion(proposal)
   const constraints = agentConstraints(requested)
-  if (latest.edits.length === 0 && JSON.stringify(constraints) === JSON.stringify(normaliseConstraints(latest.constraints))) {
-    return refuse(409, 'NO_CHANGE', `v${latest.n} already has those constraints.`)
-  }
   const built = buildVersion(proposal.accountId, constraints, [])
   if (!built.ok) return refuse(400, built.code, built.message)
+  if (latest.edits.length === 0 && built.built.fingerprint === latest.fingerprint) {
+    return refuse(409, 'NO_CHANGE', `v${latest.n} already has those constraints.`)
+  }
   return {
     ok: true,
     detail: append(proposal, {
       author: { kind: 'agent', agentId: 'proposal' }, constraints, edits: [],
-      changeSummary: revisionSummary(constraints, built.built, latest.edits.length > 0), ...built.built,
+      changeSummary: revisionSummary(constraints, built.built, latest), ...built.built,
     }),
   }
 }

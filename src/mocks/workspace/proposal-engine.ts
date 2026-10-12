@@ -1,7 +1,9 @@
 import type { AssetClass } from '@/types/portfolio'
+import type { Account } from '@/types/account'
 import type { ProposedTrade, RebalancePreview } from '@/services/oms'
 import type { DraftPreview, ExcludedLeg, LegEdit, LegFacts, ProposalConstraint, ProposalTaxSummary } from '@/types/workspace-proposal'
 import { accounts } from '@/mocks/data/accounts'
+import { getPositionsForAccount } from '@/mocks/data/positions'
 import { evaluateProposal } from '@/mocks/handlers/compliance'
 import type { LegSale } from '@/mocks/handlers/batch-wash-sales'
 import {
@@ -9,7 +11,7 @@ import {
   type GenerationConstraints, type ProposedTradeLeg, type RebalanceProposal,
 } from '@/mocks/handlers/oms'
 import { claimNameOf } from '@/mocks/agents/claim-name'
-import { ASSET_CLASS_LABELS } from '@/lib/labels'
+import { ASSET_CLASS_LABELS, ASSET_CLASS_PROSE_LABELS } from '@/lib/labels'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { fingerprint } from '@/lib/fingerprint'
 
@@ -171,6 +173,21 @@ export function taxSummaryOf(preview: RebalancePreview): ProposalTaxSummary {
 }
 
 /**
+ * An asset class can be left untouched only if the account holds some of it, and never cash:
+ * every sale settles into cash and every buy is paid from it.
+ */
+function unexcludable(account: Account, constraints: readonly ProposalConstraint[]): EngineFailure | undefined {
+  const held = new Set(getPositionsForAccount(account.id, account.totalValue).filter((p) => p.marketValue > 0).map((p) => p.assetClass))
+  for (const c of constraints) {
+    if (c.kind !== 'exclude_asset_class') continue
+    const name = ASSET_CLASS_PROSE_LABELS[c.assetClass]
+    if (c.assetClass === 'cash') return fail('NOT_EXCLUDABLE', 'Cash cannot be left untouched: every sale settles into it and every buy is paid from it.')
+    if (!held.has(c.assetClass)) return fail('NOT_EXCLUDABLE', `The account holds no ${name} to leave untouched.`)
+  }
+  return undefined
+}
+
+/**
  * One version: the agent's legs under `constraints`, `edits` on top, then the engine's preview
  * (§1091 settled, the return-level estimate against year-to-date results, drift after the trades)
  * and the proposal-level pre-trade check. The fingerprint covers the account, the constraints, the
@@ -179,6 +196,8 @@ export function taxSummaryOf(preview: RebalancePreview): ProposalTaxSummary {
 export function buildVersion(accountId: string, constraints: readonly ProposalConstraint[], edits: readonly LegEdit[]): { ok: true; built: DraftPreview; names: ReadonlyMap<string, string> } | EngineFailure {
   const account = accounts.find((a) => a.id === accountId)
   if (!account) return fail('NO_ACCOUNT', 'Account not found.')
+  const refused = unexcludable(account, constraints)
+  if (refused) return refused
   const generated = generateRebalanceProposal(accountId, true, PROPOSAL_DRIFT_THRESHOLD, undefined, generationConstraintsOf(constraints))
   const symbols = generated.legs.map((l) => l.symbol)
   if (new Set(symbols).size !== symbols.length) throw new Error(`The proposal for ${accountId} names a symbol twice; edits address legs by symbol`)

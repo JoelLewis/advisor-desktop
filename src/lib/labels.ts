@@ -1,9 +1,24 @@
 import type { AccountType, TaxTreatment } from '@/types/account'
+import type { AssetClass } from '@/types/portfolio'
 
 export const ASSET_CLASS_LABELS: Record<string, string> = {
   us_equity: 'US Equity',
   intl_equity: 'Intl Equity',
   emerging_markets: 'Emerging Mkts',
+  fixed_income: 'Fixed Income',
+  alternatives: 'Alternatives',
+  real_estate: 'Real Estate',
+  commodities: 'Commodities',
+  cash: 'Cash',
+  digital_assets: 'Digital Assets',
+  private_equity: 'Private Equity',
+}
+
+/** Full names for asset classes in running prose, where the column abbreviations would read oddly. */
+export const ASSET_CLASS_PROSE_LABELS: Readonly<Record<AssetClass, string>> = {
+  us_equity: 'US Equity',
+  intl_equity: 'International Equity',
+  emerging_markets: 'Emerging Markets',
   fixed_income: 'Fixed Income',
   alternatives: 'Alternatives',
   real_estate: 'Real Estate',

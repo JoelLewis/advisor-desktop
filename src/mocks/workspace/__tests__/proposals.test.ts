@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { Thread } from '@/types/workspace'
+import type { ProposalConstraint } from '@/types/workspace-proposal'
 import { accounts } from '@/mocks/data/accounts'
 import { resetWorkspaceStore, store } from '@/mocks/data/workspace-store'
 import { agentConstraints, draftSummary, revisionSummary } from '@/mocks/agents/proposal-agent'
@@ -29,7 +30,7 @@ describe('asking the Proposal Agent', () => {
     expect(detail).toMatchObject({ id: 'prop-0001', title: 'Johnson rebalance', accountId: 'acc-002', clientId: 'cli-001', threadId: 'th-johnson-review' })
     const v1 = detail.versions[0]!
     expect(v1).toMatchObject({ n: 1, author: { kind: 'agent', agentId: 'proposal' }, constraints: [{ kind: 'avoid_self_wash' }], edits: [] })
-    expect(v1.changeSummary).toBe("Drafted a tax-aware rebalance toward the Growth model. It sells losses first, then the lots that cost the least tax, and buys nothing that would wash one of the taxpayer's losses.")
+    expect(v1.changeSummary).toBe("Drafted a tax-aware rebalance toward the Growth model. It harvests losses first, then sells the lots that cost the least tax, and buys nothing that would wash one of the taxpayer's losses.")
     expect(detail.approval).toEqual({ kind: 'unapproved', latestVersion: 1 })
     const posted = store().messages.filter((m) => m.kind === 'proposal')
     expect(posted).toEqual([expect.objectContaining({ threadId: 'th-johnson-review', agentId: 'proposal', proposalId: 'prop-0001', at: v1.createdAt })])
@@ -86,6 +87,59 @@ describe('revising under constraints', () => {
     expect(v2.changeSummary).not.toMatch(/\d/)
     const line = store().messages[store().messages.length - 1]!
     expect(line).toMatchObject({ kind: 'proposal_version', proposalId: id, version: 2, author: { kind: 'agent', agentId: 'proposal' }, changeSummary: v2.changeSummary })
+  })
+
+  it('never claims tax-aware lot choice for an account whose sales are not taxed', () => {
+    for (const account of accounts.filter((a) => a.taxTreatment === 'tax_deferred' || a.taxTreatment === 'tax_free')) {
+      const summary = draftSummary(account.id)
+      expect(summary).toMatch(/^Drafted a rebalance toward /)
+      expect(summary).not.toMatch(/tax-aware|least tax|harvests/)
+      expect(summary).toContain("buys nothing that would wash one of the taxpayer's losses")
+    }
+  })
+
+  it('refuses to leave cash untouched, or a class the account does not hold', () => {
+    const { id } = create()
+    const cash = reviseProposal('user-001', id, [{ kind: 'exclude_asset_class', assetClass: 'cash' }])
+    expect(cash).toMatchObject({ ok: false, status: 400, code: 'NOT_EXCLUDABLE' })
+    expect(cash.ok ? '' : cash.message).toMatch(/^Cash cannot be left untouched/)
+    expect(reviseProposal('user-001', id, [{ kind: 'exclude_asset_class', assetClass: 'emerging_markets' }]))
+      .toEqual({ ok: false, status: 400, code: 'NOT_EXCLUDABLE', message: 'The account holds no Emerging Markets to leave untouched.' })
+    expect(buildVersion('acc-002', agentConstraints([{ kind: 'exclude_asset_class', assetClass: 'cash' }]), [])).toMatchObject({ ok: false, code: 'NOT_EXCLUDABLE' })
+    expect(store().proposals[0]!.versions).toHaveLength(1)
+    const held = reviseProposal('user-001', id, [{ kind: 'exclude_asset_class', assetClass: 'intl_equity' }])
+    if (!held.ok) throw new Error(held.message)
+    expect(held.detail.versions[1]!.changeSummary).toMatch(/^Revised to leave International Equity untouched\. /)
+  })
+
+  it('says when a gain cap does not bind, and not when it does', () => {
+    const { id } = create()
+    const loose = reviseProposal('user-001', id, [{ kind: 'cap_realised_gains', usd: 100_000_000 }])
+    if (!loose.ok) throw new Error(loose.message)
+    expect(loose.detail.versions[1]!.changeSummary).toBe('Revised to cap the gains it realises. The cap does not bind; the trades are unchanged. Every asset class ends inside its band.')
+    const tight = reviseProposal('user-001', id, [{ kind: 'cap_realised_gains', usd: 1_000 }])
+    if (!tight.ok) throw new Error(tight.message)
+    expect(tight.detail.versions[2]!.changeSummary).not.toContain('does not bind')
+  })
+
+  it('refuses the same constraints whatever their key order', () => {
+    const { id } = create()
+    reviseProposal('user-001', id, [{ kind: 'cap_realised_gains', usd: 50_000 }])
+    const reordered = JSON.parse('[{"usd":50000,"kind":"cap_realised_gains"}]') as ProposalConstraint[]
+    expect(reviseProposal('user-001', id, reordered)).toMatchObject({ ok: false, status: 409, code: 'NO_CHANGE' })
+  })
+
+  it('a revision that keeps the constraints only drops the workbench edits, and says so', () => {
+    const { id } = create()
+    saveVersion('user-001', id, [{ kind: 'exclude', symbol: 'QAI' }])
+    const bare = reviseProposal('user-001', id, [])
+    if (!bare.ok) throw new Error(bare.message)
+    expect(bare.detail.versions[2]!.changeSummary).toMatch(/^Back to the agent's legs, which buys nothing that would wash one of the taxpayer's losses\. .* Workbench edits on the previous version are not carried into this one\.$/)
+    reviseProposal('user-001', id, [{ kind: 'harvest_only' }])
+    saveVersion('user-001', id, [{ kind: 'exclude', symbol: 'INTC' }])
+    const harvest = reviseProposal('user-001', id, [{ kind: 'harvest_only' }])
+    if (!harvest.ok) throw new Error(harvest.message)
+    expect(harvest.detail.versions[5]!.changeSummary).toMatch(/^Back to the agent's legs under the rule to sell only lots at a loss; it still buys nothing that would wash one of the taxpayer's losses\. /)
   })
 
   it('says when workbench edits on the previous version are not carried', () => {
@@ -159,12 +213,13 @@ describe('workbench versions', () => {
 describe('the Proposal Agent over the whole book', () => {
   it.each(accounts.map((a) => a.id))('%s: digit-free summaries, and no buy that washes one of the taxpayer\'s losses', (id) => {
     expect(draftSummary(id)).not.toMatch(/\d/)
-    for (const requested of [[], [{ kind: 'harvest_only' as const }]]) {
+    for (const requested of [[], [{ kind: 'harvest_only' as const }], [{ kind: 'cap_realised_gains' as const, usd: 10_000 }]]) {
       const built = buildVersion(id, agentConstraints(requested), [])
       if (!built.ok) throw new Error(built.message)
       for (const leg of built.built.preview.trades.filter((t) => t.side === 'buy')) expect(leg.washSaleRisk).toBe(false)
-      expect(revisionSummary(agentConstraints(requested), built.built, false)).not.toMatch(/\d/)
-      expect(revisionSummary(agentConstraints(requested), built.built, true)).not.toMatch(/\d/)
+      expect(revisionSummary(agentConstraints(requested), built.built)).not.toMatch(/\d/)
+      expect(revisionSummary(agentConstraints(requested), built.built, { constraints: agentConstraints([]), edits: [{ kind: 'exclude', symbol: 'X' }] })).not.toMatch(/\d/)
+      expect(revisionSummary(agentConstraints(requested), built.built, { constraints: agentConstraints(requested), edits: [{ kind: 'exclude', symbol: 'X' }] })).not.toMatch(/\d/)
     }
   })
 })
