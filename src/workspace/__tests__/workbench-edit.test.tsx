@@ -3,8 +3,10 @@ import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
-import { approveProposal, createProposal, saveProposalVersion } from '@/services/workspace'
+import { approveProposal, createProposal, getProposal, saveProposalVersion } from '@/services/workspace'
 import { store } from '@/mocks/data/workspace-store'
+import { http, HttpResponse } from 'msw'
+import { server } from '@/test/server'
 
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
 const feed = () => within(screen.getByRole('complementary', { name: 'Live thread' })).getByRole('list', { name: 'Thread feed' })
@@ -299,13 +301,46 @@ describe('editing a draft version', () => {
     expect(await within(bar).findByRole('alert')).toHaveTextContent('Nothing differs from v2.')
     const next = await within(bar).findByRole('button', { name: 'Save as v3' })
     expect(next).toBeDisabled()
-    await user.keyboard('{Control>}s{/Control}')
-    expect(within(bar).queryByText('Saving once the preview is ready…')).toBeNull()
-    expect(within(bar).getByRole('alert')).toHaveTextContent('Nothing differs from v2.')
     expect(store().proposals[0]!.versions).toHaveLength(2)
     await user.click(within(detail).getByRole('checkbox', { name: /^lot-pos-020-1/ }))
     await waitFor(() => expect(next).toBeEnabled())
     expect(within(bar).queryByRole('alert')).toBeNull()
+  })
+
+  it('mod+S sends no save while the NO_CHANGE refusal holds a dirty draft', async () => {
+    const detail = await openLeg('SPY')
+    const user = userEvent.setup()
+    await user.click(within(detail).getByRole('checkbox', { name: /^lot-pos-020-1/ }))
+    const bar = screen.getByRole('group', { name: 'Draft version' })
+    const save = within(bar).getByRole('button', { name: 'Save as v2' })
+    await waitFor(() => expect(save).toBeEnabled())
+    // The refetch after the refusal is held at v1 until released, so the draft stays dirty against v1 with the refusal showing.
+    const v1 = await getProposal('user-001', 'prop-0001')
+    let held = true
+    server.use(http.get('/api/workspace/proposals/:id', () => (held ? HttpResponse.json(v1) : undefined)))
+    await saveProposalVersion('user-001', 'prop-0001', [{ kind: 'lots', symbol: 'SPY', lotIds: ['lot-pos-020-0', 'lot-pos-020-1'] }])
+    const saves: string[] = []
+    const countSaves = ({ request }: { request: Request }) => {
+      if (request.method === 'POST' && new URL(request.url).pathname === '/api/workspace/proposals/prop-0001/versions') saves.push(request.url)
+    }
+    server.events.on('request:start', countSaves)
+    try {
+      await user.click(save)
+      expect(await within(bar).findByRole('alert')).toHaveTextContent('Nothing differs from v2.')
+      expect(bar).toHaveTextContent('Draft · not saved')
+      expect(saves).toHaveLength(1)
+      await user.keyboard('{Control>}s{/Control}')
+      await user.keyboard('{Meta>}s{/Meta}')
+      // Time for a save the shortcut wrongly started to reach the engine.
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      expect(saves).toHaveLength(1)
+      expect(within(bar).getByRole('alert')).toHaveTextContent('Nothing differs from v2.')
+      expect(within(bar).getByRole('button', { name: 'Save as v2' })).toBeDisabled()
+    } finally {
+      server.events.removeListener('request:start', countSaves)
+      held = false
+    }
+    expect(store().proposals[0]!.versions).toHaveLength(2)
   })
 
   it('the lots refusal describes the lots it concerns', async () => {
