@@ -52,14 +52,14 @@ const byDateThenId = <T>(dateOf: (x: T) => string, idOf: (x: T) => string) => (a
 
 /**
  * Treas. Reg. §1.1091-1(c): when fewer replacement shares are acquired than loss shares are sold,
- * only the loss on as many sold shares as were replaced is disallowed, and each replacement share
- * washes one sold share, never two. Replacement shares are matched in the order they were bought,
- * earliest first, as the regulation directs.
+ * only the loss on as many sold shares as were replaced is disallowed. Under §1.1091-1(e) each
+ * replacement share washes one sold share, never two. Replacement shares are matched in the order
+ * they were bought, earliest first.
  *
  * The scenario is "sell every one of `lossLots` today": the replacements are the purchases of the
  * same symbol in the last 30 days that are not themselves among the lots sold. The sold shares are
- * taken in the order they were bought, earliest first — a convention, since the regulation does
- * not order shares sold together. Purchases in the 30 days after today cannot be known and are
+ * taken in the order they were bought, earliest first, as §1.1091-1(b) deems for shares sold
+ * together that cannot otherwise be identified. Purchases in the 30 days after today cannot be known and are
  * not counted; an open loss-sale window (`repurchaseBlockedUntil`) is what guards those.
  *
  * Returns an entry for every loss lot, `0`/`0` when nothing washes it.

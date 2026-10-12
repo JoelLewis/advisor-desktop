@@ -36,8 +36,9 @@ export function taxReturnFor(account: Account): string | null {
  * - An irrevocable trust, an entity and a custodial account are their own taxpayers, so only their
  *   own purchases wash their own sales, and theirs wash no one else's.
  * - Everything else is its owner's, including the owner's IRAs and Roths (Rev. Rul. 2008-5).
- * - A spouse's purchase counts as the taxpayer's whether or not the couple files jointly
- *   (Rev. Rul. 76-240), so a primary and a spouse are one wash-sale taxpayer.
+ * - A spouse's purchase counts as the taxpayer's (IRS Pub. 550). Sources differ on spouses filing
+ *   separately; treating a primary and a spouse as one wash-sale taxpayer either way is the
+ *   conservative position, and the one taken here.
  * - Any other household member (an adult child, a parent) is a taxpayer of their own.
  */
 export function washSaleTaxpayer(account: Account): string {
