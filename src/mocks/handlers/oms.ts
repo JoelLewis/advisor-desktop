@@ -17,6 +17,7 @@ import { generateTaxLots, boundedTradeQty, washSaleAcquisitions, type CustodianL
 import { repurchaseRestrictionsFor } from './repurchase-restrictions'
 import { settleBatchWashSales, type LegSale } from './batch-wash-sales'
 import { taxRateFor } from '@/lib/tax-rules'
+import type { Account } from '@/types/account'
 import type { Position } from '@/types/portfolio'
 import type { CurrencyCode } from '@/types/currency'
 
@@ -88,25 +89,23 @@ type RealisedSale = { shortTerm: number; longTerm: number; collectibleLongTerm: 
 const NOTHING_REALISED: RealisedSale = { shortTerm: 0, longTerm: 0, collectibleLongTerm: 0, tax: 0, consumedLotIds: [], soldLosses: [] }
 
 /**
- * Realise a sale of `notional` dollars out of `target`: the signed short- and long-term result
- * and the capital-gains tax on its gains, using the same per-lot generator the tax page reads (`generateTaxLots`) and the same rate function
- * (`taxRateFor`) it applies — a short-term-heavy sell is taxed at `SHORT_TERM_RATE` (40.8%), not
- * silently at the long-term rate (23.8%) for the entire position. A tax-aware pass sells the
- * lowest-gain-fraction (highest cost basis) lots first to minimise realised gain; a tax-unaware
- * pass sells the lots in their own oldest-first order.
+ * Lots ordered for a tax-aware sale: least tax per dollar sold first, so losses go first, then the
+ * cheapest gains. Ranked by *tax per dollar sold*, not gain per dollar sold: a low-gain short-term
+ * lot (40.8% rate) can carry more tax than a low-gain long-term lot (23.8% rate), so sorting by gain
+ * fraction alone can pick a worse-taxed lot first.
  */
-function realiseSale(accountLots: readonly CustodianLot[], target: Position, notional: number, taxAware: boolean): RealisedSale {
-  const lots = accountLots.filter((l) => l.positionId === target.id)
-  if (lots.length === 0 || notional <= 0) return NOTHING_REALISED
-  // §0.6 · GLD's long-term gain is collectibles gain (31.8%), not 23.8%.
-  const character = taxCharacterOf(target.symbol)
-  const rateFor = (holdingPeriod: (typeof lots)[number]['holdingPeriod']) => taxRateFor(holdingPeriod, character)
-  // Minimise realised gain and rank by *tax per dollar sold*, not gain per dollar sold: a
-  // low-gain short-term lot (40.8% rate) can carry more tax than a low-gain long-term lot (23.8%
-  // rate), so sorting by gain fraction alone can pick a worse-taxed lot first.
-  const taxPerDollar = (l: (typeof lots)[number]) => (l.gainLoss / l.currentValue) * rateFor(l.holdingPeriod)
-  const ordered = taxAware ? [...lots].sort((a, b) => taxPerDollar(a) - taxPerDollar(b)) : lots
+function taxAwareLotOrder(lots: readonly CustodianLot[], symbol: string): CustodianLot[] {
+  const character = taxCharacterOf(symbol)
+  const taxPerDollar = (l: CustodianLot) => (l.gainLoss / l.currentValue) * taxRateFor(l.holdingPeriod, character)
+  return [...lots].sort((a, b) => taxPerDollar(a) - taxPerDollar(b))
+}
 
+/** Realise a sale of `notional` drawn from `ordered` in exactly that order. */
+function realiseOrderedLots(ordered: readonly CustodianLot[], symbol: string, notional: number): RealisedSale {
+  if (ordered.length === 0 || notional <= 0) return NOTHING_REALISED
+  // §0.6 · GLD's long-term gain is collectibles gain (31.8%), not 23.8%.
+  const character = taxCharacterOf(symbol)
+  const rateFor = (holdingPeriod: CustodianLot['holdingPeriod']) => taxRateFor(holdingPeriod, character)
   let remaining = notional
   let shortTerm = 0
   let longTerm = 0
@@ -123,7 +122,7 @@ function realiseSale(accountLots: readonly CustodianLot[], target: Position, not
     if (realised > 0) tax += realised * rateFor(lot.holdingPeriod)
     if (realised < 0) {
       soldLosses.push({
-        lotId: lot.id, symbol: target.symbol, purchaseDate: lot.purchaseDate,
+        lotId: lot.id, symbol, purchaseDate: lot.purchaseDate,
         quantity: lot.quantity * portion, loss: realised, holdingPeriod: lot.holdingPeriod,
       })
     }
@@ -138,6 +137,19 @@ function realiseSale(accountLots: readonly CustodianLot[], target: Position, not
     consumedLotIds,
     soldLosses,
   }
+}
+
+/**
+ * Realise a sale of `notional` dollars out of `target`: the signed short- and long-term result
+ * and the capital-gains tax on its gains, using the same per-lot generator the tax page reads (`generateTaxLots`) and the same rate function
+ * (`taxRateFor`) it applies — a short-term-heavy sell is taxed at `SHORT_TERM_RATE` (40.8%), not
+ * silently at the long-term rate (23.8%) for the entire position. A tax-aware pass sells the
+ * lowest-gain-fraction (highest cost basis) lots first to minimise realised gain; a tax-unaware
+ * pass sells the lots in their own oldest-first order.
+ */
+function realiseSale(accountLots: readonly CustodianLot[], target: Position, notional: number, taxAware: boolean): RealisedSale {
+  const lots = accountLots.filter((l) => l.positionId === target.id)
+  return realiseOrderedLots(taxAware ? taxAwareLotOrder(lots, target.symbol) : lots, target.symbol, notional)
 }
 
 /**
@@ -644,6 +656,81 @@ export function holdingsAfterTrades(account: (typeof accounts)[number], position
   return [...bySymbol.values()].map(({ assetClass, marketValue }) => ({ assetClass, weight: marketValue / account.totalValue }))
 }
 
+export type LegCut = { quantity: number; lotIds?: readonly string[] }
+export type RecutFailure = {
+  ok: false
+  code: 'BAD_QUANTITY' | 'OVER_HELD' | 'LOT_NOT_IN_POSITION' | 'LOTS_TOO_SMALL' | 'LOTS_ON_BUY'
+  message: string
+}
+
+/** The settled §1091 fields belong to a batch; a re-cut leg is settled again with the rest of its batch. */
+const unsettled = ({ washedLoss: _washed, repurchaseBlockedUntil: _until, ...leg }: ProposedTradeLeg): ProposedTradeLeg => leg
+
+/** What one unit of a leg's security costs in the account's currency: the held position's price, or the model security's. */
+function unitPriceFor(account: Account, leg: ProposedTradeLeg, position: Position | undefined): number {
+  if (position) return position.price
+  const security = modelImplementationSecurity(computeDriftForAccount(account).modelId, leg.assetClass)
+  if (!security) throw new Error(`recutLeg: no price for ${leg.symbol} in ${account.id}`)
+  return convertCurrency(security.price, 'USD', currencyForAccount(account.id), FX_RATES_USD_BASE)
+}
+
+/**
+ * Phase 3 · a workbench edit re-cut onto one leg. A sale is re-realised lot by lot: from `lotIds`
+ * in the order given (specific identification) or, without them, in the generator's own tax-aware
+ * order. A purchase is re-priced. The engine refuses what cannot be traded rather than clamping it.
+ */
+export function recutLeg(accountId: string, leg: ProposedTradeLeg, { quantity, lotIds }: LegCut): { ok: true; leg: ProposedTradeLeg; sale: LegSale } | RecutFailure {
+  const account = accounts.find((a) => a.id === accountId)
+  if (!account) throw new Error(`recutLeg: unknown account ${accountId}`)
+  const wholeUnits = Number.isInteger(leg.quantity)
+  if (!Number.isFinite(quantity) || quantity <= 0 || (wholeUnits && !Number.isInteger(quantity))) {
+    return { ok: false, code: 'BAD_QUANTITY', message: `${leg.symbol}: the quantity must be a positive ${wholeUnits ? 'whole number of shares' : 'number'}.` }
+  }
+  const position = getPositionsForAccount(account.id, account.totalValue).find((p) => p.symbol === leg.symbol && p.symbol !== 'CASH')
+  const taxable = isTaxableAccount(account.taxTreatment)
+  const ownLots = generateTaxLots(account.id, account.totalValue)
+  const lossWindows = openWashSaleWindowsFor(account, MOCK_TODAY_ISO)
+  const acquisitions = washSaleAcquisitions(account, (a) => (a.id === account.id ? ownLots : generateTaxLots(a.id, a.totalValue)))
+
+  if (leg.side === 'buy') {
+    if (lotIds) return { ok: false, code: 'LOTS_ON_BUY', message: `${leg.symbol}: lots are chosen for a sale, not a purchase.` }
+    const estimatedValue = Math.round(quantity * unitPriceFor(account, leg, position))
+    const washSaleRisk = hasWashSaleRisk({ symbol: leg.symbol, side: 'buy', realisesLoss: false, soldLotIds: [] }, lossWindows, acquisitions, MOCK_TODAY_ISO)
+    return { ok: true, leg: { ...unsettled(leg), quantity, estimatedValue, washSaleRisk }, sale: { soldLosses: [], consumedLotIds: [] } }
+  }
+
+  if (!position) throw new Error(`recutLeg: ${accountId} sells ${leg.symbol} but holds none`)
+  if (quantity > position.quantity) return { ok: false, code: 'OVER_HELD', message: `${leg.symbol}: the account holds fewer shares than that.` }
+  const positionLots = ownLots.filter((l) => l.positionId === position.id)
+  let ordered: CustodianLot[]
+  if (lotIds) {
+    const byId = new Map(positionLots.map((l) => [l.id, l]))
+    const missing = lotIds.find((id) => !byId.has(id))
+    if (missing !== undefined) return { ok: false, code: 'LOT_NOT_IN_POSITION', message: `${leg.symbol}: lot ${missing} is not part of this position.` }
+    ordered = lotIds.flatMap((id) => byId.get(id) ?? [])
+    const inLots = ordered.reduce((s, l) => s + l.quantity, 0)
+    if (inLots + 1e-9 < quantity) return { ok: false, code: 'LOTS_TOO_SMALL', message: `${leg.symbol}: the chosen lots hold fewer shares than the sale.` }
+  } else {
+    ordered = taxable ? taxAwareLotOrder(positionLots, position.symbol) : positionLots
+  }
+  const estimatedValue = Math.round(quantity * position.price)
+  const realised = taxable ? realiseOrderedLots(ordered, position.symbol, estimatedValue) : NOTHING_REALISED
+  const trade: ProposedTradeLeg = {
+    ...unsettled(leg),
+    quantity,
+    estimatedValue,
+    taxImpact: realised.tax,
+    realisedShortTerm: realised.shortTerm,
+    realisedLongTerm: realised.longTerm,
+    realisedCollectibleLongTerm: realised.collectibleLongTerm,
+    washSaleRisk: hasWashSaleRisk(
+      { symbol: leg.symbol, side: 'sell', realisesLoss: realised.shortTerm + realised.longTerm < 0, soldLotIds: realised.consumedLotIds },
+      lossWindows, acquisitions, MOCK_TODAY_ISO,
+    ),
+  }
+  return { ok: true, leg: trade, sale: { soldLosses: realised.soldLosses, consumedLotIds: realised.consumedLotIds } }
+}
+
 /** What the classifier needs to know about one invested asset class still away from target. */
 export type ResidualFacts = {
   /** Projected drift, signed (positive = overweight). */
@@ -730,6 +817,52 @@ export function projectDrift(
         : { ...d }
     )),
   }
+}
+
+/** One account's entry in a preview batch. */
+export type PreviewEntry = { account: Account } & RebalanceProposal
+
+/**
+ * The rebalance previews of a batch: §1091 settled across each wash-sale taxpayer's accounts, the
+ * tax each proposal adds to its return netted against that return's year-to-date results (and
+ * earlier accounts in the batch), the repurchase restrictions, and the drift after the trades. The
+ * one assembly behind `/api/oms/rebalance` and every Phase 3 proposal version.
+ */
+export function buildRebalancePreviews(
+  proposed: readonly PreviewEntry[],
+  taxAware: boolean,
+  driftThreshold: number | undefined,
+  asOfISO: string,
+): RebalancePreview[] {
+  // §0.2 · §1091 across the batch: a buy here can wash a loss sold there, for one taxpayer.
+  const settled = settleBatchWashSales(proposed, asOfISO)
+  const batch = proposed.map(({ account }, i) => ({ account, legs: settled[i]! }))
+  const estimates = estimateTaxOnReturns(batch, asOfISO)
+  const proposals = batch.map(({ account, legs }) => ({ accountId: account.id, legs }))
+  return batch.map(({ account, legs: trades }, i) => {
+    const tax = estimates[i]!
+    return {
+      accountId: account.id,
+      // §9.3 — same source as every trade on this preview (`currencyForAccount`), so a preview
+      // with zero proposed trades still carries a correct currency tag rather than an implicit
+      // USD default.
+      currency: currencyForAccount(account.id),
+      trades,
+      // §1222 — the tax this proposal adds to its owner's return, netted with that return's
+      // year-to-date results and earlier accounts in this batch on the same return. The gross
+      // figure is the legs' own tax on gains, nothing netted: a reference beside the estimate,
+      // not a bound on it (see `RebalancePreview.estimatedTaxImpact`).
+      estimatedTaxImpact: tax.net,
+      grossTaxOnGains: tax.gross,
+      ytdRealisedOnReturn: tax.ytdRealisedOnReturn,
+      nettedWithAccountIds: tax.nettedWithAccountIds,
+      // Whether a sale here is a taxable event at all; a surface reads it to tell "not taxed in
+      // this account" from "taxed, and the result is zero".
+      taxable: isTaxableAccount(account.taxTreatment),
+      repurchaseRestrictions: repurchaseRestrictionsFor(account, asOfISO, proposals),
+      projectedDrift: projectDrift(account.id, trades, taxAware, driftThreshold),
+    }
+  })
 }
 
 export const omsHandlers = [
@@ -922,7 +1055,7 @@ export const omsHandlers = [
 
   http.post('/api/oms/rebalance', async ({ request }) => {
     const body = await request.json() as { accountIds: string[]; driftThreshold?: number; taxAware: boolean }
-    const proposed = []
+    const proposed: PreviewEntry[] = []
     for (const accountId of body.accountIds) {
       const account = accounts.find((a) => a.id === accountId)
       if (!account) return notFound()
@@ -930,37 +1063,7 @@ export const omsHandlers = [
       // in scope one line away.
       proposed.push({ account, ...generateRebalanceProposal(accountId, body.taxAware, body.driftThreshold) })
     }
-    // §0.2 · §1091 across the batch: a buy here can wash a loss sold there, for one taxpayer.
-    const settled = settleBatchWashSales(proposed, MOCK_TODAY_ISO)
-    const batch = proposed.map(({ account }, i) => ({ account, legs: settled[i]! }))
-    const estimates = estimateTaxOnReturns(batch, MOCK_TODAY_ISO)
-    const proposals = batch.map(({ account, legs }) => ({ accountId: account.id, legs }))
-    const previews: RebalancePreview[] = batch.map(({ account, legs: trades }, i) => {
-      const tax = estimates[i]!
-      const accountId = account.id
-      return {
-        accountId,
-        // §9.3 — same source as every trade on this preview (`currencyForAccount`), so a preview
-        // with zero proposed trades still carries a correct currency tag rather than an implicit
-        // USD default.
-        currency: currencyForAccount(accountId),
-        trades,
-        // §1222 — the tax this proposal adds to its owner's return, netted with that return's
-        // year-to-date results and earlier accounts in this batch on the same return. The gross
-        // figure is the legs' own tax on gains, nothing netted: a reference beside the estimate,
-        // not a bound on it (see `RebalancePreview.estimatedTaxImpact`).
-        estimatedTaxImpact: tax.net,
-        grossTaxOnGains: tax.gross,
-        ytdRealisedOnReturn: tax.ytdRealisedOnReturn,
-        nettedWithAccountIds: tax.nettedWithAccountIds,
-        // Whether a sale here is a taxable event at all; a surface reads it to tell "not taxed in
-        // this account" from "taxed, and the result is zero".
-        taxable: isTaxableAccount(account.taxTreatment),
-        repurchaseRestrictions: repurchaseRestrictionsFor(account, MOCK_TODAY_ISO, proposals),
-        projectedDrift: projectDrift(accountId, trades, body.taxAware, body.driftThreshold),
-      }
-    })
-    return HttpResponse.json(previews)
+    return HttpResponse.json(buildRebalancePreviews(proposed, body.taxAware, body.driftThreshold, MOCK_TODAY_ISO))
   }),
 
   http.post('/api/oms/rebalance/execute', async ({ request }) => {
