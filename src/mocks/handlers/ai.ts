@@ -17,7 +17,7 @@ import { openWashSaleWindows } from '../data/realised-sales'
 import { FX_RATES_USD_BASE } from '../data/currencies'
 import { convertToBase } from '@/lib/currency'
 import { sumAccountsUSD } from '@/lib/aum'
-import { formatDate } from '@/lib/utils'
+import { formatCalendarDate, formatDate } from '@/lib/utils'
 import { estimatedTaxBenefit, isHarvestable, harvestsNow, lossAllowedNow } from '@/lib/tax-rules'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { getPositionsForAccount } from '../data/positions'
@@ -785,16 +785,21 @@ export const aiHandlers = [
       // "EFA — compliance hold." Read from `openWashSaleWindows` instead — the same selector the
       // chat's trading-desk answer and the wash-sale calendar citation read — so this insight
       // can't name a restriction the account's own screen doesn't show.
+      //
+      // Final review I5 · a window's end is a calendar date, formatted as one (`formatCalendarDate`):
+      // `formatDate` read 2026-03-22 as UTC midnight and printed "Mar 21" in any US time zone. The
+      // count is of accounts, not windows: one account can carry two.
       const activeWashWindows = openWashSaleWindows(MOCK_TODAY_ISO)
       if (activeWashWindows.length > 0) {
         const detail = activeWashWindows
-          .map((w) => `${w.symbol} in ${accounts.find((a) => a.id === w.accountId)?.name ?? w.accountId} (through ${formatDate(w.end)})`)
+          .map((w) => `${w.symbol} in ${accounts.find((a) => a.id === w.accountId)?.name ?? w.accountId} (through ${formatCalendarDate(w.end)})`)
           .join('; ')
+        const restrictedAccounts = new Set(activeWashWindows.map((w) => w.accountId)).size
         insights.push({
           id: 'trade-2',
           severity: 'warning',
           title: 'Trade Restrictions Active',
-          body: `${activeWashWindows.length} account${activeWashWindows.length === 1 ? '' : 's'} carrying an active wash-sale restriction: ${detail}. Check restrictions before placing orders in these or substantially identical securities.`,
+          body: `${restrictedAccounts} account${restrictedAccounts === 1 ? '' : 's'} carrying an active wash-sale restriction: ${detail}. Check restrictions before placing orders in these or substantially identical securities.`,
           actionLabel: 'View Restricted Securities',
           actionAI: 'Show me all securities with active trade restrictions and their details',
         })
