@@ -256,6 +256,30 @@ function pickBuyCandidate(held: Position[], modelId: string, assetClass: string,
 }
 
 /**
+ * Phase 3 · a buy for an underweight class that `pickBuyCandidate`'s choice would wash
+ * (`washingSymbols`): the model's own implementation security for the class first, then what the
+ * account already holds in it, skipping every washing symbol. "Substantially identical" is the
+ * same symbol here, as throughout `wash-sale.ts`. A model security the account holds is bought as
+ * the holding, at the holding's price.
+ */
+function substituteBuyCandidate(
+  held: readonly Position[],
+  modelId: string,
+  assetClass: string,
+  currency: CurrencyCode,
+  washing: ReadonlySet<string>,
+): TradeCandidate | undefined {
+  const holdings = held.map((position): TradeCandidate => ({ symbol: position.symbol, name: position.name, price: position.price, position }))
+  const security = modelImplementationSecurity(modelId, assetClass)
+  const modelCandidate = security && (holdings.find((c) => c.symbol === security.symbol) ?? {
+    symbol: security.symbol,
+    name: security.name,
+    price: convertCurrency(security.price, 'USD', currency, FX_RATES_USD_BASE),
+  })
+  return [modelCandidate, ...holdings].find((c): c is TradeCandidate => c !== undefined && !washing.has(c.symbol))
+}
+
+/**
  * C26 · rebalancing / tax-efficiency — `taxImpact: taxAware ? 3_800 : 0` made the riskier setting
  * display as free. Tax is estimated per-lot from the account's actual embedded gains at the
  * lot's own holding-period rate, so a tax-unaware rebalance realises MORE than a tax-aware one,
@@ -389,7 +413,9 @@ function largestSaleWithin(realise: (value: number) => RealisedResult, ceiling: 
  *   realised gains (losses not netted) are at or under the cap.
  * - `excludeAssetClasses` leaves those classes untouched.
  * - `avoidSelfWash` never proposes a buy that would wash one of the proposal's own loss sales or an
- *   open loss sale of the same wash-sale taxpayer in any of their accounts.
+ *   open loss sale of the same wash-sale taxpayer in any of their accounts. It buys a substitute
+ *   in the class (`substituteBuyCandidate`), or with none leaves the money in cash; either way no
+ *   sale is resized for it.
  */
 export function generateRebalanceProposal(
   accountId: string,
@@ -421,7 +447,13 @@ export function generateRebalanceProposal(
   const heldBack = new Map<AssetClass, ResidualDriftReason>()
   const lossValueOf = (p: Position) => lossLotValue(ownLots, p)
 
-  type RawLeg = { target: TradeCandidate; side: 'buy' | 'sell'; notional: number; sleeve: Sleeve }
+  /**
+   * A buy `avoidSelfWash` turned away from its washing `target` is still resolved onto the cash
+   * band as that target, so no sale (above all no harvest) is resized for the constraint:
+   * - `substitute`: then bought instead, for the value the band sized, in whole units of its own;
+   * - `parked`: no substitute exists, so it is left out and the money it would have spent stays in cash.
+   */
+  type RawLeg = { target: TradeCandidate; side: 'buy' | 'sell'; notional: number; sleeve: Sleeve; substitute?: TradeCandidate; parked?: true }
 
   const drafted = drift.assetClassDrifts
     .filter((d) => Math.abs(d.drift) > driftThreshold)
@@ -475,10 +507,14 @@ export function generateRebalanceProposal(
     ? drafted.filter((l) => l.side === 'sell' && l.target.position && saleOf(l.target.position, l.notional).soldLosses.length > 0).map((l) => l.target.symbol)
     : []
   const washing = constraints.avoidSelfWash ? washingSymbols(lossWindows, lossSold) : new Set<string>()
-  const raw = drafted.filter((leg) => {
-    if (leg.side !== 'buy' || !washing.has(leg.target.symbol)) return true
+  // A washing buy moves to a substitute in the same class; only a class with none is held back.
+  const raw = drafted.map((leg): RawLeg => {
+    if (leg.side !== 'buy' || !washing.has(leg.target.symbol)) return leg
+    const held = positions.filter((p) => p.assetClass === leg.sleeve.assetClass && p.symbol !== 'CASH' && isMarketTradable(p.symbol))
+    const substitute = substituteBuyCandidate(held, drift.modelId, leg.sleeve.assetClass, currency, washing)
+    if (substitute) return { ...leg, substitute }
     heldBack.set(leg.sleeve.assetClass, 'wash_sale_avoided')
-    return false
+    return { ...leg, parked: true }
   })
 
   // The cash band does not depend on the legs, so it is measured once, ahead of every resolution.
@@ -741,6 +777,21 @@ export function generateRebalanceProposal(
       )
     }
 
+    // A buy turned away from a washing symbol was sized as that symbol; it now becomes its
+    // substitute, at no more than the value sized (whole units floored), or leaves the proposal.
+    for (const leg of rawLegs) {
+      const sized = built.get(leg)
+      if (!sized || (!leg.parked && !leg.substitute)) continue
+      sales.delete(sized)
+      const bought = leg.substitute && toTrade({ ...leg, target: leg.substitute, notional: sized.estimatedValue }, 1)
+      if (bought && bought.estimatedValue > 0) {
+        built.set(leg, bought)
+        continue
+      }
+      if (bought) sales.delete(bought)
+      built.delete(leg)
+      heldBack.set(leg.sleeve.assetClass, 'wash_sale_avoided')
+    }
 
     // Emitted in the drift surface's own asset-class order, so a preview reads the same way it did
     // before sells and buys were built in separate passes.
@@ -960,6 +1011,12 @@ export function projectDrift(
     }
   }
 
+  // A buy parked to avoid a wash sale leaves its money in cash, so cash ends above target and no
+  // class is held to the model's cash target: what holds the rest back is the parked buy.
+  const parkedForWash = [...constrainedBy.values()].includes('wash_sale_avoided')
+  const constrainedReason = (reason: ResidualDriftReason): ResidualDriftReason =>
+    (reason === 'cash_capped' && parkedForWash ? 'wash_sale_avoided' : reason)
+
   return {
     driftTolerance: after.driftTolerance,
     driftThreshold,
@@ -968,7 +1025,7 @@ export function projectDrift(
     withinBand: !after.needsRebalance,
     assetClassDrifts: after.assetClassDrifts.map((d) => (
       d.assetClass !== 'cash' && Math.abs(d.drift) > driftThreshold
-        ? { ...d, residualReason: constrainedBy.get(d.assetClass) ?? residualReason(factsFor(d.assetClass, d.drift)) }
+        ? { ...d, residualReason: constrainedBy.get(d.assetClass) ?? constrainedReason(residualReason(factsFor(d.assetClass, d.drift))) }
         : { ...d }
     )),
   }
