@@ -6,7 +6,7 @@ import { KeyLegend } from '@/kit/keyboard/KeyLegend'
 import { useJumpKeys } from '@/kit/keyboard/use-jump-keys'
 import type { Binding } from '@/kit/keyboard/keys'
 import { MAIN_ID } from '@/kit/page/ids'
-import { contextColumnOf } from './context-column'
+import { contextColumnOf, threadListHidden } from './context-column'
 import { ContextAvailability } from './ContextAvailability'
 import { CONTEXT_COLUMN_ID, THREAD_LIST_ID } from './shell-ids'
 import { ThemeToggle } from './ThemeToggle'
@@ -17,11 +17,13 @@ import { useFocusOnRouteChange } from './use-focus-on-route-change'
 const focusRegion = (id: string) => () => document.getElementById(id)?.focus()
 
 export function WorkspaceShell() {
-  const provided = contextColumnOf(useMatches())
+  const matches = useMatches()
+  const provided = contextColumnOf(matches)
+  const listHidden = threadListHidden(matches)
   const [available, setAvailable] = useState(true)
   const context = provided && available ? provided.column : undefined
   useJumpKeys('shell', [
-    { key: '[', label: 'Thread list', run: focusRegion(THREAD_LIST_ID) },
+    ...(listHidden ? [] : [{ key: '[', label: 'Thread list', run: focusRegion(THREAD_LIST_ID) } satisfies Binding]),
     { key: '\\', label: 'Main', run: focusRegion(MAIN_ID) },
     ...(context ? [{ key: ']', label: 'Context column', run: focusRegion(CONTEXT_COLUMN_ID) } satisfies Binding] : []),
   ])
@@ -41,14 +43,22 @@ export function WorkspaceShell() {
         </div>
       </header>
       <div className="mx-auto grid max-w-(--breakpoint-wide) grid-cols-12 gap-x-6 gap-y-10 px-6 py-8">
-        <nav id={THREAD_LIST_ID} tabIndex={-1} aria-label="Threads" className="col-span-12 min-w-0 narrow:col-span-4 narrow:row-span-2 split:col-span-3 split:row-span-1">
-          <ThreadList />
-        </nav>
-        <main id={MAIN_ID} tabIndex={-1} className={cn('col-span-12 min-w-0 narrow:col-span-8', context ? 'split:col-span-6' : 'split:col-span-9')}>
+        {listHidden ? null : (
+          <nav id={THREAD_LIST_ID} tabIndex={-1} aria-label="Threads" className="col-span-12 min-w-0 narrow:col-span-4 narrow:row-span-2 split:col-span-3 split:row-span-1">
+            <ThreadList />
+          </nav>
+        )}
+        <main id={MAIN_ID} tabIndex={-1} className={cn(
+          'col-span-12 min-w-0',
+          listHidden ? (context ? 'split:col-span-9' : '') : cn('narrow:col-span-8', context ? 'split:col-span-6' : 'split:col-span-9'),
+        )}>
           <Outlet />
         </main>
         {context ? (
-          <div id={CONTEXT_COLUMN_ID} tabIndex={-1} className="col-span-12 min-w-0 narrow:col-span-8 narrow:col-start-5 split:col-span-3 split:col-start-auto">
+          <div id={CONTEXT_COLUMN_ID} tabIndex={-1} className={cn(
+            'col-span-12 min-w-0',
+            listHidden ? 'split:col-span-3' : 'narrow:col-span-8 narrow:col-start-5 split:col-span-3 split:col-start-auto',
+          )}>
             <SidePanel label={context.label}><context.Content /></SidePanel>
           </div>
         ) : null}

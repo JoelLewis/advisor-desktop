@@ -27,6 +27,14 @@ describe('keyboard', () => {
     expect(matchDestinations('kit', d)).toHaveLength(1)
     expect(matchDestinations('zzz', d)).toHaveLength(0)
   })
+  it('puts the destination a query names exactly ahead of those that merely contain it', () => {
+    const d = [
+      { id: 'thread', label: 'Thread · Johnson Rebalance Review', aliases: [], run: () => {} },
+      { id: 'proposal', label: 'Proposal · Johnson rebalance', aliases: [], run: () => {} },
+    ]
+    expect(matchDestinations('johnson rebalance', d).map((x) => x.id)).toEqual(['proposal', 'thread'])
+    expect(matchDestinations('johnson', d).map((x) => x.id)).toEqual(['thread', 'proposal'])
+  })
   it('knows editable targets', () => {
     const input = document.createElement('input')
     expect(isEditableTarget(input)).toBe(true)
