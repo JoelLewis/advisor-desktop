@@ -1,4 +1,5 @@
 import { http, HttpResponse, delay } from 'msw'
+import { nextEventTime, nextRecordNumber } from './event-clock'
 import { proposalTemplates, SECTION_LABELS, generateSectionContent, complianceRules } from '../data/proposals'
 import { clients } from '../data/clients'
 import { accounts } from '../data/accounts'
@@ -115,13 +116,13 @@ export const proposalHandlers = [
       currentAllocation: getAllocationForRiskProfile(client.riskProfile.tolerance),
     }
 
-    const now = new Date().toISOString()
+    const now = nextEventTime()
 
     // Auto-generate all section content inline during creation
     const sections: ProposalSection[] = template.sections.map((sectionType, idx) => {
       const content = generateSectionContent(sectionType, client.fullName, template.id, clientData.householdAUM)
       return {
-        id: `sec-${Date.now()}-${idx}`,
+        id: `sec-${nextRecordNumber()}-${idx}`,
         type: sectionType,
         label: SECTION_LABELS[sectionType] ?? sectionType,
         content,
@@ -133,7 +134,7 @@ export const proposalHandlers = [
     })
 
     const draft: ProposalDraft = {
-      id: `prop-${Date.now()}`,
+      id: `prop-${nextRecordNumber()}`,
       templateId: template.id,
       templateName: template.name,
       clientId: client.id,
@@ -172,7 +173,7 @@ export const proposalHandlers = [
     }
 
     const content = generateSectionContent(body.sectionType, draft.clientData.clientName, draft.templateId, draft.clientData.householdAUM)
-    const now = new Date().toISOString()
+    const now = nextEventTime()
 
     section.content = content
     section.originalContent = content
@@ -200,7 +201,7 @@ export const proposalHandlers = [
       return new HttpResponse(JSON.stringify({ error: 'Section not found' }), { status: 404 })
     }
 
-    const now = new Date().toISOString()
+    const now = nextEventTime()
     section.content = body.content
     section.status = 'edited'
     section.editedAt = now
@@ -215,7 +216,7 @@ export const proposalHandlers = [
     const draft = proposalStore.get(params.id as string)
     if (!draft) return notFound()
 
-    const now = new Date().toISOString()
+    const now = nextEventTime()
     const checks = complianceRules.map((cr, idx) => {
       let status: 'pass' | 'warning' | 'fail' = 'pass'
       let message = `${cr.rule} check passed.`
@@ -241,7 +242,7 @@ export const proposalHandlers = [
       }
 
       return {
-        id: `chk-${Date.now()}-${idx}`,
+        id: `chk-${nextRecordNumber()}-${idx}`,
         rule: cr.rule,
         description: cr.description,
         status,
@@ -263,7 +264,7 @@ export const proposalHandlers = [
     const draft = proposalStore.get(params.id as string)
     if (!draft) return notFound()
 
-    const now = new Date().toISOString()
+    const now = nextEventTime()
     draft.status = 'finalized'
     draft.finalizedAt = now
     draft.updatedAt = now
@@ -271,7 +272,7 @@ export const proposalHandlers = [
     return HttpResponse.json({
       success: true,
       proposalId: draft.id,
-      documentId: `doc-prop-${Date.now()}`,
+      documentId: `doc-prop-${nextRecordNumber()}`,
       message: 'Proposal finalized and ready for client presentation. Document has been added to the client document vault.',
     })
   }),

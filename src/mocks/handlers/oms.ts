@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw'
+import { nextEventTime, nextRecordNumber } from './event-clock'
 import type { Order, RebalancePreview, ProposedTrade, TradeRequest, PreTradeCheckRequest, PreTradeViolation, PreTradeCheckProposalRequest } from '@/services/oms'
 import { notFound } from './utils'
 import { RESTRICTED_SECURITIES, CASH_MINIMUM_PCT, TECH_SYMBOLS, SECTOR_LIMIT, evaluateProposal, invalidProposal } from './compliance'
@@ -594,7 +595,7 @@ export const omsHandlers = [
   http.post('/api/oms/orders', async ({ request }) => {
     const body = await request.json() as TradeRequest
     const newOrder: Order = {
-      id: `ord-${Date.now()}`,
+      id: `ord-${nextRecordNumber()}`,
       accountId: body.accountId,
       symbol: body.symbol,
       side: body.side,
@@ -604,7 +605,7 @@ export const omsHandlers = [
       stopPrice: body.stopPrice,
       status: 'submitted',
       filledQuantity: 0,
-      submittedAt: new Date().toISOString(),
+      submittedAt: nextEventTime(),
       assetClass: body.assetClass,
       timeInForce: body.timeInForce,
       extendedHours: body.extendedHours,

@@ -1,4 +1,5 @@
 import { http, HttpResponse, delay } from 'msw'
+import { nextEventTime, nextRecordNumber } from './event-clock'
 import { getAIResponse, suggestedPrompts, actionTemplates } from '../data/ai'
 import { clients } from '../data/clients'
 import { households } from '../data/households'
@@ -9,7 +10,7 @@ import type { ChatMessage, TradeSuggestion, ActionConfirmation, DocumentGenerati
 import type { CustomPromptCategory } from '@/types/settings'
 import type { TaxLot } from '@/types/portfolio'
 import { formatAUM, computeTotalAUM } from './utils'
-import { now, MOCK_TODAY_ISO } from '@/lib/clock'
+import { now, MOCK_NOW_ISO, MOCK_TODAY_ISO } from '@/lib/clock'
 import { computeMetrics, computeDriftForAccount } from './pms'
 import { generateTaxLotsWithSaleRisk } from './custodian'
 import { openWashSaleWindows } from '../data/realised-sales'
@@ -98,7 +99,7 @@ function makeBriefing(
   metrics: BriefingMetric[],
   highlights: string[],
 ): ContextBriefingData {
-  return { title, entityType, metrics, highlights, asOf: new Date().toISOString() }
+  return { title, entityType, metrics, highlights, asOf: MOCK_NOW_ISO }
 }
 
 /**
@@ -253,10 +254,10 @@ export const aiHandlers = [
     const filled = interpolateFacts(template, facts)
 
     const response: ChatMessage = {
-      id: `msg-${Date.now()}`,
+      id: `msg-${nextRecordNumber()}`,
       role: 'assistant',
       content: filled.content,
-      timestamp: new Date().toISOString(),
+      timestamp: nextEventTime(),
       citations: filled.citations,
       actions: filled.actions,
       documentPreview: filled.documentPreview,

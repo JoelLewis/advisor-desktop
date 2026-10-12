@@ -1,4 +1,5 @@
 import { http, HttpResponse, delay } from 'msw'
+import { nextEventTime, nextRecordNumber } from './event-clock'
 import type { AISettings, NBASettings, NotificationSettings, DisplaySettings, CustomPrompt, DelegationRule } from '@/types/settings'
 import type { StandingRule, AIPermissionMatrix, StandingRuleAction, TriggerType } from '@/types/standing-rule'
 
@@ -259,13 +260,13 @@ export const settingsHandlers = [
   }),
   http.post('/api/settings/ai/prompts', async ({ request }) => {
     const body = await request.json() as { name: string; text: string; category: CustomPrompt['category'] }
-    const id = `cp-${Date.now()}`
+    const id = `cp-${nextRecordNumber()}`
     const prompt: CustomPrompt = {
       id,
       name: body.name,
       text: body.text,
       category: body.category,
-      createdAt: new Date().toISOString(),
+      createdAt: nextEventTime(),
     }
     customPrompts.set(id, prompt)
     return HttpResponse.json(prompt, { status: 201 })
@@ -294,7 +295,7 @@ export const settingsHandlers = [
   http.post('/api/settings/standing-rules', async ({ request }) => {
     await delay(200)
     const body = await request.json() as { name: string; triggerType: TriggerType; triggerCondition: string; action: StandingRuleAction; actionDescription: string }
-    const id = `sr-${Date.now()}`
+    const id = `sr-${nextRecordNumber()}`
     const rule: StandingRule = {
       id,
       name: body.name,
@@ -303,7 +304,7 @@ export const settingsHandlers = [
       action: body.action,
       actionDescription: body.actionDescription,
       enabled: true,
-      createdAt: new Date().toISOString(),
+      createdAt: nextEventTime(),
       runCount: 0,
     }
     standingRules.set(id, rule)
@@ -335,7 +336,7 @@ export const settingsHandlers = [
   http.post('/api/settings/delegation-rules', async ({ request }) => {
     await delay(200)
     const body = await request.json() as Omit<DelegationRule, 'id'>
-    const id = `dr-${Date.now()}`
+    const id = `dr-${nextRecordNumber()}`
     const rule: DelegationRule = { id, ...body }
     delegationRules.set(id, rule)
     return HttpResponse.json(rule, { status: 201 })

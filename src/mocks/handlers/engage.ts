@@ -1,4 +1,5 @@
 import { http, HttpResponse, delay } from 'msw'
+import { nextEventTime, nextRecordNumber } from './event-clock'
 import { campaigns, socialOpportunities, newsletters } from '../data/engage'
 import { clientComms } from '../data/client-comms'
 
@@ -21,19 +22,19 @@ export const engageHandlers = [
 
   http.post('/api/engage/compose-email', async () => {
     await delay(300)
-    return HttpResponse.json({ success: true, id: `email-${Date.now()}` })
+    return HttpResponse.json({ success: true, id: `email-${nextRecordNumber()}` })
   }),
 
   http.post('/api/engage/log-call', async () => {
     await delay(300)
-    return HttpResponse.json({ success: true, id: `call-${Date.now()}` })
+    return HttpResponse.json({ success: true, id: `call-${nextRecordNumber()}` })
   }),
 
   http.post('/api/engage/campaigns', async ({ request }) => {
     await delay(300)
     const body = (await request.json()) as { name: string; channel: string; audience: string; message: string }
     return HttpResponse.json({
-      id: `camp-${Date.now()}`,
+      id: `camp-${nextRecordNumber()}`,
       name: body.name,
       channel: body.channel,
       status: 'draft',
@@ -56,7 +57,7 @@ export const engageHandlers = [
   http.post('/api/engage/social/:id/schedule', async ({ params }) => {
     await delay(200)
     const opp = socialOpportunities.find((s) => s.id === params.id)
-    return HttpResponse.json(opp ? { ...opp, scheduledDate: new Date().toISOString() } : { id: params.id, scheduledDate: new Date().toISOString() })
+    return HttpResponse.json(opp ? { ...opp, scheduledDate: nextEventTime() } : { id: params.id, scheduledDate: nextEventTime() })
   }),
 
   http.post('/api/engage/social/:id/request-approval', async ({ params }) => {
