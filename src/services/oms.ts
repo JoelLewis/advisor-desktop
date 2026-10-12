@@ -1,6 +1,7 @@
 import { get, post } from './api-client'
 import type { TradableAssetClass, TradeSide, TradeOrderType, TimeInForce, BondPriceType, MutualFundAmountType } from '@/types/trading'
 import type { CurrencyCode } from '@/types/currency'
+import type { WashedLoss } from '@/lib/wash-sale'
 
 export type Order = {
   id: string
@@ -113,6 +114,28 @@ export type RebalancePreview = {
   grossTaxOnGains: number
   /** False for an IRA, Roth or other tax-advantaged account, where a sale realises nothing taxable. */
   taxable: boolean
+  /**
+   * IRC §1091 repurchase restrictions on this account: windows opened by loss sales already
+   * recorded, and windows this batch's own loss legs would open, by any account of the same
+   * wash-sale taxpayer (owner and spouse, their IRAs and Roths included; a trust or entity stands
+   * alone). Sorted by `until`, then `symbol`.
+   */
+  repurchaseRestrictions: RepurchaseRestriction[]
+}
+
+/**
+ * A window in which buying `symbol` back would wash a loss (IRC §1091): 30 days either side of the
+ * loss sale, inclusive. `recorded` windows come from sales already made (`realisedSales`);
+ * `projected` windows are the ones a proposal's own loss legs would open if executed today. The two
+ * are never merged: a reviewer needs to see both that a window exists and that a proposal extends it.
+ */
+export type RepurchaseRestriction = {
+  symbol: string
+  start: string
+  until: string
+  source:
+    | { kind: 'recorded'; saleId: string; accountId: string; saleDate: string }
+    | { kind: 'projected'; accountId: string; saleDate: string }
 }
 
 export type ProposedTrade = {
@@ -128,6 +151,20 @@ export type ProposedTrade = {
   /** The part of `realisedLongTerm` that is collectibles gain or loss (GLD and other physical-metal trusts), taxed at up to 28% + NIIT. */
   realisedCollectibleLongTerm: number
   washSaleRisk: boolean
+  /**
+   * Sell legs that realise a loss only: the part of it IRC §1091 washes because the taxpayer bought
+   * the symbol in the last 30 days (Treas. Reg. §1.1091-1(c), pro rata to the replaced shares).
+   * Signed like the loss (≤ 0), account currency; `realisedShortTerm`/`realisedLongTerm` still
+   * include it. The tax estimate nets only the rest. Absent when nothing washes.
+   */
+  washedLoss?: WashedLoss & { collectibleLongTerm: number }
+  /**
+   * Sell legs that recognise a loss only: the last day of the IRC §1091 window the sale opens if
+   * executed today — the sale date plus 30 days. Buying the symbol back before then, in any account
+   * of the same taxpayer, washes the loss. Absent on a leg whose loss is already washed in full:
+   * no loss share is left for a later purchase to replace.
+   */
+  repurchaseBlockedUntil?: string
   // Same account-native currency as the parent `RebalancePreview.currency` — carried on the trade
   // itself so a consumer that only has the trade (not the preview) still knows what it's reading.
   currency: CurrencyCode

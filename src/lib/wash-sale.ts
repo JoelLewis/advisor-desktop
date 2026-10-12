@@ -95,3 +95,35 @@ export function matchWashedShares(
   }
   return washed
 }
+
+/** Shares of one lot a sale disposes of at a loss: how many, and the signed loss they realise (< 0). */
+export type SoldLossLot = LossLot & { loss: number; holdingPeriod: 'short' | 'long' }
+
+/**
+ * The part of a sale's realised loss §1091 does not allow now, signed like the loss (≤ 0), by
+ * holding period and by what becomes of it: `deferred` into a taxable replacement's basis
+ * (§1091(d)), or `disallowed` for good by an IRA or Roth replacement. `shortTerm + longTerm` and
+ * `deferred + disallowed` are the same total.
+ */
+export type WashedLoss = { shortTerm: number; longTerm: number; deferred: number; disallowed: number }
+
+/**
+ * The dollars of `sold`'s loss that §1091 takes if the sale is executed on `asOfISO`: each lot's
+ * loss in proportion to its shares `matchWashedShares` finds replaced (§1.1091-1(c)). Unrounded.
+ */
+export function washedLoss(sold: readonly SoldLossLot[], acquisitions: readonly Acquisition[], asOfISO: string): WashedLoss {
+  const shares = matchWashedShares(sold, acquisitions, asOfISO)
+  const total: WashedLoss = { shortTerm: 0, longTerm: 0, deferred: 0, disallowed: 0 }
+  for (const lot of sold) {
+    const washed = shares.get(lot.lotId)
+    if (!washed || lot.quantity <= 0) continue
+    const perShare = lot.loss / lot.quantity
+    const deferred = washed.deferredShares * perShare
+    const disallowed = washed.disallowedShares * perShare
+    if (lot.holdingPeriod === 'short') total.shortTerm += deferred + disallowed
+    else total.longTerm += deferred + disallowed
+    total.deferred += deferred
+    total.disallowed += disallowed
+  }
+  return total
+}

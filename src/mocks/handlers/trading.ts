@@ -137,6 +137,7 @@ export const tradingHandlers = [
         estimatedValue: t.estimatedValue,
         currency: t.currency,
         reason: sleeveReason(t),
+        ...(t.repurchaseBlockedUntil === undefined ? {} : { repurchaseBlockedUntil: t.repurchaseBlockedUntil }),
       })),
       estimatedTaxImpact: estimates[i]!.net,
       nettedWithAccountIds: estimates[i]!.nettedWithAccountIds,

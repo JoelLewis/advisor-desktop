@@ -6,7 +6,7 @@ import { realisedSales, openWashSaleWindows, type OpenWashSaleWindow } from '../
 import { FX_RATES_USD_BASE } from '../data/currencies'
 import { convertCurrency } from '@/lib/currency'
 import { isTaxableAccount } from '@/lib/tax-treatment'
-import { additionalCapitalGainsTax, netTaxForLegs, type RealisedByCharacter, type TaxedLeg } from '@/lib/capital-gains'
+import { additionalCapitalGainsTax, netTaxForLegs, recognisedResult, type RealisedByCharacter, type TaxedLeg } from '@/lib/capital-gains'
 import { taxRateFor } from '@/features/portfolios/tax/shared'
 import { taxCharacterOf } from '@/lib/security-master'
 
@@ -121,10 +121,12 @@ export function estimateTaxOnReturns(
     const prior = realisedSoFar.get(returnId) ?? { realised: ytd, accountIds: [] }
     const currency = currencyOf(account)
     const fromUSD = (usd: number) => convertCurrency(usd, 'USD', currency, FX_RATES_USD_BASE)
+    // §1091 · only the recognised part of a loss offsets anything; a washed loss is not netted.
+    const recognised = legs.map(recognisedResult)
     const added: Required<RealisedByCharacter> = {
-      shortTerm: toUSD(legs.reduce((s, l) => s + l.realisedShortTerm, 0), currency),
-      longTerm: toUSD(legs.reduce((s, l) => s + l.realisedLongTerm, 0), currency),
-      collectibleLongTerm: toUSD(legs.reduce((s, l) => s + (l.realisedCollectibleLongTerm ?? 0), 0), currency),
+      shortTerm: toUSD(recognised.reduce((s, r) => s + r.shortTerm, 0), currency),
+      longTerm: toUSD(recognised.reduce((s, r) => s + r.longTerm, 0), currency),
+      collectibleLongTerm: toUSD(recognised.reduce((s, r) => s + r.collectibleLongTerm, 0), currency),
     }
     realisedSoFar.set(returnId, {
       realised: {

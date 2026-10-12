@@ -11,9 +11,11 @@ import { convertCurrency } from '@/lib/currency'
 import { securityKind, concentrationLimitFor, isMarketTradable, taxCharacterOf } from '@/lib/security-master'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
-import { hasWashSaleRisk, isoDaysBefore } from '@/lib/wash-sale'
+import { hasWashSaleRisk, isoDaysBefore, washedLoss, type SoldLossLot } from '@/lib/wash-sale'
 import { estimateTaxOnReturns, openWashSaleWindowsFor } from './tax-return'
 import { generateTaxLots, boundedTradeQty, washSaleAcquisitions, type CustodianLot } from './custodian'
+import { washSaleWindow } from '../data/realised-sales'
+import { repurchaseRestrictionsFor } from './repurchase-restrictions'
 import { taxRateFor } from '@/features/portfolios/tax/shared'
 import type { Position } from '@/types/portfolio'
 import type { CurrencyCode } from '@/types/currency'
@@ -74,8 +76,9 @@ export function currencyForAccount(accountId: string): CurrencyCode {
   return accounts.find((a) => a.id === accountId)?.baseCurrency ?? 'USD'
 }
 
-type RealisedSale = { shortTerm: number; longTerm: number; collectibleLongTerm: number; tax: number; consumedLotIds: string[] }
-const NOTHING_REALISED: RealisedSale = { shortTerm: 0, longTerm: 0, collectibleLongTerm: 0, tax: 0, consumedLotIds: [] }
+/** `soldLosses`: the shares of each lot sold at a loss, which §1091 may wash (`washedLoss`). */
+type RealisedSale = { shortTerm: number; longTerm: number; collectibleLongTerm: number; tax: number; consumedLotIds: string[]; soldLosses: SoldLossLot[] }
+const NOTHING_REALISED: RealisedSale = { shortTerm: 0, longTerm: 0, collectibleLongTerm: 0, tax: 0, consumedLotIds: [], soldLosses: [] }
 
 /**
  * Realise a sale of `notional` dollars out of `target`: the signed short- and long-term result
@@ -102,6 +105,7 @@ function realiseSale(accountLots: readonly CustodianLot[], target: Position, not
   let longTerm = 0
   let tax = 0
   const consumedLotIds: string[] = []
+  const soldLosses: SoldLossLot[] = []
   for (const lot of ordered) {
     if (remaining <= 0 || lot.currentValue <= 0) continue
     const portion = Math.min(1, remaining / lot.currentValue)
@@ -110,6 +114,12 @@ function realiseSale(accountLots: readonly CustodianLot[], target: Position, not
     if (lot.holdingPeriod === 'short') shortTerm += realised
     else longTerm += realised
     if (realised > 0) tax += realised * rateFor(lot.holdingPeriod)
+    if (realised < 0) {
+      soldLosses.push({
+        lotId: lot.id, symbol: target.symbol, purchaseDate: lot.purchaseDate,
+        quantity: lot.quantity * portion, loss: realised, holdingPeriod: lot.holdingPeriod,
+      })
+    }
     remaining -= lot.currentValue * portion
   }
   const roundedLongTerm = Math.round(longTerm)
@@ -119,6 +129,7 @@ function realiseSale(accountLots: readonly CustodianLot[], target: Position, not
     collectibleLongTerm: character === 'collectible' ? roundedLongTerm : 0,
     tax: Math.max(0, Math.round(tax)),
     consumedLotIds,
+    soldLosses,
   }
 }
 
@@ -291,6 +302,27 @@ export function generateRebalanceTrades(
 
   type RawLeg = { target: TradeCandidate; side: 'buy' | 'sell'; notional: number; sleeve: Sleeve }
 
+  /**
+   * §0.2 · the part of a sale's loss §1091 washes against the taxpayer's purchases in the last 30
+   * days, rounded per character; `undefined` when none does. The sale's own lots are not
+   * replacements (`matchWashedShares`). Judged per account: another account's legs in the same
+   * batch are not cross-checked (see `wash-sale.ts`).
+   */
+  const washedLossOn = (realised: RealisedSale, symbol: string): ProposedTrade['washedLoss'] => {
+    const washed = washedLoss(realised.soldLosses, acquisitions, MOCK_TODAY_ISO)
+    const shortTerm = Math.round(washed.shortTerm)
+    const longTerm = Math.round(washed.longTerm)
+    if (shortTerm === 0 && longTerm === 0) return undefined
+    const deferred = Math.round(washed.deferred)
+    return {
+      shortTerm,
+      longTerm,
+      collectibleLongTerm: taxCharacterOf(symbol) === 'collectible' ? longTerm : 0,
+      deferred,
+      disallowed: shortTerm + longTerm - deferred,
+    }
+  }
+
   const raw = drift.assetClassDrifts
     .filter((d) => Math.abs(d.drift) > driftThreshold)
     .flatMap((d): RawLeg[] => {
@@ -434,6 +466,9 @@ export function generateRebalanceTrades(
       const realised = side === 'sell' && taxable && target.position
         ? realiseSale(ownLots, target.position, estimatedValue, taxAware)
         : NOTHING_REALISED
+      const realisesLoss = realised.shortTerm + realised.longTerm < 0
+      const washed = washedLossOn(realised, target.symbol)
+      const recognisesLoss = realised.shortTerm + realised.longTerm - (washed?.shortTerm ?? 0) - (washed?.longTerm ?? 0) < 0
       return {
         symbol: target.symbol,
         name: target.name,
@@ -445,9 +480,12 @@ export function generateRebalanceTrades(
         realisedLongTerm: realised.longTerm,
         realisedCollectibleLongTerm: realised.collectibleLongTerm,
         washSaleRisk: hasWashSaleRisk(
-          { symbol: target.symbol, side, realisesLoss: realised.shortTerm + realised.longTerm < 0, soldLotIds: realised.consumedLotIds },
+          { symbol: target.symbol, side, realisesLoss, soldLotIds: realised.consumedLotIds },
           lossWindows, acquisitions, MOCK_TODAY_ISO,
         ),
+        ...(washed ? { washedLoss: washed } : {}),
+        // §0.2 · a loss sale opens its own §1091 window, today through today + 30.
+        ...(side === 'sell' && recognisesLoss ? { repurchaseBlockedUntil: washSaleWindow(MOCK_TODAY_ISO).end } : {}),
         currency,
         ...sleeve,
       }
@@ -781,6 +819,7 @@ export const omsHandlers = [
       batch.push({ account, legs: generateRebalanceTrades(accountId, body.taxAware, body.driftThreshold) })
     }
     const estimates = estimateTaxOnReturns(batch, MOCK_TODAY_ISO)
+    const proposals = batch.map(({ account, legs }) => ({ accountId: account.id, legs }))
     const previews: RebalancePreview[] = batch.map(({ account, legs: trades }, i) => {
       const tax = estimates[i]!
       const accountId = account.id
@@ -802,6 +841,7 @@ export const omsHandlers = [
         // Whether a sale here is a taxable event at all; a surface reads it to tell "not taxed in
         // this account" from "taxed, and the result is zero".
         taxable: isTaxableAccount(account.taxTreatment),
+        repurchaseRestrictions: repurchaseRestrictionsFor(account, MOCK_TODAY_ISO, proposals),
       }
     })
     return HttpResponse.json(previews)

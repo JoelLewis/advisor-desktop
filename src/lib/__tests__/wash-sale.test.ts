@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { hasWashSaleRisk, isoDaysBefore, matchWashedShares, type Acquisition } from '@/lib/wash-sale'
+import { hasWashSaleRisk, isoDaysBefore, matchWashedShares, washedLoss, type Acquisition } from '@/lib/wash-sale'
 
 const window = { symbol: 'INTC', start: '2026-01-22', end: '2026-03-23' }
 
@@ -90,5 +90,33 @@ describe('matchWashedShares (Treas. Reg. §1.1091-1(c): replacement shares wash 
     expect(isoDaysBefore(today, 30)).toBe('2026-01-26')
     const washed = matchWashedShares([loss('old', '2024-06-03', 10)], [buy('edge', '2026-01-26', 10)], today)
     expect(washed.get('old')).toEqual({ deferredShares: 10, disallowedShares: 0 })
+  })
+})
+
+describe('washedLoss (the dollars of a sale\'s loss §1091 takes, pro rata to the washed shares)', () => {
+  const today = '2026-02-25'
+  const buy = (lotId: string, quantity: number, account: Acquisition['account'] = 'taxable'): Acquisition =>
+    ({ symbol: 'SMH', date: '2026-02-20', lotId, quantity, account })
+  const sold = (lotId: string, purchaseDate: string, quantity: number, loss: number, holdingPeriod: 'short' | 'long') =>
+    ({ lotId, symbol: 'SMH', purchaseDate, quantity, loss, holdingPeriod })
+
+  it('a partly replaced sale washes that fraction of its loss: 120 of 400 shares washes 30% of −$10,000', () => {
+    expect(washedLoss([sold('old', '2024-06-03', 400, -10_000, 'long')], [buy('new', 120)], today))
+      .toEqual({ shortTerm: 0, longTerm: -3_000, deferred: -3_000, disallowed: 0 })
+  })
+
+  it('splits by holding period and by what becomes of it: an IRA replacement disallows, a taxable one defers', () => {
+    const result = washedLoss(
+      [sold('lt', '2024-06-03', 100, -2_000, 'long'), sold('st', '2025-11-03', 100, -1_000, 'short')],
+      [buy('ira', 150, 'tax_advantaged')],
+      today,
+    )
+    // Earliest-bought loss shares first: all 100 long-term (−2,000), then 50 of the short-term (−500).
+    expect(result).toEqual({ shortTerm: -500, longTerm: -2_000, deferred: 0, disallowed: -2_500 })
+  })
+
+  it('nothing replaced, nothing washed', () => {
+    expect(washedLoss([sold('old', '2024-06-03', 400, -10_000, 'long')], [], today))
+      .toEqual({ shortTerm: 0, longTerm: 0, deferred: 0, disallowed: 0 })
   })
 })

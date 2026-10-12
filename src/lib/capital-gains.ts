@@ -36,12 +36,32 @@ export function netCapitalGainsTax(shortTerm: number, longTerm: number, rateFor:
 
 /**
  * What `netTaxForLegs` reads off each leg: its signed realised result by holding period, the part
- * of the long-term result that is collectibles (absent: none), and its own tax.
+ * of the long-term result that is collectibles (absent: none), its own tax, and the part of its
+ * realised loss IRC §1091 washes (absent: none; signed like the loss, so ≤ 0).
  */
-export type TaxedLeg = { realisedShortTerm: number; realisedLongTerm: number; realisedCollectibleLongTerm?: number; taxImpact: number }
+export type TaxedLeg = {
+  realisedShortTerm: number
+  realisedLongTerm: number
+  realisedCollectibleLongTerm?: number
+  taxImpact: number
+  washedLoss?: RealisedByCharacter
+}
 
 /**
- * The estimated tax on one proposal **on its own**: `net` is its legs' results netted under §1222
+ * The result a leg puts on the return: what it realised less the loss §1091 washes. A washed loss
+ * is deferred into a replacement's basis or lost; either way it offsets no gain this year.
+ */
+export function recognisedResult(leg: TaxedLeg): Required<RealisedByCharacter> {
+  return {
+    shortTerm: leg.realisedShortTerm - (leg.washedLoss?.shortTerm ?? 0),
+    longTerm: leg.realisedLongTerm - (leg.washedLoss?.longTerm ?? 0),
+    collectibleLongTerm: (leg.realisedCollectibleLongTerm ?? 0) - (leg.washedLoss?.collectibleLongTerm ?? 0),
+  }
+}
+
+/**
+ * The estimated tax on one proposal **on its own**: `net` is its legs' recognised results (realised
+ * less any §1091-washed loss, `recognisedResult`) netted under §1222
  * (no year-to-date realised results, no other account), `gross` the sum of the legs' own tax on
  * gains. Netting a proposal's own legs never raises its bill, so `net` is clamped to `gross`: it
  * rounds once where `gross` rounds per leg, and with nothing to net the two can differ by a dollar.
@@ -51,9 +71,10 @@ export type TaxedLeg = { realisedShortTerm: number; realisedLongTerm: number; re
  */
 export function netTaxForLegs(legs: readonly TaxedLeg[], rateFor: RateFor): { net: number; gross: number } {
   const gross = legs.reduce((s, l) => s + l.taxImpact, 0)
-  const shortTerm = legs.reduce((s, l) => s + l.realisedShortTerm, 0)
-  const longTerm = legs.reduce((s, l) => s + l.realisedLongTerm, 0)
-  const collectibleLongTerm = legs.reduce((s, l) => s + (l.realisedCollectibleLongTerm ?? 0), 0)
+  const recognised = legs.map(recognisedResult)
+  const shortTerm = recognised.reduce((s, r) => s + r.shortTerm, 0)
+  const longTerm = recognised.reduce((s, r) => s + r.longTerm, 0)
+  const collectibleLongTerm = recognised.reduce((s, r) => s + r.collectibleLongTerm, 0)
   return { net: Math.min(netCapitalGainsTax(shortTerm, longTerm, rateFor, collectibleLongTerm), gross), gross }
 }
 

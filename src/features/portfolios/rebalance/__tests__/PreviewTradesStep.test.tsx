@@ -181,6 +181,7 @@ describe('PreviewTradesStep renders each trade at its own account currency, not 
       grossTaxOnGains: 0,
       ytdRealisedOnReturn: { shortTerm: 0, longTerm: 0, collectibleLongTerm: 0 },
       nettedWithAccountIds: [],
+      repurchaseRestrictions: [],
       trades: [{
         symbol: 'SMH', name: 'VanEck Semiconductor ETF', side: 'sell', quantity: 180, estimatedValue: 44_136,
         taxImpact: 0, realisedShortTerm: 0, realisedLongTerm: 0, realisedCollectibleLongTerm: 0, washSaleRisk: false, currency: 'USD',

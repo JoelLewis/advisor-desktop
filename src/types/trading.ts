@@ -162,4 +162,6 @@ export type ModelProposedTrade = {
   /** Same account-native currency as the parent preview — see `ModelTradePreview.currency`. */
   currency: CurrencyCode
   reason: string
+  /** Sells that recognise a loss only: the last day of the IRC §1091 window the sale opens (sale date + 30). */
+  repurchaseBlockedUntil?: string
 }
