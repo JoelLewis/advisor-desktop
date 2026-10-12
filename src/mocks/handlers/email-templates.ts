@@ -1,4 +1,5 @@
 import { http, HttpResponse, delay } from 'msw'
+import { nextEventTime, nextRecordNumber } from './event-clock'
 import type { EmailTemplate, TemplateCategory } from '@/types/email-template'
 import { emailTemplates as seedData } from '@/mocks/data/email-templates'
 
@@ -28,8 +29,8 @@ export const emailTemplateHandlers = [
   http.post('/api/settings/email-templates', async ({ request }) => {
     await delay(200)
     const body = await request.json() as Pick<EmailTemplate, 'name' | 'subject' | 'body' | 'category'>
-    const id = `et-${Date.now()}`
-    const now = new Date().toISOString()
+    const id = `et-${nextRecordNumber()}`
+    const now = nextEventTime()
     const template: EmailTemplate = {
       id,
       name: body.name,
@@ -54,7 +55,7 @@ export const emailTemplateHandlers = [
       ...existing,
       ...body,
       version: existing.version + 1,
-      updatedAt: new Date().toISOString(),
+      updatedAt: nextEventTime(),
     }
     templates.set(id, updated)
     return HttpResponse.json(updated)

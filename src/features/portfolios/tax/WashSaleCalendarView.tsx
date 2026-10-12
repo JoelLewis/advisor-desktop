@@ -19,13 +19,14 @@ export function WashSaleCalendarView({ windows }: WashSaleCalendarViewProps) {
       </CardHeader>
       <CardContent>
         <p className="mb-3 text-caption text-text-secondary">
-          Opened by a realised loss sale in any account in this household, including IRAs and
-          employer plans. Repurchasing a substantially identical security inside the window
-          disallows the loss under IRC §1091.
+          Opened by a realised loss sale by this account&rsquo;s taxpayer: the owner or their
+          spouse, or the trust or entity itself. Repurchasing a substantially identical security
+          inside the window, in any of their accounts, disallows the loss under IRC §1091: deferred
+          into the new shares&rsquo; basis in a taxable account, lost for good in an IRA or Roth.
         </p>
         {windows.length === 0 ? (
           <div className="py-12 text-center text-text-tertiary">
-            No open wash sale windows in this household.
+            No open wash sale windows for this taxpayer.
           </div>
         ) : (
           <div className="space-y-3">

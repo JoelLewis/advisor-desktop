@@ -3,7 +3,7 @@ import type { Note } from '@/types/note'
 export const notes: Note[] = [
   // ── Johnson ──
   { id: 'note-001', clientId: 'cli-001', content: 'Robert interested in exploring ESG-aligned alternatives for the trust. Review options at next quarterly meeting.', createdAt: '2026-02-20T14:00:00Z', updatedAt: '2026-02-20T14:00:00Z', createdBy: 'Sarah Mitchell', pinned: true, aiGenerated: false },
-  { id: 'note-002', clientId: 'cli-001', content: 'Tax-loss harvesting executed — sold INTC, replaced with SMH to maintain sector exposure while avoiding wash sale. Robert approved via phone.', createdAt: '2026-02-21T10:30:00Z', updatedAt: '2026-02-21T10:30:00Z', createdBy: 'Sarah Mitchell', pinned: false, aiGenerated: false },
+  { id: 'note-002', clientId: 'cli-001', content: 'Tax-loss harvesting executed — sold INTC, replaced with SMH to maintain sector exposure while avoiding wash sale. Robert approved via phone.', createdAt: '2026-02-20T15:30:00Z', updatedAt: '2026-02-20T15:30:00Z', createdBy: 'Sarah Mitchell', pinned: false, aiGenerated: false },
   { id: 'note-003', clientId: 'cli-002', content: 'Patricia mentioned interest in charitable remainder trust for estate planning. Flagged for next family meeting.', createdAt: '2026-01-15T11:00:00Z', updatedAt: '2026-01-15T11:00:00Z', createdBy: 'Sarah Mitchell', pinned: false, aiGenerated: false },
 
   // ── Chen-Wong ──

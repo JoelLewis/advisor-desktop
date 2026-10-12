@@ -1,25 +1,33 @@
 import { http, HttpResponse } from 'msw'
-import type { Order, RebalancePreview, ProposedTrade, TradeRequest, PreTradeCheckRequest, PreTradeViolation, PreTradeCheckProposalRequest } from '@/services/oms'
+import { nextEventTime, nextRecordNumber } from './event-clock'
+import type { Order, RebalancePreview, ProposedTrade, TradeRequest, PreTradeCheckRequest, PreTradeViolation, PreTradeCheckProposalRequest, ProjectedDrift, ResidualDriftReason } from '@/services/oms'
 import { notFound } from './utils'
 import { RESTRICTED_SECURITIES, CASH_MINIMUM_PCT, TECH_SYMBOLS, SECTOR_LIMIT, evaluateProposal, invalidProposal } from './compliance'
-import { computeDriftForAccount, modelImplementationSecurity } from './pms'
+import { computeDriftForAccount, computeDriftForHoldings, modelImplementationSecurity, type DriftHolding } from './pms'
 import { accounts } from '../data/accounts'
 import { getPositionsForAccount } from '../data/positions'
-import { openWashSaleWindows } from '../data/realised-sales'
 import { FX_RATES_USD_BASE } from '../data/currencies'
 import { convertCurrency } from '@/lib/currency'
-import { securityKind, concentrationLimitFor, isMarketTradable } from '@/lib/security-master'
+import { securityKind, concentrationLimitFor, isMarketTradable, taxCharacterOf } from '@/lib/security-master'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
-import { hasWashSaleRisk, isoDaysBefore } from '@/lib/wash-sale'
-import { netTaxForLegs } from '@/lib/capital-gains'
-import { generateTaxLots, boundedTradeQty } from './custodian'
-import { taxRateFor } from '@/features/portfolios/tax/shared'
-import type { Position, TaxLot } from '@/types/portfolio'
+import { hasWashSaleRisk, isoDaysBefore, type SoldLossLot } from '@/lib/wash-sale'
+import { estimateTaxOnReturns, openWashSaleWindowsFor } from './tax-return'
+import { generateTaxLots, boundedTradeQty, washSaleAcquisitions, type CustodianLot } from './custodian'
+import { repurchaseRestrictionsFor } from './repurchase-restrictions'
+import { settleBatchWashSales, type LegSale } from './batch-wash-sales'
+import { taxRateFor } from '@/lib/tax-rules'
+import type { Position } from '@/types/portfolio'
 import type { CurrencyCode } from '@/types/currency'
 
 // Exported so `ai.ts`'s trading-desk chat response reads the same pending-order counts this
 // handler serves, rather than a second, independently hand-typed "3 open orders" figure.
+//
+// Final review I2 · every timestamp is real UTC, as `clock.ts` reads it (12:00Z is 7:00 ET). Fills
+// were written as New York time with a Z, so several read as pre-market fills; they now fall in the
+// regular session, 14:30–21:00Z before daylight time starts on 2026-03-08. Pending orders submitted
+// before 12:00Z today are pre-market submissions still waiting for the open. ord-014, which filled on
+// Sunday 2026-02-22, filled on Friday 2026-02-20. BTC (ord-015) trades every day.
 export const orders: Order[] = [
   // ── Recent orders for Johnson Family Trust (acc-001) ──
   { id: 'ord-001', accountId: 'acc-001', symbol: 'VTI', side: 'buy', quantity: 150, orderType: 'market', status: 'filled', filledQuantity: 150, filledPrice: 268.35, submittedAt: '2026-02-24T14:30:00Z', filledAt: '2026-02-24T14:30:02Z', assetClass: 'equity' },
@@ -28,13 +36,14 @@ export const orders: Order[] = [
 
   // ── Robert Johnson Individual (acc-002) ──
   // D28 — this fill is the same event as rs-001, so it prices at rs-001's $142,250 / 5,000 shares
-  // and acc-002's INTC position now shows the 7,000 shares left after it.
-  { id: 'ord-004', accountId: 'acc-002', symbol: 'INTC', side: 'sell', quantity: 5000, orderType: 'market', status: 'filled', filledQuantity: 5000, filledPrice: 28.45, submittedAt: '2026-02-21T10:15:00Z', filledAt: '2026-02-21T10:15:03Z', assetClass: 'equity' },
+  // and acc-002's INTC position now shows the 7,000 shares left after it. Final review I2: it was
+  // dated Saturday 2026-02-21; it filled Friday 2026-02-20 at 10:15 ET (15:15Z).
+  { id: 'ord-004', accountId: 'acc-002', symbol: 'INTC', side: 'sell', quantity: 5000, orderType: 'market', status: 'filled', filledQuantity: 5000, filledPrice: 28.45, submittedAt: '2026-02-20T15:15:00Z', filledAt: '2026-02-20T15:15:03Z', assetClass: 'equity' },
   { id: 'ord-005', accountId: 'acc-002', symbol: 'QQQ', side: 'buy', quantity: 200, orderType: 'limit', limitPrice: 480.00, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-25T09:35:00Z', assetClass: 'equity' },
 
   // ── Chen Irrevocable Trust (acc-006) ──
-  { id: 'ord-006', accountId: 'acc-006', symbol: 'VTI', side: 'buy', quantity: 800, orderType: 'market', status: 'filled', filledQuantity: 800, filledPrice: 268.40, submittedAt: '2026-02-20T11:00:00Z', filledAt: '2026-02-20T11:00:04Z', assetClass: 'equity' },
-  { id: 'ord-007', accountId: 'acc-006', symbol: 'TLT', side: 'sell', quantity: 300, orderType: 'market', status: 'filled', filledQuantity: 300, filledPrice: 95.65, submittedAt: '2026-02-20T11:00:00Z', filledAt: '2026-02-20T11:00:02Z', assetClass: 'equity' },
+  { id: 'ord-006', accountId: 'acc-006', symbol: 'VTI', side: 'buy', quantity: 800, orderType: 'market', status: 'filled', filledQuantity: 800, filledPrice: 268.40, submittedAt: '2026-02-20T16:00:00Z', filledAt: '2026-02-20T16:00:04Z', assetClass: 'equity' },
+  { id: 'ord-007', accountId: 'acc-006', symbol: 'TLT', side: 'sell', quantity: 300, orderType: 'market', status: 'filled', filledQuantity: 300, filledPrice: 95.65, submittedAt: '2026-02-20T16:00:00Z', filledAt: '2026-02-20T16:00:02Z', assetClass: 'equity' },
 
   // ── David Williams Individual (acc-011) ──
   { id: 'ord-008', accountId: 'acc-011', symbol: 'SPY', side: 'buy', quantity: 100, orderType: 'market', status: 'submitted', filledQuantity: 0, submittedAt: '2026-02-25T10:00:00Z', assetClass: 'equity' },
@@ -42,8 +51,8 @@ export const orders: Order[] = [
 
   // ── Michael Martinez Individual (acc-015) ──
   { id: 'ord-010', accountId: 'acc-015', symbol: 'EFA', side: 'buy', quantity: 350, orderType: 'limit', limitPrice: 81.50, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-25T09:45:00Z', assetClass: 'equity' },
-  { id: 'ord-011', accountId: 'acc-015', symbol: 'GLD', side: 'sell', quantity: 50, orderType: 'market', status: 'filled', filledQuantity: 50, filledPrice: 215.80, submittedAt: '2026-02-24T13:20:00Z', filledAt: '2026-02-24T13:20:01Z', assetClass: 'equity' },
-  { id: 'ord-012', accountId: 'acc-015', symbol: 'VNQ', side: 'buy', quantity: 200, orderType: 'market', status: 'filled', filledQuantity: 200, filledPrice: 89.15, submittedAt: '2026-02-24T13:20:00Z', filledAt: '2026-02-24T13:20:02Z', assetClass: 'equity' },
+  { id: 'ord-011', accountId: 'acc-015', symbol: 'GLD', side: 'sell', quantity: 50, orderType: 'market', status: 'filled', filledQuantity: 50, filledPrice: 215.80, submittedAt: '2026-02-24T18:20:00Z', filledAt: '2026-02-24T18:20:01Z', assetClass: 'equity' },
+  { id: 'ord-012', accountId: 'acc-015', symbol: 'VNQ', side: 'buy', quantity: 200, orderType: 'market', status: 'filled', filledQuantity: 200, filledPrice: 89.15, submittedAt: '2026-02-24T18:20:00Z', filledAt: '2026-02-24T18:20:02Z', assetClass: 'equity' },
 
   // ── Multi-asset orders ──
   // D26 — a mutual fund order cannot fill at 11:00 ET. Rule 22c-1 requires forward pricing at the
@@ -56,7 +65,7 @@ export const orders: Order[] = [
   // statements usually display is a settlement-layer detail; the arithmetic is the reason here, not
   // a claim about any particular clearing system's record layout.
   { id: 'ord-013', accountId: 'acc-001', symbol: 'VFIAX', side: 'purchase', quantity: 53.72647, orderType: 'market', status: 'filled', filledQuantity: 53.72647, filledPrice: 465.32, submittedAt: '2026-02-23T15:00:00Z', filledAt: '2026-02-23T21:00:00Z', assetClass: 'mutual_fund', dollarAmount: 25000, amountType: 'dollars' },
-  { id: 'ord-014', accountId: 'acc-002', symbol: 'UST-10Y', side: 'buy', quantity: 50, orderType: 'limit', limitPrice: 95.25, status: 'filled', filledQuantity: 50, filledPrice: 95.20, submittedAt: '2026-02-22T10:30:00Z', filledAt: '2026-02-22T10:30:05Z', assetClass: 'fixed_income', parAmount: 50000, bondPriceType: 'price', priceOrYield: 95.25 },
+  { id: 'ord-014', accountId: 'acc-002', symbol: 'UST-10Y', side: 'buy', quantity: 50, orderType: 'limit', limitPrice: 95.25, status: 'filled', filledQuantity: 50, filledPrice: 95.20, submittedAt: '2026-02-20T15:30:00Z', filledAt: '2026-02-20T15:30:05Z', assetClass: 'fixed_income', parAmount: 50000, bondPriceType: 'price', priceOrYield: 95.25 },
   // D27 — spot BTC settled into acc-002, a Schwab brokerage that can only hold the IBIT and ETHE
   // ETFs. It belongs in acc-045, the Coinbase account that actually custodies coins, and at the one
   // BTC price the app knows.
@@ -74,24 +83,28 @@ export function currencyForAccount(accountId: string): CurrencyCode {
   return accounts.find((a) => a.id === accountId)?.baseCurrency ?? 'USD'
 }
 
-type RealisedSale = { shortTerm: number; longTerm: number; tax: number; consumedLotIds: string[] }
-const NOTHING_REALISED: RealisedSale = { shortTerm: 0, longTerm: 0, tax: 0, consumedLotIds: [] }
+/** `soldLosses`: the shares of each lot sold at a loss, which §1091 may wash (`washedLoss`). */
+type RealisedSale = { shortTerm: number; longTerm: number; collectibleLongTerm: number; tax: number; consumedLotIds: string[]; soldLosses: SoldLossLot[] }
+const NOTHING_REALISED: RealisedSale = { shortTerm: 0, longTerm: 0, collectibleLongTerm: 0, tax: 0, consumedLotIds: [], soldLosses: [] }
 
 /**
  * Realise a sale of `notional` dollars out of `target`: the signed short- and long-term result
  * and the capital-gains tax on its gains, using the same per-lot generator the tax page reads (`generateTaxLots`) and the same rate function
- * (`taxRateFor`) it applies — a short-term-heavy sell is taxed at `SHORT_TERM_RATE` (37%), not
+ * (`taxRateFor`) it applies — a short-term-heavy sell is taxed at `SHORT_TERM_RATE` (40.8%), not
  * silently at the long-term rate (23.8%) for the entire position. A tax-aware pass sells the
  * lowest-gain-fraction (highest cost basis) lots first to minimise realised gain; a tax-unaware
  * pass sells the lots in their own oldest-first order.
  */
-function realiseSale(accountLots: readonly TaxLot[], target: Position, notional: number, taxAware: boolean): RealisedSale {
+function realiseSale(accountLots: readonly CustodianLot[], target: Position, notional: number, taxAware: boolean): RealisedSale {
   const lots = accountLots.filter((l) => l.positionId === target.id)
   if (lots.length === 0 || notional <= 0) return NOTHING_REALISED
+  // §0.6 · GLD's long-term gain is collectibles gain (31.8%), not 23.8%.
+  const character = taxCharacterOf(target.symbol)
+  const rateFor = (holdingPeriod: (typeof lots)[number]['holdingPeriod']) => taxRateFor(holdingPeriod, character)
   // Minimise realised gain and rank by *tax per dollar sold*, not gain per dollar sold: a
-  // low-gain short-term lot (37% rate) can carry more tax than a low-gain long-term lot (23.8%
+  // low-gain short-term lot (40.8% rate) can carry more tax than a low-gain long-term lot (23.8%
   // rate), so sorting by gain fraction alone can pick a worse-taxed lot first.
-  const taxPerDollar = (l: (typeof lots)[number]) => (l.gainLoss / l.currentValue) * taxRateFor(l.holdingPeriod)
+  const taxPerDollar = (l: (typeof lots)[number]) => (l.gainLoss / l.currentValue) * rateFor(l.holdingPeriod)
   const ordered = taxAware ? [...lots].sort((a, b) => taxPerDollar(a) - taxPerDollar(b)) : lots
 
   let remaining = notional
@@ -99,6 +112,7 @@ function realiseSale(accountLots: readonly TaxLot[], target: Position, notional:
   let longTerm = 0
   let tax = 0
   const consumedLotIds: string[] = []
+  const soldLosses: SoldLossLot[] = []
   for (const lot of ordered) {
     if (remaining <= 0 || lot.currentValue <= 0) continue
     const portion = Math.min(1, remaining / lot.currentValue)
@@ -106,10 +120,24 @@ function realiseSale(accountLots: readonly TaxLot[], target: Position, notional:
     const realised = lot.gainLoss * portion
     if (lot.holdingPeriod === 'short') shortTerm += realised
     else longTerm += realised
-    if (realised > 0) tax += realised * taxRateFor(lot.holdingPeriod)
+    if (realised > 0) tax += realised * rateFor(lot.holdingPeriod)
+    if (realised < 0) {
+      soldLosses.push({
+        lotId: lot.id, symbol: target.symbol, purchaseDate: lot.purchaseDate,
+        quantity: lot.quantity * portion, loss: realised, holdingPeriod: lot.holdingPeriod,
+      })
+    }
     remaining -= lot.currentValue * portion
   }
-  return { shortTerm: Math.round(shortTerm), longTerm: Math.round(longTerm), tax: Math.max(0, Math.round(tax)), consumedLotIds }
+  const roundedLongTerm = Math.round(longTerm)
+  return {
+    shortTerm: Math.round(shortTerm),
+    longTerm: roundedLongTerm,
+    collectibleLongTerm: character === 'collectible' ? roundedLongTerm : 0,
+    tax: Math.max(0, Math.round(tax)),
+    consumedLotIds,
+    soldLosses,
+  }
 }
 
 /**
@@ -132,7 +160,7 @@ type TradeCandidate = { symbol: string; name: string; price: number; position?: 
  * already knows these three numbers; it now hands them on instead of dropping them.
  */
 type Sleeve = {
-  assetClass: string
+  assetClass: DriftHolding['assetClass']
   /** The account's own weight in this class, renormalised — `computeDriftForAccount`'s `actual`. */
   actualWeight: number
   /** The model's target weight for it — the same figure the drift surface bands against. */
@@ -166,8 +194,8 @@ export type ProposedTradeLeg = ProposedTrade & Sleeve
  *
  * A tax-aware pass also never sells a position whose every lot is `recentlyOpened` (held 31 days
  * or fewer). Such a position is, in practice, a harvest replacement: acc-002's 180 SMH were
- * bought 2026-02-21 to keep semiconductor exposure after the INTC loss sale (note-002, comp-006),
- * and at zero gain they ranked ahead of SPY, so the toggle sold them four days later and undid the
+ * bought 2026-02-20 to keep semiconductor exposure after the INTC loss sale (note-002, comp-006),
+ * and at zero gain they ranked ahead of SPY, so the toggle sold them five days later and undid the
  * harvest. Holding the replacement past the 31st day is the TLH practice; the sleeve then fills
  * from the next candidate as it always would.
  */
@@ -181,7 +209,7 @@ function orderSellCandidates(held: Position[], taxAware: boolean, recentlyOpened
 const REPLACEMENT_HOLD_DAYS = 31
 
 /** Positions every one of whose lots was bought within the last `REPLACEMENT_HOLD_DAYS` days. */
-function recentlyOpenedPositions(lots: readonly TaxLot[], asOfISO: string): Set<string> {
+function recentlyOpenedPositions(lots: readonly CustodianLot[], asOfISO: string): Set<string> {
   const since = isoDaysBefore(asOfISO, REPLACEMENT_HOLD_DAYS)
   const hasOlderLot = new Set(lots.filter((l) => l.purchaseDate < since).map((l) => l.positionId))
   return new Set(lots.filter((l) => !hasOlderLot.has(l.positionId)).map((l) => l.positionId))
@@ -266,28 +294,41 @@ export function generateRebalanceTrades(
   driftThreshold = 0.005,
   modelId?: string,
 ): ProposedTradeLeg[] {
+  return generateRebalanceProposal(accountId, taxAware, driftThreshold, modelId).legs
+}
+
+/** One account's proposal, as a batch step needs it. */
+export type RebalanceProposal = {
+  legs: ProposedTradeLeg[]
+  /** What each sell leg disposes of, lot by lot, for `settleBatchWashSales`. */
+  sales: ReadonlyMap<ProposedTradeLeg, LegSale>
+}
+
+/**
+ * `generateRebalanceTrades` with the lots each leg sells. A preview passes the batch's proposals
+ * through `settleBatchWashSales`, which needs them; the legs are the same either way.
+ */
+export function generateRebalanceProposal(
+  accountId: string,
+  taxAware: boolean,
+  driftThreshold = 0.005,
+  modelId?: string,
+): RebalanceProposal {
   const account = accounts.find((a) => a.id === accountId)
-  if (!account) return []
+  if (!account) return { legs: [], sales: new Map() }
   const positions = getPositionsForAccount(account.id, account.totalValue)
   const drift = computeDriftForAccount(account, modelId)
   const taxable = isTaxableAccount(account.taxTreatment)
   const currency = currencyForAccount(accountId)
-  const lossWindows = openWashSaleWindows(MOCK_TODAY_ISO, account.householdId)
+  const lossWindows = openWashSaleWindowsFor(account, MOCK_TODAY_ISO)
   // The account's own lots are generated once and shared by the sell ordering, every leg's
-  // `realiseSale`, and the household acquisitions below.
+  // `realiseSale`, and the taxpayer's acquisitions below.
   const ownLots = generateTaxLots(account.id, account.totalValue)
   const recentlyOpened = recentlyOpenedPositions(ownLots, MOCK_TODAY_ISO)
-  const acquisitions = accounts.filter((a) => a.householdId === account.householdId).flatMap((a) => {
-    const symbolOf = new Map(getPositionsForAccount(a.id, a.totalValue).map((p) => [p.id, p.symbol]))
-    const lots = a.id === account.id ? ownLots : generateTaxLots(a.id, a.totalValue)
-    return lots.map((l) => {
-      const symbol = symbolOf.get(l.positionId)
-      if (symbol === undefined) throw new Error(`tax lot ${l.id} in ${a.id} names unknown position ${l.positionId}`)
-      return { symbol, date: l.purchaseDate, lotId: l.id }
-    })
-  })
+  const acquisitions = washSaleAcquisitions(account, (a) => (a.id === account.id ? ownLots : generateTaxLots(a.id, a.totalValue)))
 
   type RawLeg = { target: TradeCandidate; side: 'buy' | 'sell'; notional: number; sleeve: Sleeve }
+  const sales = new Map<ProposedTradeLeg, LegSale>()
 
   const raw = drift.assetClassDrifts
     .filter((d) => Math.abs(d.drift) > driftThreshold)
@@ -432,7 +473,7 @@ export function generateRebalanceTrades(
       const realised = side === 'sell' && taxable && target.position
         ? realiseSale(ownLots, target.position, estimatedValue, taxAware)
         : NOTHING_REALISED
-      return {
+      const trade: ProposedTradeLeg = {
         symbol: target.symbol,
         name: target.name,
         side,
@@ -441,6 +482,7 @@ export function generateRebalanceTrades(
         taxImpact: realised.tax,
         realisedShortTerm: realised.shortTerm,
         realisedLongTerm: realised.longTerm,
+        realisedCollectibleLongTerm: realised.collectibleLongTerm,
         washSaleRisk: hasWashSaleRisk(
           { symbol: target.symbol, side, realisesLoss: realised.shortTerm + realised.longTerm < 0, soldLotIds: realised.consumedLotIds },
           lossWindows, acquisitions, MOCK_TODAY_ISO,
@@ -448,6 +490,8 @@ export function generateRebalanceTrades(
         currency,
         ...sleeve,
       }
+      sales.set(trade, { soldLosses: realised.soldLosses, consumedLotIds: realised.consumedLotIds })
+      return trade
   }
 
   // Build one side of the proposal at a given scale and report the money it **actually** moves —
@@ -576,7 +620,116 @@ export function generateRebalanceTrades(
 
   // Emitted in the drift surface's own asset-class order, so a preview reads the same way it did
   // before sells and buys were built in separate passes.
-  return raw.map((leg) => built.get(leg)).filter((t): t is ProposedTradeLeg => t !== undefined)
+  const legs = raw.map((leg) => built.get(leg)).filter((t): t is ProposedTradeLeg => t !== undefined)
+  return { legs, sales }
+}
+
+/**
+ * §0.6 · the account's holdings after `legs` execute: a sell reduces its position, a buy adds to
+ * its position (or opens one), and cash takes the difference. Weights stay `marketValue /
+ * totalValue`, the definition `getPositionsForAccount` uses, because trades move money between
+ * holdings without changing the account's value.
+ */
+export function holdingsAfterTrades(account: (typeof accounts)[number], positions: readonly Position[], legs: readonly ProposedTradeLeg[]): DriftHolding[] {
+  const bySymbol = new Map(positions.map((p) => [p.symbol, { assetClass: p.assetClass, marketValue: p.marketValue }]))
+  let cashMoved = 0
+  for (const leg of legs) {
+    const signed = leg.side === 'sell' ? -leg.estimatedValue : leg.estimatedValue
+    const held = bySymbol.get(leg.symbol)
+    bySymbol.set(leg.symbol, { assetClass: held?.assetClass ?? leg.assetClass, marketValue: (held?.marketValue ?? 0) + signed })
+    cashMoved -= signed
+  }
+  const cash = bySymbol.get('CASH')
+  bySymbol.set('CASH', { assetClass: 'cash', marketValue: (cash?.marketValue ?? 0) + cashMoved })
+  return [...bySymbol.values()].map(({ assetClass, marketValue }) => ({ assetClass, weight: marketValue / account.totalValue }))
+}
+
+/** What the classifier needs to know about one invested asset class still away from target. */
+export type ResidualFacts = {
+  /** Projected drift, signed (positive = overweight). */
+  drift: number
+  totalValue: number
+  /** Value left after the trades in positions a sell could still draw on. */
+  sellableLeft: number
+  /** Value in positions with no market to sell into (`isMarketTradable` false). */
+  nonTradableLeft: number
+  /** Value in harvest replacements a tax-aware rebalance holds for `REPLACEMENT_HOLD_DAYS`. */
+  replacementHeldLeft: number
+  /** Price of one unit of the cheapest security that could close the gap; `undefined` when none can. */
+  unitPrice: number | undefined
+}
+
+/**
+ * Why a class is still away from target after the trades. An overweight class whose remaining
+ * excess is more than the sellable value left is blocked by what cannot be sold: a periodic-
+ * liquidity fund, or a harvest replacement still inside its hold. Otherwise the gap is smaller
+ * than one unit of what would close it, or the proposal stopped where the cash band let it.
+ */
+export function residualReason(facts: ResidualFacts): ResidualDriftReason {
+  const residualValue = Math.abs(facts.drift) * facts.totalValue
+  if (facts.drift > 0 && facts.sellableLeft < residualValue) {
+    if (facts.nonTradableLeft > 0) return 'not_market_tradable'
+    if (facts.replacementHeldLeft > 0) return 'replacement_hold'
+  }
+  if (facts.unitPrice !== undefined && residualValue < facts.unitPrice) return 'below_lot_size'
+  return 'cash_capped'
+}
+
+/**
+ * §0.6 · drift after the proposed trades, by asset class, from `computeDriftForHoldings` — the
+ * function current drift comes from — run on `holdingsAfterTrades`. Every invested class whose
+ * |drift| still exceeds `driftThreshold` (the threshold the trades were generated against) carries
+ * the reason the proposal could not close it. Cash carries none: it is the balancing item the
+ * other classes settle into (see the funding priority in `generateRebalanceTrades`).
+ */
+export function projectDrift(
+  accountId: string,
+  legs: readonly ProposedTradeLeg[],
+  taxAware: boolean,
+  driftThreshold = 0.005,
+  modelId?: string,
+): ProjectedDrift {
+  const account = accounts.find((a) => a.id === accountId)
+  if (!account) throw new Error(`projectDrift: unknown account ${accountId}`)
+  const positions = getPositionsForAccount(account.id, account.totalValue)
+  const after = computeDriftForHoldings(account, holdingsAfterTrades(account, positions, legs), modelId)
+  const heldBack = taxAware && isTaxableAccount(account.taxTreatment)
+    ? recentlyOpenedPositions(generateTaxLots(account.id, account.totalValue), MOCK_TODAY_ISO)
+    : new Set<string>()
+  const soldBySymbol = new Map<string, number>()
+  for (const leg of legs) if (leg.side === 'sell') soldBySymbol.set(leg.symbol, (soldBySymbol.get(leg.symbol) ?? 0) + leg.estimatedValue)
+  const valueLeft = (p: Position) => p.marketValue - (soldBySymbol.get(p.symbol) ?? 0)
+
+  const factsFor = (assetClass: DriftHolding['assetClass'], drift: number): ResidualFacts => {
+    const inClass = positions.filter((p) => p.assetClass === assetClass && p.symbol !== 'CASH')
+    const sellable = inClass.filter((p) => isMarketTradable(p.symbol) && !heldBack.has(p.id) && valueLeft(p) > 0)
+    const sum = (ps: readonly Position[]) => ps.reduce((s, p) => s + valueLeft(p), 0)
+    const buyCandidate = drift < 0
+      ? pickBuyCandidate(inClass.filter((p) => isMarketTradable(p.symbol)), after.modelId, assetClass, currencyForAccount(accountId))
+      : undefined
+    const sellPrices = sellable.map((p) => p.price)
+    return {
+      drift,
+      totalValue: account.totalValue,
+      sellableLeft: sum(sellable),
+      nonTradableLeft: sum(inClass.filter((p) => !isMarketTradable(p.symbol))),
+      replacementHeldLeft: sum(inClass.filter((p) => heldBack.has(p.id))),
+      unitPrice: drift < 0 ? buyCandidate?.price : (sellPrices.length > 0 ? Math.min(...sellPrices) : undefined),
+    }
+  }
+
+  return {
+    driftTolerance: after.driftTolerance,
+    driftThreshold,
+    totalDrift: after.totalDrift,
+    maxAbsDrift: after.maxAbsDrift,
+    withinBand: !after.needsRebalance,
+    assetClassDrifts: after.assetClassDrifts.map((d) => (
+      d.assetClass !== 'cash' && Math.abs(d.drift) > driftThreshold
+        ? { ...d, residualReason: residualReason(factsFor(d.assetClass, d.drift)) }
+        : { ...d }
+    )),
+  }
 }
 
 export const omsHandlers = [
@@ -603,7 +756,7 @@ export const omsHandlers = [
   http.post('/api/oms/orders', async ({ request }) => {
     const body = await request.json() as TradeRequest
     const newOrder: Order = {
-      id: `ord-${Date.now()}`,
+      id: `ord-${nextRecordNumber()}`,
       accountId: body.accountId,
       symbol: body.symbol,
       side: body.side,
@@ -613,7 +766,7 @@ export const omsHandlers = [
       stopPrice: body.stopPrice,
       status: 'submitted',
       filledQuantity: 0,
-      submittedAt: new Date().toISOString(),
+      submittedAt: nextEventTime(),
       assetClass: body.assetClass,
       timeInForce: body.timeInForce,
       extendedHours: body.extendedHours,
@@ -696,20 +849,19 @@ export const omsHandlers = [
       })
     }
 
-    // Wash sale check — derived from the household's actual realised loss sales (Task 14's
-    // 61-day window), not a hand-typed symbol list. A wash sale is triggered by *repurchasing*
-    // a security recently sold at a loss, so this applies to buys, and it is scoped to the
-    // account's household — the same fact the tax page reads (`realisedSales` carries
-    // `householdId`).
+    // Wash sale check — derived from the actual realised loss sales (Task 14's 61-day window),
+    // not a hand-typed symbol list. A wash sale is triggered by *repurchasing* a security recently
+    // sold at a loss, so this applies to buys, and it is scoped to the account's wash-sale
+    // taxpayer (`openWashSaleWindowsFor`) — the same fact the tax page reads.
     if (isBuy) {
-      const openWindow = openWashSaleWindows(MOCK_TODAY_ISO, account.householdId).find((w) => w.symbol === sym)
+      const openWindow = openWashSaleWindowsFor(account, MOCK_TODAY_ISO).find((w) => w.symbol === sym)
       if (openWindow) {
         violations.push({
           constraint: 'Wash sale rule (61-day window)',
           severity: 'warning',
           currentValue: `Sold at a loss ${openWindow.saleDate}`,
           limit: '61-day window',
-          message: `${sym} was sold at a loss in this household on ${openWindow.saleDate}. Repurchasing before ${openWindow.end} may trigger a wash sale, disallowing the loss.`,
+          message: `${sym} was sold at a loss by this account's taxpayer (owner or spouse) on ${openWindow.saleDate}. Repurchasing on or before ${openWindow.end} may trigger a wash sale, disallowing the loss.`,
         })
       }
     }
@@ -770,30 +922,44 @@ export const omsHandlers = [
 
   http.post('/api/oms/rebalance', async ({ request }) => {
     const body = await request.json() as { accountIds: string[]; driftThreshold?: number; taxAware: boolean }
-    const previews: RebalancePreview[] = []
+    const proposed = []
     for (const accountId of body.accountIds) {
       const account = accounts.find((a) => a.id === accountId)
       if (!account) return notFound()
       // The Rebalance page's drift-threshold control was sent and ignored; `driftThreshold` was
       // in scope one line away.
-      const trades = generateRebalanceTrades(accountId, body.taxAware, body.driftThreshold)
-      const tax = netTaxForLegs(trades, taxRateFor)
-      previews.push({
+      proposed.push({ account, ...generateRebalanceProposal(accountId, body.taxAware, body.driftThreshold) })
+    }
+    // §0.2 · §1091 across the batch: a buy here can wash a loss sold there, for one taxpayer.
+    const settled = settleBatchWashSales(proposed, MOCK_TODAY_ISO)
+    const batch = proposed.map(({ account }, i) => ({ account, legs: settled[i]! }))
+    const estimates = estimateTaxOnReturns(batch, MOCK_TODAY_ISO)
+    const proposals = batch.map(({ account, legs }) => ({ accountId: account.id, legs }))
+    const previews: RebalancePreview[] = batch.map(({ account, legs: trades }, i) => {
+      const tax = estimates[i]!
+      const accountId = account.id
+      return {
         accountId,
         // §9.3 — same source as every trade on this preview (`currencyForAccount`), so a preview
         // with zero proposed trades still carries a correct currency tag rather than an implicit
         // USD default.
         currency: currencyForAccount(accountId),
         trades,
-        // §1222 — this proposal's legs netted (not year-to-date results, not other accounts); the
-        // gross figure is kept so a surface can show what netting saved.
+        // §1222 — the tax this proposal adds to its owner's return, netted with that return's
+        // year-to-date results and earlier accounts in this batch on the same return. The gross
+        // figure is the legs' own tax on gains, nothing netted: a reference beside the estimate,
+        // not a bound on it (see `RebalancePreview.estimatedTaxImpact`).
         estimatedTaxImpact: tax.net,
         grossTaxOnGains: tax.gross,
+        ytdRealisedOnReturn: tax.ytdRealisedOnReturn,
+        nettedWithAccountIds: tax.nettedWithAccountIds,
         // Whether a sale here is a taxable event at all; a surface reads it to tell "not taxed in
         // this account" from "taxed, and the result is zero".
         taxable: isTaxableAccount(account.taxTreatment),
-      })
-    }
+        repurchaseRestrictions: repurchaseRestrictionsFor(account, MOCK_TODAY_ISO, proposals),
+        projectedDrift: projectDrift(accountId, trades, body.taxAware, body.driftThreshold),
+      }
+    })
     return HttpResponse.json(previews)
   }),
 

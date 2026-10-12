@@ -19,12 +19,18 @@ export type RealisedSale = {
   /** Negative values are loss sales and open a wash-sale window. */
   realisedGainLoss: number
   holdingPeriod: 'short' | 'long'
+  /**
+   * The security bought with the proceeds to keep the market exposure the harvest gave up, when
+   * there was one. Selling it does not itself cause a wash sale; the window governs buying back
+   * `symbol`. The Drift Monitor reads this link to keep a rebalance from trimming the replacement.
+   */
+  replacementSymbol?: string
 }
 
 export const realisedSales: RealisedSale[] = [
-  { id: 'rs-001', accountId: 'acc-002', householdId: 'hh-001', symbol: 'INTC', name: 'Intel Corp.', saleDate: '2026-02-21', quantity: 5_000, proceeds: 142_250, costBasis: 175_000, realisedGainLoss: -32_750, holdingPeriod: 'long' },
+  { id: 'rs-001', accountId: 'acc-002', householdId: 'hh-001', symbol: 'INTC', name: 'Intel Corp.', saleDate: '2026-02-20', quantity: 5_000, proceeds: 142_250, costBasis: 175_000, realisedGainLoss: -32_750, holdingPeriod: 'long', replacementSymbol: 'SMH' },
   { id: 'rs-002', accountId: 'acc-007', householdId: 'hh-002', symbol: 'NVDA', name: 'NVIDIA Corp.', saleDate: '2026-02-10', quantity: 300, proceeds: 234_000, costBasis: 262_500, realisedGainLoss: -28_500, holdingPeriod: 'short' },
-  { id: 'rs-003', accountId: 'acc-015', householdId: 'hh-004', symbol: 'INTC', name: 'Intel Corp.', saleDate: '2026-02-18', quantity: 4_000, proceeds: 113_800, costBasis: 138_667, realisedGainLoss: -24_867, holdingPeriod: 'long' },
+  { id: 'rs-003', accountId: 'acc-015', householdId: 'hh-004', symbol: 'INTC', name: 'Intel Corp.', saleDate: '2026-02-18', quantity: 4_000, proceeds: 113_800, costBasis: 138_667, realisedGainLoss: -24_867, holdingPeriod: 'short' },
   // Planted gain sale, proving the loss filter — not the date filter — is what excludes it.
   // Its window (2026-01-13 .. 2026-03-14) is still date-live at MOCK_TODAY_ISO (2026-02-25), so
   // only `realisedGainLoss < 0` keeps it out of `openWashSaleWindows`.

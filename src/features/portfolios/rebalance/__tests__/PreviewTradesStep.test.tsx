@@ -9,6 +9,7 @@ import type { RebalancePreview } from '@/services/oms'
 import { formatCurrency } from '@/lib/utils'
 import { convertCurrency, convertToBase } from '@/lib/currency'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
+import { CAPITAL_LOSS_SCOPE_NOTE } from '@/lib/capital-gains'
 
 /**
  * §9.3 · currencies-and-fx — render-level coverage for the fix at `PreviewTradesStep.tsx:38, 65,
@@ -31,7 +32,7 @@ function Harness({ previews }: { previews: RebalancePreview[] }) {
   return (
     <PreviewTradesStep
       previews={previews}
-      accounts={[{ id: 'acc-043', name: 'Mueller EUR Balanced Account' }]}
+      accounts={[{ id: 'acc-043', name: 'Mueller EUR Balanced Account' }, { id: 'acc-001', name: 'Johnson Family Trust' }]}
       formatWithConversion={formatWithConversion}
       totalTrades={previews.reduce((sum, p) => sum + p.trades.length, 0)}
       // Mirrors RebalancePage.tsx's own fix — the batch total is converted to USD (per preview's
@@ -116,11 +117,12 @@ describe('PreviewTradesStep renders each trade at its own account currency, not 
     // same amount). Both must show the converted figure, and the mislabeled
     // (unconverted-EUR-read-as-USD) string must appear nowhere on the page.
     // Header (line 38) — inline text inside a mixed-content span, so matched via textContent.
-    expect(container.textContent).toContain(`Est. tax, this proposal (gains net of losses): ${expected}`)
+    expect(container.textContent).toContain(`Est. tax added to the return: ${expected}`)
+    expect(container.textContent).toContain('nets this proposal with YTD realised results on the same tax return (none)')
     // Footer batch total — the only `<strong class="font-mono text-accent-red">` on the step. It
     // adds separately netted account figures, so it is labelled as a sum of them.
     expect(container.querySelector('strong.font-mono.text-accent-red')?.textContent).toBe(expected)
-    expect(container.textContent).toContain(`Est. tax, sum of account estimates: ${expected}`)
+    expect(container.textContent).toContain(`Est. tax added, sum of account estimates: ${expected}`)
     expect(container.textContent).not.toContain(mislabeledUsd)
 
     // Line 67 · the per-row taxImpact cells must be converted too. They are individual legs of
@@ -145,8 +147,9 @@ describe('PreviewTradesStep renders each trade at its own account currency, not 
     const usd = (n: number) => formatCurrency(n, { compact: true, currency: 'USD' })
     const intcRow = screen.getByText('INTC').closest('tr')!
     expect(intcRow.textContent).toContain(`Harvested loss ${usd(Math.abs(loss))}`)
-    expect(container.textContent).toContain(`Est. tax, this proposal (gains net of losses): ${usd(preview!.estimatedTaxImpact)}`)
-    expect(container.textContent).toContain(`Gross on gains: ${usd(preview!.grossTaxOnGains)}`)
+    expect(container.textContent).toContain(`Est. tax added to the return: ${usd(preview!.estimatedTaxImpact)}`)
+    expect(container.textContent).toContain(`nets this proposal with YTD realised results on the same tax return (LT ${usd(-32_750)})`)
+    expect(container.textContent).toContain(`Tax on its gains before netting: ${usd(preview!.grossTaxOnGains)}`)
     // Buys realise nothing, so their Realised cell is a dash, not a figure.
     const buyRow = screen.getByText(preview!.trades.find((t) => t.side === 'buy')!.symbol).closest('tr')!
     expect(buyRow.textContent).not.toContain('Harvested loss')
@@ -176,9 +179,13 @@ describe('PreviewTradesStep renders each trade at its own account currency, not 
       taxable: true,
       estimatedTaxImpact: 0,
       grossTaxOnGains: 0,
+      ytdRealisedOnReturn: { shortTerm: 0, longTerm: 0, collectibleLongTerm: 0 },
+      nettedWithAccountIds: [],
+      repurchaseRestrictions: [],
+      projectedDrift: { driftTolerance: 0.05, driftThreshold: 0.005, totalDrift: 0, maxAbsDrift: 0, withinBand: true, assetClassDrifts: [] },
       trades: [{
         symbol: 'SMH', name: 'VanEck Semiconductor ETF', side: 'sell', quantity: 180, estimatedValue: 44_136,
-        taxImpact: 0, realisedShortTerm: 0, realisedLongTerm: 0, washSaleRisk: false, currency: 'USD',
+        taxImpact: 0, realisedShortTerm: 0, realisedLongTerm: 0, realisedCollectibleLongTerm: 0, washSaleRisk: false, currency: 'USD',
       }],
     }
     render(<Harness previews={[zeroResult]} />, { wrapper: createWrapper() })
@@ -201,5 +208,50 @@ describe('PreviewTradesStep renders each trade at its own account currency, not 
     // USD -> USD conversion is a no-op, so the rendered figure equals the raw notional formatted.
     const expected = formatCurrency(trade.estimatedValue, { compact: true, currency: 'USD' })
     expect(screen.getAllByText(expected).length).toBeGreaterThan(0)
+  })
+})
+
+describe('PreviewTradesStep says what each tax estimate nets', () => {
+  it('acc-001 then acc-002: the second header names the earlier account on the same return it nets against', async () => {
+    const previews = await previewRebalance({ accountIds: ['acc-001', 'acc-002'], taxAware: true })
+    const { container } = render(<Harness previews={previews} />, { wrapper: createWrapper() })
+    await waitFor(() => expect(screen.queryByTestId('fx-loading')).not.toBeInTheDocument())
+    expect(container.textContent).toContain('and with Johnson Family Trust above')
+  })
+
+  // In a batch, acc-005 (Patricia Johnson, same joint return) nets after acc-002, whose gains have
+  // already used up rs-001's YTD loss; acc-005's own losses then lower the return's bill. A
+  // negative estimate is a saving and must read as one — never as a signed "tax added".
+  it('acc-002 then acc-005: a negative estimate reads "Est. tax saved", with the amount unsigned', async () => {
+    const previews = await previewRebalance({ accountIds: ['acc-002', 'acc-005'], taxAware: true })
+    const acc005 = previews.find((p) => p.accountId === 'acc-005')!
+    expect(acc005.nettedWithAccountIds).toEqual(['acc-002'])
+    expect(acc005.estimatedTaxImpact, 'vacuity guard — this batch must produce a saving').toBeLessThan(0)
+
+    const { container } = render(<Harness previews={[acc005]} />, { wrapper: createWrapper() })
+    await waitFor(() => expect(screen.queryByTestId('fx-loading')).not.toBeInTheDocument())
+    const usd = (n: number) => formatCurrency(n, { compact: true, currency: 'USD' })
+    expect(container.textContent).toContain(`Est. tax saved on the return: ${usd(-acc005.estimatedTaxImpact)}`)
+    expect(container.textContent).not.toContain('Est. tax added to the return')
+    // The footer sums this one saving, so it reads as one too, in green rather than red.
+    expect(container.textContent).toContain(`Est. tax saved, sum of account estimates: ${usd(-acc005.estimatedTaxImpact)}`)
+    expect(container.querySelector('strong.font-mono.text-accent-green')?.textContent).toBe(usd(-acc005.estimatedTaxImpact))
+    expect(container.textContent).not.toContain(usd(acc005.estimatedTaxImpact))
+  })
+
+  it('every estimate states what it leaves out: the §1211(b) ordinary-income offset and carryforwards', async () => {
+    const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
+    const { container } = render(<Harness previews={[preview!]} />, { wrapper: createWrapper() })
+    await waitFor(() => expect(screen.queryByTestId('fx-loading')).not.toBeInTheDocument())
+    expect(container.textContent).toContain(CAPITAL_LOSS_SCOPE_NOTE)
+    expect(CAPITAL_LOSS_SCOPE_NOTE).toContain('$3,000')
+  })
+
+  it('acc-003 (Traditional IRA): no capital-gains estimate, and no claim to net anything', async () => {
+    const [preview] = await previewRebalance({ accountIds: ['acc-003'], taxAware: true })
+    const { container } = render(<Harness previews={[preview!]} />, { wrapper: createWrapper() })
+    await waitFor(() => expect(screen.queryByTestId('fx-loading')).not.toBeInTheDocument())
+    expect(container.textContent).toContain('Not taxed in this account')
+    expect(container.textContent).not.toContain('Est. tax added to the return')
   })
 })

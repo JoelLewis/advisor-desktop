@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw'
+import { nextEventTime } from './event-clock'
 import type { IntegrationHealth, ReconBreak, DataQualitySummary } from '@/types/reconciliation'
 import { startOfToday, MOCK_TODAY_ISO } from '@/lib/clock'
 import { accounts } from '../data/accounts'
@@ -128,7 +129,7 @@ export const reconciliationHandlers = [
   http.post('/api/reconciliation/breaks/:breakId/resolve', ({ params }) => {
     const brk = breaks.find((b) => b.id === params.breakId)
     if (!brk) return new HttpResponse(null, { status: 404 })
-    brk.resolvedAt = new Date().toISOString()
+    brk.resolvedAt = nextEventTime()
     return HttpResponse.json(brk)
   }),
 ]

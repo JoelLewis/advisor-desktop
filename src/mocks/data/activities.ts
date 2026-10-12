@@ -1,17 +1,43 @@
 import type { ActivityItem } from '@/types/activity'
+import { driftBatchFacts } from './nbas'
+import { accounts } from './accounts'
+import { getPositionsForAccount } from './positions'
+import { realisedSales } from './realised-sales'
+import { orders } from '../handlers/oms'
+import { KNOWN_OPEN_DATES } from '../handlers/custodian'
+
+/**
+ * §0.7 · the INTC harvest and its SMH replacement, from the records that state them: rs-001 and
+ * its fill (ord-004) for the sale, pos-265 and its recorded open date for the purchase. The feed
+ * said "Sold 500 shares … Realized loss: $6,820" against a 5,000-share, −$32,750 sale.
+ */
+const rs001 = realisedSales.find((s) => s.id === 'rs-001')!
+const ord004 = orders.find((o) => o.id === 'ord-004')!
+const acc002 = accounts.find((a) => a.id === rs001.accountId)!
+const smh = getPositionsForAccount(acc002.id, acc002.totalValue).find((p) => p.id === 'pos-265')!
+
+/** The SMH replacement filled five minutes after the INTC sale, on the day pos-265 records it opened. */
+function smhPurchaseTimestamp(): string {
+  const filled = new Date(Date.parse(ord004.filledAt!) + 5 * 60_000).toISOString()
+  if (filled.slice(0, 10) !== KNOWN_OPEN_DATES.get(smh.id)) throw new Error(`SMH replacement at ${filled} is not on pos-265's open date`)
+  return filled
+}
+const dollarsAndCents = (amount: number) => `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 export const activities: ActivityItem[] = [
   {
     id: 'act-001', type: 'rebalance', source: 'pms',
     title: 'Batch rebalance completed — 5 accounts',
     description: 'Executed 23 trades across 5 accounts. Net tax impact: -$4,200 (harvested losses).',
-    timestamp: '2026-02-25T13:45:00Z', read: false,
+    // §0.7 · was 13:45Z today, after the frozen now (12:00Z, 7:00 ET) and before the market opened.
+    timestamp: '2026-02-24T20:45:00Z', read: false,
   },
   {
     id: 'act-002', type: 'system', source: 'pms',
-    title: 'Market open — S&P 500 up 0.3% pre-market',
+    title: 'Pre-market — S&P 500 futures up 0.3%',
     description: 'Futures indicate positive open. Key earnings: HD, LOW this week.',
-    timestamp: '2026-02-25T13:30:00Z', read: true,
+    // §0.7 · was 13:30Z, after the frozen now; a pre-market note at 6:30 ET precedes it.
+    timestamp: '2026-02-25T11:30:00Z', read: true,
   },
   {
     id: 'act-003', type: 'compliance', source: 'compliance',
@@ -29,10 +55,11 @@ export const activities: ActivityItem[] = [
   },
   {
     id: 'act-005', type: 'trade', source: 'oms',
-    title: 'Trade executed — INTC sell for tax harvest',
-    description: 'Sold 500 shares INTC at $28.45 in Johnson account. Realized loss: $6,820.',
+    title: `Trade executed — ${rs001.symbol} sell for tax harvest`,
+    description: `Sold ${rs001.quantity.toLocaleString('en-US')} shares ${rs001.symbol} at ${dollarsAndCents(rs001.proceeds / rs001.quantity)} in ${acc002.name}. ` +
+      `Realised ${rs001.holdingPeriod}-term loss: $${Math.abs(rs001.realisedGainLoss).toLocaleString('en-US')}.`,
     entityType: 'client', entityId: 'cli-001', entityName: 'Robert Johnson',
-    timestamp: '2026-02-24T16:30:00Z', read: true,
+    timestamp: ord004.filledAt!, read: true,
   },
   {
     id: 'act-006', type: 'ai_action', source: 'ai',
@@ -70,15 +97,17 @@ export const activities: ActivityItem[] = [
   },
   {
     id: 'act-011', type: 'trade', source: 'oms',
-    title: 'Order filled — SMH purchase (tax harvest replacement)',
-    description: 'Purchased 180 shares SMH at $245.20 in Johnson account as INTC replacement.',
+    title: `Order filled — ${smh.symbol} purchase (tax harvest replacement)`,
+    description: `Purchased ${smh.quantity.toLocaleString('en-US')} shares ${smh.symbol} at ${dollarsAndCents(smh.costBasis / smh.quantity)} in ${acc002.name} as the ${rs001.symbol} replacement.`,
     entityType: 'client', entityId: 'cli-001', entityName: 'Robert Johnson',
-    timestamp: '2026-02-23T14:20:00Z', read: true,
+    // Bought five minutes after the INTC fill (ord-004), on the date pos-265 records it opened.
+    timestamp: smhPurchaseTimestamp(), read: true,
   },
   {
     id: 'act-012', type: 'system', source: 'pms',
-    title: 'Drift alert — 7 portfolios exceeded 3% threshold',
-    description: 'Recent equity rally pushed 7 client portfolios beyond drift tolerance.',
+    // §0.7 · the count and the bands come from the drift engine, as nba-001's do.
+    title: `Drift alert — ${driftBatchFacts().accountCount} accounts outside their model's band`,
+    description: `${driftBatchFacts().accountCount} client accounts are outside their own model's drift band (${driftBatchFacts().bands.join(', ')}).`,
     timestamp: '2026-02-23T13:00:00Z', read: true,
   },
   {

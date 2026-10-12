@@ -11,8 +11,8 @@ import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { useCurrencyConverter } from '@/hooks/use-fx'
 import { cn } from '@/lib/utils'
 import { harvestingDisclosureFor } from '@/lib/tax-treatment'
-import { isHarvestable, estimatedTaxBenefit, computeCostBasisImpact, fxStatusFrom, harvestFxStatus } from './tax/shared'
-import { COST_BASIS_METHODS, type CostBasisMethod } from './tax/CostBasisMethodCard'
+import { isHarvestable, harvestsNow, harvestBenefitNow, lossAllowedNow, lossDeferred, lossDisallowed, computeCostBasisImpact, fxStatusFrom, harvestFxStatus } from '@/lib/tax-rules'
+import { COST_BASIS_METHODS, type CostBasisMethod } from '@/lib/cost-basis'
 import { TaxSummaryCards } from './tax/TaxSummaryCards'
 import { CostBasisMethodCard } from './tax/CostBasisMethodCard'
 import { TaxLotsView } from './tax/TaxLotsView'
@@ -46,7 +46,7 @@ export function TaxManagementPage() {
   // Fix-round-3 review: harvestOpportunities, the summary card, and the scanner tab all derive
   // their availability from this single value rather than the raw `fxStatus` — a USD-native
   // account's harvest computation never touches the FX rate map (see `harvestFxStatus` in
-  // tax/shared.tsx), so it must read 'ready' even while the global FX query is down. All but
+  // lib/tax-rules.ts), so it must read 'ready' even while the global FX query is down. All but
   // four fixture accounts are USD-native; gating them on `fxStatus` directly suppressed a
   // fully-known number across nearly the whole book over an outage irrelevant to them.
   const harvestStatus = harvestFxStatus(baseCurrency, fxStatus)
@@ -104,17 +104,27 @@ export function TaxManagementPage() {
     const totalUnrealizedLoss = taxLots.filter((l) => l.gainLoss < 0).reduce((s, l) => s + l.gainLoss, 0)
     const shortTermGain = taxLots.filter((l) => l.holdingPeriod === 'short' && l.gainLoss > 0).reduce((s, l) => s + l.gainLoss, 0)
     const longTermGain = taxLots.filter((l) => l.holdingPeriod === 'long' && l.gainLoss > 0).reduce((s, l) => s + l.gainLoss, 0)
-    const harvestableAmount = harvestOpportunities.reduce((s, l) => s + Math.abs(l.gainLoss), 0)
+    // §1091 takes only the washed shares' part of a candidate's loss, so every figure below counts
+    // the allowed part; a candidate fully washed drops out of the lot count.
+    const harvestable = harvestOpportunities.filter(harvestsNow)
+    const harvestableAmount = harvestable.reduce((s, l) => s - lossAllowedNow(l), 0)
+    const washedLoss = {
+      deferred: harvestOpportunities.reduce((s, l) => s - lossDeferred(l), 0),
+      disallowed: harvestOpportunities.reduce((s, l) => s - lossDisallowed(l), 0),
+    }
     // §9.1 · the page-level "estimated tax benefit" total. Only ever rendered in the taxable
     // branch below (see `disclosure`) — a tax-deferred or tax-free account never computes past
     // `harvestOpportunities === []` in the first place, but the gate on *rendering* this value is
     // what a component test can actually observe, so that is where it is enforced.
-    const estimatedBenefit = harvestOpportunities.reduce((s, l) => s + estimatedTaxBenefit(l), 0)
-    return { totalUnrealizedGain, totalUnrealizedLoss, shortTermGain, longTermGain, harvestableAmount, estimatedBenefit }
+    const estimatedBenefit = harvestable.reduce((s, l) => s + harvestBenefitNow(l), 0)
+    return {
+      totalUnrealizedGain, totalUnrealizedLoss, shortTermGain, longTermGain,
+      harvestableAmount, harvestableLotCount: harvestable.length, washedLoss, estimatedBenefit,
+    }
   }, [taxLots, harvestOpportunities])
 
-  // Cost basis method impact simulation — computeCostBasisImpact lives in tax/shared.tsx (not
-  // inline here) so it is independently importable and testable; see shared.tsx for why.
+  // Cost basis method impact simulation — computeCostBasisImpact lives in lib/tax-rules.ts (not
+  // inline here) so it is independently importable and testable; see lib/tax-rules.ts for why.
   const methodImpact = useMemo(() => {
     if (!taxLots || taxLots.length === 0) return null
     return COST_BASIS_METHODS.map((method) => ({
@@ -212,7 +222,6 @@ export function TaxManagementPage() {
         <TaxSummaryCards
           stats={stats}
           washSaleWindowsCount={washSaleWindows?.length ?? 0}
-          harvestOpportunitiesLength={harvestOpportunities.length}
           harvestUnavailable={harvestStatus !== 'ready'}
           formatWithConversion={formatWithConversion}
           baseCurrency={baseCurrency}

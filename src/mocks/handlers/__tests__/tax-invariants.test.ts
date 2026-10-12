@@ -10,6 +10,7 @@ import {
   estimatedTaxBenefit,
   SHORT_TERM_RATE,
   LONG_TERM_RATE,
+  COLLECTIBLE_LONG_TERM_RATE,
   HARVEST_LOSS_THRESHOLD_USD,
   isHarvestable,
   computeCostBasisImpact,
@@ -17,7 +18,7 @@ import {
   buildRateDisclosure,
   harvestNeedsFx,
   harvestFxStatus,
-} from '@/features/portfolios/tax/shared'
+} from '@/lib/tax-rules'
 
 const ACCOUNTS = ['acc-001', 'acc-002', 'acc-011', 'acc-020', 'acc-029', 'acc-041', 'acc-042', 'acc-043', 'acc-044']
 
@@ -273,19 +274,24 @@ describe('wash sale windows', () => {
   })
 })
 
-describe('washSaleRestricted reflects a real restriction', () => {
-  it('C12: a lot whose symbol has an open household window is restricted', async () => {
+// `repurchaseBlockedUntil` is a fact about **buying** the symbol back, not about selling the lot:
+// selling a long-held INTC lot at a loss is not a wash sale; repurchasing INTC before hh-001's
+// rs-001 window closes (2026-03-22) would be. The field carries the date so no surface has to
+// guess what is restricted, or until when.
+describe('repurchaseBlockedUntil states what is restricted, and until when', () => {
+  it('C12: acc-002\'s INTC lots are blocked from repurchase until rs-001\'s window closes', async () => {
     const lots = await getTaxLots('acc-002')
     const positions = await getPositions('acc-002')
     const intcPositionId = positions.find((p) => p.symbol === 'INTC')!.id
     const intcLots = lots.filter((l) => l.positionId === intcPositionId)
-    expect(intcLots.every((l) => l.washSaleRestricted)).toBe(true)
+    expect(intcLots.length).toBeGreaterThan(0)
+    expect(intcLots.every((l) => l.repurchaseBlockedUntil === '2026-03-22')).toBe(true)
   })
 
-  it('C12: not every lot is Clear', async () => {
+  it('C12: a symbol with no open household window is not blocked', async () => {
     const lots = await getTaxLots('acc-002')
-    expect(lots.some((l) => l.washSaleRestricted)).toBe(true)
-    expect(lots.some((l) => !l.washSaleRestricted)).toBe(true)
+    expect(lots.some((l) => l.repurchaseBlockedUntil !== null)).toBe(true)
+    expect(lots.some((l) => l.repurchaseBlockedUntil === null)).toBe(true)
   })
 })
 
@@ -365,10 +371,10 @@ describe('every realised sale reconciles with a real sell transaction (C14)', ()
 })
 
 describe('tax-loss harvesting rates', () => {
-  it('C11: short-term losses offset at the ordinary rate, long-term at capital-gains + NIIT', () => {
-    expect(SHORT_TERM_RATE).toBe(0.37)
+  it('C11: short-term losses offset at the ordinary rate + NIIT, long-term at capital-gains + NIIT', () => {
+    expect(SHORT_TERM_RATE).toBe(0.408)
     expect(LONG_TERM_RATE).toBe(0.238)
-    expect(estimatedTaxBenefit({ gainLoss: -10_000, holdingPeriod: 'short' })).toBeCloseTo(3_700, 2)
+    expect(estimatedTaxBenefit({ gainLoss: -10_000, holdingPeriod: 'short' })).toBeCloseTo(4_080, 2)
     expect(estimatedTaxBenefit({ gainLoss: -10_000, holdingPeriod: 'long' })).toBeCloseTo(2_380, 2)
   })
 
@@ -460,7 +466,7 @@ describe('the harvest threshold is currency-aware (PRE-FLIGHT correction 1)', ()
 // `TaxManagementPage`'s `useMemo` — nothing in the repo imported it, so it was untestable. The
 // reviewer reverted the whole C13/C14 fix, left `TaxManagementPage.tsx` syntactically broken, and
 // the suite still reported the identical 31-failure baseline: an untested fix is indistinguishable
-// from an unfixed one. `computeCostBasisImpact` is now a standalone export in tax/shared.tsx; these
+// from an unfixed one. `computeCostBasisImpact` is now a standalone export in src/lib/tax-rules.ts; these
 // exercise it against real fixture lots (acc-011, pos-072), hand-verified independently below.
 describe('computeCostBasisImpact (fix-round-1 review, Important #1)', () => {
   it('acc-011 pos-072: FIFO, LIFO and HIFO each draw from a different lot and attribute holding period by the lot actually sold', async () => {
@@ -535,24 +541,30 @@ describe('computeCostBasisImpact (fix-round-1 review, Important #1)', () => {
 // else in the codebase.
 describe('rate disclosure derivation (fix-round-2 review, Minor M1)', () => {
   it('buildRateDisclosure renders whatever rates it is given, not fixed prose', () => {
-    const disclosure = buildRateDisclosure(0.4, 0.25)
+    const disclosure = buildRateDisclosure(0.4, 0.25, 0.33)
     expect(disclosure).toContain('40% short-term')
     expect(disclosure).toContain('25% long-term')
+    expect(disclosure).toContain('33% on collectibles')
     // Neither of the real, current rates should leak in from a hardcoded fallback.
     expect(disclosure).not.toContain('37%')
     expect(disclosure).not.toContain('23.8%')
+    expect(disclosure).not.toContain('31.8%')
   })
 
   it('a different pair of rates produces different, correctly-formatted copy', () => {
-    expect(buildRateDisclosure(0.2, 0.15)).toContain('20% short-term')
-    expect(buildRateDisclosure(0.2, 0.15)).toContain('15% long-term')
+    expect(buildRateDisclosure(0.2, 0.15, 0.3)).toContain('20% short-term')
+    expect(buildRateDisclosure(0.2, 0.15, 0.3)).toContain('15% long-term')
+    expect(buildRateDisclosure(0.2, 0.15, 0.3)).toContain('30% on collectibles')
   })
 
-  it('RATE_DISCLOSURE is buildRateDisclosure(SHORT_TERM_RATE, LONG_TERM_RATE), not a separate literal', () => {
-    expect(SHORT_TERM_RATE).toBe(0.37)
+  it('RATE_DISCLOSURE is buildRateDisclosure(SHORT_TERM_RATE, LONG_TERM_RATE, COLLECTIBLE_LONG_TERM_RATE), not a separate literal', () => {
+    expect(SHORT_TERM_RATE).toBe(0.408)
     expect(LONG_TERM_RATE).toBe(0.238)
-    expect(RATE_DISCLOSURE).toBe(buildRateDisclosure(SHORT_TERM_RATE, LONG_TERM_RATE))
-    expect(RATE_DISCLOSURE).toContain('37% short-term')
+    expect(COLLECTIBLE_LONG_TERM_RATE).toBe(0.318)
+    expect(RATE_DISCLOSURE).toBe(buildRateDisclosure(SHORT_TERM_RATE, LONG_TERM_RATE, COLLECTIBLE_LONG_TERM_RATE))
+    expect(RATE_DISCLOSURE).toContain('31.8% on collectibles')
+    expect(RATE_DISCLOSURE).toContain('40.8% short-term')
+    expect(RATE_DISCLOSURE).toContain('3.8% net investment income tax')
     expect(RATE_DISCLOSURE).toContain('23.8% long-term')
     expect(RATE_DISCLOSURE.toLowerCase()).toContain('not tax advice')
   })

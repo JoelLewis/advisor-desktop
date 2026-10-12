@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw'
+import { nextEventTime, nextRecordNumber } from './event-clock'
 import { clients } from '../data/clients'
 import { households } from '../data/households'
 import { activities } from '../data/activities'
@@ -90,12 +91,13 @@ export const crmHandlers = [
 
   http.post('/api/crm/clients/:clientId/notes', async ({ params, request }) => {
     const body = await request.json() as { content: string }
+    const at = nextEventTime()
     const newNote = {
-      id: `note-${Date.now()}`,
+      id: `note-${nextRecordNumber()}`,
       clientId: String(params.clientId),
       content: body.content,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: at,
+      updatedAt: at,
       createdBy: 'Sarah Mitchell',
       pinned: false,
       aiGenerated: false,

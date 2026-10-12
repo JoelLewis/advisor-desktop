@@ -9,7 +9,7 @@ import { generateTaxLots } from '@/mocks/handlers/custodian'
 import { formatAUM } from '@/mocks/handlers/utils'
 import { formatDate } from '@/lib/utils'
 import { convertToBase } from '@/lib/currency'
-import { isHarvestable, estimatedTaxBenefit, SHORT_TERM_RATE, LONG_TERM_RATE } from '@/features/portfolios/tax/shared'
+import { isHarvestable, estimatedTaxBenefit, SHORT_TERM_RATE, LONG_TERM_RATE } from '@/lib/tax-rules'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import type { TaxTreatment } from '@/types/account'
@@ -132,7 +132,7 @@ describe('the dashboard does not contradict itself', () => {
       expect(shortLoss).toBe(105_100)
       expect(longLoss).toBe(4_000)
       const expectedBenefit = 105_100 * SHORT_TERM_RATE + 4_000 * LONG_TERM_RATE
-      expect(expectedBenefit).toBeCloseTo(39_839, 6)
+      expect(expectedBenefit).toBeCloseTo(43_832.8, 6)
 
       const actualBenefit = lots.reduce((s, l) => s + estimatedTaxBenefit(l), 0)
       expect(actualBenefit).toBeCloseTo(expectedBenefit, 6)

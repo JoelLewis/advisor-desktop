@@ -1,16 +1,11 @@
-/* eslint-disable react-refresh/only-export-components -- exports component + cost basis constants */
+/* eslint-disable react-refresh/only-export-components -- exports component + cost basis descriptions */
 import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'
 import type { CurrencyCode } from '@/types/currency'
 import type { Account } from '@/types/account'
+import { COST_BASIS_METHODS, type CostBasisMethod } from '@/lib/cost-basis'
 
-// C14 · tax-efficiency — Spec ID is not a fifth lot-selection algorithm alongside FIFO/LIFO/HIFO;
-// HIFO and LIFO are standing instructions *under* specific identification, which is how
-// custodians actually offer it. Dropping it here also drops the `case 'SpecID'` branch in
-// TaxManagementPage's `computeImpact` switch.
-export const COST_BASIS_METHODS = ['FIFO', 'LIFO', 'HIFO', 'AvgCost'] as const
-export type CostBasisMethod = (typeof COST_BASIS_METHODS)[number]
 
 export const COST_BASIS_DESCRIPTIONS: Record<CostBasisMethod, string> = {
   FIFO: 'First In, First Out — sells oldest lots first',

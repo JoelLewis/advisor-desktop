@@ -6,6 +6,10 @@ import { Routes, Route } from 'react-router-dom'
 import { renderWithProviders } from '@/test/render'
 import { server } from '@/test/server'
 import { TaxManagementPage } from '../TaxManagementPage'
+import { previewRebalance } from '@/services/oms'
+import { generateTaxLotsWithSaleRisk } from '@/mocks/handlers/custodian'
+import { estimatedTaxBenefit } from '@/lib/tax-rules'
+import { formatCurrency } from '@/lib/utils'
 
 function renderPage(accountId: string) {
   return renderWithProviders(
@@ -38,7 +42,7 @@ describe('TaxManagementPage', () => {
     expect(await screen.findByText('6 opportunities')).toBeInTheDocument()
 
     // The rate disclosure renders alongside real opportunities, not just in isolation.
-    expect(screen.getByText(/37% short-term, 23\.8% long-term/)).toBeInTheDocument()
+    expect(screen.getByText(/40\.8% short-term, 23\.8% long-term/)).toBeInTheDocument()
   })
 
   it('acc-001 (specific_id): AvgCost is not offered as a cost-basis method', async () => {
@@ -292,5 +296,61 @@ describe('TaxManagementPage gates on tax treatment', () => {
     renderPage('acc-003')
     await screen.findByText(/not applicable in a tax-deferred account/i)
     expect(screen.queryByText('Cost Basis Method')).not.toBeInTheDocument()
+  })
+
+  // An open household loss window restricts **buying INTC back**, not selling it: selling a
+  // long-held lot at a loss is the harvest, and the rebalance preview books it as one with no
+  // wash-sale flag. The scanner previously badged that same lot "Restricted" in a "Wash Sale Risk"
+  // column, so the two surfaces disagreed about one sale.
+  it('acc-002 INTC: the scanner and the rebalance preview agree the loss sale is not a wash sale', async () => {
+    const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
+    const intcSell = preview!.trades.find((t) => t.symbol === 'INTC' && t.side === 'sell')!
+    expect(intcSell.realisedShortTerm + intcSell.realisedLongTerm).toBeLessThan(0)
+    expect(intcSell.washSaleRisk).toBe(false)
+
+    const user = userEvent.setup()
+    renderPage('acc-002')
+    await screen.findByText('Robert Johnson Individual')
+    await user.click(screen.getByRole('button', { name: 'Harvest scanner' }))
+
+    const intcCell = await screen.findByText('INTC')
+    const intcRow = intcCell.closest('tr')!
+    expect(within(intcRow).queryByText('Restricted')).not.toBeInTheDocument()
+    expect(within(intcRow).getByText('Repurchase blocked through Mar 22, 2026')).toBeInTheDocument()
+    expect(screen.queryByText('Wash Sale Risk')).not.toBeInTheDocument()
+  })
+
+  // §1091 takes only the washed shares' part of a loss (Treas. Reg. §1.1091-1(c)): deferred into a
+  // taxable replacement's basis, or permanently disallowed when the replacement was bought in an
+  // IRA or Roth (Rev. Rul. 2008-5). No fixture has a washing lot, so this marks a quarter of
+  // acc-001's largest harvestable lot as washed by each kind of replacement at the endpoint:
+  //   allowed now  = gainLoss × (q − q/4 − q/4)/q = gainLoss / 2
+  //   deferred     = gainLoss / 4,  disallowed = gainLoss / 4
+  it('acc-001: the "Harvestable losses" card counts only the allowed part of a washing lot, and names the rest', async () => {
+    const lots = generateTaxLotsWithSaleRisk('acc-001', 8_200_000)
+    const harvestable = lots.filter((l) => l.gainLoss < -1_000)
+    expect(harvestable).toHaveLength(5)
+    const washing = [...harvestable].sort((a, b) => a.gainLoss - b.gainLoss)[0]!
+    const quarter = washing.quantity / 4
+    server.use(
+      http.get('/api/custodian/accounts/acc-001/tax-lots', () =>
+        HttpResponse.json(lots.map((l) => (l.id === washing.id
+          ? { ...l, saleWash: { deferredShares: quarter, disallowedShares: quarter } }
+          : l)))),
+    )
+    renderPage('acc-001')
+    await screen.findByText('Johnson Family Trust')
+
+    const kept = harvestable.filter((l) => l.id !== washing.id)
+    const usd = (n: number) => formatCurrency(n, { compact: true, currency: 'USD' })
+    const cardEl = (await screen.findByText('Harvestable losses')).closest('div')!
+    const allowed = kept.reduce((s, l) => s - l.gainLoss, 0) - washing.gainLoss / 2
+    expect(within(cardEl).getByText(usd(allowed))).toBeInTheDocument()
+    expect(within(cardEl).getByText('5 lots')).toBeInTheDocument()
+    expect(within(cardEl).getByText(`Excludes ${usd(-washing.gainLoss / 4)} deferred by a wash sale`)).toBeInTheDocument()
+    expect(within(cardEl).getByText(`Excludes ${usd(-washing.gainLoss / 4)} permanently disallowed: replacement bought in an IRA or Roth`)).toBeInTheDocument()
+    const benefit = kept.reduce((s, l) => s + estimatedTaxBenefit(l), 0)
+      + estimatedTaxBenefit({ gainLoss: washing.gainLoss / 2, holdingPeriod: washing.holdingPeriod })
+    expect(within(cardEl).getByTestId('estimated-tax-benefit').textContent).toBe(usd(benefit))
   })
 })

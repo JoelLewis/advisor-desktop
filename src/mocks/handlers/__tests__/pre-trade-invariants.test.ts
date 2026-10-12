@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest'
+import { additionalCapitalGainsTax, netCapitalGainsTax } from '@/lib/capital-gains'
+import { taxCharacterOf } from '@/lib/security-master'
 import { preTradeCheck, previewRebalance } from '@/services/oms'
 import { checkTradeCompliance } from '@/services/compliance'
 import { getAccounts, getTaxLots } from '@/services/custodian'
@@ -6,7 +8,7 @@ import { getPositions, getDrift } from '@/services/pms'
 import { modelImplementationSecurity } from '@/mocks/handlers/pms'
 import { convertCurrency } from '@/lib/currency'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
-import { LONG_TERM_RATE, SHORT_TERM_RATE, taxRateFor } from '@/features/portfolios/tax/shared'
+import { LONG_TERM_RATE, SHORT_TERM_RATE, taxRateFor } from '@/lib/tax-rules'
 
 describe('pre-trade concentration uses the account own value', () => {
   it('C27: a $600K trade is 5% of the $12M Chen Trust, not 24% — no violation, trade passes', async () => {
@@ -162,15 +164,51 @@ describe('rebalance tax estimation', () => {
     expect(unaware[0]!.estimatedTaxImpact).toBeGreaterThanOrEqual(aware[0]!.estimatedTaxImpact)
   })
 
-  it('C26: the gross tax equals the sum of its trade-level tax impacts, and netting never raises it', async () => {
+  it('C26: the gross tax equals the sum of its trade-level tax impacts, and the YTD loss on the return lowers the estimate', async () => {
     const [preview] = await previewRebalance({ accountIds: ['acc-001'], taxAware: true })
     expect(preview!.grossTaxOnGains)
       .toBeCloseTo(preview!.trades.reduce((s, t) => s + t.taxImpact, 0), 0)
-    expect(preview!.estimatedTaxImpact).toBeLessThanOrEqual(preview!.grossTaxOnGains)
-    // acc-001 realises no loss, so there is nothing to net and the two agree exactly.
-    if (preview!.trades.every((t) => t.realisedShortTerm + t.realisedLongTerm >= 0)) {
-      expect(preview!.estimatedTaxImpact).toBe(preview!.grossTaxOnGains)
+    // acc-001 (Robert Johnson's revocable trust) is on hh-001's joint return, which already
+    // realised rs-001's −$32,750 long-term loss this year; that loss shelters acc-001's gains.
+    expect(preview!.ytdRealisedOnReturn).toEqual({ shortTerm: 0, longTerm: -32_750, collectibleLongTerm: 0 })
+    const shortTerm = preview!.trades.reduce((s, t) => s + t.realisedShortTerm, 0)
+    const longTerm = preview!.trades.reduce((s, t) => s + t.realisedLongTerm, 0)
+    const collectibleLongTerm = preview!.trades.reduce((s, t) => s + t.realisedCollectibleLongTerm, 0)
+    expect(preview!.estimatedTaxImpact)
+      .toBe(additionalCapitalGainsTax({ shortTerm: 0, longTerm: -32_750 }, { shortTerm, longTerm, collectibleLongTerm }, taxRateFor))
+    expect(preview!.estimatedTaxImpact).toBeLessThan(preview!.grossTaxOnGains)
+  })
+
+  // Main's C26 said "netting never raises the bill" (estimate ≤ gross). That held while the
+  // estimate netted a proposal's own legs; it now nets them with the return's year-to-date
+  // results, so it is true only when those results are a gain or nil in each rate group
+  // (short-term, long-term collectibles, other long-term), and the estimate is negative when the
+  // trades save tax. These are the relationships that do hold, every account previewed alone (so
+  // no earlier batch account is netted in).
+  it('C26: the estimate is at most the gross when the YTD results are ≥ 0 in each rate group, and never saves more than the YTD tax', async () => {
+    let boundedByGross = 0
+    let withYtdGain = 0
+    for (const account of await getAccounts()) {
+      const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
+      const ytd = preview!.ytdRealisedOnReturn
+      if (ytd === null) {
+        expect(preview!.estimatedTaxImpact, account.id).toBe(0)
+        continue
+      }
+      expect(preview!.estimatedTaxImpact, account.id).toBeGreaterThanOrEqual(-netCapitalGainsTax(ytd.shortTerm, ytd.longTerm, taxRateFor, ytd.collectibleLongTerm) - 1)
+      const collectibles = ytd.collectibleLongTerm ?? 0
+      if (ytd.shortTerm < 0 || collectibles < 0 || ytd.longTerm - collectibles < 0) continue
+      // Slack: the gross rounds each leg's tax and the estimate rounds its realised results per
+      // leg, each under a dollar, plus one for the estimate's own two roundings.
+      const taxedLegs = preview!.trades.filter((t) => t.side === 'sell').length
+      expect(preview!.estimatedTaxImpact, account.id).toBeLessThanOrEqual(preview!.grossTaxOnGains + 1 + taxedLegs)
+      boundedByGross++
+      if (ytd.shortTerm > 0 || ytd.longTerm > 0) withYtdGain++
     }
+    expect(boundedByGross, "vacuity guard").toBeGreaterThan(10)
+    // acc-011 is on a return with rs-004's +6,260 long-term gain: the bound is tested off the
+    // trivial no-YTD path too.
+    expect(withYtdGain, 'vacuity guard — an account with a YTD gain').toBeGreaterThan(0)
   })
 })
 
@@ -829,14 +867,14 @@ describe('fix round 3 · rebalance tax uses each lot\'s own holding-period rate,
  * The ordering itself is pinned separately (the acc-002 and toggle tests above).
  */
 describe('§9.7 round 4 · the tax on a row is the tax on the value that row states', () => {
-  const taxOnLots = (lots: { currentValue: number; gainLoss: number; holdingPeriod: 'short' | 'long' }[], value: number) => {
+  const taxOnLots = (symbol: string, lots: { currentValue: number; gainLoss: number; holdingPeriod: 'short' | 'long' }[], value: number) => {
     let remaining = value
     let tax = 0
     for (const lot of lots) {
       if (remaining <= 0 || lot.currentValue <= 0) continue
       const portion = Math.min(1, remaining / lot.currentValue)
       const gain = lot.gainLoss * portion
-      if (gain > 0) tax += gain * taxRateFor(lot.holdingPeriod)
+      if (gain > 0) tax += gain * taxRateFor(lot.holdingPeriod, taxCharacterOf(symbol))
       remaining -= lot.currentValue * portion
     }
     return Math.max(0, Math.round(tax))
@@ -850,11 +888,11 @@ describe('§9.7 round 4 · the tax on a row is the tax on the value that row sta
     expect(lots.length).toBeGreaterThan(0)
     expect(btc.quantity).toBe(2)
     expect(btc.estimatedValue).toBe(174_900)
-    expect(btc.taxImpact).toBe(taxOnLots(lots, btc.estimatedValue))
+    expect(btc.taxImpact).toBe(taxOnLots('BTC', lots, btc.estimatedValue))
     // The direction that makes the assertion above mean something: one BTC unit is $87,450, half
     // this leg's executed value, so the walk is anything but insensitive to the figure it is
     // handed. Taxing the whole position instead of the two units traded is a different number.
-    expect(taxOnLots(lots, position.marketValue)).toBeGreaterThan(btc.taxImpact)
+    expect(taxOnLots('BTC', lots, position.marketValue)).toBeGreaterThan(btc.taxImpact)
   })
 
   it('every taxed account book-wide: each sell leg\'s tax is the lot walk over that leg\'s own estimatedValue', async () => {
@@ -877,14 +915,14 @@ describe('§9.7 round 4 · the tax on a row is the tax on the value that row sta
         const lots = allLots.filter((l) => l.positionId === position.id)
         if (lots.length === 0) continue
         legsChecked++
-        const onTheRow = taxOnLots(lots, trade.estimatedValue)
+        const onTheRow = taxOnLots(trade.symbol, lots, trade.estimatedValue)
         if (trade.taxImpact !== onTheRow) {
           mismatches.push(`${account.id} ${trade.symbol}: tax ${trade.taxImpact}, but the row's own ${trade.estimatedValue} implies ${onTheRow}`)
         }
         // Sensitivity: adding a single lot's worth of value changes the answer, so equality above
         // is a real constraint on the argument rather than a walk that returns the same number
         // for any input near it.
-        if (taxOnLots(lots, trade.estimatedValue + position.price) !== onTheRow) lotSensitiveLegs++
+        if (taxOnLots(trade.symbol, lots, trade.estimatedValue + position.price) !== onTheRow) lotSensitiveLegs++
       }
     }
     expect(legsChecked).toBeGreaterThan(30)
@@ -912,7 +950,7 @@ describe('fix round 2 · rebalance trade direction follows actual vs target, not
 })
 
 describe('oms.ts pre-trade wash-sale check is derived from realised sales, not a hand-typed symbol list', () => {
-  it('flags INTC in acc-002 (hh-001), which itself realised the INTC loss sale 4 days ago', async () => {
+  it('flags INTC in acc-002 (hh-001), which itself realised the INTC loss sale 5 days ago', async () => {
     const result = await preTradeCheck({
       accountId: 'acc-002', symbol: 'INTC', side: 'buy', quantity: 100, estimatedValue: 2_845,
     })
@@ -1132,7 +1170,7 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     //
     // "Prefer losses, then the smallest embedded gain" is an ordering drawn from until the
     // sleeve is filled, not a single pick — with one exclusion. The 180 SMH (pos-265) were bought
-    // 2026-02-21 as the INTC harvest replacement (note-002, comp-006, nba-002); selling them four
+    // 2026-02-20 as the INTC harvest replacement (note-002, comp-006, nba-002); selling them five
     // days later at zero gain would undo the harvest, and TLH practice is to hold the replacement
     // past the 31st day. A position whose every lot is that recent is not a tax-aware sell
     // candidate, so the sequence is INTC in full ($199,150), then SPY for the rest.
@@ -1169,7 +1207,7 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     // INTC — so SPY alone absorbs the whole $549,900 trim and the loss lot is never reached.
     const unawareUsEquity = unaware!.trades.filter((t) => t.side === 'sell' && ['SPY', 'QQQ', 'INTC'].includes(t.symbol))
     expect(unawareUsEquity.map((t) => t.symbol)).toEqual(['SPY'])
-    // The 180 SMH bought 2026-02-21 (pos-265, $44,136) are us_equity, so the sleeve is 0.681978
+    // The 180 SMH bought 2026-02-20 (pos-265, $44,136) are us_equity, so the sleeve is 0.681978
     // of 4,500,000 and the trim is 0.1320 x 4,500,000 = 594,000. 1,141 shares x 520.30 = 593,662,
     // within one SPY lot of that notional. The bound is restated against the new notional: left at
     // 549,900 it would have been satisfied by a *negative* difference and stopped discriminating.
@@ -1332,5 +1370,35 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     // Vacuity guard — if the engine proposed nothing anywhere, every assertion above ran zero
     // times and this test would pass while proving nothing.
     expect(tradesChecked).toBeGreaterThan(100)
+  })
+})
+
+/**
+ * §0.6 · GLD is a grantor trust holding gold: its holders are treated as owning the metal, a
+ * collectible, so its long-term gain is taxed at the 28% maximum + 3.8% NIIT = 31.8%, not 23.8%.
+ */
+describe('§0.6 · a long-term GLD gain is collectibles gain', () => {
+  it('acc-001: the GLD leg is taxed at 31.8%, the VTI leg beside it at 23.8%', async () => {
+    const [preview] = await previewRebalance({ accountIds: ['acc-001'], taxAware: true })
+    const gld = preview!.trades.find((t) => t.symbol === 'GLD' && t.side === 'sell')!
+    const vti = preview!.trades.find((t) => t.symbol === 'VTI' && t.side === 'sell')!
+    // Both legs are wholly long-term gain, so each leg's tax is that gain at one rate.
+    expect([gld.realisedShortTerm, vti.realisedShortTerm]).toEqual([0, 0])
+    expect(gld.realisedCollectibleLongTerm).toBe(gld.realisedLongTerm)
+    expect(vti.realisedCollectibleLongTerm).toBe(0)
+    // 21,324 × 0.318 = 6,781.03 → 6,781 (it was 21,324 × 0.238 = 5,075).
+    expect(gld.realisedLongTerm).toBe(21_324)
+    expect(gld.taxImpact).toBe(Math.round(21_324 * 0.318))
+    expect(gld.taxImpact).toBe(6_781)
+    // 109,639 × 0.238 = 26,094.08 → 26,094.
+    expect(vti.taxImpact).toBe(Math.round(vti.realisedLongTerm * 0.238))
+  })
+
+  it('acc-001: the estimate nets the year-to-date loss against the 23.8% gain, leaving the 28% gain whole', async () => {
+    const [preview] = await previewRebalance({ accountIds: ['acc-001'], taxAware: true })
+    // LT 109,639 (VTI) + 5,179 (VNQ) + 21,324 (GLD) − 32,750 (rs-001) = 103,392, of which GLD 21,324:
+    // 82,068 × 0.238 + 21,324 × 0.318 = 19,532.18 + 6,781.03 = 26,313.21 → 26,313
+    // (at a flat 23.8%: 103,392 × 0.238 = 24,607.30 → 24,607).
+    expect(preview!.estimatedTaxImpact).toBe(26_313)
   })
 })

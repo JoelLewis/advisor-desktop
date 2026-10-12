@@ -142,7 +142,14 @@ export type ModelTradePreview = {
    */
   currentDrift: number
   trades: ModelProposedTrade[]
+  /**
+   * The tax this proposal adds to its owner's return, netted with that return's YTD realised
+   * results. Signed: negative when the trades save tax against gains already realised this year.
+   * Same figure and same relationship to the legs' own tax as `RebalancePreview.estimatedTaxImpact`.
+   */
   estimatedTaxImpact: number
+  /** Accounts earlier in this batch, on the same return, whose proposals `estimatedTaxImpact` also nets against. */
+  nettedWithAccountIds: string[]
 }
 
 export type ModelProposedTrade = {
@@ -155,4 +162,6 @@ export type ModelProposedTrade = {
   /** Same account-native currency as the parent preview — see `ModelTradePreview.currency`. */
   currency: CurrencyCode
   reason: string
+  /** Sells with an unwashed loss share only: the last day of the IRC §1091 window the sale opens (sale date + 30). See `ProposedTrade`. */
+  repurchaseBlockedUntil?: string
 }

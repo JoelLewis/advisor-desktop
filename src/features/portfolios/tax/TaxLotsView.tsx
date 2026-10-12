@@ -2,10 +2,24 @@ import { memo } from 'react'
 import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { CurrencyValue } from '@/components/ui/CurrencyValue'
-import { formatDate, cn } from '@/lib/utils'
+import { formatDate, formatCalendarDate, cn } from '@/lib/utils'
 import type { TaxLot } from '@/types/portfolio'
 import type { CurrencyCode } from '@/types/currency'
-import { HOLDING_LABELS, Th } from './shared'
+import { HOLDING_LABELS } from '@/lib/tax-rules'
+
+const TH_ALIGN = {
+  left: 'text-left',
+  right: 'text-right',
+  center: 'text-center',
+} as const
+
+function Th({ children, align = 'left' }: { children: React.ReactNode; align?: 'left' | 'right' | 'center' }) {
+  return (
+    <th className={cn('px-4 py-2.5 text-caption font-medium text-text-secondary', TH_ALIGN[align])}>
+      {children}
+    </th>
+  )
+}
 
 const TaxLotRow = memo(function TaxLotRow({
   lot,
@@ -36,10 +50,10 @@ const TaxLotRow = memo(function TaxLotRow({
         <CurrencyValue value={lot.gainLoss} from={baseCurrency} compact />
       </td>
       <td className="px-4 py-2.5 text-center">
-        {lot.washSaleRestricted ? (
-          <Badge variant="red">Yes</Badge>
+        {lot.repurchaseBlockedUntil ? (
+          <Badge variant="yellow">{formatCalendarDate(lot.repurchaseBlockedUntil)}</Badge>
         ) : (
-          <span className="text-caption text-text-tertiary">No</span>
+          <span className="text-caption text-text-tertiary">—</span>
         )}
       </td>
     </tr>
@@ -68,7 +82,7 @@ export function TaxLotsView({ taxLots, positionMap, baseCurrency }: TaxLotsViewP
                 <Th align="right">Cost Basis</Th>
                 <Th align="right">Current Value</Th>
                 <Th align="right">Gain/Loss</Th>
-                <Th align="center">Wash Sale</Th>
+                <Th align="center">Repurchase blocked through</Th>
               </tr>
             </thead>
             <tbody>

@@ -1,17 +1,108 @@
 import { http, HttpResponse, delay } from 'msw'
-import { nbas } from '../data/nbas'
-import type { BatchActionRequest, NBAActionTemplate, NBAEffectivenessMetrics, NBACategory } from '@/types/nba'
+import { nextEventTime } from './event-clock'
+import { MOCK_NOW_ISO } from '@/lib/clock'
+import { INTC_HARVEST_NBA_ID, accountDriftSentence, clientDriftFacts, intcHolderFor, intcHoldingSentence, intcReturnSentence, nbas, type IntcHolder } from '../data/nbas'
+import type { BatchActionRequest, NBA, NBAActionTemplate, NBAEffectivenessMetrics, NBACategory } from '@/types/nba'
 import { notFound } from './utils'
-import { SHORT_TERM_RATE, LONG_TERM_RATE, formatRatePercent } from '@/features/portfolios/tax/shared'
+
+const wholeDollars = (amount: number) => `$${Math.round(Math.abs(amount)).toLocaleString('en-US')}`
+
+/** What nba-002's figures are, stated beside every one of them. */
+const HARVEST_ESTIMATE_BASIS =
+  "against this return's realised results so far this year, at top federal rates; capital-gains tax only, and state tax is not modelled"
+const HARVEST_ESTIMATE_BASIS_FOR_CLIENT =
+  "These figures are federal capital-gains tax at top rates, against your return's realised results so far this year; state tax is not modelled. They are estimates, not tax advice."
 
 /**
- * PRE-FLIGHT correction 7 — these templates previously said "at 37% bracket" / "at top marginal
- * rate" for every tax-loss-harvesting NBA, regardless of whether the underlying lots are
- * short-term (37%) or long-term (23.8%). The rate depends on holding period; a generic template
- * cannot know a specific lot's period, so it discloses the range rather than asserting a single
- * rate it cannot back up — the same posture `RATE_DISCLOSURE` takes on the tax page itself.
+ * C1 (final review) · a client email for a multi-client NBA once interpolated `nba.description`,
+ * which names every client's holdings and tax position, and quoted the NBA's whole estimate as the
+ * addressee's saving. The INTC template reads the addressee's own holder facts and nothing else:
+ * their holding, their return, their saving.
  */
-const TAX_RATE_RANGE = `${formatRatePercent(SHORT_TERM_RATE)} short-term / ${formatRatePercent(LONG_TERM_RATE)} long-term`
+function intcHarvestTemplate(h: IntcHolder, name: string): NBAActionTemplate {
+  return {
+    talkingPoints: [
+      `Tax-loss harvesting opportunity: ${intcHoldingSentence(h, 'advisor')}`,
+      `Estimated capital-gains tax saved this year: ${wholeDollars(h.savingThisYear)}, ${HARVEST_ESTIMATE_BASIS}`,
+      intcReturnSentence(h, 'advisor'),
+      'Replacement securities maintain sector exposure while observing wash sale rules',
+      "The 30-day wash sale window must be tracked across every account of the same taxpayer, including a spouse's and IRAs",
+      'Document the tax rationale for compliance records before executing',
+    ],
+    emailDraft: {
+      subject: `Tax Management Opportunity — ${name}`,
+      body: `Dear ${name},\n\nOur monitoring systems have identified a tax-loss harvesting opportunity in your portfolio. ${intcHoldingSentence(h, 'client')} ${intcReturnSentence(h, 'client')}\n\n` +
+        `${HARVEST_ESTIMATE_BASIS_FOR_CLIENT}\n\n` +
+        "We'd replace the shares sold with a similar investment to maintain your portfolio's risk profile while observing wash sale rules.\n\n" +
+        "Would you like to discuss this strategy? I'm available for a brief call at your convenience.\n\nBest regards,\nYour Advisor",
+    },
+    analysisSummary: `Unrealized loss: ${intcHoldingSentence(h, 'advisor')} ${intcReturnSentence(h, 'advisor')} ` +
+      'Strategy: sell the loss position, replace with a correlated ETF to maintain sector exposure. Wash sale monitoring across all of the taxpayer\'s accounts required. ' +
+      'Recommendation: execute before additional price recovery narrows the harvesting window.',
+    generatedAt: MOCK_NOW_ISO,
+  }
+}
+
+/**
+ * I1 (final review) · the rebalancing email once told each client the book-wide breach range
+ * ("6.2%–90.6%", the 90.6% another client's non-USD account) as their drift, called it a
+ * threshold, and quoted a hand-typed $45K. It now states the addressee's own accounts: each one
+ * outside its band, its worst asset class against its own model's target and band, and the value a
+ * rebalance trades to restore them.
+ */
+function rebalancingTemplate(clientId: string, name: string): NBAActionTemplate {
+  const { own, outOfBand, valueToTradeUsd } = clientDriftFacts(clientId)
+  const advisorDrift = outOfBand.map((d) => accountDriftSentence(d, 'advisor')).join(' ')
+  const clientDrift = outOfBand.map((d) => accountDriftSentence(d, 'client')).join(' ')
+  const accountsOut = outOfBand.length === 1 ? 'one of your accounts has' : `${outOfBand.length} of your accounts have`
+  const toTrade = `Bringing ${outOfBand.length === 1 ? 'it' : 'them'} back to target would mean trading about ${wholeDollars(valueToTradeUsd)}.`
+  const emailFinding = outOfBand.length > 0
+    ? `I'm writing because ${accountsOut} drifted outside the band ${outOfBand.length === 1 ? 'its model allows' : 'their models allow'}. ${clientDrift}\n\n${toTrade} ` +
+      'I recommend we rebalance to restore your target allocation and the risk level we agreed upon in your Investment Policy Statement.'
+    : "None of your accounts is outside its model's drift band today, so drift alone does not call for a rebalance. I'd still like to review your allocation with you."
+  return {
+    talkingPoints: [
+      outOfBand.length > 0
+        ? `${outOfBand.length} of ${name}'s ${own.length} accounts ${outOfBand.length === 1 ? 'is' : 'are'} outside ${outOfBand.length === 1 ? "its model's" : "their models'"} drift band. ${advisorDrift}`
+        : `None of ${name}'s accounts is outside its model's drift band`,
+      outOfBand.length > 0 ? `Restoring target trades about ${wholeDollars(valueToTradeUsd)} across those accounts` : 'Restoring target allocation keeps the agreed risk level',
+      'Tax-loss harvesting can be layered into the rebalance to offset realized gains',
+      'Recommend batch execution to minimize market timing differences across accounts',
+    ],
+    emailDraft: {
+      subject: `Portfolio Rebalancing Recommendation — ${name}`,
+      body: `Dear ${name},\n\n${emailFinding}\n\nI'd like to schedule a brief call to walk you through the proposed trades. Would you have 15 minutes this week?\n\nBest regards,\nYour Advisor`,
+    },
+    analysisSummary: outOfBand.length > 0
+      ? `Drift analysis: ${advisorDrift} Recommended action: systematic rebalancing with tax-aware lot selection, trading about ${wholeDollars(valueToTradeUsd)} to restore each model's targets.`
+      : `Drift analysis: none of ${name}'s accounts is outside its model's band.`,
+    generatedAt: MOCK_NOW_ISO,
+  }
+}
+
+/**
+ * Any other tax NBA. Its description and estimate are the NBA's as a whole, so the email quotes
+ * the description only when the NBA concerns the addressee alone, and never quotes the estimate as
+ * the addressee's saving.
+ */
+function taxManagementTemplate(nba: NBA, name: string): NBAActionTemplate {
+  const ownDescription = nba.clients.length === 1 ? ` ${nba.description}` : ''
+  return {
+    talkingPoints: [
+      `Tax management opportunity: ${nba.trigger.value}`,
+      nba.estimatedImpact > 0 ? `Estimated impact: ${wholeDollars(nba.estimatedImpact)}` : 'Harvesting losses offsets realized gains from earlier in the year',
+      'Replacement securities maintain sector exposure while observing wash sale rules',
+      'The 30-day wash sale window must be tracked across all accounts for the same tax ID',
+      'Document the tax rationale for compliance records before executing',
+    ],
+    emailDraft: {
+      subject: `Tax Management Opportunity — ${name}`,
+      body: `Dear ${name},\n\nOur monitoring systems have identified a tax management opportunity in your portfolio.${ownDescription}\n\nI'd like to walk you through what it would mean for your taxes this year.\n\nWould you like to discuss this strategy? I'm available for a brief call at your convenience.\n\nBest regards,\nYour Advisor`,
+    },
+    analysisSummary: `Tax event: ${nba.trigger.value}. ${nba.suggestedAction}. Wash sale monitoring across all client accounts required.`,
+    generatedAt: MOCK_NOW_ISO,
+  }
+}
 
 export const nbaHandlers = [
   // GET /api/nba/effectiveness — NBA system effectiveness metrics
@@ -117,12 +208,12 @@ export const nbaHandlers = [
       if (body.supervisorOverride) {
         nba.complianceInfo.supervisorOverride = true
         nba.complianceInfo.auditTrail.push({
-          action: 'override_granted', timestamp: new Date().toISOString(),
+          action: 'override_granted', timestamp: nextEventTime(),
           actor: 'supervisor-override', note: body.reason as string ?? 'Supervisor override',
         })
         nba.dismissed = true
         nba.complianceInfo.auditTrail.push({
-          action: 'dismissed', timestamp: new Date().toISOString(),
+          action: 'dismissed', timestamp: nextEventTime(),
           actor: 'advisor', note: 'Dismissed with supervisor override',
         })
         return new HttpResponse(null, { status: 204 })
@@ -136,7 +227,7 @@ export const nbaHandlers = [
     nba.dismissed = true
     if (nba.complianceInfo) {
       nba.complianceInfo.auditTrail.push({
-        action: 'dismissed', timestamp: new Date().toISOString(), actor: 'advisor',
+        action: 'dismissed', timestamp: nextEventTime(), actor: 'advisor',
       })
     }
     return new HttpResponse(null, { status: 204 })
@@ -146,55 +237,32 @@ export const nbaHandlers = [
     const nba = nbas.find((n) => n.id === params.id)
     if (nba?.complianceInfo) {
       nba.complianceInfo.auditTrail.push({
-        action: 'snoozed', timestamp: new Date().toISOString(), actor: 'advisor',
+        action: 'snoozed', timestamp: nextEventTime(), actor: 'advisor',
       })
     }
     return new HttpResponse(null, { status: 204 })
   }),
 
-  // GET /api/nba/:id/templates — AI-generated action templates
-  http.get('/api/nba/:id/templates', async ({ params }) => {
+  // GET /api/nba/:id/templates?clientId= — AI-generated action templates, addressed to one of the
+  // NBA's clients (the first when none is named); 404 for a client the NBA does not concern.
+  http.get('/api/nba/:id/templates', async ({ params, request }) => {
     await delay(500)
     const nba = nbas.find((n) => n.id === params.id)
     if (!nba) return notFound()
-
-    const clientNames = nba.clients.map((c) => c.name).join(', ')
-    const firstClient = nba.clients[0]?.name ?? 'the client'
+    const clientId = new URL(request.url).searchParams.get('clientId')
+    const addressee = clientId === null ? nba.clients[0] : nba.clients.find((c) => c.id === clientId)
+    if (addressee === undefined) return notFound()
+    const addresseeName = addressee.name
     const impact = nba.estimatedImpact > 0
       ? `$${(nba.estimatedImpact / 1000).toFixed(0)}K`
       : null
 
     const templatesByCategory: Record<string, () => NBAActionTemplate> = {
-      rebalancing: () => ({
-        talkingPoints: [
-          `Portfolio drift has exceeded the ${nba.trigger.value} threshold for ${clientNames}`,
-          'Rebalancing now captures the recent equity rally gains and reduces concentration risk',
-          impact ? `Estimated portfolio risk reduction impact: ${impact}` : 'Restoring target allocation improves risk-adjusted returns',
-          'Tax-loss harvesting can be layered into the rebalance to offset realized gains',
-          'Recommend batch execution to minimize market timing differences across accounts',
-        ],
-        emailDraft: {
-          subject: `Portfolio Rebalancing Recommendation — ${firstClient}`,
-          body: `Dear ${firstClient},\n\nI'm writing to let you know that your portfolio has drifted from its target allocation due to recent market movements. Specifically, ${nba.trigger.value}.\n\nI recommend we rebalance your portfolio to restore your target allocation. This helps maintain the risk level we agreed upon in your Investment Policy Statement while taking advantage of recent market gains.\n\n${impact ? `The estimated impact of this rebalancing is ${impact}.` : ''}\n\nI'd like to schedule a brief call to walk you through the proposed trades. Would you have 15 minutes this week?\n\nBest regards,\nYour Advisor`,
-        },
-        analysisSummary: `Drift analysis detected ${nba.trigger.value} deviation from target model across ${nba.clients.length} account(s). Primary driver: equity outperformance shifting allocation above policy band. Recommended action: systematic rebalancing with tax-aware lot selection. Risk reduction: restores portfolio to within policy tolerances.`,
-        generatedAt: new Date().toISOString(),
-      }),
-      tax_management: () => ({
-        talkingPoints: [
-          `Tax-loss harvesting opportunity identified: ${nba.trigger.value}`,
-          impact ? `Estimated tax savings at applicable rate (${TAX_RATE_RANGE}): ${impact}` : 'Harvesting losses offsets realized gains from earlier in the year',
-          'Replacement securities maintain sector exposure while observing wash sale rules',
-          'The 30-day wash sale window must be tracked across all accounts for the same tax ID',
-          'Document the tax rationale for compliance records before executing',
-        ],
-        emailDraft: {
-          subject: `Tax Management Opportunity — ${firstClient}`,
-          body: `Dear ${firstClient},\n\nOur monitoring systems have identified a tax management opportunity in your portfolio. ${nba.description}\n\nBy harvesting these losses now, we can offset realized gains and potentially reduce your tax liability for the year${impact ? ` by approximately ${impact}` : ''}.\n\nWe'll replace the sold positions with similar investments to maintain your portfolio's risk profile while observing wash sale rules.\n\nWould you like to discuss this strategy? I'm available for a brief call at your convenience.\n\nBest regards,\nYour Advisor`,
-        },
-        analysisSummary: `Unrealized loss detected: ${nba.trigger.value}. Strategy: sell loss position, replace with correlated ETF to maintain sector exposure. Wash sale monitoring across all client accounts required. ${impact ? `Estimated tax benefit: ${impact} at applicable rate (${TAX_RATE_RANGE}).` : ''} Recommendation: execute before additional price recovery narrows the harvesting window.`,
-        generatedAt: new Date().toISOString(),
-      }),
+      rebalancing: () => rebalancingTemplate(addressee.id, addresseeName),
+      tax_management: () => {
+        const holder = nba.id === INTC_HARVEST_NBA_ID ? intcHolderFor(addressee.id) : undefined
+        return holder ? intcHarvestTemplate(holder, addresseeName) : taxManagementTemplate(nba, addresseeName)
+      },
       planning: () => ({
         talkingPoints: [
           `Planning trigger: ${nba.trigger.condition.replace(/_/g, ' ')} — ${nba.trigger.value}`,
@@ -204,11 +272,11 @@ export const nbaHandlers = [
           'Document the planning discussion and any strategy changes for compliance',
         ],
         emailDraft: {
-          subject: `Financial Planning Update — ${firstClient}`,
-          body: `Dear ${firstClient},\n\nI wanted to reach out regarding an important planning item. ${nba.description}\n\nI'd like to schedule a meeting to review your financial plan, update our projections, and discuss the best path forward.\n\nPlease let me know a few times that work for you this week or next, and I'll send a calendar invitation.\n\nBest regards,\nYour Advisor`,
+          subject: `Financial Planning Update — ${addresseeName}`,
+          body: `Dear ${addresseeName},\n\nI wanted to reach out regarding an important planning item. ${nba.description}\n\nI'd like to schedule a meeting to review your financial plan, update our projections, and discuss the best path forward.\n\nPlease let me know a few times that work for you this week or next, and I'll send a calendar invitation.\n\nBest regards,\nYour Advisor`,
         },
         analysisSummary: `Planning event: ${nba.trigger.value}. ${nba.suggestedAction}. Impact on long-term plan should be modeled with updated assumptions. Client engagement recommended within 2 weeks.`,
-        generatedAt: new Date().toISOString(),
+        generatedAt: MOCK_NOW_ISO,
       }),
       risk: () => ({
         talkingPoints: [
@@ -219,11 +287,11 @@ export const nbaHandlers = [
           'Consider hedging alternatives (protective puts, collars) if immediate sale is undesirable',
         ],
         emailDraft: {
-          subject: `Portfolio Risk Review — ${firstClient}`,
-          body: `Dear ${firstClient},\n\nI'm reaching out regarding a risk management item in your portfolio. ${nba.description}\n\nI'd like to review the situation with you and discuss strategies to address this, including systematic diversification options that consider tax implications.\n\nCould we schedule 30 minutes this week to discuss?\n\nBest regards,\nYour Advisor`,
+          subject: `Portfolio Risk Review — ${addresseeName}`,
+          body: `Dear ${addresseeName},\n\nI'm reaching out regarding a risk management item in your portfolio. ${nba.description}\n\nI'd like to review the situation with you and discuss strategies to address this, including systematic diversification options that consider tax implications.\n\nCould we schedule 30 minutes this week to discuss?\n\nBest regards,\nYour Advisor`,
         },
         analysisSummary: `Risk event: ${nba.trigger.value}. ${nba.suggestedAction}. IPS compliance review required. Options: systematic reduction over 3-6 months, hedging overlay, or IPS amendment with documented rationale.`,
-        generatedAt: new Date().toISOString(),
+        generatedAt: MOCK_NOW_ISO,
       }),
       client_service: () => ({
         talkingPoints: [
@@ -235,14 +303,14 @@ export const nbaHandlers = [
         ],
         emailDraft: {
           subject: nba.trigger.condition === 'birthday_approaching'
-            ? `Happy Birthday, ${firstClient}!`
-            : `Checking In — ${firstClient}`,
+            ? `Happy Birthday, ${addresseeName}!`
+            : `Checking In — ${addresseeName}`,
           body: nba.trigger.condition === 'birthday_approaching'
-            ? `Dear ${firstClient},\n\nWishing you a wonderful birthday! I hope you have a fantastic celebration.\n\nAs always, I'm here if you'd like to discuss anything about your financial plan or portfolio. Looking forward to connecting soon.\n\nWarm regards,\nYour Advisor`
-            : `Dear ${firstClient},\n\nI wanted to reach out to check in. ${nba.description}\n\nI'd love to schedule some time to catch up and ensure everything is on track with your financial goals.\n\nPlease let me know if you have any questions or if there's anything I can help with.\n\nBest regards,\nYour Advisor`,
+            ? `Dear ${addresseeName},\n\nWishing you a wonderful birthday! I hope you have a fantastic celebration.\n\nAs always, I'm here if you'd like to discuss anything about your financial plan or portfolio. Looking forward to connecting soon.\n\nWarm regards,\nYour Advisor`
+            : `Dear ${addresseeName},\n\nI wanted to reach out to check in. ${nba.description}\n\nI'd love to schedule some time to catch up and ensure everything is on track with your financial goals.\n\nPlease let me know if you have any questions or if there's anything I can help with.\n\nBest regards,\nYour Advisor`,
         },
         analysisSummary: `Client service action: ${nba.suggestedAction}. ${nba.trigger.value}. Proactive outreach supports retention and satisfaction goals.`,
-        generatedAt: new Date().toISOString(),
+        generatedAt: MOCK_NOW_ISO,
       }),
       compliance: () => ({
         talkingPoints: [
@@ -253,11 +321,11 @@ export const nbaHandlers = [
           'Escalate to compliance officer if the deadline cannot be met',
         ],
         emailDraft: {
-          subject: `Important: Account Update Required — ${firstClient}`,
-          body: `Dear ${firstClient},\n\n${nba.description}\n\nTo ensure your account remains in good standing, we need to complete this process promptly. Please let me know a convenient time for a brief call, or reply with any questions.\n\nThank you for your prompt attention to this matter.\n\nBest regards,\nYour Advisor`,
+          subject: `Important: Account Update Required — ${addresseeName}`,
+          body: `Dear ${addresseeName},\n\n${nba.description}\n\nTo ensure your account remains in good standing, we need to complete this process promptly. Please let me know a convenient time for a brief call, or reply with any questions.\n\nThank you for your prompt attention to this matter.\n\nBest regards,\nYour Advisor`,
         },
         analysisSummary: `Compliance action required: ${nba.suggestedAction}. Trigger: ${nba.trigger.value}. Deadline adherence is mandatory. Document completion for audit trail.`,
-        generatedAt: new Date().toISOString(),
+        generatedAt: MOCK_NOW_ISO,
       }),
       growth: () => ({
         talkingPoints: [
@@ -268,11 +336,11 @@ export const nbaHandlers = [
           'Follow up within 5 business days to maintain momentum',
         ],
         emailDraft: {
-          subject: `Introduction — ${firstClient}`,
-          body: `Dear ${firstClient},\n\n${nba.trigger.condition === 'referral_mention' ? 'Thank you for the kind referral! ' : ''}${nba.description}\n\nI'd welcome the opportunity to discuss how we might help. Could we schedule a brief introductory conversation?\n\nBest regards,\nYour Advisor`,
+          subject: `Introduction — ${addresseeName}`,
+          body: `Dear ${addresseeName},\n\n${nba.trigger.condition === 'referral_mention' ? 'Thank you for the kind referral! ' : ''}${nba.description}\n\nI'd welcome the opportunity to discuss how we might help. Could we schedule a brief introductory conversation?\n\nBest regards,\nYour Advisor`,
         },
         analysisSummary: `Growth opportunity: ${nba.suggestedAction}. ${nba.trigger.value}. ${impact ? `Estimated annual revenue impact: ${impact}.` : ''} Timely follow-up is critical for conversion.`,
-        generatedAt: new Date().toISOString(),
+        generatedAt: MOCK_NOW_ISO,
       }),
     }
 

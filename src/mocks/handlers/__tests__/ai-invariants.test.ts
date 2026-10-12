@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { getAIInsights } from '@/services/ai'
 import { clients } from '@/mocks/data/clients'
-import { MOCK_NOW_ISO } from '@/lib/clock'
+import { MOCK_NOW_ISO, MOCK_TODAY_ISO } from '@/lib/clock'
+import { openWashSaleWindows } from '@/mocks/data/realised-sales'
+import { formatCalendarDate } from '@/lib/utils'
 
 // Regression test for fix round 2: the "Contact Gap Detected" insight's daysSinceContact was
 // computed against the live system clock (Date.now()) while comparing to a frozen fixture
@@ -67,5 +69,18 @@ describe('AI insight invariants — account_detail tax-loss-harvesting insight g
     expect(harvest?.metric?.value).toBe('$48,804')
     expect(harvest?.body).not.toContain('clear for all candidates')
     expect(harvest?.body).toContain('wash-sale window')
+  })
+})
+
+describe('I5 · the trading insight states each wash-sale window end as a calendar date, and counts accounts', () => {
+  it('prints every window end as its own date in any time zone, and the number of accounts restricted', async () => {
+    const windows = openWashSaleWindows(MOCK_TODAY_ISO)
+    const insight = (await getAIInsights('trading')).find((i) => i.id === 'trade-2')!
+    for (const w of windows) expect(insight.body).toContain(`${w.symbol} in`) // every window is named
+    // rs-001 closes 2026-03-22; a local-time formatter west of Greenwich printed "Mar 21, 2026".
+    expect(insight.body).toContain('(through Mar 22, 2026)')
+    for (const w of windows) expect(insight.body).toContain(`(through ${formatCalendarDate(w.end)})`)
+    const restricted = new Set(windows.map((w) => w.accountId)).size
+    expect(insight.body).toMatch(new RegExp(`^${restricted} accounts? carrying an active wash-sale restriction`))
   })
 })

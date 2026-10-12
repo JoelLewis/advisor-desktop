@@ -1,14 +1,16 @@
 import { describe, it, expect } from 'vitest'
 import { accounts } from '@/mocks/data/accounts'
 import { getPositionsForAccount } from '@/mocks/data/positions'
-import { openWashSaleWindows } from '@/mocks/data/realised-sales'
+import { openWashSaleWindowsFor, sameWashSaleTaxpayer } from '../tax-return'
 import { generateRebalanceTrades } from '../oms'
 import { generateTaxLots } from '../custodian'
 import { hasWashSaleRisk } from '@/lib/wash-sale'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
+import type { Account } from '@/types/account'
 
-function householdAcquisitions(householdId: string) {
-  return accounts.filter((a) => a.householdId === householdId).flatMap((a) => {
+/** Who counts is `sameWashSaleTaxpayer`'s rule, tested in tax-return-netting.test.ts; the rest is recomputed here. */
+function taxpayerAcquisitions(account: Account) {
+  return sameWashSaleTaxpayer(account).flatMap((a) => {
     const bySymbol = new Map(getPositionsForAccount(a.id, a.totalValue).map((p) => [p.id, p.symbol]))
     return generateTaxLots(a.id, a.totalValue).map((l) => {
       const symbol = bySymbol.get(l.positionId)
@@ -26,8 +28,8 @@ function lotIdsOfSymbol(accountId: string, totalValue: number, symbol: string): 
 describe('washSaleRisk on every proposed leg equals §1091 recomputed independently', () => {
   it('holds for every account, tax-aware', () => {
     for (const a of accounts) {
-      const windows = openWashSaleWindows(MOCK_TODAY_ISO, a.householdId)
-      const acquisitions = householdAcquisitions(a.householdId)
+      const windows = openWashSaleWindowsFor(a, MOCK_TODAY_ISO)
+      const acquisitions = taxpayerAcquisitions(a)
       for (const leg of generateRebalanceTrades(a.id, true)) {
         const realisesLoss = leg.realisedShortTerm + leg.realisedLongTerm < 0
         // The legs do not expose which lots they consume, so the recompute treats every lot of the

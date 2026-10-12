@@ -23,7 +23,27 @@ type TaxLot = {
   currentValue: Currency;
   gainLoss: Currency;
   holdingPeriod: HoldingPeriod;
-  washSaleRestricted: boolean;
+  /**
+   * The last day of the latest open loss-sale window of this account's wash-sale taxpayer
+   * (`openWashSaleWindowsFor`: the couple, IRAs and Roths included) on this lot's symbol, or `null`
+   * when there is none. It restricts **buying the symbol back** (IRC §1091), not selling this lot:
+   * selling a lot at a loss is the harvest itself.
+   */
+  repurchaseBlockedUntil: string | null;
+  /**
+   * How many of this lot's shares would have their loss taken by §1091 if it were sold today:
+   * replacement shares the same taxpayer bought in the last 30 days, matched one for one to loss
+   * shares (Treas. Reg. §1.1091-1(c)), so only that proportion of the loss is affected. Both 0 for
+   * a lot at a gain or with nothing to match.
+   */
+  saleWash: SaleWash;
+};
+
+type SaleWash = {
+  /** Matched to a replacement in a taxable account: that part of the loss moves into the replacement's basis (§1091(d)). */
+  deferredShares: number;
+  /** Matched to a replacement in an IRA, Roth or other tax-advantaged account: that part of the loss is permanently disallowed (Rev. Rul. 2008-5). */
+  disallowedShares: number;
 };
 
 type Position = {
@@ -170,6 +190,7 @@ export type {
   AssetClass,
   HoldingPeriod,
   TaxLot,
+  SaleWash,
   Position,
   PositionSeed,
   HoldingGroup,
