@@ -4,6 +4,7 @@ import { todayISO } from '@/lib/clock'
 import { securityKind, concentrationLimitFor } from '@/lib/security-master'
 import { accounts } from '../data/accounts'
 import { getPositionsForAccount } from '../data/positions'
+import { personById } from '../data/people'
 import { openWashSaleWindowsFor } from './tax-return'
 import type { ProposalTradeLeg, ProposalViolation, ProposalLegResult, PreTradeCheckProposalResult } from '@/services/oms'
 
@@ -379,10 +380,17 @@ export const complianceAlerts: ComplianceAlert[] = [
   { id: 'comp-007', type: 'RMD', severity: 'warning', title: 'RMD calculation needed — Thompson Traditional IRA', description: 'James Thompson turns 73 this year. First RMD from Traditional IRA (acc-020) must be calculated.', entityType: 'account', entityId: 'acc-020', reviewStatus: 'pending', createdAt: '2026-02-01T08:00:00Z' },
 ]
 
+/**
+ * §0.3 · the chief compliance officer, the supervisory principal who disposes of these alerts.
+ * Records carry his directory id; the display label is read from the directory, not re-typed.
+ */
+const CCO_ID = 'cco-001'
+const ccoReviewer = { reviewerId: CCO_ID, reviewer: `${personById(CCO_ID)!.name} (CCO)` }
+
 const supervisionRecords: SupervisionRecord[] = [
-  { id: 'sr-001', alertId: 'comp-004', reviewer: 'Mark Davis (CCO)', action: 'Approved', notes: 'All trades within portfolio guidelines. No restricted securities.', timestamp: '2026-02-22T09:35:00Z' },
-  { id: 'sr-002', alertId: 'comp-006', reviewer: 'Mark Davis (CCO)', action: 'Approved', notes: 'SMH is a distinct ETF from INTC. No wash sale concern.', timestamp: '2026-02-21T14:10:00Z' },
-  { id: 'sr-003', alertId: 'comp-002', reviewer: 'Mark Davis (CCO)', action: 'Under Review', notes: 'Reviewing client IPS for AAPL exception. Position is long-held with significant unrealized gain.', timestamp: '2026-02-23T10:00:00Z' },
+  { id: 'sr-001', alertId: 'comp-004', ...ccoReviewer, action: 'Approved', notes: 'All trades within portfolio guidelines. No restricted securities.', timestamp: '2026-02-22T09:35:00Z' },
+  { id: 'sr-002', alertId: 'comp-006', ...ccoReviewer, action: 'Approved', notes: 'SMH is a distinct ETF from INTC. No wash sale concern.', timestamp: '2026-02-21T14:10:00Z' },
+  { id: 'sr-003', alertId: 'comp-002', ...ccoReviewer, action: 'Under Review', notes: 'Reviewing client IPS for AAPL exception. Position is long-held with significant unrealized gain.', timestamp: '2026-02-23T10:00:00Z' },
 ]
 
 export const complianceHandlers = [
