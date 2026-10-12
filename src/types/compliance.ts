@@ -18,6 +18,9 @@ export type ComplianceAlert = {
 export type SupervisionRecord = {
   id: string
   alertId: string
+  /** The reviewing principal's id in the team directory (`people.ts`). */
+  reviewerId: string
+  /** Display label, derived from the directory: name and title. */
   reviewer: string
   action: string
   notes: string

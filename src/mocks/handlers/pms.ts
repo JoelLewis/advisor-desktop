@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import type { MetricsSummary, AllocationSlice } from '@/services/pms'
-import type { DriftStatus, BenchmarkKind } from '@/types/portfolio'
+import type { DriftStatus, BenchmarkKind, Position } from '@/types/portfolio'
 import type { RiskMetrics, FactorExposure, StressScenario } from '@/types/risk'
 import type {
   BenchmarkComparison, PerformanceSeries, AttributionResult, AttributionResponse,
@@ -282,6 +282,17 @@ export function modelImplementationSecurity(modelId: string, assetClass: string)
 /** Exported so the invariant test checks the same map the engine reads, not a re-derivation. */
 export function usdQuoteFor(symbol: string): { name: string; price: number } | undefined {
   return USD_SECURITY_QUOTES.get(symbol)
+}
+
+/**
+ * §0.4 · a model's display name ("mod-002" → "Growth"), from `MODELS` — the one place a model is
+ * named. Throws on an unknown id: a name that silently fell back to another model's would label
+ * one policy with another's name.
+ */
+export function modelDisplayName(modelId: string): string {
+  const model = findModel(modelId)
+  if (!model) throw new Error(`no model ${modelId}`)
+  return model.name
 }
 
 function getModelByIndex(index: number): ModelDefinition {
@@ -566,7 +577,18 @@ const MODEL_BANDS: Record<string, { driftTolerance: number; rebalanceFrequency: 
 // what drift means. An unknown model id throws rather than falling back to mod-001 — a silently
 // substituted model here would be a trade instruction against a policy nobody chose.
 export function computeDriftForAccount(account: typeof accounts[0], modelIdOverride?: string): DriftStatus {
-  const positions = getPositionsForAccount(account.id, account.totalValue)
+  return computeDriftForHoldings(account, getPositionsForAccount(account.id, account.totalValue), modelIdOverride)
+}
+
+/** What drift reads from a holding: its asset class and its weight in the account. */
+export type DriftHolding = Pick<Position, 'assetClass' | 'weight'>
+
+/**
+ * §0.6 · the drift derivation itself, over any set of holdings. `computeDriftForAccount` runs it on
+ * the account's positions today; the rebalance preview runs it on the same positions with the
+ * proposed trades applied, so current and projected drift are one function, not two.
+ */
+export function computeDriftForHoldings(account: typeof accounts[0], positions: readonly DriftHolding[], modelIdOverride?: string): DriftStatus {
   const modelId = modelIdOverride ?? account.modelId ?? 'mod-001'
   const targets = getModelTargets(modelId)
   const band = MODEL_BANDS[modelId]

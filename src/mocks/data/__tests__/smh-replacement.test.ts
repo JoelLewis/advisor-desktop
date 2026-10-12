@@ -6,7 +6,7 @@ import { MOCK_TODAY_ISO } from '@/lib/clock'
 
 const acc = accounts.find((a) => a.id === 'acc-002')!
 
-describe('acc-002 holds the SMH bought on 2026-02-21 as the INTC replacement', () => {
+describe('acc-002 holds the SMH bought on 2026-02-20 as the INTC replacement', () => {
   const positions = getPositionsForAccount(acc.id, acc.totalValue)
   const smh = positions.find((p) => p.symbol === 'SMH')
 
@@ -24,21 +24,21 @@ describe('acc-002 holds the SMH bought on 2026-02-21 as the INTC replacement', (
   it('has exactly one lot, dated the purchase day, short-term', () => {
     const lots = generateTaxLots(acc.id, acc.totalValue).filter((l) => l.positionId === smh!.id)
     expect(lots).toHaveLength(1)
-    expect(lots[0]).toMatchObject({ purchaseDate: '2026-02-21', quantity: 180, holdingPeriod: 'short', gainLoss: 0 })
+    expect(lots[0]).toMatchObject({ purchaseDate: '2026-02-20', quantity: 180, holdingPeriod: 'short', gainLoss: 0 })
   })
 })
 
 describe('acc-002 transaction history records the SMH purchase, and nothing in SMH before it', () => {
   const smhTxns = generateTransactions(acc.id, acc.totalValue).filter((t) => t.symbol === 'SMH')
 
-  it('has exactly one SMH transaction: the 2026-02-21 buy of 180 at $245.20 for $44,136', () => {
+  it('has exactly one SMH transaction: the 2026-02-20 buy of 180 at $245.20 for $44,136', () => {
     expect(smhTxns).toHaveLength(1)
     expect(smhTxns[0]).toMatchObject({ type: 'buy', quantity: 180, price: 245.2, amount: -44_136 })
-    expect(smhTxns[0]!.date.slice(0, 10)).toBe('2026-02-21')
+    expect(smhTxns[0]!.date.slice(0, 10)).toBe('2026-02-20')
   })
 
   it('no SMH dividend or trade is dated before the position was opened', () => {
-    expect(smhTxns.filter((t) => t.date.slice(0, 10) < '2026-02-21')).toEqual([])
+    expect(smhTxns.filter((t) => t.date.slice(0, 10) < '2026-02-20')).toEqual([])
   })
 })
 
@@ -46,7 +46,7 @@ describe('holdingPeriodOn: IRC §1222 long-term means held more than one year', 
   it('exactly one year is short-term; a day more is long-term', () => {
     expect(holdingPeriodOn('2025-02-25', '2026-02-25')).toBe('short')
     expect(holdingPeriodOn('2025-02-24', '2026-02-25')).toBe('long')
-    expect(holdingPeriodOn('2026-02-21', '2026-02-25')).toBe('short')
+    expect(holdingPeriodOn('2026-02-20', '2026-02-25')).toBe('short')
   })
 
   it('every acc-002 lot, synthetic or known-date, carries the holding period its own date implies', () => {

@@ -14,6 +14,8 @@
  * so the fix is explicit symbols, not adding `intl_equity`/`fixed_income` to FUND_ONLY_CLASSES —
  * that would misclassify those single stocks as funds instead.
  */
+import type { TaxCharacter } from './capital-gains'
+
 export type SecurityKind = 'single_name' | 'fund' | 'cash'
 
 /** Pooled vehicles held anywhere in the fixtures. */
@@ -46,6 +48,26 @@ const PERIODIC_LIQUIDITY_SYMBOLS = new Set(['BXPE'])
 
 export function isMarketTradable(symbol: string): boolean {
   return !PERIODIC_LIQUIDITY_SYMBOLS.has(symbol)
+}
+
+/**
+ * The first day each security could be bought, for every security held in the book that launched
+ * after 2022-03-25 — the earliest date the custodian's synthetic lot generator can produce
+ * (`generateTaxLots` dates lots 3 to 47 whole months before 2026-02-25). Every other held security
+ * launched before that date, so no lot can predate it.
+ *
+ * - IBIT: iShares Bitcoin Trust ETF began trading on 11 January 2024, the first day of US spot
+ *   bitcoin ETFs.
+ * - BXPE: Blackstone Private Equity Strategies Fund L.P. held its first close, its inception, on
+ *   2 January 2024.
+ */
+const INCEPTION_DATES: ReadonlyMap<string, string> = new Map([
+  ['IBIT', '2024-01-11'],
+  ['BXPE', '2024-01-02'],
+])
+
+export function inceptionDate(symbol: string): string | undefined {
+  return INCEPTION_DATES.get(symbol)
 }
 
 export const SINGLE_NAME_LIMIT = 0.10 as const
@@ -93,4 +115,31 @@ export function concentrationLimitFor(kind: SecurityKind): number {
     case 'fund': return FUND_LIMIT
     case 'single_name': return SINGLE_NAME_LIMIT
   }
+}
+
+/**
+ * §0.6 · grantor trusts that hold physical precious metal. A grantor trust's holders are treated
+ * as owning its assets (§§671–677), so selling a share is selling metal, a collectible under
+ * §408(m)(2): its long-term gain is collectibles gain, taxed at up to 28% (§1(h)(4)–(5)), not
+ * 20%. Funds that hold futures or miners' shares are not collectibles and are not listed.
+ */
+const PHYSICAL_PRECIOUS_METAL_TRUSTS = new Set(['GLD', 'IAU', 'SLV', 'PPLT'])
+
+export function taxCharacterOf(symbol: string): TaxCharacter {
+  return PHYSICAL_PRECIOUS_METAL_TRUSTS.has(symbol) ? 'collectible' : 'capital_asset'
+}
+
+/**
+ * Coins held directly, not through a fund or trust. §1091 disallows losses on "stock or
+ * securities"; a directly held coin is property (Notice 2014-21), so selling one at a loss and
+ * buying it straight back washes nothing. Exchange-traded crypto trusts (IBIT, ETHE) are not
+ * listed: they stay subject, the conservative reading.
+ */
+export const SPOT_CRYPTO_SYMBOLS: ReadonlySet<string> = new Set([
+  'BTC', 'ETH', 'SOL', 'AVAX', 'LINK', 'DOT', 'USDC', 'ADA', 'MATIC', 'UNI', 'ATOM',
+])
+
+/** Whether IRC §1091 reaches a loss on `symbol` — every security; not a directly held coin. */
+export function isSubjectToWashSale(symbol: string): boolean {
+  return !SPOT_CRYPTO_SYMBOLS.has(symbol)
 }

@@ -20,7 +20,7 @@ const trustPositions: PositionSeed[] = [
 // Growth tilt with digital assets, PE, and INTC loss position (TLH candidate).
 //
 // D2/D28 — the nine positions summed to $4,832,000 against a $4,500,000 balance, and INTC still
-// showed the full 12,000 shares four days after ord-004/rs-001 sold 5,000 of them. INTC is now the
+// showed the full 12,000 shares five days after ord-004/rs-001 sold 5,000 of them. INTC is now the
 // 7,000 shares actually held (cost basis $35.00/share, matching rs-001's $175,000 on 5,000), and the
 // remaining holdings are scaled by 0.923909 (= $4,031,210 / $4,363,210) with quantities re-derived
 // as whole shares so every market value is quantity x price. CASH is the money market balance plus
@@ -34,9 +34,9 @@ const robertIndividualPositions: PositionSeed[] = [
   { id: 'pos-023', accountId: 'acc-002', symbol: 'INTC', name: 'Intel Corp.', assetClass: 'us_equity', quantity: 7000, price: 28.45, costBasis: 245_000, marketValue: 199_150, gainLoss: -45_850, gainLossPercent: -0.187 },
   { id: 'pos-024', accountId: 'acc-002', symbol: 'AGG', name: 'iShares Core US Aggregate Bond ETF', assetClass: 'fixed_income', quantity: 5082, price: 98.50, costBasis: 503_531, marketValue: 500_577, gainLoss: -2_954, gainLossPercent: -0.006 },
   { id: 'pos-026', accountId: 'acc-002', symbol: 'IBIT', name: 'iShares Bitcoin Trust ETF', assetClass: 'digital_assets', quantity: 3234, price: 52.80, costBasis: 129_347, marketValue: 170_755.20, gainLoss: 41_408.20, gainLossPercent: 0.320 },
-  { id: 'pos-027', accountId: 'acc-002', symbol: 'ETHE', name: 'iShares Ethereum Trust ETF', assetClass: 'digital_assets', quantity: 3882, price: 18.45, costBasis: 60_054, marketValue: 71_622.90, gainLoss: 11_568.90, gainLossPercent: 0.193 },
-  { id: 'pos-028', accountId: 'acc-002', symbol: 'BXPE', name: 'Blackstone Private Equity Fund', assetClass: 'private_equity', quantity: 1110, price: 108.50, costBasis: 106_250, marketValue: 120_435, gainLoss: 14_185, gainLossPercent: 0.134 },
-  // Bought 2026-02-21 as the INTC tax-loss-harvest replacement (activities.ts, note-002, comp-006).
+  { id: 'pos-027', accountId: 'acc-002', symbol: 'ETHE', name: 'Grayscale Ethereum Trust ETF', assetClass: 'digital_assets', quantity: 3882, price: 18.45, costBasis: 60_054, marketValue: 71_622.90, gainLoss: 11_568.90, gainLossPercent: 0.193 },
+  { id: 'pos-028', accountId: 'acc-002', symbol: 'BXPE', name: 'Blackstone Private Equity Strategies Fund', assetClass: 'private_equity', quantity: 1110, price: 108.50, costBasis: 106_250, marketValue: 120_435, gainLoss: 14_185, gainLossPercent: 0.134 },
+  // Bought 2026-02-20 as the INTC tax-loss-harvest replacement (activities.ts, note-002, comp-006).
   { id: 'pos-265', accountId: 'acc-002', symbol: 'SMH', name: 'VanEck Semiconductor ETF', assetClass: 'us_equity', quantity: 180, price: 245.20, costBasis: 44_136, marketValue: 44_136, gainLoss: 0, gainLossPercent: 0 },
   { id: 'pos-025', accountId: 'acc-002', symbol: 'CASH', name: 'Money Market Fund', assetClass: 'cash', quantity: 1, price: 225_504, costBasis: 225_504, marketValue: 225_504, gainLoss: 0, gainLossPercent: 0 },
 ]
@@ -67,7 +67,7 @@ const chenTrustPositions: PositionSeed[] = [
   { id: 'pos-056', accountId: 'acc-006', symbol: 'AGG', name: 'iShares Core US Aggregate Bond ETF', assetClass: 'fixed_income', quantity: 12000, price: 98.50, costBasis: 1_200_000, marketValue: 1_182_000, gainLoss: -18_000, gainLossPercent: -0.015 },
   { id: 'pos-057', accountId: 'acc-006', symbol: 'BNDX', name: 'Vanguard Total International Bond ETF', assetClass: 'fixed_income', quantity: 12000, price: 50.80, costBasis: 620_000, marketValue: 609_600, gainLoss: -10_400, gainLossPercent: -0.017 },
   { id: 'pos-058', accountId: 'acc-006', symbol: 'LQD', name: 'iShares iBoxx $ Investment Grade Corp Bond ETF', assetClass: 'fixed_income', quantity: 5000, price: 113.40, costBasis: 575_000, marketValue: 567_000, gainLoss: -8_000, gainLossPercent: -0.014 },
-  { id: 'pos-059', accountId: 'acc-006', symbol: 'BXPE', name: 'Blackstone Private Equity Fund', assetClass: 'private_equity', quantity: 5000, price: 108.50, costBasis: 500_000, marketValue: 542_500, gainLoss: 42_500, gainLossPercent: 0.085 },
+  { id: 'pos-059', accountId: 'acc-006', symbol: 'BXPE', name: 'Blackstone Private Equity Strategies Fund', assetClass: 'private_equity', quantity: 5000, price: 108.50, costBasis: 500_000, marketValue: 542_500, gainLoss: 42_500, gainLossPercent: 0.085 },
   { id: 'pos-060', accountId: 'acc-006', symbol: 'QAI', name: 'IQ Hedge Multi-Strategy Tracker ETF', assetClass: 'alternatives', quantity: 30000, price: 35.20, costBasis: 1_030_000, marketValue: 1_056_000, gainLoss: 26_000, gainLossPercent: 0.025 },
   { id: 'pos-061', accountId: 'acc-006', symbol: 'VNQ', name: 'Vanguard Real Estate ETF', assetClass: 'real_estate', quantity: 6500, price: 89.20, costBasis: 540_000, marketValue: 579_800, gainLoss: 39_800, gainLossPercent: 0.074 },
   { id: 'pos-062', accountId: 'acc-006', symbol: 'CASH', name: 'Money Market Fund', assetClass: 'cash', quantity: 1, price: 1_012_470, costBasis: 1_012_470, marketValue: 1_012_470, gainLoss: 0, gainLossPercent: 0 },

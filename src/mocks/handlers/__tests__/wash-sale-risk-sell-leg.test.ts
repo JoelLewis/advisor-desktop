@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { TaxLot } from '@/types/portfolio'
+import type { CustodianLot } from '@/mocks/handlers/custodian'
 
 /**
  * Sell-side §1091 through the engine. No fixture today gives a loss sale with a replacement bought
@@ -29,9 +29,9 @@ vi.mock('@/mocks/data/positions', async (importOriginal) => {
 
 vi.mock('@/mocks/handlers/custodian', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/mocks/handlers/custodian')>()
-  const splitWithRecentLot = (lot: TaxLot): TaxLot[] => {
+  const splitWithRecentLot = (lot: CustodianLot): CustodianLot[] => {
     const recentShare = 2_000 / lot.quantity
-    const recent: TaxLot = {
+    const recent: CustodianLot = {
       ...lot,
       id: `${lot.id}-recent`,
       purchaseDate: '2026-02-15',
@@ -41,7 +41,7 @@ vi.mock('@/mocks/handlers/custodian', async (importOriginal) => {
       holdingPeriod: 'short',
     }
     recent.gainLoss = recent.currentValue - recent.costBasis
-    const older: TaxLot = {
+    const older: CustodianLot = {
       ...lot,
       quantity: lot.quantity - recent.quantity,
       costBasis: lot.costBasis - recent.costBasis,
@@ -52,7 +52,7 @@ vi.mock('@/mocks/handlers/custodian', async (importOriginal) => {
   }
   return {
     ...original,
-    generateTaxLots: (accountId: string, totalValue: number): TaxLot[] => {
+    generateTaxLots: (accountId: string, totalValue: number): CustodianLot[] => {
       const lots = original.generateTaxLots(accountId, totalValue)
       if (scenario.current === 'roth-buys-intc' && accountId === 'acc-004') {
         // A Roth repurchase is the "IRA wash-sale trap": it disallows the taxable account's loss.

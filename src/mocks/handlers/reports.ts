@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw'
+import { nextEventTime, nextRecordNumber } from './event-clock'
 import type { GeneratedReport, ReportSection, ReportTemplate } from '@/types/report'
 import { now } from '@/lib/clock'
 
@@ -72,13 +73,12 @@ export const reportHandlers = [
   http.post('/api/reports/generate', async ({ request }) => {
     const body = await request.json() as { template: ReportTemplate; sections: ReportSection[]; clientId?: string }
     const report: GeneratedReport = {
-      id: `rpt-${Date.now()}`,
+      id: `rpt-${nextRecordNumber()}`,
       // The title's date is the report's display "as of" date (same treatment as the proposal
       // cover-page date) — anchored to the frozen clock, not the live system clock. `generatedAt`
-      // below is a genuine event/mutation timestamp (out of scope for Task 1, same as
-      // createdAt/updatedAt elsewhere) and correctly stays on the real clock.
+      // below is the event time of this generation, taken from the event clock.
       title: `${TEMPLATE_LABELS[body.template]} — ${now().toLocaleDateString('en-US', { timeZone: 'UTC' })}`,
-      generatedAt: new Date().toISOString(),
+      generatedAt: nextEventTime(),
       sections: body.sections
         .map((s) => SECTION_CONTENT[s])
         .filter(Boolean)

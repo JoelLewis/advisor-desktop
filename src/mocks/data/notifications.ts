@@ -1,5 +1,16 @@
 import type { Notification } from '@/types/notification'
 import { now } from '@/lib/clock'
+import { driftBatchFacts } from './nbas'
+import { modelDisplayName } from '../handlers/pms'
+
+/** §0.7 · ntf-010 named a "Growth Equity" model that does not exist and a flat 3% band. */
+function growthBatchBody(): string {
+  const modelId = 'mod-002'
+  const facts = driftBatchFacts()
+  const count = facts.modelIds.filter((id) => id === modelId).length
+  const band = facts.bands.find((b) => b.startsWith(`${modelDisplayName(modelId)} `))
+  return `${count} accounts on the ${modelDisplayName(modelId)} model are outside its band (${band}). Batch rebalance recommended.`
+}
 
 function daysAgo(n: number): string {
   const d = now()
@@ -88,7 +99,9 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
     category: 'trades',
     priority: 'medium',
     title: 'Rebalance Complete — 8 Accounts',
-    body: 'Model "Growth Equity" rebalance executed. 47 trades filled, $2.3M notional. 0 rejects.',
+    // Final review I6 · named a "Growth Equity" model that does not exist, as ntf-010 did. The model
+    // is the Growth model's own name; the trade counts are pre-existing fixture figures.
+    body: `Model "${modelDisplayName('mod-002')}" rebalance executed. 47 trades filled, $2.3M notional. 0 rejects.`,
     timestamp: hoursAgo(3),
     read: false,
     dismissed: false,
@@ -170,7 +183,7 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
     category: 'nba',
     priority: 'medium',
     title: 'Batch Rebalance Opportunity',
-    body: '5 accounts drifted >3% from Growth Equity model. Batch rebalance recommended.',
+    body: growthBatchBody(),
     timestamp: hoursAgo(4),
     read: false,
     dismissed: false,

@@ -1,4 +1,68 @@
 import type { Participant, Thread, Message } from '@/types/messaging'
+import { accounts } from './accounts'
+import { computeDriftForAccount, modelDisplayName } from '../handlers/pms'
+import { generateRebalanceProposal } from '../handlers/oms'
+import { settleBatchWashSales } from '../handlers/batch-wash-sales'
+import { estimateTaxOnReturns } from '../handlers/tax-return'
+import { ASSET_CLASS_LABELS } from '@/lib/labels'
+import { formatRatePercent } from '@/lib/tax-rules'
+import { recognisedResult, taxEstimateDirection } from '@/lib/capital-gains'
+import { formatCalendarDate, formatCurrency } from '@/lib/utils'
+import { MOCK_TODAY_ISO } from '@/lib/clock'
+import { roundTo } from '../handlers/utils'
+
+const pct1 = (fraction: number) => `${(fraction * 100).toFixed(1)}%`
+const wholeDollars = (amount: number) => `$${Math.round(amount).toLocaleString('en-US')}`
+/** "a", "a and b", "a, b and c". */
+const listing = (items: readonly string[]) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`)
+
+/**
+ * §0.7 · msg-003, in Robert Johnson's rebalance thread, used to recommend trimming AAPL and MSFT at
+ * "3.2% over target" — acc-001's holdings at a figure from nowhere. It now reports acc-002, Robert's
+ * individual account, from the engine: its worst asset-class drift against its own model and band,
+ * and the trades the tax-aware rebalance proposes.
+ *
+ * Ledger Task 11 · the trades are the preview's own: settled for §1091 across the taxpayer
+ * (`settleBatchWashSales`), so a washed loss is never stated as realised. The note says the
+ * rebalance *proposes* them, gives each sale's realised result, gains as well as the INTC loss, and
+ * the net, the tax the preview estimates they add to the return, and the date to which selling INTC
+ * bars buying it back.
+ */
+export function johnsonDriftNote() {
+  const account = accounts.find((a) => a.id === 'acc-002')!
+  const drift = computeDriftForAccount(account)
+  const worst = [...drift.assetClassDrifts].sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift))[0]!
+  const [legs] = settleBatchWashSales([{ account, ...generateRebalanceProposal(account.id, true) }], MOCK_TODAY_ISO)
+  if (legs === undefined) throw new Error('acc-002 has no rebalance proposal')
+  const [estimate] = estimateTaxOnReturns([{ account, legs }], MOCK_TODAY_ISO)
+  if (estimate === undefined) throw new Error('acc-002 has no tax estimate')
+  const recognised = (leg: (typeof legs)[number]) => {
+    const r = recognisedResult(leg)
+    return r.shortTerm + r.longTerm
+  }
+  const sellLegs = legs.filter((l) => l.side === 'sell')
+  const sells = sellLegs.map((l) => {
+    const result = recognised(l)
+    const outcome = result === 0 ? '' : ` (a ${wholeDollars(Math.abs(result))} ${result < 0 ? 'loss' : 'gain'})`
+    return `${l.quantity.toLocaleString('en-US')} ${l.symbol}${outcome}`
+  })
+  const net = sellLegs.reduce((s, l) => s + recognised(l), 0)
+  const buys = [...new Set(legs.filter((l) => l.side === 'buy').map((l) => ASSET_CLASS_LABELS[l.assetClass] ?? l.assetClass))]
+  const label = ASSET_CLASS_LABELS[worst.assetClass] ?? worst.assetClass
+  const tax = taxEstimateDirection(estimate.net)
+  const intc = sellLegs.find((l) => l.symbol === 'INTC')
+  const intcWindow = intc?.repurchaseBlockedUntil
+    ? ` Selling INTC at a loss bars buying it back in any of the couple's accounts, IRAs included, through ${formatCalendarDate(intc.repurchaseBlockedUntil)}.`
+    : ''
+  const content = `I ran the drift analysis on Robert's individual account: ${label} is ${pct1(worst.actual)} against the ` +
+    `${modelDisplayName(drift.modelId)} model's ${pct1(worst.target)} target, ${(Math.abs(worst.drift) * 100).toFixed(1)} points ` +
+    `${worst.drift > 0 ? 'over' : 'under'}, outside its ±${formatRatePercent(drift.driftTolerance)} band. A tax-aware rebalance proposes selling ` +
+    `${listing(sells)}, and buying ${listing(buys)}. The sales net a ${wholeDollars(Math.abs(net))} ${net < 0 ? 'loss' : 'gain'}; ` +
+    `against the joint return's results so far this year, that is about ${wholeDollars(tax.amount)} of capital-gains tax ${tax.direction} the return.${intcWindow}`
+  return { account, drift, worst, label, legs, net, estimate, content }
+}
+
+const johnson = johnsonDriftNote()
 
 const adrian: Participant = { id: 'user-001', name: 'Adrian Hale', role: 'advisor' }
 const sarah: Participant = { id: 'user-002', name: 'Sarah Mitchell', role: 'csa' }
@@ -13,7 +77,7 @@ export const threads: Thread[] = [
     id: 'thread-001',
     subject: 'Johnson Rebalance Review',
     participants: [adrian, sarah, mike],
-    lastMessage: 'I ran the drift analysis — large-cap growth is 3.2% over target. Recommend trimming AAPL and MSFT to fund the fixed income sleeve.',
+    lastMessage: johnson.content,
     lastMessageAt: '2026-02-25T10:45:00Z',
     unreadCount: 2,
     entityContext: { type: 'client', id: 'cli-001', name: 'Robert Johnson' },
@@ -77,28 +141,24 @@ export const threadMessages: Record<string, Message[]> = {
       id: 'msg-003',
       threadId: 'thread-001',
       senderId: 'user-003',
-      content: 'I ran the drift analysis — large-cap growth is 3.2% over target. Recommend trimming AAPL and MSFT to fund the fixed income sleeve.',
+      content: johnson.content,
       timestamp: '2026-02-25T10:45:00Z',
       attachments: [
         {
           type: 'account_card' as const,
-          entityId: 'acc-001',
-          entityName: 'Johnson Family Trust',
-          preview: 'Drift: +3.2% large-cap growth',
+          entityId: johnson.account.id,
+          entityName: johnson.account.name,
+          preview: `Drift: ${johnson.worst.drift > 0 ? '+' : '−'}${(Math.abs(johnson.worst.drift) * 100).toFixed(1)}% ${johnson.label}`,
           richData: {
             variant: 'portfolio_overview' as const,
-            entityId: 'acc-001',
-            entityName: 'Johnson Family Trust',
-            metrics: [{ label: 'AUM', value: '$8.2M' }],
-            allocation: [
-              { assetClass: 'us_equity', weight: 0.45 },
-              { assetClass: 'intl_equity', weight: 0.12 },
-              { assetClass: 'fixed_income', weight: 0.22 },
-              { assetClass: 'alternatives', weight: 0.13 },
-              { assetClass: 'cash', weight: 0.08 },
-            ],
-            driftPercent: 3.2,
-            needsRebalance: true,
+            entityId: johnson.account.id,
+            entityName: johnson.account.name,
+            metrics: [{ label: 'AUM', value: formatCurrency(johnson.account.totalValue, true) }],
+            allocation: johnson.drift.assetClassDrifts
+              .filter((d) => d.actual > 0)
+              .map((d) => ({ assetClass: d.assetClass, weight: roundTo(d.actual, 3) })),
+            driftPercent: roundTo(johnson.drift.maxAbsDrift * 100, 1),
+            needsRebalance: johnson.drift.needsRebalance,
           },
         },
       ],

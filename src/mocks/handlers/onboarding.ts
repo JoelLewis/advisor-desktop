@@ -1,4 +1,5 @@
 import { http, HttpResponse, delay } from 'msw'
+import { nextRecordNumber } from './event-clock'
 import { riskQuestions, accountRequirements } from '../data/onboarding'
 import type { RiskResult, OnboardingApplication } from '@/types/onboarding'
 
@@ -43,8 +44,8 @@ export const onboardingHandlers = [
 
     return HttpResponse.json({
       success: true,
-      applicationId: `app-${Date.now()}`,
-      workflowTrackerId: `wf-onboard-${Date.now()}`,
+      applicationId: `app-${nextRecordNumber()}`,
+      workflowTrackerId: `wf-onboard-${nextRecordNumber()}`,
       message: `Onboarding application submitted for ${body.clientInfo.firstName} ${body.clientInfo.lastName}. A process tracker has been created in Workflow Center.`,
     })
   }),

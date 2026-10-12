@@ -3,9 +3,15 @@ import type { Transaction } from '@/services/custodian'
 import type { TaxLot } from '@/types/portfolio'
 import { accounts } from '../data/accounts'
 import { getPositionsForAccount } from '../data/positions'
-import { openWashSaleWindows, realisedSales } from '../data/realised-sales'
+import { realisedSales } from '../data/realised-sales'
+import { openWashSaleWindowsFor, sameWashSaleTaxpayer } from './tax-return'
+import { isTaxableAccount } from '@/lib/tax-treatment'
 import { notFound } from './utils'
 import { startOfToday, MOCK_TODAY_ISO } from '@/lib/clock'
+import { matchWashedShares, type Acquisition } from '@/lib/wash-sale'
+import { inceptionDate } from '@/lib/security-master'
+import { tradingDayOnOrBefore } from '@/lib/trading-calendar'
+import type { Account } from '@/types/account'
 
 const DAY_MS = 1000 * 60 * 60 * 24
 
@@ -91,7 +97,7 @@ type TradeShell = {
 
 /**
  * Positions whose purchase date is a recorded fact rather than synthesised. pos-265 is the SMH
- * bought on 2026-02-21 as the INTC replacement; seeding it 3–47 months old would contradict the
+ * bought on 2026-02-20 as the INTC replacement; seeding it 3–47 months old would contradict the
  * activity feed, the note and the compliance record that all date it.
  *
  * Only the date lives here. Such a position was opened in one purchase and not traded since, so
@@ -99,7 +105,7 @@ type TradeShell = {
  * emits and the one buy `generateTransactions` records are both read from the position, and the
  * three cannot drift apart.
  */
-export const KNOWN_OPEN_DATES: ReadonlyMap<string, string> = new Map([['pos-265', '2026-02-21']])
+export const KNOWN_OPEN_DATES: ReadonlyMap<string, string> = new Map([['pos-265', '2026-02-20']])
 
 /**
  * IRC §1222: long-term means held *more than* one year, so a lot bought exactly a year before
@@ -109,6 +115,30 @@ export function holdingPeriodOn(purchaseISO: string, asOfISO: string): 'short' |
   const anniversary = new Date(`${purchaseISO}T00:00:00Z`)
   anniversary.setUTCFullYear(anniversary.getUTCFullYear() + 1)
   return asOfISO > anniversary.toISOString().slice(0, 10) ? 'long' : 'short'
+}
+
+/** Whole months before `anchor` that still land on or after `inceptionISO`. */
+export function monthsSinceInception(anchor: Date, inceptionISO: string): number {
+  let months = 0
+  for (;;) {
+    const earlier = new Date(anchor)
+    earlier.setUTCMonth(earlier.getUTCMonth() - (months + 1))
+    if (earlier.toISOString().slice(0, 10) < inceptionISO) return months
+    months += 1
+  }
+}
+
+/**
+ * Lot ages (whole months, oldest first) no older than `maxAge`, each a month younger than the one
+ * before it once capped, so two lots of one position are never dated the same day by the cap.
+ */
+export function capLotAges(agesOldestFirst: readonly number[], maxAge: number): number[] {
+  let ceiling = maxAge
+  return agesOldestFirst.map((age) => {
+    const capped = Math.max(0, Math.min(age, ceiling))
+    ceiling = capped - 1
+    return capped
+  })
 }
 
 /** Whether `pos` was held on `dateISO` — false only before a known open date. */
@@ -127,12 +157,20 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
   // C14 · data-integrity — every realised sale in `realisedSales` must appear in its own account's
   // transaction stream as a real sell (previously the two fixtures were unrelated: acc-002's
   // stream held exactly one sell, SPY, never the INTC sale the tax page reports as having
-  // happened on 2026-02-21; acc-007's stream held zero sells at all). The PRNG below never draws
+  // happened on 2026-02-20; acc-007's stream held zero sells at all). The PRNG below never draws
   // these symbols for its own buy/sell trades (see `tradePool`), so the match is exact — the
   // fixture's sale, not a coincidentally similar random one.
   const accountSales = realisedSales.filter((s) => s.accountId === accountId)
   const soldSymbols = new Set(accountSales.map((s) => s.symbol))
   const heldBySymbol = new Map(held.map((p) => [p.symbol, p]))
+  // §0.7 · a position still held was opened when its oldest lot was bought: acc-002's INTC opening
+  // was dated 2025-12-27 against a lot bought 2022-07-25, and a long-term sale (rs-001) cannot come
+  // out of shares bought two months earlier.
+  const oldestLotDate = new Map<string, string>()
+  for (const lot of soldSymbols.size > 0 ? generateTaxLots(accountId, totalValue) : []) {
+    const known = oldestLotDate.get(lot.positionId)
+    if (known === undefined || lot.purchaseDate < known) oldestLotDate.set(lot.positionId, lot.purchaseDate)
+  }
 
   // Task 13's running-balance model starts every symbol at zero 60 days ago — already unrealistic
   // (it implicitly claims the account held nothing two months ago), and it makes an injected sell
@@ -158,7 +196,12 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
     const earliestSaleMs = Math.min(
       ...salesForSymbol.map((s) => new Date(`${s.saleDate}T00:00:00Z`).getTime()),
     )
-    const openingMs = Math.min(baseDate.getTime() - 60 * DAY_MS, earliestSaleMs - DAY_MS)
+    // A position sold out entirely has no lot left to date it, so it opens just before the
+    // 60-day window or the day before its first sale, whichever is earlier, rolled back to a
+    // trading day (final review I2: the 60-day mark is Saturday 2025-12-27).
+    const openedOn = position ? oldestLotDate.get(position.id) : undefined
+    const fallbackOpening = new Date(Math.min(baseDate.getTime() - 60 * DAY_MS, earliestSaleMs - DAY_MS)).toISOString()
+    const openingMs = new Date(`${openedOn ?? tradingDayOnOrBefore(fallbackOpening)}T00:00:00Z`).getTime()
 
     txns.push({
       id: `txn-${accountId}-opening-${symbol}`,
@@ -297,18 +340,82 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
   return txns.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 }
 
-export function generateTaxLots(accountId: string, totalValue: number): TaxLot[] {
+/**
+ * A lot as the custodian's records state it. `saleWash` is left off: it needs every lot of the
+ * wash-sale taxpayer's accounts, so only the surfaces that show it (`generateTaxLotsWithSaleRisk`)
+ * pay for it, not the rebalance engine, which tests its own sell legs.
+ */
+export type CustodianLot = Omit<TaxLot, 'saleWash'>
+
+type LotFacts = Pick<TaxLot, 'id' | 'positionId' | 'purchaseDate' | 'quantity'>
+
+/**
+ * Every lot bought in an account of `account`'s wash-sale taxpayer (`sameWashSaleTaxpayer`), as a
+ * §1091 acquisition — IRAs and Roths included, since a purchase in any of them is a replacement.
+ * `lotsFor` supplies each account's lots, so a caller can pass the lots it already holds for its
+ * own account.
+ */
+export function washSaleAcquisitions(account: Account, lotsFor: (a: Account) => readonly LotFacts[]): Acquisition[] {
+  return sameWashSaleTaxpayer(account).flatMap((a) => {
+    const symbolOf = new Map(getPositionsForAccount(a.id, a.totalValue).map((p) => [p.id, p.symbol]))
+    const kind = isTaxableAccount(a.taxTreatment) ? 'taxable' : 'tax_advantaged'
+    return lotsFor(a).map((l) => {
+      const symbol = symbolOf.get(l.positionId)
+      if (symbol === undefined) throw new Error(`tax lot ${l.id} in ${a.id} names unknown position ${l.positionId}`)
+      return { symbol, date: l.purchaseDate, lotId: l.id, quantity: l.quantity, account: kind } as const
+    })
+  })
+}
+
+/**
+ * The account's lots, each with `saleWash`: how many of its shares would have their loss taken by
+ * §1091 if the taxpayer harvested every loss lot today (`matchWashedShares`), split by whether
+ * that loss is deferred into a taxable replacement's basis or permanently disallowed by an IRA or
+ * Roth replacement. A lot at a gain, and every lot in an account whose sales are not taxed, has
+ * nothing to lose and reads 0/0; so does a coin held directly, which §1091 does not reach
+ * (`matchWashedShares` skips it, `isSubjectToWashSale`).
+ *
+ * The rebalance engine reads the same acquisitions. Its generator's first `washSaleRisk` on a sell
+ * leg judges the whole leg on its net result (`hasWashSaleRisk`); the preview then settles every
+ * leg lot by lot (`settleBatchWashSales`), so a leg that nets to a gain is flagged, and carries
+ * `washedLoss`, when any loss lot it sells washes, as its lots here would show.
+ */
+export function generateTaxLotsWithSaleRisk(accountId: string, totalValue: number): TaxLot[] {
+  const own = generateTaxLots(accountId, totalValue)
+  const account = accounts.find((a) => a.id === accountId)
+  if (!account) throw new Error(`tax lots requested for unknown account ${accountId}`)
+  const lotsOf = new Map(sameWashSaleTaxpayer(account).map((a) => [a.id, a.id === accountId ? own : generateTaxLots(a.id, a.totalValue)]))
+  const lotsFor = (a: Account) => lotsOf.get(a.id) ?? []
+  const acquisitions = washSaleAcquisitions(account, lotsFor)
+  const symbolOfLot = new Map(acquisitions.map((a) => [a.lotId, a.symbol]))
+  const symbolOf = (lotId: string) => {
+    const symbol = symbolOfLot.get(lotId)
+    if (symbol === undefined) throw new Error(`tax lot ${lotId} is missing from its taxpayer's acquisitions`)
+    return symbol
+  }
+  // Losses on lots in taxable accounts are the ones a harvest realises; they compete, across the
+  // taxpayer's accounts, for the same replacement shares.
+  const lossLots = sameWashSaleTaxpayer(account)
+    .filter((a) => isTaxableAccount(a.taxTreatment))
+    .flatMap((a) => lotsFor(a).filter((l) => l.gainLoss < 0).map((l) => ({
+      lotId: l.id, symbol: symbolOf(l.id), purchaseDate: l.purchaseDate, quantity: l.quantity,
+    })))
+  const washed = matchWashedShares(lossLots, acquisitions, MOCK_TODAY_ISO)
+  return own.map((lot) => ({ ...lot, saleWash: washed.get(lot.id) ?? { deferredShares: 0, disallowedShares: 0 } }))
+}
+
+export function generateTaxLots(accountId: string, totalValue: number): CustodianLot[] {
   const positions = getPositionsForAccount(accountId, totalValue)
   const anchor = startOfToday()
-  const lots: TaxLot[] = []
+  const lots: CustodianLot[] = []
 
   const account = accounts.find((a) => a.id === accountId)
-  // C12 · tax-loss-harvesting — scoped to the whole household, including IRAs and 401(k)s,
-  // because a repurchase in any of them triggers §1091 (the "IRA wash-sale trap"). An account
-  // that can't be resolved to a household must restrict nothing, not everything — an omitted
-  // `householdId` would otherwise widen `openWashSaleWindows` to every household in the firm.
-  const restrictedSymbols = new Set(
-    account ? openWashSaleWindows(MOCK_TODAY_ISO, account.householdId).map((w) => w.symbol) : [],
+  // C12 · tax-loss-harvesting — scoped to the wash-sale taxpayer (`openWashSaleWindowsFor`), IRAs
+  // and Roths included, because a repurchase in any of them triggers §1091 (the "IRA wash-sale
+  // trap"). An account that can't be resolved must restrict nothing, not everything.
+  // Windows arrive sorted by `end`, so the last one written per symbol is the latest to close.
+  const repurchaseBlockedUntil = new Map(
+    account ? openWashSaleWindowsFor(account, MOCK_TODAY_ISO).map((w) => [w.symbol, w.end]) : [],
   )
 
   for (const pos of positions) {
@@ -324,7 +431,7 @@ export function generateTaxLots(accountId: string, totalValue: number): TaxLot[]
         currentValue: pos.marketValue,
         gainLoss: pos.marketValue - pos.costBasis,
         holdingPeriod: holdingPeriodOn(openedOn, MOCK_TODAY_ISO),
-        washSaleRestricted: restrictedSymbols.has(pos.symbol),
+        repurchaseBlockedUntil: repurchaseBlockedUntil.get(pos.symbol) ?? null,
       })
       continue
     }
@@ -333,8 +440,13 @@ export function generateTaxLots(accountId: string, totalValue: number): TaxLot[]
     const shares = fractions(rand, lotCount)
 
     // Older lots first, so FIFO and LIFO orderings are meaningful.
-    const ages = Array.from({ length: lotCount }, () => 3 + Math.floor(rand() * 45))
+    const drawnAges = Array.from({ length: lotCount }, () => 3 + Math.floor(rand() * 45))
       .sort((a, b) => b - a)
+    // §0.7 · no lot predates its security: IBIT drew 2022 and 2023 dates for a fund launched in
+    // January 2024. The draws are kept (the PRNG stream, and so every other lot, is unchanged)
+    // and only capped at the inception.
+    const inception = inceptionDate(pos.symbol)
+    const ages = inception === undefined ? drawnAges : capLotAges(drawnAges, monthsSinceInception(anchor, inception))
 
     let allocatedQty = 0
     let allocatedBasis = 0
@@ -342,10 +454,16 @@ export function generateTaxLots(accountId: string, totalValue: number): TaxLot[]
     for (let i = 0; i < lotCount; i++) {
       const isLast = i === lotCount - 1
       const share = shares[i]!
-      const purchaseDate = new Date(anchor)
+      const monthsAgo = new Date(anchor)
       // UTC, not local: `anchor` is UTC midnight, and local get/set-Month would bake in the
       // host timezone's day-of-month, making the serialised date machine-dependent.
-      purchaseDate.setUTCMonth(purchaseDate.getUTCMonth() - ages[i]!)
+      monthsAgo.setUTCMonth(monthsAgo.getUTCMonth() - ages[i]!)
+      // Final review I2 · a whole-month age anchored on the 25th lands on a weekend or holiday
+      // about a third of the time, and a lot is bought on a day the market trades. The date rolls
+      // back to the last trading day after the draws, so the PRNG stream is unchanged. A roll of a
+      // few days never changes the holding period: the one lot near a year old (12 months,
+      // 2025-02-25) falls on a Tuesday and stays put.
+      const purchaseDate = tradingDayOnOrBefore(monthsAgo.toISOString())
 
       const quantity = isLast ? pos.quantity - allocatedQty
         : Math.round(pos.quantity * share * 1e6) / 1e6
@@ -361,7 +479,7 @@ export function generateTaxLots(accountId: string, totalValue: number): TaxLot[]
       lots.push({
         id: `lot-${pos.id}-${i}`,
         positionId: pos.id,
-        purchaseDate: purchaseDate.toISOString().slice(0, 10),
+        purchaseDate,
         quantity,
         costBasis,
         currentValue,
@@ -370,7 +488,7 @@ export function generateTaxLots(accountId: string, totalValue: number): TaxLot[]
         // 12 months old is short-term. A whole-month age makes this `holdingPeriodOn`'s rule
         // without the date arithmetic, which this hot path (every rebalance sweep) would pay.
         holdingPeriod: ages[i]! > 12 ? 'long' : 'short',
-        washSaleRestricted: restrictedSymbols.has(pos.symbol),
+        repurchaseBlockedUntil: repurchaseBlockedUntil.get(pos.symbol) ?? null,
       })
     }
   }
@@ -415,12 +533,12 @@ export const custodianHandlers = [
   http.get('/api/custodian/accounts/:accountId/tax-lots', ({ params }) => {
     const account = accounts.find((a) => a.id === params.accountId)
     if (!account) return notFound()
-    return HttpResponse.json(generateTaxLots(account.id, account.totalValue))
+    return HttpResponse.json(generateTaxLotsWithSaleRisk(account.id, account.totalValue))
   }),
 
   http.get('/api/custodian/accounts/:accountId/realised-sales', ({ params }) => {
     const account = accounts.find((a) => a.id === params.accountId)
     if (!account) return notFound()
-    return HttpResponse.json(openWashSaleWindows(MOCK_TODAY_ISO, account.householdId))
+    return HttpResponse.json(openWashSaleWindowsFor(account, MOCK_TODAY_ISO))
   }),
 ]

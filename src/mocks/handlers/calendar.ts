@@ -1,4 +1,6 @@
 import { http, HttpResponse, delay } from 'msw'
+import { nextEventTime } from './event-clock'
+import { MOCK_NOW_ISO } from '@/lib/clock'
 import { calendarEvents } from '../data/calendar'
 import { clients } from '../data/clients'
 import { accounts } from '../data/accounts'
@@ -142,7 +144,7 @@ export const calendarHandlers = [
       talkingPoints: talkingPointsByType[event.meetingType] ?? talkingPointsByType['ad_hoc'] ?? [],
       actionItems: actionItemsByType[event.meetingType] ?? actionItemsByType['ad_hoc'] ?? [],
       recentActivity,
-      generatedAt: new Date().toISOString(),
+      generatedAt: MOCK_NOW_ISO,
     }
 
     return HttpResponse.json(prep)
@@ -167,7 +169,7 @@ export const calendarHandlers = [
     if (!event) return notFound()
 
     const body = (await request.json()) as { sections: MeetingNote['sections'] }
-    const now = new Date().toISOString()
+    const now = nextEventTime()
     const existing = meetingNotesStore.get(eventId)
 
     const note: MeetingNote = {
@@ -210,7 +212,7 @@ export const calendarHandlers = [
       assignee: body.assignee,
       dueDate: body.dueDate,
       completed: false,
-      createdAt: new Date().toISOString(),
+      createdAt: nextEventTime(),
     }
 
     existing.push(followUp)

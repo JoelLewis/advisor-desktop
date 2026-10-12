@@ -1,4 +1,5 @@
 import { http, HttpResponse, delay } from 'msw'
+import { nextEventTime, nextRecordNumber } from './event-clock'
 import { tasks, processTrackers, workflowTemplates } from '../data/workflows'
 import { notFound } from './utils'
 import { startOfToday } from '@/lib/clock'
@@ -45,7 +46,7 @@ export const workflowHandlers = [
   http.post('/api/workflows/templates', async ({ request }) => {
     await delay(200)
     const body = await request.json() as Omit<WorkflowTemplate, 'id'>
-    const id = `tpl-${Date.now()}`
+    const id = `tpl-${nextRecordNumber()}`
     const template: WorkflowTemplate = { id, ...body }
     templateStore.set(id, template)
     return HttpResponse.json(template, { status: 201 })
@@ -88,7 +89,7 @@ export const workflowHandlers = [
     await delay(300)
     const body = (await request.json()) as { title: string; priority: string; dueDate: string; clientId?: string; clientName?: string }
     return HttpResponse.json({
-      id: `task-new-${Date.now()}`,
+      id: `task-new-${nextRecordNumber()}`,
       title: body.title,
       description: '',
       status: 'pending',
@@ -99,7 +100,7 @@ export const workflowHandlers = [
       clientName: body.clientName,
       category: 'administrative',
       dueDate: body.dueDate,
-      createdAt: new Date().toISOString(),
+      createdAt: nextEventTime(),
     })
   }),
 
@@ -107,7 +108,7 @@ export const workflowHandlers = [
     await delay(300)
     const body = (await request.json()) as { templateId: string; clientId?: string; clientName?: string; priority: string }
     return HttpResponse.json({
-      id: `task-wf-${Date.now()}`,
+      id: `task-wf-${nextRecordNumber()}`,
       title: `Workflow started from template ${body.templateId}`,
       description: '',
       status: 'in_progress',
@@ -118,7 +119,7 @@ export const workflowHandlers = [
       clientName: body.clientName,
       category: 'administrative',
       dueDate: dueInDays(7),
-      createdAt: new Date().toISOString(),
+      createdAt: nextEventTime(),
     })
   }),
 ]

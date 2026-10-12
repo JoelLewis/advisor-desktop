@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw'
+import { nextEventTime, nextRecordNumber } from './event-clock'
 import { threads, threadMessages, teamMembers } from '../data/messages'
 import type { MessageAttachment } from '@/types/messaging'
 import { notFound } from './utils'
@@ -20,11 +21,11 @@ export const messagingHandlers = [
       attachments?: MessageAttachment[]
     }
     const newMessage = {
-      id: `msg-${Date.now()}`,
+      id: `msg-${nextRecordNumber()}`,
       threadId: String(params.threadId),
       senderId: 'user-001',
       content: body.content,
-      timestamp: new Date().toISOString(),
+      timestamp: nextEventTime(),
       attachments: body.attachments,
       read: true,
     }
@@ -41,11 +42,11 @@ export const messagingHandlers = [
       body.participantIds.includes(m.id),
     )
     const newThread = {
-      id: `thread-${Date.now()}`,
+      id: `thread-${nextRecordNumber()}`,
       subject: body.subject,
       participants,
       lastMessage: '',
-      lastMessageAt: new Date().toISOString(),
+      lastMessageAt: nextEventTime(),
       unreadCount: 0,
       entityContext: body.entityContext,
     }
