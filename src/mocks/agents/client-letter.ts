@@ -13,7 +13,8 @@ import { sameWashSaleTaxpayer, taxReturnFor, washSaleTaxpayer } from '@/mocks/ha
 import { taxpayerHeldAway } from './harvest-scanner'
 import { canHoldSecurities } from '@/lib/held-away'
 import { firstNameOf, joinWords } from '@/lib/words'
-import { RATE_DISCLOSURE } from '@/lib/tax-rules'
+import { buildClientRateDisclosure, formatRatePercent, NIIT_RATE, TAX_RATE_BASIS } from '@/lib/tax-rules'
+import { ACCOUNT_TYPE_LABELS } from '@/lib/labels'
 import { capitalLossUse, ORDINARY_INCOME_OFFSET_LIMIT, ORDINARY_INCOME_OFFSET_LIMIT_SEPARATE, recognisedResult } from '@/lib/capital-gains'
 import { isSubjectToWashSale } from '@/lib/security-master'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
@@ -38,6 +39,15 @@ const recognised = (t: ProposedTrade) => {
 }
 /** Client copy states dollars to the nearest hundred; `figures` keep the exact values. */
 const aboutMoney = (v: number) => clientMoney(Math.round(v / 100) * 100)
+/** The account as its owner would name it: "individual account", "traditional IRA"; a named account such as a trust keeps its name. */
+function accountInWords(account: Account, ownerFullName: string): string {
+  if (!account.name.startsWith(`${ownerFullName} `)) return account.name
+  const type = ACCOUNT_TYPE_LABELS[account.type]
+    .split(' ')
+    .map((word) => (/^[A-Z][a-z]+$/.test(word) && word !== 'Roth' ? word.toLowerCase() : word))
+    .join(' ')
+  return /(IRA|\)|plan|trust|UTMA)$/.test(type) ? type : `${type} account`
+}
 const clientFirstName = (clientId: string) => {
   const named = clients.find((c) => c.id === clientId)
   return named ? firstNameOf(named.fullName) : undefined
@@ -64,7 +74,7 @@ export function writeClientLetter(proposal: Proposal, version: ProposalVersion, 
   ]
   const paragraphs = [
     `Dear ${client.firstName},`,
-    opening(account.name, modelDisplayName(drift.modelId), version)
+    opening(accountInWords(account, client.fullName), modelDisplayName(drift.modelId), version)
       + ` ${capitalise(CLIENT_WORDS[worst.assetClass])} had grown to ${clientPercent(worst.actual)} of the account against a ${clientPercent(worst.target)} target, `
       + `so we plan to ${harvestOnly(version) ? `sell only ${sells.length === 1 ? 'a holding' : 'holdings'} at a loss` : 'sell some holdings'} and add to the areas below their targets.`,
     [
@@ -86,11 +96,12 @@ export function writeClientLetter(proposal: Proposal, version: ProposalVersion, 
     : ownTaxpayer ? 'in this account'
       : spouses.length > 0 ? `in any of your accounts or ${joinWords(spouses.map((n) => `${n}'s`))}, including IRAs` : 'in any of your accounts, including IRAs'
   const buyers = isTrust ? 'the trust has' : ownTaxpayer ? 'this account has' : spouses.length > 0 ? `you or ${joinWords(spouses)} have` : 'you have'
-  // §1091: a taxable buyback defers the loss into the new shares; a retirement-account buyback disallows it for good (Rev. Rul. 2008-5).
+  // §1091: a taxable buyback defers the loss into the new shares; an IRA or Roth buyback disallows it for good (Rev. Rul. 2008-5).
+  // The ruling does not reach employer plans, so the letter says only that they may be treated the same way.
   const consequence = ownTaxpayer
     ? 'A purchase in that period would not forfeit the loss but would postpone it until the new shares are sold.'
     : 'A purchase in that period in a taxable account would not forfeit the loss but would postpone it until the new shares are sold; '
-      + 'a purchase in a retirement account such as an IRA, Roth IRA, 401(k) or 403(b) would lose it permanently.'
+      + 'a purchase in an IRA or Roth IRA would lose it permanently, and a purchase in an employer plan such as a 401(k) or 403(b) may be treated the same way.'
   const harvested = sells.filter((t) => t.repurchaseBlockedUntil !== undefined && isSubjectToWashSale(t.symbol) && recognised(t) < 0)
   for (const t of harvested) {
     const until = t.repurchaseBlockedUntil ?? ''
@@ -98,9 +109,8 @@ export function writeClientLetter(proposal: Proposal, version: ProposalVersion, 
     figures.push({ label: `${t.symbol} loss`, value: recognised(t), unit: 'USD', source: `version.preview.trades.${t.symbol} realised, less any washed part` })
     paragraphs.push(
       `Selling ${security(t)} is expected to realize a loss of about ${aboutMoney(-recognised(t))} at today's prices, which can offset capital gains, now or in later years. `
-      + `To avoid postponing or losing that loss, if the sale is made on ${clientDate(saleDate)}, please don't buy ${t.name} back ${where}, on or before ${clientDate(until)}. ${consequence} `
-      + `If the sale is made then, from ${clientDate(dayAfter(until))} you may buy it again. `
-      + `Please also tell us before the sale if ${buyers} bought ${t.name} in any account on or after ${clientDate(window.start)}, because that can affect the loss.`,
+      + `To avoid postponing or losing that loss, if the sale is made on ${clientDate(saleDate)}, please don't buy ${t.name} back ${where}, on or before ${clientDate(until)}; from ${clientDate(dayAfter(until))} you may buy it again. ${consequence} `
+      + `If the sale is made on ${clientDate(saleDate)}, please also tell us before the sale if ${buyers} bought ${t.name} in any account on or after ${clientDate(window.start)}, because that can affect the loss.`,
     )
   }
   if (harvested.length > 0) {
@@ -113,7 +123,8 @@ export function writeClientLetter(proposal: Proposal, version: ProposalVersion, 
     paragraphs.push(
       'Two things can also count as buying it back: dividends set to reinvest automatically, '
       + `and purchases in accounts we do not manage${away.length > 0 ? `, such as ${joinWords(away)}` : ''}. `
-      + `If any account reinvests dividends into ${names}, please turn that off until then, and check with us before buying ${names} in any account.`,
+      + `If the sale is made on ${clientDate(saleDate)} and any account reinvests dividends into ${names}, please turn that off through ${clientDate(window.end)}, `
+      + `and check with us before buying ${names} in any account.`,
     )
   }
 
@@ -123,7 +134,7 @@ export function writeClientLetter(proposal: Proposal, version: ProposalVersion, 
   } else {
     paragraphs.push('This account is tax-advantaged, so these sales create no taxable gain or loss.')
   }
-  paragraphs.push(RATE_DISCLOSURE)
+  paragraphs.push(buildClientRateDisclosure(TAX_RATE_BASIS))
   paragraphs.push('The orders are with our compliance team for review before any is placed.')
   paragraphs.push(signer.name)
   return { body: paragraphs.join('\n\n'), figures }
@@ -133,12 +144,14 @@ const harvestOnly = (version: ProposalVersion) => version.constraints.some((c) =
 
 /** What the approved version sets out to do, from its constraints: a harvest or a capped rebalance only moves toward the model. */
 function opening(accountName: string, modelName: string, version: ProposalVersion): string {
-  if (harvestOnly(version)) return `We plan to move your ${accountName} account toward its ${modelName} model.`
+  if (harvestOnly(version)) return `We plan to move your ${accountName} toward its ${modelName} model.`
   if (version.constraints.some((c) => c.kind === 'cap_realised_gains')) {
-    return `We plan to move your ${accountName} account toward its ${modelName} model while limiting the gains it realizes.`
+    return `We plan to move your ${accountName} toward its ${modelName} model while limiting the gains it realizes.`
   }
-  return `We plan to rebalance your ${accountName} account to bring it back in line with its ${modelName} model.`
+  return `We plan to rebalance your ${accountName} to bring it back in line with its ${modelName} model.`
 }
+
+const INCLUDING_NIIT = `including the ${formatRatePercent(NIIT_RATE)} net investment income tax`
 
 /** §1211(b)'s limit on the account's return: $1,500 when the household records spouses filing separately, $3,000 otherwise. */
 function ordinaryIncomeLimit(account: Account): number {
@@ -154,10 +167,10 @@ function returnParagraphs(account: Account, version: ProposalVersion, figures: F
   const { estimatedTaxImpact, ytdRealisedOnReturn, trades } = version.preview
   const yourReturn = `your ${taxReturnFor(account)?.startsWith('joint:') === true ? 'joint ' : ''}return for ${MOCK_TODAY_ISO.slice(0, 4)}`
   if (estimatedTaxImpact > 0) {
-    return [`After netting against the gains and losses already realized this year, we estimate about ${aboutMoney(estimatedTaxImpact)} of federal capital-gains tax added to ${yourReturn}.`]
+    return [`After netting against the gains and losses already realized this year, we estimate about ${aboutMoney(estimatedTaxImpact)} of federal tax on these gains, ${INCLUDING_NIIT}, added to ${yourReturn}.`]
   }
   const saving = estimatedTaxImpact < 0
-    ? ` We estimate they would reduce the federal tax on gains already realized this year by about ${aboutMoney(-estimatedTaxImpact)}.`
+    ? ` We estimate they would reduce the federal tax on gains already realized this year, ${INCLUDING_NIIT}, by about ${aboutMoney(-estimatedTaxImpact)}.`
     : ''
   const lines = [`After netting against the gains and losses already realized this year, we expect no federal capital-gains tax from these sales on ${yourReturn}.${saving}`]
   if (ytdRealisedOnReturn === null) return lines
@@ -173,10 +186,10 @@ function returnParagraphs(account: Account, version: ProposalVersion, figures: F
   const year = MOCK_TODAY_ISO.slice(0, 4)
   const rule = `Up to ${clientMoney(limit)} of net capital loss can offset ordinary income each year`
   const use = ordinaryIncomeOffset <= 0
-    ? `${rule}, and losses already realized this year use that limit, so about ${aboutMoney(carriedForward)} of this loss carries forward to later years.`
+    ? `${rule}, and losses already realized this year use that limit, so about ${aboutMoney(carriedForward)} of this loss would carry forward to later years.`
     : carriedForward <= 0
       ? `${rule}, so about ${aboutMoney(ordinaryIncomeOffset)} of this loss would offset ordinary income for ${year}.`
-      : `${rule}, so about ${aboutMoney(ordinaryIncomeOffset)} of this loss would offset ordinary income for ${year} and the rest, about ${aboutMoney(carriedForward)}, carries forward to later years.`
+      : `${rule}, so about ${aboutMoney(ordinaryIncomeOffset)} of this loss would offset ordinary income for ${year} and the rest, about ${aboutMoney(carriedForward)}, would carry forward to later years.`
   lines.push(`The sales would leave a net capital loss for the year. ${use}`)
   return lines
 }

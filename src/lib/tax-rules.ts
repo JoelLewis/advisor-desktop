@@ -84,6 +84,20 @@ export function buildRateDisclosure(shortTermRate: number, longTermRate: number,
 // lie about the rates actually applied.
 export const RATE_DISCLOSURE = buildRateDisclosure(SHORT_TERM_RATE, LONG_TERM_RATE, COLLECTIBLE_LONG_TERM_RATE)
 
+/**
+ * The same basis as `RATE_DISCLOSURE`, worded for a client letter: US spelling and plain sentences.
+ * Templated from the basis it is given, so the client's copy cannot drift from the rates applied.
+ */
+export function buildClientRateDisclosure(basis: TaxRateBasis): string {
+  const niit = basis.includes.includes('niit') ? `, including the ${formatRatePercent(NIIT_RATE)} net investment income tax` : ''
+  const state = basis.excludes.includes('state') ? ' State tax is not modeled.' : ''
+  return (
+    `These estimates use top federal rates${niit}: ${formatRatePercent(basis.shortTerm)} on short-term gains and ` +
+    `${formatRatePercent(basis.longTerm)} on long-term gains (${formatRatePercent(basis.collectibleLongTerm)} on collectibles, ` +
+    `including physically backed precious-metal funds).${state} They are estimates, not tax advice.`
+  )
+}
+
 export function taxRateFor(holdingPeriod: TaxLot['holdingPeriod'], character: TaxCharacter = 'capital_asset'): number {
   if (holdingPeriod === 'short') return SHORT_TERM_RATE
   return character === 'collectible' ? COLLECTIBLE_LONG_TERM_RATE : LONG_TERM_RATE
