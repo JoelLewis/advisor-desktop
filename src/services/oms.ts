@@ -1,6 +1,7 @@
 import { get, post } from './api-client'
 import type { TradableAssetClass, TradeSide, TradeOrderType, TimeInForce, BondPriceType, MutualFundAmountType } from '@/types/trading'
 import type { CurrencyCode } from '@/types/currency'
+import type { AssetClass } from '@/types/portfolio'
 import type { WashedLoss } from '@/lib/wash-sale'
 
 export type Order = {
@@ -121,6 +122,8 @@ export type RebalancePreview = {
    * alone). Sorted by `until`, then `symbol`.
    */
   repurchaseRestrictions: RepurchaseRestriction[]
+  /** Drift by asset class after the proposed trades, from the same drift function as current drift. */
+  projectedDrift: ProjectedDrift
 }
 
 /**
@@ -136,6 +139,30 @@ export type RepurchaseRestriction = {
   source:
     | { kind: 'recorded'; saleId: string; accountId: string; saleDate: string }
     | { kind: 'projected'; accountId: string; saleDate: string }
+}
+
+/** Why an asset class is still away from target after the proposed trades. */
+export type ResidualDriftReason = 'not_market_tradable' | 'cash_capped' | 'replacement_hold' | 'below_lot_size'
+
+export type ProjectedAssetClassDrift = {
+  assetClass: AssetClass
+  target: number
+  actual: number
+  /** Signed, rounded to 4dp, exactly as `DriftStatus.assetClassDrifts[].drift`. */
+  drift: number
+  /** Present on every invested (non-cash) class whose |drift| still exceeds the proposal's threshold. */
+  residualReason?: ResidualDriftReason
+}
+
+export type ProjectedDrift = {
+  driftTolerance: number
+  /** The threshold the trades were generated against; a residual is drift beyond it. */
+  driftThreshold: number
+  totalDrift: number
+  maxAbsDrift: number
+  /** `maxAbsDrift` within the model's own band. */
+  withinBand: boolean
+  assetClassDrifts: ProjectedAssetClassDrift[]
 }
 
 export type ProposedTrade = {

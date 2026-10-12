@@ -1,9 +1,9 @@
 import { http, HttpResponse } from 'msw'
 import { nextEventTime, nextRecordNumber } from './event-clock'
-import type { Order, RebalancePreview, ProposedTrade, TradeRequest, PreTradeCheckRequest, PreTradeViolation, PreTradeCheckProposalRequest } from '@/services/oms'
+import type { Order, RebalancePreview, ProposedTrade, TradeRequest, PreTradeCheckRequest, PreTradeViolation, PreTradeCheckProposalRequest, ProjectedDrift, ResidualDriftReason } from '@/services/oms'
 import { notFound } from './utils'
 import { RESTRICTED_SECURITIES, CASH_MINIMUM_PCT, TECH_SYMBOLS, SECTOR_LIMIT, evaluateProposal, invalidProposal } from './compliance'
-import { computeDriftForAccount, modelImplementationSecurity } from './pms'
+import { computeDriftForAccount, computeDriftForHoldings, modelImplementationSecurity, type DriftHolding } from './pms'
 import { accounts } from '../data/accounts'
 import { getPositionsForAccount } from '../data/positions'
 import { FX_RATES_USD_BASE } from '../data/currencies'
@@ -153,7 +153,7 @@ type TradeCandidate = { symbol: string; name: string; price: number; position?: 
  * already knows these three numbers; it now hands them on instead of dropping them.
  */
 type Sleeve = {
-  assetClass: string
+  assetClass: DriftHolding['assetClass']
   /** The account's own weight in this class, renormalised — `computeDriftForAccount`'s `actual`. */
   actualWeight: number
   /** The model's target weight for it — the same figure the drift surface bands against. */
@@ -617,6 +617,114 @@ export function generateRebalanceProposal(
   return { legs, sales }
 }
 
+/**
+ * §0.6 · the account's holdings after `legs` execute: a sell reduces its position, a buy adds to
+ * its position (or opens one), and cash takes the difference. Weights stay `marketValue /
+ * totalValue`, the definition `getPositionsForAccount` uses, because trades move money between
+ * holdings without changing the account's value.
+ */
+export function holdingsAfterTrades(account: (typeof accounts)[number], positions: readonly Position[], legs: readonly ProposedTradeLeg[]): DriftHolding[] {
+  const bySymbol = new Map(positions.map((p) => [p.symbol, { assetClass: p.assetClass, marketValue: p.marketValue }]))
+  let cashMoved = 0
+  for (const leg of legs) {
+    const signed = leg.side === 'sell' ? -leg.estimatedValue : leg.estimatedValue
+    const held = bySymbol.get(leg.symbol)
+    bySymbol.set(leg.symbol, { assetClass: held?.assetClass ?? leg.assetClass, marketValue: (held?.marketValue ?? 0) + signed })
+    cashMoved -= signed
+  }
+  const cash = bySymbol.get('CASH')
+  bySymbol.set('CASH', { assetClass: 'cash', marketValue: (cash?.marketValue ?? 0) + cashMoved })
+  return [...bySymbol.values()].map(({ assetClass, marketValue }) => ({ assetClass, weight: marketValue / account.totalValue }))
+}
+
+/** What the classifier needs to know about one invested asset class still away from target. */
+export type ResidualFacts = {
+  /** Projected drift, signed (positive = overweight). */
+  drift: number
+  totalValue: number
+  /** Value left after the trades in positions a sell could still draw on. */
+  sellableLeft: number
+  /** Value in positions with no market to sell into (`isMarketTradable` false). */
+  nonTradableLeft: number
+  /** Value in harvest replacements a tax-aware rebalance holds for `REPLACEMENT_HOLD_DAYS`. */
+  replacementHeldLeft: number
+  /** Price of one unit of the cheapest security that could close the gap; `undefined` when none can. */
+  unitPrice: number | undefined
+}
+
+/**
+ * Why a class is still away from target after the trades. An overweight class whose remaining
+ * excess is more than the sellable value left is blocked by what cannot be sold: a periodic-
+ * liquidity fund, or a harvest replacement still inside its hold. Otherwise the gap is smaller
+ * than one unit of what would close it, or the proposal stopped where the cash band let it.
+ */
+export function residualReason(facts: ResidualFacts): ResidualDriftReason {
+  const residualValue = Math.abs(facts.drift) * facts.totalValue
+  if (facts.drift > 0 && facts.sellableLeft < residualValue) {
+    if (facts.nonTradableLeft > 0) return 'not_market_tradable'
+    if (facts.replacementHeldLeft > 0) return 'replacement_hold'
+  }
+  if (facts.unitPrice !== undefined && residualValue < facts.unitPrice) return 'below_lot_size'
+  return 'cash_capped'
+}
+
+/**
+ * §0.6 · drift after the proposed trades, by asset class, from `computeDriftForHoldings` — the
+ * function current drift comes from — run on `holdingsAfterTrades`. Every invested class whose
+ * |drift| still exceeds `driftThreshold` (the threshold the trades were generated against) carries
+ * the reason the proposal could not close it. Cash carries none: it is the balancing item the
+ * other classes settle into (see the funding priority in `generateRebalanceTrades`).
+ */
+export function projectDrift(
+  accountId: string,
+  legs: readonly ProposedTradeLeg[],
+  taxAware: boolean,
+  driftThreshold = 0.005,
+  modelId?: string,
+): ProjectedDrift {
+  const account = accounts.find((a) => a.id === accountId)
+  if (!account) throw new Error(`projectDrift: unknown account ${accountId}`)
+  const positions = getPositionsForAccount(account.id, account.totalValue)
+  const after = computeDriftForHoldings(account, holdingsAfterTrades(account, positions, legs), modelId)
+  const heldBack = taxAware && isTaxableAccount(account.taxTreatment)
+    ? recentlyOpenedPositions(generateTaxLots(account.id, account.totalValue), MOCK_TODAY_ISO)
+    : new Set<string>()
+  const soldBySymbol = new Map<string, number>()
+  for (const leg of legs) if (leg.side === 'sell') soldBySymbol.set(leg.symbol, (soldBySymbol.get(leg.symbol) ?? 0) + leg.estimatedValue)
+  const valueLeft = (p: Position) => p.marketValue - (soldBySymbol.get(p.symbol) ?? 0)
+
+  const factsFor = (assetClass: DriftHolding['assetClass'], drift: number): ResidualFacts => {
+    const inClass = positions.filter((p) => p.assetClass === assetClass && p.symbol !== 'CASH')
+    const sellable = inClass.filter((p) => isMarketTradable(p.symbol) && !heldBack.has(p.id) && valueLeft(p) > 0)
+    const sum = (ps: readonly Position[]) => ps.reduce((s, p) => s + valueLeft(p), 0)
+    const buyCandidate = drift < 0
+      ? pickBuyCandidate(inClass.filter((p) => isMarketTradable(p.symbol)), after.modelId, assetClass, currencyForAccount(accountId))
+      : undefined
+    const sellPrices = sellable.map((p) => p.price)
+    return {
+      drift,
+      totalValue: account.totalValue,
+      sellableLeft: sum(sellable),
+      nonTradableLeft: sum(inClass.filter((p) => !isMarketTradable(p.symbol))),
+      replacementHeldLeft: sum(inClass.filter((p) => heldBack.has(p.id))),
+      unitPrice: drift < 0 ? buyCandidate?.price : (sellPrices.length > 0 ? Math.min(...sellPrices) : undefined),
+    }
+  }
+
+  return {
+    driftTolerance: after.driftTolerance,
+    driftThreshold,
+    totalDrift: after.totalDrift,
+    maxAbsDrift: after.maxAbsDrift,
+    withinBand: !after.needsRebalance,
+    assetClassDrifts: after.assetClassDrifts.map((d) => (
+      d.assetClass !== 'cash' && Math.abs(d.drift) > driftThreshold
+        ? { ...d, residualReason: residualReason(factsFor(d.assetClass, d.drift)) }
+        : { ...d }
+    )),
+  }
+}
+
 export const omsHandlers = [
   http.get('/api/oms/orders', ({ request }) => {
     const url = new URL(request.url)
@@ -842,6 +950,7 @@ export const omsHandlers = [
         // this account" from "taxed, and the result is zero".
         taxable: isTaxableAccount(account.taxTreatment),
         repurchaseRestrictions: repurchaseRestrictionsFor(account, MOCK_TODAY_ISO, proposals),
+        projectedDrift: projectDrift(accountId, trades, body.taxAware, body.driftThreshold),
       }
     })
     return HttpResponse.json(previews)

@@ -224,7 +224,7 @@ describe('§0.2 · a buy proposed in the same batch washes a loss sold by the sa
 describe('§0.2 · settleBatchWashSales on constructed legs', () => {
   const leg = (symbol: string, side: 'buy' | 'sell', quantity: number, realisedLongTerm = 0): ProposedTradeLeg => ({
     symbol, name: symbol, side, quantity, estimatedValue: quantity, taxImpact: 0, realisedShortTerm: 0, realisedLongTerm,
-    realisedCollectibleLongTerm: 0, washSaleRisk: false, currency: 'USD', assetClass: 'equity', actualWeight: 0, targetWeight: 0,
+    realisedCollectibleLongTerm: 0, washSaleRisk: false, currency: 'USD', assetClass: 'us_equity', actualWeight: 0, targetWeight: 0,
   })
   const settleOne = (accountId: string, sell: ProposedTradeLeg, sale: LegSale, others: ProposedTradeLeg[] = []) =>
     settleBatchWashSales([{ account: account(accountId), legs: [sell, ...others], sales: new Map([[sell, sale]]) }], MOCK_TODAY_ISO)[0]!
