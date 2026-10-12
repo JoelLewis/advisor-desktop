@@ -181,10 +181,11 @@ describe('rebalance tax estimation', () => {
 
   // Main's C26 said "netting never raises the bill" (estimate ≤ gross). That held while the
   // estimate netted a proposal's own legs; it now nets them with the return's year-to-date
-  // results, so it is true only when those results are a gain or nil in both characters, and the
-  // estimate is negative when the trades save tax. These are the relationships that do hold,
-  // every account previewed alone (so no earlier batch account is netted in).
-  it('C26: the estimate is at most the gross when the YTD results are ≥ 0 in both characters, and never saves more than the YTD tax', async () => {
+  // results, so it is true only when those results are a gain or nil in each rate group
+  // (short-term, long-term collectibles, other long-term), and the estimate is negative when the
+  // trades save tax. These are the relationships that do hold, every account previewed alone (so
+  // no earlier batch account is netted in).
+  it('C26: the estimate is at most the gross when the YTD results are ≥ 0 in each rate group, and never saves more than the YTD tax', async () => {
     let boundedByGross = 0
     let withYtdGain = 0
     for (const account of await getAccounts()) {
@@ -195,7 +196,8 @@ describe('rebalance tax estimation', () => {
         continue
       }
       expect(preview!.estimatedTaxImpact, account.id).toBeGreaterThanOrEqual(-netCapitalGainsTax(ytd.shortTerm, ytd.longTerm, taxRateFor, ytd.collectibleLongTerm) - 1)
-      if (ytd.shortTerm < 0 || ytd.longTerm < 0) continue
+      const collectibles = ytd.collectibleLongTerm ?? 0
+      if (ytd.shortTerm < 0 || collectibles < 0 || ytd.longTerm - collectibles < 0) continue
       // Slack: the gross rounds each leg's tax and the estimate rounds its realised results per
       // leg, each under a dollar, plus one for the estimate's own two roundings.
       const taxedLegs = preview!.trades.filter((t) => t.side === 'sell').length

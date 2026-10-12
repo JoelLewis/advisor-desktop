@@ -85,11 +85,15 @@ export type RealisedByCharacter = { shortTerm: number; longTerm: number; collect
  * The tax `added` puts on a return that has already realised `prior` this year: §1222-netted tax
  * on both together, less the tax `prior` already owes. How it relates to `added`'s own tax on
  * gains (a preview's `grossTaxOnGains`):
- * - **At most the gross when `prior` is a gain or nil in both characters.** Every added dollar of
- *   gain is then taxed at no more than its own rate, and every added loss can only lower the bill.
+ * - **At most the gross when `prior` is a gain or nil in each rate group**: short-term,
+ *   long-term collectibles, and other long-term. Every added dollar of gain is then taxed at no
+ *   more than its own rate, and every added loss can only lower the bill. A long-term total of
+ *   zero is not enough: it can hide a collectibles gain sheltered by an ordinary long-term loss.
  * - **Above the gross otherwise, legitimately.** A gain that uses up a loss which was sheltering a
- *   gain of the other character un-shelters that gain: prior ST +10,000 and LT −10,000 owe 0;
- *   adding LT +10,000 makes the ST gain taxable, 4,080 at 40.8% against 2,380 of its own tax.
+ *   gain of another group un-shelters that gain: prior ST +10,000 and LT −10,000 owe 0; adding
+ *   LT +10,000 makes the ST gain taxable, 4,080 at 40.8% against 2,380 of its own tax. Likewise
+ *   prior LT 0, made of +10,000 collectibles and −10,000 ordinary: adding ordinary LT +10,000
+ *   un-shelters the collectibles gain, 3,180 at 31.8% against 2,380.
  * - **Negative when `added` lowers the bill**: a loss against gains already realised this year.
  *   It is never below `−netCapitalGainsTax(prior)` — trades cannot save more than the year owes.
  *

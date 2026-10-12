@@ -10,6 +10,7 @@ import {
   estimatedTaxBenefit,
   SHORT_TERM_RATE,
   LONG_TERM_RATE,
+  COLLECTIBLE_LONG_TERM_RATE,
   HARVEST_LOSS_THRESHOLD_USD,
   isHarvestable,
   computeCostBasisImpact,
@@ -540,23 +541,28 @@ describe('computeCostBasisImpact (fix-round-1 review, Important #1)', () => {
 // else in the codebase.
 describe('rate disclosure derivation (fix-round-2 review, Minor M1)', () => {
   it('buildRateDisclosure renders whatever rates it is given, not fixed prose', () => {
-    const disclosure = buildRateDisclosure(0.4, 0.25)
+    const disclosure = buildRateDisclosure(0.4, 0.25, 0.33)
     expect(disclosure).toContain('40% short-term')
     expect(disclosure).toContain('25% long-term')
+    expect(disclosure).toContain('33% on collectibles')
     // Neither of the real, current rates should leak in from a hardcoded fallback.
     expect(disclosure).not.toContain('37%')
     expect(disclosure).not.toContain('23.8%')
+    expect(disclosure).not.toContain('31.8%')
   })
 
   it('a different pair of rates produces different, correctly-formatted copy', () => {
-    expect(buildRateDisclosure(0.2, 0.15)).toContain('20% short-term')
-    expect(buildRateDisclosure(0.2, 0.15)).toContain('15% long-term')
+    expect(buildRateDisclosure(0.2, 0.15, 0.3)).toContain('20% short-term')
+    expect(buildRateDisclosure(0.2, 0.15, 0.3)).toContain('15% long-term')
+    expect(buildRateDisclosure(0.2, 0.15, 0.3)).toContain('30% on collectibles')
   })
 
-  it('RATE_DISCLOSURE is buildRateDisclosure(SHORT_TERM_RATE, LONG_TERM_RATE), not a separate literal', () => {
+  it('RATE_DISCLOSURE is buildRateDisclosure(SHORT_TERM_RATE, LONG_TERM_RATE, COLLECTIBLE_LONG_TERM_RATE), not a separate literal', () => {
     expect(SHORT_TERM_RATE).toBe(0.408)
     expect(LONG_TERM_RATE).toBe(0.238)
-    expect(RATE_DISCLOSURE).toBe(buildRateDisclosure(SHORT_TERM_RATE, LONG_TERM_RATE))
+    expect(COLLECTIBLE_LONG_TERM_RATE).toBe(0.318)
+    expect(RATE_DISCLOSURE).toBe(buildRateDisclosure(SHORT_TERM_RATE, LONG_TERM_RATE, COLLECTIBLE_LONG_TERM_RATE))
+    expect(RATE_DISCLOSURE).toContain('31.8% on collectibles')
     expect(RATE_DISCLOSURE).toContain('40.8% short-term')
     expect(RATE_DISCLOSURE).toContain('3.8% net investment income tax')
     expect(RATE_DISCLOSURE).toContain('23.8% long-term')

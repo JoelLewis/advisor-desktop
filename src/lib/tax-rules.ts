@@ -69,11 +69,7 @@ export function formatRatePercent(rate: number): string {
  * a test drive it with values that appear nowhere else in the codebase (see
  * tax-invariants.test.ts), which a hardcoded string cannot satisfy by coincidence.
  */
-export function buildRateDisclosure(
-  shortTermRate: number,
-  longTermRate: number,
-  collectibleLongTermRate: number = COLLECTIBLE_LONG_TERM_RATE,
-): string {
+export function buildRateDisclosure(shortTermRate: number, longTermRate: number, collectibleLongTermRate: number): string {
   return (
     `Estimated at top federal marginal rates including the ${formatRatePercent(NIIT_RATE)} net ` +
     `investment income tax — ${formatRatePercent(shortTermRate)} short-term, ` +

@@ -95,10 +95,10 @@ export type RebalancePreview = {
    * `grossTaxOnGains` (`additionalCapitalGainsTax` has the reasoning):
    * - negative when the proposal saves tax — its losses offset gains already realised this year —
    *   but never by more than the tax those results already owe;
-   * - at most `grossTaxOnGains` (to rounding) when what it nets against is a gain or nil in both
-   *   short- and long-term;
-   * - above `grossTaxOnGains` when its gains use up a loss that was sheltering a gain of the other
-   *   character.
+   * - at most `grossTaxOnGains` (to rounding) when what it nets against is a gain or nil in each
+   *   rate group: short-term, long-term collectibles and other long-term;
+   * - above `grossTaxOnGains` when its gains use up a loss that was sheltering a gain of another
+   *   group (including a collectibles gain sheltered by an ordinary long-term loss).
    * Capital-gains tax only: the §1211(b) ordinary-income offset and §1212 carryforwards are not
    * modelled.
    */
@@ -179,9 +179,10 @@ export type ProposedTrade = {
   realisedCollectibleLongTerm: number
   washSaleRisk: boolean
   /**
-   * Sell legs that realise a loss only: the part of it IRC §1091 washes because the taxpayer bought
-   * the symbol in the last 30 days or this batch buys it today in any of the taxpayer's accounts
-   * (Treas. Reg. §1.1091-1(c), pro rata to the replaced shares; `settleBatchWashSales`).
+   * Sell legs that sell any loss lot, judged per lot (so a leg that nets to a gain can carry it):
+   * the part of those lots' loss IRC §1091 washes because the taxpayer bought the symbol in the
+   * last 30 days or this batch buys it today in any of the taxpayer's accounts (Treas. Reg.
+   * §1.1091-1(c), pro rata to the replaced shares; `settleBatchWashSales`).
    * Signed like the loss (≤ 0), account currency; `realisedShortTerm`/`realisedLongTerm` still
    * include it. The tax estimate nets only the rest. Absent when nothing washes.
    */

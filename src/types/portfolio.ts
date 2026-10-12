@@ -24,7 +24,8 @@ type TaxLot = {
   gainLoss: Currency;
   holdingPeriod: HoldingPeriod;
   /**
-   * The last day of the latest open household loss-sale window on this lot's symbol, or `null`
+   * The last day of the latest open loss-sale window of this account's wash-sale taxpayer
+   * (`openWashSaleWindowsFor`: the couple, IRAs and Roths included) on this lot's symbol, or `null`
    * when there is none. It restricts **buying the symbol back** (IRC §1091), not selling this lot:
    * selling a lot at a loss is the harvest itself.
    */

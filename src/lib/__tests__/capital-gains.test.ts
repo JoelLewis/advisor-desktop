@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { netCapitalGainsTax, netTaxForLegs, additionalCapitalGainsTax, taxEstimateDirection, capitalLossUse } from '@/lib/capital-gains'
+import { taxRateFor } from '@/lib/tax-rules'
 
 const rate = (p: 'short' | 'long') => (p === 'short' ? 0.37 : 0.238)
 
@@ -81,6 +82,15 @@ describe('additionalCapitalGainsTax (a proposal on top of results already realis
   it('a gain can cost more than its own rate when it uses up a loss that was sheltering short-term gains', () => {
     // Before: ST +10,000 sheltered by LT −10,000 → 0. After adding LT +10,000: ST +10,000 → 3,700.
     expect(additionalCapitalGainsTax({ shortTerm: 10_000, longTerm: -10_000 }, { shortTerm: 0, longTerm: 10_000 }, rate)).toBe(3_700)
+  })
+  it('a zero long-term total can hide a sheltered collectibles gain: an added ordinary gain then costs more than its own rate', () => {
+    // Prior LT 0 = +10,000 collectibles − 10,000 ordinary: the 20% group's loss offsets the 28% gain,
+    // so 0 is owed. Adding ordinary LT +10,000 nets the 20% group to 0 and leaves the 10,000
+    // collectibles gain taxable at 31.8% = 3,180, against the added gain's own 2,380.
+    const prior = { shortTerm: 0, longTerm: 0, collectibleLongTerm: 10_000 }
+    expect(netCapitalGainsTax(0, 0, taxRateFor, 10_000)).toBe(0)
+    expect(additionalCapitalGainsTax(prior, { shortTerm: 0, longTerm: 10_000 }, taxRateFor)).toBe(3_180)
+    expect(Math.round(10_000 * taxRateFor('long'))).toBe(2_380)
   })
   it('a loss against gains already realised this year is a negative change — tax saved', () => {
     expect(additionalCapitalGainsTax({ shortTerm: 0, longTerm: 50_000 }, { shortTerm: 0, longTerm: -20_000 }, rate))

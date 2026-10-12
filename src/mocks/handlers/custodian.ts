@@ -375,9 +375,10 @@ export function washSaleAcquisitions(account: Account, lotsFor: (a: Account) => 
  * nothing to lose and reads 0/0; so does a coin held directly, which §1091 does not reach
  * (`matchWashedShares` skips it, `isSubjectToWashSale`).
  *
- * The rebalance engine's `washSaleRisk` on a sell leg reads the same acquisitions but judges a
- * whole leg on its net result and asks only whether any replacement exists (`hasWashSaleRisk`), so
- * a leg that nets to a gain is not flagged even when one of its lots here shows washed shares.
+ * The rebalance engine reads the same acquisitions. Its generator's first `washSaleRisk` on a sell
+ * leg judges the whole leg on its net result (`hasWashSaleRisk`); the preview then settles every
+ * leg lot by lot (`settleBatchWashSales`), so a leg that nets to a gain is flagged, and carries
+ * `washedLoss`, when any loss lot it sells washes, as its lots here would show.
  */
 export function generateTaxLotsWithSaleRisk(accountId: string, totalValue: number): TaxLot[] {
   const own = generateTaxLots(accountId, totalValue)
