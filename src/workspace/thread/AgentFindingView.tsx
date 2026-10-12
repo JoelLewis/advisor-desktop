@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { fmtTimestamp } from '@/kit/measure'
 import { Reading } from '@/kit/reading/Reading'
 import { SourceChips } from '@/kit/source-chips/SourceChips'
@@ -6,12 +7,15 @@ import { Tag } from '@/kit/tag/Tag'
 import type { AgentProfile, Message } from '@/types/workspace'
 import { findingStatus, formatFigure } from './figure-format'
 
-type AgentFinding = Extract<Message, { kind: 'agent_finding' }>
+/** A finding as posted, or as carried into another thread (a `CarriedFinding` fits). */
+type AgentFinding = Pick<Extract<Message, { kind: 'agent_finding' }>, 'at' | 'claim' | 'figures' | 'citations' | 'attention'>
 
-export function AgentFindingView({ finding, agent }: { finding: AgentFinding; agent: AgentProfile }) {
+type AgentFindingViewProps = { finding: AgentFinding; agent: AgentProfile; anchorId?: string; footer?: ReactNode }
+
+export function AgentFindingView({ finding, agent, anchorId, footer }: AgentFindingViewProps) {
   const status = findingStatus(finding)
   return (
-    <article aria-label={`${agent.name}: ${finding.claim}`} className="flex min-w-0 flex-col gap-3 border-l-2 border-ink pl-4">
+    <article id={anchorId} tabIndex={anchorId ? -1 : undefined} aria-label={`${agent.name}: ${finding.claim}`} className="flex min-w-0 flex-col gap-3 border-l-2 border-ink pl-4">
       <div className="flex flex-col gap-1.5">
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <span className="text-body font-semibold">{agent.name}</span>
@@ -36,6 +40,7 @@ export function AgentFindingView({ finding, agent }: { finding: AgentFinding; ag
         </div>
       ) : null}
       <SourceChips sources={finding.citations.map((c) => ({ label: c.source, asOf: c.asOf }))} />
+      {footer}
     </article>
   )
 }

@@ -1,0 +1,51 @@
+import { describe, it, expect } from 'vitest'
+import { screen, within } from '@testing-library/react'
+import { routes } from '@/app/routes'
+import { renderRoutes } from '@/test/render'
+import { approveProposal, createProposal, reviseProposal } from '@/services/workspace'
+
+const ADRIAN = 'user-001'
+
+async function openJohnson() {
+  renderRoutes(routes, '/t/th-johnson-review')
+  await screen.findByRole('heading', { level: 1, name: 'Johnson Rebalance Review' })
+  return screen.findByRole('region', { name: 'Proposal · Johnson rebalance' })
+}
+
+describe('the proposal in the team thread', () => {
+  it('shows v1 as an embed: legs with pre-trade, tax readings, restrictions, drift before and after, and the workbench link', async () => {
+    await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
+    const embed = await openJohnson()
+    const legs = await within(embed).findByRole('table', { name: 'Proposal legs · v1' })
+    expect(within(legs).getAllByRole('row')).toHaveLength(10)
+    expect(within(legs).getByRole('row', { name: /^SPY/ })).toHaveTextContent('WARN')
+    expect(within(embed).getByText('Est. tax added to the return')).toBeInTheDocument()
+    expect(embed).toHaveTextContent('10,422')
+    expect(embed).toHaveTextContent('no repurchase through 2026-03-27')
+    expect(embed).toHaveTextContent('recorded · sale rs-001 of 2026-02-20 in acc-002')
+    const drift = await within(embed).findByRole('table', { name: 'Drift before and after' })
+    expect(drift).toHaveTextContent('Private Equity')
+    expect(drift).toHaveTextContent('no market to sell into')
+    expect(within(embed).getByRole('link', { name: 'Workbench' })).toHaveAttribute('href', '/proposals/prop-0001?from=th-johnson-review')
+    expect(embed).toHaveTextContent('v1 is not approved')
+    expect(embed).toHaveTextContent('Drafted a tax-aware rebalance toward the Growth model.')
+  })
+
+  it('a revision posts a version line and the embed moves to the latest version', async () => {
+    await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
+    await reviseProposal(ADRIAN, 'prop-0001', [{ kind: 'harvest_only' }])
+    const embed = await openJohnson()
+    expect(await within(embed).findByRole('table', { name: 'Proposal legs · v2' })).toBeInTheDocument()
+    const line = screen.getByRole('article', { name: 'v2 · Proposal Agent' })
+    expect(line).toHaveTextContent('Revised to sell only lots at a loss.')
+    expect(within(line).getByRole('link', { name: 'Open in the workbench' })).toHaveAttribute('href', '/proposals/prop-0001?from=th-johnson-review')
+  })
+
+  it('says the approval stays on the older version when a newer one arrives', async () => {
+    const created = await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
+    await approveProposal(ADRIAN, created.id, 1, created.versions[0]!.fingerprint)
+    await reviseProposal(ADRIAN, created.id, [{ kind: 'harvest_only' }])
+    const embed = await openJohnson()
+    expect(await within(embed).findByText('Approval applies to v1; v2 is unapproved')).toBeInTheDocument()
+  })
+})

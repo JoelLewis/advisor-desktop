@@ -17,30 +17,21 @@ import { Stamp } from '@/kit/stamp/Stamp'
 import { RecordSlip } from '@/kit/record-slip/RecordSlip'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
 import { RecordTrail } from '@/kit/record-trail/RecordTrail'
-import { clientMoney, fmtDrift, fmtMoney, fmtResult, fmtTimestamp, fmtTolerance } from '@/kit/measure'
+import { clientMoney, fmtDrift, fmtMoney, fmtTimestamp, fmtTolerance } from '@/kit/measure'
 import { todayISO, now } from '@/lib/clock'
 import { RATE_DISCLOSURE } from '@/lib/tax-rules'
-import { CAPITAL_LOSS_SCOPE_NOTE, taxEstimateDirection } from '@/lib/capital-gains'
-import type { RebalancePreview } from '@/services/oms'
+import { taxEstimateDirection } from '@/lib/capital-gains'
 import type { Status } from '@/kit/status/status'
 import { HoldingsTable, TaxLotsTable } from '@/workspace/full-views/account-columns'
 import { assetClassLabel } from '@/workspace/asset-class-label'
 import { RebalanceEmbed } from '@/workspace/thread/embeds/RebalanceEmbed'
 import { AgentFindingView } from '@/workspace/thread/AgentFindingView'
+import { taxScope } from '@/workspace/proposal/tax-scope'
 import { splitReviewer } from './reviewer'
 import type { KitData } from './use-kit-data'
 
 const STATUSES: Status[] = ['OUT', 'AT LIMIT', 'IN', 'BLOCK', 'WARN', 'CLEAR', 'OPEN']
 const TAX_SOURCE = 'Rebalance preview · estimated tax'
-
-/** What the preview's estimate nets against, read from the preview rather than assumed. */
-function taxScope({ ytdRealisedOnReturn: ytd, nettedWithAccountIds }: RebalancePreview): string {
-  if (!ytd) return 'A tax-advantaged account: its sales realise nothing taxable.'
-  const results = [`short-term ${fmtResult(ytd.shortTerm)}`, `long-term ${fmtResult(ytd.longTerm)}`]
-  if (ytd.collectibleLongTerm !== 0) results.push(`collectibles ${fmtResult(ytd.collectibleLongTerm)}`)
-  const batch = nettedWithAccountIds.length > 0 ? ', and with earlier accounts in this batch on the same return' : ''
-  return `Nets this proposal's legs with the return's year-to-date realised results (${results.join(', ')} USD)${batch}. ${CAPITAL_LOSS_SCOPE_NOTE}`
-}
 
 export function KitSections({ data }: { data: KitData }) {
   const { account, positions, drift, lots, windows, preview, approval, agentFinding } = data

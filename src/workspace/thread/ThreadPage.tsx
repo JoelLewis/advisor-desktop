@@ -48,7 +48,7 @@ function Thread({ detail: { thread, messages }, directory }: { detail: ThreadDet
         <ol aria-label="Messages" className="flex min-w-0 flex-col">
           {messages.map((m) => (
             <li key={m.id} className="min-w-0 border-b border-rule py-5 first:pt-0 last:border-b-0">
-              <MessageView message={m} directory={directory} />
+              <MessageView message={m} thread={thread} directory={directory} />
             </li>
           ))}
         </ol>
