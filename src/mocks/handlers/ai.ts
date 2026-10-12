@@ -5,7 +5,7 @@ import { households } from '../data/households'
 import { accounts } from '../data/accounts'
 import { nbas } from '../data/nbas'
 import { customPrompts } from './settings'
-import type { ChatMessage, ActionConfirmation, DocumentGeneration, ContextBriefingData, BriefingMetric, AIInsight, ActionTemplate, SuggestedPrompt } from '@/types/ai'
+import type { ChatMessage, TradeSuggestion, ActionConfirmation, DocumentGeneration, ContextBriefingData, BriefingMetric, AIInsight, ActionTemplate, SuggestedPrompt } from '@/types/ai'
 import type { CustomPromptCategory } from '@/types/settings'
 import type { TaxLot } from '@/types/portfolio'
 import { formatAUM, computeTotalAUM } from './utils'
@@ -15,12 +15,14 @@ import { generateTaxLots } from './custodian'
 import { openWashSaleWindows } from '../data/realised-sales'
 import { FX_RATES_USD_BASE } from '../data/currencies'
 import { convertToBase } from '@/lib/currency'
+import { sumAccountsUSD } from '@/lib/aum'
 import { formatDate } from '@/lib/utils'
 import { estimatedTaxBenefit, isHarvestable } from '@/lib/tax-rules'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { getPositionsForAccount } from '../data/positions'
 import { securityKind, concentrationLimitFor } from '@/lib/security-master'
-import { orders } from './oms'
+import { orders, generateRebalanceTrades } from './oms'
+import { ASSET_CLASS_LABELS } from '@/lib/labels'
 
 /**
  * D22 · tax-loss-harvesting — the book-wide harvestable lot set, walked once here so the dashboard
@@ -88,6 +90,47 @@ function topHarvestableAccount(harvestable: ReturnType<typeof harvestableLotsAcr
   return { accountId: best.accountId, accountName: account?.name ?? best.accountId, amount: best.amount }
 }
 
+/**
+ * §9.5 · a household's accounts outside their drift band — the set the dashboard's "Review
+ * Johnson Rebalance" action acts on. It was hand-typed as "$12.4M across 3 accounts"; hh-001 has
+ * 5 accounts, and the 4 that need a rebalance (acc-001, acc-002, acc-004, acc-005) hold $15.2M.
+ */
+function householdRebalanceAccounts(householdId: string) {
+  return accounts.filter((a) => a.householdId === householdId && computeDriftForAccount(a).needsRebalance)
+}
+
+/** "7.1%" — max asset-class drift, formatted as the drift surfaces show it (SelectAccountsStep, OverviewTab). */
+function formatDriftPercent(maxAbsDrift: number): string {
+  return `${(maxAbsDrift * 100).toFixed(1)}%`
+}
+
+/**
+ * §9.5 · an account's rebalance trades as chat suggestions — the same legs the Rebalance page
+ * proposes (`generateRebalanceTrades`, tax-aware), so the chat never suggests a trade the engine
+ * would not make. The rationale quotes the leg's own sleeve drift.
+ */
+function rebalanceTradeSuggestions(accountId: string): TradeSuggestion[] {
+  const account = accounts.find((a) => a.id === accountId)
+  if (!account) return []
+  return generateRebalanceTrades(accountId, true).map((leg) => {
+    const label = ASSET_CLASS_LABELS[leg.assetClass] ?? leg.assetClass
+    const gap = formatDriftPercent(Math.abs(leg.actualWeight - leg.targetWeight))
+    return {
+      symbol: leg.symbol,
+      name: leg.name,
+      side: leg.side,
+      quantity: leg.quantity,
+      rationale: leg.side === 'sell'
+        ? `Reduce ${label} overweight (${gap} above target)`
+        : `Restore ${label} underweight (${gap} below target)`,
+      estimatedValue: leg.estimatedValue,
+      accountId,
+      accountName: account.name,
+      assetClass: leg.assetClass,
+    }
+  })
+}
+
 /** "March 15, 2026" — long-month style, matching `proposals.ts`'s date prose. */
 function formatLongDate(iso: string): string {
   return new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-US', {
@@ -138,17 +181,32 @@ export const aiHandlers = [
     const harvestable = harvestableLotsAcrossBook()
     const topHarvest = topHarvestableAccount(harvestable)
 
+    const driftedCount = driftedAccountsCount()
     const facts: Record<string, string> = {
       OPEN_ORDERS_COUNT: String(pendingOrders.length),
       LIMIT_ORDERS_COUNT: String(pendingOrders.filter((o) => o.orderType === 'limit').length),
       MARKET_ORDERS_COUNT: String(pendingOrders.filter((o) => o.orderType === 'market').length),
       WASH_SALE_COUNT: String(new Set(washWindows.map((w) => w.accountId)).size),
       WASH_SALE_DATE: latestWashSaleEnd ? formatLongDate(latestWashSaleEnd) : 'no open windows',
-      DRIFT_COUNT: String(driftedAccountsCount()),
+      DRIFT_COUNT: String(driftedCount),
       TLH_TOTAL: formatAUM(harvestable.reduce((s, l) => s + Math.abs(l.gainLoss), 0)),
       TLH_ACCOUNT_COUNT: String(new Set(harvestable.map((l) => l.accountId)).size),
       TOP_HARVEST_ACCOUNT: topHarvest?.accountName ?? 'no account',
       TOP_HARVEST_AMOUNT: topHarvest ? formatAUM(topHarvest.amount) : '$0',
+      // §9.5 · per-household rebalance set, e.g. `{{HH_001_REBALANCE_VALUE}}` → "$15.2M".
+      ...Object.fromEntries(households.flatMap((h) => {
+        const key = h.id.toUpperCase().replace(/-/g, '_')
+        const set = householdRebalanceAccounts(h.id)
+        return [
+          [`${key}_REBALANCE_VALUE`, formatAUM(sumAccountsUSD(set, FX_RATES_USD_BASE))],
+          [`${key}_REBALANCE_COUNT`, String(set.length)],
+        ]
+      })),
+      // §9.5 · per-account max drift, e.g. `{{MAX_DRIFT_ACC_001}}` → "7.1%".
+      ...Object.fromEntries(accounts.map((a) => [
+        `MAX_DRIFT_${a.id.toUpperCase().replace(/-/g, '_')}`,
+        formatDriftPercent(computeDriftForAccount(a).maxAbsDrift),
+      ])),
     }
 
     const filled = interpolateFacts(template, facts)
@@ -161,8 +219,17 @@ export const aiHandlers = [
       citations: filled.citations,
       actions: filled.actions,
       documentPreview: filled.documentPreview,
-      richCards: filled.richCards,
-      tradeSuggestions: filled.tradeSuggestions,
+      // §9.5 · a rebalance card's figures come from the engine, not the template.
+      richCards: filled.richCards?.map((card) => {
+        if (card.variant !== 'rebalance_workflow') return card
+        const account = accounts.find((a) => a.id === card.entityId)
+        if (!account) return card
+        const drift = computeDriftForAccount(account)
+        return { ...card, driftPercent: drift.maxAbsDrift * 100, needsRebalance: drift.needsRebalance, accountCount: driftedCount }
+      }),
+      tradeSuggestions: filled.rebalanceTradesFor
+        ? rebalanceTradeSuggestions(filled.rebalanceTradesFor)
+        : filled.tradeSuggestions,
     }
 
     return HttpResponse.json(response)
