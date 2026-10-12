@@ -48,6 +48,23 @@ describe('recutLeg', () => {
     expect(r.leg.washedLoss).toBeUndefined()
   })
 
+  it('re-cuts a directly held coin, or any position held in a fraction, to a fractional quantity', () => {
+    const crypto = generateRebalanceTrades('acc-045', true)
+    for (const [symbol, held] of [['ETH', 22.5], ['USDC', 15_231.5]] as const) {
+      const generated = crypto.find((l) => l.symbol === symbol)
+      if (!generated) throw new Error(`acc-045 proposes no ${symbol} leg`)
+      const r = recutLeg('acc-045', generated, { quantity: held })
+      if (!r.ok) throw new Error(r.message)
+      expect(r.leg.quantity).toBe(held)
+    }
+  })
+
+  it('a whole-unit equity still refuses half a share', () => {
+    const r = cut('SPY', 100.5)
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.code).toBe('BAD_QUANTITY')
+  })
+
   it.each([
     ['INTC', 0, undefined, 'BAD_QUANTITY'],
     ['INTC', -5, undefined, 'BAD_QUANTITY'],
@@ -55,6 +72,7 @@ describe('recutLeg', () => {
     ['INTC', 1.5, undefined, 'BAD_QUANTITY'],
     ['INTC', 8_000, undefined, 'OVER_HELD'],
     ['INTC', 1_000, ['lot-pos-020-0'], 'LOT_NOT_IN_POSITION'],
+    ['SPY', 2_000, ['lot-pos-020-0', 'lot-pos-020-0'], 'DUPLICATE_LOT'],
     ['SPY', 2_000, ['lot-pos-020-0'], 'LOTS_TOO_SMALL'],
     ['EFA', 100, ['lot-pos-022-0'], 'LOTS_ON_BUY'],
   ] as const)('%s × %s with lots %j is refused with %s', (symbol, quantity, lotIds, code) => {

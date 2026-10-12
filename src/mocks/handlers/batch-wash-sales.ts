@@ -49,7 +49,13 @@ export function settleBatchWashSales(batch: readonly BatchEntry[], asOfISO: stri
   }
   for (const entries of byTaxpayer.values()) {
     const sales = new Map(entries.flatMap((e) => [...e.sales]))
-    const saleOf = (leg: ProposedTradeLeg): LegSale => sales.get(leg) ?? NOTHING_SOLD
+    // A buy disposes of nothing; a sell without its lots would settle as if it sold no loss shares.
+    const saleOf = (leg: ProposedTradeLeg): LegSale => {
+      const sale = sales.get(leg)
+      if (sale) return sale
+      if (leg.side === 'buy') return NOTHING_SOLD
+      throw new Error(`settleBatchWashSales: the ${leg.symbol} sale carries no record of the lots it sells`)
+    }
     const allLegs = entries.flatMap((e) => e.legs)
     const sold = new Set(allLegs.flatMap((leg) => saleOf(leg).consumedLotIds))
     const held = washSaleAcquisitions(entries[0]!.account, lotsFor).filter((a) => !sold.has(a.lotId))

@@ -3,12 +3,12 @@ import { nextEventTime, nextRecordNumber } from './event-clock'
 import type { Order, RebalancePreview, ProposedTrade, TradeRequest, PreTradeCheckRequest, PreTradeViolation, PreTradeCheckProposalRequest, ProjectedDrift, ResidualDriftReason } from '@/services/oms'
 import { notFound } from './utils'
 import { RESTRICTED_SECURITIES, CASH_MINIMUM_PCT, TECH_SYMBOLS, SECTOR_LIMIT, evaluateProposal, invalidProposal } from './compliance'
-import { computeDriftForAccount, computeDriftForHoldings, modelImplementationSecurity, type DriftHolding } from './pms'
+import { computeDriftForAccount, computeDriftForHoldings, modelImplementationSecurity, usdQuoteFor, type DriftHolding } from './pms'
 import { accounts } from '../data/accounts'
 import { getPositionsForAccount } from '../data/positions'
 import { FX_RATES_USD_BASE } from '../data/currencies'
 import { convertCurrency } from '@/lib/currency'
-import { securityKind, concentrationLimitFor, isMarketTradable, taxCharacterOf } from '@/lib/security-master'
+import { securityKind, concentrationLimitFor, isMarketTradable, taxCharacterOf, SPOT_CRYPTO_SYMBOLS } from '@/lib/security-master'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { hasWashSaleRisk, isoDaysBefore, type SoldLossLot } from '@/lib/wash-sale'
@@ -143,9 +143,9 @@ function realiseOrderedLots(ordered: readonly CustodianLot[], symbol: string, no
  * Realise a sale of `notional` dollars out of `target`: the signed short- and long-term result
  * and the capital-gains tax on its gains, using the same per-lot generator the tax page reads (`generateTaxLots`) and the same rate function
  * (`taxRateFor`) it applies — a short-term-heavy sell is taxed at `SHORT_TERM_RATE` (40.8%), not
- * silently at the long-term rate (23.8%) for the entire position. A tax-aware pass sells the
- * lowest-gain-fraction (highest cost basis) lots first to minimise realised gain; a tax-unaware
- * pass sells the lots in their own oldest-first order.
+ * silently at the long-term rate (23.8%) for the entire position. A tax-aware pass sells the lots
+ * carrying the least tax per dollar sold first (`taxAwareLotOrder`); a tax-unaware pass sells the
+ * lots in their own oldest-first order.
  */
 function realiseSale(accountLots: readonly CustodianLot[], target: Position, notional: number, taxAware: boolean): RealisedSale {
   const lots = accountLots.filter((l) => l.positionId === target.id)
@@ -659,34 +659,41 @@ export function holdingsAfterTrades(account: (typeof accounts)[number], position
 export type LegCut = { quantity: number; lotIds?: readonly string[] }
 export type RecutFailure = {
   ok: false
-  code: 'BAD_QUANTITY' | 'OVER_HELD' | 'LOT_NOT_IN_POSITION' | 'LOTS_TOO_SMALL' | 'LOTS_ON_BUY'
+  code: 'BAD_QUANTITY' | 'OVER_HELD' | 'LOT_NOT_IN_POSITION' | 'DUPLICATE_LOT' | 'LOTS_TOO_SMALL' | 'LOTS_ON_BUY'
   message: string
 }
 
 /** The settled §1091 fields belong to a batch; a re-cut leg is settled again with the rest of its batch. */
 const unsettled = ({ washedLoss: _washed, repurchaseBlockedUntil: _until, ...leg }: ProposedTradeLeg): ProposedTradeLeg => leg
 
-/** What one unit of a leg's security costs in the account's currency: the held position's price, or the model security's. */
+/** What one unit of a leg's security costs in the account's currency: the held position's price, or the symbol's own quote. */
 function unitPriceFor(account: Account, leg: ProposedTradeLeg, position: Position | undefined): number {
   if (position) return position.price
-  const security = modelImplementationSecurity(computeDriftForAccount(account).modelId, leg.assetClass)
-  if (!security) throw new Error(`recutLeg: no price for ${leg.symbol} in ${account.id}`)
-  return convertCurrency(security.price, 'USD', currencyForAccount(account.id), FX_RATES_USD_BASE)
+  const quote = usdQuoteFor(leg.symbol)
+  if (!quote) throw new Error(`recutLeg: no quote for ${leg.symbol} in ${account.id}`)
+  return convertCurrency(quote.price, 'USD', currencyForAccount(account.id), FX_RATES_USD_BASE)
 }
+
+/** Whether a holding trades in fractions: a directly held coin does, and so does any position already held in a fraction. */
+const tradesInFractions = (symbol: string, position: Position | undefined) =>
+  SPOT_CRYPTO_SYMBOLS.has(symbol) || (position !== undefined && !Number.isInteger(position.quantity))
 
 /**
  * Phase 3 · a workbench edit re-cut onto one leg. A sale is re-realised lot by lot: from `lotIds`
  * in the order given (specific identification) or, without them, in the generator's own tax-aware
  * order. A purchase is re-priced. The engine refuses what cannot be traded rather than clamping it.
+ *
+ * For tax-aware proposals only: a sale without chosen lots is drawn in the tax-aware lot order,
+ * never a tax-unaware proposal's oldest-first order.
  */
 export function recutLeg(accountId: string, leg: ProposedTradeLeg, { quantity, lotIds }: LegCut): { ok: true; leg: ProposedTradeLeg; sale: LegSale } | RecutFailure {
   const account = accounts.find((a) => a.id === accountId)
   if (!account) throw new Error(`recutLeg: unknown account ${accountId}`)
-  const wholeUnits = Number.isInteger(leg.quantity)
-  if (!Number.isFinite(quantity) || quantity <= 0 || (wholeUnits && !Number.isInteger(quantity))) {
-    return { ok: false, code: 'BAD_QUANTITY', message: `${leg.symbol}: the quantity must be a positive ${wholeUnits ? 'whole number of shares' : 'number'}.` }
-  }
   const position = getPositionsForAccount(account.id, account.totalValue).find((p) => p.symbol === leg.symbol && p.symbol !== 'CASH')
+  const wholeUnits = !tradesInFractions(leg.symbol, position)
+  if (!Number.isFinite(quantity) || quantity <= 0 || (wholeUnits && !Number.isInteger(quantity))) {
+    return { ok: false, code: 'BAD_QUANTITY', message: `${leg.symbol}: the quantity must be a positive ${wholeUnits ? 'whole number of shares' : 'number of units'}.` }
+  }
   const taxable = isTaxableAccount(account.taxTreatment)
   const ownLots = generateTaxLots(account.id, account.totalValue)
   const lossWindows = openWashSaleWindowsFor(account, MOCK_TODAY_ISO)
@@ -705,6 +712,8 @@ export function recutLeg(accountId: string, leg: ProposedTradeLeg, { quantity, l
   let ordered: CustodianLot[]
   if (lotIds) {
     const byId = new Map(positionLots.map((l) => [l.id, l]))
+    const duplicate = lotIds.find((id, i) => lotIds.indexOf(id) !== i)
+    if (duplicate !== undefined) return { ok: false, code: 'DUPLICATE_LOT', message: `${leg.symbol}: lot ${duplicate} is chosen more than once.` }
     const missing = lotIds.find((id) => !byId.has(id))
     if (missing !== undefined) return { ok: false, code: 'LOT_NOT_IN_POSITION', message: `${leg.symbol}: lot ${missing} is not part of this position.` }
     ordered = lotIds.flatMap((id) => byId.get(id) ?? [])
