@@ -5,7 +5,7 @@ import { activities } from '@/mocks/data/activities'
 import { MOCK_NOTIFICATIONS } from '@/mocks/data/notifications'
 import { accounts } from '@/mocks/data/accounts'
 import { clients } from '@/mocks/data/clients'
-import { computeDriftForAccount, modelDisplayName } from '@/mocks/handlers/pms'
+import { computeDriftForAccount, modelDisplayName, MODEL_DEFINITIONS } from '@/mocks/handlers/pms'
 import { formatRatePercent } from '@/lib/tax-rules'
 
 const drifted = accounts.map((a) => ({ account: a, drift: computeDriftForAccount(a) })).filter(({ drift }) => drift.needsRebalance)
@@ -52,6 +52,14 @@ describe('§0.7 · drift copy states each account\'s own band and the engine\'s 
     expect(ntf.body).toContain(`${onGrowth} accounts on the Growth model`)
     expect(ntf.body).toContain(bandOf('mod-002'))
     expect(ntf.body).not.toContain('Growth Equity')
+  })
+
+  it('no notification names a model that does not exist', () => {
+    const names = new Set(MODEL_DEFINITIONS.map((m) => m.name))
+    for (const ntf of MOCK_NOTIFICATIONS) {
+      for (const [, name] of ntf.body.matchAll(/Model "([^"]+)"/g)) expect(names, `${ntf.id} names "${name}"`).toContain(name)
+      expect(ntf.body, ntf.id).not.toContain('Growth Equity')
+    }
   })
 })
 

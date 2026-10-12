@@ -99,7 +99,9 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
     category: 'trades',
     priority: 'medium',
     title: 'Rebalance Complete — 8 Accounts',
-    body: 'Model "Growth Equity" rebalance executed. 47 trades filled, $2.3M notional. 0 rejects.',
+    // Final review I6 · named a "Growth Equity" model that does not exist, as ntf-010 did. The model
+    // is the Growth model's own name; the trade counts are pre-existing fixture figures.
+    body: `Model "${modelDisplayName('mod-002')}" rebalance executed. 47 trades filled, $2.3M notional. 0 rejects.`,
     timestamp: hoursAgo(3),
     read: false,
     dismissed: false,
