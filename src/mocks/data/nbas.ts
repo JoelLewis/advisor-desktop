@@ -125,6 +125,9 @@ function ordinaryIncomeOffsetFiling(account: Account): { ordinaryIncomeLimit: nu
 
 const intcHarvest = intcHarvestFacts()
 
+/** The NBA whose per-client facts are `intcHarvest.holders`. */
+export const INTC_HARVEST_NBA_ID = 'nba-002'
+
 export type IntcHolder = (typeof intcHarvest.holders)[number]
 
 /** Who a draft speaks about: the advisor's own notes name the client; a letter to the client says "you". */
@@ -146,11 +149,12 @@ function jointFilers(account: Account): string {
 
 /** What the INTC still held is, and the shares already harvested from it. */
 export function intcHoldingSentence(h: IntcHolder, voice: Voice): string {
-  const harvested = h.sales.map((s) => `harvested ${s.quantity.toLocaleString('en-US')} shares on ${formatCalendarDate(s.saleDate)} and `).join('')
+  const harvested = (security: string) => h.sales.map((s) => `harvested ${s.quantity.toLocaleString('en-US')} shares${security} on ${formatCalendarDate(s.saleDate)} and `).join('')
   const held = h.position.quantity.toLocaleString('en-US')
-  return voice === 'client'
-    ? `You ${harvested}${harvested ? 'still ' : ''}hold ${held} shares of Intel (INTC) at a ${dollars(h.loss)} loss.`
-    : `${clientName(h.account.clientId)} ${harvested}holds ${held} at a ${dollars(h.loss)} loss.`
+  if (voice === 'advisor') return `${clientName(h.account.clientId)} ${harvested('')}holds ${held} at a ${dollars(h.loss)} loss.`
+  return h.sales.length > 0
+    ? `You ${harvested(' of Intel (INTC)')}still hold ${held} at a ${dollars(h.loss)} loss.`
+    : `You hold ${held} shares of Intel (INTC) at a ${dollars(h.loss)} loss.`
 }
 
 /**
@@ -219,7 +223,7 @@ export const nbas: NBA[] = [
   },
   // ── Tax Management ──
   {
-    id: 'nba-002', title: 'Tax-loss harvesting opportunity — INTC position',
+    id: INTC_HARVEST_NBA_ID, title: 'Tax-loss harvesting opportunity — INTC position',
     // §0.7 · this read as if nothing had been harvested, stated the benefit at long-term rates for
     // all three accounts, and said a 2026 harvest could offset Q4 (2025) gains. The description now
     // states the partial harvests already made (the realised-sales ledger), the INTC still held, and

@@ -17,8 +17,9 @@ export function snoozeNBA(id: string, until: string) {
   return post<void>(`/nba/${id}/snooze`, { until })
 }
 
-export function getNBATemplates(id: string) {
-  return get<NBAActionTemplate>(`/nba/${id}/templates`)
+/** The NBA's action templates, addressed to `clientId` (one of its clients), or to its first client. */
+export function getNBATemplates(id: string, clientId?: string) {
+  return get<NBAActionTemplate>(`/nba/${id}/templates`, clientId === undefined ? undefined : { clientId })
 }
 
 export function getNBAEffectiveness() {
