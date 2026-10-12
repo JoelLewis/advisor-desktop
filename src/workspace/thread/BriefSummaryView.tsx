@@ -4,6 +4,7 @@ import { StatusCode } from '@/kit/status/StatusCode'
 import { useFocusAfter } from '@/kit/keyboard/use-focus-after'
 import type { Directory, Message } from '@/types/workspace'
 import { findingAnchorId } from './finding-anchor'
+import { marksBreach } from './figure-format'
 
 type Summary = Extract<Message, { kind: 'brief_summary' }>
 
@@ -17,7 +18,7 @@ export function BriefSummaryView({ summary, directory }: { summary: Summary; dir
       <ol className="flex flex-col gap-2">
         {summary.items.map((item) => (
           <li key={item.findingId} className="grid grid-cols-[3.5rem_1fr_auto] items-baseline gap-3">
-            <span>{item.attention === 'attention' ? <StatusCode status="OUT" /> : null}</span>
+            <span>{marksBreach(item) ? <StatusCode status="OUT" /> : null}</span>
             <Button rank="quiet" className="text-left font-normal" onClick={() => focusAfter(findingAnchorId(item.findingId))}>{item.claim}</Button>
             <span className="text-label uppercase text-ink-3">{agentName(item.agentId)}</span>
           </li>

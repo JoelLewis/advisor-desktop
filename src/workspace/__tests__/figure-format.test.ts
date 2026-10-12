@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { findingStatus, formatFigure } from '@/workspace/thread/figure-format'
+import { findingStatus, formatFigure, marksBreach } from '@/workspace/thread/figure-format'
+import type { AgentId } from '@/types/workspace'
 import type { Figure } from '@/types/workspace'
 
 const fig = (value: number, unit: Figure['unit'], source = 'test.value'): Figure => ({ label: 'Figure', value, unit, source })
@@ -27,7 +28,7 @@ describe('formatFigure', () => {
 })
 
 describe('findingStatus', () => {
-  const finding = (claim: string, attention: 'info' | 'attention') => ({ claim, attention })
+  const finding = (claim: string, attention: 'info' | 'attention', agentId: AgentId = 'drift-monitor') => ({ agentId, claim, attention })
   it('a blocked check is BLOCK whatever its attention', () => {
     expect(findingStatus(finding('Blocked: Cash would fall below the minimum reserve.', 'attention'))).toBe('BLOCK')
     expect(findingStatus(finding('Blocked: A security is on the restricted list.', 'info'))).toBe('BLOCK')
@@ -37,6 +38,12 @@ describe('findingStatus', () => {
   })
   it('otherwise a finding that needs attention is OUT', () => {
     expect(findingStatus(finding('US Equity is outside its tolerance band.', 'attention'))).toBe('OUT')
+  })
+  it('a harvest opportunity breaches nothing, so it carries no code: OUT is kept for breaches', () => {
+    const harvest = finding('Intel Corp. can be sold at a loss today, and nothing bought in the last thirty days would wash the loss.', 'attention', 'harvest-scanner')
+    expect(findingStatus(harvest)).toBe('none')
+    expect(marksBreach(harvest)).toBe(false)
+    expect(marksBreach(finding('US Equity is outside its tolerance band.', 'attention'))).toBe(true)
   })
   it('an informational finding carries no status code', () => {
     expect(findingStatus(finding('Some holdings sit outside the model.', 'info'))).toBe('none')

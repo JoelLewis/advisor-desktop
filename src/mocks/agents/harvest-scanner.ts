@@ -73,7 +73,7 @@ export function runHarvestScanner({ asOf, subject }: AgentContext): AgentFinding
         { label: `Shares · ${p.symbol}`, value: p.quantity, unit: 'sh', source: 'positions.quantity' },
       ]
       const citations = isSubjectToWashSale(p.symbol)
-        ? [...lotsCite, { source: `Wash-sale window · a sale of ${p.symbol} on ${today} restricts buying it back until ${window.end}`, asOf }]
+        ? [...lotsCite, { source: `Wash-sale window · a sale of ${p.symbol} on ${today} restricts buying it back through ${window.end}`, asOf }]
         : lotsCite
       findings.push({ claim: harvestClaim(claimNameOf(p.symbol, p.name), p.symbol, losses), attention: 'attention', figures, citations })
     }
@@ -87,7 +87,7 @@ export function runHarvestScanner({ asOf, subject }: AgentContext): AgentFinding
         { label: `Loss realised · ${w.symbol}`, value: w.realisedGainLoss, unit: 'USD', source: 'realisedSales.realisedGainLoss' },
         { label: `Days until the ${w.symbol} window closes`, value: w.daysRemaining, unit: 'd', source: 'openWashSaleWindows.daysRemaining' },
       ],
-      citations: [{ source: `Wash-sale window · ${w.id} · ${w.symbol} loss sale of ${w.saleDate}, open to ${w.end}`, asOf }],
+      citations: [{ source: `Wash-sale window · ${w.id} · ${w.symbol} loss sale of ${w.saleDate}, open through ${w.end}`, asOf }],
     })
   }
 

@@ -21,6 +21,9 @@ describe('the Brief', () => {
     const items = within(summary).getAllByRole('listitem')
     expect(items[0]).toHaveTextContent('US Equity is outside its tolerance band.')
     expect(items[1]).toHaveTextContent(INTC_CLAIM)
+    // OUT marks the drift breach; a harvest opportunity breaches nothing and carries no code. The ranking is unchanged.
+    expect(items[0]!.querySelector('[data-status="OUT"]')).not.toBeNull()
+    expect(items[1]!.querySelector('[data-status]')).toBeNull()
     const user = userEvent.setup()
     await user.click(within(items[1]!).getByRole('button', { name: INTC_CLAIM }))
     const intc = screen.getByRole('article', { name: `Harvest Scanner: ${INTC_CLAIM}` })
@@ -39,7 +42,8 @@ describe('the Brief', () => {
     const card = await screen.findByRole('article', { name: `Carried from the Brief: ${INTC_CLAIM}` })
     expect(card).toHaveTextContent('From the Brief · carried by Adrian Hale')
     expect(within(card).getByRole('link', { name: 'the Brief' })).toHaveAttribute('href', '/t/th-brief')
-    expect(within(card).getByRole('article', { name: `Harvest Scanner: ${INTC_CLAIM}` })).toBeInTheDocument()
+    const carried = within(card).getByRole('article', { name: `Harvest Scanner: ${INTC_CLAIM}` })
+    expect(carried.querySelector('[data-status]')).toBeNull()
     expect(within(card).queryByRole('button', { name: 'Take to team thread' })).toBeNull()
   })
 
