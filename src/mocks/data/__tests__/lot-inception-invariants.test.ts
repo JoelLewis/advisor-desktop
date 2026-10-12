@@ -36,7 +36,8 @@ describe('§0.7 · no lot predates its security', () => {
     const { positions, lots } = lotsWithSymbols('acc-002')
     const ibit = lots.filter((l) => l.symbol === 'IBIT')
     const position = positions.find((p) => p.symbol === 'IBIT')!
-    expect(ibit.map((l) => l.purchaseDate)).toEqual(['2024-01-25', '2024-02-25', '2025-01-25'])
+    // 2024-02-25 (Sunday) and 2025-01-25 (Saturday) roll back to the Friday before (final review I2).
+    expect(ibit.map((l) => l.purchaseDate)).toEqual(['2024-01-25', '2024-02-23', '2025-01-24'])
     expect(ibit.every((l) => l.holdingPeriod === 'long')).toBe(true)
     expect(ibit.reduce((s, l) => s + l.quantity, 0)).toBeCloseTo(position.quantity, 6)
     expect(ibit.reduce((s, l) => s + l.costBasis, 0)).toBe(position.costBasis)

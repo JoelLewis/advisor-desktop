@@ -10,6 +10,7 @@ import { notFound } from './utils'
 import { startOfToday, MOCK_TODAY_ISO } from '@/lib/clock'
 import { matchWashedShares, type Acquisition } from '@/lib/wash-sale'
 import { inceptionDate } from '@/lib/security-master'
+import { tradingDayOnOrBefore } from '@/lib/trading-calendar'
 import type { Account } from '@/types/account'
 
 const DAY_MS = 1000 * 60 * 60 * 24
@@ -195,10 +196,12 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
     const earliestSaleMs = Math.min(
       ...salesForSymbol.map((s) => new Date(`${s.saleDate}T00:00:00Z`).getTime()),
     )
+    // A position sold out entirely has no lot left to date it, so it opens just before the
+    // 60-day window or the day before its first sale, whichever is earlier, rolled back to a
+    // trading day (final review I2: the 60-day mark is Saturday 2025-12-27).
     const openedOn = position ? oldestLotDate.get(position.id) : undefined
-    const openingMs = openedOn !== undefined
-      ? new Date(`${openedOn}T00:00:00Z`).getTime()
-      : Math.min(baseDate.getTime() - 60 * DAY_MS, earliestSaleMs - DAY_MS)
+    const fallbackOpening = new Date(Math.min(baseDate.getTime() - 60 * DAY_MS, earliestSaleMs - DAY_MS)).toISOString()
+    const openingMs = new Date(`${openedOn ?? tradingDayOnOrBefore(fallbackOpening)}T00:00:00Z`).getTime()
 
     txns.push({
       id: `txn-${accountId}-opening-${symbol}`,
@@ -450,10 +453,16 @@ export function generateTaxLots(accountId: string, totalValue: number): Custodia
     for (let i = 0; i < lotCount; i++) {
       const isLast = i === lotCount - 1
       const share = shares[i]!
-      const purchaseDate = new Date(anchor)
+      const monthsAgo = new Date(anchor)
       // UTC, not local: `anchor` is UTC midnight, and local get/set-Month would bake in the
       // host timezone's day-of-month, making the serialised date machine-dependent.
-      purchaseDate.setUTCMonth(purchaseDate.getUTCMonth() - ages[i]!)
+      monthsAgo.setUTCMonth(monthsAgo.getUTCMonth() - ages[i]!)
+      // Final review I2 · a whole-month age anchored on the 25th lands on a weekend or holiday
+      // about a third of the time, and a lot is bought on a day the market trades. The date rolls
+      // back to the last trading day after the draws, so the PRNG stream is unchanged. A roll of a
+      // few days never changes the holding period: the one lot near a year old (12 months,
+      // 2025-02-25) falls on a Tuesday and stays put.
+      const purchaseDate = tradingDayOnOrBefore(monthsAgo.toISOString())
 
       const quantity = isLast ? pos.quantity - allocatedQty
         : Math.round(pos.quantity * share * 1e6) / 1e6
@@ -469,7 +478,7 @@ export function generateTaxLots(accountId: string, totalValue: number): Custodia
       lots.push({
         id: `lot-${pos.id}-${i}`,
         positionId: pos.id,
-        purchaseDate: purchaseDate.toISOString().slice(0, 10),
+        purchaseDate,
         quantity,
         costBasis,
         currentValue,
