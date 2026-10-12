@@ -222,17 +222,13 @@ describe('§9.5 · AI drift figures for acc-001 match computeDriftForAccount', (
 
 /**
  * §9.5 · the dashboard's "Review Johnson Rebalance" action claimed "$12.4M across 3 accounts".
- * No set of hh-001 accounts gives that: the household has 5 accounts, and the two that are
- * overweight US equity and outside their band (acc-001, acc-002) hold $12.7M.
+ * No set of hh-001 accounts gives that. The household has 5 accounts; the 4 outside their drift
+ * band (acc-001, acc-002, acc-004, acc-005) hold $15.2M. Two of those are underweight US equity,
+ * so the action no longer says "reduce US equity overweight".
  */
 describe('§9.5 · Johnson household rebalance action matches household data', () => {
-  it('the action\'s value and account count are the hh-001 accounts overweight US equity and needing rebalance', async () => {
-    const targets = accounts.filter((a) => {
-      if (a.householdId !== 'hh-001') return false
-      const d = computeDriftForAccount(a)
-      const us = d.assetClassDrifts.find((x) => x.assetClass === 'us_equity')
-      return d.needsRebalance && (us?.drift ?? 0) > 0
-    })
+  it('the action\'s value and account count are the hh-001 accounts that need a rebalance', async () => {
+    const targets = accounts.filter((a) => a.householdId === 'hh-001' && computeDriftForAccount(a).needsRebalance)
     // Vacuity guard: an empty set would make "$0 across 0 accounts" pass.
     expect(targets.length).toBeGreaterThan(0)
     const value = formatAUM(targets.reduce((s, a) => s + a.totalValue, 0))
@@ -241,5 +237,6 @@ describe('§9.5 · Johnson household rebalance action matches household data', (
     const action = answer.actions?.find((a) => a.action === 'Review Johnson Rebalance')
     expect(action, 'dashboard answer carries the Johnson rebalance action').toBeDefined()
     expect(action!.impact).toBe(`Affects ${value} across ${targets.length} accounts`)
+    expect(action!.description).not.toMatch(/US equity/)
   })
 })
