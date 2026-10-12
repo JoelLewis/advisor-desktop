@@ -11,7 +11,7 @@ const DISALLOWED = 'permanently disallowed'
 
 describe('the harvesting insight says which §1091 fact applies to its candidates', () => {
   it('a candidate whose own sale would wash is named first', () => {
-    expect(harvestWashSaleNote([lot({}), lot({ deferredShares: 180, repurchaseBlockedUntil: '2026-03-23' })]))
+    expect(harvestWashSaleNote([lot({}), lot({ deferredShares: 180, repurchaseBlockedUntil: '2026-03-22' })]))
       .toMatch(/^At least one candidate's sale would be a wash sale, in part or in whole/)
   })
 
@@ -34,7 +34,7 @@ describe('the harvesting insight says which §1091 fact applies to its candidate
   })
 
   it('a candidate under an open window only blocks repurchase', () => {
-    expect(harvestWashSaleNote([lot({ repurchaseBlockedUntil: '2026-03-23' })]))
+    expect(harvestWashSaleNote([lot({ repurchaseBlockedUntil: '2026-03-22' })]))
       .toMatch(/^At least one candidate sits inside an active wash-sale window/)
   })
 

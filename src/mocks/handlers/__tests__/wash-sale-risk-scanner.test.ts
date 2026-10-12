@@ -5,7 +5,7 @@ import { lossAllowedNow, lossDeferred, lossDisallowed, washesOnSale } from '@/li
  * Sell-side §1091 for each lot the harvest scanner lists. No fixture has a loss lot whose sale
  * would wash, so this file gives the Johnson Family Trust (acc-001, Robert Johnson's revocable
  * trust) an older 400-share SMH holding at a loss. acc-002 (Robert's individual account, so the
- * same taxpayer) bought 180 SMH on 2026-02-21 (pos-265), four days before MOCK_TODAY_ISO.
+ * same taxpayer) bought 180 SMH on 2026-02-20 (pos-265), five days before MOCK_TODAY_ISO.
  *
  * Treas. Reg. §1.1091-1(c): 180 replacement shares wash 180 of the 400 loss shares, not all 400.
  * acc-002 is taxable, so the washed part is deferred into the replacement's basis (§1091(d)).
@@ -37,10 +37,10 @@ async function engine() {
 }
 
 describe('saleWash: how many shares of this lot would a sale today wash?', () => {
-  it('acc-001\'s 400-share SMH loss lot washes 180 shares, deferred: acc-002 bought 180 SMH four days ago', async () => {
+  it('acc-001\'s 400-share SMH loss lot washes 180 shares, deferred: acc-002 bought 180 SMH five days ago', async () => {
     const { generateTaxLots } = await engine()
     const [replacement] = generateTaxLots('acc-002', 4_500_000).filter((l) => l.positionId === 'pos-265')
-    expect(replacement).toMatchObject({ purchaseDate: '2026-02-21', quantity: 180 })
+    expect(replacement).toMatchObject({ purchaseDate: '2026-02-20', quantity: 180 })
     const smh = generateTaxLots('acc-001', 8_200_000).filter((l) => l.positionId === TRUST_SMH)
     expect(smh.reduce((s, l) => s + l.quantity, 0)).toBe(400)
     for (const lot of smh) {

@@ -93,7 +93,7 @@ describe('year-to-date realised results on a return', () => {
   })
 
   it('a sale after the as-of date, or in an earlier tax year, is not year-to-date', () => {
-    expect(ytdRealisedOnReturn(returnOf('acc-002')!, '2026-02-20')).toEqual({ shortTerm: 0, longTerm: 0, collectibleLongTerm: 0 })
+    expect(ytdRealisedOnReturn(returnOf('acc-002')!, '2026-02-19')).toEqual({ shortTerm: 0, longTerm: 0, collectibleLongTerm: 0 })
     expect(ytdRealisedOnReturn(returnOf('acc-002')!, '2027-01-05')).toEqual({ shortTerm: 0, longTerm: 0, collectibleLongTerm: 0 })
   })
 })

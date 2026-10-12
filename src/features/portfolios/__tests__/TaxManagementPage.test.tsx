@@ -316,7 +316,7 @@ describe('TaxManagementPage gates on tax treatment', () => {
     const intcCell = await screen.findByText('INTC')
     const intcRow = intcCell.closest('tr')!
     expect(within(intcRow).queryByText('Restricted')).not.toBeInTheDocument()
-    expect(within(intcRow).getByText('Repurchase blocked through Mar 23, 2026')).toBeInTheDocument()
+    expect(within(intcRow).getByText('Repurchase blocked through Mar 22, 2026')).toBeInTheDocument()
     expect(screen.queryByText('Wash Sale Risk')).not.toBeInTheDocument()
   })
 

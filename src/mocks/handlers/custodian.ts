@@ -96,7 +96,7 @@ type TradeShell = {
 
 /**
  * Positions whose purchase date is a recorded fact rather than synthesised. pos-265 is the SMH
- * bought on 2026-02-21 as the INTC replacement; seeding it 3–47 months old would contradict the
+ * bought on 2026-02-20 as the INTC replacement; seeding it 3–47 months old would contradict the
  * activity feed, the note and the compliance record that all date it.
  *
  * Only the date lives here. Such a position was opened in one purchase and not traded since, so
@@ -104,7 +104,7 @@ type TradeShell = {
  * emits and the one buy `generateTransactions` records are both read from the position, and the
  * three cannot drift apart.
  */
-export const KNOWN_OPEN_DATES: ReadonlyMap<string, string> = new Map([['pos-265', '2026-02-21']])
+export const KNOWN_OPEN_DATES: ReadonlyMap<string, string> = new Map([['pos-265', '2026-02-20']])
 
 /**
  * IRC §1222: long-term means held *more than* one year, so a lot bought exactly a year before
@@ -156,7 +156,7 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
   // C14 · data-integrity — every realised sale in `realisedSales` must appear in its own account's
   // transaction stream as a real sell (previously the two fixtures were unrelated: acc-002's
   // stream held exactly one sell, SPY, never the INTC sale the tax page reports as having
-  // happened on 2026-02-21; acc-007's stream held zero sells at all). The PRNG below never draws
+  // happened on 2026-02-20; acc-007's stream held zero sells at all). The PRNG below never draws
   // these symbols for its own buy/sell trades (see `tradePool`), so the match is exact — the
   // fixture's sale, not a coincidentally similar random one.
   const accountSales = realisedSales.filter((s) => s.accountId === accountId)

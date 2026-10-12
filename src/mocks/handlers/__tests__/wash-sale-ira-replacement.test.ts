@@ -10,10 +10,10 @@ import type { TaxLot } from '@/types/portfolio'
  * This file gives the Johnson Family Trust (acc-001, Robert Johnson's revocable trust) a 400-share
  * SMH lot at a −21,920 loss, and Patricia Johnson's Roth (acc-004, the spouse's, so the same
  * wash-sale taxpayer) 100 SMH bought on 2026-02-15. acc-002 (Robert's individual account) already
- * bought 180 SMH on 2026-02-21. Treas. Reg. §1.1091-1(c) matches replacements earliest first:
+ * bought 180 SMH on 2026-02-20. Treas. Reg. §1.1091-1(c) matches replacements earliest first:
  *
  *   Roth   100 shares, 2026-02-15 → loss shares   1–100 disallowed: −21,920 × 100/400 = −5,480
- *   acc-002 180 shares, 2026-02-21 → loss shares 101–280 deferred:   −21,920 × 180/400 = −9,864
+ *   acc-002 180 shares, 2026-02-20 → loss shares 101–280 deferred:   −21,920 × 180/400 = −9,864
  *   no replacement                  → loss shares 281–400 allowed:    −21,920 × 120/400 = −6,576
  */
 const TRUST_SMH = 'pos-test-acc-001-smh'

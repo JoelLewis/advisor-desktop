@@ -14,7 +14,7 @@ const dollars = (amount: number) => `$${Math.round(Math.abs(amount)).toLocaleStr
 describe('§0.7 · nba-002 refers to the partial harvests already made', () => {
   const nba = nbas.find((n) => n.id === 'nba-002')!
 
-  it("states Robert Johnson's 2026-02-21 harvest and the 7,000 shares he still holds, at the loss a sale today realises", () => {
+  it("states Robert Johnson's 2026-02-20 harvest and the 7,000 shares he still holds, at the loss a sale today realises", () => {
     const rs001 = realisedSales.find((s) => s.id === 'rs-001')!
     const acc002 = accounts.find((a) => a.id === 'acc-002')!
     const intc = getPositionsForAccount(acc002.id, acc002.totalValue).find((p) => p.symbol === 'INTC')!

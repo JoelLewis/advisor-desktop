@@ -151,7 +151,7 @@ describe('preTradeCheckProposal · per-leg attribution', () => {
   })
 
   it('a buy inside an open wash-sale window warns on that leg', async () => {
-    // acc-002 realised the INTC loss four days ago (hh-001).
+    // acc-002 realised the INTC loss five days ago (hh-001).
     const result = await preTradeCheckProposal({
       accountId: 'acc-002', trades: [{ symbol: 'INTC', side: 'buy', quantity: 100, estimatedValue: 2_845 }],
     })

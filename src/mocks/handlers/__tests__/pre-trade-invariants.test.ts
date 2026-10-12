@@ -948,7 +948,7 @@ describe('fix round 2 · rebalance trade direction follows actual vs target, not
 })
 
 describe('oms.ts pre-trade wash-sale check is derived from realised sales, not a hand-typed symbol list', () => {
-  it('flags INTC in acc-002 (hh-001), which itself realised the INTC loss sale 4 days ago', async () => {
+  it('flags INTC in acc-002 (hh-001), which itself realised the INTC loss sale 5 days ago', async () => {
     const result = await preTradeCheck({
       accountId: 'acc-002', symbol: 'INTC', side: 'buy', quantity: 100, estimatedValue: 2_845,
     })
@@ -1168,7 +1168,7 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     //
     // "Prefer losses, then the smallest embedded gain" is an ordering drawn from until the
     // sleeve is filled, not a single pick — with one exclusion. The 180 SMH (pos-265) were bought
-    // 2026-02-21 as the INTC harvest replacement (note-002, comp-006, nba-002); selling them four
+    // 2026-02-20 as the INTC harvest replacement (note-002, comp-006, nba-002); selling them five
     // days later at zero gain would undo the harvest, and TLH practice is to hold the replacement
     // past the 31st day. A position whose every lot is that recent is not a tax-aware sell
     // candidate, so the sequence is INTC in full ($199,150), then SPY for the rest.
@@ -1205,7 +1205,7 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     // INTC — so SPY alone absorbs the whole $549,900 trim and the loss lot is never reached.
     const unawareUsEquity = unaware!.trades.filter((t) => t.side === 'sell' && ['SPY', 'QQQ', 'INTC'].includes(t.symbol))
     expect(unawareUsEquity.map((t) => t.symbol)).toEqual(['SPY'])
-    // The 180 SMH bought 2026-02-21 (pos-265, $44,136) are us_equity, so the sleeve is 0.681978
+    // The 180 SMH bought 2026-02-20 (pos-265, $44,136) are us_equity, so the sleeve is 0.681978
     // of 4,500,000 and the trim is 0.1320 x 4,500,000 = 594,000. 1,141 shares x 520.30 = 593,662,
     // within one SPY lot of that notional. The bound is restated against the new notional: left at
     // 549,900 it would have been satisfied by a *negative* difference and stopped discriminating.

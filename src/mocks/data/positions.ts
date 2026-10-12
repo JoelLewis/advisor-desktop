@@ -20,7 +20,7 @@ const trustPositions: PositionSeed[] = [
 // Growth tilt with digital assets, PE, and INTC loss position (TLH candidate).
 //
 // D2/D28 — the nine positions summed to $4,832,000 against a $4,500,000 balance, and INTC still
-// showed the full 12,000 shares four days after ord-004/rs-001 sold 5,000 of them. INTC is now the
+// showed the full 12,000 shares five days after ord-004/rs-001 sold 5,000 of them. INTC is now the
 // 7,000 shares actually held (cost basis $35.00/share, matching rs-001's $175,000 on 5,000), and the
 // remaining holdings are scaled by 0.923909 (= $4,031,210 / $4,363,210) with quantities re-derived
 // as whole shares so every market value is quantity x price. CASH is the money market balance plus
@@ -36,7 +36,7 @@ const robertIndividualPositions: PositionSeed[] = [
   { id: 'pos-026', accountId: 'acc-002', symbol: 'IBIT', name: 'iShares Bitcoin Trust ETF', assetClass: 'digital_assets', quantity: 3234, price: 52.80, costBasis: 129_347, marketValue: 170_755.20, gainLoss: 41_408.20, gainLossPercent: 0.320 },
   { id: 'pos-027', accountId: 'acc-002', symbol: 'ETHE', name: 'Grayscale Ethereum Trust ETF', assetClass: 'digital_assets', quantity: 3882, price: 18.45, costBasis: 60_054, marketValue: 71_622.90, gainLoss: 11_568.90, gainLossPercent: 0.193 },
   { id: 'pos-028', accountId: 'acc-002', symbol: 'BXPE', name: 'Blackstone Private Equity Strategies Fund', assetClass: 'private_equity', quantity: 1110, price: 108.50, costBasis: 106_250, marketValue: 120_435, gainLoss: 14_185, gainLossPercent: 0.134 },
-  // Bought 2026-02-21 as the INTC tax-loss-harvest replacement (activities.ts, note-002, comp-006).
+  // Bought 2026-02-20 as the INTC tax-loss-harvest replacement (activities.ts, note-002, comp-006).
   { id: 'pos-265', accountId: 'acc-002', symbol: 'SMH', name: 'VanEck Semiconductor ETF', assetClass: 'us_equity', quantity: 180, price: 245.20, costBasis: 44_136, marketValue: 44_136, gainLoss: 0, gainLossPercent: 0 },
   { id: 'pos-025', accountId: 'acc-002', symbol: 'CASH', name: 'Money Market Fund', assetClass: 'cash', quantity: 1, price: 225_504, costBasis: 225_504, marketValue: 225_504, gainLoss: 0, gainLossPercent: 0 },
 ]

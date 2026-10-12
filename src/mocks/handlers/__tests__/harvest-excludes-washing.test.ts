@@ -10,7 +10,7 @@ import { taxRateFor } from '@/lib/tax-rules'
  * §1.1091-1(c)), so a partly washed lot adds its allowed part — and only that — to every harvest
  * figure. No fixture has one, so this file gives acc-001 (Robert Johnson's revocable trust) a
  * 400-share SMH holding at a −21,920 loss. acc-002 (Robert's individual account, same taxpayer)
- * bought 180 SMH on 2026-02-21, so 180 of the 400 shares wash and are deferred:
+ * bought 180 SMH on 2026-02-20, so 180 of the 400 shares wash and are deferred:
  *
  *   allowed now: −21,920 × (400 − 180)/400 = −12,056
  *   tax benefit: 12,056 × the lot's own holding-period rate (it is short-term: 37% → 4,460.72)

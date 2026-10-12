@@ -41,7 +41,7 @@ describe('§0.7 · an opening transaction matches the lots it opened', () => {
   })
 })
 
-describe('§0.7 · the 2022 INTC lot is not restricted by the 2026-02-21 sale', () => {
+describe('§0.7 · the 2022 INTC lot is not restricted by the 2026-02-20 sale', () => {
   it('selling it is not a wash sale: no INTC was bought in the household in the 30 days before today', () => {
     const a = account('acc-002')
     const intc = getPositionsForAccount(a.id, a.totalValue).find((p) => p.symbol === 'INTC')!
@@ -50,11 +50,11 @@ describe('§0.7 · the 2022 INTC lot is not restricted by the 2026-02-21 sale', 
     expect(lot!.saleWash).toEqual({ deferredShares: 0, disallowedShares: 0 })
   })
 
-  it('what the 2026-02-21 sale restricts is buying INTC back, through 2026-03-23', () => {
+  it('what the 2026-02-20 sale restricts is buying INTC back, through 2026-03-22', () => {
     const a = account('acc-002')
     const intc = getPositionsForAccount(a.id, a.totalValue).find((p) => p.symbol === 'INTC')!
     const [lot] = generateTaxLots(a.id, a.totalValue).filter((l) => l.positionId === intc.id)
-    expect(lot!.repurchaseBlockedUntil).toBe('2026-03-23')
+    expect(lot!.repurchaseBlockedUntil).toBe('2026-03-22')
   })
 
   it('the tax-aware rebalance sells it with no wash-sale flag', () => {

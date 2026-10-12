@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { previewRebalance } from '@/services/oms'
 import { previewModelTrades } from '@/services/trading'
 import { accounts } from '@/mocks/data/accounts'
-import { realisedSales, washSaleWindow } from '@/mocks/data/realised-sales'
+import { openWashSaleWindows, realisedSales, washSaleWindow } from '@/mocks/data/realised-sales'
 import { repurchaseRestrictionsFor } from '@/mocks/handlers/repurchase-restrictions'
 import { estimateTaxOnReturns } from '@/mocks/handlers/tax-return'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
@@ -65,12 +65,12 @@ describe('§0.2 · a loss sale opens its own wash-sale window', () => {
     }
   })
 
-  it("the restriction list keeps rs-001's recorded window (to 2026-03-23) separate from the projected one", async () => {
+  it("the restriction list keeps rs-001's recorded window (to 2026-03-22) separate from the projected one", async () => {
     const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
     const intc = preview!.repurchaseRestrictions.filter((r) => r.symbol === 'INTC')
     const rs001 = realisedSales.find((s) => s.id === 'rs-001')!
     expect(intc).toEqual([
-      { symbol: 'INTC', start: '2026-01-22', until: '2026-03-23', source: { kind: 'recorded', saleId: 'rs-001', accountId: 'acc-002', saleDate: rs001.saleDate } },
+      { symbol: 'INTC', start: '2026-01-21', until: '2026-03-22', source: { kind: 'recorded', saleId: 'rs-001', accountId: 'acc-002', saleDate: rs001.saleDate } },
       { symbol: 'INTC', start: '2026-01-26', until: '2026-03-27', source: { kind: 'projected', accountId: 'acc-002', saleDate: MOCK_TODAY_ISO } },
     ])
   })
@@ -256,5 +256,12 @@ describe('§0.2 · settleBatchWashSales on constructed legs', () => {
     expect(settledSell!.washedLoss).toEqual({ shortTerm: 0, longTerm: -1_000, collectibleLongTerm: 0, deferred: -1_000, disallowed: 0 })
     expect(settledSell!.repurchaseBlockedUntil).toBeUndefined()
     expect(settledBuy!.washSaleRisk).toBe(true)
+  })
+})
+
+describe('I2 · rs-001 filled on a trading day, Friday 2026-02-20', () => {
+  it('its window runs 2026-01-21 to 2026-03-22, 25 days from the frozen today', () => {
+    const rs001 = openWashSaleWindows(MOCK_TODAY_ISO).find((w) => w.id === 'rs-001')!
+    expect(rs001).toMatchObject({ saleDate: '2026-02-20', start: '2026-01-21', end: '2026-03-22', daysRemaining: 25 })
   })
 })

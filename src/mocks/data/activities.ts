@@ -15,6 +15,13 @@ const rs001 = realisedSales.find((s) => s.id === 'rs-001')!
 const ord004 = orders.find((o) => o.id === 'ord-004')!
 const acc002 = accounts.find((a) => a.id === rs001.accountId)!
 const smh = getPositionsForAccount(acc002.id, acc002.totalValue).find((p) => p.id === 'pos-265')!
+
+/** The SMH replacement filled five minutes after the INTC sale, on the day pos-265 records it opened. */
+function smhPurchaseTimestamp(): string {
+  const filled = new Date(Date.parse(ord004.filledAt!) + 5 * 60_000).toISOString()
+  if (filled.slice(0, 10) !== KNOWN_OPEN_DATES.get(smh.id)) throw new Error(`SMH replacement at ${filled} is not on pos-265's open date`)
+  return filled
+}
 const dollarsAndCents = (amount: number) => `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 export const activities: ActivityItem[] = [
@@ -93,8 +100,8 @@ export const activities: ActivityItem[] = [
     title: `Order filled — ${smh.symbol} purchase (tax harvest replacement)`,
     description: `Purchased ${smh.quantity.toLocaleString('en-US')} shares ${smh.symbol} at ${dollarsAndCents(smh.costBasis / smh.quantity)} in ${acc002.name} as the ${rs001.symbol} replacement.`,
     entityType: 'client', entityId: 'cli-001', entityName: 'Robert Johnson',
-    // Bought the morning of the sale, after the INTC fill (10:15) and before note-002 (10:30).
-    timestamp: `${KNOWN_OPEN_DATES.get(smh.id)}T10:20:00Z`, read: true,
+    // Bought five minutes after the INTC fill (ord-004), on the date pos-265 records it opened.
+    timestamp: smhPurchaseTimestamp(), read: true,
   },
   {
     id: 'act-012', type: 'system', source: 'pms',

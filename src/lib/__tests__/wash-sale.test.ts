@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { hasWashSaleRisk, hasUnwashedLossShares, isoDaysBefore, matchWashedShares, washedLoss, type Acquisition, type SoldLossLot } from '@/lib/wash-sale'
 
-const window = { symbol: 'INTC', start: '2026-01-22', end: '2026-03-23' }
+const window = { symbol: 'INTC', start: '2026-01-21', end: '2026-03-22' }
 
 describe('hasWashSaleRisk (IRC §1091, same-symbol approximation)', () => {
   it('a buy inside an open loss-sale window for the same symbol is at risk', () => {
@@ -11,7 +11,7 @@ describe('hasWashSaleRisk (IRC §1091, same-symbol approximation)', () => {
     expect(hasWashSaleRisk({ symbol: 'SMH', side: 'buy', realisesLoss: false, soldLotIds: [] }, [window], [], '2026-02-25')).toBe(false)
   })
   it('a buy after the window closed is not', () => {
-    expect(hasWashSaleRisk({ symbol: 'INTC', side: 'buy', realisesLoss: false, soldLotIds: [] }, [window], [], '2026-03-24')).toBe(false)
+    expect(hasWashSaleRisk({ symbol: 'INTC', side: 'buy', realisesLoss: false, soldLotIds: [] }, [window], [], '2026-03-23')).toBe(false)
   })
   it('a loss sale with the same symbol acquired in the prior 30 days is at risk', () => {
     expect(hasWashSaleRisk({ symbol: 'TLT', side: 'sell', realisesLoss: true, soldLotIds: [] }, [], [{ symbol: 'TLT', date: '2026-02-01', lotId: 'l1' }], '2026-02-25')).toBe(true)
@@ -43,19 +43,19 @@ describe('matchWashedShares (Treas. Reg. §1.1091-1(c): replacement shares wash 
   const loss = (lotId: string, purchaseDate: string, quantity: number) => ({ lotId, symbol: 'SMH', purchaseDate, quantity })
 
   it('fewer replacement shares than loss shares wash only that many: 180 bought against 400 sold washes 180', () => {
-    const washed = matchWashedShares([loss('old', '2024-06-03', 400)], [buy('new', '2026-02-21', 180)], today)
+    const washed = matchWashedShares([loss('old', '2024-06-03', 400)], [buy('new', '2026-02-20', 180)], today)
     expect(washed.get('old')).toEqual({ deferredShares: 180, disallowedShares: 0 })
   })
 
   it('more replacement shares than loss shares wash every loss share, and no more', () => {
-    const washed = matchWashedShares([loss('old', '2024-06-03', 100)], [buy('new', '2026-02-21', 500)], today)
+    const washed = matchWashedShares([loss('old', '2024-06-03', 100)], [buy('new', '2026-02-20', 500)], today)
     expect(washed.get('old')).toEqual({ deferredShares: 100, disallowedShares: 0 })
   })
 
   it('each replacement share washes once: 180 against two loss lots of 150 washes 150 of the earlier and 30 of the later', () => {
     const washed = matchWashedShares(
       [loss('later', '2024-09-01', 150), loss('earlier', '2024-06-03', 150)],
-      [buy('new', '2026-02-21', 180)],
+      [buy('new', '2026-02-20', 180)],
       today,
     )
     expect(washed.get('earlier')).toEqual({ deferredShares: 150, disallowedShares: 0 })
@@ -65,10 +65,10 @@ describe('matchWashedShares (Treas. Reg. §1.1091-1(c): replacement shares wash 
   it('a replacement in an IRA or Roth disallows; one in a taxable account defers; the earliest replacement is matched first', () => {
     const washed = matchWashedShares(
       [loss('old', '2024-06-03', 400)],
-      [buy('taxable', '2026-02-21', 180), buy('roth', '2026-02-15', 100, 'tax_advantaged')],
+      [buy('taxable', '2026-02-20', 180), buy('roth', '2026-02-15', 100, 'tax_advantaged')],
       today,
     )
-    // Roth 100 (Feb 15) first, then the taxable 180 (Feb 21); 120 shares are left unwashed.
+    // Roth 100 (Feb 15) first, then the taxable 180 (Feb 20); 120 shares are left unwashed.
     expect(washed.get('old')).toEqual({ deferredShares: 180, disallowedShares: 100 })
   })
 

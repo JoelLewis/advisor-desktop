@@ -30,8 +30,9 @@ export const orders: Order[] = [
 
   // ── Robert Johnson Individual (acc-002) ──
   // D28 — this fill is the same event as rs-001, so it prices at rs-001's $142,250 / 5,000 shares
-  // and acc-002's INTC position now shows the 7,000 shares left after it.
-  { id: 'ord-004', accountId: 'acc-002', symbol: 'INTC', side: 'sell', quantity: 5000, orderType: 'market', status: 'filled', filledQuantity: 5000, filledPrice: 28.45, submittedAt: '2026-02-21T10:15:00Z', filledAt: '2026-02-21T10:15:03Z', assetClass: 'equity' },
+  // and acc-002's INTC position now shows the 7,000 shares left after it. Final review I2: it was
+  // dated Saturday 2026-02-21; it filled Friday 2026-02-20 at 10:15 ET (15:15Z).
+  { id: 'ord-004', accountId: 'acc-002', symbol: 'INTC', side: 'sell', quantity: 5000, orderType: 'market', status: 'filled', filledQuantity: 5000, filledPrice: 28.45, submittedAt: '2026-02-20T15:15:00Z', filledAt: '2026-02-20T15:15:03Z', assetClass: 'equity' },
   { id: 'ord-005', accountId: 'acc-002', symbol: 'QQQ', side: 'buy', quantity: 200, orderType: 'limit', limitPrice: 480.00, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-25T09:35:00Z', assetClass: 'equity' },
 
   // ── Chen Irrevocable Trust (acc-006) ──
@@ -187,8 +188,8 @@ export type ProposedTradeLeg = ProposedTrade & Sleeve
  *
  * A tax-aware pass also never sells a position whose every lot is `recentlyOpened` (held 31 days
  * or fewer). Such a position is, in practice, a harvest replacement: acc-002's 180 SMH were
- * bought 2026-02-21 to keep semiconductor exposure after the INTC loss sale (note-002, comp-006),
- * and at zero gain they ranked ahead of SPY, so the toggle sold them four days later and undid the
+ * bought 2026-02-20 to keep semiconductor exposure after the INTC loss sale (note-002, comp-006),
+ * and at zero gain they ranked ahead of SPY, so the toggle sold them five days later and undid the
  * harvest. Holding the replacement past the 31st day is the TLH practice; the sleeve then fills
  * from the next candidate as it always would.
  */
