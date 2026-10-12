@@ -68,7 +68,7 @@ export function TaxLotsView({ taxLots, positionMap, baseCurrency }: TaxLotsViewP
                 <Th align="right">Cost Basis</Th>
                 <Th align="right">Current Value</Th>
                 <Th align="right">Gain/Loss</Th>
-                <Th align="center">Repurchase blocked until</Th>
+                <Th align="center">Repurchase blocked through</Th>
               </tr>
             </thead>
             <tbody>

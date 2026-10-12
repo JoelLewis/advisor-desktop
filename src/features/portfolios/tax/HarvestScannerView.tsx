@@ -5,7 +5,7 @@ import { CurrencyValue } from '@/components/ui/CurrencyValue'
 import type { TaxLot } from '@/types/portfolio'
 import { formatCalendarDate } from '@/lib/utils'
 import type { CurrencyCode } from '@/types/currency'
-import { HOLDING_LABELS, Th, estimatedTaxBenefit, RATE_DISCLOSURE, type FxStatus } from './shared'
+import { HOLDING_LABELS, Th, RATE_DISCLOSURE, harvestBenefitNow, lossAllowedNow, lossDeferred, lossDisallowed, washesOnSale, type FxStatus } from './shared'
 
 type HarvestScannerViewProps = {
   harvestOpportunities: TaxLot[]
@@ -25,6 +25,40 @@ type HarvestScannerViewProps = {
   fxStatus?: FxStatus
 }
 
+/**
+ * The tax a sale saves now, on the allowed part of the loss. A fully washed lot saves nothing now,
+ * so it names what happens to its loss instead of showing $0.
+ */
+function BenefitCell({ lot, baseCurrency }: { lot: TaxLot; baseCurrency: CurrencyCode }) {
+  if (lossAllowedNow(lot) < 0) return <CurrencyValue value={harvestBenefitNow(lot)} from={baseCurrency} />
+  const { deferredShares, disallowedShares } = lot.saleWash
+  const outcome = deferredShares > 0 && disallowedShares > 0 ? 'Deferred and disallowed'
+    : disallowedShares > 0 ? 'Permanently disallowed' : 'Deferred'
+  return <span className="text-caption text-text-tertiary">{outcome}</span>
+}
+
+/**
+ * How much of this lot a sale today would wash: replacement shares the same taxpayer bought in the
+ * last 30 days, matched share for share. A replacement in a taxable account defers the matched
+ * loss into its own basis; one in an IRA or Roth disallows it for good.
+ */
+function SaleWashCell({ lot }: { lot: TaxLot }) {
+  if (!washesOnSale(lot)) return <span className="text-caption text-text-tertiary">No purchase in last 30 days</span>
+  const { deferredShares, disallowedShares } = lot.saleWash
+  const shares = (n: number) => n.toLocaleString()
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <Badge variant="red">Wash sale: {shares(deferredShares + disallowedShares)} of {shares(lot.quantity)} shares</Badge>
+      {deferredShares > 0 && (
+        <span className="text-caption text-text-tertiary">{shares(deferredShares)} deferred into a taxable replacement&rsquo;s basis</span>
+      )}
+      {disallowedShares > 0 && (
+        <span className="text-caption text-accent-red">{shares(disallowedShares)} permanently disallowed: bought in an IRA or Roth</span>
+      )}
+    </div>
+  )
+}
+
 export function HarvestScannerView({
   harvestOpportunities,
   selectedLots,
@@ -35,10 +69,14 @@ export function HarvestScannerView({
   baseCurrency,
   fxStatus = 'ready',
 }: HarvestScannerViewProps) {
-  const selectedLoss = selectedLotObjects.reduce((s, l) => s + Math.abs(l.gainLoss), 0)
-  // A sale that washes defers its loss into the replacement's basis (§1091(d)); it saves nothing now.
-  const selectedBenefit = selectedLotObjects.reduce((s, l) => s + (l.saleWashSaleRisk ? 0 : estimatedTaxBenefit(l)), 0)
-  const selectedWashing = selectedLotObjects.filter((l) => l.saleWashSaleRisk).length
+  // §1091 takes only the washed shares' part of a loss (Reg. §1.1091-1(c)): the rest is realised
+  // and saves tax now. The washed part is deferred into a taxable replacement's basis, or lost for
+  // good when the replacement was bought in an IRA or Roth.
+  const selectedLoss = selectedLotObjects.reduce((s, l) => s - lossAllowedNow(l), 0)
+  const selectedBenefit = selectedLotObjects.reduce((s, l) => s + harvestBenefitNow(l), 0)
+  const selectedDeferred = selectedLotObjects.reduce((s, l) => s - lossDeferred(l), 0)
+  const selectedDisallowed = selectedLotObjects.reduce((s, l) => s - lossDisallowed(l), 0)
+  const compact = (n: number) => formatWithConversion(n, baseCurrency, { compact: true })
 
   return (
     <div className="space-y-4">
@@ -48,11 +86,12 @@ export function HarvestScannerView({
             <div>
               <p className="text-body-strong">{selectedLots.size} lot{selectedLots.size !== 1 ? 's' : ''} selected</p>
               <p className="text-caption text-text-secondary">
-                Harvestable loss{' '}
-                <span className="font-mono font-medium">{formatWithConversion(selectedLoss, baseCurrency, { compact: true })}</span>
+                Loss realised now{' '}
+                <span className="font-mono font-medium">{compact(selectedLoss)}</span>
                 {' · '}estimated tax benefit{' '}
-                <span className="font-mono font-medium text-accent-green">{formatWithConversion(selectedBenefit, baseCurrency, { compact: true })}</span>
-                {selectedWashing > 0 && ` · ${selectedWashing} would wash, loss deferred`}
+                <span className="font-mono font-medium text-accent-green">{compact(selectedBenefit)}</span>
+                {selectedDeferred > 0 && ` · ${compact(selectedDeferred)} deferred by a wash sale`}
+                {selectedDisallowed > 0 && ` · ${compact(selectedDisallowed)} permanently disallowed (IRA or Roth replacement)`}
               </p>
             </div>
             <button className="flex items-center gap-1.5 rounded-md bg-accent-blue px-4 py-2 text-body font-medium text-white hover:bg-accent-blue/90">
@@ -124,25 +163,18 @@ export function HarvestScannerView({
                       <td className="px-4 py-2.5 text-right font-mono">{lot.quantity.toLocaleString()}</td>
                       <td className="px-4 py-2.5 text-right font-mono text-accent-red"><CurrencyValue value={lot.gainLoss} from={baseCurrency} /></td>
                       <td className="px-4 py-2.5 text-right font-mono text-accent-green">
-                        {lot.saleWashSaleRisk
-                          ? <span className="text-caption text-text-tertiary">Deferred</span>
-                          : <CurrencyValue value={estimatedTaxBenefit(lot)} from={baseCurrency} />}
+                        <BenefitCell lot={lot} baseCurrency={baseCurrency} />
                       </td>
                       <td className="px-4 py-2.5 text-center">
-                        {/* The same test the rebalance preview applies to a sell leg: a loss with
-                            the same symbol bought in the household in the last 30 days. */}
-                        {lot.saleWashSaleRisk ? (
-                          <Badge variant="red">Wash sale: bought within 30 days</Badge>
-                        ) : (
-                          <span className="text-caption text-text-tertiary">No purchase in last 30 days</span>
-                        )}
+                        <SaleWashCell lot={lot} />
                       </td>
                       <td className="px-4 py-2.5 text-center">
                         {/* An open household loss window blocks buying this symbol back, not selling
                             this lot — the rebalance preview sells the same lot as a harvested loss
                             with no wash-sale flag. */}
+                        {/* `repurchaseBlockedUntil` is the window's last day, and a buy on it still washes. */}
                         {lot.repurchaseBlockedUntil ? (
-                          <Badge variant="yellow">Repurchase blocked until {formatCalendarDate(lot.repurchaseBlockedUntil)}</Badge>
+                          <Badge variant="yellow">Repurchase blocked through {formatCalendarDate(lot.repurchaseBlockedUntil)}</Badge>
                         ) : (
                           <span className="text-caption text-text-tertiary">No open window</span>
                         )}

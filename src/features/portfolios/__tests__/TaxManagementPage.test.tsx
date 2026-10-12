@@ -316,21 +316,27 @@ describe('TaxManagementPage gates on tax treatment', () => {
     const intcCell = await screen.findByText('INTC')
     const intcRow = intcCell.closest('tr')!
     expect(within(intcRow).queryByText('Restricted')).not.toBeInTheDocument()
-    expect(within(intcRow).getByText('Repurchase blocked until Mar 23, 2026')).toBeInTheDocument()
+    expect(within(intcRow).getByText('Repurchase blocked through Mar 23, 2026')).toBeInTheDocument()
     expect(screen.queryByText('Wash Sale Risk')).not.toBeInTheDocument()
   })
 
-  // A lot whose sale would wash defers its loss into the replacement's basis (§1091(d)): selling
-  // it harvests nothing this year. No fixture has one, so this marks acc-001's largest harvestable
-  // lot as washing at the endpoint and checks the card leaves it out of every figure.
-  it('acc-001: the "Harvestable losses" card leaves out a lot whose sale would wash, and says so', async () => {
+  // §1091 takes only the washed shares' part of a loss (Treas. Reg. §1.1091-1(c)): deferred into a
+  // taxable replacement's basis, or permanently disallowed when the replacement was bought in an
+  // IRA or Roth (Rev. Rul. 2008-5). No fixture has a washing lot, so this marks a quarter of
+  // acc-001's largest harvestable lot as washed by each kind of replacement at the endpoint:
+  //   allowed now  = gainLoss × (q − q/4 − q/4)/q = gainLoss / 2
+  //   deferred     = gainLoss / 4,  disallowed = gainLoss / 4
+  it('acc-001: the "Harvestable losses" card counts only the allowed part of a washing lot, and names the rest', async () => {
     const lots = generateTaxLotsWithSaleRisk('acc-001', 8_200_000)
     const harvestable = lots.filter((l) => l.gainLoss < -1_000)
     expect(harvestable).toHaveLength(5)
     const washing = [...harvestable].sort((a, b) => a.gainLoss - b.gainLoss)[0]!
+    const quarter = washing.quantity / 4
     server.use(
       http.get('/api/custodian/accounts/acc-001/tax-lots', () =>
-        HttpResponse.json(lots.map((l) => (l.id === washing.id ? { ...l, saleWashSaleRisk: true } : l)))),
+        HttpResponse.json(lots.map((l) => (l.id === washing.id
+          ? { ...l, saleWash: { deferredShares: quarter, disallowedShares: quarter } }
+          : l)))),
     )
     renderPage('acc-001')
     await screen.findByText('Johnson Family Trust')
@@ -338,10 +344,13 @@ describe('TaxManagementPage gates on tax treatment', () => {
     const kept = harvestable.filter((l) => l.id !== washing.id)
     const usd = (n: number) => formatCurrency(n, { compact: true, currency: 'USD' })
     const cardEl = (await screen.findByText('Harvestable losses')).closest('div')!
-    expect(within(cardEl).getByText(usd(kept.reduce((s, l) => s - l.gainLoss, 0)))).toBeInTheDocument()
-    expect(within(cardEl).getByText('4 lots')).toBeInTheDocument()
-    expect(within(cardEl).getByText('1 excluded: sale would wash')).toBeInTheDocument()
-    expect(within(cardEl).getByTestId('estimated-tax-benefit').textContent)
-      .toBe(usd(kept.reduce((s, l) => s + estimatedTaxBenefit(l), 0)))
+    const allowed = kept.reduce((s, l) => s - l.gainLoss, 0) - washing.gainLoss / 2
+    expect(within(cardEl).getByText(usd(allowed))).toBeInTheDocument()
+    expect(within(cardEl).getByText('5 lots')).toBeInTheDocument()
+    expect(within(cardEl).getByText(`Excludes ${usd(-washing.gainLoss / 4)} deferred by a wash sale`)).toBeInTheDocument()
+    expect(within(cardEl).getByText(`Excludes ${usd(-washing.gainLoss / 4)} permanently disallowed: replacement bought in an IRA or Roth`)).toBeInTheDocument()
+    const benefit = kept.reduce((s, l) => s + estimatedTaxBenefit(l), 0)
+      + estimatedTaxBenefit({ gainLoss: washing.gainLoss / 2, holdingPeriod: washing.holdingPeriod })
+    expect(within(cardEl).getByTestId('estimated-tax-benefit').textContent).toBe(usd(benefit))
   })
 })

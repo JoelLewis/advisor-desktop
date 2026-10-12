@@ -2,7 +2,7 @@ import type { Account } from '@/types/account'
 import type { CurrencyCode } from '@/types/currency'
 import { accounts } from '../data/accounts'
 import { householdFixtures } from '../data/households'
-import { realisedSales } from '../data/realised-sales'
+import { realisedSales, openWashSaleWindows, type OpenWashSaleWindow } from '../data/realised-sales'
 import { FX_RATES_USD_BASE } from '../data/currencies'
 import { convertCurrency } from '@/lib/currency'
 import { isTaxableAccount } from '@/lib/tax-treatment'
@@ -28,6 +28,41 @@ export function taxReturnFor(account: Account): string | null {
   const filesJointly = household?.filingStatus === 'married_filing_jointly'
     && (owner?.relationship === 'primary' || owner?.relationship === 'spouse')
   return filesJointly ? `joint:${household.id}` : `client:${account.clientId}`
+}
+
+/**
+ * §1091 asks whether *the taxpayer* bought replacement shares, which is a wider set than the
+ * accounts on one return and a narrower one than the household:
+ * - An irrevocable trust, an entity and a custodial account are their own taxpayers, so only their
+ *   own purchases wash their own sales, and theirs wash no one else's.
+ * - Everything else is its owner's, including the owner's IRAs and Roths (Rev. Rul. 2008-5).
+ * - A spouse's purchase counts as the taxpayer's whether or not the couple files jointly
+ *   (Rev. Rul. 76-240), so a primary and a spouse are one wash-sale taxpayer.
+ * - Any other household member (an adult child, a parent) is a taxpayer of their own.
+ */
+export function washSaleTaxpayer(account: Account): string {
+  if (SEPARATE_TAXPAYER_TYPES.has(account.type)) return `account:${account.id}`
+  const household = householdFixtures.find((h) => h.id === account.householdId)
+  const owner = household?.members.find((m) => m.clientId === account.clientId)
+  const isCouple = household !== undefined && (owner?.relationship === 'primary' || owner?.relationship === 'spouse')
+    && household.members.some((m) => m.relationship === 'spouse')
+  return isCouple ? `couple:${household.id}` : `client:${account.clientId}`
+}
+
+/** The accounts whose purchases can wash a loss sold in `account`, and whose loss sales its purchases can wash. */
+export function sameWashSaleTaxpayer(account: Account): Account[] {
+  const taxpayer = washSaleTaxpayer(account)
+  return accounts.filter((a) => a.householdId === account.householdId && washSaleTaxpayer(a) === taxpayer)
+}
+
+/** The open loss-sale windows that restrict buying in `account`: loss sales by the same wash-sale taxpayer. */
+export function openWashSaleWindowsFor(account: Account, asOfISO: string): OpenWashSaleWindow[] {
+  const taxpayer = washSaleTaxpayer(account)
+  return openWashSaleWindows(asOfISO, account.householdId).filter((w) => {
+    const seller = accounts.find((a) => a.id === w.accountId)
+    if (!seller) throw new Error(`realised sale ${w.id} names unknown account ${w.accountId}`)
+    return washSaleTaxpayer(seller) === taxpayer
+  })
 }
 
 const NOTHING: RealisedByCharacter = { shortTerm: 0, longTerm: 0 }
@@ -66,8 +101,8 @@ export type ReturnTaxEstimate = {
  * the same return. Netting in batch order is what keeps a year-to-date loss from being spent once
  * per account — the estimates of one batch sum to the tax the whole batch adds to each return.
  *
- * Amounts are netted in USD (the realised-sales ledger's currency) and each estimate converted
- * back. An account with nothing to net against keeps `netTaxForLegs`' figure exactly, with no
+ * Amounts are netted in USD — each realised sale is converted from its account's currency, as
+ * is each account's legs — and each estimate converted back into the account's currency. An account with nothing to net against keeps `netTaxForLegs`' figure exactly, with no
  * FX round trip.
  */
 export function estimateTaxOnReturns(

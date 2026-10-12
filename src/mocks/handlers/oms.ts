@@ -5,15 +5,14 @@ import { RESTRICTED_SECURITIES, CASH_MINIMUM_PCT, TECH_SYMBOLS, SECTOR_LIMIT, ev
 import { computeDriftForAccount, modelImplementationSecurity } from './pms'
 import { accounts } from '../data/accounts'
 import { getPositionsForAccount } from '../data/positions'
-import { openWashSaleWindows } from '../data/realised-sales'
 import { FX_RATES_USD_BASE } from '../data/currencies'
 import { convertCurrency } from '@/lib/currency'
 import { securityKind, concentrationLimitFor, isMarketTradable } from '@/lib/security-master'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { hasWashSaleRisk, isoDaysBefore } from '@/lib/wash-sale'
-import { estimateTaxOnReturns } from './tax-return'
-import { generateTaxLots, boundedTradeQty, householdAcquisitions, type CustodianLot } from './custodian'
+import { estimateTaxOnReturns, openWashSaleWindowsFor } from './tax-return'
+import { generateTaxLots, boundedTradeQty, washSaleAcquisitions, type CustodianLot } from './custodian'
 import { taxRateFor } from '@/features/portfolios/tax/shared'
 import type { Position } from '@/types/portfolio'
 import type { CurrencyCode } from '@/types/currency'
@@ -272,12 +271,12 @@ export function generateRebalanceTrades(
   const drift = computeDriftForAccount(account, modelId)
   const taxable = isTaxableAccount(account.taxTreatment)
   const currency = currencyForAccount(accountId)
-  const lossWindows = openWashSaleWindows(MOCK_TODAY_ISO, account.householdId)
+  const lossWindows = openWashSaleWindowsFor(account, MOCK_TODAY_ISO)
   // The account's own lots are generated once and shared by the sell ordering, every leg's
-  // `realiseSale`, and the household acquisitions below.
+  // `realiseSale`, and the taxpayer's acquisitions below.
   const ownLots = generateTaxLots(account.id, account.totalValue)
   const recentlyOpened = recentlyOpenedPositions(ownLots, MOCK_TODAY_ISO)
-  const acquisitions = householdAcquisitions(account, (a) => (a.id === account.id ? ownLots : generateTaxLots(a.id, a.totalValue)))
+  const acquisitions = washSaleAcquisitions(account, (a) => (a.id === account.id ? ownLots : generateTaxLots(a.id, a.totalValue)))
 
   type RawLeg = { target: TradeCandidate; side: 'buy' | 'sell'; notional: number; sleeve: Sleeve }
 
@@ -688,20 +687,19 @@ export const omsHandlers = [
       })
     }
 
-    // Wash sale check — derived from the household's actual realised loss sales (Task 14's
-    // 61-day window), not a hand-typed symbol list. A wash sale is triggered by *repurchasing*
-    // a security recently sold at a loss, so this applies to buys, and it is scoped to the
-    // account's household — the same fact the tax page reads (`realisedSales` carries
-    // `householdId`).
+    // Wash sale check — derived from the actual realised loss sales (Task 14's 61-day window),
+    // not a hand-typed symbol list. A wash sale is triggered by *repurchasing* a security recently
+    // sold at a loss, so this applies to buys, and it is scoped to the account's wash-sale
+    // taxpayer (`openWashSaleWindowsFor`) — the same fact the tax page reads.
     if (isBuy) {
-      const openWindow = openWashSaleWindows(MOCK_TODAY_ISO, account.householdId).find((w) => w.symbol === sym)
+      const openWindow = openWashSaleWindowsFor(account, MOCK_TODAY_ISO).find((w) => w.symbol === sym)
       if (openWindow) {
         violations.push({
           constraint: 'Wash sale rule (61-day window)',
           severity: 'warning',
           currentValue: `Sold at a loss ${openWindow.saleDate}`,
           limit: '61-day window',
-          message: `${sym} was sold at a loss in this household on ${openWindow.saleDate}. Repurchasing before ${openWindow.end} may trigger a wash sale, disallowing the loss.`,
+          message: `${sym} was sold at a loss by this account's taxpayer (owner or spouse) on ${openWindow.saleDate}. Repurchasing on or before ${openWindow.end} may trigger a wash sale, disallowing the loss.`,
         })
       }
     }

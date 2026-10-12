@@ -17,7 +17,7 @@ import { FX_RATES_USD_BASE } from '../data/currencies'
 import { convertToBase } from '@/lib/currency'
 import { sumAccountsUSD } from '@/lib/aum'
 import { formatDate } from '@/lib/utils'
-import { estimatedTaxBenefit, isHarvestable, harvestsNow } from '@/features/portfolios/tax/shared'
+import { estimatedTaxBenefit, isHarvestable, harvestsNow, lossAllowedNow } from '@/features/portfolios/tax/shared'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { getPositionsForAccount } from '../data/positions'
 import { securityKind, concentrationLimitFor } from '@/lib/security-master'
@@ -37,19 +37,31 @@ import { ASSET_CLASS_LABELS } from '@/lib/labels'
  * losses were being summed as if they were dollars and printed with a USD symbol.
  */
 /**
- * The harvesting insight's §1091 sentence. A candidate whose own sale would wash (shares bought in
- * the household within 30 days) defers its loss, which outranks a window that only blocks buying
- * the symbol back; "clear" is said only when neither applies to any candidate.
+ * The harvesting insight's §1091 sentence. A candidate whose sale would wash, in part or in whole,
+ * outranks a window that only blocks buying the symbol back; "clear" is said only when neither
+ * applies to any candidate. What happens to the washed part depends on where the replacement was
+ * bought: a taxable account defers it into the replacement's basis, an IRA or Roth disallows it for
+ * good (Rev. Rul. 2008-5), so the two are never called by one name.
  */
-export function harvestWashSaleNote(lots: readonly Pick<TaxLot, 'repurchaseBlockedUntil' | 'saleWashSaleRisk'>[]): string {
-  if (lots.some((l) => l.saleWashSaleRisk)) {
-    return "At least one candidate's sale would be a wash sale — the same security was bought in the household within the last 30 days, so its loss would be deferred, not realised."
+export function harvestWashSaleNote(lots: readonly Pick<TaxLot, 'repurchaseBlockedUntil' | 'saleWash'>[]): string {
+  const disallowed = lots.some((l) => l.saleWash.disallowedShares > 0)
+  const deferred = lots.some((l) => l.saleWash.deferredShares > 0)
+  if (disallowed || deferred) {
+    const outcomes = [
+      disallowed && 'where the replacement was bought in an IRA or Roth, that part of the loss is permanently disallowed',
+      deferred && 'where it was bought in a taxable account, that part is deferred into the replacement\'s basis',
+    ].filter((o): o is string => typeof o === 'string')
+    return "At least one candidate's sale would be a wash sale, in part or in whole — the same security was bought by the same taxpayer within the last 30 days, so the loss on the matched shares is not realised now: "
+      + `${outcomes.join('; ')}.`
   }
   if (lots.some((l) => l.repurchaseBlockedUntil !== null)) {
     return 'At least one candidate sits inside an active wash-sale window — confirm clearance before repurchasing the same or a substantially identical security.'
   }
   return 'Wash sale window clear for all candidates.'
 }
+
+/** A harvest candidate reduced to what a sale today realises: `lossNow` is the allowed part of its loss, in USD, negative. */
+type HarvestNow = { accountId: string; positionId: string; holdingPeriod: TaxLot['holdingPeriod']; lossNow: number }
 
 function harvestCandidatesAcrossBook(): (TaxLot & { accountId: string })[] {
   return accounts
@@ -66,10 +78,19 @@ function harvestCandidatesAcrossBook(): (TaxLot & { accountId: string })[] {
     })
 }
 
-/** The candidates whose loss is realised this year if sold now — what every harvest total counts. */
-function harvestableLotsAcrossBook(): (TaxLot & { accountId: string })[] {
-  return harvestCandidatesAcrossBook().filter(harvestsNow)
+/**
+ * The candidates whose loss is realised this year, at least in part, if sold now, each carrying only
+ * that allowed part — what every harvest total counts. §1091 takes only the washed shares' loss.
+ */
+function harvestableLotsAcrossBook(): HarvestNow[] {
+  return harvestCandidatesAcrossBook().filter(harvestsNow).map(toHarvestNow)
 }
+
+function toHarvestNow(lot: TaxLot & { accountId: string }): HarvestNow {
+  return { accountId: lot.accountId, positionId: lot.positionId, holdingPeriod: lot.holdingPeriod, lossNow: lossAllowedNow(lot) }
+}
+
+const benefitNow = (lot: HarvestNow) => estimatedTaxBenefit({ gainLoss: lot.lossNow, holdingPeriod: lot.holdingPeriod })
 
 function makeBriefing(
   title: string,
@@ -96,10 +117,10 @@ function driftedAccountsCount(): number {
  * uses — so "the largest opportunity is in account X" and the total figure quoted alongside it
  * are two views of one pass over the real lots, not an independently hand-typed household name.
  */
-function topHarvestableAccount(harvestable: ReturnType<typeof harvestableLotsAcrossBook>): { accountId: string; accountName: string; amount: number } | null {
+function topHarvestableAccount(harvestable: readonly HarvestNow[]): { accountId: string; accountName: string; amount: number } | null {
   const byAccount = new Map<string, number>()
   for (const lot of harvestable) {
-    byAccount.set(lot.accountId, (byAccount.get(lot.accountId) ?? 0) + Math.abs(lot.gainLoss))
+    byAccount.set(lot.accountId, (byAccount.get(lot.accountId) ?? 0) - lot.lossNow)
   }
   let best: { accountId: string; amount: number } | null = null
   for (const [accountId, amount] of byAccount) {
@@ -209,7 +230,7 @@ export const aiHandlers = [
       WASH_SALE_COUNT: String(new Set(washWindows.map((w) => w.accountId)).size),
       WASH_SALE_DATE: latestWashSaleEnd ? formatLongDate(latestWashSaleEnd) : 'no open windows',
       DRIFT_COUNT: String(driftedCount),
-      TLH_TOTAL: formatAUM(harvestable.reduce((s, l) => s + Math.abs(l.gainLoss), 0)),
+      TLH_TOTAL: formatAUM(harvestable.reduce((s, l) => s - l.lossNow, 0)),
       TLH_ACCOUNT_COUNT: String(new Set(harvestable.map((l) => l.accountId)).size),
       TOP_HARVEST_ACCOUNT: topHarvest?.accountName ?? 'no account',
       TOP_HARVEST_AMOUNT: topHarvest ? formatAUM(topHarvest.amount) : '$0',
@@ -553,8 +574,8 @@ export const aiHandlers = [
       // to — acc-001's five harvestable lots are all long-term, so that page computes 23.8% on
       // exactly those losses.
       const harvestable = harvestableLotsAcrossBook()
-      const harvestableLoss = harvestable.reduce((s, l) => s + Math.abs(l.gainLoss), 0)
-      const harvestableBenefit = harvestable.reduce((s, l) => s + estimatedTaxBenefit(l), 0)
+      const harvestableLoss = harvestable.reduce((s, l) => s - l.lossNow, 0)
+      const harvestableBenefit = harvestable.reduce((s, l) => s + benefitNow(l), 0)
       insights.push({
         id: 'dash-3',
         severity: 'opportunity',
@@ -661,16 +682,16 @@ export const aiHandlers = [
           // surface in the product stating figures it couldn't support. Filters the same
           // book-wide harvestable-lot walk the dashboard's D22 insight and the chat response above
           // both read (`harvestableLotsAcrossBook`) down to this account, and reads
-          // `TaxLot.repurchaseBlockedUntil` and `saleWashSaleRisk` through `harvestWashSaleNote` —
+          // `TaxLot.repurchaseBlockedUntil` and `saleWash` through `harvestWashSaleNote` —
           // both set by `generateTaxLotsWithSaleRisk` (custodian.ts) — rather than asserting the window is clear
           // unconditionally. No harvestable losses means no insight, not a $0 one.
-          // Figures count only lots that harvest now; the §1091 sentence reads every candidate, so
-          // a washing one is still named.
+          // Figures count only the part of each loss realised now; the §1091 sentence reads every
+          // candidate, so a washing one is still named.
           const accountCandidates = harvestCandidatesAcrossBook().filter((l) => l.accountId === entityId)
-          const accountHarvestable = accountCandidates.filter(harvestsNow)
+          const accountHarvestable = accountCandidates.filter(harvestsNow).map(toHarvestNow)
           if (accountHarvestable.length > 0) {
             const positionCount = new Set(accountHarvestable.map((l) => l.positionId)).size
-            const loss = accountHarvestable.reduce((s, l) => s + Math.abs(l.gainLoss), 0)
+            const loss = accountHarvestable.reduce((s, l) => s - l.lossNow, 0)
             insights.push({
               id: `acc-${entityId}-2`,
               severity: 'opportunity',

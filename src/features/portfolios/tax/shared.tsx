@@ -70,14 +70,48 @@ export function isHarvestable(gainLoss: number, currency: CurrencyCode, rates: F
   return convertToBase(gainLoss, currency, rates) < HARVEST_LOSS_THRESHOLD_USD
 }
 
+type WashFacts = Pick<TaxLot, 'gainLoss' | 'quantity' | 'saleWash'>
+
+/** The part of a loss lot's loss that falls on `shares` of it; 0 for a lot at a gain. */
+function lossOnShares(lot: WashFacts, shares: number): number {
+  if (lot.gainLoss >= 0 || lot.quantity <= 0) return 0
+  return lot.gainLoss * Math.min(1, shares / lot.quantity)
+}
+
 /**
- * Whether a harvest candidate's loss is realised this year if sold now. A sale that washes defers
- * its loss into the replacement's basis (§1091(d)), so every harvest total — the tax page's card,
- * the dashboard insight, the chat answer, the account insight — leaves it out. The scanner still
- * lists it, with its benefit shown as deferred.
+ * The loss a sale of this lot today realises this year (negative), or 0. §1091 takes only the
+ * loss on the shares a replacement was matched to (Treas. Reg. §1.1091-1(c)); the rest is
+ * allowed. Every harvest total — the tax page's card, the dashboard insight, the chat answer, the
+ * account insight — counts this figure, never the lot's whole loss.
  */
-export function harvestsNow(lot: Pick<TaxLot, 'saleWashSaleRisk'>): boolean {
-  return !lot.saleWashSaleRisk
+export function lossAllowedNow(lot: WashFacts): number {
+  const { deferredShares, disallowedShares } = lot.saleWash
+  return lossOnShares(lot, lot.quantity - deferredShares - disallowedShares)
+}
+
+/** The part of the loss §1091 moves into a taxable replacement's basis (§1091(d)): not realised now, recovered later. */
+export function lossDeferred(lot: WashFacts): number {
+  return lossOnShares(lot, lot.saleWash.deferredShares)
+}
+
+/** The part of the loss lost for good because the replacement was bought in an IRA, Roth or other tax-advantaged account (Rev. Rul. 2008-5). */
+export function lossDisallowed(lot: WashFacts): number {
+  return lossOnShares(lot, lot.saleWash.disallowedShares)
+}
+
+/** Whether §1091 takes any part of this lot's loss. */
+export function washesOnSale(lot: Pick<TaxLot, 'saleWash'>): boolean {
+  return lot.saleWash.deferredShares + lot.saleWash.disallowedShares > 0
+}
+
+/** Whether selling this lot today realises any loss this year. */
+export function harvestsNow(lot: WashFacts): boolean {
+  return lossAllowedNow(lot) < 0
+}
+
+/** The tax a sale of this lot today saves this year: the allowed part of its loss at its holding-period rate. */
+export function harvestBenefitNow(lot: WashFacts & Pick<TaxLot, 'holdingPeriod'>): number {
+  return estimatedTaxBenefit({ gainLoss: lossAllowedNow(lot), holdingPeriod: lot.holdingPeriod })
 }
 
 /**

@@ -3,8 +3,8 @@ import type { ComplianceAlert, SupervisionRecord, TradeComplianceRequest, TradeC
 import { todayISO } from '@/lib/clock'
 import { securityKind, concentrationLimitFor } from '@/lib/security-master'
 import { accounts } from '../data/accounts'
-import { openWashSaleWindows } from '../data/realised-sales'
 import { getPositionsForAccount } from '../data/positions'
+import { openWashSaleWindowsFor } from './tax-return'
 import type { ProposalTradeLeg, ProposalViolation, ProposalLegResult, PreTradeCheckProposalResult } from '@/services/oms'
 
 /**
@@ -220,8 +220,8 @@ export function evaluateProposal(accountId: string, trades: readonly ProposalTra
     })
   }
 
-  // ── Wash sale — household-scoped 61-day window (Task 14 / C10). Buys only. ──
-  const openWindows = openWashSaleWindows(todayISO(), account.householdId)
+  // ── Wash sale — the wash-sale taxpayer's 61-day windows (Task 14 / C10). Buys only. ──
+  const openWindows = openWashSaleWindowsFor(account, todayISO())
   trades.forEach((t, i) => {
     if (t.side !== 'buy') return
     const window = openWindows.find((w) => w.symbol === t.symbol)
@@ -232,7 +232,7 @@ export function evaluateProposal(accountId: string, trades: readonly ProposalTra
       severity: 'warning',
       currentValue: `Sold at a loss ${window.saleDate}`,
       limit: '61-day window',
-      message: `${t.symbol} was sold at a loss in this household on ${window.saleDate}. Repurchasing before ${window.end} may trigger a wash sale, disallowing the loss.`,
+      message: `${t.symbol} was sold at a loss by this account's taxpayer (owner or spouse) on ${window.saleDate}. Repurchasing on or before ${window.end} may trigger a wash sale, disallowing the loss.`,
       legs: [i],
       preExisting: false,
       symbol: t.symbol,

@@ -3,10 +3,12 @@ import type { Transaction } from '@/services/custodian'
 import type { TaxLot } from '@/types/portfolio'
 import { accounts } from '../data/accounts'
 import { getPositionsForAccount } from '../data/positions'
-import { openWashSaleWindows, realisedSales } from '../data/realised-sales'
+import { realisedSales } from '../data/realised-sales'
+import { openWashSaleWindowsFor, sameWashSaleTaxpayer } from './tax-return'
+import { isTaxableAccount } from '@/lib/tax-treatment'
 import { notFound } from './utils'
 import { startOfToday, MOCK_TODAY_ISO } from '@/lib/clock'
-import { hasWashSaleRisk, type Acquisition } from '@/lib/wash-sale'
+import { matchWashedShares, type Acquisition } from '@/lib/wash-sale'
 import type { Account } from '@/types/account'
 
 const DAY_MS = 1000 * 60 * 60 * 24
@@ -300,51 +302,65 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
 }
 
 /**
- * A lot as the custodian's records state it. `saleWashSaleRisk` is left off: it needs every
- * household account's lots, so only the surfaces that show it (`generateTaxLotsWithSaleRisk`)
+ * A lot as the custodian's records state it. `saleWash` is left off: it needs every lot of the
+ * wash-sale taxpayer's accounts, so only the surfaces that show it (`generateTaxLotsWithSaleRisk`)
  * pay for it, not the rebalance engine, which tests its own sell legs.
  */
-export type CustodianLot = Omit<TaxLot, 'saleWashSaleRisk'>
+export type CustodianLot = Omit<TaxLot, 'saleWash'>
+
+type LotFacts = Pick<TaxLot, 'id' | 'positionId' | 'purchaseDate' | 'quantity'>
 
 /**
- * Every lot bought in `account`'s household, as a §1091 acquisition — IRAs and Roths included,
- * since a purchase in any of them is a replacement. `lotsFor` supplies each account's lots, so a
- * caller can pass the lots it already holds for its own account.
+ * Every lot bought in an account of `account`'s wash-sale taxpayer (`sameWashSaleTaxpayer`), as a
+ * §1091 acquisition — IRAs and Roths included, since a purchase in any of them is a replacement.
+ * `lotsFor` supplies each account's lots, so a caller can pass the lots it already holds for its
+ * own account.
  */
-export function householdAcquisitions(
-  account: Account,
-  lotsFor: (a: Account) => readonly Pick<TaxLot, 'id' | 'positionId' | 'purchaseDate'>[],
-): Acquisition[] {
-  return accounts.filter((a) => a.householdId === account.householdId).flatMap((a) => {
+export function washSaleAcquisitions(account: Account, lotsFor: (a: Account) => readonly LotFacts[]): Acquisition[] {
+  return sameWashSaleTaxpayer(account).flatMap((a) => {
     const symbolOf = new Map(getPositionsForAccount(a.id, a.totalValue).map((p) => [p.id, p.symbol]))
+    const kind = isTaxableAccount(a.taxTreatment) ? 'taxable' : 'tax_advantaged'
     return lotsFor(a).map((l) => {
       const symbol = symbolOf.get(l.positionId)
       if (symbol === undefined) throw new Error(`tax lot ${l.id} in ${a.id} names unknown position ${l.positionId}`)
-      return { symbol, date: l.purchaseDate, lotId: l.id }
+      return { symbol, date: l.purchaseDate, lotId: l.id, quantity: l.quantity, account: kind } as const
     })
   })
 }
 
 /**
- * The account's lots, each with `saleWashSaleRisk`: whether selling that lot alone, today, would
- * be a wash sale — a loss with substantially identical shares bought in the household within the
- * last 30 days, other than the lot itself. The same test (`hasWashSaleRisk`) over the same
- * acquisitions the rebalance engine applies to a sell leg, so the scanner and the preview cannot
- * disagree about one sale.
+ * The account's lots, each with `saleWash`: how many of its shares would have their loss taken by
+ * §1091 if the taxpayer harvested every loss lot today (`matchWashedShares`), split by whether
+ * that loss is deferred into a taxable replacement's basis or permanently disallowed by an IRA or
+ * Roth replacement. A lot at a gain, and every lot in an account whose sales are not taxed, has
+ * nothing to lose and reads 0/0.
+ *
+ * The rebalance engine's `washSaleRisk` on a sell leg reads the same acquisitions but judges a
+ * whole leg on its net result and asks only whether any replacement exists (`hasWashSaleRisk`), so
+ * a leg that nets to a gain is not flagged even when one of its lots here shows washed shares.
  */
 export function generateTaxLotsWithSaleRisk(accountId: string, totalValue: number): TaxLot[] {
   const own = generateTaxLots(accountId, totalValue)
   const account = accounts.find((a) => a.id === accountId)
-  if (!account) return own.map((l) => ({ ...l, saleWashSaleRisk: false }))
-  const acquisitions = householdAcquisitions(account, (a) => (a.id === accountId ? own : generateTaxLots(a.id, a.totalValue)))
-  const symbolOf = new Map(getPositionsForAccount(accountId, totalValue).map((p) => [p.id, p.symbol]))
-  return own.map((lot) => {
-    const symbol = symbolOf.get(lot.positionId)
-    if (symbol === undefined) throw new Error(`tax lot ${lot.id} in ${accountId} names unknown position ${lot.positionId}`)
-    const sale = { symbol, side: 'sell', realisesLoss: lot.gainLoss < 0, soldLotIds: [lot.id] } as const
-    // A sell is judged on recent acquisitions only; open loss windows bear on buys.
-    return { ...lot, saleWashSaleRisk: hasWashSaleRisk(sale, [], acquisitions, MOCK_TODAY_ISO) }
-  })
+  if (!account) throw new Error(`tax lots requested for unknown account ${accountId}`)
+  const lotsOf = new Map(sameWashSaleTaxpayer(account).map((a) => [a.id, a.id === accountId ? own : generateTaxLots(a.id, a.totalValue)]))
+  const lotsFor = (a: Account) => lotsOf.get(a.id) ?? []
+  const acquisitions = washSaleAcquisitions(account, lotsFor)
+  const symbolOfLot = new Map(acquisitions.map((a) => [a.lotId, a.symbol]))
+  const symbolOf = (lotId: string) => {
+    const symbol = symbolOfLot.get(lotId)
+    if (symbol === undefined) throw new Error(`tax lot ${lotId} is missing from its taxpayer's acquisitions`)
+    return symbol
+  }
+  // Losses on lots in taxable accounts are the ones a harvest realises; they compete, across the
+  // taxpayer's accounts, for the same replacement shares.
+  const lossLots = sameWashSaleTaxpayer(account)
+    .filter((a) => isTaxableAccount(a.taxTreatment))
+    .flatMap((a) => lotsFor(a).filter((l) => l.gainLoss < 0).map((l) => ({
+      lotId: l.id, symbol: symbolOf(l.id), purchaseDate: l.purchaseDate, quantity: l.quantity,
+    })))
+  const washed = matchWashedShares(lossLots, acquisitions, MOCK_TODAY_ISO)
+  return own.map((lot) => ({ ...lot, saleWash: washed.get(lot.id) ?? { deferredShares: 0, disallowedShares: 0 } }))
 }
 
 export function generateTaxLots(accountId: string, totalValue: number): CustodianLot[] {
@@ -353,13 +369,12 @@ export function generateTaxLots(accountId: string, totalValue: number): Custodia
   const lots: CustodianLot[] = []
 
   const account = accounts.find((a) => a.id === accountId)
-  // C12 · tax-loss-harvesting — scoped to the whole household, including IRAs and 401(k)s,
-  // because a repurchase in any of them triggers §1091 (the "IRA wash-sale trap"). An account
-  // that can't be resolved to a household must restrict nothing, not everything — an omitted
-  // `householdId` would otherwise widen `openWashSaleWindows` to every household in the firm.
+  // C12 · tax-loss-harvesting — scoped to the wash-sale taxpayer (`openWashSaleWindowsFor`), IRAs
+  // and Roths included, because a repurchase in any of them triggers §1091 (the "IRA wash-sale
+  // trap"). An account that can't be resolved must restrict nothing, not everything.
   // Windows arrive sorted by `end`, so the last one written per symbol is the latest to close.
   const repurchaseBlockedUntil = new Map(
-    account ? openWashSaleWindows(MOCK_TODAY_ISO, account.householdId).map((w) => [w.symbol, w.end]) : [],
+    account ? openWashSaleWindowsFor(account, MOCK_TODAY_ISO).map((w) => [w.symbol, w.end]) : [],
   )
 
   for (const pos of positions) {
@@ -472,6 +487,6 @@ export const custodianHandlers = [
   http.get('/api/custodian/accounts/:accountId/realised-sales', ({ params }) => {
     const account = accounts.find((a) => a.id === params.accountId)
     if (!account) return notFound()
-    return HttpResponse.json(openWashSaleWindows(MOCK_TODAY_ISO, account.householdId))
+    return HttpResponse.json(openWashSaleWindowsFor(account, MOCK_TODAY_ISO))
   }),
 ]

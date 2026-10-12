@@ -2,12 +2,21 @@ import { describe, it, expect, vi, beforeAll } from 'vitest'
 import { server } from '@/test/server'
 import { getAIInsights, sendMessage } from '@/services/ai'
 import type { AIInsight } from '@/types/ai'
+import type { TaxLot } from '@/types/portfolio'
+import { taxRateFor } from '@/features/portfolios/tax/shared'
 
 /**
- * A lot whose sale would wash defers its loss (§1091(d)), so it harvests nothing this year and
- * must not swell any harvest figure. No fixture has one, so this file gives acc-001 an older SMH
- * holding at a loss: acc-002 bought SMH on 2026-02-21, so every lot of it washes. Every harvest
- * figure must then read exactly as it does without the holding.
+ * §1091 takes only the loss on the shares a replacement was matched to (Treas. Reg.
+ * §1.1091-1(c)), so a partly washed lot adds its allowed part — and only that — to every harvest
+ * figure. No fixture has one, so this file gives acc-001 (Robert Johnson's revocable trust) a
+ * 400-share SMH holding at a −21,920 loss. acc-002 (Robert's individual account, same taxpayer)
+ * bought 180 SMH on 2026-02-21, so 180 of the 400 shares wash and are deferred:
+ *
+ *   allowed now: −21,920 × (400 − 180)/400 = −12,056
+ *   tax benefit: 12,056 × the lot's own holding-period rate (it is short-term: 37% → 4,460.72)
+ *
+ * Every figure must then read as the baseline plus exactly that allowed part — not the baseline
+ * (the whole loss deferred) and not the baseline plus −21,920 (nothing deferred).
  *
  * The real handlers (bound by the test setup to the real modules) give the baseline; the same
  * handlers re-imported against the mock are then put in front of them.
@@ -31,6 +40,8 @@ vi.mock('@/mocks/data/positions', async (importOriginal) => {
 
 const harvestInsight = (insights: AIInsight[], title: string) => insights.find((i) => i.title === title)!
 type Figures = { dashboard: AIInsight; account: AIInsight; chat: string }
+const dollars = (insight: AIInsight) => Number(insight.metric!.value.replace(/[$,]/g, ''))
+const positionCount = (body: string) => Number(body.match(/^(\d+) positions?/)![1])
 
 async function figures(): Promise<Figures> {
   const [dashboard, account, chat] = await Promise.all([
@@ -46,34 +57,45 @@ async function figures(): Promise<Figures> {
 }
 
 let baseline: Figures
-let withWashingLots: Figures
+let withWashingLot: Figures
+let smh: TaxLot[]
 beforeAll(async () => {
   baseline = await figures()
   vi.resetModules()
   const { generateTaxLotsWithSaleRisk } = await import('../custodian')
-  const smh = generateTaxLotsWithSaleRisk('acc-001', 8_200_000).filter((l) => l.positionId === TRUST_SMH)
-  // Vacuity guard: the planted lots are harvest candidates in their own right, and every one washes.
-  expect(smh.length).toBeGreaterThan(0)
-  expect(smh.every((l) => l.gainLoss < -1_000 && l.saleWashSaleRisk)).toBe(true)
+  smh = generateTaxLotsWithSaleRisk('acc-001', 8_200_000).filter((l) => l.positionId === TRUST_SMH)
   const { aiHandlers } = await import('../ai')
   server.use(...aiHandlers)
-  withWashingLots = await figures()
+  withWashingLot = await figures()
 }, 30_000)
 
-describe('harvest figures leave out lots whose sale would wash', () => {
-  it('the dashboard insight\'s loss total, account count and estimated benefit', () => {
-    expect(withWashingLots.dashboard.body).toBe(baseline.dashboard.body)
-    expect(withWashingLots.dashboard.metric).toEqual(baseline.dashboard.metric)
+describe('harvest figures count only the part of a loss a sale realises now', () => {
+  it('vacuity guard: the planted lot is one harvest candidate, 180 of its 400 shares washed and deferred', () => {
+    expect(smh).toHaveLength(1)
+    expect(smh[0]!.gainLoss).toBeLessThan(-1_000)
+    expect(smh[0]!.saleWash).toEqual({ deferredShares: 180, disallowedShares: 0 })
   })
 
-  it('the chat answer\'s book total, account count and largest opportunity', () => {
-    expect(withWashingLots.chat).toBe(baseline.chat)
+  it('the account insight\'s harvestable amount grows by 12,056 and its position count by one', () => {
+    // Each metric is rounded to the dollar, so the difference of two can be off by one.
+    expect(Math.abs(dollars(withWashingLot.account) - dollars(baseline.account) - 12_056)).toBeLessThanOrEqual(1)
+    expect(positionCount(withWashingLot.account.body)).toBe(positionCount(baseline.account.body) + 1)
+    expect(withWashingLot.account.body).toContain("At least one candidate's sale would be a wash sale, in part or in whole")
+    expect(withWashingLot.account.body).toContain('deferred into the replacement\'s basis')
+    expect(withWashingLot.account.body).not.toContain('permanently disallowed')
   })
 
-  it('the account insight\'s harvestable amount and position count, while its §1091 sentence still names the washing candidate', () => {
-    expect(withWashingLots.account.metric).toEqual(baseline.account.metric)
-    const positions = (body: string) => body.match(/^\d+ positions?/)![0]
-    expect(positions(withWashingLots.account.body)).toBe(positions(baseline.account.body))
-    expect(withWashingLots.account.body).toContain("At least one candidate's sale would be a wash sale")
+  it('the dashboard insight\'s estimated benefit grows by the allowed loss at the lot\'s own rate', () => {
+    const benefit = 12_056 * taxRateFor(smh[0]!.holdingPeriod)
+    expect(Math.abs(dollars(withWashingLot.dashboard) - dollars(baseline.dashboard) - benefit)).toBeLessThanOrEqual(1)
+  })
+
+  it('the book total in the dashboard insight and the chat answer moves by the allowed 12,056, not the whole 21,920', () => {
+    const totalOf = (body: string) => body.match(/^(\$(\d+)K) in harvestable losses/)!
+    const [before, after] = [totalOf(baseline.dashboard.body), totalOf(withWashingLot.dashboard.body)]
+    // Stated to the nearest $1K, so a 12,056 increase reads as +12K or +13K; the whole loss would read +22K.
+    expect(Number(after[2]) - Number(before[2])).toBeGreaterThanOrEqual(12)
+    expect(Number(after[2]) - Number(before[2])).toBeLessThanOrEqual(13)
+    expect(withWashingLot.chat).toContain(`I've identified ${after[1]} in harvestable losses`)
   })
 })

@@ -11,7 +11,7 @@ import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { useCurrencyConverter } from '@/hooks/use-fx'
 import { cn } from '@/lib/utils'
 import { harvestingDisclosureFor } from '@/lib/tax-treatment'
-import { isHarvestable, harvestsNow, estimatedTaxBenefit, computeCostBasisImpact, fxStatusFrom, harvestFxStatus } from './tax/shared'
+import { isHarvestable, harvestsNow, harvestBenefitNow, lossAllowedNow, lossDeferred, lossDisallowed, computeCostBasisImpact, fxStatusFrom, harvestFxStatus } from './tax/shared'
 import { COST_BASIS_METHODS, type CostBasisMethod } from './tax/CostBasisMethodCard'
 import { TaxSummaryCards } from './tax/TaxSummaryCards'
 import { CostBasisMethodCard } from './tax/CostBasisMethodCard'
@@ -104,17 +104,22 @@ export function TaxManagementPage() {
     const totalUnrealizedLoss = taxLots.filter((l) => l.gainLoss < 0).reduce((s, l) => s + l.gainLoss, 0)
     const shortTermGain = taxLots.filter((l) => l.holdingPeriod === 'short' && l.gainLoss > 0).reduce((s, l) => s + l.gainLoss, 0)
     const longTermGain = taxLots.filter((l) => l.holdingPeriod === 'long' && l.gainLoss > 0).reduce((s, l) => s + l.gainLoss, 0)
+    // §1091 takes only the washed shares' part of a candidate's loss, so every figure below counts
+    // the allowed part; a candidate fully washed drops out of the lot count.
     const harvestable = harvestOpportunities.filter(harvestsNow)
-    const washingLotCount = harvestOpportunities.length - harvestable.length
-    const harvestableAmount = harvestable.reduce((s, l) => s + Math.abs(l.gainLoss), 0)
+    const harvestableAmount = harvestable.reduce((s, l) => s - lossAllowedNow(l), 0)
+    const washedLoss = {
+      deferred: harvestOpportunities.reduce((s, l) => s - lossDeferred(l), 0),
+      disallowed: harvestOpportunities.reduce((s, l) => s - lossDisallowed(l), 0),
+    }
     // §9.1 · the page-level "estimated tax benefit" total. Only ever rendered in the taxable
     // branch below (see `disclosure`) — a tax-deferred or tax-free account never computes past
     // `harvestOpportunities === []` in the first place, but the gate on *rendering* this value is
     // what a component test can actually observe, so that is where it is enforced.
-    const estimatedBenefit = harvestable.reduce((s, l) => s + estimatedTaxBenefit(l), 0)
+    const estimatedBenefit = harvestable.reduce((s, l) => s + harvestBenefitNow(l), 0)
     return {
       totalUnrealizedGain, totalUnrealizedLoss, shortTermGain, longTermGain,
-      harvestableAmount, harvestableLotCount: harvestable.length, washingLotCount, estimatedBenefit,
+      harvestableAmount, harvestableLotCount: harvestable.length, washedLoss, estimatedBenefit,
     }
   }, [taxLots, harvestOpportunities])
 

@@ -9,8 +9,12 @@ type TaxStats = {
   longTermGain: number
   harvestableAmount: number
   harvestableLotCount: number
-  /** Harvest candidates left out of the figures above because selling them now would wash. */
-  washingLotCount: number
+  /**
+   * The part of the candidates' losses §1091 would take if they were sold today, left out of the
+   * figures above: deferred into a taxable replacement's basis, or permanently disallowed by an IRA
+   * or Roth replacement. Positive amounts.
+   */
+  washedLoss: { deferred: number; disallowed: number }
   estimatedBenefit: number
 }
 
@@ -66,8 +70,15 @@ export function TaxSummaryCards({
             <>
               <p className="font-mono text-section-header text-accent-blue">{formatWithConversion(stats.harvestableAmount, baseCurrency, { compact: true })}</p>
               <p className="mt-1 text-caption text-text-tertiary">{stats.harvestableLotCount} lot{stats.harvestableLotCount !== 1 ? 's' : ''}</p>
-              {stats.washingLotCount > 0 && (
-                <p className="mt-1 text-caption text-text-tertiary">{stats.washingLotCount} excluded: sale would wash</p>
+              {stats.washedLoss.deferred > 0 && (
+                <p className="mt-1 text-caption text-text-tertiary">
+                  Excludes {formatWithConversion(stats.washedLoss.deferred, baseCurrency, { compact: true })} deferred by a wash sale
+                </p>
+              )}
+              {stats.washedLoss.disallowed > 0 && (
+                <p className="mt-1 text-caption text-accent-red">
+                  Excludes {formatWithConversion(stats.washedLoss.disallowed, baseCurrency, { compact: true })} permanently disallowed: replacement bought in an IRA or Roth
+                </p>
               )}
               <p className="mt-1 text-caption text-text-tertiary">
                 Est. tax benefit{' '}
@@ -85,7 +96,7 @@ export function TaxSummaryCards({
           <p className={cn('font-mono text-section-header', washSaleWindowsCount > 0 ? 'text-amber-600' : 'text-accent-green')}>
             {washSaleWindowsCount}
           </p>
-          <p className="mt-1 text-caption text-text-tertiary">open, household-wide</p>
+          <p className="mt-1 text-caption text-text-tertiary">open, same taxpayer (owner and spouse)</p>
         </CardContent>
       </Card>
     </div>
