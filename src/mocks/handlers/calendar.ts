@@ -1,5 +1,6 @@
 import { http, HttpResponse, delay } from 'msw'
 import { nextEventTime } from './event-clock'
+import { MOCK_NOW_ISO } from '@/lib/clock'
 import { calendarEvents } from '../data/calendar'
 import { clients } from '../data/clients'
 import { accounts } from '../data/accounts'
@@ -143,7 +144,7 @@ export const calendarHandlers = [
       talkingPoints: talkingPointsByType[event.meetingType] ?? talkingPointsByType['ad_hoc'] ?? [],
       actionItems: actionItemsByType[event.meetingType] ?? actionItemsByType['ad_hoc'] ?? [],
       recentActivity,
-      generatedAt: nextEventTime(),
+      generatedAt: MOCK_NOW_ISO,
     }
 
     return HttpResponse.json(prep)

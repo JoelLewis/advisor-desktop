@@ -38,3 +38,16 @@ describe('§0.5 · records made at runtime take the event clock, never the live 
     expect(order.id).toMatch(/^ord-\d+$/)
   })
 })
+
+describe('generated ids never meet a seed id', () => {
+  it('a custom prompt created first leaves seed cp-1 in place', async () => {
+    const created = await fetch('/api/settings/ai/prompts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'n', text: 't', category: 'general' }),
+    }).then((r) => r.json() as Promise<{ id: string }>)
+    const all = await fetch('/api/settings/ai/prompts').then((r) => r.json() as Promise<{ id: string }[]>)
+    expect(created.id).not.toBe('cp-1')
+    expect(all.map((p) => p.id)).toContain('cp-1')
+  })
+})

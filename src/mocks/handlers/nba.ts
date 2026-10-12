@@ -1,5 +1,6 @@
 import { http, HttpResponse, delay } from 'msw'
 import { nextEventTime } from './event-clock'
+import { MOCK_NOW_ISO } from '@/lib/clock'
 import { nbas } from '../data/nbas'
 import type { BatchActionRequest, NBAActionTemplate, NBAEffectivenessMetrics, NBACategory } from '@/types/nba'
 import { notFound } from './utils'
@@ -179,7 +180,7 @@ export const nbaHandlers = [
           body: `Dear ${firstClient},\n\nI'm writing to let you know that your portfolio has drifted from its target allocation due to recent market movements. Specifically, ${nba.trigger.value}.\n\nI recommend we rebalance your portfolio to restore your target allocation. This helps maintain the risk level we agreed upon in your Investment Policy Statement while taking advantage of recent market gains.\n\n${impact ? `The estimated impact of this rebalancing is ${impact}.` : ''}\n\nI'd like to schedule a brief call to walk you through the proposed trades. Would you have 15 minutes this week?\n\nBest regards,\nYour Advisor`,
         },
         analysisSummary: `Drift analysis detected ${nba.trigger.value} deviation from target model across ${nba.clients.length} account(s). Primary driver: equity outperformance shifting allocation above policy band. Recommended action: systematic rebalancing with tax-aware lot selection. Risk reduction: restores portfolio to within policy tolerances.`,
-        generatedAt: nextEventTime(),
+        generatedAt: MOCK_NOW_ISO,
       }),
       tax_management: () => ({
         talkingPoints: [
@@ -194,7 +195,7 @@ export const nbaHandlers = [
           body: `Dear ${firstClient},\n\nOur monitoring systems have identified a tax management opportunity in your portfolio. ${nba.description}\n\nBy harvesting these losses now, we can offset realized gains and potentially reduce your tax liability for the year${impact ? ` by approximately ${impact}` : ''}.\n\nWe'll replace the sold positions with similar investments to maintain your portfolio's risk profile while observing wash sale rules.\n\nWould you like to discuss this strategy? I'm available for a brief call at your convenience.\n\nBest regards,\nYour Advisor`,
         },
         analysisSummary: `Unrealized loss detected: ${nba.trigger.value}. Strategy: sell loss position, replace with correlated ETF to maintain sector exposure. Wash sale monitoring across all client accounts required. ${impact ? `Estimated tax benefit: ${impact} at applicable rate (${TAX_RATE_RANGE}).` : ''} Recommendation: execute before additional price recovery narrows the harvesting window.`,
-        generatedAt: nextEventTime(),
+        generatedAt: MOCK_NOW_ISO,
       }),
       planning: () => ({
         talkingPoints: [
@@ -209,7 +210,7 @@ export const nbaHandlers = [
           body: `Dear ${firstClient},\n\nI wanted to reach out regarding an important planning item. ${nba.description}\n\nI'd like to schedule a meeting to review your financial plan, update our projections, and discuss the best path forward.\n\nPlease let me know a few times that work for you this week or next, and I'll send a calendar invitation.\n\nBest regards,\nYour Advisor`,
         },
         analysisSummary: `Planning event: ${nba.trigger.value}. ${nba.suggestedAction}. Impact on long-term plan should be modeled with updated assumptions. Client engagement recommended within 2 weeks.`,
-        generatedAt: nextEventTime(),
+        generatedAt: MOCK_NOW_ISO,
       }),
       risk: () => ({
         talkingPoints: [
@@ -224,7 +225,7 @@ export const nbaHandlers = [
           body: `Dear ${firstClient},\n\nI'm reaching out regarding a risk management item in your portfolio. ${nba.description}\n\nI'd like to review the situation with you and discuss strategies to address this, including systematic diversification options that consider tax implications.\n\nCould we schedule 30 minutes this week to discuss?\n\nBest regards,\nYour Advisor`,
         },
         analysisSummary: `Risk event: ${nba.trigger.value}. ${nba.suggestedAction}. IPS compliance review required. Options: systematic reduction over 3-6 months, hedging overlay, or IPS amendment with documented rationale.`,
-        generatedAt: nextEventTime(),
+        generatedAt: MOCK_NOW_ISO,
       }),
       client_service: () => ({
         talkingPoints: [
@@ -243,7 +244,7 @@ export const nbaHandlers = [
             : `Dear ${firstClient},\n\nI wanted to reach out to check in. ${nba.description}\n\nI'd love to schedule some time to catch up and ensure everything is on track with your financial goals.\n\nPlease let me know if you have any questions or if there's anything I can help with.\n\nBest regards,\nYour Advisor`,
         },
         analysisSummary: `Client service action: ${nba.suggestedAction}. ${nba.trigger.value}. Proactive outreach supports retention and satisfaction goals.`,
-        generatedAt: nextEventTime(),
+        generatedAt: MOCK_NOW_ISO,
       }),
       compliance: () => ({
         talkingPoints: [
@@ -258,7 +259,7 @@ export const nbaHandlers = [
           body: `Dear ${firstClient},\n\n${nba.description}\n\nTo ensure your account remains in good standing, we need to complete this process promptly. Please let me know a convenient time for a brief call, or reply with any questions.\n\nThank you for your prompt attention to this matter.\n\nBest regards,\nYour Advisor`,
         },
         analysisSummary: `Compliance action required: ${nba.suggestedAction}. Trigger: ${nba.trigger.value}. Deadline adherence is mandatory. Document completion for audit trail.`,
-        generatedAt: nextEventTime(),
+        generatedAt: MOCK_NOW_ISO,
       }),
       growth: () => ({
         talkingPoints: [
@@ -273,7 +274,7 @@ export const nbaHandlers = [
           body: `Dear ${firstClient},\n\n${nba.trigger.condition === 'referral_mention' ? 'Thank you for the kind referral! ' : ''}${nba.description}\n\nI'd welcome the opportunity to discuss how we might help. Could we schedule a brief introductory conversation?\n\nBest regards,\nYour Advisor`,
         },
         analysisSummary: `Growth opportunity: ${nba.suggestedAction}. ${nba.trigger.value}. ${impact ? `Estimated annual revenue impact: ${impact}.` : ''} Timely follow-up is critical for conversion.`,
-        generatedAt: nextEventTime(),
+        generatedAt: MOCK_NOW_ISO,
       }),
     }
 

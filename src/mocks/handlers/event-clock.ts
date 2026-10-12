@@ -6,7 +6,8 @@ import { eventTime } from '@/lib/clock'
  * session carry distinct, ordered times after the frozen now, and the live clock is never read.
  */
 let sequence = 0
-let recordNumber = 0
+// Seed ids are numbered below 1000, so a generated id can never meet one.
+let recordNumber = 999
 
 export function nextEventTime(): string {
   sequence += 1
