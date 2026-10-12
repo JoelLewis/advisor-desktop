@@ -3,7 +3,11 @@ import { accounts } from '@/mocks/data/accounts'
 import { clients } from '@/mocks/data/clients'
 import { computeDriftForAccount, modelDisplayName } from '@/mocks/handlers/pms'
 import { buildVersion, normaliseConstraints } from '@/mocks/workspace/proposal-engine'
+import { sameWashSaleTaxpayer } from '@/mocks/handlers/tax-return'
 import { ASSET_CLASS_PROSE_LABELS } from '@/lib/labels'
+import { isSubjectToWashSale } from '@/lib/security-master'
+import { harvestOpportunities } from './harvest-scanner'
+import { claimNameOf } from './claim-name'
 import { joinWords } from '@/lib/words'
 
 const NO_SELF_WASH = "buys nothing that would wash one of the taxpayer's losses"
@@ -53,8 +57,26 @@ export function proposalTitle(accountId: string): string {
   return `${client.lastName} rebalance`
 }
 
+/**
+ * A buy of a security the Harvest Scanner flags for the same taxpayer forecloses that harvest: a
+ * sale of its loss lots within thirty days of the purchase would be washed (§1091 looks back as
+ * well as forward). The engine does not route such a buy to a substitute yet, so the agent says so.
+ */
+export function foreclosedHarvestCaveat(accountId: string, built: DraftPreview): string {
+  const account = accounts.find((a) => a.id === accountId)
+  if (!account) throw new Error(`Proposal Agent: unknown account ${accountId}`)
+  const flagged = new Set(sameWashSaleTaxpayer(account).flatMap(harvestOpportunities).map((o) => o.position.symbol))
+  const names = [...new Set(built.preview.trades
+    .filter((t) => t.side === 'buy' && isSubjectToWashSale(t.symbol) && flagged.has(t.symbol))
+    .map((t) => claimNameOf(t.symbol, t.name)))]
+  if (names.length === 0) return ''
+  return names.length === 1
+    ? ` ${names[0]} is bought here, so its loss cannot be harvested for thirty days without a wash sale.`
+    : ` ${joinWords(names)} are bought here, so their losses cannot be harvested for thirty days without a wash sale.`
+}
+
 /** Lot choice only changes the tax in an account whose sales are taxed. */
-export function draftSummary(accountId: string): string {
+export function draftSummary(accountId: string, built: DraftPreview): string {
   const account = accounts.find((a) => a.id === accountId)
   if (!account) throw new Error(`Proposal Agent: unknown account ${accountId}`)
   const model = modelDisplayName(computeDriftForAccount(account).modelId)
@@ -62,10 +84,10 @@ export function draftSummary(accountId: string): string {
   switch (account.taxTreatment) {
     case 'taxable':
     case 'trust_taxable':
-      return `Drafted a tax-aware rebalance toward ${toward}. It harvests losses first, then sells the lots that cost the least tax, and ${NO_SELF_WASH}.`
+      return `Drafted a tax-aware rebalance toward ${toward}. Where it sells, it sells loss lots first, then the lots that cost the least tax, and it ${NO_SELF_WASH}.${foreclosedHarvestCaveat(accountId, built)}`
     case 'tax_deferred':
     case 'tax_free':
-      return `Drafted a rebalance toward ${toward}. Sales in this account are not taxed when they happen, so the choice of lots does not change the tax; it still ${NO_SELF_WASH}.`
+      return `Drafted a rebalance toward ${toward}. Sales in this account are not taxed when they happen, so the choice of lots does not change the tax; it still ${NO_SELF_WASH}.${foreclosedHarvestCaveat(accountId, built)}`
   }
 }
 
@@ -92,7 +114,7 @@ function opening(constraints: readonly ProposalConstraint[], onlyDropsEdits: boo
     const rules = constraints.flatMap(under)
     return rules.length > 0
       ? `Back to the agent's legs under ${joinWords(rules)}; it still ${NO_SELF_WASH}.`
-      : `Back to the agent's legs, which ${NO_SELF_WASH}.`
+      : `Back to the agent's own legs; it still ${NO_SELF_WASH}.`
   }
   const asks = constraints.flatMap(asked)
   return asks.length > 0 ? `Revised to ${joinWords(asks)}.` : `Revised with no constraint beyond its rule that it ${NO_SELF_WASH}.`
@@ -118,5 +140,5 @@ export function revisionSummary(
   const onlyDropsEdits = previous !== undefined && hadEdits && sameConstraints(constraints, previous.constraints)
   const cap = capBinds(constraints, built) === false ? ' The cap changes no trade.' : ''
   const carried = hadEdits ? ' Workbench edits on the previous version are not carried into this one.' : ''
-  return `${opening(constraints, onlyDropsEdits)}${cap}${bandResult(built)}${carried}`
+  return `${opening(constraints, onlyDropsEdits)}${cap}${bandResult(built)}${foreclosedHarvestCaveat(built.preview.accountId, built)}${carried}`
 }

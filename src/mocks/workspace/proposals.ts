@@ -54,7 +54,7 @@ export function createProposal(viewerId: string, threadId: string, accountId: st
   const at = nextAt()
   const proposal: Proposal = {
     id: nextProposalId(), title: proposalTitle(accountId), accountId, clientId: account.clientId, threadId: thread.id,
-    versions: [{ n: 1, author: { kind: 'agent', agentId: 'proposal' }, createdAt: at, constraints, edits: [], changeSummary: draftSummary(accountId), ...built.built }],
+    versions: [{ n: 1, author: { kind: 'agent', agentId: 'proposal' }, createdAt: at, constraints, edits: [], changeSummary: draftSummary(accountId, built.built), ...built.built }],
   }
   const s = store()
   s.proposals.push(proposal)

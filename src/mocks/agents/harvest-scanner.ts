@@ -1,5 +1,6 @@
 import type { AgentContext, AgentFinding } from './agent'
 import type { Account } from '@/types/account'
+import type { Position } from '@/types/portfolio'
 import type { HeldAwayAsset } from '@/types/held-away'
 import type { Figure } from '@/types/workspace'
 import { accounts } from '@/mocks/data/accounts'
@@ -39,6 +40,27 @@ export function taxpayerHeldAway(account: Account): HeldAwayAsset[] {
 /** "401(k) — Former employer" → "401(k)". */
 const shortAccountType = (accountType: string) => accountType.split(' — ')[0] ?? accountType
 
+export type HarvestOpportunity = { position: Position; losses: PositionLosses }
+
+/**
+ * The positions in a taxable account that a sale today would harvest: a loss allowed now past the
+ * harvest threshold, largest first. None in an account whose sales are not taxed.
+ */
+export function harvestOpportunities(account: Account): HarvestOpportunity[] {
+  if (!isTaxableAccount(account.taxTreatment)) return []
+  const currency = account.baseCurrency ?? 'USD'
+  const lots = generateTaxLotsWithSaleRisk(account.id, account.totalValue)
+  return getPositionsForAccount(account.id, account.totalValue)
+    .filter((p) => p.symbol !== 'CASH')
+    .map((p) => {
+      const own = lots.filter((l) => l.positionId === p.id)
+      const sum = (f: (l: (typeof own)[number]) => number) => own.reduce((s, l) => s + f(l), 0)
+      return { position: p, losses: { allowed: sum(lossAllowedNow), deferred: sum(lossDeferred), disallowed: sum(lossDisallowed) } }
+    })
+    .filter(({ losses }) => isHarvestable(losses.allowed, currency, FX_RATES_USD_BASE))
+    .sort((a, b) => a.losses.allowed - b.losses.allowed)
+}
+
 export function runHarvestScanner({ asOf, subject }: AgentContext): AgentFinding[] {
   if (subject.type !== 'account') return []
   const account = accounts.find((a) => a.id === subject.id)
@@ -52,17 +74,8 @@ export function runHarvestScanner({ asOf, subject }: AgentContext): AgentFinding
   } else {
     const currency = account.baseCurrency ?? 'USD'
     const usd = (amount: number) => Math.round(convertToBase(amount, currency, FX_RATES_USD_BASE))
-    const lots = generateTaxLotsWithSaleRisk(account.id, account.totalValue)
     const window = washSaleWindow(today)
-    const harvestable = getPositionsForAccount(account.id, account.totalValue)
-      .filter((p) => p.symbol !== 'CASH')
-      .map((p) => {
-        const own = lots.filter((l) => l.positionId === p.id)
-        const sum = (f: (l: (typeof own)[number]) => number) => own.reduce((s, l) => s + f(l), 0)
-        return { position: p, losses: { allowed: sum(lossAllowedNow), deferred: sum(lossDeferred), disallowed: sum(lossDisallowed) } }
-      })
-      .filter(({ losses }) => isHarvestable(losses.allowed, currency, FX_RATES_USD_BASE))
-      .sort((a, b) => a.losses.allowed - b.losses.allowed)
+    const harvestable = harvestOpportunities(account)
     if (harvestable.length === 0) {
       findings.push({ claim: 'No position in this account can be sold at a loss today.', attention: 'info', figures: [], citations: lotsCite })
     }

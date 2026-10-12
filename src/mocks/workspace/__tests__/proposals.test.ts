@@ -4,6 +4,10 @@ import type { ProposalConstraint } from '@/types/workspace-proposal'
 import { accounts } from '@/mocks/data/accounts'
 import { resetWorkspaceStore, store } from '@/mocks/data/workspace-store'
 import { agentConstraints, draftSummary, revisionSummary } from '@/mocks/agents/proposal-agent'
+import { harvestOpportunities } from '@/mocks/agents/harvest-scanner'
+import { claimNameOf } from '@/mocks/agents/claim-name'
+import { sameWashSaleTaxpayer } from '@/mocks/handlers/tax-return'
+import { isSubjectToWashSale } from '@/lib/security-master'
 import { buildVersion } from '../proposal-engine'
 import { createProposal, previewEdits, readableProposals, reviseProposal, saveVersion } from '../proposals'
 import { runAgent } from '../run-agent'
@@ -30,7 +34,8 @@ describe('asking the Proposal Agent', () => {
     expect(detail).toMatchObject({ id: 'prop-0001', title: 'Johnson rebalance', accountId: 'acc-002', clientId: 'cli-001', threadId: 'th-johnson-review' })
     const v1 = detail.versions[0]!
     expect(v1).toMatchObject({ n: 1, author: { kind: 'agent', agentId: 'proposal' }, constraints: [{ kind: 'avoid_self_wash' }], edits: [] })
-    expect(v1.changeSummary).toBe("Drafted a tax-aware rebalance toward the Growth model. It harvests losses first, then sells the lots that cost the least tax, and buys nothing that would wash one of the taxpayer's losses.")
+    expect(v1.changeSummary).toBe("Drafted a tax-aware rebalance toward the Growth model. Where it sells, it sells loss lots first, then the lots that cost the least tax, and it buys nothing that would wash one of the taxpayer's losses. "
+      + 'iShares Core US Aggregate Bond ETF is bought here, so its loss cannot be harvested for thirty days without a wash sale.')
     expect(detail.approval).toEqual({ kind: 'unapproved', latestVersion: 1 })
     const posted = store().messages.filter((m) => m.kind === 'proposal')
     expect(posted).toEqual([expect.objectContaining({ threadId: 'th-johnson-review', agentId: 'proposal', proposalId: 'prop-0001', at: v1.createdAt })])
@@ -91,7 +96,9 @@ describe('revising under constraints', () => {
 
   it('never claims tax-aware lot choice for an account whose sales are not taxed', () => {
     for (const account of accounts.filter((a) => a.taxTreatment === 'tax_deferred' || a.taxTreatment === 'tax_free')) {
-      const summary = draftSummary(account.id)
+      const built = buildVersion(account.id, agentConstraints([]), [])
+      if (!built.ok) throw new Error(built.message)
+      const summary = draftSummary(account.id, built.built)
       expect(summary).toMatch(/^Drafted a rebalance toward /)
       expect(summary).not.toMatch(/tax-aware|least tax|harvests/)
       expect(summary).toContain("buys nothing that would wash one of the taxpayer's losses")
@@ -116,7 +123,8 @@ describe('revising under constraints', () => {
     const { id } = create()
     const loose = reviseProposal('user-001', id, [{ kind: 'cap_realised_gains', usd: 100_000_000 }])
     if (!loose.ok) throw new Error(loose.message)
-    expect(loose.detail.versions[1]!.changeSummary).toBe('Revised to cap the gains it realises. The cap changes no trade. Every asset class ends inside its band.')
+    expect(loose.detail.versions[1]!.changeSummary).toBe('Revised to cap the gains it realises. The cap changes no trade. Every asset class ends inside its band. '
+      + 'iShares Core US Aggregate Bond ETF is bought here, so its loss cannot be harvested for thirty days without a wash sale.')
     const tight = reviseProposal('user-001', id, [{ kind: 'cap_realised_gains', usd: 1_000 }])
     if (!tight.ok) throw new Error(tight.message)
     expect(tight.detail.versions[2]!.changeSummary).not.toContain('The cap changes no trade.')
@@ -134,7 +142,7 @@ describe('revising under constraints', () => {
     saveVersion('user-001', id, [{ kind: 'exclude', symbol: 'QAI' }])
     const bare = reviseProposal('user-001', id, [])
     if (!bare.ok) throw new Error(bare.message)
-    expect(bare.detail.versions[2]!.changeSummary).toMatch(/^Back to the agent's legs, which buys nothing that would wash one of the taxpayer's losses\. .* Workbench edits on the previous version are not carried into this one\.$/)
+    expect(bare.detail.versions[2]!.changeSummary).toMatch(/^Back to the agent's own legs; it still buys nothing that would wash one of the taxpayer's losses\. .* Workbench edits on the previous version are not carried into this one\.$/)
     reviseProposal('user-001', id, [{ kind: 'harvest_only' }])
     saveVersion('user-001', id, [{ kind: 'exclude', symbol: 'INTC' }])
     const harvest = reviseProposal('user-001', id, [{ kind: 'harvest_only' }])
@@ -212,14 +220,44 @@ describe('workbench versions', () => {
 
 describe('the Proposal Agent over the whole book', () => {
   it.each(accounts.map((a) => a.id))('%s: digit-free summaries, and no buy that washes one of the taxpayer\'s losses', (id) => {
-    expect(draftSummary(id)).not.toMatch(/\d/)
     for (const requested of [[], [{ kind: 'harvest_only' as const }], [{ kind: 'cap_realised_gains' as const, usd: 10_000 }]]) {
       const built = buildVersion(id, agentConstraints(requested), [])
       if (!built.ok) throw new Error(built.message)
       for (const leg of built.built.preview.trades.filter((t) => t.side === 'buy')) expect(leg.washSaleRisk).toBe(false)
+      if (requested.length === 0) expect(draftSummary(id, built.built)).not.toMatch(/\d/)
       expect(revisionSummary(agentConstraints(requested), built.built)).not.toMatch(/\d/)
       expect(revisionSummary(agentConstraints(requested), built.built, { constraints: agentConstraints([]), edits: [{ kind: 'exclude', symbol: 'X' }] })).not.toMatch(/\d/)
       expect(revisionSummary(agentConstraints(requested), built.built, { constraints: agentConstraints(requested), edits: [{ kind: 'exclude', symbol: 'X' }] })).not.toMatch(/\d/)
+    }
+  })
+})
+
+describe('the Proposal Agent never claims a harvest its own buys foreclose', () => {
+  const account = (id: string) => accounts.find((a) => a.id === id)!
+  /** Securities the Harvest Scanner flags in any account of this account's wash-sale taxpayer. */
+  const flaggedFor = (id: string) => new Set(sameWashSaleTaxpayer(account(id)).flatMap(harvestOpportunities).map((o) => o.position.symbol))
+
+  it('the Johnson draft buys AGG while the Brief flags AGG as a harvest, and says so', () => {
+    const built = buildVersion('acc-002', agentConstraints([]), [])
+    if (!built.ok) throw new Error(built.message)
+    expect(built.built.preview.trades.some((t) => t.side === 'buy' && t.symbol === 'AGG')).toBe(true)
+    expect(flaggedFor('acc-002').has('AGG')).toBe(true)
+    expect(draftSummary('acc-002', built.built)).toContain('iShares Core US Aggregate Bond ETF is bought here, so its loss cannot be harvested for thirty days without a wash sale.')
+  })
+
+  it.each(accounts.map((a) => a.id))('%s: no "harvests losses first", and a caveat exactly when a buy forecloses a flagged harvest', (id) => {
+    const flagged = flaggedFor(id)
+    for (const requested of [[], [{ kind: 'harvest_only' as const }], [{ kind: 'cap_realised_gains' as const, usd: 10_000 }]]) {
+      const built = buildVersion(id, agentConstraints(requested), [])
+      if (!built.ok) throw new Error(built.message)
+      const forecloses = built.built.preview.trades.filter((t) => t.side === 'buy' && isSubjectToWashSale(t.symbol) && flagged.has(t.symbol))
+      const summaries = [revisionSummary(agentConstraints(requested), built.built), ...(requested.length === 0 ? [draftSummary(id, built.built)] : [])]
+      for (const summary of summaries) {
+        expect(summary).not.toMatch(/harvests losses first/)
+        expect(summary).not.toMatch(/\d/)
+        expect(summary.includes('cannot be harvested for thirty days without a wash sale')).toBe(forecloses.length > 0)
+        for (const t of forecloses) expect(summary).toContain(claimNameOf(t.symbol, t.name))
+      }
     }
   })
 })
