@@ -284,6 +284,17 @@ export function usdQuoteFor(symbol: string): { name: string; price: number } | u
   return USD_SECURITY_QUOTES.get(symbol)
 }
 
+/**
+ * §0.4 · a model's display name ("mod-002" → "Growth"), from `MODELS` — the one place a model is
+ * named. Throws on an unknown id: a name that silently fell back to another model's would label
+ * one policy with another's name.
+ */
+export function modelDisplayName(modelId: string): string {
+  const model = findModel(modelId)
+  if (!model) throw new Error(`no model ${modelId}`)
+  return model.name
+}
+
 function getModelByIndex(index: number): ModelDefinition {
   const model = MODELS[index]
   if (!model) throw new Error(`Model at index ${index} not found`)
