@@ -7,14 +7,14 @@ import type { ProposedTrade } from '@/services/oms'
 import type { DraftPreview } from '@/types/workspace-proposal'
 import { SIDE_WORDS, legStatus } from './leg-status'
 
-type Row = ProposedTrade & { status: Status }
+type Row = ProposedTrade & { index: number; status: Status }
 
 /** The compact legs table of the thread embed: realised results by character, pre-trade per leg. */
 export function ProposalLegsTable({ version, caption }: { version: DraftPreview; caption: string }) {
   const currency = version.preview.currency
-  const rows: Row[] = version.preview.trades.map((t, i) => ({ ...t, status: legStatus(version.pretrade, i, t.symbol) }))
+  const rows: Row[] = version.preview.trades.map((t, i) => ({ ...t, index: i, status: legStatus(version.pretrade, i, t.symbol) }))
   return (
-    <DataTable caption={caption} rows={rows} getRowId={(r) => r.symbol} noun={{ singular: 'leg', plural: 'legs' }} density="dense"
+    <DataTable caption={caption} rows={rows} getRowId={(r) => String(r.index)} noun={{ singular: 'leg', plural: 'legs' }} density="dense"
       columns={[
         { id: 'symbol', header: 'Symbol', cell: (r) => r.symbol },
         { id: 'side', header: 'Side', cell: (r) => SIDE_WORDS[r.side] },

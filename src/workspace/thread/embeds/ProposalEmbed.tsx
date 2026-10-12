@@ -11,6 +11,12 @@ import { authorName } from '@/workspace/proposal/author-name'
 import { latestVersionOf } from '@/workspace/proposal/latest-version'
 import { proposalWorkbenchHref } from '@/workspace/proposal/proposal-href'
 import { taxScope } from '@/workspace/proposal/tax-scope'
+import type { Directory } from '@/types/workspace'
+import type { ProposalVersion } from '@/types/workspace-proposal'
+
+/** The agent that drafts versions already heads the embed; only a person's version names its author. */
+const versionByline = (version: ProposalVersion, directory: Directory) =>
+  version.author.kind === 'person' ? `v${version.n} · ${authorName(version.author, directory)}` : `v${version.n}`
 
 type ProposalEmbedProps = { proposalId: string; threadId: string; actions?: ReactNode }
 
@@ -29,7 +35,7 @@ export function ProposalEmbed({ proposalId, threadId, actions }: ProposalEmbedPr
     <section aria-labelledby={titleId} className="flex min-w-0 flex-col gap-4 border border-rule-2 p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-rule pb-2">
         <h2 id={titleId} className="text-label uppercase text-ink-2">{`Proposal · ${p.title}`}</h2>
-        <span className="tabular text-label text-ink-3">{`v${latest.n} · ${authorName(latest.author, directory.data)}`}</span>
+        <span className="tabular text-label text-ink-3">{versionByline(latest, directory.data)}</span>
       </div>
       <p className="text-copy">{latest.changeSummary}</p>
       <ApprovalNote state={p.approval} />

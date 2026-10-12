@@ -10,8 +10,9 @@ export function CarryControl({ thread, findingId }: { thread: Thread; findingId:
   const threads = useThreads()
   const carry = useCarryFinding(thread.id)
   const [taken, setTaken] = useState<string>()
-  const target = (threads.data ?? []).find((t) => t.visibility === 'internal' && t.memberIds.includes(viewerId)
-    && t.subject?.type === thread.subject?.type && t.subject?.id === thread.subject?.id)
+  const subject = thread.subject
+  const target = subject && (threads.data ?? []).find((t) => t.visibility === 'internal' && t.memberIds.includes(viewerId)
+    && t.subject?.type === subject.type && t.subject.id === subject.id)
   if (thread.ownerId !== viewerId || !target) return null
   return (
     <div className="flex flex-wrap items-center gap-3">

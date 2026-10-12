@@ -5,6 +5,8 @@ import { Reading } from '@/kit/reading/Reading'
 import { StatusCode } from '@/kit/status/StatusCode'
 import { Tag } from '@/kit/tag/Tag'
 import { Button } from '@/kit/button/Button'
+import { Checkbox } from '@/kit/checkbox/Checkbox'
+import { NumberInput } from '@/kit/number-input/NumberInput'
 import { Attestation } from '@/kit/attestation/Attestation'
 import { Stepper } from '@/kit/stepper/Stepper'
 import { Gauge } from '@/kit/gauge/Gauge'
@@ -36,6 +38,8 @@ const TAX_SOURCE = 'Rebalance preview · estimated tax'
 export function KitSections({ data }: { data: KitData }) {
   const { account, positions, drift, lots, windows, preview, approval, agentFinding } = data
   const [attested, setAttested] = useState(false)
+  const [harvestOnly, setHarvestOnly] = useState(false)
+  const [gainsCap, setGainsCap] = useState('')
   const worst = [...drift.assetClassDrifts].sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift))[0]
   const gains = preview.trades.reduce((s, t) => s + Math.max(0, t.realisedShortTerm) + Math.max(0, t.realisedLongTerm), 0)
   const losses = preview.trades.reduce((s, t) => s + Math.min(0, t.realisedShortTerm) + Math.min(0, t.realisedLongTerm), 0)
@@ -62,6 +66,10 @@ export function KitSections({ data }: { data: KitData }) {
           <div className="flex flex-wrap gap-4">{STATUSES.map((s) => <StatusCode key={s} status={s} />)}</div>
           <div className="flex flex-wrap gap-2"><Tag tone="hatch">NO MARKET</Tag><Tag>OFF-MODEL</Tag><Tag tone="solid">HELD</Tag></div>
           <div className="flex flex-wrap gap-4"><Button>Approve</Button><Button rank="secondary">Withdraw</Button><Button rank="quiet">View lots</Button></div>
+          <div className="flex flex-wrap items-start gap-8">
+            <Checkbox label="Harvest only: sell only lots at a loss" checked={harvestOnly} onChange={setHarvestOnly} />
+            <NumberInput label="Realised gains cap" unit="USD" value={gainsCap} onChange={setGainsCap} />
+          </div>
         </Pane>
         <Pane title="Drift against model" meta={`band ${fmtTolerance(drift.driftTolerance)} pp`}>
           <div className="flex flex-col gap-2">

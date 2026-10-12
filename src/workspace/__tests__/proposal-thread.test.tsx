@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { screen, within } from '@testing-library/react'
 import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
-import { approveProposal, createProposal, reviseProposal } from '@/services/workspace'
+import { approveProposal, createProposal, reviseProposal, saveProposalVersion } from '@/services/workspace'
 
 const ADRIAN = 'user-001'
 
@@ -47,5 +47,28 @@ describe('the proposal in the team thread', () => {
     await reviseProposal(ADRIAN, created.id, [{ kind: 'harvest_only' }])
     const embed = await openJohnson()
     expect(await within(embed).findByText('Approval applies to v1; v2 is unapproved')).toBeInTheDocument()
+  })
+
+  it('names the author in the embed only for a person\'s version: the agent already heads it', async () => {
+    await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
+    const { unmount } = renderRoutes(routes, '/t/th-johnson-review')
+    const embed = await screen.findByRole('region', { name: 'Proposal · Johnson rebalance' })
+    await within(embed).findByRole('table', { name: 'Proposal legs · v1' })
+    expect(within(embed).getByText('v1')).toBeInTheDocument()
+    expect(embed).not.toHaveTextContent('Proposal Agent')
+    unmount()
+    await saveProposalVersion(ADRIAN, 'prop-0001', [{ kind: 'exclude', symbol: 'SPY' }])
+    const again = await openJohnson()
+    expect(await within(again).findByText('v2 · Adrian Hale')).toBeInTheDocument()
+  })
+
+  it('shows each class\'s band before and after the trades', async () => {
+    await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
+    const embed = await openJohnson()
+    const drift = await within(embed).findByRole('table', { name: 'Drift before and after' })
+    const bands = (name: RegExp) => [...within(drift).getByRole('row', { name }).querySelectorAll('[data-status]')].map((s) => s.getAttribute('data-status'))
+    expect(bands(/^US Equity/)).toEqual(['OUT', 'IN'])
+    expect(bands(/^Emerging Mkts/)).toEqual(['AT LIMIT', 'IN'])
+    expect(bands(/^Private Equity/)).toEqual(['IN', 'IN'])
   })
 })

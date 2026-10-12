@@ -1,20 +1,26 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
+import { Button } from '@/kit/button/Button'
 import { fmtTimestamp } from '@/kit/measure'
-import { useActs } from '@/hooks/use-workspace'
+import { usePositions } from '@/hooks/use-portfolio'
+import { useActs, useProposal } from '@/hooks/use-workspace'
+import { ReviseDialog } from '@/workspace/proposal/ReviseDialog'
 import { personIn } from '@/workspace/people/directory-people'
 import { ROLE_LABEL } from '@/workspace/people/role-label'
+import { useViewer } from '@/workspace/viewer/use-viewer'
 import type { Directory, Message, Person, Thread } from '@/types/workspace'
 import { ActRecordSlip } from './ActRecordSlip'
 import { AgentFindingView } from './AgentFindingView'
 import { BriefSummaryView } from './BriefSummaryView'
 import { CarriedFindingView } from './CarriedFindingView'
 import { CarryControl } from './CarryControl'
+import { canPostIn } from './can-post'
 import { ProposalVersionLine } from './ProposalVersionLine'
 import { ProposalEmbed } from './embeds/ProposalEmbed'
 import { embedFor } from './embeds/embed-registry'
 import { findingAnchorId } from './finding-anchor'
 
 export function MessageView({ message, thread, directory }: { message: Message; thread: Thread; directory: Directory }) {
+  const { viewerId } = useViewer()
   switch (message.kind) {
     case 'text':
       return (
@@ -37,7 +43,8 @@ export function MessageView({ message, thread, directory }: { message: Message; 
     case 'proposal': {
       const agent = directory.agents.find((a) => a.id === message.agentId)
       if (!agent) throw new Error(`No agent "${message.agentId}" in the directory`)
-      return <ByAgent name={agent.name} at={message.at}><ProposalEmbed proposalId={message.proposalId} threadId={message.threadId} /></ByAgent>
+      const actions = canPostIn(thread, viewerId, directory) ? <ReviseAction proposalId={message.proposalId} /> : undefined
+      return <ByAgent name={agent.name} at={message.at}><ProposalEmbed proposalId={message.proposalId} threadId={message.threadId} actions={actions} /></ByAgent>
     }
     case 'proposal_version':
       return <ProposalVersionLine message={message} directory={directory} />
@@ -53,6 +60,21 @@ export function MessageView({ message, thread, directory }: { message: Message; 
 /** Every message kind has a view: a kind added to `Message` without one fails to compile here. */
 function unknownKind(message: never): never {
   throw new Error(`No view for message kind "${(message as { kind: string }).kind}"`)
+}
+
+/** The dialog mounts only while open, so its form starts from the latest version each time. */
+function ReviseAction({ proposalId }: { proposalId: string }) {
+  const [open, setOpen] = useState(false)
+  const proposal = useProposal(proposalId)
+  // Warm the holdings the dialog's "Leave untouched" list reads, so it opens complete.
+  usePositions(proposal.data?.accountId ?? '')
+  if (!proposal.data) return null
+  return (
+    <>
+      <Button rank="secondary" onClick={() => setOpen(true)}>Revise</Button>
+      {open ? <ReviseDialog open={open} onOpenChange={setOpen} detail={proposal.data} /> : null}
+    </>
+  )
 }
 
 function ByAgent({ name, at, children }: { name: string; at: string; children: ReactNode }) {

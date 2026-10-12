@@ -122,7 +122,7 @@ describe('thread context column', () => {
     expect(within(conversation()).getAllByRole('listitem')).toHaveLength(3)
     const ask = within(section('Ask an agent'))
     expect(ask.getByRole('button', { name: 'Ask Pre-trade Check' })).toBeInTheDocument()
-    expect(ask.queryByRole('button', { name: /Proposal Agent/ })).toBeNull()
+    expect(ask.getByRole('button', { name: 'Ask Proposal Agent' })).toBeInTheDocument()
     await userEvent.setup().click(ask.getByRole('button', { name: 'Ask Drift Monitor' }))
     expect(await within(conversation()).findAllByRole('article', { name: /^Drift Monitor: / })).not.toHaveLength(0)
     expect(router.state.location.pathname).toBe('/t/th-johnson-review')

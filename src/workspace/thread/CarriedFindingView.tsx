@@ -9,7 +9,8 @@ type Carried = Extract<Message, { kind: 'carried' }>
 
 /**
  * A Brief finding quoted in a team thread. The Brief is private to the person who carried it, so
- * only they get a link back to it; everyone else reads whose brief it came from, as plain text.
+ * only they get a link back to it; everyone else reads whose brief it came from, as plain text, which
+ * already says who carried it.
  */
 export function CarriedFindingView({ message, directory }: { message: Carried; directory: Directory }) {
   const { viewerId } = useViewer()
@@ -24,9 +25,8 @@ export function CarriedFindingView({ message, directory }: { message: Carried; d
         <span className="text-label uppercase text-ink-3">
           {'From '}
           {ownBrief
-            ? <Link to={`/t/${encodeURIComponent(message.fromThreadId)}`} className="underline decoration-rule-2 underline-offset-4 hover:decoration-ink">{from}</Link>
+            ? <><Link to={`/t/${encodeURIComponent(message.fromThreadId)}`} className="underline decoration-rule-2 underline-offset-4 hover:decoration-ink">{from}</Link>{` · carried by ${carrier}`}</>
             : from}
-          {` · carried by ${carrier}`}
         </span>
         <span className="tabular ml-auto text-label text-ink-3">{fmtTimestamp(message.at)}</span>
       </div>

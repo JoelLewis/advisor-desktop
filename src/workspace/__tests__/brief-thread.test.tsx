@@ -49,6 +49,14 @@ describe('the Brief', () => {
     renderRoutes(routes, '/t/th-johnson-review')
     const card = await screen.findByRole('article', { name: `Carried from Adrian Hale's brief: ${INTC_CLAIM}` })
     expect(card).toHaveTextContent("From Adrian Hale's brief")
+    expect(card).not.toHaveTextContent('carried by')
     expect(within(card).queryByRole('link')).toBeNull()
+  })
+
+  it('offers no team thread for a brief without a subject, even beside another thread without one', async () => {
+    for (const t of store().threads.filter((t) => t.id === 'th-brief' || t.id === 'th-johnson-review')) delete t.subject
+    renderRoutes(routes, '/t/th-brief')
+    const intc = await screen.findByRole('article', { name: `Harvest Scanner: ${INTC_CLAIM}` })
+    expect(within(intc).queryByRole('button', { name: 'Take to team thread' })).toBeNull()
   })
 })

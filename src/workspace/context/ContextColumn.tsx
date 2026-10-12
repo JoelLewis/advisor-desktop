@@ -4,6 +4,7 @@ import { useFocusAfter } from '@/kit/keyboard/use-focus-after'
 import { useActs, useDirectory, useThread } from '@/hooks/use-workspace'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { isClientViewer } from '@/workspace/people/directory-people'
+import { canPostIn } from '@/workspace/thread/can-post'
 import { actAnchorId } from './act-anchor'
 import { ActsPanel } from './ActsPanel'
 import { AskAgents } from './AskAgents'
@@ -48,7 +49,7 @@ function ThreadContext({ threadId }: { threadId: string }) {
       {acts.isPending ? <p role="status" className="py-5 text-body text-ink-3">Loading the record…</p>
         : acts.isError ? <p role="alert" className="py-5 text-body">{acts.error.message}</p>
         : <ActsPanel acts={acts.data} directory={dir} viewerIsClient={viewerIsClient} />}
-      {t.visibility !== 'client' && agents.length > 0 ? <AskAgents thread={t} agents={agents} /> : null}
+      {t.visibility !== 'client' && agents.length > 0 ? <AskAgents thread={t} agents={agents} canPost={canPostIn(t, viewerId, dir)} /> : null}
       {accountId && !viewerIsClient ? <FullViews accountId={accountId} threadId={t.id} /> : null}
     </div>
   )
