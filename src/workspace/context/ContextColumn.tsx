@@ -7,6 +7,7 @@ import { isClientViewer } from '@/workspace/people/directory-people'
 import { canPostIn } from '@/workspace/thread/can-post'
 import { actAnchorId } from './act-anchor'
 import { ActsPanel } from './ActsPanel'
+import { ApprovalPanel } from './ApprovalPanel'
 import { AskAgents } from './AskAgents'
 import { DraftsPanel } from './DraftsPanel'
 import { FullViews } from './FullViews'
@@ -44,6 +45,7 @@ function ThreadContext({ threadId }: { threadId: string }) {
   return (
     <div className="flex min-w-0 flex-col divide-y divide-rule">
       <WhoCanSee thread={t} directory={dir} viewerIsClient={viewerIsClient} />
+      {t.visibility !== 'client' && !viewerIsClient ? <ApprovalPanel thread={t} directory={dir} onRecorded={setSentActId} /> : null}
       {t.visibility === 'client' && !viewerIsClient
         ? <DraftsPanel thread={t} directory={dir} onSent={setSentActId} /> : null}
       {acts.isPending ? <p role="status" className="py-5 text-body text-ink-3">Loading the record…</p>
