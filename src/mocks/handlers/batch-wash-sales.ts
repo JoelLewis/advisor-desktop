@@ -1,5 +1,6 @@
 import type { Account } from '@/types/account'
 import type { ProposedTrade } from '@/services/oms'
+import type { LotTake } from '@/types/workspace-proposal'
 import type { ProposedTradeLeg, RebalanceProposal } from './oms'
 import { hasUnwashedLossShares, matchWashedShares, washedLoss, type Acquisition, type SoldLossLot, type WashedShares } from '@/lib/wash-sale'
 import { isSubjectToWashSale, taxCharacterOf } from '@/lib/security-master'
@@ -8,13 +9,13 @@ import { washSaleWindow } from '../data/realised-sales'
 import { generateTaxLots, washSaleAcquisitions, type CustodianLot } from './custodian'
 import { washSaleTaxpayer } from './tax-return'
 
-/** What one sell leg disposes of: every lot it draws on, and the shares of each it sells at a loss. */
-export type LegSale = { soldLosses: readonly SoldLossLot[]; consumedLotIds: readonly string[] }
+/** What one sell leg disposes of: every lot it draws on, what it takes from each, and the shares of each it sells at a loss. */
+export type LegSale = { soldLosses: readonly SoldLossLot[]; consumedLotIds: readonly string[]; lotTakes: readonly LotTake[] }
 
 /** Settlement needs only the legs and what they sell. */
 type BatchEntry = { account: Account } & Pick<RebalanceProposal, 'legs' | 'sales'>
 
-const NOTHING_SOLD: LegSale = { soldLosses: [], consumedLotIds: [] }
+const NOTHING_SOLD: LegSale = { soldLosses: [], consumedLotIds: [], lotTakes: [] }
 
 /**
  * §0.2 · the IRC §1091 consequences of executing a whole batch today, settled across each wash-sale

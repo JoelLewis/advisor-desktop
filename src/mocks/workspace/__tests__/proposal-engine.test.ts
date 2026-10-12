@@ -3,7 +3,7 @@ import { accounts } from '@/mocks/data/accounts'
 import { washSaleWindow } from '@/mocks/data/realised-sales'
 import type { Acquisition } from '@/lib/wash-sale'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
-import type { LegEdit, ProposalConstraint } from '@/types/workspace-proposal'
+import type { DraftPreview, LegEdit, ProposalConstraint } from '@/types/workspace-proposal'
 import { applyEdits, buildVersion, editSummary, normaliseConstraints, parseConstraints, parseEdits } from '../proposal-engine'
 import { buildRebalancePreviews, generateRebalanceProposal } from '@/mocks/handlers/oms'
 
@@ -27,7 +27,7 @@ describe('buildVersion · acc-002', () => {
     })
     expect(v.pretrade.passed).toBe(true)
     expect(v.pretrade.violations.map((x) => [x.category, x.symbol, x.severity])).toEqual([['concentration_limit', 'SPY', 'warning']])
-    expect(v.legFacts.find((f) => f.symbol === 'INTC')).toEqual({ symbol: 'INTC', lotIds: ['lot-pos-023-0'], washed: 0 })
+    expect(v.legFacts.find((f) => f.symbol === 'INTC')).toEqual({ symbol: 'INTC', lotIds: ['lot-pos-023-0'], lots: [{ lotId: 'lot-pos-023-0', shares: 7_000, realised: -45_850, character: 'long' }], washed: 0 })
     expect(v.excludedLegs).toEqual([])
   })
 
@@ -202,5 +202,39 @@ describe('every account', () => {
     if (!r.ok) throw new Error(r.message)
     const symbols = r.built.preview.trades.map((t) => t.symbol)
     expect(new Set(symbols).size).toBe(symbols.length)
+  })
+  it.each(accounts.map((a) => a.id))('%s: each sell leg\'s lot takes sum to its quantity and, by character, to its realised results', (id) => {
+    const r = buildVersion(id, AGENT, [])
+    if (!r.ok) throw new Error(r.message)
+    expectTakesTie(r.built)
+  })
+})
+
+function expectTakesTie(v: DraftPreview) {
+  for (const t of v.preview.trades.filter((leg) => leg.side === 'sell')) {
+    const facts = v.legFacts.find((f) => f.symbol === t.symbol)
+    if (!facts) throw new Error(`no facts for ${t.symbol}`)
+    expect(facts.lots.map((l) => l.lotId)).toEqual(facts.lotIds)
+    if (facts.lots.length === 0) {
+      // A tax-advantaged sale realises nothing, so it records no takes.
+      expect([t.realisedShortTerm, t.realisedLongTerm]).toEqual([0, 0])
+      continue
+    }
+    expect(facts.lots.reduce((s, l) => s + l.shares, 0)).toBeCloseTo(t.quantity, 9)
+    for (const l of facts.lots) expect(Number.isInteger(l.realised)).toBe(true)
+    const by = (c: 'short' | 'long') => facts.lots.filter((l) => l.character === c).reduce((s, l) => s + l.realised, 0)
+    expect([by('short'), by('long')]).toEqual([t.realisedShortTerm, t.realisedLongTerm])
+  }
+}
+
+describe('lot takes · acc-002', () => {
+  it('SPY sells 758 shares of its first lot for the leg\'s whole long-term result', () => {
+    const spy = built(AGENT).legFacts.find((f) => f.symbol === 'SPY')
+    expect(spy?.lots).toEqual([{ lotId: 'lot-pos-020-0', shares: 758, realised: 69_411, character: 'long' }])
+  })
+  it('a re-cut leg (a quantity and lots chosen in the workbench) ties too', () => {
+    const v = built(AGENT, [{ kind: 'quantity', symbol: 'SPY', quantity: 2_000 }, { kind: 'lots', symbol: 'INTC', lotIds: ['lot-pos-023-0'] }])
+    expectTakesTie(v)
+    expect(v.legFacts.find((f) => f.symbol === 'SPY')?.lots.map((l) => l.lotId)).toEqual(['lot-pos-020-0', 'lot-pos-020-1'])
   })
 })

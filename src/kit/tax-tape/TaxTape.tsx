@@ -4,6 +4,8 @@ import { MeasureError, UNIT, fmtMoney, fmtResult, isNegative } from '@/kit/measu
 type TaxTapeProps = {
   gains: number; losses: number; netShortTerm: number; netLongTerm: number
   grossTax: number; netTax: number; scope: string; rateBasis: string
+  /** The return's realised result so far this year, when the estimate nets against it; the tape then shows the year's net too. */
+  yearToDate?: number
 }
 
 const RECONCILIATION_TOLERANCE_USD = 1
@@ -41,7 +43,7 @@ function assertReconciles({ gains, losses, netShortTerm, netLongTerm }: TaxTapeP
 
 export function TaxTape(props: TaxTapeProps) {
   assertReconciles(props)
-  const { gains, losses, netShortTerm, netLongTerm, grossTax, netTax, scope, rateBasis } = props
+  const { gains, losses, netShortTerm, netLongTerm, grossTax, netTax, scope, rateBasis, yearToDate } = props
   return (
     <section aria-label="Tax effect estimate" className="border border-ink bg-face p-4">
       <dl>
@@ -50,6 +52,12 @@ export function TaxTape(props: TaxTapeProps) {
         <Line label="Net realized" value={fmtResult(gains + losses)} ruleAbove="rule" />
         <Line label="Net, long-term" value={fmtResult(netLongTerm)} subItem />
         <Line label="Net, short-term" value={fmtResult(netShortTerm)} subItem />
+        {yearToDate !== undefined ? (
+          <>
+            <Line label="Year-to-date realized" value={fmtResult(yearToDate)} ruleAbove="rule" />
+            <Line label="Net for the year" value={fmtResult(gains + losses + yearToDate)} />
+          </>
+        ) : null}
         <Line label="Tax on gains before netting" value={fmtMoney(grossTax)} ruleAbove="ink" />
         <Line label="Reduced by netting the losses" value={fmtResult(netTax - grossTax)} />
         <div className={cn('flex items-baseline justify-between gap-4', RULE_ABOVE.heavy)}>

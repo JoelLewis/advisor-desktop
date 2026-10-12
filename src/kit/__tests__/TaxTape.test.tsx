@@ -62,3 +62,12 @@ it('tolerates a one dollar rounding difference', () => {
   render(<TaxTape {...figures} netLongTerm={76_539} />)
   expect(screen.getByText('+76,539')).toBeInTheDocument()
 })
+
+it('shows the year-to-date result and the year\'s net only when the estimate nets against it', () => {
+  const { unmount } = render(<TaxTape {...figures} />)
+  expect(screen.queryByText('Year-to-date realized')).not.toBeInTheDocument()
+  unmount()
+  render(<TaxTape {...figures} yearToDate={-32_750} />)
+  expect(within(valueOf('Year-to-date realized')).getByText(`${MINUS}32,750`)).toBeInTheDocument()
+  expect(within(valueOf('Net for the year')).getByText('+43,788')).toBeInTheDocument()
+})

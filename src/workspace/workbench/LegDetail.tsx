@@ -5,7 +5,8 @@ import { NumberInput } from '@/kit/number-input/NumberInput'
 import { fmtDate, fmtQuantity, fmtResult } from '@/kit/measure'
 import { useTaxLots } from '@/hooks/use-accounts'
 import { usePositions } from '@/hooks/use-portfolio'
-import type { DraftPreview } from '@/types/workspace-proposal'
+import type { TaxLot } from '@/types/portfolio'
+import type { DraftPreview, LotTake } from '@/types/workspace-proposal'
 
 type LegDetailProps = {
   accountId: string
@@ -18,6 +19,13 @@ type LegDetailProps = {
   onToggleExclude?: () => void
   onQuantity?: (quantity: number | undefined) => void
   onLots?: (lotIds: string[]) => void
+}
+
+/** A lot as this version sells it: what the sale takes against what the lot holds, or the whole lot when it is not sold. */
+function lotLabel(lot: TaxLot, take: LotTake | undefined): string {
+  const head = `${lot.id} · bought ${fmtDate(lot.purchaseDate)} · ${lot.holdingPeriod === 'long' ? 'long-term' : 'short-term'}`
+  if (!take) return `${head} · ${fmtQuantity(lot.quantity)} sh · ${fmtResult(lot.gainLoss)} USD · not sold`
+  return `${head} · ${fmtQuantity(take.shares)} of ${fmtQuantity(lot.quantity)} sh · ${fmtResult(take.realised)} of ${fmtResult(lot.gainLoss)} USD`
 }
 
 export function LegDetail({ accountId, view, symbol, excluded, quantity, lotIds, onToggleExclude, onQuantity, onLots }: LegDetailProps) {
@@ -33,11 +41,14 @@ export function LegDetail({ accountId, view, symbol, excluded, quantity, lotIds,
   const editable = onQuantity !== undefined
   const position = positions.data?.find((p) => p.symbol === symbol)
   const positionLots = position ? (lots.data ?? []).filter((l) => l.positionId === position.id) : []
-  const selected = lotIds ?? view.legFacts.find((f) => f.symbol === symbol)?.lotIds ?? []
+  const facts = view.legFacts.find((f) => f.symbol === symbol)
+  const selected = lotIds ?? facts?.lotIds ?? []
+  const takes = new Map((facts?.lots ?? []).map((t) => [t.lotId, t]))
   // Blank returns to the agent's quantity; an unchanged field (a blur with no edit) changes nothing.
   const commit = () => {
     if (!onQuantity) return
     const typed = text.trim() === '' ? undefined : Number(text.replace(/,/g, ''))
+    if (typed !== undefined && !Number.isFinite(typed)) return
     if (typed === shownQuantity && quantity !== undefined) return
     if (typed === trade.quantity && quantity === undefined) return
     onQuantity(typed)
@@ -52,7 +63,7 @@ export function LegDetail({ accountId, view, symbol, excluded, quantity, lotIds,
   return (
     <section aria-labelledby={titleId} className="flex min-w-0 flex-col gap-4 border border-rule-2 p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h2 id={titleId} className="text-label uppercase text-ink-2">{`Leg · ${symbol}`}</h2>
+        <h3 id={titleId} className="text-label uppercase text-ink-2">{`Leg · ${symbol}`}</h3>
         <span className="text-body">{trade.name}</span>
       </div>
       <div className="flex flex-wrap items-end gap-6">
@@ -68,7 +79,7 @@ export function LegDetail({ accountId, view, symbol, excluded, quantity, lotIds,
           {positionLots.map((lot) => (
             <Checkbox key={lot.id} checked={selected.includes(lot.id)} disabled={!onLots || excluded}
               onChange={(on) => toggleLot(lot.id, on)}
-              label={`${lot.id} · bought ${fmtDate(lot.purchaseDate)} · ${fmtQuantity(lot.quantity)} sh · ${lot.holdingPeriod === 'long' ? 'long-term' : 'short-term'} · ${fmtResult(lot.gainLoss)} USD`} />
+              label={lotLabel(lot, takes.get(lot.id))} />
           ))}
         </fieldset>
       ) : null}

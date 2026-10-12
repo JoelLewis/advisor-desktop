@@ -12,3 +12,10 @@ it('lists the legs in the engine\'s order, then the excluded ones, with the engi
   expect(rows[0]).toMatchObject({ name: 'Intel Corp.', side: 'sell', quantity: 7_000, longTerm: -45_850, shortTerm: 0, washed: 0, restrictedTo: '2026-03-27', status: 'CLEAR' })
   expect(rows[2]).toMatchObject({ symbol: 'EFA', side: 'buy', shortTerm: undefined, washed: undefined, restrictedTo: undefined })
 })
+
+it('refuses a sell leg with no record of its lots rather than reporting nothing washed', () => {
+  const r = buildVersion('acc-002', [{ kind: 'avoid_self_wash' }], [])
+  if (!r.ok) throw new Error(r.message)
+  const view = { ...r.built, legFacts: r.built.legFacts.filter((f) => f.symbol !== 'SPY') }
+  expect(() => legRows(view)).toThrow('The SPY sale has no record of its lots or washed loss')
+})

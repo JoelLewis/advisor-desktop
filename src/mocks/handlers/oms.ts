@@ -18,6 +18,7 @@ import { repurchaseRestrictionsFor } from './repurchase-restrictions'
 import { settleBatchWashSales, type LegSale } from './batch-wash-sales'
 import { taxRateFor } from '@/lib/tax-rules'
 import type { Account } from '@/types/account'
+import type { LotTake } from '@/types/workspace-proposal'
 import type { AssetClass, Position } from '@/types/portfolio'
 import type { CurrencyCode } from '@/types/currency'
 
@@ -84,9 +85,59 @@ export function currencyForAccount(accountId: string): CurrencyCode {
   return accounts.find((a) => a.id === accountId)?.baseCurrency ?? 'USD'
 }
 
-/** `soldLosses`: the shares of each lot sold at a loss, which §1091 may wash (`washedLoss`). */
-type RealisedSale = { shortTerm: number; longTerm: number; collectibleLongTerm: number; tax: number; consumedLotIds: string[]; soldLosses: SoldLossLot[] }
-const NOTHING_REALISED: RealisedSale = { shortTerm: 0, longTerm: 0, collectibleLongTerm: 0, tax: 0, consumedLotIds: [], soldLosses: [] }
+/** A take before it is tied to the leg's quantity, with the shares its lot holds. */
+type RawTake = LotTake & { held: number }
+
+/** How far the takes' shares may sit from the leg's quantity: a fraction of it, plus a dollar's worth (see `takesForQuantity`). */
+const SHARE_RECONCILIATION = 0.01
+const ROUNDING_USD = 1
+
+/**
+ * Ties a sale's takes to the leg's quantity. The sale is drawn by value, and a fixture lot's value
+ * per share is not exactly the position's price (and the executed value is rounded once), so the
+ * shares by value differ slightly from the quantity (for a one-share leg of a low-priced security,
+ * the dollar rounding alone is a large part of a share). The difference is settled from the last
+ * take backwards, never past what a lot holds or below nothing. A gap beyond `SHARE_RECONCILIATION`
+ * of the quantity plus `ROUNDING_USD` at `price`, or one the lots cannot settle, throws.
+ */
+function takesForQuantity(takes: readonly RawTake[], quantity: number, price: number): LotTake[] {
+  if (takes.length === 0) return []
+  const shares = takes.map((t) => t.shares)
+  const gap = quantity - shares.reduce((s, v) => s + v, 0)
+  if (Math.abs(gap) > SHARE_RECONCILIATION * quantity + ROUNDING_USD / price) throw new Error(`takesForQuantity: the lots give ${quantity - gap} shares for a ${quantity}-share leg`)
+  let left = gap
+  for (let i = takes.length - 1; i >= 0 && left !== 0; i--) {
+    const current = shares[i] ?? 0
+    const next = Math.min(takes[i]?.held ?? 0, Math.max(0, current + left))
+    left -= next - current
+    shares[i] = next
+  }
+  if (Math.abs(left) > 1e-9) throw new Error(`takesForQuantity: the lots cannot give the ${quantity}-share leg its shares`)
+  return takes.map(({ held: _held, ...take }, i) => ({ ...take, shares: shares[i] ?? 0 }))
+}
+
+/**
+ * `soldLosses`: the shares of each lot sold at a loss, which §1091 may wash (`washedLoss`).
+ * `lotTakes`: what the sale takes from each lot; the shares are drawn by value, not yet tied to the
+ * leg's quantity (`takesForQuantity`).
+ */
+type RealisedSale = { shortTerm: number; longTerm: number; collectibleLongTerm: number; tax: number; consumedLotIds: string[]; soldLosses: SoldLossLot[]; lotTakes: RawTake[] }
+const NOTHING_REALISED: RealisedSale = { shortTerm: 0, longTerm: 0, collectibleLongTerm: 0, tax: 0, consumedLotIds: [], soldLosses: [], lotTakes: [] }
+
+/** Rounds each value to whole dollars so they sum to `total`, moving the gap onto the largest remainders. */
+function roundToTotal(values: readonly number[], total: number): number[] {
+  const rounded = values.map(Math.round)
+  let gap = total - rounded.reduce((s, v) => s + v, 0)
+  const byRemainder = values.map((v, i) => ({ i, remainder: v - Math.round(v) })).sort((a, b) => (gap > 0 ? b.remainder - a.remainder : a.remainder - b.remainder))
+  for (const { i } of byRemainder) {
+    if (gap === 0) break
+    const step = Math.sign(gap)
+    rounded[i] = (rounded[i] ?? 0) + step
+    gap -= step
+  }
+  if (gap !== 0) throw new Error(`roundToTotal: ${values.length} values cannot round to ${total}`)
+  return rounded
+}
 
 /**
  * Lots ordered for a tax-aware sale: least tax per dollar sold first, so losses go first, then the
@@ -112,11 +163,13 @@ function realiseOrderedLots(ordered: readonly CustodianLot[], symbol: string, no
   let tax = 0
   const consumedLotIds: string[] = []
   const soldLosses: SoldLossLot[] = []
+  const rawTakes: RawTake[] = []
   for (const lot of ordered) {
     if (remaining <= 0 || lot.currentValue <= 0) continue
     const portion = Math.min(1, remaining / lot.currentValue)
     consumedLotIds.push(lot.id)
     const realised = lot.gainLoss * portion
+    rawTakes.push({ lotId: lot.id, shares: lot.quantity * portion, realised, character: lot.holdingPeriod, held: lot.quantity })
     if (lot.holdingPeriod === 'short') shortTerm += realised
     else longTerm += realised
     if (realised > 0) tax += realised * rateFor(lot.holdingPeriod)
@@ -129,13 +182,22 @@ function realiseOrderedLots(ordered: readonly CustodianLot[], symbol: string, no
     remaining -= lot.currentValue * portion
   }
   const roundedLongTerm = Math.round(longTerm)
+  const roundedShortTerm = Math.round(shortTerm)
+  // Each take's result in whole dollars, summing by character to the sale's rounded results.
+  const wholeDollars = new Map<RawTake, number>()
+  for (const [character, total] of [['short', roundedShortTerm], ['long', roundedLongTerm]] as const) {
+    const ofCharacter = rawTakes.filter((t) => t.character === character)
+    roundToTotal(ofCharacter.map((t) => t.realised), total).forEach((v, i) => { const t = ofCharacter[i]; if (t) wholeDollars.set(t, v) })
+  }
+  const lotTakes = rawTakes.map((t) => ({ ...t, realised: wholeDollars.get(t) ?? 0 }))
   return {
-    shortTerm: Math.round(shortTerm),
+    shortTerm: roundedShortTerm,
     longTerm: roundedLongTerm,
     collectibleLongTerm: character === 'collectible' ? roundedLongTerm : 0,
     tax: Math.max(0, Math.round(tax)),
     consumedLotIds,
     soldLosses,
+    lotTakes,
   }
 }
 
@@ -649,7 +711,7 @@ export function generateRebalanceProposal(
           currency,
           ...sleeve,
         }
-        sales.set(trade, { soldLosses: realised.soldLosses, consumedLotIds: realised.consumedLotIds })
+        sales.set(trade, { soldLosses: realised.soldLosses, consumedLotIds: realised.consumedLotIds, lotTakes: takesForQuantity(realised.lotTakes, quantity, target.price) })
         return trade
     }
 
@@ -898,7 +960,7 @@ export function recutLeg(accountId: string, leg: ProposedTradeLeg, { quantity, l
     if (lotIds) return { ok: false, code: 'LOTS_ON_BUY', message: `${leg.symbol}: lots are chosen for a sale, not a purchase.` }
     const estimatedValue = Math.round(quantity * unitPriceFor(account, leg, position))
     const washSaleRisk = hasWashSaleRisk({ symbol: leg.symbol, side: 'buy', realisesLoss: false, soldLotIds: [] }, lossWindows, acquisitions, MOCK_TODAY_ISO)
-    return { ok: true, leg: { ...unsettled(leg), quantity, estimatedValue, washSaleRisk }, sale: { soldLosses: [], consumedLotIds: [] } }
+    return { ok: true, leg: { ...unsettled(leg), quantity, estimatedValue, washSaleRisk }, sale: { soldLosses: [], consumedLotIds: [], lotTakes: [] } }
   }
 
   if (!position) throw new Error(`recutLeg: ${accountId} sells ${leg.symbol} but holds none`)
@@ -932,7 +994,7 @@ export function recutLeg(accountId: string, leg: ProposedTradeLeg, { quantity, l
       lossWindows, acquisitions, MOCK_TODAY_ISO,
     ),
   }
-  return { ok: true, leg: trade, sale: { soldLosses: realised.soldLosses, consumedLotIds: realised.consumedLotIds } }
+  return { ok: true, leg: trade, sale: { soldLosses: realised.soldLosses, consumedLotIds: realised.consumedLotIds, lotTakes: takesForQuantity(realised.lotTakes, quantity, position.price) } }
 }
 
 /** What the classifier needs to know about one invested asset class still away from target. */

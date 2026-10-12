@@ -12,11 +12,14 @@ import { RestrictionRulers } from './RestrictionRulers'
 
 export function WorkbenchSummary({ detail, view }: { detail: ProposalDetail; view: DraftPreview }) {
   const s = view.summary
+  // Collectibles gains are part of the long-term result, so short plus long is the whole year to date.
+  const ytd = view.preview.ytdRealisedOnReturn
   return (
     <>
       <Pane title="Tax effect" meta="return-level estimate against this year's results">
         <TaxTape gains={s.gains} losses={s.losses} netShortTerm={s.netShortTerm} netLongTerm={s.netLongTerm}
-          grossTax={s.grossTax} netTax={s.netTax} scope={taxScope(view.preview)} rateBasis={RATE_DISCLOSURE} />
+          grossTax={s.grossTax} netTax={s.netTax} scope={taxScope(view.preview)} rateBasis={RATE_DISCLOSURE}
+          yearToDate={ytd ? ytd.shortTerm + ytd.longTerm : undefined} />
         {s.washed !== 0 ? <Reading label="Washed · deferred or disallowed" value={fmtResult(s.washed)} unit={view.preview.currency} /> : null}
       </Pane>
       <Pane title="Drift before and after">

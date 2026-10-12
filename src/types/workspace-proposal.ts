@@ -17,8 +17,17 @@ export type LegEdit =
   | { kind: 'quantity'; symbol: string; quantity: number }
   | { kind: 'lots'; symbol: string; lotIds: string[] }
 
-/** What each sell leg disposes of: its lots in sale order, and the part of its loss §1091 washes (≤ 0). */
-export type LegFacts = { symbol: string; lotIds: string[]; washed: number }
+/**
+ * What a sale takes from one lot: the shares, and the result they realise (signed, whole dollars)
+ * by holding period. A leg's takes sum to its quantity and, by character, to its realised results.
+ */
+export type LotTake = { lotId: string; shares: number; realised: number; character: 'short' | 'long' }
+
+/**
+ * What each sell leg disposes of: its lots in sale order, what it takes from each (empty for a
+ * tax-advantaged account, which realises nothing), and the part of its loss §1091 washes (≤ 0).
+ */
+export type LegFacts = { symbol: string; lotIds: string[]; lots: LotTake[]; washed: number }
 
 /** A leg the workbench or a constraint removed, kept so the version still shows what was dropped. */
 export type ExcludedLeg = Pick<ProposedTrade, 'symbol' | 'name' | 'side' | 'quantity' | 'estimatedValue'>

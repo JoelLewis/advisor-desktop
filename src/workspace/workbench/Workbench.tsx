@@ -29,7 +29,7 @@ export function Workbench({ detail, directory }: { detail: ProposalDetail; direc
       </header>
       <Pane title="Legs" meta={`v${latest.n}`}>
         <WorkbenchLegs view={latest} caption={`Legs · v${latest.n}`} onExpand={(s) => setExpanded((open) => (open === s ? undefined : s))} />
-        {expanded ? <LegDetail accountId={detail.accountId} view={latest} symbol={expanded} excluded={latest.excludedLegs.some((l) => l.symbol === expanded)} /> : null}
+        {expanded ? <LegDetail key={expanded} accountId={detail.accountId} view={latest} symbol={expanded} excluded={latest.excludedLegs.some((l) => l.symbol === expanded)} /> : null}
       </Pane>
       <WorkbenchSummary detail={detail} view={latest} />
     </div>

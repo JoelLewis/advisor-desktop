@@ -14,7 +14,11 @@ export type Column<T> = {
   wrap?: boolean
 }
 
-/** A single key that acts on the focused row, kept from reaching the page's own shortcuts. */
+/**
+ * A single key that acts on the focused row, kept from reaching the page's own shortcuts. The
+ * table's own keys (arrows, J/K, Home, End, Enter) win over a binding, modifier chords never
+ * match, and `key` is matched case-sensitively against `KeyboardEvent.key` ('x' is not 'X').
+ */
 export type RowKey<T> = { key: string; run: (row: T) => void }
 
 export type TiesTo = { label: string; expected: number; actual: number }

@@ -210,9 +210,12 @@ export function buildVersion(accountId: string, constraints: readonly ProposalCo
   const legFacts: LegFacts[] = edited.proposal.legs.flatMap((leg, i) => {
     const settled = preview.trades[i]
     if (leg.side !== 'sell' || !settled) return []
+    const sale = edited.proposal.sales.get(leg)
+    if (!sale) throw new Error(`The ${leg.symbol} sale carries no record of the lots it sells`)
     return [{
       symbol: leg.symbol,
-      lotIds: [...(edited.proposal.sales.get(leg)?.consumedLotIds ?? [])],
+      lotIds: [...sale.consumedLotIds],
+      lots: sale.lotTakes.map((t) => ({ ...t })),
       washed: (settled.washedLoss?.shortTerm ?? 0) + (settled.washedLoss?.longTerm ?? 0),
     }]
   })

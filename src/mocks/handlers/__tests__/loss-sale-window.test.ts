@@ -232,9 +232,9 @@ describe('§0.2 · settleBatchWashSales on constructed legs', () => {
   it('an IBIT loss sale (an exchange-traded trust) still opens a window; a DOT one does not', () => {
     const lossLot = (symbol: string) => ({ lotId: `x-${symbol}`, symbol, purchaseDate: '2025-06-03', quantity: 100, loss: -1_000, holdingPeriod: 'long' as const })
     const ibit = leg('IBIT', 'sell', 100, -1_000)
-    expect(settleOne('acc-002', ibit, { soldLosses: [lossLot('IBIT')], consumedLotIds: ['x-IBIT'] })[0]!.repurchaseBlockedUntil).toBe('2026-03-27')
+    expect(settleOne('acc-002', ibit, { soldLosses: [lossLot('IBIT')], consumedLotIds: ['x-IBIT'], lotTakes: [] })[0]!.repurchaseBlockedUntil).toBe('2026-03-27')
     const dot = leg('DOT', 'sell', 100, -1_000)
-    expect(settleOne('acc-045', dot, { soldLosses: [lossLot('DOT')], consumedLotIds: ['x-DOT'] })[0]!.repurchaseBlockedUntil).toBeUndefined()
+    expect(settleOne('acc-045', dot, { soldLosses: [lossLot('DOT')], consumedLotIds: ['x-DOT'], lotTakes: [] })[0]!.repurchaseBlockedUntil).toBeUndefined()
   })
 
   it('a net-gain leg that sells a loss lot opens a window: the loss shares are judged per lot', () => {
@@ -242,6 +242,7 @@ describe('§0.2 · settleBatchWashSales on constructed legs', () => {
     const sale: LegSale = {
       soldLosses: [{ lotId: 'loss', symbol: 'SMH', purchaseDate: '2025-06-03', quantity: 100, loss: -1_000, holdingPeriod: 'long' }],
       consumedLotIds: ['loss', 'gain'],
+      lotTakes: [],
     }
     expect(settleOne('acc-033', sell, sale)[0]!.repurchaseBlockedUntil).toBe('2026-03-27')
   })
@@ -251,6 +252,7 @@ describe('§0.2 · settleBatchWashSales on constructed legs', () => {
     const sale: LegSale = {
       soldLosses: [{ lotId: 'loss', symbol: 'SMH', purchaseDate: '2025-06-03', quantity: 100, loss: -1_000, holdingPeriod: 'long' }],
       consumedLotIds: ['loss'],
+      lotTakes: [],
     }
     const [settledSell, settledBuy] = settleOne('acc-033', sell, sale, [leg('SMH', 'buy', 100)])
     expect(settledSell!.washedLoss).toEqual({ shortTerm: 0, longTerm: -1_000, collectibleLongTerm: 0, deferred: -1_000, disallowed: 0 })

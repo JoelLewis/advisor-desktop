@@ -1,9 +1,12 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { act, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { routes } from '@/app/routes'
-import { renderRoutes } from '@/test/render'
+import { renderRoutes, renderWithProviders } from '@/test/render'
+import { buildVersion } from '@/mocks/workspace/proposal-engine'
+import { LegDetail } from '@/workspace/workbench/LegDetail'
 import { createProposal } from '@/services/workspace'
+import { MINUS } from '@/kit/measure'
 
 async function openWorkbench() {
   await createProposal('user-001', 'th-johnson-review', 'acc-002')
@@ -32,6 +35,11 @@ describe('the workbench body', () => {
     expect(within(detail).getByRole('checkbox', { name: /^lot-pos-020-0/ })).toBeChecked()
     expect(within(detail).getByRole('checkbox', { name: /^lot-pos-020-1/ })).not.toBeChecked()
     expect(within(detail).getByRole('textbox', { name: 'Quantity sh' })).toHaveValue('758')
+    expect(within(detail).getByRole('heading', { level: 3, name: 'Leg · SPY' })).toBeInTheDocument()
+    // What the leg takes from the lot, against what the lot holds: it ties to the leg's 758 sh and +69,411 LT.
+    expect(within(detail).getByRole('checkbox', { name: /^lot-pos-020-0/ })).toHaveAccessibleName(
+      'lot-pos-020-0 · bought 2024-08-23 · long-term · 758 of 1,515.332 sh · +69,411 of +138,761 USD')
+    expect(within(detail).getByRole('checkbox', { name: /^lot-pos-020-1/ })).toHaveAccessibleName(/2,363\.668 sh · \+216,446 USD · not sold$/)
   })
 
   it('summarises the tax, the drift before and after, the restrictions and the held-away accounts', async () => {
@@ -39,13 +47,33 @@ describe('the workbench body', () => {
     const tape = await screen.findByRole('region', { name: 'Tax effect estimate' })
     expect(tape).toHaveTextContent('10,422')
     expect(tape).toHaveTextContent('Nets this proposal')
+    expect(tape).toHaveTextContent(`Year-to-date realized${MINUS}32,750`)
+    expect(tape).toHaveTextContent('Net for the year+43,788')
     expect(await screen.findByRole('region', { name: 'Drift after' })).toHaveTextContent('no market to sell into')
     expect(screen.getByRole('region', { name: 'Drift before' })).toBeInTheDocument()
     const restrictions = screen.getByRole('region', { name: 'Repurchase restrictions' })
     expect(restrictions).toHaveTextContent('recorded · sale rs-001 of 2026-02-20 in acc-002')
     expect(restrictions).toHaveTextContent("projected · this proposal's sale in acc-002")
     const away = await screen.findByRole('region', { name: 'Held-away accounts' })
-    expect(away).toHaveTextContent('Vanguard')
+    expect(away).toHaveTextContent('Robert Johnson · Vanguard')
+    expect(away).toHaveTextContent('Patricia Johnson · TIAA')
+    expect(away).toHaveTextContent('joint filers count as one')
     expect(away).toHaveTextContent('NOT VISIBLE TO WASH-SALE CHECKS')
+  })
+})
+
+describe('the leg detail quantity', () => {
+  it('does not commit what is not a number, and commits a typed quantity', async () => {
+    const r = buildVersion('acc-002', [{ kind: 'avoid_self_wash' }], [])
+    if (!r.ok) throw new Error(r.message)
+    const onQuantity = vi.fn()
+    renderWithProviders(<LegDetail accountId="acc-002" view={r.built} symbol="SPY" excluded={false} onQuantity={onQuantity} />)
+    const field = screen.getByRole('textbox', { name: 'Quantity sh' })
+    await userEvent.clear(field)
+    await userEvent.type(field, '7O0{Enter}')
+    expect(onQuantity).not.toHaveBeenCalled()
+    await userEvent.clear(field)
+    await userEvent.type(field, '700{Enter}')
+    expect(onQuantity).toHaveBeenCalledWith(700)
   })
 })
