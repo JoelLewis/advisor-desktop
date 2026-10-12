@@ -11,7 +11,7 @@ import { formatRatePercent, lossAllowedNow } from '@/lib/tax-rules'
 import { capitalLossUse, ORDINARY_INCOME_OFFSET_LIMIT, ORDINARY_INCOME_OFFSET_LIMIT_SEPARATE, taxEstimateDirection, type TaxedLeg } from '@/lib/capital-gains'
 import type { Account } from '@/types/account'
 import { isTaxableAccount } from '@/lib/tax-treatment'
-import { formatCalendarDate } from '@/lib/utils'
+import { formatCalendarDate, formatCurrency } from '@/lib/utils'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { convertToBase } from '@/lib/currency'
 import { ASSET_CLASS_LABELS } from '@/lib/labels'
@@ -252,12 +252,15 @@ export const nbas: NBA[] = [
       return { source: 'pms', condition: 'drift_exceeded', value: `${percent(facts.lowestBreach)}–${percent(facts.highestBreach)}`, detectedAt: '2026-02-24T08:00:00Z' }
     },
     suggestedAction: 'Generate batch rebalance trades with tax-loss harvesting overlay',
-    // Final review I1 · this was a hand-typed 45_000 with no stated basis. It is now the value the
-    // batch trades to bring every out-of-band account back to its model, in USD.
-    get estimatedImpact() {
-      return Math.round(driftBatchFacts().valueToTradeUsd)
+    // Final review I1 · this was a hand-typed 45_000 with no stated basis. A rebalance has no dollar
+    // benefit to score (controller ruling): the note states what it does and, from the engine, how
+    // much it trades: one-way turnover, totalDrift × value summed over the out-of-band accounts.
+    estimatedImpact: 0,
+    get estimatedImpactNote() {
+      const facts = driftBatchFacts()
+      return 'Not scored in dollars: rebalancing restores the risk each IPS sets. ' +
+        `The batch would sell about ${formatCurrency(facts.valueToTradeUsd, { compact: true })}, and buy about as much, across ${facts.accountCount} accounts.`
     },
-    estimatedImpactNote: "The value traded to bring these accounts back to their models' targets, in USD: not a gain, a cost or revenue.",
     createdAt: '2026-02-24T08:15:00Z', expiresAt: '2026-03-01T23:59:00Z', dismissed: false,
     actionRoute: { path: '/portfolios/rebalance' },
   },

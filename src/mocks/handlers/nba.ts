@@ -121,9 +121,7 @@ export const nbaHandlers = [
         dismissed,
         snoozed,
         avgTimeToAction: +(4 + Math.random() * 44).toFixed(1),
-        // An NBA with an impact note states a figure that is not revenue (a tax saving, the value a
-        // rebalance trades, a rollover not scored on its fee), so it adds nothing here.
-        revenueImpact: catNbas.filter((n) => n.estimatedImpactNote === undefined).reduce((sum, n) => sum + n.estimatedImpact, 0) * (0.3 + Math.random() * 0.4),
+        revenueImpact: catNbas.reduce((sum, n) => sum + n.estimatedImpact, 0) * (0.3 + Math.random() * 0.4),
       }
     })
 

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest'
-import { getNBAEffectiveness, getNBATemplates } from '@/services/nba'
+import { getNBAEffectiveness, getNBATemplates, getNBAs } from '@/services/nba'
+import { formatCurrency } from '@/lib/utils'
 import type { NBAActionTemplate } from '@/types/nba'
 import { nbas, intcHolderFor, clientDriftFacts, driftBatchFacts, type IntcHolder } from '@/mocks/data/nbas'
 import { formatRatePercent } from '@/lib/tax-rules'
@@ -125,20 +126,31 @@ describe("I1 · a rebalancing email states the addressee's own drift, band and v
   })
 })
 
-describe('I1 · nba-001 states a derived impact, not a hand-typed $45K', () => {
+describe('I1 · nba-001 is not scored in dollars; its note states the turnover from the engine', () => {
   const nba = nbas.find((n) => n.id === 'nba-001')!
 
-  it('is the value the batch trades to restore every out-of-band account, in USD', () => {
-    expect(nba.estimatedImpact).toBe(Math.round(driftBatchFacts().valueToTradeUsd))
-    expect(nba.estimatedImpact).not.toBe(45_000)
-    expect(nba.estimatedImpactNote).toContain('not a gain, a cost or revenue')
+  it('has no dollar impact, and no hand-typed $45K', () => {
+    expect(nba.estimatedImpact).toBe(0)
   })
 
-  it('a figure with an impact note is not counted as revenue on the effectiveness page', async () => {
+  it('the note gives the one-way turnover and the account count, derived', () => {
+    const facts = driftBatchFacts()
+    expect(nba.estimatedImpactNote).toBe(
+      'Not scored in dollars: rebalancing restores the risk each IPS sets. ' +
+      `The batch would sell about ${formatCurrency(facts.valueToTradeUsd, { compact: true })}, and buy about as much, across ${facts.accountCount} accounts.`,
+    )
+    expect(nba.estimatedImpactNote).toContain('$20.9M')
+    expect(nba.estimatedImpactNote).toContain('across 40 accounts')
+  })
+
+  it('so the rebalancing category adds no revenue on the effectiveness page', async () => {
     const metrics = await getNBAEffectiveness()
-    const rebalancing = metrics.byCategory.find((c) => c.category === 'rebalancing')!
-    // nba-001 carries a note; nba-018 and nba-020 state no impact.
-    expect(rebalancingNbas.filter((n) => n.estimatedImpactNote === undefined).every((n) => n.estimatedImpact === 0)).toBe(true)
-    expect(rebalancing.revenueImpact).toBe(0)
+    expect(rebalancingNbas.every((n) => n.estimatedImpact === 0)).toBe(true)
+    expect(metrics.byCategory.find((c) => c.category === 'rebalancing')!.revenueImpact).toBe(0)
+  })
+
+  it('the note is served over the wire, not lost as an unread getter', async () => {
+    const served = (await getNBAs()).find((n) => n.id === 'nba-001')!
+    expect(served.estimatedImpactNote).toBe(nba.estimatedImpactNote)
   })
 })
