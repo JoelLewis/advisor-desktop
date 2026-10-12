@@ -108,12 +108,13 @@ describe('drift monitor replacement holds', () => {
     const sale = realisedSales.find((s) => s.id === 'rs-001')!
     const { end } = washSaleWindow(sale.saleDate)
     const daysToClose = (Date.parse(`${end}T00:00:00Z`) - Date.parse(`${MOCK_TODAY_ISO}T00:00:00Z`)) / 86_400_000
-    expect(end).toBe('2026-03-23')
+    // The INTC harvest is Fri 2026-02-20 (Phase 0 trading-day ruling), so the window closes 03-22, 25 days out.
+    expect([end, daysToClose]).toEqual(['2026-03-22', 25])
     expect(hold!.figures).toEqual([
       { label: 'SMH weight', value: smh.weight, unit: '%', source: 'positions.weight' },
       { label: 'Days until the INTC window closes', value: daysToClose, unit: 'd', source: 'openWashSaleWindows.daysRemaining' },
     ])
-    expect(hold!.citations).toEqual([{ source: 'Wash-sale window · rs-001 · INTC loss sale of 2026-02-21, open to 2026-03-23', asOf: MOCK_NOW_ISO }])
+    expect(hold!.citations).toEqual([{ source: `Wash-sale window · rs-001 · INTC loss sale of ${sale.saleDate}, open to ${end}`, asOf: MOCK_NOW_ISO }])
   })
 
   it('the replacement link lives on the loss sale, not in the agent', () => {
