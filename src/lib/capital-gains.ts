@@ -43,7 +43,7 @@ export type RealisedByCharacter = { shortTerm: number; longTerm: number }
  *   gain is then taxed at no more than its own rate, and every added loss can only lower the bill.
  * - **Above the gross otherwise, legitimately.** A gain that uses up a loss which was sheltering a
  *   gain of the other character un-shelters that gain: prior ST +10,000 and LT −10,000 owe 0;
- *   adding LT +10,000 makes the ST gain taxable, 3,700 at 37% against 2,380 of its own tax.
+ *   adding LT +10,000 makes the ST gain taxable, 4,080 at 40.8% against 2,380 of its own tax.
  * - **Negative when `added` lowers the bill**: a loss against gains already realised this year.
  *   It is never below `−netCapitalGainsTax(prior)` — trades cannot save more than the year owes.
  *

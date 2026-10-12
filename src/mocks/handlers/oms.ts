@@ -80,7 +80,7 @@ const NOTHING_REALISED: RealisedSale = { shortTerm: 0, longTerm: 0, tax: 0, cons
 /**
  * Realise a sale of `notional` dollars out of `target`: the signed short- and long-term result
  * and the capital-gains tax on its gains, using the same per-lot generator the tax page reads (`generateTaxLots`) and the same rate function
- * (`taxRateFor`) it applies — a short-term-heavy sell is taxed at `SHORT_TERM_RATE` (37%), not
+ * (`taxRateFor`) it applies — a short-term-heavy sell is taxed at `SHORT_TERM_RATE` (40.8%), not
  * silently at the long-term rate (23.8%) for the entire position. A tax-aware pass sells the
  * lowest-gain-fraction (highest cost basis) lots first to minimise realised gain; a tax-unaware
  * pass sells the lots in their own oldest-first order.
@@ -89,7 +89,7 @@ function realiseSale(accountLots: readonly CustodianLot[], target: Position, not
   const lots = accountLots.filter((l) => l.positionId === target.id)
   if (lots.length === 0 || notional <= 0) return NOTHING_REALISED
   // Minimise realised gain and rank by *tax per dollar sold*, not gain per dollar sold: a
-  // low-gain short-term lot (37% rate) can carry more tax than a low-gain long-term lot (23.8%
+  // low-gain short-term lot (40.8% rate) can carry more tax than a low-gain long-term lot (23.8%
   // rate), so sorting by gain fraction alone can pick a worse-taxed lot first.
   const taxPerDollar = (l: (typeof lots)[number]) => (l.gainLoss / l.currentValue) * taxRateFor(l.holdingPeriod)
   const ordered = taxAware ? [...lots].sort((a, b) => taxPerDollar(a) - taxPerDollar(b)) : lots

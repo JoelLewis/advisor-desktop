@@ -42,7 +42,7 @@ describe('TaxManagementPage', () => {
     expect(await screen.findByText('6 opportunities')).toBeInTheDocument()
 
     // The rate disclosure renders alongside real opportunities, not just in isolation.
-    expect(screen.getByText(/37% short-term, 23\.8% long-term/)).toBeInTheDocument()
+    expect(screen.getByText(/40\.8% short-term, 23\.8% long-term/)).toBeInTheDocument()
   })
 
   it('acc-001 (specific_id): AvgCost is not offered as a cost-basis method', async () => {

@@ -132,7 +132,7 @@ describe('the dashboard does not contradict itself', () => {
       expect(shortLoss).toBe(105_100)
       expect(longLoss).toBe(4_000)
       const expectedBenefit = 105_100 * SHORT_TERM_RATE + 4_000 * LONG_TERM_RATE
-      expect(expectedBenefit).toBeCloseTo(39_839, 6)
+      expect(expectedBenefit).toBeCloseTo(43_832.8, 6)
 
       const actualBenefit = lots.reduce((s, l) => s + estimatedTaxBenefit(l), 0)
       expect(actualBenefit).toBeCloseTo(expectedBenefit, 6)

@@ -12,10 +12,35 @@ export const HOLDING_LABELS: Record<string, string> = { short: 'Short-Term', lon
  * "Long" holding-period badge. Long-term losses offset long-term gains at capital-gains rates.
  *
  * These are the top federal marginal rates and exclude state tax. The screen must say so.
+ *
+ * §0.6 · the 3.8% net investment income tax (IRC §1411) applies to net gain of either character,
+ * so it belongs on the short-term rate as much as the long-term one: a top-bracket short-term gain
+ * is taxed at 37% + 3.8% = 40.8%, not 37%. The components are kept so the rates can be checked
+ * against them; the rates themselves are literals because 0.37 + 0.038 is not exactly 0.408 in
+ * floating point.
  */
-export const SHORT_TERM_RATE = 0.37 as const
+export const TOP_ORDINARY_RATE = 0.37 as const
+export const TOP_LONG_TERM_GAINS_RATE = 0.2 as const
+export const NIIT_RATE = 0.038 as const
+/** 37% top ordinary rate + 3.8% net investment income tax. */
+export const SHORT_TERM_RATE = 0.408 as const
 /** 20% long-term capital gains + 3.8% net investment income tax. */
 export const LONG_TERM_RATE = 0.238 as const
+
+/** What the two rates include and leave out, so a screen can state the basis of every estimate. */
+export type TaxRateBasis = {
+  shortTerm: number
+  longTerm: number
+  includes: readonly ('federal' | 'niit')[]
+  excludes: readonly 'state'[]
+}
+
+export const TAX_RATE_BASIS: TaxRateBasis = {
+  shortTerm: SHORT_TERM_RATE,
+  longTerm: LONG_TERM_RATE,
+  includes: ['federal', 'niit'],
+  excludes: ['state'],
+}
 
 /**
  * 0.238 → "23.8%", 0.37 → "37%". Trims a bare ".0" so whole-percent rates read cleanly.
@@ -36,9 +61,10 @@ export function formatRatePercent(rate: number): string {
  */
 export function buildRateDisclosure(shortTermRate: number, longTermRate: number): string {
   return (
-    `Estimated at top federal marginal rates — ${formatRatePercent(shortTermRate)} short-term, ` +
-    `${formatRatePercent(longTermRate)} long-term including net investment income tax. State ` +
-    'tax is not modelled. Estimates only, not tax advice.'
+    `Estimated at top federal marginal rates including the ${formatRatePercent(NIIT_RATE)} net ` +
+    `investment income tax — ${formatRatePercent(shortTermRate)} short-term, ` +
+    `${formatRatePercent(longTermRate)} long-term. State tax is not modelled. Estimates only, not ` +
+    'tax advice.'
   )
 }
 

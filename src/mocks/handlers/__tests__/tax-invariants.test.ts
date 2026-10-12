@@ -370,10 +370,10 @@ describe('every realised sale reconciles with a real sell transaction (C14)', ()
 })
 
 describe('tax-loss harvesting rates', () => {
-  it('C11: short-term losses offset at the ordinary rate, long-term at capital-gains + NIIT', () => {
-    expect(SHORT_TERM_RATE).toBe(0.37)
+  it('C11: short-term losses offset at the ordinary rate + NIIT, long-term at capital-gains + NIIT', () => {
+    expect(SHORT_TERM_RATE).toBe(0.408)
     expect(LONG_TERM_RATE).toBe(0.238)
-    expect(estimatedTaxBenefit({ gainLoss: -10_000, holdingPeriod: 'short' })).toBeCloseTo(3_700, 2)
+    expect(estimatedTaxBenefit({ gainLoss: -10_000, holdingPeriod: 'short' })).toBeCloseTo(4_080, 2)
     expect(estimatedTaxBenefit({ gainLoss: -10_000, holdingPeriod: 'long' })).toBeCloseTo(2_380, 2)
   })
 
@@ -554,10 +554,11 @@ describe('rate disclosure derivation (fix-round-2 review, Minor M1)', () => {
   })
 
   it('RATE_DISCLOSURE is buildRateDisclosure(SHORT_TERM_RATE, LONG_TERM_RATE), not a separate literal', () => {
-    expect(SHORT_TERM_RATE).toBe(0.37)
+    expect(SHORT_TERM_RATE).toBe(0.408)
     expect(LONG_TERM_RATE).toBe(0.238)
     expect(RATE_DISCLOSURE).toBe(buildRateDisclosure(SHORT_TERM_RATE, LONG_TERM_RATE))
-    expect(RATE_DISCLOSURE).toContain('37% short-term')
+    expect(RATE_DISCLOSURE).toContain('40.8% short-term')
+    expect(RATE_DISCLOSURE).toContain('3.8% net investment income tax')
     expect(RATE_DISCLOSURE).toContain('23.8% long-term')
     expect(RATE_DISCLOSURE.toLowerCase()).toContain('not tax advice')
   })

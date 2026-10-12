@@ -9,7 +9,7 @@ import { SHORT_TERM_RATE, LONG_TERM_RATE, formatRatePercent } from '@/features/p
 /**
  * PRE-FLIGHT correction 7 — these templates previously said "at 37% bracket" / "at top marginal
  * rate" for every tax-loss-harvesting NBA, regardless of whether the underlying lots are
- * short-term (37%) or long-term (23.8%). The rate depends on holding period; a generic template
+ * short-term (40.8%) or long-term (23.8%). The rate depends on holding period; a generic template
  * cannot know a specific lot's period, so it discloses the range rather than asserting a single
  * rate it cannot back up — the same posture `RATE_DISCLOSURE` takes on the tax page itself.
  */
