@@ -1,10 +1,14 @@
 import type { Participant, Thread, Message } from '@/types/messaging'
 import { accounts } from './accounts'
 import { computeDriftForAccount, modelDisplayName } from '../handlers/pms'
-import { generateRebalanceTrades } from '../handlers/oms'
+import { generateRebalanceProposal } from '../handlers/oms'
+import { settleBatchWashSales } from '../handlers/batch-wash-sales'
+import { estimateTaxOnReturns } from '../handlers/tax-return'
 import { ASSET_CLASS_LABELS } from '@/lib/labels'
 import { formatRatePercent } from '@/lib/tax-rules'
-import { formatCurrency } from '@/lib/utils'
+import { recognisedResult, taxEstimateDirection } from '@/lib/capital-gains'
+import { formatCalendarDate, formatCurrency } from '@/lib/utils'
+import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { roundTo } from '../handlers/utils'
 
 const pct1 = (fraction: number) => `${(fraction * 100).toFixed(1)}%`
@@ -17,23 +21,45 @@ const listing = (items: readonly string[]) => (items.length < 2 ? items.join('')
  * "3.2% over target" — acc-001's holdings at a figure from nowhere. It now reports acc-002, Robert's
  * individual account, from the engine: its worst asset-class drift against its own model and band,
  * and the trades the tax-aware rebalance proposes.
+ *
+ * Ledger Task 11 · the trades are the preview's own: settled for §1091 across the taxpayer
+ * (`settleBatchWashSales`), so a washed loss is never stated as realised. The note says the
+ * rebalance *proposes* them, gives each sale's realised result, gains as well as the INTC loss, and
+ * the net, the tax the preview estimates they add to the return, and the date to which selling INTC
+ * bars buying it back.
  */
 export function johnsonDriftNote() {
   const account = accounts.find((a) => a.id === 'acc-002')!
   const drift = computeDriftForAccount(account)
   const worst = [...drift.assetClassDrifts].sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift))[0]!
-  const legs = generateRebalanceTrades(account.id, true)
-  const sells = legs.filter((l) => l.side === 'sell').map((l) => {
-    const realised = l.realisedShortTerm + l.realisedLongTerm
-    return `${l.quantity.toLocaleString('en-US')} ${l.symbol}${realised < 0 ? ` (a ${wholeDollars(Math.abs(realised))} loss)` : ''}`
+  const [legs] = settleBatchWashSales([{ account, ...generateRebalanceProposal(account.id, true) }], MOCK_TODAY_ISO)
+  if (legs === undefined) throw new Error('acc-002 has no rebalance proposal')
+  const [estimate] = estimateTaxOnReturns([{ account, legs }], MOCK_TODAY_ISO)
+  if (estimate === undefined) throw new Error('acc-002 has no tax estimate')
+  const recognised = (leg: (typeof legs)[number]) => {
+    const r = recognisedResult(leg)
+    return r.shortTerm + r.longTerm
+  }
+  const sellLegs = legs.filter((l) => l.side === 'sell')
+  const sells = sellLegs.map((l) => {
+    const result = recognised(l)
+    const outcome = result === 0 ? '' : ` (a ${wholeDollars(Math.abs(result))} ${result < 0 ? 'loss' : 'gain'})`
+    return `${l.quantity.toLocaleString('en-US')} ${l.symbol}${outcome}`
   })
+  const net = sellLegs.reduce((s, l) => s + recognised(l), 0)
   const buys = [...new Set(legs.filter((l) => l.side === 'buy').map((l) => ASSET_CLASS_LABELS[l.assetClass] ?? l.assetClass))]
   const label = ASSET_CLASS_LABELS[worst.assetClass] ?? worst.assetClass
+  const tax = taxEstimateDirection(estimate.net)
+  const intc = sellLegs.find((l) => l.symbol === 'INTC')
+  const intcWindow = intc?.repurchaseBlockedUntil
+    ? ` Selling INTC at a loss bars buying it back in any of the couple's accounts, IRAs included, through ${formatCalendarDate(intc.repurchaseBlockedUntil)}.`
+    : ''
   const content = `I ran the drift analysis on Robert's individual account: ${label} is ${pct1(worst.actual)} against the ` +
     `${modelDisplayName(drift.modelId)} model's ${pct1(worst.target)} target, ${(Math.abs(worst.drift) * 100).toFixed(1)} points ` +
-    `${worst.drift > 0 ? 'over' : 'under'}, outside its ±${formatRatePercent(drift.driftTolerance)} band. A tax-aware rebalance sells ` +
-    `${listing(sells)}, and buys ${listing(buys)}.`
-  return { account, drift, worst, label, content }
+    `${worst.drift > 0 ? 'over' : 'under'}, outside its ±${formatRatePercent(drift.driftTolerance)} band. A tax-aware rebalance proposes selling ` +
+    `${listing(sells)}, and buying ${listing(buys)}. The sales net a ${wholeDollars(Math.abs(net))} ${net < 0 ? 'loss' : 'gain'}; ` +
+    `against the joint return's results so far this year, that is about ${wholeDollars(tax.amount)} of capital-gains tax ${tax.direction} the return.${intcWindow}`
+  return { account, drift, worst, label, legs, net, estimate, content }
 }
 
 const johnson = johnsonDriftNote()
