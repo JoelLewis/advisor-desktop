@@ -1,4 +1,4 @@
-import type { NBA, NBAClient, TriggerSignal } from '@/types/nba'
+import type { NBA, NBAClient, NBAPriority, NBAScoring, TriggerSignal } from '@/types/nba'
 import { accounts } from './accounts'
 import { clients } from './clients'
 import { getPositionsForAccount } from './positions'
@@ -159,6 +159,24 @@ function ordinaryIncomeOffsetFiling(account: Account): { ordinaryIncomeLimit: nu
 
 const intcHarvest = intcHarvestFacts()
 
+/** nba-002's impact (0-100) from the capital-gains tax the harvest saves this year, log-scaled: $100 -> 0, $100,000 -> 100. Carryforward is noted, not scored. */
+export function harvestImpactScore(savingThisYearUsd: number): number {
+  if (savingThisYearUsd <= 100) return 0
+  return Math.min(100, Math.round(((Math.log10(savingThisYearUsd) - 2) / 3) * 100))
+}
+
+export function harvestPriority(impact: number): Extract<NBAPriority, 'high' | 'medium'> {
+  return impact >= 70 ? 'high' : 'medium'
+}
+
+/** The composite the NBA invariants check every score against. */
+export function compositeScore(s: Omit<NBAScoring, 'composite'>): number {
+  return Math.round(0.3 * s.urgency + 0.25 * s.impact + 0.2 * s.efficiency + 0.15 * s.relationship + 0.1 * s.confidence)
+}
+
+const intcImpact = harvestImpactScore(intcHarvest.totalSavingThisYear)
+const intcScoring = { urgency: 85, impact: intcImpact, efficiency: 70, relationship: 40, confidence: 92 }
+
 /** The NBA whose per-client facts are `intcHarvest.holders`. */
 export const INTC_HARVEST_NBA_ID = 'nba-002'
 
@@ -262,7 +280,7 @@ export const nbas: NBA[] = [
         `The batch would sell about ${formatCurrency(facts.valueToTradeUsd, { compact: true })}, and buy about as much, across ${facts.accountCount} accounts.`
     },
     createdAt: '2026-02-24T08:15:00Z', expiresAt: '2026-03-01T23:59:00Z', dismissed: false,
-    actionRoute: { path: '/portfolios/rebalance' },
+    actionRoute: { path: '/' },
   },
   // ── Tax Management ──
   {
@@ -272,8 +290,12 @@ export const nbas: NBA[] = [
     // states the partial harvests already made (the realised-sales ledger), the INTC still held, and
     // what harvesting the rest does on each client's own return this year (`intcReturnSentence`).
     description: intcHarvestDescription(),
-    category: 'tax_management', priority: 'high',
-    scoring: { urgency: 85, impact: 75, efficiency: 70, relationship: 40, confidence: 92, composite: 76 },
+    category: 'tax_management',
+    // Phase 3 · priority and impact from the engine: the tax this harvest saves this year
+    // (`estimatedImpact`), not a hand-set 75. Most of its value is the loss carried forward, which
+    // `estimatedImpactNote` states and the score does not count.
+    priority: harvestPriority(intcImpact),
+    scoring: { ...intcScoring, composite: compositeScore(intcScoring) },
     clients: intcHarvest.holders.map(({ account }): NBAClient => ({ id: account.clientId, name: clientName(account.clientId) })),
     groupId: 'grp-002',
     // The INTC still held, all accounts together: 191,500 / 1,045,000 = −18.3%. It was −18.7%, which
@@ -287,7 +309,7 @@ export const nbas: NBA[] = [
     estimatedImpact: intcHarvest.totalSavingThisYear,
     estimatedImpactNote: `Capital-gains tax saved this year only. Most of the harvest's value is the ${dollars(intcHarvest.totalCarriedForward)} of loss that carries forward to later years, which this figure does not count.`,
     createdAt: '2026-02-24T09:45:00Z', dismissed: false,
-    actionRoute: { path: '/portfolios/accounts/acc-002/tax' },
+    actionRoute: { path: '/t/th-brief' },
   },
   {
     id: 'nba-003', title: 'Wash sale risk — Margaret Chen sold NVDA on Feb 10',
@@ -298,7 +320,7 @@ export const nbas: NBA[] = [
     trigger: { source: 'compliance', condition: 'wash_sale_window', value: 'NVDA — closes Mar 12', detectedAt: '2026-02-24T06:00:00Z' },
     suggestedAction: 'Block NVDA purchases until Mar 13; use QQQ as temporary substitute',
     estimatedImpact: 8_500, createdAt: '2026-02-24T06:15:00Z', expiresAt: '2026-03-12T23:59:00Z', dismissed: false,
-    actionRoute: { path: '/portfolios/accounts/acc-007/tax' },
+    actionRoute: { path: '/accounts/acc-007' },
     contextRelevance: 'portfolio',
   },
   // ── Planning ──
@@ -311,7 +333,7 @@ export const nbas: NBA[] = [
     trigger: { source: 'planning', condition: 'rmd_age_threshold', value: 'age 73 in 2026', detectedAt: '2026-01-15T08:00:00Z' },
     suggestedAction: 'Schedule RMD planning meeting; model tax-optimal distribution strategy',
     estimatedImpact: 83_000, createdAt: '2026-01-15T08:30:00Z', dismissed: false,
-    actionRoute: { path: '/clients/cli-008', openAI: true, aiMessage: 'Prepare RMD planning analysis for James Thompson — model tax-optimal distribution strategy for 2026' },
+    actionRoute: { path: '/accounts/acc-020', openAI: true, aiMessage: 'Prepare RMD planning analysis for James Thompson — model tax-optimal distribution strategy for 2026' },
   },
   {
     id: 'nba-005', title: 'Goal probability dropped — Patel education fund',
@@ -322,7 +344,7 @@ export const nbas: NBA[] = [
     trigger: { source: 'planning', condition: 'goal_probability_drop', value: '88% → 74%', detectedAt: '2026-02-20T10:00:00Z' },
     suggestedAction: 'Present contribution increase scenario; review asset allocation',
     estimatedImpact: 48_000, createdAt: '2026-02-20T10:15:00Z', dismissed: false,
-    actionRoute: { path: '/clients/cli-011', openAI: true, aiMessage: 'Analyze Patel 529 education fund — probability dropped from 88% to 74%. Show contribution increase scenarios' },
+    actionRoute: { path: '/accounts/acc-029', openAI: true, aiMessage: 'Analyze Patel 529 education fund — probability dropped from 88% to 74%. Show contribution increase scenarios' },
   },
   {
     id: 'nba-006', title: 'Retirement plan review — Linda Garcia',
@@ -333,7 +355,7 @@ export const nbas: NBA[] = [
     trigger: { source: 'planning', condition: 'allocation_age_mismatch', value: '60% equity at age 75', detectedAt: '2026-02-22T08:00:00Z' },
     suggestedAction: 'Schedule review meeting; present de-risking glide path',
     estimatedImpact: 15_000, createdAt: '2026-02-22T08:30:00Z', dismissed: false,
-    actionRoute: { path: '/clients/cli-016', openAI: true, aiMessage: 'Review retirement plan for Linda Garcia — portfolio is 60% equities at age 75 with conservative profile. Present de-risking glide path' },
+    actionRoute: { path: '/accounts/acc-035', openAI: true, aiMessage: 'Review retirement plan for Linda Garcia — portfolio is 60% equities at age 75 with conservative profile. Present de-risking glide path' },
   },
   // ── Risk ──
   {
@@ -353,15 +375,7 @@ export const nbas: NBA[] = [
     // actually needs trimming is the excess over the 10% IPS limit: pos-070's marketValue 390,000
     // minus 10% of acc-011's totalValue 2,800,000 (280,000) = 110,000.
     estimatedImpact: 110_000, createdAt: '2026-02-24T07:15:00Z', dismissed: false,
-    // Review round 1, Important #3 · '/portfolios/accounts/acc-011/concentration' is not a route
-    // (routes.tsx defines only accounts/:accountId, .../attribution and .../tax — no concentration
-    // child). AccountDetailPage renders a "concentration" tab on the base account route, selected
-    // via a ?tab= query param. Review round 2 correction: that ?tab= mechanism did not actually
-    // work before this change — TabLayout never read the URL, so this route+params shape (matching
-    // nba-007's own pre-existing actionRoute) silently landed on Overview rather than crashing.
-    // TabLayout now reads `tab` from the URL (falling back to its prior defaultTab/tabs[0]
-    // behavior when absent or unrecognised), so this actually opens the Concentration tab.
-    actionRoute: { path: '/portfolios/accounts/acc-011', params: { tab: 'concentration' } },
+    actionRoute: { path: '/accounts/acc-011' },
   },
   {
     // D12 · Anderson's fixed income sleeve (acc-022/023/024/025, generated fallback) holds only
@@ -374,7 +388,7 @@ export const nbas: NBA[] = [
     trigger: { source: 'pms', condition: 'duration_mismatch', value: '6.0y vs 5.0y target', detectedAt: '2026-02-23T14:00:00Z' },
     suggestedAction: 'Shorten duration with a short-duration bond sleeve',
     estimatedImpact: 22_000, createdAt: '2026-02-23T14:30:00Z', dismissed: false,
-    actionRoute: { path: '/portfolios/risk' },
+    actionRoute: { path: '/accounts/acc-022' },
   },
   // ── Client Service ──
   {
@@ -403,7 +417,7 @@ export const nbas: NBA[] = [
     trigger: { source: 'crm', condition: 'review_overdue', value: 'Last review: 2025-04-15', detectedAt: '2026-02-20T08:00:00Z' },
     suggestedAction: 'Schedule semi-annual review; AI can generate prep brief',
     estimatedImpact: 0, createdAt: '2026-02-20T08:15:00Z', dismissed: false,
-    actionRoute: { path: '/clients/cli-004', openAI: true, aiMessage: 'Prepare a semi-annual review brief for David & Sarah Williams. Last review was 2025-04-15.' },
+    actionRoute: { path: '/accounts/acc-011', openAI: true, aiMessage: 'Prepare a semi-annual review brief for David & Sarah Williams. Last review was 2025-04-15.' },
   },
   {
     id: 'nba-011', title: 'Life event detected — Raj Patel new baby',
@@ -414,7 +428,7 @@ export const nbas: NBA[] = [
     trigger: { source: 'crm', condition: 'life_event', value: 'New child — mentioned Feb 18', detectedAt: '2026-02-18T16:00:00Z' },
     suggestedAction: 'Create onboarding checklist: beneficiary updates, 529, insurance, estate plan',
     estimatedImpact: 50_000, createdAt: '2026-02-18T16:30:00Z', dismissed: false,
-    actionRoute: { path: '/clients/cli-011', openAI: true, aiMessage: 'Create a life event action plan for Raj Patel — new baby. Include: beneficiary updates, 529 account opening, life insurance review, estate plan revision.' },
+    actionRoute: { path: '/accounts/acc-026', openAI: true, aiMessage: 'Create a life event action plan for Raj Patel — new baby. Include: beneficiary updates, 529 account opening, life insurance review, estate plan revision.' },
   },
   // ── Compliance ──
   {
@@ -428,7 +442,7 @@ export const nbas: NBA[] = [
     trigger: { source: 'compliance', condition: 'ips_review_overdue', value: 'Last: 2024-09-10', detectedAt: '2026-02-15T08:00:00Z' },
     suggestedAction: 'Schedule IPS review; AI can generate updated IPS draft',
     estimatedImpact: 0, createdAt: '2026-02-15T08:15:00Z', dismissed: false,
-    actionRoute: { path: '/clients/cli-001' },
+    actionRoute: { path: '/accounts/acc-002' },
     complianceInfo: {
       nonDismissible: true,
       escalationLevel: 'advisor',
@@ -452,7 +466,7 @@ export const nbas: NBA[] = [
     trigger: { source: 'custodian', condition: 'large_transaction', value: '$250,000 wire received', detectedAt: '2026-02-24T15:00:00Z' },
     suggestedAction: 'Contact client for source-of-funds documentation; file compliance report',
     estimatedImpact: 250_000, createdAt: '2026-02-24T15:15:00Z', expiresAt: '2026-02-26T17:00:00Z', dismissed: false,
-    actionRoute: { path: '/clients/cli-009', openAI: true, aiMessage: 'Draft a source-of-funds request email for Richard Anderson regarding the $250K wire transfer received yesterday.' },
+    actionRoute: { path: '/accounts/acc-022', openAI: true, aiMessage: 'Draft a source-of-funds request email for Richard Anderson regarding the $250K wire transfer received yesterday.' },
     complianceInfo: {
       nonDismissible: true,
       escalationLevel: 'supervisor',
@@ -487,7 +501,7 @@ export const nbas: NBA[] = [
     // they generate.
     estimatedImpactNote: 'Not scored on revenue — a rollover recommendation must be evaluated on the client’s interest, not the fee it generates.',
     createdAt: '2026-02-10T08:30:00Z', dismissed: false,
-    actionRoute: { path: '/clients/cli-004', openAI: true, aiMessage: 'Prepare a rollover cost comparison for David Williams: $1.2M 401(k) at Fidelity. Show plan cost against our schedule, list the non-fee considerations on both sides, and draft the PTE 2020-02 disclosure.' },
+    actionRoute: { path: '/accounts/acc-011', openAI: true, aiMessage: 'Prepare a rollover cost comparison for David Williams: $1.2M 401(k) at Fidelity. Show plan cost against our schedule, list the non-fee considerations on both sides, and draft the PTE 2020-02 disclosure.' },
   },
   {
     id: 'nba-015', title: 'Referral follow-up — Thompson mentioned colleague',
@@ -498,7 +512,7 @@ export const nbas: NBA[] = [
     trigger: { source: 'crm', condition: 'referral_mention', value: 'Dr. Amanda Foster — ~$3M', detectedAt: '2026-02-20T14:00:00Z' },
     suggestedAction: 'Send thank-you note to James; request introduction email; AI can draft outreach',
     estimatedImpact: 22_500, createdAt: '2026-02-20T14:15:00Z', dismissed: false,
-    actionRoute: { path: '/growth', openAI: true, aiMessage: 'Draft a referral outreach email for Dr. Amanda Foster (orthopedic surgeon, ~$3M investable) — referred by James Thompson.' },
+    actionRoute: { path: '/', openAI: true, aiMessage: 'Draft a referral outreach email for Dr. Amanda Foster (orthopedic surgeon, ~$3M investable) — referred by James Thompson.' },
   },
   // ── Additional batch items for volume ──
   {
@@ -510,7 +524,7 @@ export const nbas: NBA[] = [
     trigger: { source: 'calendar', condition: 'upcoming_review', value: 'Mar 5 quarterly review', detectedAt: '2026-02-25T06:00:00Z' },
     suggestedAction: 'Generate AI meeting brief; review performance; prepare agenda',
     estimatedImpact: 0, createdAt: '2026-02-25T06:15:00Z', dismissed: false,
-    actionRoute: { path: '/clients/cli-009', openAI: true, aiMessage: 'Generate a quarterly review prep brief for the Anderson Household — meeting scheduled Mar 5. Include performance summary, planning update, and discussion agenda.' },
+    actionRoute: { path: '/accounts/acc-022', openAI: true, aiMessage: 'Generate a quarterly review prep brief for the Anderson Household — meeting scheduled Mar 5. Include performance summary, planning update, and discussion agenda.' },
   },
   {
     id: 'nba-017', title: 'Roth conversion window — Thompson IRA',
@@ -521,7 +535,7 @@ export const nbas: NBA[] = [
     trigger: { source: 'planning', condition: 'roth_conversion_opportunity', value: 'Lower income year', detectedAt: '2026-02-15T10:00:00Z' },
     suggestedAction: 'Model Roth conversion scenarios at $50K, $100K, $150K; project tax brackets',
     estimatedImpact: 38_000, createdAt: '2026-02-15T10:30:00Z', dismissed: false,
-    actionRoute: { path: '/portfolios/accounts/acc-020/tax' },
+    actionRoute: { path: '/accounts/acc-020' },
   },
   {
     id: 'nba-018', title: 'New model available — ESG Balanced Growth',
@@ -536,7 +550,7 @@ export const nbas: NBA[] = [
     trigger: { source: 'pms', condition: 'new_model_available', value: 'ESG Balanced Growth', detectedAt: '2026-02-22T12:00:00Z' },
     suggestedAction: 'Present ESG model comparison; show tracking error vs current allocation',
     estimatedImpact: 0, createdAt: '2026-02-22T12:15:00Z', dismissed: false,
-    actionRoute: { path: '/portfolios/rebalance' },
+    actionRoute: { path: '/' },
   },
   {
     id: 'nba-019', title: 'Account funding incomplete — Foster brokerage',
@@ -547,7 +561,7 @@ export const nbas: NBA[] = [
     trigger: { source: 'custodian', condition: 'funding_incomplete', value: 'Expected $200K — 10 days', detectedAt: '2026-02-25T08:00:00Z' },
     suggestedAction: 'Contact William to verify wire details; check with custodian',
     estimatedImpact: 200_000, createdAt: '2026-02-25T08:15:00Z', dismissed: false,
-    actionRoute: { path: '/clients/cli-017', openAI: true, aiMessage: 'Draft a follow-up email to William Foster about the expected $200K initial deposit for his new brokerage account. Verify wire details.' },
+    actionRoute: { path: '/accounts/acc-037', openAI: true, aiMessage: 'Draft a follow-up email to William Foster about the expected $200K initial deposit for his new brokerage account. Verify wire details.' },
     complianceInfo: {
       nonDismissible: true,
       escalationLevel: 'none',
@@ -571,6 +585,6 @@ export const nbas: NBA[] = [
     trigger: { source: 'pms', condition: 'rebalance_overdue', value: '14 months since last', detectedAt: '2026-02-24T08:00:00Z' },
     suggestedAction: 'Generate rebalance proposal to return to the 55/45 target',
     estimatedImpact: 0, createdAt: '2026-02-24T08:30:00Z', dismissed: false,
-    actionRoute: { path: '/portfolios/rebalance' },
+    actionRoute: { path: '/accounts/acc-032' },
   },
 ]

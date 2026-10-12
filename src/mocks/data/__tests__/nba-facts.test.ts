@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { nbas } from '@/mocks/data/nbas'
+import { compositeScore, harvestImpactScore, harvestPriority, intcHarvestFacts, nbas } from '@/mocks/data/nbas'
 import { accounts } from '@/mocks/data/accounts'
 import { households } from '@/mocks/data/households'
 import { householdFees } from '@/mocks/data/billing'
@@ -10,9 +10,7 @@ import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { generateTaxLotsWithSaleRisk } from '@/mocks/handlers/custodian'
 import { getModels } from '@/services/pms'
 
-// These tests pin NBA narratives to the mock data. The guard that every NBA `actionRoute.path`
-// resolves to a real route was removed in phase 1 with the old route tree; the roadmap's
-// "Follow-ups already identified" (Phase 3) tracks restoring it against the workspace routes.
+// These tests pin NBA narratives to the mock data. The action-route guard lives in nba-routes.test.ts.
 
 function positionsFor(accountId: string) {
   const account = accounts.find((a) => a.id === accountId)!
@@ -299,5 +297,32 @@ describe('Reg BI / DOL PTE 2020-02 rollover framing', () => {
     expect(rollover.estimatedImpact).not.toBe(5_400)
     expect(rollover.estimatedImpactNote).toBeTruthy()
     expect(rollover.estimatedImpactNote?.toLowerCase()).toContain('not scored on revenue')
+  })
+})
+
+describe('nba-002 is scored from the engine', () => {
+  const nba = nbas.find((n) => n.id === 'nba-002')!
+  const saving = intcHarvestFacts().totalSavingThisYear
+
+  it('impact comes from this year\'s saving; priority and composite follow from it', () => {
+    expect(saving).toBe(1_490)
+    expect(harvestImpactScore(saving)).toBe(39)
+    expect(nba.scoring.impact).toBe(harvestImpactScore(saving))
+    expect(nba.priority).toBe(harvestPriority(nba.scoring.impact))
+    expect(nba.priority).toBe('medium')
+    const { composite, ...rest } = nba.scoring
+    expect(composite).toBe(compositeScore(rest))
+    expect(nba.estimatedImpact).toBe(saving)
+    expect(nba.estimatedImpactNote).toContain('carries forward')
+  })
+
+  it('the impact scale is monotonic and bounded', () => {
+    expect(harvestImpactScore(0)).toBe(0)
+    expect(harvestImpactScore(100)).toBe(0)
+    expect(harvestImpactScore(10_000)).toBe(67)
+    expect(harvestImpactScore(100_000)).toBe(100)
+    expect(harvestImpactScore(10_000_000)).toBe(100)
+    expect(harvestPriority(69)).toBe('medium')
+    expect(harvestPriority(70)).toBe('high')
   })
 })
