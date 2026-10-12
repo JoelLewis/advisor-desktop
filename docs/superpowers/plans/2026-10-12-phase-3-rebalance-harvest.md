@@ -3747,7 +3747,7 @@ import { renderRoutes } from '@/test/render'
 import { carryFinding } from '@/services/workspace'
 import { store } from '@/mocks/data/workspace-store'
 
-const INTC_CLAIM = 'Intel Corp. can be sold at a loss today, and none of the loss would be washed.'
+const INTC_CLAIM = 'Intel Corp. can be sold at a loss today, and nothing bought in the last thirty days would wash the loss.'
 
 describe('the Brief', () => {
   it('opens ready with its ranked summary; a finding goes to the team thread once', async () => {
