@@ -1,7 +1,7 @@
 import { http, HttpResponse, delay } from 'msw'
 import { nextEventTime } from './event-clock'
 import { MOCK_NOW_ISO } from '@/lib/clock'
-import { INTC_HARVEST_NBA_ID, intcHolderFor, intcHoldingSentence, intcReturnSentence, nbas, type IntcHolder } from '../data/nbas'
+import { INTC_HARVEST_NBA_ID, accountDriftSentence, clientDriftFacts, intcHolderFor, intcHoldingSentence, intcReturnSentence, nbas, type IntcHolder } from '../data/nbas'
 import type { BatchActionRequest, NBA, NBAActionTemplate, NBAEffectivenessMetrics, NBACategory } from '@/types/nba'
 import { notFound } from './utils'
 
@@ -39,6 +39,43 @@ function intcHarvestTemplate(h: IntcHolder, name: string): NBAActionTemplate {
     analysisSummary: `Unrealized loss: ${intcHoldingSentence(h, 'advisor')} ${intcReturnSentence(h, 'advisor')} ` +
       'Strategy: sell the loss position, replace with a correlated ETF to maintain sector exposure. Wash sale monitoring across all of the taxpayer\'s accounts required. ' +
       'Recommendation: execute before additional price recovery narrows the harvesting window.',
+    generatedAt: MOCK_NOW_ISO,
+  }
+}
+
+/**
+ * I1 (final review) · the rebalancing email once told each client the book-wide breach range
+ * ("6.2%–90.6%", the 90.6% another client's non-USD account) as their drift, called it a
+ * threshold, and quoted a hand-typed $45K. It now states the addressee's own accounts: each one
+ * outside its band, its worst asset class against its own model's target and band, and the value a
+ * rebalance trades to restore them.
+ */
+function rebalancingTemplate(clientId: string, name: string): NBAActionTemplate {
+  const { own, outOfBand, valueToTradeUsd } = clientDriftFacts(clientId)
+  const advisorDrift = outOfBand.map((d) => accountDriftSentence(d, 'advisor')).join(' ')
+  const clientDrift = outOfBand.map((d) => accountDriftSentence(d, 'client')).join(' ')
+  const accountsOut = outOfBand.length === 1 ? 'one of your accounts has' : `${outOfBand.length} of your accounts have`
+  const toTrade = `Bringing ${outOfBand.length === 1 ? 'it' : 'them'} back to target would mean trading about ${wholeDollars(valueToTradeUsd)}.`
+  const emailFinding = outOfBand.length > 0
+    ? `I'm writing because ${accountsOut} drifted outside the band ${outOfBand.length === 1 ? 'its model allows' : 'their models allow'}. ${clientDrift}\n\n${toTrade} ` +
+      'I recommend we rebalance to restore your target allocation and the risk level we agreed upon in your Investment Policy Statement.'
+    : "None of your accounts is outside its model's drift band today, so drift alone does not call for a rebalance. I'd still like to review your allocation with you."
+  return {
+    talkingPoints: [
+      outOfBand.length > 0
+        ? `${outOfBand.length} of ${name}'s ${own.length} accounts ${outOfBand.length === 1 ? 'is' : 'are'} outside ${outOfBand.length === 1 ? "its model's" : "their models'"} drift band. ${advisorDrift}`
+        : `None of ${name}'s accounts is outside its model's drift band`,
+      outOfBand.length > 0 ? `Restoring target trades about ${wholeDollars(valueToTradeUsd)} across those accounts` : 'Restoring target allocation keeps the agreed risk level',
+      'Tax-loss harvesting can be layered into the rebalance to offset realized gains',
+      'Recommend batch execution to minimize market timing differences across accounts',
+    ],
+    emailDraft: {
+      subject: `Portfolio Rebalancing Recommendation — ${name}`,
+      body: `Dear ${name},\n\n${emailFinding}\n\nI'd like to schedule a brief call to walk you through the proposed trades. Would you have 15 minutes this week?\n\nBest regards,\nYour Advisor`,
+    },
+    analysisSummary: outOfBand.length > 0
+      ? `Drift analysis: ${advisorDrift} Recommended action: systematic rebalancing with tax-aware lot selection, trading about ${wholeDollars(valueToTradeUsd)} to restore each model's targets.`
+      : `Drift analysis: none of ${name}'s accounts is outside its model's band.`,
     generatedAt: MOCK_NOW_ISO,
   }
 }
@@ -84,7 +121,9 @@ export const nbaHandlers = [
         dismissed,
         snoozed,
         avgTimeToAction: +(4 + Math.random() * 44).toFixed(1),
-        revenueImpact: catNbas.reduce((sum, n) => sum + n.estimatedImpact, 0) * (0.3 + Math.random() * 0.4),
+        // An NBA with an impact note states a figure that is not revenue (a tax saving, the value a
+        // rebalance trades, a rollover not scored on its fee), so it adds nothing here.
+        revenueImpact: catNbas.filter((n) => n.estimatedImpactNote === undefined).reduce((sum, n) => sum + n.estimatedImpact, 0) * (0.3 + Math.random() * 0.4),
       }
     })
 
@@ -207,39 +246,23 @@ export const nbaHandlers = [
   }),
 
   // GET /api/nba/:id/templates?clientId= — AI-generated action templates, addressed to one of the
-  // NBA's clients (the first when none is named).
+  // NBA's clients (the first when none is named); 404 for a client the NBA does not concern.
   http.get('/api/nba/:id/templates', async ({ params, request }) => {
     await delay(500)
     const nba = nbas.find((n) => n.id === params.id)
     if (!nba) return notFound()
     const clientId = new URL(request.url).searchParams.get('clientId')
     const addressee = clientId === null ? nba.clients[0] : nba.clients.find((c) => c.id === clientId)
-    if (clientId !== null && addressee === undefined) return notFound()
-
-    const clientNames = nba.clients.map((c) => c.name).join(', ')
-    const addresseeName = addressee?.name ?? 'the client'
+    if (addressee === undefined) return notFound()
+    const addresseeName = addressee.name
     const impact = nba.estimatedImpact > 0
       ? `$${(nba.estimatedImpact / 1000).toFixed(0)}K`
       : null
 
     const templatesByCategory: Record<string, () => NBAActionTemplate> = {
-      rebalancing: () => ({
-        talkingPoints: [
-          `Portfolio drift has exceeded the ${nba.trigger.value} threshold for ${clientNames}`,
-          'Rebalancing now captures the recent equity rally gains and reduces concentration risk',
-          impact ? `Estimated portfolio risk reduction impact: ${impact}` : 'Restoring target allocation improves risk-adjusted returns',
-          'Tax-loss harvesting can be layered into the rebalance to offset realized gains',
-          'Recommend batch execution to minimize market timing differences across accounts',
-        ],
-        emailDraft: {
-          subject: `Portfolio Rebalancing Recommendation — ${addresseeName}`,
-          body: `Dear ${addresseeName},\n\nI'm writing to let you know that your portfolio has drifted from its target allocation due to recent market movements. Specifically, ${nba.trigger.value}.\n\nI recommend we rebalance your portfolio to restore your target allocation. This helps maintain the risk level we agreed upon in your Investment Policy Statement while taking advantage of recent market gains.\n\n${impact ? `The estimated impact of this rebalancing is ${impact}.` : ''}\n\nI'd like to schedule a brief call to walk you through the proposed trades. Would you have 15 minutes this week?\n\nBest regards,\nYour Advisor`,
-        },
-        analysisSummary: `Drift analysis detected ${nba.trigger.value} deviation from target model across ${nba.clients.length} account(s). Primary driver: equity outperformance shifting allocation above policy band. Recommended action: systematic rebalancing with tax-aware lot selection. Risk reduction: restores portfolio to within policy tolerances.`,
-        generatedAt: MOCK_NOW_ISO,
-      }),
+      rebalancing: () => rebalancingTemplate(addressee.id, addresseeName),
       tax_management: () => {
-        const holder = nba.id === INTC_HARVEST_NBA_ID && addressee ? intcHolderFor(addressee.id) : undefined
+        const holder = nba.id === INTC_HARVEST_NBA_ID ? intcHolderFor(addressee.id) : undefined
         return holder ? intcHarvestTemplate(holder, addresseeName) : taxManagementTemplate(nba, addresseeName)
       },
       planning: () => ({

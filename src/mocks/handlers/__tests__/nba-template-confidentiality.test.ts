@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeAll } from 'vitest'
-import { getNBATemplates } from '@/services/nba'
+import { getNBAEffectiveness, getNBATemplates } from '@/services/nba'
 import type { NBAActionTemplate } from '@/types/nba'
-import { nbas, intcHolderFor, type IntcHolder } from '@/mocks/data/nbas'
+import { nbas, intcHolderFor, clientDriftFacts, driftBatchFacts, type IntcHolder } from '@/mocks/data/nbas'
+import { formatRatePercent } from '@/lib/tax-rules'
 import { clients } from '@/mocks/data/clients'
 import { ORDINARY_INCOME_OFFSET_LIMIT_SEPARATE } from '@/lib/capital-gains'
 
@@ -18,12 +19,13 @@ function holderFigures(h: IntcHolder): Set<string> {
 }
 
 const taxNbas = nbas.filter((n) => n.category === 'tax_management')
+const rebalancingNbas = nbas.filter((n) => n.category === 'rebalancing')
 
 // Fetched together: the handler waits 500ms per template.
 const templates = new Map<string, NBAActionTemplate>()
 const templateFor = (nbaId: string, clientId: string) => templates.get(`${nbaId}:${clientId}`)!
 beforeAll(async () => {
-  const pairs = taxNbas.flatMap((nba) => nba.clients.map((c) => [nba.id, c.id] as const))
+  const pairs = [...taxNbas, ...rebalancingNbas].flatMap((nba) => nba.clients.map((c) => [nba.id, c.id] as const))
   const fetched = await Promise.all(pairs.map(([nbaId, clientId]) => getNBATemplates(nbaId, clientId)))
   pairs.forEach(([nbaId, clientId], i) => templates.set(`${nbaId}:${clientId}`, fetched[i]!))
 })
@@ -85,5 +87,58 @@ describe("C1 · the nba-002 email states the addressee's own saving", () => {
     const [unnamed, refused] = await Promise.allSettled([getNBATemplates('nba-002'), getNBATemplates('nba-002', 'cli-003')])
     expect(unnamed.status === 'fulfilled' && unnamed.value.emailDraft.body).toContain(`Dear ${nba.clients[0]!.name},`)
     expect(refused.status).toBe('rejected')
+  })
+})
+
+const percentFigures = (text: string) => text.match(/±?\d+(\.\d+)?%/g) ?? []
+const pct1 = (fraction: number) => `${(fraction * 100).toFixed(1)}%`
+
+describe("I1 · a rebalancing email states the addressee's own drift, band and value to trade", () => {
+  for (const nba of rebalancingNbas) {
+    for (const client of nba.clients) {
+      it(`${nba.id} addressed to ${client.name}`, () => {
+        const { emailDraft } = templateFor(nba.id, client.id)
+        const email = `${emailDraft.subject}\n${emailDraft.body}`
+        const { outOfBand, valueToTradeUsd } = clientDriftFacts(client.id)
+        for (const other of clients.filter((c) => c.id !== client.id)) expect(email).not.toContain(other.fullName)
+        expect(email).not.toContain('threshold')
+        expect(email).not.toContain(nba.trigger.value)
+
+        // Every percentage is one of the addressee's own out-of-band accounts': the worst class's
+        // weight and target, or the model's band.
+        const own = new Set(outOfBand.flatMap(({ drift, worst }) => [pct1(worst.actual), pct1(worst.target), `±${formatRatePercent(drift.driftTolerance)}`]))
+        for (const figure of percentFigures(email)) expect(own, `${figure} in ${client.name}'s email`).toContain(figure)
+        const ownDollars = outOfBand.length > 0 ? [dollars(valueToTradeUsd)] : []
+        expect(dollarFigures(email)).toEqual(ownDollars)
+        for (const { account } of outOfBand) expect(email).toContain(`In your ${account.name}`)
+      })
+    }
+  }
+
+  it("Robert Johnson's nba-001 email gives his two accounts' drift, not the book-wide 6.2%–90.6% range", () => {
+    const { emailDraft } = templateFor('nba-001', 'cli-001')
+    const { outOfBand } = clientDriftFacts('cli-001')
+    expect(outOfBand.map(({ account }) => account.id)).toEqual(['acc-001', 'acc-002'])
+    expect(emailDraft.body).toContain('In your Robert Johnson Individual, US Equity is 68.2% against the Growth model\'s 55.0% target, 13.2 points over, outside its ±5% band.')
+    expect(emailDraft.body).not.toContain('90.6%')
+    expect(emailDraft.body).not.toContain('$45K')
+  })
+})
+
+describe('I1 · nba-001 states a derived impact, not a hand-typed $45K', () => {
+  const nba = nbas.find((n) => n.id === 'nba-001')!
+
+  it('is the value the batch trades to restore every out-of-band account, in USD', () => {
+    expect(nba.estimatedImpact).toBe(Math.round(driftBatchFacts().valueToTradeUsd))
+    expect(nba.estimatedImpact).not.toBe(45_000)
+    expect(nba.estimatedImpactNote).toContain('not a gain, a cost or revenue')
+  })
+
+  it('a figure with an impact note is not counted as revenue on the effectiveness page', async () => {
+    const metrics = await getNBAEffectiveness()
+    const rebalancing = metrics.byCategory.find((c) => c.category === 'rebalancing')!
+    // nba-001 carries a note; nba-018 and nba-020 state no impact.
+    expect(rebalancingNbas.filter((n) => n.estimatedImpactNote === undefined).every((n) => n.estimatedImpact === 0)).toBe(true)
+    expect(rebalancing.revenueImpact).toBe(0)
   })
 })

@@ -13,6 +13,9 @@ import type { Account } from '@/types/account'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { formatCalendarDate } from '@/lib/utils'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
+import { convertToBase } from '@/lib/currency'
+import { ASSET_CLASS_LABELS } from '@/lib/labels'
+import { FX_RATES_USD_BASE } from './currencies'
 
 const dollars = (amount: number) => `$${Math.round(Math.abs(amount)).toLocaleString('en-US')}`
 const percent = (fraction: number) => `${(fraction * 100).toFixed(1)}%`
@@ -25,7 +28,7 @@ const clientName = (clientId: string) => clients.find((c) => c.id === clientId)?
  */
 export function driftBatchFacts() {
   const drifted = accounts
-    .map((account) => ({ account, drift: computeDriftForAccount(account) }))
+    .map((account) => accountDriftFacts(account))
     .filter(({ drift }) => drift.needsRebalance)
   const clientIds = [...new Set(drifted.map(({ account }) => account.clientId))]
   const bands = [...new Map(drifted.map(({ drift }) => [drift.modelId, drift.driftTolerance])).entries()]
@@ -39,7 +42,38 @@ export function driftBatchFacts() {
     bands,
     lowestBreach: Math.min(...breaches),
     highestBreach: Math.max(...breaches),
+    valueToTradeUsd: drifted.reduce((s, d) => s + d.valueToTradeUsd, 0),
   }
+}
+
+/**
+ * One account's drift as a client letter states it: the worst asset class against the model's
+ * target and band, and the value a rebalance trades to restore the targets. That is `totalDrift`
+ * (half the sum of the class drifts, the fraction of the account that must trade) of the account's
+ * value, in USD.
+ */
+export function accountDriftFacts(account: Account) {
+  const drift = computeDriftForAccount(account)
+  const worst = [...drift.assetClassDrifts].sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift))[0]
+  if (worst === undefined) throw new Error(`${account.id} has no asset-class drift`)
+  const valueToTradeUsd = convertToBase(drift.totalDrift * account.totalValue, account.baseCurrency ?? 'USD', FX_RATES_USD_BASE)
+  return { account, drift, worst, valueToTradeUsd }
+}
+
+/** "In [your] Robert Johnson Individual, US Equity is 63.2% against the Growth model's 50.0% target, 13.2 points over, outside its ±5% band." */
+export function accountDriftSentence({ account, drift, worst }: Pick<ReturnType<typeof accountDriftFacts>, 'account' | 'drift' | 'worst'>, voice: Voice): string {
+  const label = ASSET_CLASS_LABELS[worst.assetClass] ?? worst.assetClass
+  const points = (Math.abs(worst.drift) * 100).toFixed(1)
+  return `In ${voice === 'client' ? 'your ' : ''}${account.name}, ${label} is ${percent(worst.actual)} against the ` +
+    `${modelDisplayName(drift.modelId)} model's ${percent(worst.target)} target, ${points} points ${worst.drift > 0 ? 'over' : 'under'}, ` +
+    `${drift.needsRebalance ? 'outside' : 'inside'} its ±${formatRatePercent(drift.driftTolerance)} band.`
+}
+
+/** Every account `clientId` owns, and those outside their model's band: a rebalancing letter to that client reads these alone. */
+export function clientDriftFacts(clientId: string) {
+  const own = accounts.filter((a) => a.clientId === clientId).map(accountDriftFacts)
+  const outOfBand = own.filter(({ drift }) => drift.needsRebalance)
+  return { own, outOfBand, valueToTradeUsd: outOfBand.reduce((s, d) => s + d.valueToTradeUsd, 0) }
 }
 
 /**
@@ -218,7 +252,13 @@ export const nbas: NBA[] = [
       return { source: 'pms', condition: 'drift_exceeded', value: `${percent(facts.lowestBreach)}–${percent(facts.highestBreach)}`, detectedAt: '2026-02-24T08:00:00Z' }
     },
     suggestedAction: 'Generate batch rebalance trades with tax-loss harvesting overlay',
-    estimatedImpact: 45_000, createdAt: '2026-02-24T08:15:00Z', expiresAt: '2026-03-01T23:59:00Z', dismissed: false,
+    // Final review I1 · this was a hand-typed 45_000 with no stated basis. It is now the value the
+    // batch trades to bring every out-of-band account back to its model, in USD.
+    get estimatedImpact() {
+      return Math.round(driftBatchFacts().valueToTradeUsd)
+    },
+    estimatedImpactNote: "The value traded to bring these accounts back to their models' targets, in USD: not a gain, a cost or revenue.",
+    createdAt: '2026-02-24T08:15:00Z', expiresAt: '2026-03-01T23:59:00Z', dismissed: false,
     actionRoute: { path: '/portfolios/rebalance' },
   },
   // ── Tax Management ──
