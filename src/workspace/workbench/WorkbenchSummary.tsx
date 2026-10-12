@@ -41,8 +41,8 @@ export function WorkbenchSummary({ detail, view, notPreviewed = false }: Workben
       </Pane>
       <Pane title="Wash-sale taxpayer">
         {notPreviewed ? <NotPreviewed /> : <RestrictionRulers restrictions={view.preview.repurchaseRestrictions} />}
-        <HeldAwayList accountId={detail.accountId} />
       </Pane>
+      <HeldAwayList accountId={detail.accountId} />
       <Pane title="Pre-trade check">
         {notPreviewed ? <NotPreviewed /> : <PretradeNotes pretrade={view.pretrade} />}
       </Pane>

@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import { Pane } from '@/kit/layout/Pane'
 import { Tag } from '@/kit/tag/Tag'
 import { fmtMoney } from '@/kit/measure'
 import { useAccount } from '@/hooks/use-accounts'
@@ -27,8 +28,7 @@ export function HeldAwayList({ accountId }: { accountId: string }) {
   }
   const securities = away.data.filter(canHoldSecurities)
   return (
-    <section aria-labelledby={titleId} className="flex min-w-0 flex-col gap-2">
-      <h3 id={titleId} className="text-label uppercase text-ink-2">Held-away accounts</h3>
+    <Pane title="Held-away accounts" titleId={titleId}>
       {securities.length === 0 ? <p className="text-body text-ink-3">None on record that can hold securities.</p> : (
         <>
           <ul className="flex flex-col gap-1.5 text-body">
@@ -40,9 +40,9 @@ export function HeldAwayList({ accountId }: { accountId: string }) {
               </li>
             ))}
           </ul>
-          <p className="text-label text-ink-3">A purchase in one of these accounts could wash a loss sold here for the same taxpayer (joint filers count as one). If it's a retirement account, the loss is permanently disallowed.</p>
+          <p className="text-label text-ink-3">A purchase in one of these accounts could wash a loss sold here for the same taxpayer (joint filers count as one). In an IRA or Roth the loss is permanently disallowed; employer plans may be treated the same way.</p>
         </>
       )}
-    </section>
+    </Pane>
   )
 }

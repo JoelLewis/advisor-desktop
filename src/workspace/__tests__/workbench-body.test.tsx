@@ -59,6 +59,10 @@ describe('the workbench body', () => {
     expect(away).toHaveTextContent('Patricia Johnson · TIAA')
     expect(away).toHaveTextContent('joint filers count as one')
     expect(away).toHaveTextContent('NOT VISIBLE TO WASH-SALE CHECKS')
+    expect(away).toHaveTextContent('In an IRA or Roth the loss is permanently disallowed; employer plans may be treated the same way.')
+    expect(away).not.toHaveTextContent(/retirement account/)
+    // Its own summary section, headed like the others rather than nested under the wash-sale taxpayer.
+    expect(within(away).getByRole('heading', { level: 2, name: 'Held-away accounts' })).toBeInTheDocument()
   })
 })
 
