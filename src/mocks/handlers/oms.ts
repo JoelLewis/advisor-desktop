@@ -1,24 +1,22 @@
 import { http, HttpResponse } from 'msw'
-import type { Order, RebalancePreview, ProposedTrade, TradeRequest, PreTradeCheckRequest, PreTradeViolation } from '@/services/oms'
+import type { Order, RebalancePreview, ProposedTrade, TradeRequest, PreTradeCheckRequest, PreTradeViolation, PreTradeCheckProposalRequest } from '@/services/oms'
 import { notFound } from './utils'
-import { RESTRICTED_SECURITIES, CASH_MINIMUM_PCT } from './compliance'
+import { RESTRICTED_SECURITIES, CASH_MINIMUM_PCT, TECH_SYMBOLS, SECTOR_LIMIT, evaluateProposal, invalidProposal } from './compliance'
 import { computeDriftForAccount, modelImplementationSecurity } from './pms'
 import { accounts } from '../data/accounts'
 import { getPositionsForAccount } from '../data/positions'
 import { openWashSaleWindows } from '../data/realised-sales'
 import { FX_RATES_USD_BASE } from '../data/currencies'
 import { convertCurrency } from '@/lib/currency'
-import { securityKind, concentrationLimitFor } from '@/lib/security-master'
+import { securityKind, concentrationLimitFor, isMarketTradable } from '@/lib/security-master'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
+import { hasWashSaleRisk, isoDaysBefore } from '@/lib/wash-sale'
+import { netTaxForLegs } from '@/lib/capital-gains'
 import { generateTaxLots, boundedTradeQty } from './custodian'
 import { taxRateFor } from '@/features/portfolios/tax/shared'
-import type { Position } from '@/types/portfolio'
+import type { Position, TaxLot } from '@/types/portfolio'
 import type { CurrencyCode } from '@/types/currency'
-
-/** Pooled/individual tech names used by the sector-concentration check below. */
-const TECH_SYMBOLS = ['AAPL', 'MSFT', 'NVDA', 'GOOGL', 'META', 'AMZN', 'TSLA']
-const SECTOR_LIMIT = 0.40
 
 // Exported so `ai.ts`'s trading-desk chat response reads the same pending-order counts this
 // handler serves, rather than a second, independently hand-typed "3 open orders" figure.
@@ -76,17 +74,20 @@ export function currencyForAccount(accountId: string): CurrencyCode {
   return accounts.find((a) => a.id === accountId)?.baseCurrency ?? 'USD'
 }
 
+type RealisedSale = { shortTerm: number; longTerm: number; tax: number; consumedLotIds: string[] }
+const NOTHING_REALISED: RealisedSale = { shortTerm: 0, longTerm: 0, tax: 0, consumedLotIds: [] }
+
 /**
- * Estimate the capital-gains tax on selling `notional` dollars out of `target`, using the same
- * per-lot generator the tax page reads (`generateTaxLots`) and the same rate function
+ * Realise a sale of `notional` dollars out of `target`: the signed short- and long-term result
+ * and the capital-gains tax on its gains, using the same per-lot generator the tax page reads (`generateTaxLots`) and the same rate function
  * (`taxRateFor`) it applies — a short-term-heavy sell is taxed at `SHORT_TERM_RATE` (37%), not
  * silently at the long-term rate (23.8%) for the entire position. A tax-aware pass sells the
  * lowest-gain-fraction (highest cost basis) lots first to minimise realised gain; a tax-unaware
  * pass sells the lots in their own oldest-first order.
  */
-function estimateSaleTax(accountId: string, totalValue: number, target: Position, notional: number, taxAware: boolean): number {
-  const lots = generateTaxLots(accountId, totalValue).filter((l) => l.positionId === target.id)
-  if (lots.length === 0 || notional <= 0) return 0
+function realiseSale(accountLots: readonly TaxLot[], target: Position, notional: number, taxAware: boolean): RealisedSale {
+  const lots = accountLots.filter((l) => l.positionId === target.id)
+  if (lots.length === 0 || notional <= 0) return NOTHING_REALISED
   // Minimise realised gain and rank by *tax per dollar sold*, not gain per dollar sold: a
   // low-gain short-term lot (37% rate) can carry more tax than a low-gain long-term lot (23.8%
   // rate), so sorting by gain fraction alone can pick a worse-taxed lot first.
@@ -94,15 +95,21 @@ function estimateSaleTax(accountId: string, totalValue: number, target: Position
   const ordered = taxAware ? [...lots].sort((a, b) => taxPerDollar(a) - taxPerDollar(b)) : lots
 
   let remaining = notional
+  let shortTerm = 0
+  let longTerm = 0
   let tax = 0
+  const consumedLotIds: string[] = []
   for (const lot of ordered) {
     if (remaining <= 0 || lot.currentValue <= 0) continue
     const portion = Math.min(1, remaining / lot.currentValue)
-    const realisedGain = lot.gainLoss * portion
-    if (realisedGain > 0) tax += realisedGain * taxRateFor(lot.holdingPeriod)
+    consumedLotIds.push(lot.id)
+    const realised = lot.gainLoss * portion
+    if (lot.holdingPeriod === 'short') shortTerm += realised
+    else longTerm += realised
+    if (realised > 0) tax += realised * taxRateFor(lot.holdingPeriod)
     remaining -= lot.currentValue * portion
   }
-  return Math.max(0, Math.round(tax))
+  return { shortTerm: Math.round(shortTerm), longTerm: Math.round(longTerm), tax: Math.max(0, Math.round(tax)), consumedLotIds }
 }
 
 /**
@@ -142,7 +149,7 @@ export type ProposedTradeLeg = ProposedTrade & Sleeve
  * already in the account is worse than no toggle.
  *
  * Ranking is by **gain per dollar of market value** — gain per dollar *sold*, the same
- * per-dollar logic `estimateSaleTax` applies across lots — not by absolute gain, which would
+ * per-dollar logic `realiseSale` applies across lots — not by absolute gain, which would
  * simply prefer whichever position happens to be biggest. Ascending order puts losses first
  * (harvestable), then the smallest embedded gains.
  *
@@ -153,14 +160,31 @@ export type ProposedTradeLeg = ProposedTrade & Sleeve
  * the account overweight us_equity after a rebalance that reported success, while SPY sat in the
  * same sleeve able to absorb the rest. Sell INTC out first, then top up from SPY.
  *
- * Gated on `taxable`: in an IRA or a Roth, gains are not taxed at all (`estimateSaleTax` already
+ * Gated on `taxable`: in an IRA or a Roth, gains are not taxed at all (`realiseSale` already
  * returns 0 there), so re-ordering by embedded gain would be an arbitrary preference dressed up
  * as tax awareness. Those accounts keep the held order under either toggle setting.
+ *
+ * A tax-aware pass also never sells a position whose every lot is `recentlyOpened` (held 31 days
+ * or fewer). Such a position is, in practice, a harvest replacement: acc-002's 180 SMH were
+ * bought 2026-02-21 to keep semiconductor exposure after the INTC loss sale (note-002, comp-006),
+ * and at zero gain they ranked ahead of SPY, so the toggle sold them four days later and undid the
+ * harvest. Holding the replacement past the 31st day is the TLH practice; the sleeve then fills
+ * from the next candidate as it always would.
  */
-function orderSellCandidates(held: Position[], taxAware: boolean): Position[] {
+function orderSellCandidates(held: Position[], taxAware: boolean, recentlyOpened: ReadonlySet<string>): Position[] {
   if (!taxAware) return held
   const gainPerDollar = (p: Position) => (p.marketValue > 0 ? p.gainLoss / p.marketValue : 0)
-  return [...held].sort((a, b) => gainPerDollar(a) - gainPerDollar(b))
+  return held.filter((p) => !recentlyOpened.has(p.id)).sort((a, b) => gainPerDollar(a) - gainPerDollar(b))
+}
+
+/** How long a harvest replacement is held before a tax-aware rebalance may sell it. */
+const REPLACEMENT_HOLD_DAYS = 31
+
+/** Positions every one of whose lots was bought within the last `REPLACEMENT_HOLD_DAYS` days. */
+function recentlyOpenedPositions(lots: readonly TaxLot[], asOfISO: string): Set<string> {
+  const since = isoDaysBefore(asOfISO, REPLACEMENT_HOLD_DAYS)
+  const hasOlderLot = new Set(lots.filter((l) => l.purchaseDate < since).map((l) => l.positionId))
+  return new Set(lots.filter((l) => !hasOlderLot.has(l.positionId)).map((l) => l.positionId))
 }
 
 /**
@@ -248,13 +272,27 @@ export function generateRebalanceTrades(
   const drift = computeDriftForAccount(account, modelId)
   const taxable = isTaxableAccount(account.taxTreatment)
   const currency = currencyForAccount(accountId)
+  const lossWindows = openWashSaleWindows(MOCK_TODAY_ISO, account.householdId)
+  // The account's own lots are generated once and shared by the sell ordering, every leg's
+  // `realiseSale`, and the household acquisitions below.
+  const ownLots = generateTaxLots(account.id, account.totalValue)
+  const recentlyOpened = recentlyOpenedPositions(ownLots, MOCK_TODAY_ISO)
+  const acquisitions = accounts.filter((a) => a.householdId === account.householdId).flatMap((a) => {
+    const symbolOf = new Map(getPositionsForAccount(a.id, a.totalValue).map((p) => [p.id, p.symbol]))
+    const lots = a.id === account.id ? ownLots : generateTaxLots(a.id, a.totalValue)
+    return lots.map((l) => {
+      const symbol = symbolOf.get(l.positionId)
+      if (symbol === undefined) throw new Error(`tax lot ${l.id} in ${a.id} names unknown position ${l.positionId}`)
+      return { symbol, date: l.purchaseDate, lotId: l.id }
+    })
+  })
 
   type RawLeg = { target: TradeCandidate; side: 'buy' | 'sell'; notional: number; sleeve: Sleeve }
 
   const raw = drift.assetClassDrifts
     .filter((d) => Math.abs(d.drift) > driftThreshold)
     .flatMap((d): RawLeg[] => {
-      const held = positions.filter((p) => p.assetClass === d.assetClass && p.symbol !== 'CASH')
+      const held = positions.filter((p) => p.assetClass === d.assetClass && p.symbol !== 'CASH' && isMarketTradable(p.symbol))
       const side: 'buy' | 'sell' = d.actual > d.target ? 'sell' : 'buy'
       const rawNotional = Math.abs(d.drift) * account.totalValue
       const sleeve: Sleeve = { assetClass: d.assetClass, actualWeight: d.actual, targetWeight: d.target }
@@ -266,7 +304,7 @@ export function generateRebalanceTrades(
         // value, so long-only holds leg by leg as well as in aggregate.
         let remaining = rawNotional
         const legs: RawLeg[] = []
-        for (const position of orderSellCandidates(held, taxAware && taxable)) {
+        for (const position of orderSellCandidates(held, taxAware && taxable, recentlyOpened)) {
           if (remaining <= 0) break
           const notional = Math.min(remaining, position.marketValue)
           if (notional <= 0) continue
@@ -315,8 +353,9 @@ export function generateRebalanceTrades(
   // may not spend below its own cash target to fund them. `buyCapacity` is what sells raise
   // plus the cash genuinely available above target — the `cashAboveTarget` term is what makes
   // this correct where a round-2 attempt (`buyScale = totalSell / totalBuy`, capping buys to
-  // match sells alone, reverted in round 3) was not: acc-006 legitimately funds $912,000 of
-  // buys from its own cash against only $540,000 of sells, and must continue to.
+  // match sells alone, reverted in round 3) was not: acc-006 legitimately funds buys from its
+  // own cash above target — now with no sells at all, since BXPE is periodic-liquidity and never
+  // sold — and must continue to.
   //
   // ── Funding priority, stated deliberately ──────────────────────────────────────────────────
   // When proceeds cannot cover both the underweight return-seeking sleeves and an underweight
@@ -390,17 +429,22 @@ export function generateRebalanceTrades(
       // unit is half this leg's executed value. 48 taxed legs book-wide were affected; the
       // exposure per leg is bounded by `unitPrice / estimatedValue`. All three numbers on the
       // row now describe one trade.
-      const taxImpact = side === 'sell' && taxable && target.position
-        ? estimateSaleTax(account.id, account.totalValue, target.position, estimatedValue, taxAware)
-        : 0
+      const realised = side === 'sell' && taxable && target.position
+        ? realiseSale(ownLots, target.position, estimatedValue, taxAware)
+        : NOTHING_REALISED
       return {
         symbol: target.symbol,
         name: target.name,
         side,
         quantity,
         estimatedValue,
-        taxImpact,
-        washSaleRisk: false,
+        taxImpact: realised.tax,
+        realisedShortTerm: realised.shortTerm,
+        realisedLongTerm: realised.longTerm,
+        washSaleRisk: hasWashSaleRisk(
+          { symbol: target.symbol, side, realisesLoss: realised.shortTerm + realised.longTerm < 0, soldLotIds: realised.consumedLotIds },
+          lossWindows, acquisitions, MOCK_TODAY_ISO,
+        ),
         currency,
         ...sleeve,
       }
@@ -626,13 +670,18 @@ export const omsHandlers = [
     const isBuy = body.side.startsWith('buy') || body.side === 'purchase'
     const postTradeWeight = (existing + (isBuy ? estValue : -estValue)) / accountValue
 
+    // A sale only moves the weight down, toward the limit. It cannot cause a breach, so it is never
+    // the block — at most a warning that the limit remains breached after it.
     if (postTradeWeight > limit * 0.8) {
+      const stillOver = !isBuy && postTradeWeight > limit
       violations.push({
         constraint: kind === 'single_name' ? 'Single-issuer concentration limit' : 'Pooled-vehicle concentration limit',
-        severity: postTradeWeight > limit ? 'block' : 'warning',
+        severity: postTradeWeight > limit && isBuy ? 'block' : 'warning',
         currentValue: `${(postTradeWeight * 100).toFixed(1)}%`,
         limit: `${(limit * 100).toFixed(1)}%`,
-        message: `${sym} would be ${(postTradeWeight * 100).toFixed(1)}% of this account against a ${(limit * 100).toFixed(1)}% IPS limit.`,
+        message: stillOver
+          ? `${sym} remains above the ${(limit * 100).toFixed(1)}% IPS limit after this sale, at ${(postTradeWeight * 100).toFixed(1)}% of this account. The sale reduces the breach; it does not cause it.`
+          : `${sym} would be ${(postTradeWeight * 100).toFixed(1)}% of this account against a ${(limit * 100).toFixed(1)}% IPS limit.`,
       })
     }
 
@@ -708,24 +757,43 @@ export const omsHandlers = [
     })
   }),
 
+  // Proposal-level pre-trade check — all legs applied to one projected portfolio, end state checked,
+  // each violation attributed to its legs. See `evaluateProposal` in `compliance.ts`.
+  http.post('/api/oms/orders/pre-check-proposal', async ({ request }) => {
+    const body = await request.json() as PreTradeCheckProposalRequest
+    const invalid = invalidProposal(body.trades)
+    if (invalid) return HttpResponse.json({ error: invalid }, { status: 400 })
+    const result = evaluateProposal(body.accountId, body.trades)
+    if (!result) return notFound()
+    return HttpResponse.json(result)
+  }),
+
   http.post('/api/oms/rebalance', async ({ request }) => {
     const body = await request.json() as { accountIds: string[]; driftThreshold?: number; taxAware: boolean }
-    const previews: RebalancePreview[] = body.accountIds.map((accountId) => {
+    const previews: RebalancePreview[] = []
+    for (const accountId of body.accountIds) {
+      const account = accounts.find((a) => a.id === accountId)
+      if (!account) return notFound()
       // The Rebalance page's drift-threshold control was sent and ignored; `driftThreshold` was
       // in scope one line away.
       const trades = generateRebalanceTrades(accountId, body.taxAware, body.driftThreshold)
-      return {
+      const tax = netTaxForLegs(trades, taxRateFor)
+      previews.push({
         accountId,
         // §9.3 — same source as every trade on this preview (`currencyForAccount`), so a preview
         // with zero proposed trades still carries a correct currency tag rather than an implicit
         // USD default.
         currency: currencyForAccount(accountId),
         trades,
-        // C26 — the total is the sum of the trades' own tax impacts, not a second literal that
-        // could (and did) disagree with them.
-        estimatedTaxImpact: trades.reduce((sum, t) => sum + t.taxImpact, 0),
-      }
-    })
+        // §1222 — this proposal's legs netted (not year-to-date results, not other accounts); the
+        // gross figure is kept so a surface can show what netting saved.
+        estimatedTaxImpact: tax.net,
+        grossTaxOnGains: tax.gross,
+        // Whether a sale here is a taxable event at all; a surface reads it to tell "not taxed in
+        // this account" from "taxed, and the result is zero".
+        taxable: isTaxableAccount(account.taxTreatment),
+      })
+    }
     return HttpResponse.json(previews)
   }),
 

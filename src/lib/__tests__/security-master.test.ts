@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { securityKind, concentrationLimitFor, SINGLE_NAME_LIMIT, FUND_LIMIT, CASH_LIMIT, type SecurityKind } from '@/lib/security-master'
+import { securityKind, concentrationLimitFor, isMarketTradable, SINGLE_NAME_LIMIT, FUND_LIMIT, CASH_LIMIT, type SecurityKind } from '@/lib/security-master'
 import { accounts } from '@/mocks/data/accounts'
 import { allPositions, getPositionsForAccount } from '@/mocks/data/positions'
 
@@ -52,7 +52,7 @@ const EXPECTED_KIND: Record<string, SecurityKind> = {
   // US-domiciled pooled vehicles
   VTI: 'fund', SPY: 'fund', QQQ: 'fund', EFA: 'fund', VWO: 'fund', VXUS: 'fund',
   AGG: 'fund', BND: 'fund', BNDX: 'fund', TLT: 'fund', TIP: 'fund', LQD: 'fund', VCIT: 'fund',
-  GLD: 'fund', VNQ: 'fund', QAI: 'fund', IBIT: 'fund', ETHE: 'fund', BXPE: 'fund',
+  GLD: 'fund', VNQ: 'fund', QAI: 'fund', IBIT: 'fund', ETHE: 'fund', BXPE: 'fund', SMH: 'fund',
   // Foreign-listed pooled vehicles — the acc-041/042/043/044 gap this round closes
   '2800.HK': 'fund',   // Tracker Fund of Hong Kong (Hang Seng index ETF)
   'ES3.SI': 'fund',    // SPDR Straits Times Index ETF
@@ -146,4 +146,13 @@ describe('C23 fix round 1: no pooled vehicle in the international accounts reads
       expect(weight).toBeLessThanOrEqual(FUND_LIMIT)
     },
   )
+})
+
+describe('isMarketTradable', () => {
+  it('BXPE redeems only at periodic windows, so it is not market-tradable', () => {
+    expect(isMarketTradable('BXPE')).toBe(false)
+  })
+  it('listed ETFs and stocks are market-tradable', () => {
+    for (const s of ['SPY', 'INTC', 'IBIT', 'SMH']) expect(isMarketTradable(s)).toBe(true)
+  })
 })

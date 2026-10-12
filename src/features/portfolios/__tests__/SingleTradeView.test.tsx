@@ -17,7 +17,11 @@ function renderView() {
  * the *broken* one (quantity x price, or yield-as-price) passes clean — the same technique used
  * for the AccountDetailPage/TradeTicketDialog wiring test in fix round 2.
  */
-describe('SingleTradeView — fixed-income notional wiring (fix round 3)', () => {
+// The slowest UI flow in the suite: ~25 user-event interactions on a 500-line form plus the symbol
+// search's real 300ms debounce — ~1.5s on an idle machine, against ~0.2s for a typical render test.
+// The 5s default leaves it ~3x headroom, which concurrent suites from other worktrees eat; 15s
+// keeps the same ~10x margin the rest of the suite has.
+describe('SingleTradeView — fixed-income notional wiring (fix round 3)', { timeout: 15_000 }, () => {
   async function placeBondOrder(user: ReturnType<typeof userEvent.setup>, { yieldMode }: { yieldMode: boolean }) {
     renderView()
 

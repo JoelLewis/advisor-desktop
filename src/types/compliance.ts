@@ -42,7 +42,7 @@ export type TradeComplianceResult = {
 
 export type TradeComplianceCheck = {
   rule: string
-  category: 'restricted_securities' | 'concentration_limit' | 'cash_minimum' | 'wash_sale' | 'position_limit'
+  category: 'restricted_securities' | 'concentration_limit' | 'sector_limit' | 'cash_minimum' | 'wash_sale' | 'position_limit'
   status: 'pass' | 'warning' | 'fail'
   message: string
   details?: {

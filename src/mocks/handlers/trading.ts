@@ -5,6 +5,8 @@ import { generateRebalanceTrades, currencyForAccount, type ProposedTradeLeg } fr
 import { computeDriftForAccount, MODEL_DEFINITIONS } from './pms'
 import { notFound, roundTo } from './utils'
 import { ASSET_CLASS_LABELS } from '@/lib/labels'
+import { netTaxForLegs } from '@/lib/capital-gains'
+import { taxRateFor } from '@/features/portfolios/tax/shared'
 import type { ModelTradePreview } from '@/types/trading'
 
 /**
@@ -132,9 +134,9 @@ export const tradingHandlers = [
           currency: t.currency,
           reason: sleeveReason(t),
         })),
-        // The sum of the trades' own tax figures, not a second literal that can disagree with them
-        // — the same rule `/api/oms/rebalance` follows.
-        estimatedTaxImpact: trades.reduce((sum, t) => sum + t.taxImpact, 0),
+        // §1222-netted from the trades' own realised results, not a second literal that can
+        // disagree with them — the same rule `/api/oms/rebalance` follows.
+        estimatedTaxImpact: netTaxForLegs(trades, taxRateFor).net,
       })
     }
     return HttpResponse.json(previews)

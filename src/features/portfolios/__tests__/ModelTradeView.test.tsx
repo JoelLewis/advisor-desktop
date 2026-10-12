@@ -47,7 +47,10 @@ async function selectOnly(user: ReturnType<typeof userEvent.setup>, accountName:
   return screen.findByText('Trade Preview')
 }
 
-describe('ModelTradeView renders the account\'s own data, not a hash of its id', () => {
+// Each test walks the wizard over the full 47-account selection table (and two of them deselect,
+// reselect and preview), ~0.7–0.8s apiece on an idle machine — the heaviest renders in the suite
+// after SingleTradeView. 15s keeps a ~10x margin when other worktrees' suites share the CPU.
+describe('ModelTradeView renders the account\'s own data, not a hash of its id', { timeout: 15_000 }, () => {
   it('step 2 shows each account\'s real drift, not the character-code figure', async () => {
     const user = userEvent.setup()
     await openModel(user, 'Growth')
@@ -134,7 +137,7 @@ describe('ModelTradeView renders the account\'s own data, not a hash of its id',
       { compact: true, currency: 'USD' },
     )
     expect(preview!.estimatedTaxImpact).toBeGreaterThan(0)
-    expect(screen.getByText(`Tax: ${convertedTax}`)).toBeInTheDocument()
+    expect(screen.getByText(`Est. tax, net of losses: ${convertedTax}`)).toBeInTheDocument()
 
     // ── the batch summary cards convert before summing ──
     // With one HKD preview selected, the "Total Value" and "Est. Tax Impact" cards are that
@@ -150,6 +153,8 @@ describe('ModelTradeView renders the account\'s own data, not a hash of its id',
     expect(screen.getAllByText(expectedTotal).length).toBeGreaterThan(0)
     expect(screen.queryByText(unconvertedTotal)).not.toBeInTheDocument()
     expect(screen.getAllByText(convertedTax).length).toBeGreaterThan(0)
+    // The card adds separately netted account figures, so it says so.
+    expect(screen.getByText('Est. tax, sum of account estimates')).toBeInTheDocument()
 
     // ── the hardcoded basket is gone ──
     expect(screen.queryByText('AAPL')).not.toBeInTheDocument()

@@ -37,6 +37,17 @@ const FUND_SYMBOLS = new Set([
 /** Asset classes that cannot hold a single issuer position in this dataset. */
 const FUND_ONLY_CLASSES = new Set(['alternatives', 'real_estate', 'commodities', 'private_equity'])
 
+/**
+ * Semi-liquid evergreen vehicles: redeemable only at periodic repurchase windows, each capped as
+ * a share of NAV (BXPE: quarterly). A rebalance cannot sell them at market, so the engine leaves
+ * them in place and lets the drift surface report the exposure.
+ */
+const PERIODIC_LIQUIDITY_SYMBOLS = new Set(['BXPE'])
+
+export function isMarketTradable(symbol: string): boolean {
+  return !PERIODIC_LIQUIDITY_SYMBOLS.has(symbol)
+}
+
 export const SINGLE_NAME_LIMIT = 0.10 as const
 export const FUND_LIMIT = 0.35 as const
 export const CASH_LIMIT = 0.15 as const
