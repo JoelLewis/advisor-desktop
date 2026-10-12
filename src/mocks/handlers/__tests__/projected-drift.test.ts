@@ -111,8 +111,10 @@ describe('§0.6 · projected drift after the proposed trades', () => {
         for (const d of projected.assetClassDrifts.filter((x) => x.residualReason === 'cash_capped')) {
           claimed++
           // Underweight: buys stopped at the band's floor. Overweight: sells stopped at its ceiling.
-          if (d.drift < 0) expect(endCash - Math.min(startCash, targetCash), `${account.id} ${d.assetClass}`).toBeLessThanOrEqual(slack)
-          else expect(Math.max(startCash, targetCash) - endCash, `${account.id} ${d.assetClass}`).toBeLessThanOrEqual(slack)
+          // Two-sided: the cash ends at that bound, within the flooring slack, neither short of it
+          // (the band did not bind) nor past it (the trades broke the band).
+          const bound = d.drift < 0 ? Math.min(startCash, targetCash) : Math.max(startCash, targetCash)
+          expect(Math.abs(endCash - bound), `${account.id} ${d.assetClass} at ${threshold}`).toBeLessThanOrEqual(slack)
         }
       }
     }
