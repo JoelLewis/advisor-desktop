@@ -23,7 +23,17 @@ type TaxLot = {
   currentValue: Currency;
   gainLoss: Currency;
   holdingPeriod: HoldingPeriod;
-  washSaleRestricted: boolean;
+  /**
+   * The last day of the latest open household loss-sale window on this lot's symbol, or `null`
+   * when there is none. It restricts **buying the symbol back** (IRC §1091), not selling this lot:
+   * selling a lot at a loss is the harvest itself.
+   */
+  repurchaseBlockedUntil: string | null;
+  /**
+   * Whether selling this lot alone, today, would be a wash sale: it realises a loss and
+   * substantially identical shares were bought in the household within the last 30 days.
+   */
+  saleWashSaleRisk: boolean;
 };
 
 type Position = {

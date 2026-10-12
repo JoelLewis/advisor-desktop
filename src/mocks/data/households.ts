@@ -22,6 +22,7 @@ export const householdFixtures: HouseholdFixture[] = [
     primaryContactId: 'cli-001',
     segment: 'platinum',
     createdAt: '2018-01-15',
+    filingStatus: 'married_filing_jointly',
   },
   {
     id: 'hh-002',
@@ -35,6 +36,7 @@ export const householdFixtures: HouseholdFixture[] = [
     primaryContactId: 'cli-003',
     segment: 'platinum',
     createdAt: '2019-06-01',
+    filingStatus: 'married_filing_jointly',
   },
   {
     id: 'hh-003',

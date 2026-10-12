@@ -31,7 +31,7 @@ function Harness({ previews }: { previews: RebalancePreview[] }) {
   return (
     <PreviewTradesStep
       previews={previews}
-      accounts={[{ id: 'acc-043', name: 'Mueller EUR Balanced Account' }]}
+      accounts={[{ id: 'acc-043', name: 'Mueller EUR Balanced Account' }, { id: 'acc-001', name: 'Johnson Family Trust' }]}
       formatWithConversion={formatWithConversion}
       totalTrades={previews.reduce((sum, p) => sum + p.trades.length, 0)}
       // Mirrors RebalancePage.tsx's own fix — the batch total is converted to USD (per preview's
@@ -116,7 +116,8 @@ describe('PreviewTradesStep renders each trade at its own account currency, not 
     // same amount). Both must show the converted figure, and the mislabeled
     // (unconverted-EUR-read-as-USD) string must appear nowhere on the page.
     // Header (line 38) — inline text inside a mixed-content span, so matched via textContent.
-    expect(container.textContent).toContain(`Est. tax, this proposal (gains net of losses): ${expected}`)
+    expect(container.textContent).toContain(`Est. tax added to the return: ${expected}`)
+    expect(container.textContent).toContain('nets this proposal with YTD realised results on the same tax return (none)')
     // Footer batch total — the only `<strong class="font-mono text-accent-red">` on the step. It
     // adds separately netted account figures, so it is labelled as a sum of them.
     expect(container.querySelector('strong.font-mono.text-accent-red')?.textContent).toBe(expected)
@@ -145,7 +146,8 @@ describe('PreviewTradesStep renders each trade at its own account currency, not 
     const usd = (n: number) => formatCurrency(n, { compact: true, currency: 'USD' })
     const intcRow = screen.getByText('INTC').closest('tr')!
     expect(intcRow.textContent).toContain(`Harvested loss ${usd(Math.abs(loss))}`)
-    expect(container.textContent).toContain(`Est. tax, this proposal (gains net of losses): ${usd(preview!.estimatedTaxImpact)}`)
+    expect(container.textContent).toContain(`Est. tax added to the return: ${usd(preview!.estimatedTaxImpact)}`)
+    expect(container.textContent).toContain(`nets this proposal with YTD realised results on the same tax return (LT ${usd(-32_750)})`)
     expect(container.textContent).toContain(`Gross on gains: ${usd(preview!.grossTaxOnGains)}`)
     // Buys realise nothing, so their Realised cell is a dash, not a figure.
     const buyRow = screen.getByText(preview!.trades.find((t) => t.side === 'buy')!.symbol).closest('tr')!
@@ -176,6 +178,8 @@ describe('PreviewTradesStep renders each trade at its own account currency, not 
       taxable: true,
       estimatedTaxImpact: 0,
       grossTaxOnGains: 0,
+      ytdRealisedOnReturn: { shortTerm: 0, longTerm: 0 },
+      nettedWithAccountIds: [],
       trades: [{
         symbol: 'SMH', name: 'VanEck Semiconductor ETF', side: 'sell', quantity: 180, estimatedValue: 44_136,
         taxImpact: 0, realisedShortTerm: 0, realisedLongTerm: 0, washSaleRisk: false, currency: 'USD',
@@ -201,5 +205,22 @@ describe('PreviewTradesStep renders each trade at its own account currency, not 
     // USD -> USD conversion is a no-op, so the rendered figure equals the raw notional formatted.
     const expected = formatCurrency(trade.estimatedValue, { compact: true, currency: 'USD' })
     expect(screen.getAllByText(expected).length).toBeGreaterThan(0)
+  })
+})
+
+describe('PreviewTradesStep says what each tax estimate nets', () => {
+  it('acc-001 then acc-002: the second header names the earlier account on the same return it nets against', async () => {
+    const previews = await previewRebalance({ accountIds: ['acc-001', 'acc-002'], taxAware: true })
+    const { container } = render(<Harness previews={previews} />, { wrapper: createWrapper() })
+    await waitFor(() => expect(screen.queryByTestId('fx-loading')).not.toBeInTheDocument())
+    expect(container.textContent).toContain('and with Johnson Family Trust above')
+  })
+
+  it('acc-003 (Traditional IRA): no capital-gains estimate, and no claim to net anything', async () => {
+    const [preview] = await previewRebalance({ accountIds: ['acc-003'], taxAware: true })
+    const { container } = render(<Harness previews={[preview!]} />, { wrapper: createWrapper() })
+    await waitFor(() => expect(screen.queryByTestId('fx-loading')).not.toBeInTheDocument())
+    expect(container.textContent).toContain('Not taxed in this account')
+    expect(container.textContent).not.toContain('Est. tax added to the return')
   })
 })

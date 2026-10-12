@@ -5,8 +5,8 @@ import { generateRebalanceTrades, currencyForAccount, type ProposedTradeLeg } fr
 import { computeDriftForAccount, MODEL_DEFINITIONS } from './pms'
 import { notFound, roundTo } from './utils'
 import { ASSET_CLASS_LABELS } from '@/lib/labels'
-import { netTaxForLegs } from '@/lib/capital-gains'
-import { taxRateFor } from '@/features/portfolios/tax/shared'
+import { estimateTaxOnReturns } from './tax-return'
+import { MOCK_TODAY_ISO } from '@/lib/clock'
 import type { ModelTradePreview } from '@/types/trading'
 
 /**
@@ -98,7 +98,7 @@ export const tradingHandlers = [
     // *display*; here it would silently issue mod-001's trades under another model's name.
     if (!model) return HttpResponse.json({ error: `Unknown model ${body.modelId}` }, { status: 404 })
 
-    const previews: ModelTradePreview[] = []
+    const batch = []
     for (const accountId of body.accountIds) {
       const account = accounts.find((a) => a.id === accountId)
       if (!account) return notFound()
@@ -112,33 +112,35 @@ export const tradingHandlers = [
       // The single source of truth matters here and is intact — both calls are the same function
       // with the same arguments, so they cannot disagree; only the work is duplicated, not the fact.
       const drift = computeDriftForAccount(account, model.id)
-      const trades = generateRebalanceTrades(account.id, MODEL_TRADE_TAX_AWARE, undefined, model.id)
-      previews.push({
-        accountId: account.id,
-        accountName: account.name,
-        modelId: model.id,
-        modelName: model.name,
-        currency: currencyForAccount(account.id),
-        // Percentage points, and `maxAbsDrift` rather than `totalDrift`: the worst single
-        // asset-class breach is what a model band actually gates on and what every other drift
-        // readout in the app renders. `maxAbsDrift` is already rounded to 4dp, so ×100 is exact to
-        // 2dp — the `roundTo` only clears the binary-float tail (0.0523 × 100 = 5.229999999999999).
-        currentDrift: roundTo(drift.maxAbsDrift * 100, 2),
-        trades: trades.map((t) => ({
-          symbol: t.symbol,
-          name: t.name,
-          assetClass: t.assetClass,
-          side: t.side,
-          quantity: t.quantity,
-          estimatedValue: t.estimatedValue,
-          currency: t.currency,
-          reason: sleeveReason(t),
-        })),
-        // §1222-netted from the trades' own realised results, not a second literal that can
-        // disagree with them — the same rule `/api/oms/rebalance` follows.
-        estimatedTaxImpact: netTaxForLegs(trades, taxRateFor).net,
-      })
+      batch.push({ account, drift, legs: generateRebalanceTrades(account.id, MODEL_TRADE_TAX_AWARE, undefined, model.id) })
     }
+    // The same rule `/api/oms/rebalance` follows: the tax each proposal adds to its owner's
+    // return, netted with that return's year-to-date results and earlier accounts in the batch.
+    const estimates = estimateTaxOnReturns(batch, MOCK_TODAY_ISO)
+    const previews: ModelTradePreview[] = batch.map(({ account, drift, legs: trades }, i) => ({
+      accountId: account.id,
+      accountName: account.name,
+      modelId: model.id,
+      modelName: model.name,
+      currency: currencyForAccount(account.id),
+      // Percentage points, and `maxAbsDrift` rather than `totalDrift`: the worst single
+      // asset-class breach is what a model band actually gates on and what every other drift
+      // readout in the app renders. `maxAbsDrift` is already rounded to 4dp, so ×100 is exact to
+      // 2dp — the `roundTo` only clears the binary-float tail (0.0523 × 100 = 5.229999999999999).
+      currentDrift: roundTo(drift.maxAbsDrift * 100, 2),
+      trades: trades.map((t) => ({
+        symbol: t.symbol,
+        name: t.name,
+        assetClass: t.assetClass,
+        side: t.side,
+        quantity: t.quantity,
+        estimatedValue: t.estimatedValue,
+        currency: t.currency,
+        reason: sleeveReason(t),
+      })),
+      estimatedTaxImpact: estimates[i]!.net,
+      nettedWithAccountIds: estimates[i]!.nettedWithAccountIds,
+    }))
     return HttpResponse.json(previews)
   }),
 

@@ -28,3 +28,22 @@ export function netTaxForLegs(legs: readonly TaxedLeg[], rateFor: (p: HoldingCha
   const longTerm = legs.reduce((s, l) => s + l.realisedLongTerm, 0)
   return { net: Math.min(netCapitalGainsTax(shortTerm, longTerm, rateFor), gross), gross }
 }
+
+/** Signed realised results by character. */
+export type RealisedByCharacter = { shortTerm: number; longTerm: number }
+
+/**
+ * The tax `added` puts on a return that has already realised `prior` this year: §1222-netted tax
+ * on both together, less the tax `prior` already owes. It is not clamped to the legs' own tax —
+ * a gain that uses up a loss which was sheltering a short-term gain legitimately costs more than
+ * its own rate — and it is negative when `added` is a loss against gains already realised.
+ */
+export function additionalCapitalGainsTax(
+  prior: RealisedByCharacter,
+  added: RealisedByCharacter,
+  rateFor: (p: HoldingCharacter) => number,
+): number {
+  const before = netCapitalGainsTax(prior.shortTerm, prior.longTerm, rateFor)
+  const after = netCapitalGainsTax(prior.shortTerm + added.shortTerm, prior.longTerm + added.longTerm, rateFor)
+  return after - before
+}

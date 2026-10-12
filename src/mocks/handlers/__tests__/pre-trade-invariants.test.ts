@@ -6,6 +6,7 @@ import { getPositions, getDrift } from '@/services/pms'
 import { modelImplementationSecurity } from '@/mocks/handlers/pms'
 import { convertCurrency } from '@/lib/currency'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
+import { additionalCapitalGainsTax } from '@/lib/capital-gains'
 import { LONG_TERM_RATE, SHORT_TERM_RATE, taxRateFor } from '@/features/portfolios/tax/shared'
 
 describe('pre-trade concentration uses the account own value', () => {
@@ -162,15 +163,18 @@ describe('rebalance tax estimation', () => {
     expect(unaware[0]!.estimatedTaxImpact).toBeGreaterThanOrEqual(aware[0]!.estimatedTaxImpact)
   })
 
-  it('C26: the gross tax equals the sum of its trade-level tax impacts, and netting never raises it', async () => {
+  it('C26: the gross tax equals the sum of its trade-level tax impacts, and the YTD loss on the return lowers the estimate', async () => {
     const [preview] = await previewRebalance({ accountIds: ['acc-001'], taxAware: true })
     expect(preview!.grossTaxOnGains)
       .toBeCloseTo(preview!.trades.reduce((s, t) => s + t.taxImpact, 0), 0)
-    expect(preview!.estimatedTaxImpact).toBeLessThanOrEqual(preview!.grossTaxOnGains)
-    // acc-001 realises no loss, so there is nothing to net and the two agree exactly.
-    if (preview!.trades.every((t) => t.realisedShortTerm + t.realisedLongTerm >= 0)) {
-      expect(preview!.estimatedTaxImpact).toBe(preview!.grossTaxOnGains)
-    }
+    // acc-001 (Robert Johnson's revocable trust) is on hh-001's joint return, which already
+    // realised rs-001's −$32,750 long-term loss this year; that loss shelters acc-001's gains.
+    expect(preview!.ytdRealisedOnReturn).toEqual({ shortTerm: 0, longTerm: -32_750 })
+    const shortTerm = preview!.trades.reduce((s, t) => s + t.realisedShortTerm, 0)
+    const longTerm = preview!.trades.reduce((s, t) => s + t.realisedLongTerm, 0)
+    expect(preview!.estimatedTaxImpact)
+      .toBe(additionalCapitalGainsTax({ shortTerm: 0, longTerm: -32_750 }, { shortTerm, longTerm }, taxRateFor))
+    expect(preview!.estimatedTaxImpact).toBeLessThan(preview!.grossTaxOnGains)
   })
 })
 

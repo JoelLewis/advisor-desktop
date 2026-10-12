@@ -12,10 +12,10 @@ import { securityKind, concentrationLimitFor, isMarketTradable } from '@/lib/sec
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { hasWashSaleRisk, isoDaysBefore } from '@/lib/wash-sale'
-import { netTaxForLegs } from '@/lib/capital-gains'
-import { generateTaxLots, boundedTradeQty } from './custodian'
+import { estimateTaxOnReturns } from './tax-return'
+import { generateTaxLots, boundedTradeQty, householdAcquisitions, type CustodianLot } from './custodian'
 import { taxRateFor } from '@/features/portfolios/tax/shared'
-import type { Position, TaxLot } from '@/types/portfolio'
+import type { Position } from '@/types/portfolio'
 import type { CurrencyCode } from '@/types/currency'
 
 // Exported so `ai.ts`'s trading-desk chat response reads the same pending-order counts this
@@ -85,7 +85,7 @@ const NOTHING_REALISED: RealisedSale = { shortTerm: 0, longTerm: 0, tax: 0, cons
  * lowest-gain-fraction (highest cost basis) lots first to minimise realised gain; a tax-unaware
  * pass sells the lots in their own oldest-first order.
  */
-function realiseSale(accountLots: readonly TaxLot[], target: Position, notional: number, taxAware: boolean): RealisedSale {
+function realiseSale(accountLots: readonly CustodianLot[], target: Position, notional: number, taxAware: boolean): RealisedSale {
   const lots = accountLots.filter((l) => l.positionId === target.id)
   if (lots.length === 0 || notional <= 0) return NOTHING_REALISED
   // Minimise realised gain and rank by *tax per dollar sold*, not gain per dollar sold: a
@@ -181,7 +181,7 @@ function orderSellCandidates(held: Position[], taxAware: boolean, recentlyOpened
 const REPLACEMENT_HOLD_DAYS = 31
 
 /** Positions every one of whose lots was bought within the last `REPLACEMENT_HOLD_DAYS` days. */
-function recentlyOpenedPositions(lots: readonly TaxLot[], asOfISO: string): Set<string> {
+function recentlyOpenedPositions(lots: readonly CustodianLot[], asOfISO: string): Set<string> {
   const since = isoDaysBefore(asOfISO, REPLACEMENT_HOLD_DAYS)
   const hasOlderLot = new Set(lots.filter((l) => l.purchaseDate < since).map((l) => l.positionId))
   return new Set(lots.filter((l) => !hasOlderLot.has(l.positionId)).map((l) => l.positionId))
@@ -277,15 +277,7 @@ export function generateRebalanceTrades(
   // `realiseSale`, and the household acquisitions below.
   const ownLots = generateTaxLots(account.id, account.totalValue)
   const recentlyOpened = recentlyOpenedPositions(ownLots, MOCK_TODAY_ISO)
-  const acquisitions = accounts.filter((a) => a.householdId === account.householdId).flatMap((a) => {
-    const symbolOf = new Map(getPositionsForAccount(a.id, a.totalValue).map((p) => [p.id, p.symbol]))
-    const lots = a.id === account.id ? ownLots : generateTaxLots(a.id, a.totalValue)
-    return lots.map((l) => {
-      const symbol = symbolOf.get(l.positionId)
-      if (symbol === undefined) throw new Error(`tax lot ${l.id} in ${a.id} names unknown position ${l.positionId}`)
-      return { symbol, date: l.purchaseDate, lotId: l.id }
-    })
-  })
+  const acquisitions = householdAcquisitions(account, (a) => (a.id === account.id ? ownLots : generateTaxLots(a.id, a.totalValue)))
 
   type RawLeg = { target: TradeCandidate; side: 'buy' | 'sell'; notional: number; sleeve: Sleeve }
 
@@ -770,30 +762,37 @@ export const omsHandlers = [
 
   http.post('/api/oms/rebalance', async ({ request }) => {
     const body = await request.json() as { accountIds: string[]; driftThreshold?: number; taxAware: boolean }
-    const previews: RebalancePreview[] = []
+    const batch = []
     for (const accountId of body.accountIds) {
       const account = accounts.find((a) => a.id === accountId)
       if (!account) return notFound()
       // The Rebalance page's drift-threshold control was sent and ignored; `driftThreshold` was
       // in scope one line away.
-      const trades = generateRebalanceTrades(accountId, body.taxAware, body.driftThreshold)
-      const tax = netTaxForLegs(trades, taxRateFor)
-      previews.push({
+      batch.push({ account, legs: generateRebalanceTrades(accountId, body.taxAware, body.driftThreshold) })
+    }
+    const estimates = estimateTaxOnReturns(batch, MOCK_TODAY_ISO)
+    const previews: RebalancePreview[] = batch.map(({ account, legs: trades }, i) => {
+      const tax = estimates[i]!
+      const accountId = account.id
+      return {
         accountId,
         // §9.3 — same source as every trade on this preview (`currencyForAccount`), so a preview
         // with zero proposed trades still carries a correct currency tag rather than an implicit
         // USD default.
         currency: currencyForAccount(accountId),
         trades,
-        // §1222 — this proposal's legs netted (not year-to-date results, not other accounts); the
-        // gross figure is kept so a surface can show what netting saved.
+        // §1222 — the tax this proposal adds to its owner's return, netted with that return's
+        // year-to-date results and earlier accounts in this batch on the same return; the gross
+        // figure is kept so a surface can show what netting saved.
         estimatedTaxImpact: tax.net,
         grossTaxOnGains: tax.gross,
+        ytdRealisedOnReturn: tax.ytdRealisedOnReturn,
+        nettedWithAccountIds: tax.nettedWithAccountIds,
         // Whether a sale here is a taxable event at all; a surface reads it to tell "not taxed in
         // this account" from "taxed, and the result is zero".
         taxable: isTaxableAccount(account.taxTreatment),
-      })
-    }
+      }
+    })
     return HttpResponse.json(previews)
   }),
 

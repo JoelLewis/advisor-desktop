@@ -6,6 +6,8 @@ import { getPositionsForAccount } from '../data/positions'
 import { openWashSaleWindows, realisedSales } from '../data/realised-sales'
 import { notFound } from './utils'
 import { startOfToday, MOCK_TODAY_ISO } from '@/lib/clock'
+import { hasWashSaleRisk, type Acquisition } from '@/lib/wash-sale'
+import type { Account } from '@/types/account'
 
 const DAY_MS = 1000 * 60 * 60 * 24
 
@@ -297,18 +299,67 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
   return txns.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 }
 
-export function generateTaxLots(accountId: string, totalValue: number): TaxLot[] {
+/**
+ * A lot as the custodian's records state it. `saleWashSaleRisk` is left off: it needs every
+ * household account's lots, so only the surfaces that show it (`generateTaxLotsWithSaleRisk`)
+ * pay for it, not the rebalance engine, which tests its own sell legs.
+ */
+export type CustodianLot = Omit<TaxLot, 'saleWashSaleRisk'>
+
+/**
+ * Every lot bought in `account`'s household, as a §1091 acquisition — IRAs and Roths included,
+ * since a purchase in any of them is a replacement. `lotsFor` supplies each account's lots, so a
+ * caller can pass the lots it already holds for its own account.
+ */
+export function householdAcquisitions(
+  account: Account,
+  lotsFor: (a: Account) => readonly Pick<TaxLot, 'id' | 'positionId' | 'purchaseDate'>[],
+): Acquisition[] {
+  return accounts.filter((a) => a.householdId === account.householdId).flatMap((a) => {
+    const symbolOf = new Map(getPositionsForAccount(a.id, a.totalValue).map((p) => [p.id, p.symbol]))
+    return lotsFor(a).map((l) => {
+      const symbol = symbolOf.get(l.positionId)
+      if (symbol === undefined) throw new Error(`tax lot ${l.id} in ${a.id} names unknown position ${l.positionId}`)
+      return { symbol, date: l.purchaseDate, lotId: l.id }
+    })
+  })
+}
+
+/**
+ * The account's lots, each with `saleWashSaleRisk`: whether selling that lot alone, today, would
+ * be a wash sale — a loss with substantially identical shares bought in the household within the
+ * last 30 days, other than the lot itself. The same test (`hasWashSaleRisk`) over the same
+ * acquisitions the rebalance engine applies to a sell leg, so the scanner and the preview cannot
+ * disagree about one sale.
+ */
+export function generateTaxLotsWithSaleRisk(accountId: string, totalValue: number): TaxLot[] {
+  const own = generateTaxLots(accountId, totalValue)
+  const account = accounts.find((a) => a.id === accountId)
+  if (!account) return own.map((l) => ({ ...l, saleWashSaleRisk: false }))
+  const acquisitions = householdAcquisitions(account, (a) => (a.id === accountId ? own : generateTaxLots(a.id, a.totalValue)))
+  const symbolOf = new Map(getPositionsForAccount(accountId, totalValue).map((p) => [p.id, p.symbol]))
+  return own.map((lot) => {
+    const symbol = symbolOf.get(lot.positionId)
+    if (symbol === undefined) throw new Error(`tax lot ${lot.id} in ${accountId} names unknown position ${lot.positionId}`)
+    const sale = { symbol, side: 'sell', realisesLoss: lot.gainLoss < 0, soldLotIds: [lot.id] } as const
+    // A sell is judged on recent acquisitions only; open loss windows bear on buys.
+    return { ...lot, saleWashSaleRisk: hasWashSaleRisk(sale, [], acquisitions, MOCK_TODAY_ISO) }
+  })
+}
+
+export function generateTaxLots(accountId: string, totalValue: number): CustodianLot[] {
   const positions = getPositionsForAccount(accountId, totalValue)
   const anchor = startOfToday()
-  const lots: TaxLot[] = []
+  const lots: CustodianLot[] = []
 
   const account = accounts.find((a) => a.id === accountId)
   // C12 · tax-loss-harvesting — scoped to the whole household, including IRAs and 401(k)s,
   // because a repurchase in any of them triggers §1091 (the "IRA wash-sale trap"). An account
   // that can't be resolved to a household must restrict nothing, not everything — an omitted
   // `householdId` would otherwise widen `openWashSaleWindows` to every household in the firm.
-  const restrictedSymbols = new Set(
-    account ? openWashSaleWindows(MOCK_TODAY_ISO, account.householdId).map((w) => w.symbol) : [],
+  // Windows arrive sorted by `end`, so the last one written per symbol is the latest to close.
+  const repurchaseBlockedUntil = new Map(
+    account ? openWashSaleWindows(MOCK_TODAY_ISO, account.householdId).map((w) => [w.symbol, w.end]) : [],
   )
 
   for (const pos of positions) {
@@ -324,7 +375,7 @@ export function generateTaxLots(accountId: string, totalValue: number): TaxLot[]
         currentValue: pos.marketValue,
         gainLoss: pos.marketValue - pos.costBasis,
         holdingPeriod: holdingPeriodOn(openedOn, MOCK_TODAY_ISO),
-        washSaleRestricted: restrictedSymbols.has(pos.symbol),
+        repurchaseBlockedUntil: repurchaseBlockedUntil.get(pos.symbol) ?? null,
       })
       continue
     }
@@ -370,7 +421,7 @@ export function generateTaxLots(accountId: string, totalValue: number): TaxLot[]
         // 12 months old is short-term. A whole-month age makes this `holdingPeriodOn`'s rule
         // without the date arithmetic, which this hot path (every rebalance sweep) would pay.
         holdingPeriod: ages[i]! > 12 ? 'long' : 'short',
-        washSaleRestricted: restrictedSymbols.has(pos.symbol),
+        repurchaseBlockedUntil: repurchaseBlockedUntil.get(pos.symbol) ?? null,
       })
     }
   }
@@ -415,7 +466,7 @@ export const custodianHandlers = [
   http.get('/api/custodian/accounts/:accountId/tax-lots', ({ params }) => {
     const account = accounts.find((a) => a.id === params.accountId)
     if (!account) return notFound()
-    return HttpResponse.json(generateTaxLots(account.id, account.totalValue))
+    return HttpResponse.json(generateTaxLotsWithSaleRisk(account.id, account.totalValue))
   }),
 
   http.get('/api/custodian/accounts/:accountId/realised-sales', ({ params }) => {

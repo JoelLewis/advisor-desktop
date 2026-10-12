@@ -23,6 +23,36 @@ type RealisedResultProps = {
   formatWithConversion: PreviewTradesStepProps['formatWithConversion']
 }
 
+type TaxEstimateProps = {
+  preview: RebalancePreview
+  accountName: (accountId: string) => string
+  formatWithConversion: PreviewTradesStepProps['formatWithConversion']
+}
+
+/**
+ * States what the estimate nets: this proposal, the year-to-date realised results on the owner's
+ * return, and any earlier account in the batch on that return — never another taxpayer's results.
+ * An IRA or Roth is on no current return, so it makes no capital-gains claim at all.
+ */
+function TaxEstimate({ preview, accountName, formatWithConversion }: TaxEstimateProps) {
+  const ytd = preview.ytdRealisedOnReturn
+  if (!preview.taxable || ytd === null) return <>Not taxed in this account</>
+  const money = (n: number) => formatWithConversion(n, preview.currency, { compact: true })
+  const ytdParts = [
+    ytd.shortTerm !== 0 && `ST ${money(ytd.shortTerm)}`,
+    ytd.longTerm !== 0 && `LT ${money(ytd.longTerm)}`,
+  ].filter(Boolean)
+  const earlier = preview.nettedWithAccountIds.map(accountName)
+  return (
+    <>
+      Est. tax added to the return: {money(preview.estimatedTaxImpact)}
+      {' '}&middot; nets this proposal with YTD realised results on the same tax return ({ytdParts.length > 0 ? ytdParts.join(', ') : 'none'})
+      {earlier.length > 0 && ` and with ${earlier.join(', ')} above`}
+      {' '}&middot; Gross on gains: {money(preview.grossTaxOnGains)}
+    </>
+  )
+}
+
 /**
  * A buy realises nothing, and neither does a sale inside an IRA or Roth — there the realised
  * fields are 0 because nothing is taxed, not because the sale broke even, so both read as a dash.
@@ -55,10 +85,12 @@ export function PreviewTradesStep({
           <Card key={preview.accountId}>
             <CardHeader action={
               <span className="font-mono text-caption text-text-secondary">
-                {/* Nets this proposal's own legs only — not year-to-date realised results, not
-                    the household's other accounts — and the label says so. */}
-                {preview.trades.length} trades &middot; Est. tax, this proposal (gains net of losses): {formatWithConversion(preview.estimatedTaxImpact, preview.currency, { compact: true })}
-                {' '}&middot; Gross on gains: {formatWithConversion(preview.grossTaxOnGains, preview.currency, { compact: true })}
+                {preview.trades.length} trades &middot;{' '}
+                <TaxEstimate
+                  preview={preview}
+                  accountName={(id) => accounts?.find((a) => a.id === id)?.name ?? id}
+                  formatWithConversion={formatWithConversion}
+                />
               </span>
             }>
               {acc?.name ?? preview.accountId}

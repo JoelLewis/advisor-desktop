@@ -385,8 +385,11 @@ export function ModelTradeView() {
                     </span>
                     <span className="font-mono text-mono-sm text-text-secondary">
                       {/* §9.3 — the preview's own currency, not USD: acc-041's tax figure is HKD,
-                          and reading HK$ as $ overstates it by 7.82x. */}
-                      Est. tax, net of losses: {formatWithConversion(preview.estimatedTaxImpact, preview.currency)}
+                          and reading HK$ as $ overstates it by 7.82x. The figure is what the
+                          proposal adds to its owner's return, netted with that return's YTD
+                          realised results. */}
+                      Est. tax added to the return, net of losses and YTD realised results: {formatWithConversion(preview.estimatedTaxImpact, preview.currency)}
+                      {preview.nettedWithAccountIds.length > 0 && ` (also netted with ${preview.nettedWithAccountIds.map((id) => previews.find((p) => p.accountId === id)?.accountName ?? id).join(', ')} above)`}
                     </span>
                   </div>
                 </button>

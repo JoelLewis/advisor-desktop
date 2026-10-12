@@ -137,7 +137,7 @@ describe('ModelTradeView renders the account\'s own data, not a hash of its id',
       { compact: true, currency: 'USD' },
     )
     expect(preview!.estimatedTaxImpact).toBeGreaterThan(0)
-    expect(screen.getByText(`Est. tax, net of losses: ${convertedTax}`)).toBeInTheDocument()
+    expect(screen.getByText(`Est. tax added to the return, net of losses and YTD realised results: ${convertedTax}`)).toBeInTheDocument()
 
     // ── the batch summary cards convert before summing ──
     // With one HKD preview selected, the "Total Value" and "Est. Tax Impact" cards are that
