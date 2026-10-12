@@ -107,7 +107,7 @@ function DraftView({ draft, directory, threadId, canEdit, staleReason, sendLabel
           {sendLabel ? 'Sending is recorded as a binding act by you.' : 'Only the advisor of record can send this. Sending is recorded as a binding act.'}
         </p>
         <div className="flex flex-wrap gap-3">
-          {canEdit && !editing ? <Button rank="secondary" onClick={startEditing}>Edit</Button> : null}
+          {canEdit && !editing && staleReason === undefined ? <Button rank="secondary" onClick={startEditing}>Edit</Button> : null}
           {sendLabel ? (
             <Button disabled={sending || staleReason !== undefined || editing} aria-describedby={staleReason ? reasonId : undefined} onClick={onSend}>
               {sendLabel}

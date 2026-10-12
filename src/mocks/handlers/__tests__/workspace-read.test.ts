@@ -62,4 +62,21 @@ describe('directory scoping', () => {
     expect(client.body[0]).not.toHaveProperty('subject')
     expect(client.body[0]).toMatchObject({ id: 'REC-0001', kind: 'send_to_client', actorId: 'user-001' })
   })
+  it("a client is served a sent letter's act without its proposal basis or its editors", async () => {
+    const post = (path: string, body: unknown) => fetch(`/api/workspace${path}`, {
+      method: 'POST', headers: { 'X-Viewer': 'user-001', 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    }).then((r) => r.json())
+    const proposal = await post('/proposals', { threadId: 'th-johnson-review', accountId: 'acc-002' })
+    await post('/acts', { kind: 'approve_proposal', proposalId: proposal.id, version: 1, fingerprint: proposal.versions[0].fingerprint })
+    const letter = await post('/threads/th-robert/drafts/letter', { proposalId: proposal.id })
+    const edited = await post(`/threads/th-robert/drafts/${letter.id}/revisions`, { body: `${letter.body}\n\nAdrian` })
+    await post('/acts', { kind: 'send_to_client', draftId: edited.id })
+    const firm = await call('/acts?threadId=th-robert', 'user-001')
+    expect(firm.body[0]).toMatchObject({ basis: { proposalId: proposal.id, version: 1 }, editedBy: ['user-001'] })
+    const client = await call('/acts?threadId=th-robert', 'cli-001')
+    expect(client.body[0]).not.toHaveProperty('basis')
+    expect(client.body[0]).not.toHaveProperty('editedBy')
+    const thread = await call('/threads/th-robert', 'cli-001')
+    expect(JSON.stringify(thread.body)).not.toMatch(/basis|editedBy|editorIds|client-letter|prop-/)
+  })
 })

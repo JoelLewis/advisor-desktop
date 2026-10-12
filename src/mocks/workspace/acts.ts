@@ -32,6 +32,8 @@ export function sendToClient(viewerId: string, draftId: string): { ok: true; act
     id: commitActId(), kind: 'send_to_client', actorId: viewerId, at, threadId: thread.id,
     subject: { type: 'draft', id: draftId }, fingerprint: fingerprint(draft.body),
     summary: 'Message sent to the client',
+    // Books and records: an agent's letter records the approved version it came from and every person who edited it.
+    ...(draft.agentId ? { basis: draft.basis, editedBy: draft.editorIds ?? [] } : {}),
   }
   const text: Message = { kind: 'text', id: nextId('msg'), threadId: thread.id, authorId: viewerId, at, body: draft.body }
   const marker: Message = { kind: 'act', id: nextId('msg'), threadId: thread.id, at: nextAt(), actId: act.id }

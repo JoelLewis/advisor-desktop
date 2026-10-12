@@ -20,7 +20,7 @@ function clientDirectory(clientId: string): Directory {
   return { people: PEOPLE.filter((p) => ids.has(p.id)), agents: [], permissions: { [clientId]: permissionsOf(clientId) } }
 }
 
-const withoutSubject = ({ subject: _subject, ...act }: BindingAct): BindingAct => act
+const withoutProvenance = ({ subject: _subject, basis: _basis, editedBy: _editedBy, ...act }: BindingAct): BindingAct => act
 
 const isAgentId = (value: string): value is AgentId => AGENTS.some((a) => a.id === value)
 
@@ -94,8 +94,8 @@ export const workspaceHandlers = [
     const thread = store().threads.find((t) => t.id === threadId)
     if (!thread || !canSeeThread(viewer, thread)) return notFound()
     const acts = store().acts.filter((a) => a.threadId === thread.id)
-    // A client sees the record of what reached them, not what it was made from (the firm's draft).
-    return HttpResponse.json(personById(viewer)?.role === 'client' ? acts.map(withoutSubject) : acts)
+    // A client sees the record of what reached them, not what it was made from (the firm's draft, its proposal, its editors).
+    return HttpResponse.json(personById(viewer)?.role === 'client' ? acts.map(withoutProvenance) : acts)
   }),
 
   http.post('/api/workspace/acts', async ({ request }) => {

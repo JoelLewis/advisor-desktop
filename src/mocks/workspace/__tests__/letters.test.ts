@@ -73,4 +73,33 @@ describe('letter drafts', () => {
     const robertSees = store().messages.filter((m) => m.threadId === 'th-robert' && m.kind === 'text').map((m) => (m.kind === 'text' ? m.body : ''))
     expect(robertSees[robertSees.length - 1]).toContain('P.S. Call me any time.')
   })
+
+  it('the send records the letter\'s basis and every person who edited it', () => {
+    const { id, v1 } = approvedJohnson()
+    const r = draftLetter('user-001', 'th-robert', id)
+    if (!r.ok) throw new Error(r.message)
+    const bySarah = reviseDraft('user-002', 'th-robert', r.draft.id, `${r.draft.body}\n\nSarah`)
+    if (!bySarah.ok) throw new Error(bySarah.message)
+    const byAdrian = reviseDraft('user-001', 'th-robert', bySarah.draft.id, `${bySarah.draft.body}\n\nAdrian`)
+    if (!byAdrian.ok) throw new Error(byAdrian.message)
+    const sent = sendToClient('user-001', byAdrian.draft.id)
+    if (!sent.ok) throw new Error(sent.message)
+    expect(sent.act).toMatchObject({ basis: { proposalId: id, version: 1, fingerprint: v1.fingerprint }, editedBy: ['user-002', 'user-001'] })
+  })
+
+  it('an unedited agent letter records no editors; a person\'s own draft records no letter provenance', () => {
+    const { id } = approvedJohnson()
+    const r = draftLetter('user-001', 'th-robert', id)
+    if (!r.ok) throw new Error(r.message)
+    const sent = sendToClient('user-001', r.draft.id)
+    if (!sent.ok) throw new Error(sent.message)
+    expect(sent.act.editedBy).toEqual([])
+    expect(sent.act.basis).toEqual(r.draft.basis)
+    const own = { id: 'draft-own', clientThreadId: 'th-robert', authorId: 'user-001', body: 'Your statement is ready.', createdAt: 'x' }
+    store().drafts.push(own)
+    const plain = sendToClient('user-001', own.id)
+    if (!plain.ok) throw new Error(plain.message)
+    expect(plain.act).not.toHaveProperty('basis')
+    expect(plain.act).not.toHaveProperty('editedBy')
+  })
 })

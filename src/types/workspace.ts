@@ -26,9 +26,9 @@ export type Message =
   | { kind: 'carried'; id: string; threadId: string; at: string; carriedBy: string; fromThreadId: string; findingId: string; finding: CarriedFinding }
   | { kind: 'brief_summary'; id: string; threadId: string; at: string; items: BriefItem[] }
 export type BindingActKind = 'approve_proposal' | 'withdraw_approval' | 'dispose_exception' | 'send_to_client'
-export type BindingAct = { id: string; kind: BindingActKind; actorId: string; at: string; threadId: string; subject?: Subject; version?: number; fingerprint: string; summary: string }
+export type BindingAct = { id: string; kind: BindingActKind; actorId: string; at: string; threadId: string; subject?: Subject; version?: number; fingerprint: string; summary: string; basis?: LetterBasis; editedBy?: string[] }
 export type LetterBasis = { proposalId: string; version: number; fingerprint: string }
-export type Draft = { id: string; clientThreadId: string; authorId: string; body: string; createdAt: string; agentId?: AgentId; basis?: LetterBasis; figures?: Figure[]; supersedes?: string; stale?: boolean }
+export type Draft = { id: string; clientThreadId: string; authorId: string; body: string; createdAt: string; agentId?: AgentId; basis?: LetterBasis; figures?: Figure[]; supersedes?: string; editorIds?: string[]; stale?: boolean }
 export type ThreadDetail = { thread: Thread; messages: Message[] }
 export type Act = BindingActKind | 'post_firm' | 'draft_for_client' | 'read_all_firm_threads'
 /** permissions: personId → the acts that person may perform, computed by the engine's can(). The UI never derives permissions itself. */

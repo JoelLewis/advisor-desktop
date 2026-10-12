@@ -1,14 +1,18 @@
-import { useId, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { Button } from '@/kit/button/Button'
-import { useDraftLetter, useProposals } from '@/hooks/use-workspace'
-import type { Thread } from '@/types/workspace'
+import { useDraftLetter, useDrafts, useProposals } from '@/hooks/use-workspace'
+import type { Draft, Thread } from '@/types/workspace'
+
+type Asked = { draftId: string; version: number; title: string; created: boolean }
 
 /** Asks the Client Letter Agent for a letter from this client's approved proposal. */
 export function LetterControl({ thread }: { thread: Thread }) {
   const reasonId = useId()
   const proposals = useProposals()
   const letter = useDraftLetter(thread.id)
-  const [report, setReport] = useState<string>()
+  const drafts = useDrafts(thread.id, true)
+  const [asked, setAsked] = useState<Asked>()
+  const asking = useRef(false)
   if (proposals.isPending) return <p role="status" className="text-body text-ink-3">Loading the proposals…</p>
   if (proposals.isError) return <p role="alert" className="text-body">{proposals.error.message}</p>
   const approved = proposals.data.flatMap((p) => (p.clientId === thread.clientId && p.approval.kind === 'approved' ? [{ p, version: p.approval.version }] : []))
@@ -20,12 +24,27 @@ export function LetterControl({ thread }: { thread: Thread }) {
       </div>
     )
   }
+  // A ref, not render state, so a double-click cannot send a second request before the first settles.
+  const ask = (proposalId: string, title: string) => {
+    if (asking.current) return
+    asking.current = true
+    const held = new Set((drafts.data ?? []).map((d) => d.id))
+    setAsked(undefined)
+    letter.mutate(proposalId, {
+      onSuccess: (draft: Draft) => setAsked(draft.basis ? { draftId: draft.id, version: draft.basis.version, title, created: !held.has(draft.id) } : undefined),
+      onSettled: () => { asking.current = false },
+    })
+  }
+  // The report stands only while the draft it names is still held: it clears once that draft is sent or replaced.
+  const reported = asked && drafts.data?.some((d) => d.id === asked.draftId) ? asked : undefined
+  const report = !reported ? undefined
+    : reported.created ? `The Client Letter Agent drafted a letter from v${reported.version} of the ${reported.title}.`
+    : `The Client Letter Agent's letter from v${reported.version} of the ${reported.title} is already in the drafts.`
   return (
     <div className="flex flex-col items-start gap-2">
       {approved.map(({ p, version }) => (
         <div key={p.id} className="flex flex-col items-start gap-1">
-          <Button rank="secondary" disabled={letter.isPending}
-            onClick={() => letter.mutate(p.id, { onSuccess: () => setReport(`The Client Letter Agent drafted a letter from v${version} of the ${p.title}.`) })}>
+          <Button rank="secondary" disabled={letter.isPending} onClick={() => ask(p.id, p.title)}>
             Ask Client Letter Agent
           </Button>
           <span className="text-label text-ink-3">{`From v${version} of the ${p.title}, approved`}</span>

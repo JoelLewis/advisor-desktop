@@ -46,7 +46,8 @@ export function reviseDraft(viewerId: string, clientThreadId: string, draftId: s
   if (!old) return { ok: false, status: 404, code: 'NO_DRAFT', message: 'Draft not found.' }
   if (body.trim().length === 0) return { ok: false, status: 400, code: 'BAD_REQUEST', message: 'A non-empty body is required.' }
   // The edit keeps the letter's basis (so it still goes stale with the approval) but not its figures: the text is now the editor's.
-  const draft: Draft = { id: nextId('draft'), clientThreadId: thread.id, authorId: viewerId, body, createdAt: nextAt(), agentId: old.agentId, basis: old.basis, supersedes: old.id }
+  const draft: Draft = { id: nextId('draft'), clientThreadId: thread.id, authorId: viewerId, body, createdAt: nextAt(), agentId: old.agentId, basis: old.basis, supersedes: old.id,
+    editorIds: [...new Set([...(old.editorIds ?? []), viewerId])] }
   s.drafts = s.drafts.map((d) => (d.id === old.id ? draft : d))
   return { ok: true, draft }
 }

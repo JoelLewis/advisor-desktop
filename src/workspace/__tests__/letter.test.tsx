@@ -39,12 +39,16 @@ describe('the client letter', () => {
     await approvedV1()
     const drafts = await openRobert()
     const user = userEvent.setup()
-    await user.dblClick(await within(drafts).findByRole('button', { name: 'Ask Client Letter Agent' }))
+    await user.click(await within(drafts).findByRole('button', { name: 'Ask Client Letter Agent' }))
     const draft = await within(drafts).findByRole('article', { name: 'Draft · not sent' })
     expect(draft).toHaveTextContent('Dear Robert,')
     expect(draft).toHaveTextContent('is expected to realize a loss of about $45,900')
     expect(draft).toHaveTextContent('State tax is not modelled.')
     expect(draft).toHaveTextContent("Drafted by Client Letter Agent at Adrian Hale's request · from v1")
+    expect(store().drafts).toHaveLength(1)
+    expect(within(drafts).getByRole('status')).toHaveTextContent('The Client Letter Agent drafted a letter from v1 of the Johnson rebalance.')
+    await user.dblClick(within(drafts).getByRole('button', { name: 'Ask Client Letter Agent' }))
+    await waitFor(() => expect(within(drafts).getByRole('status')).toHaveTextContent("The Client Letter Agent's letter from v1 of the Johnson rebalance is already in the drafts."))
     expect(store().drafts).toHaveLength(1)
 
     await user.click(within(draft).getByRole('button', { name: 'Edit' }))
@@ -56,7 +60,11 @@ describe('the client letter', () => {
     await user.click(within(edited).getByRole('button', { name: 'Send to Robert' }))
     await waitFor(() => expect(conversation()).toHaveTextContent('I will call you on Friday to walk through it.'))
     expect(conversation()).toHaveTextContent(RATE_DISCLOSURE)
-    expect(within(inContext().getByRole('region', { name: 'Binding acts' })).getByRole('list', { name: 'Record trail' })).toHaveTextContent('Send to client')
+    const acts = inContext().getByRole('region', { name: 'Binding acts' })
+    expect(within(acts).getByRole('list', { name: 'Record trail' })).toHaveTextContent('Send to client')
+    const fingerprint = store().acts.find((a) => a.kind === 'approve_proposal')!.fingerprint
+    expect(within(acts).getByRole('article', { name: 'Message sent to the client' })).toHaveTextContent(`from v1 · fingerprint ${fingerprint} · edited by Adrian Hale`)
+    expect(within(drafts).queryByRole('status')).toBeNull()
 
     await viewAs('Robert Johnson · Client')
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'Message' })).toBeInTheDocument())
@@ -64,6 +72,18 @@ describe('the client letter', () => {
     expect(document.body).not.toHaveTextContent('Client Letter Agent')
     expect(document.body).not.toHaveTextContent('Draft · not sent')
     expect(document.body).not.toHaveTextContent('Johnson Rebalance Review')
+    expect(document.body).not.toHaveTextContent(fingerprint)
+    expect(document.body).not.toHaveTextContent(/edited by|unedited|from v1/)
+  })
+
+  it("records an unedited agent letter as the agent's draft", async () => {
+    const created = await approvedV1()
+    await draftLetter(ADRIAN, 'th-robert', created.id)
+    const drafts = await openRobert()
+    const draft = await within(drafts).findByRole('article', { name: 'Draft · not sent' })
+    await userEvent.setup().click(within(draft).getByRole('button', { name: 'Send to Robert' }))
+    const slip = await within(inContext().getByRole('region', { name: 'Binding acts' })).findByRole('article', { name: 'Message sent to the client' })
+    expect(slip).toHaveTextContent(`from v1 · fingerprint ${created.versions[0]!.fingerprint} · agent draft, unedited`)
   })
 
   it('a letter from a version that is no longer approved is marked stale and cannot be sent', async () => {
@@ -77,6 +97,7 @@ describe('the client letter', () => {
     const send = within(draft).getByRole('button', { name: 'Send to Robert' })
     expect(send).toBeDisabled()
     expect(send).toHaveAccessibleDescription(/The approval moved to v2/)
+    expect(within(draft).queryByRole('button', { name: 'Edit' })).toBeNull()
   })
 
   it('an edited letter keeps its basis, so a withdrawn approval makes it stale too', async () => {
