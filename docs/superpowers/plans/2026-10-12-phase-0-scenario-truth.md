@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-11-phase-0-scenario-truth-design.md` (binding). Read it before Task 1.
 
+> **Note, 2026-10-12:** this plan dates the INTC harvest 2026-02-21, a Saturday. The controller's Task 14 ruling (spec "Amendments") moved it to Friday 2026-02-20 with a market-hours fill; the window became 2026-01-21 to 2026-03-22. The plan's dates below are left as they were written.
+
 **Base:** branch `phase-0` at or after `4de430e` (PR #5, `claude/funny-turing-de0c7d`, merged: per-lot `saleWashSaleRisk`, symbol-level `repurchaseBlockedUntil` on `TaxLot`, YTD-netted `estimateTaxOnReturns`, `hh-001`/`hh-002` `married_filing_jointly`). Review-fix commits to PR #5 (for example to `src/lib/wash-sale.ts`'s `Acquisition` type) may sit on top; no task here depends on `Acquisition`'s shape. Locate code by the quoted anchors, not by line numbers.
 
 Every task below was prototyped on a scratch copy of `phase-0` + PR #5 and its tests, `lint` and `build` ran green there in this order. Figures quoted in tests were read from that run.

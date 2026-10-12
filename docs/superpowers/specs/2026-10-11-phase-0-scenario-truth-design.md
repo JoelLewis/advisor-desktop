@@ -39,6 +39,9 @@ and their tests are updated only where a figure legitimately moves (with the ari
   projected windows (from the proposal), each with its source.
 - **Test:** acc-002's INTC sale on 2026-02-25 yields `repurchaseBlockedUntil: '2026-03-27'`; the
   rs-001 window (to 2026-03-23) stays separate and is labelled recorded.
+  *Amendment, 2026-10-12 (controller ruling, Task 14 and final review I2): 2026-02-21 is a Saturday.
+  The INTC harvest (rs-001) moved to Friday 2026-02-20, so the recorded window runs 2026-01-21 to
+  2026-03-22. The text above is kept as written; see "Amendments" below.*
 
 ### 0.3 People, roles and permissions
 
@@ -96,6 +99,9 @@ asserts every model ID used by an account has a name.
 
 Each fix gets an invariant test that ties the copy to the engine.
 
+*Amendment, 2026-10-12: the 2026-02-21 partial harvest in the last row is dated 2026-02-20 since the
+trading-day ruling; see "Amendments" below.*
+
 ## Out of scope
 
 - Any workspace code (that lives on branch `workspace`).
@@ -108,3 +114,16 @@ Each fix gets an invariant test that ties the copy to the engine.
 - All three branches merged, suite green, acc-002 before → after recorded.
 - Every item in 0.2–0.7 has a test that fails without its fix.
 - `pnpm lint`, `pnpm build`, full `vitest run` green; no hand-typed figure added.
+
+## Amendments
+
+- **2026-10-12 · the INTC harvest moves to a trading day** (controller ruling at Task 14, widened
+  by the final whole-branch review's I2). 2026-02-21, the date this spec gives the INTC harvest in
+  §0.2 and §0.7, is a Saturday. rs-001, its fill ord-004 (now 15:15:03Z, 10:15 ET), the SMH
+  replacement (pos-265) and the notes, tasks and compliance records about them are dated Friday
+  2026-02-20. Derived dates move with it: the rs-001 window is 2026-01-21 to 2026-03-22, and 25 days
+  remain at 2026-02-25. No tax figure, quantity or holding period moves. The same ruling put every
+  order fill in the NYSE regular session in real UTC, dated every tax lot and opening transaction on
+  an NYSE trading day, and added a trading-day invariant over realised sales, orders, lots and
+  opening dates (`src/mocks/data/__tests__/trading-day-invariants.test.ts`). The synthetic custodian
+  transaction history is outside that invariant until the review's I3 is fixed.
