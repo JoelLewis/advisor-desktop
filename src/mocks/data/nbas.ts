@@ -1,9 +1,17 @@
 import type { NBA, NBAClient, TriggerSignal } from '@/types/nba'
 import { accounts } from './accounts'
 import { clients } from './clients'
+import { getPositionsForAccount } from './positions'
+import { realisedSales } from './realised-sales'
 import { computeDriftForAccount, modelDisplayName } from '../handlers/pms'
-import { formatRatePercent } from '@/features/portfolios/tax/shared'
+import { generateTaxLotsWithSaleRisk } from '../handlers/custodian'
+import { formatRatePercent, harvestBenefitNow, lossAllowedNow, LONG_TERM_RATE, SHORT_TERM_RATE } from '@/features/portfolios/tax/shared'
+import { ORDINARY_INCOME_OFFSET_LIMIT } from '@/lib/capital-gains'
+import { isTaxableAccount } from '@/lib/tax-treatment'
+import { formatCalendarDate } from '@/lib/utils'
+import { MOCK_TODAY_ISO } from '@/lib/clock'
 
+const dollars = (amount: number) => `$${Math.round(Math.abs(amount)).toLocaleString('en-US')}`
 const percent = (fraction: number) => `${(fraction * 100).toFixed(1)}%`
 const clientName = (clientId: string) => clients.find((c) => c.id === clientId)?.fullName ?? clientId
 
@@ -29,6 +37,53 @@ export function driftBatchFacts() {
     lowestBreach: Math.min(...breaches),
     highestBreach: Math.max(...breaches),
   }
+}
+
+/**
+ * §0.7 · the INTC harvest across the book: every taxable account still holding INTC below cost,
+ * the loss a sale today realises (`lossAllowedNow`, so any share §1091 would wash is left out),
+ * the tax benefit of that loss at each lot's own holding-period rate (`harvestBenefitNow`), and the
+ * partial harvests already recorded in the realised-sales ledger.
+ */
+export function intcHarvestFacts() {
+  const holders = accounts
+    .filter((a) => isTaxableAccount(a.taxTreatment))
+    .flatMap((account) => {
+      const position = getPositionsForAccount(account.id, account.totalValue).find((p) => p.symbol === 'INTC' && p.gainLoss < 0)
+      if (!position) return []
+      const lots = generateTaxLotsWithSaleRisk(account.id, account.totalValue).filter((l) => l.positionId === position.id)
+      return [{
+        account,
+        position,
+        loss: lots.reduce((s, l) => s + lossAllowedNow(l), 0),
+        benefit: lots.reduce((s, l) => s + harvestBenefitNow(l), 0),
+        sales: realisedSales.filter((r) => r.accountId === account.id && r.symbol === 'INTC'),
+      }]
+    })
+  return {
+    holders,
+    totalLoss: holders.reduce((s, h) => s + h.loss, 0),
+    totalBenefit: holders.reduce((s, h) => s + h.benefit, 0),
+  }
+}
+
+/**
+ * A loss realised this year offsets this year's capital gains, then up to $3,000 of ordinary
+ * income (§1211(b)); the rest carries forward (§1212(b)). It cannot reach last year's gains.
+ */
+function intcHarvestDescription(): string {
+  const { holders, totalLoss, totalBenefit } = intcHarvestFacts()
+  const taxYear = MOCK_TODAY_ISO.slice(0, 4)
+  const perAccount = holders.map(({ account, position, sales }) => {
+    const harvested = sales.map((s) => `harvested ${s.quantity.toLocaleString('en-US')} shares on ${formatCalendarDate(s.saleDate)} and `).join('')
+    return `${clientName(account.clientId)} ${harvested}holds ${position.quantity.toLocaleString('en-US')} at a ${dollars(position.gainLoss)} loss`
+  })
+  return `Intel (INTC) is still below cost in ${holders.length} client accounts: ${perAccount.join('; ')}. ` +
+    `That is ${dollars(totalLoss)} of harvestable losses. Realised in ${taxYear}, they offset ${taxYear} capital gains, then up to ` +
+    `${dollars(ORDINARY_INCOME_OFFSET_LIMIT)} of ordinary income a year; any excess carries forward. ` +
+    `Against gains taxed at each lot's own rate (${formatRatePercent(SHORT_TERM_RATE)} short-term, ` +
+    `${formatRatePercent(LONG_TERM_RATE)} long-term), the estimated tax benefit is about ${dollars(Math.round(totalBenefit / 100) * 100)}; ` +
+    `the ${dollars(totalLoss)} is the harvestable loss, not the benefit.`
 }
 
 export const nbas: NBA[] = [
@@ -62,13 +117,12 @@ export const nbas: NBA[] = [
   // ── Tax Management ──
   {
     id: 'nba-002', title: 'Tax-loss harvesting opportunity — INTC position',
-    // D22 · tax-loss-harvesting — the $78.6K + $52.4K + $93.3K = $224K figure was pre-Task-18
-    // (acc-002's INTC position was 12,000 shares; a recorded 5,000-share sale left 7,000). Current
-    // losses per the fixtures: acc-002 -45,850, acc-011 -52,400, acc-015 -93,250, total -191,500.
-    // The total also conflates the harvestable loss with the tax benefit; the appended sentence
-    // separates them and states the benefit at LONG_TERM_RATE (23.8%) applied to the exact total,
-    // not to rounded per-account components (45.9 + 52.4 + 93.3 sums to 191.6, not 191.5).
-    description: 'Intel (INTC) is down 18.7% from cost basis across 3 client accounts ($45,850 + $52,400 + $93,250 = $191,500 harvestable losses). Harvesting could offset realized gains from Q4. Estimated tax benefit at long-term rates is about $45,600; the $191,500 is the harvestable loss, not the benefit.',
+    // §0.7 · this read as if nothing had been harvested, stated the benefit at long-term rates for
+    // all three accounts, and said a 2026 harvest could offset Q4 (2025) gains. Robert Johnson sold
+    // 5,000 of his 12,000 shares on 2026-02-21 (rs-001) and Michael Martinez 4,000 on 2026-02-18
+    // (rs-003); the description now says so, from the realised-sales ledger and the positions,
+    // prices each lot at its own holding-period rate, and states what a 2026 loss can offset.
+    description: intcHarvestDescription(),
     category: 'tax_management', priority: 'high',
     scoring: { urgency: 85, impact: 75, efficiency: 70, relationship: 40, confidence: 92, composite: 76 },
     clients: [
@@ -78,13 +132,9 @@ export const nbas: NBA[] = [
     groupId: 'grp-002',
     trigger: { source: 'pms', condition: 'unrealized_loss_threshold', value: '-18.7%', detectedAt: '2026-02-24T09:30:00Z' },
     suggestedAction: 'Sell INTC, replace with semiconductor ETF (SMH) to maintain sector exposure',
-    // Review round 1, Critical · this was 224_000 — the harvestable loss, not the benefit — the
-    // same "impact = the raw dollar figure, not what the client actually gets" mistake nba-014's
-    // Reg BI fix exists to correct, now rendered on-screen by NBACard's impact figure. The value
-    // the client actually realises is the tax benefit at long-term rates: 45,850 + 52,400 + 93,250
-    // = 191,500 × LONG_TERM_RATE (0.238) = 45,577 exactly (nba-facts.test.ts asserts this figure
-    // is exactly the sum of estimatedTaxBenefit() over the three INTC lots, not transcribed).
-    estimatedImpact: 45_577, createdAt: '2026-02-24T09:45:00Z', dismissed: false,
+    // The benefit, not the harvestable loss: `harvestBenefitNow` summed over every remaining INTC
+    // lot, each at its own holding-period rate on the part of its loss §1091 leaves allowed.
+    estimatedImpact: Math.round(intcHarvestFacts().totalBenefit), createdAt: '2026-02-24T09:45:00Z', dismissed: false,
     actionRoute: { path: '/portfolios/accounts/acc-002/tax' },
   },
   {

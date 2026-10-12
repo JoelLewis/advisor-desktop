@@ -4,7 +4,8 @@ import { accounts } from '@/mocks/data/accounts'
 import { households } from '@/mocks/data/households'
 import { householdFees } from '@/mocks/data/billing'
 import { getPositionsForAccount } from '@/mocks/data/positions'
-import { estimatedTaxBenefit } from '@/features/portfolios/tax/shared'
+import { harvestBenefitNow, washesOnSale } from '@/features/portfolios/tax/shared'
+import { generateTaxLotsWithSaleRisk } from '@/mocks/handlers/custodian'
 import { getModels } from '@/services/pms'
 import { router } from '@/app/routes'
 
@@ -208,10 +209,25 @@ describe('D22: nba-002 states the post-Task-18 harvestable loss, not the stale p
     expect(nba.description).not.toContain('78.6')
   })
 
-  it('the appended benefit figure is the loss, at long-term rates, not the loss itself', () => {
-    const benefit = intcLosses.reduce((sum, g) => sum + estimatedTaxBenefit({ gainLoss: g, holdingPeriod: 'long' }), 0)
-    expect(benefit).toBeCloseTo(45_577, 0)
-    expect(nba.description).toContain('$45,600')
+  // §0.7 · each lot at its own holding-period rate, on the part of its loss §1091 leaves allowed
+  // (`harvestBenefitNow`): acc-015's INTC lot (bought 2025-05-25) is short-term, so its $93,250 is
+  // priced at 40.8%, not 23.8%. No INTC lot washes today, so the whole loss counts:
+  // 45,850 × 0.238 + 52,400 × 0.238 + 93,250 × 0.408 = 10,912.30 + 12,471.20 + 38,046.00 = 61,429.50,
+  // stated as "about $61,400".
+  const intcLots = ['acc-002', 'acc-011', 'acc-015'].flatMap((id) => {
+    const account = accounts.find((a) => a.id === id)!
+    const intc = positionsFor(id).find((p) => p.symbol === 'INTC')!
+    return generateTaxLotsWithSaleRisk(account.id, account.totalValue).filter((l) => l.positionId === intc.id)
+  })
+  const benefit = intcLots.reduce((sum, l) => sum + harvestBenefitNow(l), 0)
+
+  it('no INTC lot washes on sale today, so the benefit counts every lot\'s whole loss', () => {
+    expect(intcLots.some(washesOnSale)).toBe(false)
+  })
+
+  it('the appended benefit figure is each lot at its own rate, not the loss itself', () => {
+    expect(benefit).toBeCloseTo(61_429.5, 6)
+    expect(nba.description).toContain('$61,400')
     expect(nba.description).toContain('not the benefit')
   })
 
@@ -223,8 +239,7 @@ describe('D22: nba-002 states the post-Task-18 harvestable loss, not the stale p
     // dormant one. Tie the field to the same derived total the description itself uses, computed
     // here from the fixtures rather than transcribed, so a hardcoded stand-in (e.g. 999_000)
     // cannot slip back in.
-    const benefit = intcLosses.reduce((sum, g) => sum + estimatedTaxBenefit({ gainLoss: g, holdingPeriod: 'long' }), 0)
-    expect(nba.estimatedImpact).toBe(benefit)
+    expect(nba.estimatedImpact).toBe(Math.round(benefit))
     expect(nba.estimatedImpact).not.toBe(Math.abs(total))
     expect(nba.estimatedImpact).not.toBe(224_000)
   })
