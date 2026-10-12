@@ -61,9 +61,9 @@ export function writeClientLetter(proposal: Proposal, version: ProposalVersion, 
   ]
   const paragraphs = [
     `Dear ${client.firstName},`,
-    `We plan to rebalance your ${account.name} account to bring it back in line with its ${modelDisplayName(drift.modelId)} model. `
-      + `${capitalise(CLIENT_WORDS[worst.assetClass])} had grown to ${clientPercent(worst.actual)} of the account against a ${clientPercent(worst.target)} target, `
-      + 'so we plan to sell some holdings and add to the areas below their targets.',
+    opening(account.name, modelDisplayName(drift.modelId), version)
+      + ` ${capitalise(CLIENT_WORDS[worst.assetClass])} had grown to ${clientPercent(worst.actual)} of the account against a ${clientPercent(worst.target)} target, `
+      + `so we plan to ${harvestOnly(version) ? `sell only ${sells.length === 1 ? 'a holding' : 'holdings'} at a loss` : 'sell some holdings'} and add to the areas below their targets.`,
     [
       sells.length > 0 ? `We plan to sell ${joinWords(sells.map(security))}` : '',
       buys.length > 0 ? `${sells.length > 0 ? ', and to buy' : 'We plan to buy'} ${joinWords(buys.map(security))}` : '',
@@ -94,10 +94,10 @@ export function writeClientLetter(proposal: Proposal, version: ProposalVersion, 
     if (until !== window.end) throw new Error(`Client Letter Agent: ${t.symbol}'s repurchase date ${until} is not a sale on ${saleDate}`)
     figures.push({ label: `${t.symbol} loss`, value: recognised(t), unit: 'USD', source: `version.preview.trades.${t.symbol} realised, less any washed part` })
     paragraphs.push(
-      `Selling ${security(t)} is expected to realize a loss of about ${aboutMoney(-recognised(t))} at today's prices, which can offset gains on your tax return. `
-      + `To use that loss now, if the sale is made on ${clientDate(saleDate)}, please don't buy ${t.name} back ${where}, on or before ${clientDate(until)}. ${consequence} `
-      + `From ${clientDate(dayAfter(until))} you may buy it again. `
-      + `Please also tell us before the sale if ${buyers} bought ${t.name} in any account since ${clientDate(window.start)}, because that can affect the loss.`,
+      `Selling ${security(t)} is expected to realize a loss of about ${aboutMoney(-recognised(t))} at today's prices, which can offset capital gains, now or in later years. `
+      + `To avoid postponing or losing that loss, if the sale is made on ${clientDate(saleDate)}, please don't buy ${t.name} back ${where}, on or before ${clientDate(until)}. ${consequence} `
+      + `If the sale is made then, from ${clientDate(dayAfter(until))} you may buy it again. `
+      + `Please also tell us before the sale if ${buyers} bought ${t.name} in any account on or after ${clientDate(window.start)}, because that can affect the loss.`,
     )
   }
   if (harvested.length > 0) {
@@ -124,6 +124,17 @@ export function writeClientLetter(proposal: Proposal, version: ProposalVersion, 
   paragraphs.push('The orders are with our compliance team for review before any is placed.')
   paragraphs.push(signer.name)
   return { body: paragraphs.join('\n\n'), figures }
+}
+
+const harvestOnly = (version: ProposalVersion) => version.constraints.some((c) => c.kind === 'harvest_only')
+
+/** What the approved version sets out to do, from its constraints: a harvest or a capped rebalance only moves toward the model. */
+function opening(accountName: string, modelName: string, version: ProposalVersion): string {
+  if (harvestOnly(version)) return `We plan to move your ${accountName} account toward its ${modelName} model.`
+  if (version.constraints.some((c) => c.kind === 'cap_realised_gains')) {
+    return `We plan to move your ${accountName} account toward its ${modelName} model while limiting the gains it realizes.`
+  }
+  return `We plan to rebalance your ${accountName} account to bring it back in line with its ${modelName} model.`
 }
 
 /** §1211(b)'s limit on the account's return: $1,500 when the household records spouses filing separately, $3,000 otherwise. */
