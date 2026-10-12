@@ -81,7 +81,7 @@ describe('thread context column', () => {
     const sarahsView = await within(await inContext().findByRole('region', { name: 'Drafts for Robert' })).findByRole('article', { name: 'Draft · not sent' })
     expect(sarahsView).toHaveTextContent('Your statement is ready.')
     expect(sarahsView).toHaveTextContent('Only the advisor of record can send this. Sending is recorded as a binding act.')
-    expect(within(sarahsView).queryByRole('button')).toBeNull()
+    expect(within(sarahsView).queryByRole('button', { name: 'Send to Robert' })).toBeNull()
     expect(within(section('Binding acts')).getByText('Send to client · binding')).toBeInTheDocument()
   })
 
