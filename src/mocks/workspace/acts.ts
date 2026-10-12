@@ -2,6 +2,7 @@ import type { BindingAct, Message } from '@/types/workspace'
 import { can, personById } from '@/mocks/data/people'
 import { commitActId, nextAt, nextId, store } from '@/mocks/data/workspace-store'
 import { fingerprint } from '@/lib/fingerprint'
+import { isDraftStale } from '@/mocks/data/proposals-store'
 import { canSeeThread } from './visibility'
 
 type Failure = { ok: false; status: 403 | 404 | 409; code: string; message: string }
@@ -22,6 +23,9 @@ export function sendToClient(viewerId: string, draftId: string): { ok: true; act
   const thread = s.threads.find((t) => t.id === draft.clientThreadId)
   if (!thread || !canSeeThread(viewerId, thread)) return noDraft
   if (!can(viewerId, 'send_to_client')) return { ok: false, status: 403, code: 'NOT_PERMITTED', message: 'Only the advisor of record can send to a client.' }
+  if (isDraftStale(draft)) {
+    return { ok: false, status: 409, code: 'STALE_DRAFT', message: `This letter was drafted from v${draft.basis?.version ?? 0}, which is no longer the approved version. Ask for a new letter.` }
+  }
 
   const at = nextAt()
   const act: BindingAct = {
