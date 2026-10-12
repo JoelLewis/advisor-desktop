@@ -11,11 +11,11 @@ import { convertCurrency } from '@/lib/currency'
 import { securityKind, concentrationLimitFor, isMarketTradable, taxCharacterOf } from '@/lib/security-master'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
-import { hasWashSaleRisk, isoDaysBefore, washedLoss, type SoldLossLot } from '@/lib/wash-sale'
+import { hasWashSaleRisk, isoDaysBefore, type SoldLossLot } from '@/lib/wash-sale'
 import { estimateTaxOnReturns, openWashSaleWindowsFor } from './tax-return'
 import { generateTaxLots, boundedTradeQty, washSaleAcquisitions, type CustodianLot } from './custodian'
-import { washSaleWindow } from '../data/realised-sales'
 import { repurchaseRestrictionsFor } from './repurchase-restrictions'
+import { settleBatchWashSales, type LegSale } from './batch-wash-sales'
 import { taxRateFor } from '@/features/portfolios/tax/shared'
 import type { Position } from '@/types/portfolio'
 import type { CurrencyCode } from '@/types/currency'
@@ -287,8 +287,28 @@ export function generateRebalanceTrades(
   driftThreshold = 0.005,
   modelId?: string,
 ): ProposedTradeLeg[] {
+  return generateRebalanceProposal(accountId, taxAware, driftThreshold, modelId).legs
+}
+
+/** One account's proposal, as a batch step needs it. */
+export type RebalanceProposal = {
+  legs: ProposedTradeLeg[]
+  /** What each sell leg disposes of, lot by lot, for `settleBatchWashSales`. */
+  sales: ReadonlyMap<ProposedTradeLeg, LegSale>
+}
+
+/**
+ * `generateRebalanceTrades` with the lots each leg sells. A preview passes the batch's proposals
+ * through `settleBatchWashSales`, which needs them; the legs are the same either way.
+ */
+export function generateRebalanceProposal(
+  accountId: string,
+  taxAware: boolean,
+  driftThreshold = 0.005,
+  modelId?: string,
+): RebalanceProposal {
   const account = accounts.find((a) => a.id === accountId)
-  if (!account) return []
+  if (!account) return { legs: [], sales: new Map() }
   const positions = getPositionsForAccount(account.id, account.totalValue)
   const drift = computeDriftForAccount(account, modelId)
   const taxable = isTaxableAccount(account.taxTreatment)
@@ -301,27 +321,7 @@ export function generateRebalanceTrades(
   const acquisitions = washSaleAcquisitions(account, (a) => (a.id === account.id ? ownLots : generateTaxLots(a.id, a.totalValue)))
 
   type RawLeg = { target: TradeCandidate; side: 'buy' | 'sell'; notional: number; sleeve: Sleeve }
-
-  /**
-   * §0.2 · the part of a sale's loss §1091 washes against the taxpayer's purchases in the last 30
-   * days, rounded per character; `undefined` when none does. The sale's own lots are not
-   * replacements (`matchWashedShares`). Judged per account: another account's legs in the same
-   * batch are not cross-checked (see `wash-sale.ts`).
-   */
-  const washedLossOn = (realised: RealisedSale, symbol: string): ProposedTrade['washedLoss'] => {
-    const washed = washedLoss(realised.soldLosses, acquisitions, MOCK_TODAY_ISO)
-    const shortTerm = Math.round(washed.shortTerm)
-    const longTerm = Math.round(washed.longTerm)
-    if (shortTerm === 0 && longTerm === 0) return undefined
-    const deferred = Math.round(washed.deferred)
-    return {
-      shortTerm,
-      longTerm,
-      collectibleLongTerm: taxCharacterOf(symbol) === 'collectible' ? longTerm : 0,
-      deferred,
-      disallowed: shortTerm + longTerm - deferred,
-    }
-  }
+  const sales = new Map<ProposedTradeLeg, LegSale>()
 
   const raw = drift.assetClassDrifts
     .filter((d) => Math.abs(d.drift) > driftThreshold)
@@ -466,10 +466,7 @@ export function generateRebalanceTrades(
       const realised = side === 'sell' && taxable && target.position
         ? realiseSale(ownLots, target.position, estimatedValue, taxAware)
         : NOTHING_REALISED
-      const realisesLoss = realised.shortTerm + realised.longTerm < 0
-      const washed = washedLossOn(realised, target.symbol)
-      const recognisesLoss = realised.shortTerm + realised.longTerm - (washed?.shortTerm ?? 0) - (washed?.longTerm ?? 0) < 0
-      return {
+      const trade: ProposedTradeLeg = {
         symbol: target.symbol,
         name: target.name,
         side,
@@ -480,15 +477,14 @@ export function generateRebalanceTrades(
         realisedLongTerm: realised.longTerm,
         realisedCollectibleLongTerm: realised.collectibleLongTerm,
         washSaleRisk: hasWashSaleRisk(
-          { symbol: target.symbol, side, realisesLoss, soldLotIds: realised.consumedLotIds },
+          { symbol: target.symbol, side, realisesLoss: realised.shortTerm + realised.longTerm < 0, soldLotIds: realised.consumedLotIds },
           lossWindows, acquisitions, MOCK_TODAY_ISO,
         ),
-        ...(washed ? { washedLoss: washed } : {}),
-        // §0.2 · a loss sale opens its own §1091 window, today through today + 30.
-        ...(side === 'sell' && recognisesLoss ? { repurchaseBlockedUntil: washSaleWindow(MOCK_TODAY_ISO).end } : {}),
         currency,
         ...sleeve,
       }
+      sales.set(trade, { soldLosses: realised.soldLosses, consumedLotIds: realised.consumedLotIds })
+      return trade
   }
 
   // Build one side of the proposal at a given scale and report the money it **actually** moves —
@@ -617,7 +613,8 @@ export function generateRebalanceTrades(
 
   // Emitted in the drift surface's own asset-class order, so a preview reads the same way it did
   // before sells and buys were built in separate passes.
-  return raw.map((leg) => built.get(leg)).filter((t): t is ProposedTradeLeg => t !== undefined)
+  const legs = raw.map((leg) => built.get(leg)).filter((t): t is ProposedTradeLeg => t !== undefined)
+  return { legs, sales }
 }
 
 export const omsHandlers = [
@@ -810,14 +807,17 @@ export const omsHandlers = [
 
   http.post('/api/oms/rebalance', async ({ request }) => {
     const body = await request.json() as { accountIds: string[]; driftThreshold?: number; taxAware: boolean }
-    const batch = []
+    const proposed = []
     for (const accountId of body.accountIds) {
       const account = accounts.find((a) => a.id === accountId)
       if (!account) return notFound()
       // The Rebalance page's drift-threshold control was sent and ignored; `driftThreshold` was
       // in scope one line away.
-      batch.push({ account, legs: generateRebalanceTrades(accountId, body.taxAware, body.driftThreshold) })
+      proposed.push({ account, ...generateRebalanceProposal(accountId, body.taxAware, body.driftThreshold) })
     }
+    // §0.2 · §1091 across the batch: a buy here can wash a loss sold there, for one taxpayer.
+    const settled = settleBatchWashSales(proposed, MOCK_TODAY_ISO)
+    const batch = proposed.map(({ account }, i) => ({ account, legs: settled[i]! }))
     const estimates = estimateTaxOnReturns(batch, MOCK_TODAY_ISO)
     const proposals = batch.map(({ account, legs }) => ({ accountId: account.id, legs }))
     const previews: RebalancePreview[] = batch.map(({ account, legs: trades }, i) => {

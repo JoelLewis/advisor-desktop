@@ -128,3 +128,18 @@ const PHYSICAL_PRECIOUS_METAL_TRUSTS = new Set(['GLD', 'IAU', 'SLV', 'PPLT'])
 export function taxCharacterOf(symbol: string): TaxCharacter {
   return PHYSICAL_PRECIOUS_METAL_TRUSTS.has(symbol) ? 'collectible' : 'capital_asset'
 }
+
+/**
+ * Coins held directly, not through a fund or trust. §1091 disallows losses on "stock or
+ * securities"; a directly held coin is property (Notice 2014-21), so selling one at a loss and
+ * buying it straight back washes nothing. Exchange-traded crypto trusts (IBIT, ETHE) are not
+ * listed: they stay subject, the conservative reading.
+ */
+export const SPOT_CRYPTO_SYMBOLS: ReadonlySet<string> = new Set([
+  'BTC', 'ETH', 'SOL', 'AVAX', 'LINK', 'DOT', 'USDC', 'ADA', 'MATIC', 'UNI', 'ATOM',
+])
+
+/** Whether IRC §1091 reaches a loss on `symbol` — every security; not a directly held coin. */
+export function isSubjectToWashSale(symbol: string): boolean {
+  return !SPOT_CRYPTO_SYMBOLS.has(symbol)
+}

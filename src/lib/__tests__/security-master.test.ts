@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { securityKind, concentrationLimitFor, isMarketTradable, taxCharacterOf, SINGLE_NAME_LIMIT, FUND_LIMIT, CASH_LIMIT, type SecurityKind } from '@/lib/security-master'
+import { securityKind, concentrationLimitFor, isMarketTradable, taxCharacterOf, isSubjectToWashSale, SPOT_CRYPTO_SYMBOLS, SINGLE_NAME_LIMIT, FUND_LIMIT, CASH_LIMIT, type SecurityKind } from '@/lib/security-master'
 import { accounts } from '@/mocks/data/accounts'
 import { allPositions, getPositionsForAccount } from '@/mocks/data/positions'
+import { digitalAssetSymbols } from '@/mocks/data/trading'
 
 describe('securityKind', () => {
   it.each(['VTI', 'SPY', 'QQQ', 'AGG', 'BND', 'TLT', 'TIP', 'EFA', 'VWO', 'VXUS', 'BNDX', 'LQD', 'VCIT', 'GLD', 'VNQ', 'QAI', 'IBIT', 'ETHE', 'BXPE', 'VFIAX'])(
@@ -163,5 +164,25 @@ describe('taxCharacterOf', () => {
   })
   it.each(['SPY', 'VTI', 'AGG', 'NVDA', 'IBIT', 'CASH'])('%s is an ordinary capital asset', (symbol) => {
     expect(taxCharacterOf(symbol)).toBe('capital_asset')
+  })
+})
+
+describe('isSubjectToWashSale (§1091 reaches stock or securities, not directly held coins)', () => {
+  it.each(['BTC', 'ETH', 'SOL', 'AVAX', 'LINK', 'DOT', 'USDC', 'ADA', 'MATIC', 'UNI', 'ATOM'])('%s, a directly held coin, is not subject', (symbol) => {
+    expect(isSubjectToWashSale(symbol)).toBe(false)
+  })
+
+  it.each(['IBIT', 'ETHE', 'INTC', 'AGG', 'SMH', 'GLD'])('%s, a security (exchange-traded crypto trusts included), is subject', (symbol) => {
+    expect(isSubjectToWashSale(symbol)).toBe(true)
+  })
+
+  it('every digital asset in the book or the trading ticket is either a listed coin or an exchange-traded trust', () => {
+    const digital = new Set([
+      ...allPositions.filter((p) => p.assetClass === 'digital_assets').map((p) => p.symbol),
+      ...digitalAssetSymbols.map((s) => s.symbol),
+    ])
+    for (const symbol of digital) {
+      expect(SPOT_CRYPTO_SYMBOLS.has(symbol) || ['IBIT', 'ETHE'].includes(symbol), symbol).toBe(true)
+    }
   })
 })

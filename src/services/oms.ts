@@ -153,16 +153,18 @@ export type ProposedTrade = {
   washSaleRisk: boolean
   /**
    * Sell legs that realise a loss only: the part of it IRC §1091 washes because the taxpayer bought
-   * the symbol in the last 30 days (Treas. Reg. §1.1091-1(c), pro rata to the replaced shares).
+   * the symbol in the last 30 days or this batch buys it today in any of the taxpayer's accounts
+   * (Treas. Reg. §1.1091-1(c), pro rata to the replaced shares; `settleBatchWashSales`).
    * Signed like the loss (≤ 0), account currency; `realisedShortTerm`/`realisedLongTerm` still
    * include it. The tax estimate nets only the rest. Absent when nothing washes.
    */
   washedLoss?: WashedLoss & { collectibleLongTerm: number }
   /**
-   * Sell legs that recognise a loss only: the last day of the IRC §1091 window the sale opens if
-   * executed today — the sale date plus 30 days. Buying the symbol back before then, in any account
-   * of the same taxpayer, washes the loss. Absent on a leg whose loss is already washed in full:
-   * no loss share is left for a later purchase to replace.
+   * Sell legs that sell any loss share §1091 has not already washed (judged per lot, so a net-gain
+   * leg can carry one): the last day of the IRC §1091 window the sale opens if executed today —
+   * the sale date plus 30 days. Buying the symbol back before then, in any account of the same
+   * taxpayer, washes the loss. Absent when every loss share is already washed, and on a coin held
+   * directly, which §1091 does not reach (`isSubjectToWashSale`).
    */
   repurchaseBlockedUntil?: string
   // Same account-native currency as the parent `RebalancePreview.currency` — carried on the trade

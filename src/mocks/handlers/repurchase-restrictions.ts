@@ -1,5 +1,6 @@
 import type { Account } from '@/types/account'
 import type { ProposedTrade, RepurchaseRestriction } from '@/services/oms'
+import { isSubjectToWashSale } from '@/lib/security-master'
 import { washSaleWindow } from '../data/realised-sales'
 import { openWashSaleWindowsFor, sameWashSaleTaxpayer } from './tax-return'
 
@@ -33,7 +34,8 @@ export function repurchaseRestrictionsFor(
   for (const { accountId, legs } of proposals) {
     if (!sameTaxpayer.has(accountId)) continue
     for (const leg of legs) {
-      if (leg.repurchaseBlockedUntil === undefined) continue
+      // §1091 reaches stock and securities only: a coin held directly has no window to project.
+      if (leg.repurchaseBlockedUntil === undefined || !isSubjectToWashSale(leg.symbol)) continue
       projected.set(`${accountId}:${leg.symbol}`, {
         symbol: leg.symbol,
         start,

@@ -369,7 +369,8 @@ export function washSaleAcquisitions(account: Account, lotsFor: (a: Account) => 
  * §1091 if the taxpayer harvested every loss lot today (`matchWashedShares`), split by whether
  * that loss is deferred into a taxable replacement's basis or permanently disallowed by an IRA or
  * Roth replacement. A lot at a gain, and every lot in an account whose sales are not taxed, has
- * nothing to lose and reads 0/0.
+ * nothing to lose and reads 0/0; so does a coin held directly, which §1091 does not reach
+ * (`matchWashedShares` skips it, `isSubjectToWashSale`).
  *
  * The rebalance engine's `washSaleRisk` on a sell leg reads the same acquisitions but judges a
  * whole leg on its net result and asks only whether any replacement exists (`hasWashSaleRisk`), so

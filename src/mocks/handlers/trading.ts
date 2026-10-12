@@ -1,7 +1,8 @@
 import { http, HttpResponse } from 'msw'
 import { symbols, getOptionChainData } from '../data/trading'
 import { accounts } from '../data/accounts'
-import { generateRebalanceTrades, currencyForAccount, type ProposedTradeLeg } from './oms'
+import { generateRebalanceTrades, generateRebalanceProposal, currencyForAccount, type ProposedTradeLeg } from './oms'
+import { settleBatchWashSales } from './batch-wash-sales'
 import { computeDriftForAccount, MODEL_DEFINITIONS } from './pms'
 import { notFound, roundTo } from './utils'
 import { ASSET_CLASS_LABELS } from '@/lib/labels'
@@ -98,7 +99,7 @@ export const tradingHandlers = [
     // *display*; here it would silently issue mod-001's trades under another model's name.
     if (!model) return HttpResponse.json({ error: `Unknown model ${body.modelId}` }, { status: 404 })
 
-    const batch = []
+    const proposed = []
     for (const accountId of body.accountIds) {
       const account = accounts.find((a) => a.id === accountId)
       if (!account) return notFound()
@@ -112,8 +113,11 @@ export const tradingHandlers = [
       // The single source of truth matters here and is intact — both calls are the same function
       // with the same arguments, so they cannot disagree; only the work is duplicated, not the fact.
       const drift = computeDriftForAccount(account, model.id)
-      batch.push({ account, drift, legs: generateRebalanceTrades(account.id, MODEL_TRADE_TAX_AWARE, undefined, model.id) })
+      proposed.push({ account, drift, ...generateRebalanceProposal(account.id, MODEL_TRADE_TAX_AWARE, undefined, model.id) })
     }
+    // §0.2 · the same §1091 settlement `/api/oms/rebalance` applies across its batch.
+    const settled = settleBatchWashSales(proposed, MOCK_TODAY_ISO)
+    const batch = proposed.map(({ account, drift }, i) => ({ account, drift, legs: settled[i]! }))
     // The same rule `/api/oms/rebalance` follows: the tax each proposal adds to its owner's
     // return, netted with that return's year-to-date results and earlier accounts in the batch.
     const estimates = estimateTaxOnReturns(batch, MOCK_TODAY_ISO)

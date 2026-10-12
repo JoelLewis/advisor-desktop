@@ -1,14 +1,21 @@
+import { isSubjectToWashSale } from './security-master'
+
 /**
  * IRC §1091 disallows a loss when substantially identical securities are acquired within 30 days
  * before or after the sale. "Substantially identical" is approximated as the same symbol: INTC and
  * SMH are distinct, which is the household's own compliance ruling (comp-006).
  *
+ * A directly held coin is not stock or a security, so §1091 never reaches it
+ * (`isSubjectToWashSale`): every function here treats its losses as unwashable.
+ *
  * Two further approximations, both deliberate:
- * - A leg is judged on its net result, so a loss lot inside a net-gain leg is not tested, and
- *   `hasWashSaleRisk` says only whether a replacement exists. How many shares wash, and whether
- *   the washed loss is deferred or lost, is `matchWashedShares`' job, per lot.
- * - A multi-account batch that sells X at a loss in one account and buys X in another in the same
- *   batch is not cross-checked; only recorded sales and held lots are.
+ * - `hasWashSaleRisk` judges a leg on its net result, so a loss lot inside a net-gain leg is not
+ *   tested, and says only whether a replacement exists. How many shares wash, whether the washed
+ *   loss is deferred or lost (`matchWashedShares`, `washedLoss`) and whether a sale opens a window
+ *   (`hasUnwashedLossShares`) are judged per lot.
+ * - `hasWashSaleRisk` reads one account's legs against recorded sales and held lots. A batch's
+ *   own buys, in any account of the same taxpayer, are matched by the rebalance batch step
+ *   (`settleBatchWashSales`), which treats them as acquisitions dated today.
  */
 export type LossSaleWindow = { symbol: string; start: string; end: string }
 /**
@@ -33,6 +40,7 @@ export function hasWashSaleRisk(
   recentAcquisitions: readonly Pick<Acquisition, 'symbol' | 'date' | 'lotId'>[],
   asOfISO: string,
 ): boolean {
+  if (!isSubjectToWashSale(leg.symbol)) return false
   if (leg.side === 'buy') {
     return openLossWindows.some((w) => w.symbol === leg.symbol && w.start <= asOfISO && asOfISO <= w.end)
   }
@@ -62,7 +70,7 @@ const byDateThenId = <T>(dateOf: (x: T) => string, idOf: (x: T) => string) => (a
  * together that cannot otherwise be identified. Purchases in the 30 days after today cannot be known and are
  * not counted; an open loss-sale window (`repurchaseBlockedUntil`) is what guards those.
  *
- * Returns an entry for every loss lot, `0`/`0` when nothing washes it.
+ * Returns an entry for every loss lot, `0`/`0` when nothing washes it (always, for a coin).
  */
 export function matchWashedShares(
   lossLots: readonly LossLot[],
@@ -72,7 +80,7 @@ export function matchWashedShares(
   const from = isoDaysBefore(asOfISO, 30)
   const sold = new Set(lossLots.map((l) => l.lotId))
   const washed = new Map<string, WashedShares>(lossLots.map((l) => [l.lotId, { deferredShares: 0, disallowedShares: 0 }]))
-  for (const symbol of new Set(lossLots.map((l) => l.symbol))) {
+  for (const symbol of new Set(lossLots.map((l) => l.symbol).filter(isSubjectToWashSale))) {
     const replacements = acquisitions
       .filter((a) => a.symbol === symbol && !sold.has(a.lotId) && a.date >= from && a.date <= asOfISO)
       .sort(byDateThenId((a) => a.date, (a) => a.lotId))
@@ -108,14 +116,13 @@ export type SoldLossLot = LossLot & { loss: number; holdingPeriod: 'short' | 'lo
 export type WashedLoss = { shortTerm: number; longTerm: number; deferred: number; disallowed: number }
 
 /**
- * The dollars of `sold`'s loss that §1091 takes if the sale is executed on `asOfISO`: each lot's
- * loss in proportion to its shares `matchWashedShares` finds replaced (§1.1091-1(c)). Unrounded.
+ * The dollars of `sold`'s loss that §1091 takes: each lot's loss in proportion to its shares
+ * `matchWashedShares` found replaced (`washedShares`, §1.1091-1(c)). Unrounded.
  */
-export function washedLoss(sold: readonly SoldLossLot[], acquisitions: readonly Acquisition[], asOfISO: string): WashedLoss {
-  const shares = matchWashedShares(sold, acquisitions, asOfISO)
+export function washedLoss(sold: readonly SoldLossLot[], washedShares: ReadonlyMap<string, WashedShares>): WashedLoss {
   const total: WashedLoss = { shortTerm: 0, longTerm: 0, deferred: 0, disallowed: 0 }
   for (const lot of sold) {
-    const washed = shares.get(lot.lotId)
+    const washed = washedShares.get(lot.lotId)
     if (!washed || lot.quantity <= 0) continue
     const perShare = lot.loss / lot.quantity
     const deferred = washed.deferredShares * perShare
@@ -126,4 +133,17 @@ export function washedLoss(sold: readonly SoldLossLot[], acquisitions: readonly 
     total.disallowed += disallowed
   }
   return total
+}
+
+/**
+ * Whether any of `sold`'s loss shares is left unwashed — a loss a purchase in the next 30 days
+ * could still wash, so the sale opens a window. Judged per lot, not on the leg's net result: a
+ * loss lot sold inside a net-gain leg opens one too. Never for a coin.
+ */
+export function hasUnwashedLossShares(sold: readonly SoldLossLot[], washedShares: ReadonlyMap<string, WashedShares>): boolean {
+  return sold.some((lot) => {
+    if (!isSubjectToWashSale(lot.symbol) || lot.loss >= 0) return false
+    const washed = washedShares.get(lot.lotId)
+    return lot.quantity - (washed?.deferredShares ?? 0) - (washed?.disallowedShares ?? 0) > 1e-9
+  })
 }
