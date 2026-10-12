@@ -154,7 +154,7 @@ describe('ModelTradeView renders the account\'s own data, not a hash of its id',
     expect(screen.queryByText(unconvertedTotal)).not.toBeInTheDocument()
     expect(screen.getAllByText(convertedTax).length).toBeGreaterThan(0)
     // The card adds separately netted account figures, so it says so.
-    expect(screen.getByText('Est. tax, sum of account estimates')).toBeInTheDocument()
+    expect(screen.getByText('Est. tax added, sum of account estimates')).toBeInTheDocument()
 
     // ── the hardcoded basket is gone ──
     expect(screen.queryByText('AAPL')).not.toBeInTheDocument()

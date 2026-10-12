@@ -6,7 +6,7 @@ import { getPositions, getDrift } from '@/services/pms'
 import { modelImplementationSecurity } from '@/mocks/handlers/pms'
 import { convertCurrency } from '@/lib/currency'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
-import { additionalCapitalGainsTax } from '@/lib/capital-gains'
+import { additionalCapitalGainsTax, netCapitalGainsTax } from '@/lib/capital-gains'
 import { LONG_TERM_RATE, SHORT_TERM_RATE, taxRateFor } from '@/features/portfolios/tax/shared'
 
 describe('pre-trade concentration uses the account own value', () => {
@@ -175,6 +175,36 @@ describe('rebalance tax estimation', () => {
     expect(preview!.estimatedTaxImpact)
       .toBe(additionalCapitalGainsTax({ shortTerm: 0, longTerm: -32_750 }, { shortTerm, longTerm }, taxRateFor))
     expect(preview!.estimatedTaxImpact).toBeLessThan(preview!.grossTaxOnGains)
+  })
+
+  // Main's C26 said "netting never raises the bill" (estimate ≤ gross). That held while the
+  // estimate netted a proposal's own legs; it now nets them with the return's year-to-date
+  // results, so it is true only when those results are a gain or nil in both characters, and the
+  // estimate is negative when the trades save tax. These are the relationships that do hold,
+  // every account previewed alone (so no earlier batch account is netted in).
+  it('C26: the estimate is at most the gross when the YTD results are ≥ 0 in both characters, and never saves more than the YTD tax', async () => {
+    let boundedByGross = 0
+    let withYtdGain = 0
+    for (const account of await getAccounts()) {
+      const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
+      const ytd = preview!.ytdRealisedOnReturn
+      if (ytd === null) {
+        expect(preview!.estimatedTaxImpact, account.id).toBe(0)
+        continue
+      }
+      expect(preview!.estimatedTaxImpact, account.id).toBeGreaterThanOrEqual(-netCapitalGainsTax(ytd.shortTerm, ytd.longTerm, taxRateFor) - 1)
+      if (ytd.shortTerm < 0 || ytd.longTerm < 0) continue
+      // Slack: the gross rounds each leg's tax and the estimate rounds its realised results per
+      // leg, each under a dollar, plus one for the estimate's own two roundings.
+      const taxedLegs = preview!.trades.filter((t) => t.side === 'sell').length
+      expect(preview!.estimatedTaxImpact, account.id).toBeLessThanOrEqual(preview!.grossTaxOnGains + 1 + taxedLegs)
+      boundedByGross++
+      if (ytd.shortTerm > 0 || ytd.longTerm > 0) withYtdGain++
+    }
+    expect(boundedByGross, "vacuity guard").toBeGreaterThan(10)
+    // acc-011 is on a return with rs-004's +6,260 long-term gain: the bound is tested off the
+    // trivial no-YTD path too.
+    expect(withYtdGain, 'vacuity guard — an account with a YTD gain').toBeGreaterThan(0)
   })
 })
 

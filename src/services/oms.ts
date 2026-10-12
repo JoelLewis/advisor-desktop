@@ -89,15 +89,27 @@ export type RebalancePreview = {
   /**
    * The tax this proposal adds to its owner's return: its legs netted under IRC §1222 with the
    * return's year-to-date realised results and with earlier accounts in this batch on the same
-   * return (`nettedWithAccountIds`). Never another taxpayer's results. Negative when the proposal
-   * realises losses against gains already realised this year.
+   * return (`nettedWithAccountIds`). Never another taxpayer's results. Signed, and not bounded by
+   * `grossTaxOnGains` (`additionalCapitalGainsTax` has the reasoning):
+   * - negative when the proposal saves tax — its losses offset gains already realised this year —
+   *   but never by more than the tax those results already owe;
+   * - at most `grossTaxOnGains` (to rounding) when what it nets against is a gain or nil in both
+   *   short- and long-term;
+   * - above `grossTaxOnGains` when its gains use up a loss that was sheltering a gain of the other
+   *   character.
+   * Capital-gains tax only: the §1211(b) ordinary-income offset and §1212 carryforwards are not
+   * modelled.
    */
   estimatedTaxImpact: number
   /** Year-to-date realised results on this account's return; `null` when it is on none (an IRA, a Roth). */
   ytdRealisedOnReturn: { shortTerm: number; longTerm: number } | null
   /** Accounts earlier in this batch, on the same return, whose proposals this estimate nets against. */
   nettedWithAccountIds: string[]
-  /** Sum of the legs' `taxImpact` — tax on gains before losses are netted. */
+  /**
+   * Sum of the legs' `taxImpact`: this proposal's own tax on its gains, each gain lot at its own
+   * rate, with no loss netted and no year-to-date result considered. A reference figure, not a cap
+   * on `estimatedTaxImpact`, which can exceed it.
+   */
   grossTaxOnGains: number
   /** False for an IRA, Roth or other tax-advantaged account, where a sale realises nothing taxable. */
   taxable: boolean

@@ -780,8 +780,9 @@ export const omsHandlers = [
         currency: currencyForAccount(accountId),
         trades,
         // §1222 — the tax this proposal adds to its owner's return, netted with that return's
-        // year-to-date results and earlier accounts in this batch on the same return; the gross
-        // figure is kept so a surface can show what netting saved.
+        // year-to-date results and earlier accounts in this batch on the same return. The gross
+        // figure is the legs' own tax on gains, nothing netted: a reference beside the estimate,
+        // not a bound on it (see `RebalancePreview.estimatedTaxImpact`).
         estimatedTaxImpact: tax.net,
         grossTaxOnGains: tax.gross,
         ytdRealisedOnReturn: tax.ytdRealisedOnReturn,

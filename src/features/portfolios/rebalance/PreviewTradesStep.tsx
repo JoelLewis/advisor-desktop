@@ -3,6 +3,7 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { cn } from '@/lib/utils'
+import { CAPITAL_LOSS_SCOPE_NOTE, taxEstimateDirection } from '@/lib/capital-gains'
 import type { ProposedTrade, RebalancePreview } from '@/services/oms'
 import type { WizardStep } from './types'
 
@@ -43,12 +44,15 @@ function TaxEstimate({ preview, accountName, formatWithConversion }: TaxEstimate
     ytd.longTerm !== 0 && `LT ${money(ytd.longTerm)}`,
   ].filter(Boolean)
   const earlier = preview.nettedWithAccountIds.map(accountName)
+  const { direction, amount } = taxEstimateDirection(preview.estimatedTaxImpact)
   return (
     <>
-      Est. tax added to the return: {money(preview.estimatedTaxImpact)}
+      Est. tax {direction} the return: {money(amount)}
       {' '}&middot; nets this proposal with YTD realised results on the same tax return ({ytdParts.length > 0 ? ytdParts.join(', ') : 'none'})
       {earlier.length > 0 && ` and with ${earlier.join(', ')} above`}
-      {' '}&middot; Gross on gains: {money(preview.grossTaxOnGains)}
+      {/* The legs' own tax on gains, nothing netted. Not a cap: the estimate can exceed it when
+          the proposal's gains use up a loss that was sheltering other gains on the return. */}
+      {' '}&middot; Tax on its gains before netting: {money(preview.grossTaxOnGains)}
     </>
   )
 }
@@ -77,6 +81,7 @@ export function PreviewTradesStep({
   handleReviewCompliance,
   setStep,
 }: PreviewTradesStepProps) {
+  const total = taxEstimateDirection(totalTaxImpact)
   return (
     <div className="space-y-4">
       {previews.map((preview) => {
@@ -139,16 +144,23 @@ export function PreviewTradesStep({
         )
       })}
 
-      <div className="flex items-center justify-between rounded-lg border border-border-primary bg-surface-tertiary p-4">
+      <div className="rounded-lg border border-border-primary bg-surface-tertiary p-4">
         <div className="flex items-center gap-6 text-body">
           <span><strong>{totalTrades}</strong> total trades</span>
           {/* §9.3 — `totalTaxImpact` sums across previews that may carry different account
               currencies; RebalancePage converts each preview's own-currency figure to USD before
               summing (Global Constraint 2's one conversion boundary), so this really is USD by the
-              time it reaches this prop — not a leftover unconverted literal. Each account is
-              netted on its own, so this is a sum of separate estimates, not a household netting. */}
-          <span>Est. tax, sum of account estimates: <strong className="font-mono text-accent-red">{formatWithConversion(totalTaxImpact, 'USD', { compact: true })}</strong></span>
+              time it reaches this prop — not a leftover unconverted literal. Accounts on one return
+              are netted in batch order, each against the ones above it, so the sum is the tax the
+              batch adds to (or saves on) the returns it touches, with no YTD loss counted twice. */}
+          <span>
+            Est. tax {total.direction === 'saved on' ? 'saved' : 'added'}, sum of account estimates:{' '}
+            <strong className={cn('font-mono', total.direction === 'saved on' ? 'text-accent-green' : 'text-accent-red')}>
+              {formatWithConversion(total.amount, 'USD', { compact: true })}
+            </strong>
+          </span>
         </div>
+        <p className="mt-2 text-caption text-text-tertiary">{CAPITAL_LOSS_SCOPE_NOTE}</p>
       </div>
 
       <div className="flex justify-between">

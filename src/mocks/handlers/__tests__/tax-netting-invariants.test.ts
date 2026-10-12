@@ -38,6 +38,10 @@ describe('the rebalance preview nets realised gains and losses', () => {
     expect(preview!.trades.some((t) => t.symbol === 'SMH')).toBe(false)
     expect(netTaxForLegs(preview!.trades, taxRateFor).net).toBe(18_216)
     expect(preview!.estimatedTaxImpact).toBe(10_422)
+    // The pin and the engine's own arithmetic on the same legs must agree, so the pin cannot drift.
+    expect(preview!.estimatedTaxImpact)
+      .toBe(additionalCapitalGainsTax({ shortTerm: 0, longTerm: -32_750 }, { shortTerm: 0, longTerm: 76_538 }, taxRateFor))
+    expect(preview!.trades.reduce((s, t) => s + t.realisedLongTerm, 0)).toBe(76_538)
     expect(preview!.grossTaxOnGains).toBe(29_128)
   })
 

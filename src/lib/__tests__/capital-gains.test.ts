@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { netCapitalGainsTax, netTaxForLegs, additionalCapitalGainsTax } from '@/lib/capital-gains'
+import { netCapitalGainsTax, netTaxForLegs, additionalCapitalGainsTax, taxEstimateDirection } from '@/lib/capital-gains'
 
 const rate = (p: 'short' | 'long') => (p === 'short' ? 0.37 : 0.238)
 
@@ -59,5 +59,48 @@ describe('additionalCapitalGainsTax (a proposal on top of results already realis
   it('a loss against gains already realised this year is a negative change — tax saved', () => {
     expect(additionalCapitalGainsTax({ shortTerm: 0, longTerm: 50_000 }, { shortTerm: 0, longTerm: -20_000 }, rate))
       .toBe(Math.round(30_000 * 0.238) - Math.round(50_000 * 0.238))
+  })
+})
+
+/**
+ * The relationship between the return-level estimate and the proposal's own tax on gains
+ * (`grossTaxOnGains`), over a grid of signed year-to-date and proposal results. `ownTaxOnGains`
+ * is the gross for a proposal of one short- and one long-term leg.
+ */
+describe('additionalCapitalGainsTax against the proposal\'s own tax on gains', () => {
+  const amounts = [-40_000, -10_000, -2_500, 0, 2_500, 10_000, 40_000]
+  const results = amounts.flatMap((shortTerm) => amounts.map((longTerm) => ({ shortTerm, longTerm })))
+  const ownTaxOnGains = (r: { shortTerm: number; longTerm: number }) =>
+    Math.round(Math.max(0, r.shortTerm) * rate('short')) + Math.round(Math.max(0, r.longTerm) * rate('long'))
+
+  it('never exceeds it when the year-to-date results are a gain or nil in both characters (to a dollar of rounding)', () => {
+    for (const prior of results.filter((r) => r.shortTerm >= 0 && r.longTerm >= 0)) {
+      for (const added of results) {
+        expect(additionalCapitalGainsTax(prior, added, rate), JSON.stringify({ prior, added })).toBeLessThanOrEqual(ownTaxOnGains(added) + 1)
+      }
+    }
+  })
+
+  it('can exceed it when a year-to-date loss was sheltering a gain of the other character', () => {
+    const exceeding = results.flatMap((prior) => results.filter((added) => additionalCapitalGainsTax(prior, added, rate) > ownTaxOnGains(added) + 1)
+      .map((added) => ({ prior, added })))
+    expect(exceeding.length).toBeGreaterThan(0)
+    for (const { prior } of exceeding) expect(Math.min(prior.shortTerm, prior.longTerm), JSON.stringify(prior)).toBeLessThan(0)
+  })
+
+  it('is never below minus the tax the year-to-date results already owe: trades cannot save more than that', () => {
+    for (const prior of results) {
+      for (const added of results) {
+        expect(additionalCapitalGainsTax(prior, added, rate)).toBeGreaterThanOrEqual(-netCapitalGainsTax(prior.shortTerm, prior.longTerm, rate))
+      }
+    }
+  })
+})
+
+describe('taxEstimateDirection', () => {
+  it('a positive estimate is tax added; a negative one is tax saved, stated unsigned', () => {
+    expect(taxEstimateDirection(10_422)).toEqual({ direction: 'added to', amount: 10_422 })
+    expect(taxEstimateDirection(-1_755)).toEqual({ direction: 'saved on', amount: 1_755 })
+    expect(taxEstimateDirection(0)).toEqual({ direction: 'added to', amount: 0 })
   })
 })

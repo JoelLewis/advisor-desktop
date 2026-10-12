@@ -102,11 +102,17 @@ describe('the rebalance estimate is the tax this proposal adds to its return', (
     const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
     expect(preview!.estimatedTaxImpact).toBe(10_422)
     expect(preview!.ytdRealisedOnReturn).toEqual({ shortTerm: 0, longTerm: -32_750 })
+    expect(sum(preview!.trades)).toEqual({ shortTerm: 0, longTerm: 76_538 })
+    expect(preview!.estimatedTaxImpact).toBe(additionalCapitalGainsTax(preview!.ytdRealisedOnReturn!, sum(preview!.trades), taxRateFor))
   })
 
   it('acc-002 onto mod-002: the model-trade preview states the same figure', async () => {
     const [modelTrade] = await previewModelTrades('mod-002', ['acc-002'])
     expect(modelTrade!.estimatedTaxImpact).toBe(10_422)
+    // Model-trade legs carry no realised results, so the pin is paired with the rebalance preview,
+    // whose figure is checked against the engine's arithmetic above.
+    const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
+    expect(modelTrade!.estimatedTaxImpact).toBe(preview!.estimatedTaxImpact)
   })
 
   it('acc-006 (irrevocable trust): nothing is netted from another taxpayer', async () => {

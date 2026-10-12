@@ -12,6 +12,7 @@ import { CurrencyValue } from '@/components/ui/CurrencyValue'
 import { convertToBase } from '@/lib/currency'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
 import { cn } from '@/lib/utils'
+import { CAPITAL_LOSS_SCOPE_NOTE, taxEstimateDirection } from '@/lib/capital-gains'
 import type { Account } from '@/types/account'
 import type { ModelGovernanceDetail } from '@/types/portfolio'
 import type { ModelTradePreview } from '@/types/trading'
@@ -143,6 +144,13 @@ export function ModelTradeView() {
     (sum, p) => sum + convertToBase(p.estimatedTaxImpact, p.currency, FX_RATES_USD_BASE),
     0,
   )
+  // Signed estimates read as a direction and an unsigned amount: "saved on" when the trades lower
+  // the tax the year's realised results already owe.
+  const totalTax = taxEstimateDirection(totalTaxImpact)
+  const taxEstimateText = (preview: ModelTradePreview) => {
+    const { direction, amount } = taxEstimateDirection(preview.estimatedTaxImpact)
+    return `Est. tax ${direction} the return, net of losses and YTD realised results: ${formatWithConversion(amount, preview.currency)}`
+  }
 
   // Account columns for step 2
   const accountColumns: ColumnDef<Account, unknown>[] = [
@@ -350,8 +358,11 @@ export function ModelTradeView() {
             </Card>
             <Card>
               <CardContent className="p-4 text-center">
-                <p className="text-caption text-text-secondary">Est. tax, sum of account estimates</p>
-                <p className="mt-1 font-mono text-page-title text-accent-red">{formatWithConversion(totalTaxImpact, 'USD')}</p>
+                <p className="text-caption text-text-secondary">Est. tax {totalTax.direction === 'saved on' ? 'saved' : 'added'}, sum of account estimates</p>
+                <p className={cn('mt-1 font-mono text-page-title', totalTax.direction === 'saved on' ? 'text-accent-green' : 'text-accent-red')}>
+                  {formatWithConversion(totalTax.amount, 'USD')}
+                </p>
+                <p className="mt-1 text-caption text-text-tertiary">{CAPITAL_LOSS_SCOPE_NOTE}</p>
               </CardContent>
             </Card>
           </div>
@@ -388,7 +399,7 @@ export function ModelTradeView() {
                           and reading HK$ as $ overstates it by 7.82x. The figure is what the
                           proposal adds to its owner's return, netted with that return's YTD
                           realised results. */}
-                      Est. tax added to the return, net of losses and YTD realised results: {formatWithConversion(preview.estimatedTaxImpact, preview.currency)}
+                      {taxEstimateText(preview)}
                       {preview.nettedWithAccountIds.length > 0 && ` (also netted with ${preview.nettedWithAccountIds.map((id) => previews.find((p) => p.accountId === id)?.accountName ?? id).join(', ')} above)`}
                     </span>
                   </div>
