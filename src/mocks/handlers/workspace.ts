@@ -3,9 +3,14 @@ import type { AgentId, BindingAct, Directory, Draft, Message, ThreadDetail } fro
 import { AGENTS, PEOPLE, can, permissionsOf, personById } from '../data/people'
 import { nextAt, nextId, store } from '../data/workspace-store'
 import { sendToClient } from '../workspace/acts'
+import { carryFinding } from '../workspace/carry'
+import { draftLetter, draftsFor, reviseDraft } from '../workspace/letters'
+import { approveProposal, visibleProposal, withdrawApproval } from '../workspace/proposal-acts'
 import { previewAgent, runAgent } from '../workspace/run-agent'
 import { canSeeThread, viewerFrom, visibleThreads } from '../workspace/visibility'
 import { notFound } from './utils'
+import { badRequest, firmViewer, nonEmptyString, readJson, refusal, unauthorised } from './workspace-http'
+import { workspaceProposalHandlers } from './workspace-proposals'
 
 const fullDirectory = (): Directory => ({ people: [...PEOPLE], agents: [...AGENTS], permissions: Object.fromEntries(PEOPLE.map((p) => [p.id, permissionsOf(p.id)])) })
 
@@ -17,18 +22,7 @@ function clientDirectory(clientId: string): Directory {
 
 const withoutSubject = ({ subject: _subject, ...act }: BindingAct): BindingAct => act
 
-const badRequest = (message: string) => HttpResponse.json({ code: 'BAD_REQUEST', message }, { status: 400 })
-
-async function readJson(request: Request): Promise<Record<string, unknown> | undefined> {
-  const parsed: unknown = await request.json().catch(() => undefined)
-  return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : undefined
-}
-
-const nonEmptyString = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0
-
 const isAgentId = (value: string): value is AgentId => AGENTS.some((a) => a.id === value)
-
-const unauthorised = () => HttpResponse.json({ code: 'NO_VIEWER', message: 'A known viewer is required.' }, { status: 401 })
 
 export const workspaceHandlers = [
   http.get('/api/workspace/people', ({ request }) => {
@@ -76,7 +70,7 @@ export const workspaceHandlers = [
     if (!viewer) return unauthorised()
     const thread = store().threads.find((t) => t.id === params.id)
     if (!thread || !canSeeThread(viewer, thread) || personById(viewer)?.role === 'client') return notFound()
-    return HttpResponse.json(store().drafts.filter((d) => d.clientThreadId === thread.id))
+    return HttpResponse.json(draftsFor(thread.id))
   }),
 
   http.post('/api/workspace/threads/:id/drafts', async ({ request, params }) => {
@@ -108,11 +102,31 @@ export const workspaceHandlers = [
     const viewer = viewerFrom(request)
     if (!viewer) return unauthorised()
     const body = await readJson(request)
-    if (!body || typeof body.kind !== 'string' || (body.draftId !== undefined && typeof body.draftId !== 'string')) return badRequest('kind (and draftId) must be strings.')
-    if (body.kind !== 'send_to_client' || !body.draftId) return HttpResponse.json({ code: 'NOT_IN_PHASE', message: 'Only sending to a client is recorded in this phase.' }, { status: 400 })
-    const result = sendToClient(viewer, body.draftId)
-    if (!result.ok) return HttpResponse.json({ code: result.code, message: result.message }, { status: result.status })
-    return HttpResponse.json(result.act, { status: 201 })
+    if (!body || typeof body.kind !== 'string') return badRequest('kind must be a string.')
+    const isClient = personById(viewer)?.role === 'client'
+    switch (body.kind) {
+      case 'send_to_client': {
+        if (!nonEmptyString(body.draftId)) return badRequest('draftId must be a string.')
+        const r = sendToClient(viewer, body.draftId)
+        return r.ok ? HttpResponse.json(r.act, { status: 201 }) : refusal(r)
+      }
+      case 'approve_proposal': {
+        if (isClient) return notFound()
+        if (!nonEmptyString(body.proposalId)) return badRequest('proposalId is required.')
+        if (!visibleProposal(viewer, body.proposalId)) return notFound()
+        if (typeof body.version !== 'number' || !nonEmptyString(body.fingerprint)) return badRequest('version (a number) and fingerprint are required.')
+        const r = approveProposal(viewer, body.proposalId, body.version, body.fingerprint)
+        return r.ok ? HttpResponse.json(r.act, { status: 201 }) : refusal(r)
+      }
+      case 'withdraw_approval': {
+        if (isClient) return notFound()
+        if (!nonEmptyString(body.proposalId)) return badRequest('proposalId is required.')
+        const r = withdrawApproval(viewer, body.proposalId)
+        return r.ok ? HttpResponse.json(r.act, { status: 201 }) : refusal(r)
+      }
+      default:
+        return HttpResponse.json({ code: 'NOT_IN_PHASE', message: 'That act is not recorded in this phase.' }, { status: 400 })
+    }
   }),
 
   http.post('/api/workspace/threads/:id/agents/:agentId/run', ({ request, params }) => {
@@ -134,6 +148,41 @@ export const workspaceHandlers = [
     if (!result.ok) return HttpResponse.json({ code: result.code, message: result.message }, { status: result.status })
     return HttpResponse.json(result.findings)
   }),
+
+  http.post('/api/workspace/threads/:id/drafts/letter', async ({ request, params }) => {
+    const viewer = firmViewer(request)
+    if (!viewer.ok) return viewer.response
+    const body = await readJson(request)
+    const proposalId = body && nonEmptyString(body.proposalId) ? body.proposalId : undefined
+    // The engine checks the thread before the proposal, so a missing proposalId surfaces as 400 only to a viewer who may draft here.
+    const r = draftLetter(viewer.viewerId, String(params.id), proposalId ?? '')
+    if (r.ok) return HttpResponse.json(r.draft, { status: r.created ? 201 : 200 })
+    return proposalId === undefined && r.code === 'NO_PROPOSAL' ? badRequest('proposalId is required.') : refusal(r)
+  }),
+
+  http.post('/api/workspace/threads/:id/drafts/:draftId/revisions', async ({ request, params }) => {
+    const viewer = firmViewer(request)
+    if (!viewer.ok) return viewer.response
+    const body = await readJson(request)
+    // A missing body reaches the engine as empty text, which it refuses with 400 only after the thread and draft checks.
+    const text = body && typeof body.body === 'string' ? body.body : ''
+    const r = reviseDraft(viewer.viewerId, String(params.id), String(params.draftId), text)
+    return r.ok ? HttpResponse.json(r.draft, { status: 201 }) : refusal(r)
+  }),
+
+  http.post('/api/workspace/threads/:id/findings/:messageId/carry', async ({ request, params }) => {
+    const viewer = firmViewer(request)
+    if (!viewer.ok) return viewer.response
+    const body = await readJson(request)
+    if (!body || !nonEmptyString(body.toThreadId)) {
+      const from = store().threads.find((t) => t.id === params.id)
+      return from && canSeeThread(viewer.viewerId, from) ? badRequest('toThreadId is required.') : notFound()
+    }
+    const r = carryFinding(viewer.viewerId, String(params.id), String(params.messageId), body.toThreadId)
+    return r.ok ? HttpResponse.json(r.message, { status: r.created ? 201 : 200 }) : refusal(r)
+  }),
+
+  ...workspaceProposalHandlers,
 
   // Workspace handlers must be registered above this catch-all.
   http.all('/api/workspace/*', () => HttpResponse.json({ code: 'METHOD_NOT_ALLOWED', message: 'Workspace records cannot be edited or deleted.' }, { status: 405 })),

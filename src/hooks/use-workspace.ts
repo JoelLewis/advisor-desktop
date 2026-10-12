@@ -1,8 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as api from '@/services/workspace'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { DEFAULT_VIEWER_ID } from '@/workspace/viewer/viewer-context'
 import type { AgentId } from '@/types/workspace'
+import type { LegEdit, ProposalConstraint } from '@/types/workspace-proposal'
 
 export function useDirectory() {
   const { viewerId } = useViewer()
@@ -100,5 +101,90 @@ export function useRunAgent(threadId: string) {
   return useMutation({
     mutationFn: (agentId: AgentId) => api.runAgent(viewerId, threadId, agentId),
     onSuccess: invalidate,
+  })
+}
+
+export function useProposals(threadId?: string, enabled = true) {
+  const { viewerId } = useViewer()
+  return useQuery({
+    queryKey: ['workspace', viewerId, 'proposals', threadId ?? 'all'],
+    queryFn: () => api.getProposals(viewerId, threadId),
+    enabled,
+  })
+}
+
+export function useProposal(id: string) {
+  const { viewerId } = useViewer()
+  return useQuery({ queryKey: ['workspace', viewerId, 'proposal', id], queryFn: () => api.getProposal(viewerId, id) })
+}
+
+/** The engine's preview of a draft version. The previous preview stays on screen while the next one loads. */
+export function useProposalPreview(id: string, edits: LegEdit[], enabled: boolean) {
+  const { viewerId } = useViewer()
+  return useQuery({
+    queryKey: ['workspace', viewerId, 'proposal-preview', id, JSON.stringify(edits)],
+    queryFn: () => api.previewProposalEdits(viewerId, id, edits),
+    enabled,
+    placeholderData: keepPreviousData,
+  })
+}
+
+// Proposal mutations invalidate on settle, not success: a refused write (a newer version arrived) must refresh what is on screen too.
+
+export function useCreateProposal(threadId: string) {
+  const { viewerId } = useViewer()
+  const invalidate = useInvalidateWorkspace()
+  return useMutation({ mutationFn: (accountId: string) => api.createProposal(viewerId, threadId, accountId), onSettled: invalidate })
+}
+
+export function useReviseProposal(proposalId: string) {
+  const { viewerId } = useViewer()
+  const invalidate = useInvalidateWorkspace()
+  return useMutation({ mutationFn: (constraints: ProposalConstraint[]) => api.reviseProposal(viewerId, proposalId, constraints), onSettled: invalidate })
+}
+
+export function useSaveVersion(proposalId: string) {
+  const { viewerId } = useViewer()
+  const invalidate = useInvalidateWorkspace()
+  return useMutation({ mutationFn: (edits: LegEdit[]) => api.saveProposalVersion(viewerId, proposalId, edits), onSettled: invalidate })
+}
+
+export function useApproveProposal() {
+  const { viewerId } = useViewer()
+  const invalidate = useInvalidateWorkspace()
+  return useMutation({
+    mutationFn: ({ proposalId, version, fingerprint }: { proposalId: string; version: number; fingerprint: string }) =>
+      api.approveProposal(viewerId, proposalId, version, fingerprint),
+    onSettled: invalidate,
+  })
+}
+
+export function useWithdrawApproval() {
+  const { viewerId } = useViewer()
+  const invalidate = useInvalidateWorkspace()
+  return useMutation({ mutationFn: (proposalId: string) => api.withdrawApproval(viewerId, proposalId), onSettled: invalidate })
+}
+
+export function useCarryFinding(fromThreadId: string) {
+  const { viewerId } = useViewer()
+  const invalidate = useInvalidateWorkspace()
+  return useMutation({
+    mutationFn: ({ messageId, toThreadId }: { messageId: string; toThreadId: string }) => api.carryFinding(viewerId, fromThreadId, messageId, toThreadId),
+    onSettled: invalidate,
+  })
+}
+
+export function useDraftLetter(clientThreadId: string) {
+  const { viewerId } = useViewer()
+  const invalidate = useInvalidateWorkspace()
+  return useMutation({ mutationFn: (proposalId: string) => api.draftLetter(viewerId, clientThreadId, proposalId), onSettled: invalidate })
+}
+
+export function useReviseDraft(clientThreadId: string) {
+  const { viewerId } = useViewer()
+  const invalidate = useInvalidateWorkspace()
+  return useMutation({
+    mutationFn: ({ draftId, body }: { draftId: string; body: string }) => api.reviseDraft(viewerId, clientThreadId, draftId, body),
+    onSettled: invalidate,
   })
 }
