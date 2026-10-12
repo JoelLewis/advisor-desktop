@@ -8,7 +8,7 @@ import { accounts } from '../data/accounts'
 import { getPositionsForAccount } from '../data/positions'
 import { FX_RATES_USD_BASE } from '../data/currencies'
 import { convertCurrency } from '@/lib/currency'
-import { securityKind, concentrationLimitFor, isMarketTradable } from '@/lib/security-master'
+import { securityKind, concentrationLimitFor, isMarketTradable, taxCharacterOf } from '@/lib/security-master'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { hasWashSaleRisk, isoDaysBefore } from '@/lib/wash-sale'
@@ -74,8 +74,8 @@ export function currencyForAccount(accountId: string): CurrencyCode {
   return accounts.find((a) => a.id === accountId)?.baseCurrency ?? 'USD'
 }
 
-type RealisedSale = { shortTerm: number; longTerm: number; tax: number; consumedLotIds: string[] }
-const NOTHING_REALISED: RealisedSale = { shortTerm: 0, longTerm: 0, tax: 0, consumedLotIds: [] }
+type RealisedSale = { shortTerm: number; longTerm: number; collectibleLongTerm: number; tax: number; consumedLotIds: string[] }
+const NOTHING_REALISED: RealisedSale = { shortTerm: 0, longTerm: 0, collectibleLongTerm: 0, tax: 0, consumedLotIds: [] }
 
 /**
  * Realise a sale of `notional` dollars out of `target`: the signed short- and long-term result
@@ -88,10 +88,13 @@ const NOTHING_REALISED: RealisedSale = { shortTerm: 0, longTerm: 0, tax: 0, cons
 function realiseSale(accountLots: readonly CustodianLot[], target: Position, notional: number, taxAware: boolean): RealisedSale {
   const lots = accountLots.filter((l) => l.positionId === target.id)
   if (lots.length === 0 || notional <= 0) return NOTHING_REALISED
+  // §0.6 · GLD's long-term gain is collectibles gain (31.8%), not 23.8%.
+  const character = taxCharacterOf(target.symbol)
+  const rateFor = (holdingPeriod: (typeof lots)[number]['holdingPeriod']) => taxRateFor(holdingPeriod, character)
   // Minimise realised gain and rank by *tax per dollar sold*, not gain per dollar sold: a
   // low-gain short-term lot (40.8% rate) can carry more tax than a low-gain long-term lot (23.8%
   // rate), so sorting by gain fraction alone can pick a worse-taxed lot first.
-  const taxPerDollar = (l: (typeof lots)[number]) => (l.gainLoss / l.currentValue) * taxRateFor(l.holdingPeriod)
+  const taxPerDollar = (l: (typeof lots)[number]) => (l.gainLoss / l.currentValue) * rateFor(l.holdingPeriod)
   const ordered = taxAware ? [...lots].sort((a, b) => taxPerDollar(a) - taxPerDollar(b)) : lots
 
   let remaining = notional
@@ -106,10 +109,17 @@ function realiseSale(accountLots: readonly CustodianLot[], target: Position, not
     const realised = lot.gainLoss * portion
     if (lot.holdingPeriod === 'short') shortTerm += realised
     else longTerm += realised
-    if (realised > 0) tax += realised * taxRateFor(lot.holdingPeriod)
+    if (realised > 0) tax += realised * rateFor(lot.holdingPeriod)
     remaining -= lot.currentValue * portion
   }
-  return { shortTerm: Math.round(shortTerm), longTerm: Math.round(longTerm), tax: Math.max(0, Math.round(tax)), consumedLotIds }
+  const roundedLongTerm = Math.round(longTerm)
+  return {
+    shortTerm: Math.round(shortTerm),
+    longTerm: roundedLongTerm,
+    collectibleLongTerm: character === 'collectible' ? roundedLongTerm : 0,
+    tax: Math.max(0, Math.round(tax)),
+    consumedLotIds,
+  }
 }
 
 /**
@@ -433,6 +443,7 @@ export function generateRebalanceTrades(
         taxImpact: realised.tax,
         realisedShortTerm: realised.shortTerm,
         realisedLongTerm: realised.longTerm,
+        realisedCollectibleLongTerm: realised.collectibleLongTerm,
         washSaleRisk: hasWashSaleRisk(
           { symbol: target.symbol, side, realisesLoss: realised.shortTerm + realised.longTerm < 0, soldLotIds: realised.consumedLotIds },
           lossWindows, acquisitions, MOCK_TODAY_ISO,

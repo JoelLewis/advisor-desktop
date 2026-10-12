@@ -4,6 +4,7 @@ import { convertToBase } from '@/lib/currency'
 import type { TaxLot } from '@/types/portfolio'
 import type { CurrencyCode, FXRateMap } from '@/types/currency'
 import type { CostBasisMethod } from './CostBasisMethodCard'
+import type { TaxCharacter } from '@/lib/capital-gains'
 
 export const HOLDING_LABELS: Record<string, string> = { short: 'Short-Term', long: 'Long-Term' }
 
@@ -27,10 +28,20 @@ export const SHORT_TERM_RATE = 0.408 as const
 /** 20% long-term capital gains + 3.8% net investment income tax. */
 export const LONG_TERM_RATE = 0.238 as const
 
-/** What the two rates include and leave out, so a screen can state the basis of every estimate. */
+/**
+ * §0.6 · a long-term collectibles gain — including a sale of GLD or another grantor trust holding
+ * physical metal (`taxCharacterOf`) — is taxed at up to 28% (§1(h)(4)), not 20%, and NIIT applies
+ * to it as to any gain. Short-term, a collectible is taxed like any short-term gain.
+ */
+export const TOP_COLLECTIBLES_RATE = 0.28 as const
+/** 28% maximum collectibles rate + 3.8% net investment income tax. */
+export const COLLECTIBLE_LONG_TERM_RATE = 0.318 as const
+
+/** What the rates include and leave out, so a screen can state the basis of every estimate. */
 export type TaxRateBasis = {
   shortTerm: number
   longTerm: number
+  collectibleLongTerm: number
   includes: readonly ('federal' | 'niit')[]
   excludes: readonly 'state'[]
 }
@@ -38,6 +49,7 @@ export type TaxRateBasis = {
 export const TAX_RATE_BASIS: TaxRateBasis = {
   shortTerm: SHORT_TERM_RATE,
   longTerm: LONG_TERM_RATE,
+  collectibleLongTerm: COLLECTIBLE_LONG_TERM_RATE,
   includes: ['federal', 'niit'],
   excludes: ['state'],
 }
@@ -59,24 +71,36 @@ export function formatRatePercent(rate: number): string {
  * a test drive it with values that appear nowhere else in the codebase (see
  * tax-invariants.test.ts), which a hardcoded string cannot satisfy by coincidence.
  */
-export function buildRateDisclosure(shortTermRate: number, longTermRate: number): string {
+export function buildRateDisclosure(
+  shortTermRate: number,
+  longTermRate: number,
+  collectibleLongTermRate: number = COLLECTIBLE_LONG_TERM_RATE,
+): string {
   return (
     `Estimated at top federal marginal rates including the ${formatRatePercent(NIIT_RATE)} net ` +
     `investment income tax — ${formatRatePercent(shortTermRate)} short-term, ` +
-    `${formatRatePercent(longTermRate)} long-term. State tax is not modelled. Estimates only, not ` +
-    'tax advice.'
+    `${formatRatePercent(longTermRate)} long-term (${formatRatePercent(collectibleLongTermRate)} on ` +
+    'collectibles, including physically backed precious-metal ETFs). State tax is not modelled. ' +
+    'Estimates only, not tax advice.'
   )
 }
 
 // Templated from the constants above, not restated as free text — changing SHORT_TERM_RATE or
 // LONG_TERM_RATE previously would not have changed this copy, so the disclosure could silently
 // lie about the rates actually applied.
-export const RATE_DISCLOSURE = buildRateDisclosure(SHORT_TERM_RATE, LONG_TERM_RATE)
+export const RATE_DISCLOSURE = buildRateDisclosure(SHORT_TERM_RATE, LONG_TERM_RATE, COLLECTIBLE_LONG_TERM_RATE)
 
-export function taxRateFor(holdingPeriod: TaxLot['holdingPeriod']): number {
-  return holdingPeriod === 'short' ? SHORT_TERM_RATE : LONG_TERM_RATE
+export function taxRateFor(holdingPeriod: TaxLot['holdingPeriod'], character: TaxCharacter = 'capital_asset'): number {
+  if (holdingPeriod === 'short') return SHORT_TERM_RATE
+  return character === 'collectible' ? COLLECTIBLE_LONG_TERM_RATE : LONG_TERM_RATE
 }
 
+/**
+ * A harvest benefit is stated at the lot's holding-period rate for an ordinary capital asset,
+ * whatever the lot is. A collectibles loss saves 31.8% only against collectibles gain realised the
+ * same year, which a per-lot estimate cannot know; stating it at 23.8% long-term never overstates
+ * the saving on that ground.
+ */
 export function estimatedTaxBenefit(lot: Pick<TaxLot, 'gainLoss' | 'holdingPeriod'>): number {
   if (lot.gainLoss >= 0) return 0
   return Math.abs(lot.gainLoss) * taxRateFor(lot.holdingPeriod)

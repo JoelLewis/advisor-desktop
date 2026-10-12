@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { securityKind, concentrationLimitFor, isMarketTradable, SINGLE_NAME_LIMIT, FUND_LIMIT, CASH_LIMIT, type SecurityKind } from '@/lib/security-master'
+import { securityKind, concentrationLimitFor, isMarketTradable, taxCharacterOf, SINGLE_NAME_LIMIT, FUND_LIMIT, CASH_LIMIT, type SecurityKind } from '@/lib/security-master'
 import { accounts } from '@/mocks/data/accounts'
 import { allPositions, getPositionsForAccount } from '@/mocks/data/positions'
 
@@ -154,5 +154,14 @@ describe('isMarketTradable', () => {
   })
   it('listed ETFs and stocks are market-tradable', () => {
     for (const s of ['SPY', 'INTC', 'IBIT', 'SMH']) expect(isMarketTradable(s)).toBe(true)
+  })
+})
+
+describe('taxCharacterOf', () => {
+  it.each(['GLD', 'IAU', 'SLV', 'PPLT'])('%s, a grantor trust holding physical metal, is a collectible', (symbol) => {
+    expect(taxCharacterOf(symbol)).toBe('collectible')
+  })
+  it.each(['SPY', 'VTI', 'AGG', 'NVDA', 'IBIT', 'CASH'])('%s is an ordinary capital asset', (symbol) => {
+    expect(taxCharacterOf(symbol)).toBe('capital_asset')
   })
 })

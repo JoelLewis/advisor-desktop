@@ -8,6 +8,7 @@ import { convertCurrency } from '@/lib/currency'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { additionalCapitalGainsTax, netTaxForLegs, type RealisedByCharacter, type TaxedLeg } from '@/lib/capital-gains'
 import { taxRateFor } from '@/features/portfolios/tax/shared'
+import { taxCharacterOf } from '@/lib/security-master'
 
 /**
  * §1222 nets within one taxpayer's return and never across two. Which accounts share a return:
@@ -66,22 +67,22 @@ export function openWashSaleWindowsFor(account: Account, asOfISO: string): OpenW
   })
 }
 
-const NOTHING: RealisedByCharacter = { shortTerm: 0, longTerm: 0 }
+const NOTHING: Required<RealisedByCharacter> = { shortTerm: 0, longTerm: 0, collectibleLongTerm: 0 }
 
 const currencyOf = (account: Account): CurrencyCode => account.baseCurrency ?? 'USD'
 const toUSD = (amount: number, from: CurrencyCode) => convertCurrency(amount, from, 'USD', FX_RATES_USD_BASE)
 
 /** Realised results on `returnId` from 1 January of `asOfISO`'s year through `asOfISO`, in USD. */
-export function ytdRealisedOnReturn(returnId: string, asOfISO: string): RealisedByCharacter {
+export function ytdRealisedOnReturn(returnId: string, asOfISO: string): Required<RealisedByCharacter> {
   const yearStart = `${asOfISO.slice(0, 4)}-01-01`
   return realisedSales.reduce((total, sale) => {
     const account = accounts.find((a) => a.id === sale.accountId)
     if (!account) throw new Error(`realised sale ${sale.id} names unknown account ${sale.accountId}`)
     if (sale.saleDate < yearStart || sale.saleDate > asOfISO || taxReturnFor(account) !== returnId) return total
     const usd = toUSD(sale.realisedGainLoss, currencyOf(account))
-    return sale.holdingPeriod === 'short'
-      ? { ...total, shortTerm: total.shortTerm + usd }
-      : { ...total, longTerm: total.longTerm + usd }
+    if (sale.holdingPeriod === 'short') return { ...total, shortTerm: total.shortTerm + usd }
+    const collectible = taxCharacterOf(sale.symbol) === 'collectible' ? usd : 0
+    return { ...total, longTerm: total.longTerm + usd, collectibleLongTerm: total.collectibleLongTerm + collectible }
   }, NOTHING)
 }
 
@@ -91,7 +92,7 @@ export type ReturnTaxEstimate = {
   /** The legs' own tax on gains, nothing netted. */
   gross: number
   /** Year-to-date realised results on the account's return, in the account's currency; `null` when it is on none. */
-  ytdRealisedOnReturn: RealisedByCharacter | null
+  ytdRealisedOnReturn: Required<RealisedByCharacter> | null
   /** Accounts earlier in the same batch, on the same return, whose legs this estimate nets against. */
   nettedWithAccountIds: string[]
 }
@@ -110,7 +111,7 @@ export function estimateTaxOnReturns(
   batch: readonly { account: Account; legs: readonly TaxedLeg[] }[],
   asOfISO: string,
 ): ReturnTaxEstimate[] {
-  const realisedSoFar = new Map<string, { realised: RealisedByCharacter; accountIds: string[] }>()
+  const realisedSoFar = new Map<string, { realised: Required<RealisedByCharacter>; accountIds: string[] }>()
   return batch.map(({ account, legs }) => {
     const own = netTaxForLegs(legs, taxRateFor)
     const returnId = taxReturnFor(account)
@@ -120,20 +121,29 @@ export function estimateTaxOnReturns(
     const prior = realisedSoFar.get(returnId) ?? { realised: ytd, accountIds: [] }
     const currency = currencyOf(account)
     const fromUSD = (usd: number) => convertCurrency(usd, 'USD', currency, FX_RATES_USD_BASE)
-    const added: RealisedByCharacter = {
+    const added: Required<RealisedByCharacter> = {
       shortTerm: toUSD(legs.reduce((s, l) => s + l.realisedShortTerm, 0), currency),
       longTerm: toUSD(legs.reduce((s, l) => s + l.realisedLongTerm, 0), currency),
+      collectibleLongTerm: toUSD(legs.reduce((s, l) => s + (l.realisedCollectibleLongTerm ?? 0), 0), currency),
     }
     realisedSoFar.set(returnId, {
-      realised: { shortTerm: prior.realised.shortTerm + added.shortTerm, longTerm: prior.realised.longTerm + added.longTerm },
+      realised: {
+        shortTerm: prior.realised.shortTerm + added.shortTerm,
+        longTerm: prior.realised.longTerm + added.longTerm,
+        collectibleLongTerm: prior.realised.collectibleLongTerm + added.collectibleLongTerm,
+      },
       accountIds: [...prior.accountIds, account.id],
     })
 
-    const nothingToNet = prior.realised.shortTerm === 0 && prior.realised.longTerm === 0
+    const nothingToNet = prior.realised.shortTerm === 0 && prior.realised.longTerm === 0 && prior.realised.collectibleLongTerm === 0
     return {
       net: nothingToNet ? own.net : Math.round(fromUSD(additionalCapitalGainsTax(prior.realised, added, taxRateFor))),
       gross: own.gross,
-      ytdRealisedOnReturn: { shortTerm: Math.round(fromUSD(ytd.shortTerm)), longTerm: Math.round(fromUSD(ytd.longTerm)) },
+      ytdRealisedOnReturn: {
+        shortTerm: Math.round(fromUSD(ytd.shortTerm)),
+        longTerm: Math.round(fromUSD(ytd.longTerm)),
+        collectibleLongTerm: Math.round(fromUSD(ytd.collectibleLongTerm)),
+      },
       nettedWithAccountIds: prior.accountIds,
     }
   })

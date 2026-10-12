@@ -14,6 +14,8 @@
  * so the fix is explicit symbols, not adding `intl_equity`/`fixed_income` to FUND_ONLY_CLASSES —
  * that would misclassify those single stocks as funds instead.
  */
+import type { TaxCharacter } from './capital-gains'
+
 export type SecurityKind = 'single_name' | 'fund' | 'cash'
 
 /** Pooled vehicles held anywhere in the fixtures. */
@@ -93,4 +95,16 @@ export function concentrationLimitFor(kind: SecurityKind): number {
     case 'fund': return FUND_LIMIT
     case 'single_name': return SINGLE_NAME_LIMIT
   }
+}
+
+/**
+ * §0.6 · grantor trusts that hold physical precious metal. A grantor trust's holders are treated
+ * as owning its assets (§§671–677), so selling a share is selling metal, a collectible under
+ * §408(m)(2): its long-term gain is collectibles gain, taxed at up to 28% (§1(h)(4)–(5)), not
+ * 20%. Funds that hold futures or miners' shares are not collectibles and are not listed.
+ */
+const PHYSICAL_PRECIOUS_METAL_TRUSTS = new Set(['GLD', 'IAU', 'SLV', 'PPLT'])
+
+export function taxCharacterOf(symbol: string): TaxCharacter {
+  return PHYSICAL_PRECIOUS_METAL_TRUSTS.has(symbol) ? 'collectible' : 'capital_asset'
 }

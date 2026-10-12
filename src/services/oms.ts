@@ -102,7 +102,7 @@ export type RebalancePreview = {
    */
   estimatedTaxImpact: number
   /** Year-to-date realised results on this account's return; `null` when it is on none (an IRA, a Roth). */
-  ytdRealisedOnReturn: { shortTerm: number; longTerm: number } | null
+  ytdRealisedOnReturn: { shortTerm: number; longTerm: number; collectibleLongTerm: number } | null
   /** Accounts earlier in this batch, on the same return, whose proposals this estimate nets against. */
   nettedWithAccountIds: string[]
   /**
@@ -125,6 +125,8 @@ export type ProposedTrade = {
   /** Realised result of this leg by holding period, signed (loss < 0), account currency. 0 for buys. */
   realisedShortTerm: number
   realisedLongTerm: number
+  /** The part of `realisedLongTerm` that is collectibles gain or loss (GLD and other physical-metal trusts), taxed at up to 28% + NIIT. */
+  realisedCollectibleLongTerm: number
   washSaleRisk: boolean
   // Same account-native currency as the parent `RebalancePreview.currency` — carried on the trade
   // itself so a consumer that only has the trade (not the preview) still knows what it's reading.

@@ -1,20 +1,44 @@
 export type HoldingCharacter = 'short' | 'long'
 
 /**
+ * §0.6 · what kind of asset a gain is on. A collectible (§408(m): art, coins, any metal) is taxed
+ * long-term at up to 28% (§1(h)(4)–(5)), not 20%. Short-term, it is ordinary income like any
+ * other short-term gain.
+ */
+export type TaxCharacter = 'capital_asset' | 'collectible'
+
+/** The rate a gain of this holding period and character is taxed at. */
+export type RateFor = (holdingPeriod: HoldingCharacter, character?: TaxCharacter) => number
+
+/**
  * IRC §1222: net short-term and long-term results within each character, then offset a net loss
  * in one against a net gain in the other. A net loss overall owes nothing here, never a negative
  * tax; the excess carries forward (§1212) and is not shown on any surface.
+ *
+ * `collectibleLongTerm` is the part of `longTerm` that is collectibles gain or loss. Under
+ * §1(h)(4) the 28%-rate gain is collectibles gain less collectibles loss, less any net
+ * short-term loss, and (Schedule D Tax Worksheet) never more than the net long-term gain left
+ * after all netting, so every loss reaches the 28% gain before the 20% gain.
  */
-export function netCapitalGainsTax(shortTerm: number, longTerm: number, rateFor: (p: HoldingCharacter) => number): number {
+export function netCapitalGainsTax(shortTerm: number, longTerm: number, rateFor: RateFor, collectibleLongTerm = 0): number {
   let st = shortTerm
   let lt = longTerm
   if (st < 0 && lt > 0) { lt = Math.max(0, lt + st); st = 0 }
   else if (lt < 0 && st > 0) { st = Math.max(0, st + lt); lt = 0 }
-  return Math.round(Math.max(0, st) * rateFor('short') + Math.max(0, lt) * rateFor('long'))
+  const netLongTerm = Math.max(0, lt)
+  const collectiblesGain = Math.min(netLongTerm, Math.max(0, collectibleLongTerm + Math.min(0, shortTerm)))
+  return Math.round(
+    Math.max(0, st) * rateFor('short')
+    + (netLongTerm - collectiblesGain) * rateFor('long')
+    + collectiblesGain * rateFor('long', 'collectible'),
+  )
 }
 
-/** What `netTaxForLegs` reads off each leg: its signed realised result by character, and its own tax. */
-export type TaxedLeg = { realisedShortTerm: number; realisedLongTerm: number; taxImpact: number }
+/**
+ * What `netTaxForLegs` reads off each leg: its signed realised result by holding period, the part
+ * of the long-term result that is collectibles (absent: none), and its own tax.
+ */
+export type TaxedLeg = { realisedShortTerm: number; realisedLongTerm: number; realisedCollectibleLongTerm?: number; taxImpact: number }
 
 /**
  * The estimated tax on one proposal **on its own**: `net` is its legs' results netted under §1222
@@ -25,15 +49,16 @@ export type TaxedLeg = { realisedShortTerm: number; realisedLongTerm: number; ta
  * That bound is this function's alone. The figure a preview shows is the tax the proposal adds to
  * its return (`additionalCapitalGainsTax`), which `gross` does not bound — see there.
  */
-export function netTaxForLegs(legs: readonly TaxedLeg[], rateFor: (p: HoldingCharacter) => number): { net: number; gross: number } {
+export function netTaxForLegs(legs: readonly TaxedLeg[], rateFor: RateFor): { net: number; gross: number } {
   const gross = legs.reduce((s, l) => s + l.taxImpact, 0)
   const shortTerm = legs.reduce((s, l) => s + l.realisedShortTerm, 0)
   const longTerm = legs.reduce((s, l) => s + l.realisedLongTerm, 0)
-  return { net: Math.min(netCapitalGainsTax(shortTerm, longTerm, rateFor), gross), gross }
+  const collectibleLongTerm = legs.reduce((s, l) => s + (l.realisedCollectibleLongTerm ?? 0), 0)
+  return { net: Math.min(netCapitalGainsTax(shortTerm, longTerm, rateFor, collectibleLongTerm), gross), gross }
 }
 
-/** Signed realised results by character. */
-export type RealisedByCharacter = { shortTerm: number; longTerm: number }
+/** Signed realised results by holding period; `collectibleLongTerm` is the part of `longTerm` on collectibles (absent: none). */
+export type RealisedByCharacter = { shortTerm: number; longTerm: number; collectibleLongTerm?: number }
 
 /**
  * The tax `added` puts on a return that has already realised `prior` this year: §1222-netted tax
@@ -53,10 +78,16 @@ export type RealisedByCharacter = { shortTerm: number; longTerm: number }
 export function additionalCapitalGainsTax(
   prior: RealisedByCharacter,
   added: RealisedByCharacter,
-  rateFor: (p: HoldingCharacter) => number,
+  rateFor: RateFor,
 ): number {
-  const before = netCapitalGainsTax(prior.shortTerm, prior.longTerm, rateFor)
-  const after = netCapitalGainsTax(prior.shortTerm + added.shortTerm, prior.longTerm + added.longTerm, rateFor)
+  const priorCollectibles = prior.collectibleLongTerm ?? 0
+  const before = netCapitalGainsTax(prior.shortTerm, prior.longTerm, rateFor, priorCollectibles)
+  const after = netCapitalGainsTax(
+    prior.shortTerm + added.shortTerm,
+    prior.longTerm + added.longTerm,
+    rateFor,
+    priorCollectibles + (added.collectibleLongTerm ?? 0),
+  )
   return after - before
 }
 

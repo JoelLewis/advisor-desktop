@@ -11,9 +11,10 @@ import { generateTaxLots, washSaleAcquisitions } from '@/mocks/handlers/custodia
 
 // The MSW server is started for every test file by src/test/setup.ts.
 const returnOf = (id: string) => taxReturnFor(accounts.find((a) => a.id === id)!)
-const sum = (trades: { realisedShortTerm: number; realisedLongTerm: number }[]) => ({
+const sum = (trades: { realisedShortTerm: number; realisedLongTerm: number; realisedCollectibleLongTerm: number }[]) => ({
   shortTerm: trades.reduce((s, t) => s + t.realisedShortTerm, 0),
   longTerm: trades.reduce((s, t) => s + t.realisedLongTerm, 0),
+  collectibleLongTerm: trades.reduce((s, t) => s + t.realisedCollectibleLongTerm, 0),
 })
 
 const accountOf = (id: string) => accounts.find((a) => a.id === id)!
@@ -79,21 +80,21 @@ describe('which accounts share a tax return', () => {
 
 describe('year-to-date realised results on a return', () => {
   it('hh-001\'s joint return carries rs-001, the −$32,750 long-term INTC loss', () => {
-    expect(ytdRealisedOnReturn(returnOf('acc-002')!, MOCK_TODAY_ISO)).toEqual({ shortTerm: 0, longTerm: -32_750 })
+    expect(ytdRealisedOnReturn(returnOf('acc-002')!, MOCK_TODAY_ISO)).toEqual({ shortTerm: 0, longTerm: -32_750, collectibleLongTerm: 0 })
   })
 
   it('the Chen irrevocable trust does not carry Margaret Chen\'s own rs-002 loss', () => {
-    expect(ytdRealisedOnReturn(returnOf('acc-006')!, MOCK_TODAY_ISO)).toEqual({ shortTerm: 0, longTerm: 0 })
-    expect(ytdRealisedOnReturn(returnOf('acc-007')!, MOCK_TODAY_ISO)).toEqual({ shortTerm: -28_500, longTerm: 0 })
+    expect(ytdRealisedOnReturn(returnOf('acc-006')!, MOCK_TODAY_ISO)).toEqual({ shortTerm: 0, longTerm: 0, collectibleLongTerm: 0 })
+    expect(ytdRealisedOnReturn(returnOf('acc-007')!, MOCK_TODAY_ISO)).toEqual({ shortTerm: -28_500, longTerm: 0, collectibleLongTerm: 0 })
   })
 
   it('Elizabeth Wong\'s acc-009 carries rs-002 from Margaret Chen\'s acc-007: one joint return', () => {
-    expect(ytdRealisedOnReturn(returnOf('acc-009')!, MOCK_TODAY_ISO)).toEqual({ shortTerm: -28_500, longTerm: 0 })
+    expect(ytdRealisedOnReturn(returnOf('acc-009')!, MOCK_TODAY_ISO)).toEqual({ shortTerm: -28_500, longTerm: 0, collectibleLongTerm: 0 })
   })
 
   it('a sale after the as-of date, or in an earlier tax year, is not year-to-date', () => {
-    expect(ytdRealisedOnReturn(returnOf('acc-002')!, '2026-02-20')).toEqual({ shortTerm: 0, longTerm: 0 })
-    expect(ytdRealisedOnReturn(returnOf('acc-002')!, '2027-01-05')).toEqual({ shortTerm: 0, longTerm: 0 })
+    expect(ytdRealisedOnReturn(returnOf('acc-002')!, '2026-02-20')).toEqual({ shortTerm: 0, longTerm: 0, collectibleLongTerm: 0 })
+    expect(ytdRealisedOnReturn(returnOf('acc-002')!, '2027-01-05')).toEqual({ shortTerm: 0, longTerm: 0, collectibleLongTerm: 0 })
   })
 })
 
@@ -101,8 +102,8 @@ describe('the rebalance estimate is the tax this proposal adds to its return', (
   it('acc-002: the proposal\'s +76,538 LT nets against rs-001\'s −32,750 → 43,788 x 23.8% = 10,422', async () => {
     const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
     expect(preview!.estimatedTaxImpact).toBe(10_422)
-    expect(preview!.ytdRealisedOnReturn).toEqual({ shortTerm: 0, longTerm: -32_750 })
-    expect(sum(preview!.trades)).toEqual({ shortTerm: 0, longTerm: 76_538 })
+    expect(preview!.ytdRealisedOnReturn).toEqual({ shortTerm: 0, longTerm: -32_750, collectibleLongTerm: 0 })
+    expect(sum(preview!.trades)).toEqual({ shortTerm: 0, longTerm: 76_538, collectibleLongTerm: 0 })
     expect(preview!.estimatedTaxImpact).toBe(additionalCapitalGainsTax(preview!.ytdRealisedOnReturn!, sum(preview!.trades), taxRateFor))
   })
 
@@ -117,7 +118,7 @@ describe('the rebalance estimate is the tax this proposal adds to its return', (
 
   it('acc-006 (irrevocable trust): nothing is netted from another taxpayer', async () => {
     const [preview] = await previewRebalance({ accountIds: ['acc-006'], taxAware: true })
-    expect(preview!.ytdRealisedOnReturn).toEqual({ shortTerm: 0, longTerm: 0 })
+    expect(preview!.ytdRealisedOnReturn).toEqual({ shortTerm: 0, longTerm: 0, collectibleLongTerm: 0 })
     expect(preview!.estimatedTaxImpact).toBe(netTaxForLegs(preview!.trades, taxRateFor).net)
   })
 

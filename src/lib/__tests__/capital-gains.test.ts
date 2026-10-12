@@ -21,6 +21,32 @@ describe('netCapitalGainsTax (IRC §1222 netting)', () => {
   })
 })
 
+describe('netCapitalGainsTax with collectibles gain (§1(h)(4)–(5), Schedule D Tax Worksheet)', () => {
+  // `longTerm` is the whole long-term result; `collectibleLongTerm` the part of it that is collectibles.
+  const withCollectibles = (p: 'short' | 'long', c?: 'capital_asset' | 'collectible') =>
+    p === 'short' ? 0.408 : c === 'collectible' ? 0.318 : 0.238
+  it('a long-term collectibles gain is taxed at its own rate beside an ordinary long-term gain', () => {
+    expect(netCapitalGainsTax(0, 30_000, withCollectibles, 10_000)).toBe(Math.round(10_000 * 0.318 + 20_000 * 0.238))
+  })
+  it('an ordinary long-term loss offsets the collectibles gain first', () => {
+    // other LT −4,000, collectibles +10,000: 6,000 of 28%-group gain remains.
+    expect(netCapitalGainsTax(0, 6_000, withCollectibles, 10_000)).toBe(Math.round(6_000 * 0.318))
+  })
+  it('a collectibles loss offsets ordinary long-term gain', () => {
+    expect(netCapitalGainsTax(0, 5_000, withCollectibles, -5_000)).toBe(Math.round(5_000 * 0.238))
+  })
+  it('a net short-term loss reduces the collectibles gain before the ordinary long-term gain', () => {
+    // ST −3,000; LT +20,000 of which collectibles +10,000 → 7,000 at 31.8%, 10,000 at 23.8%.
+    expect(netCapitalGainsTax(-3_000, 20_000, withCollectibles, 10_000)).toBe(Math.round(7_000 * 0.318 + 10_000 * 0.238))
+  })
+  it('a long-term loss overall leaves no collectibles gain to tax', () => {
+    expect(netCapitalGainsTax(5_000, -2_000, withCollectibles, 3_000)).toBe(Math.round(3_000 * 0.408))
+  })
+  it('without collectibles the result is unchanged', () => {
+    expect(netCapitalGainsTax(-3_000, 10_000, withCollectibles)).toBe(Math.round(7_000 * 0.238))
+  })
+})
+
 describe('netTaxForLegs', () => {
   it('nets the legs\' summed results and reports the per-leg gross alongside', () => {
     const legs = [
