@@ -1,4 +1,5 @@
 import type { ActivityItem } from '@/types/activity'
+import { driftBatchFacts } from './nbas'
 
 export const activities: ActivityItem[] = [
   {
@@ -77,8 +78,9 @@ export const activities: ActivityItem[] = [
   },
   {
     id: 'act-012', type: 'system', source: 'pms',
-    title: 'Drift alert — 7 portfolios exceeded 3% threshold',
-    description: 'Recent equity rally pushed 7 client portfolios beyond drift tolerance.',
+    // §0.7 · the count and the bands come from the drift engine, as nba-001's do.
+    title: `Drift alert — ${driftBatchFacts().accountCount} accounts outside their model's band`,
+    description: `${driftBatchFacts().accountCount} client accounts are outside their own model's drift band (${driftBatchFacts().bands.join(', ')}).`,
     timestamp: '2026-02-23T13:00:00Z', read: true,
   },
   {

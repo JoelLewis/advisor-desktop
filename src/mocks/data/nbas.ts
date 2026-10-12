@@ -1,20 +1,60 @@
-import type { NBA } from '@/types/nba'
+import type { NBA, NBAClient, TriggerSignal } from '@/types/nba'
+import { accounts } from './accounts'
+import { clients } from './clients'
+import { computeDriftForAccount, modelDisplayName } from '../handlers/pms'
+import { formatRatePercent } from '@/features/portfolios/tax/shared'
+
+const percent = (fraction: number) => `${(fraction * 100).toFixed(1)}%`
+const clientName = (clientId: string) => clients.find((c) => c.id === clientId)?.fullName ?? clientId
+
+/**
+ * §0.7 · nba-001 used to say "seven portfolios … beyond the 3% threshold" against per-model bands
+ * of 3%, 5% and 7%. Its figures now come from the drift engine: the accounts whose own model band
+ * is breached (`needsRebalance`), each band stated with its model's name.
+ */
+export function driftBatchFacts() {
+  const drifted = accounts
+    .map((account) => ({ account, drift: computeDriftForAccount(account) }))
+    .filter(({ drift }) => drift.needsRebalance)
+  const clientIds = [...new Set(drifted.map(({ account }) => account.clientId))]
+  const bands = [...new Map(drifted.map(({ drift }) => [drift.modelId, drift.driftTolerance])).entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([modelId, band]) => `${modelDisplayName(modelId)} ±${formatRatePercent(band)}`)
+  const breaches = drifted.map(({ drift }) => drift.maxAbsDrift)
+  return {
+    accountCount: drifted.length,
+    modelIds: drifted.map(({ drift }) => drift.modelId),
+    clients: clientIds.map((id): NBAClient => ({ id, name: clientName(id) })),
+    bands,
+    lowestBreach: Math.min(...breaches),
+    highestBreach: Math.max(...breaches),
+  }
+}
 
 export const nbas: NBA[] = [
-  // ── Rebalancing (batch group — 7 clients over 3% drift) ──
+  // ── Rebalancing (batch group) ──
   {
-    id: 'nba-001', title: 'Batch Rebalance — 7 portfolios exceeding drift threshold',
-    description: 'Seven client portfolios have drifted beyond the 3% threshold due to recent equity rally. Batch rebalancing can save ~40 minutes vs individual trades.',
+    id: 'nba-001',
+    // `pms.ts` imports this module, so the drift engine is read when these fields are read, never
+    // while the modules load: a load-time call would run before `pms.ts` has defined its models.
+    get title() {
+      return `Batch rebalance — ${driftBatchFacts().accountCount} accounts outside their model's drift band`
+    },
+    get description() {
+      const facts = driftBatchFacts()
+      return `${facts.accountCount} accounts across ${facts.clients.length} clients have drifted outside their own model's band (${facts.bands.join(', ')}). ` +
+        'Batch rebalancing proposes every account in one pass.'
+    },
     category: 'rebalancing', priority: 'high',
     scoring: { urgency: 72, impact: 80, efficiency: 90, relationship: 50, confidence: 88, composite: 77 },
-    clients: [
-      { id: 'cli-001', name: 'Robert Johnson' }, { id: 'cli-003', name: 'Margaret Chen' },
-      { id: 'cli-006', name: 'Michael Martinez' }, { id: 'cli-008', name: 'James Thompson' },
-      { id: 'cli-009', name: 'Richard Anderson' }, { id: 'cli-011', name: 'Raj Patel' },
-      { id: 'cli-017', name: 'William Foster' },
-    ],
+    get clients() {
+      return driftBatchFacts().clients
+    },
     groupId: 'grp-001',
-    trigger: { source: 'pms', condition: 'drift_exceeded', value: '3.2%-5.8%', detectedAt: '2026-02-24T08:00:00Z' },
+    get trigger(): TriggerSignal {
+      const facts = driftBatchFacts()
+      return { source: 'pms', condition: 'drift_exceeded', value: `${percent(facts.lowestBreach)}–${percent(facts.highestBreach)}`, detectedAt: '2026-02-24T08:00:00Z' }
+    },
     suggestedAction: 'Generate batch rebalance trades with tax-loss harvesting overlay',
     estimatedImpact: 45_000, createdAt: '2026-02-24T08:15:00Z', expiresAt: '2026-03-01T23:59:00Z', dismissed: false,
     actionRoute: { path: '/portfolios/rebalance' },
