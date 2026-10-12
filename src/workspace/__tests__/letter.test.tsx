@@ -5,7 +5,7 @@ import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
 import { approveProposal, createProposal, draftLetter, reviseDraft, reviseProposal, withdrawApproval } from '@/services/workspace'
 import { store } from '@/mocks/data/workspace-store'
-import { RATE_DISCLOSURE } from '@/lib/tax-rules'
+import { buildClientRateDisclosure, TAX_RATE_BASIS } from '@/lib/tax-rules'
 
 const ADRIAN = 'user-001'
 const inContext = () => within(screen.getByRole('complementary', { name: 'Thread context' }))
@@ -59,7 +59,7 @@ describe('the client letter', () => {
     await waitFor(() => expect(edited).toHaveTextContent("Client Letter Agent's draft, edited by Adrian Hale"))
     await user.click(within(edited).getByRole('button', { name: 'Send to Robert' }))
     await waitFor(() => expect(conversation()).toHaveTextContent('I will call you on Friday to walk through it.'))
-    expect(conversation()).toHaveTextContent(RATE_DISCLOSURE)
+    expect(conversation()).toHaveTextContent(buildClientRateDisclosure(TAX_RATE_BASIS))
     const acts = inContext().getByRole('region', { name: 'Binding acts' })
     expect(within(acts).getByRole('list', { name: 'Record trail' })).toHaveTextContent('Send to client')
     const fingerprint = store().acts.find((a) => a.kind === 'approve_proposal')!.fingerprint
