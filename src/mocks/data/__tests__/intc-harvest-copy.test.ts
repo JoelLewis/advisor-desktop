@@ -5,7 +5,7 @@ import { accounts } from '@/mocks/data/accounts'
 import { getPositionsForAccount } from '@/mocks/data/positions'
 import { generateTaxLotsWithSaleRisk } from '@/mocks/handlers/custodian'
 import { taxReturnFor, ytdRealisedOnReturn } from '@/mocks/handlers/tax-return'
-import { lossAllowedNow } from '@/lib/tax-rules'
+import { LONG_TERM_RATE, lossAllowedNow } from '@/lib/tax-rules'
 import { formatCalendarDate } from '@/lib/utils'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 
@@ -56,22 +56,43 @@ describe("§0.7 · nba-002 states each client's position on their own return", (
     }
   })
 
-  it('Robert Johnson and Michael Martinez save no tax this year; their February losses already took the ordinary-income offset', () => {
+  it("the Johnsons' joint return and Michael Martinez's save no tax this year; their February losses already took the ordinary-income offset", () => {
     // acc-002's joint return: −32,750 LT (rs-001). acc-015's: −24,867 ST (rs-003). Each is past
-    // the $3,000 limit already, so the whole harvest carries forward.
-    expect(nba.description).toContain('Robert Johnson saves no capital-gains tax this year')
-    expect(nba.description).toContain('Michael Martinez saves no capital-gains tax this year')
-    expect(nba.description).toContain('$45,850 carries forward')
-    expect(nba.description).toContain('$93,250 carries forward')
+    // the $3,000 limit already (and past $1,500, the separate-return limit), so the whole harvest
+    // carries forward.
+    expect(nba.description).toContain("On Robert and Patricia Johnson's joint return, with a $32,750 net capital loss so far this year, harvesting the rest saves no capital-gains tax this year")
+    expect(nba.description).toContain("the return's existing net loss already uses the full $3,000 ordinary-income offset, so $45,850 carries forward")
+    expect(nba.description).toContain("On Michael Martinez's return, with a $24,867 net capital loss so far this year, harvesting the rest saves no capital-gains tax this year")
+    expect(nba.description).toContain('ordinary-income offset ($1,500 if filing separately), so $93,250 carries forward')
   })
 
   it('David Williams saves the tax on his $6,260 gain, offsets $3,000 of ordinary income, and carries the rest forward', () => {
     // +6,260 LT (rs-004) − 52,400 = −46,140: 6,260 × 0.238 = 1,489.88 → $1,490 saved; $3,000 (his
     // household records no filing status, so $1,500 if he files separately) against ordinary income;
-    // 52,400 − 6,260 − 3,000 = 43,140 carries forward.
-    expect(nba.description).toContain('David Williams saves about $1,490 of capital-gains tax this year')
+    // 52,400 − 6,260 − 3,000 = 43,140 carries forward, or 52,400 − 6,260 − 1,500 = 44,640 on a
+    // separate return.
+    expect(nba.description).toContain("On David Williams's return, with a $6,260 net capital gain so far this year, harvesting saves about $1,490 of capital-gains tax this year")
     expect(nba.description).toContain('offsets $3,000 of ordinary income ($1,500 if filing separately)')
-    expect(nba.description).toContain('$43,140 carries forward')
+    expect(nba.description).toContain('$43,140 carries forward to later years ($44,640 if filing separately)')
+  })
+
+  it('names the return, not one spouse, as the one that saves; says which loss takes the offset; no vestigial clause', () => {
+    expect(nba.description).not.toMatch(/(Robert Johnson|David Williams|Michael Martinez) saves/)
+    expect(nba.description).not.toContain('that loss')
+    expect(nba.description).not.toContain('not the benefit')
+  })
+
+  it('discloses that losses carried in from earlier years are not modelled', () => {
+    expect(nba.description).toContain('Losses carried in from earlier years are not modelled')
+  })
+
+  it("the impact note says most of the value is the loss carried forward, and the arithmetic bears it out", () => {
+    // 45,850 + 43,140 + 93,250 = 182,240 carried forward; even at the 23.8% long-term rate that is
+    // worth far more than the $1,490 saved this year.
+    const carried = facts.holders.reduce((s, h) => s + h.carriedForward, 0)
+    expect(carried).toBe(facts.totalCarriedForward)
+    expect(carried * LONG_TERM_RATE).toBeGreaterThan(facts.totalSavingThisYear)
+    expect(nba.estimatedImpactNote).toContain(`Most of the harvest's value is the ${dollars(carried)} of loss that carries forward`)
   })
 
   it('every figure is per return: no sentence pools the offset limit across taxpayers', () => {

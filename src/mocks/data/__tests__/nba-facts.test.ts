@@ -247,10 +247,9 @@ describe('D22: nba-002 states the post-Task-18 harvestable loss, not the stale p
     expect(nba.estimatedImpact).not.toBe(224_000)
   })
 
-  it('states no pooled lot-rate benefit, and says the total loss is not the benefit', () => {
+  it('states no pooled lot-rate benefit', () => {
     expect(nba.description).not.toContain('61,4')
     expect(nba.description).not.toContain("each lot's own rate")
-    expect(nba.description).toContain('not the benefit')
   })
 })
 

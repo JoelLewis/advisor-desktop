@@ -86,6 +86,9 @@ export function intcHarvestFacts() {
       savingThisYear: taxSaved(account, estimate.net),
       ...filing,
       ...capitalLossUse(priorNet, loss, filing.ordinaryIncomeLimit),
+      // The same harvest on a separate return, stated beside the joint figures when the household
+      // records no filing status for a married client.
+      ifFilingSeparately: filing.separateLimitUnconfirmed ? capitalLossUse(priorNet, loss, ORDINARY_INCOME_OFFSET_LIMIT_SEPARATE) : null,
     }
   })
   return {
@@ -93,6 +96,7 @@ export function intcHarvestFacts() {
     totalLoss: holders.reduce((s, h) => s + h.loss, 0),
     totalCost: holders.reduce((s, h) => s + h.position.costBasis, 0),
     totalSavingThisYear: holders.reduce((s, h) => s + h.savingThisYear, 0),
+    totalCarriedForward: holders.reduce((s, h) => s + h.carriedForward, 0),
   }
 }
 
@@ -121,33 +125,68 @@ function ordinaryIncomeOffsetFiling(account: Account): { ordinaryIncomeLimit: nu
 
 const intcHarvest = intcHarvestFacts()
 
-type IntcHolder = (typeof intcHarvest.holders)[number]
+export type IntcHolder = (typeof intcHarvest.holders)[number]
 
-function intcReturnSentence(h: IntcHolder): string {
-  const name = clientName(h.account.clientId)
+/** Who a draft speaks about: the advisor's own notes name the client; a letter to the client says "you". */
+export type Voice = 'advisor' | 'client'
+
+/** The INTC holder `clientId` is, if any: a client-facing draft reads this client's facts and no one else's. */
+export function intcHolderFor(clientId: string): IntcHolder | undefined {
+  return intcHarvest.holders.find((h) => h.account.clientId === clientId)
+}
+
+/** "Robert and Patricia Johnson": the two spouses a joint return belongs to, from the household record. */
+function jointFilers(account: Account): string {
+  const household = householdFixtures.find((h) => h.id === account.householdId)
+  const [first, second] = (household?.members ?? []).filter((m) => m.relationship === 'primary' || m.relationship === 'spouse').map((m) => m.name)
+  if (first === undefined || second === undefined) throw new Error(`joint return for ${account.id} has no couple on record`)
+  const surname = (name: string) => name.slice(name.lastIndexOf(' ') + 1)
+  return surname(first) === surname(second) ? `${first.split(' ')[0]} and ${second}` : `${first} and ${second}`
+}
+
+/** What the INTC still held is, and the shares already harvested from it. */
+export function intcHoldingSentence(h: IntcHolder, voice: Voice): string {
+  const harvested = h.sales.map((s) => `harvested ${s.quantity.toLocaleString('en-US')} shares on ${formatCalendarDate(s.saleDate)} and `).join('')
+  const held = h.position.quantity.toLocaleString('en-US')
+  return voice === 'client'
+    ? `You ${harvested}${harvested ? 'still ' : ''}hold ${held} shares of Intel (INTC) at a ${dollars(h.loss)} loss.`
+    : `${clientName(h.account.clientId)} ${harvested}holds ${held} at a ${dollars(h.loss)} loss.`
+}
+
+/**
+ * What harvesting the rest does on this holder's own return this year: the capital-gains tax saved,
+ * the ordinary income newly offset (§1211(b)) and the loss carried forward (§1212(b)), with the
+ * separate-return figures beside them where the filing status is not on record.
+ */
+export function intcReturnSentence(h: IntcHolder, voice: Voice): string {
+  const whose = voice === 'client'
+    ? `your ${h.jointReturn ? 'joint ' : ''}return`
+    : h.jointReturn ? `${jointFilers(h.account)}'s joint return` : `${clientName(h.account.clientId)}'s return`
   const ytd = h.ytdNet === 0 ? 'no net capital gain or loss' : `a ${dollars(h.ytdNet)} net capital ${h.ytdNet < 0 ? 'loss' : 'gain'}`
-  const saving = h.savingThisYear > 0 ? `saves about ${dollars(h.savingThisYear)} of capital-gains tax` : 'saves no capital-gains tax'
-  const separately = h.separateLimitUnconfirmed ? ` (${dollars(ORDINARY_INCOME_OFFSET_LIMIT_SEPARATE)} if filing separately)` : ''
-  const ordinary = h.ordinaryIncomeOffset > 0
-    ? ` and offsets ${dollars(h.ordinaryIncomeOffset)} of ordinary income${separately}`
+  const harvesting = h.sales.length > 0 ? 'harvesting the rest' : 'harvesting'
+  const saving = h.savingThisYear > 0 ? `saves about ${dollars(h.savingThisYear)} of capital-gains tax this year` : 'saves no capital-gains tax this year'
+  const separately = (joint: number, separate: number | undefined) =>
+    separate !== undefined && separate !== joint ? ` (${dollars(separate)} if filing separately)` : ''
+  const carried = h.carriedForward > 0
+    ? `${dollars(h.carriedForward)} carries forward to later years${separately(h.carriedForward, h.ifFilingSeparately?.carriedForward)}`
+    : ''
+  const separateLimit = h.separateLimitUnconfirmed ? ORDINARY_INCOME_OFFSET_LIMIT_SEPARATE : undefined
+  const outcome = h.ordinaryIncomeOffset > 0
+    ? ` and offsets ${dollars(h.ordinaryIncomeOffset)} of ordinary income${separately(h.ordinaryIncomeOffset, h.ifFilingSeparately?.ordinaryIncomeOffset)}${carried ? `; ${carried}` : ''}`
     : h.priorNet <= -h.ordinaryIncomeLimit
-      ? `, and that loss already takes the ${dollars(h.ordinaryIncomeLimit)} ordinary-income offset${separately}`
-      : ''
-  const carried = h.carriedForward > 0 ? `; ${dollars(h.carriedForward)} carries forward to later years` : ''
-  return `On ${h.jointReturn ? 'a joint' : 'a'} return with ${ytd} so far this year, ${name} ${saving} this year by harvesting${ordinary}${carried}.`
+      ? `; the return's existing net loss already uses the full ${dollars(h.ordinaryIncomeLimit)} ordinary-income offset${separately(h.ordinaryIncomeLimit, separateLimit)}${carried ? `, so ${carried}` : ''}`
+      : carried ? `; ${carried}` : ''
+  return `On ${whose}, with ${ytd} so far this year, ${harvesting} ${saving}${outcome}.`
 }
 
 function intcHarvestDescription(): string {
   const { holders, totalLoss } = intcHarvest
-  const perAccount = holders.map((h) => {
-    const harvested = h.sales.map((s) => `harvested ${s.quantity.toLocaleString('en-US')} shares on ${formatCalendarDate(s.saleDate)} and `).join('')
-    return `${clientName(h.account.clientId)} ${harvested}holds ${h.position.quantity.toLocaleString('en-US')} at a ${dollars(h.loss)} loss. ${intcReturnSentence(h)}`
-  })
+  const perAccount = holders.map((h) => `${intcHoldingSentence(h, 'advisor')} ${intcReturnSentence(h, 'advisor')}`)
   return `Intel (INTC) is still below cost in ${holders.length} client accounts, ${dollars(totalLoss)} of harvestable losses in all. ` +
     `${perAccount.join(' ')} ` +
     `Figures are capital-gains tax at top federal rates against each return's sales realised so far this year; ` +
-    `gains realised later in ${MOCK_TODAY_ISO.slice(0, 4)} would use loss shown as carried forward. State tax is not modelled. ` +
-    `The ${dollars(totalLoss)} is the harvestable loss, not the benefit.`
+    `gains realised later in ${MOCK_TODAY_ISO.slice(0, 4)} would use loss shown as carried forward. ` +
+    'Losses carried in from earlier years are not modelled, nor is state tax.'
 }
 
 export const nbas: NBA[] = [
@@ -182,10 +221,9 @@ export const nbas: NBA[] = [
   {
     id: 'nba-002', title: 'Tax-loss harvesting opportunity — INTC position',
     // §0.7 · this read as if nothing had been harvested, stated the benefit at long-term rates for
-    // all three accounts, and said a 2026 harvest could offset Q4 (2025) gains. Robert Johnson sold
-    // 5,000 of his 12,000 shares on 2026-02-21 (rs-001) and Michael Martinez 4,000 on 2026-02-18
-    // (rs-003); the description now says so, from the realised-sales ledger and the positions,
-    // prices each lot at its own holding-period rate, and states what a 2026 loss can offset.
+    // all three accounts, and said a 2026 harvest could offset Q4 (2025) gains. The description now
+    // states the partial harvests already made (the realised-sales ledger), the INTC still held, and
+    // what harvesting the rest does on each client's own return this year (`intcReturnSentence`).
     description: intcHarvestDescription(),
     category: 'tax_management', priority: 'high',
     scoring: { urgency: 85, impact: 75, efficiency: 70, relationship: 40, confidence: 92, composite: 76 },
@@ -199,7 +237,9 @@ export const nbas: NBA[] = [
     // the harvestable loss, and not each lot's loss at its own rate, which assumed gains of that
     // character these clients have not realised. Two of the three returns are already at a net
     // loss for 2026, so only acc-011's $6,260 gain is there to offset.
-    estimatedImpact: intcHarvest.totalSavingThisYear, createdAt: '2026-02-24T09:45:00Z', dismissed: false,
+    estimatedImpact: intcHarvest.totalSavingThisYear,
+    estimatedImpactNote: `Capital-gains tax saved this year only. Most of the harvest's value is the ${dollars(intcHarvest.totalCarriedForward)} of loss that carries forward to later years, which this figure does not count.`,
+    createdAt: '2026-02-24T09:45:00Z', dismissed: false,
     actionRoute: { path: '/portfolios/accounts/acc-002/tax' },
   },
   {
