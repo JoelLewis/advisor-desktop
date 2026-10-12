@@ -1,6 +1,7 @@
 import { useId, useRef, useState } from 'react'
-import { Attestation } from '@/kit/attestation/Attestation'
 import { Button } from '@/kit/button/Button'
+import { Checkbox } from '@/kit/checkbox/Checkbox'
+import { Dialog } from '@/kit/dialog/Dialog'
 import { StatusCode } from '@/kit/status/StatusCode'
 import { Tag } from '@/kit/tag/Tag'
 import { fmtMoney, fmtQuantity } from '@/kit/measure'
@@ -11,7 +12,7 @@ import { isApprovedLatest } from '@/workspace/proposal/approval-words'
 import { latestVersionOf } from '@/workspace/proposal/latest-version'
 import { SIDE_WORDS } from '@/workspace/proposal/leg-status'
 import type { Directory, Thread } from '@/types/workspace'
-import type { ProposalDetail, StagedOrder } from '@/types/workspace-proposal'
+import type { ProposalDetail, ProposalVersion, StagedOrder } from '@/types/workspace-proposal'
 import { ContextSection } from './ContextSection'
 import { approveBlocker } from './approve-blocker'
 
@@ -21,7 +22,8 @@ type RecordCallbacks = { onSuccess: (act: { id: string }) => void; onSettled: ()
 
 export function ApprovalPanel({ thread, directory, onRecorded }: ApprovalPanelProps) {
   const proposals = useProposals(thread.id)
-  if (proposals.isPending) return <p role="status" className="py-5 text-body text-ink-3">Loading the proposals…</p>
+  // Most threads have no proposal: nothing shows until there is one to show, so unrelated threads never flash a loading line.
+  if (proposals.isPending) return null
   if (proposals.isError) return <p role="alert" className="py-5 text-body">{proposals.error.message}</p>
   return proposals.data.map((p) => <ProposalApproval key={p.id} detail={p} directory={directory} onRecorded={onRecorded} />)
 }
@@ -32,9 +34,11 @@ function ProposalApproval({ detail, directory, onRecorded }: { detail: ProposalD
   const withdraw = useWithdrawApproval()
   // The attestation names one version; a newer version arriving un-ticks it rather than carrying the review over.
   const [attestedVersion, setAttestedVersion] = useState<number>()
+  const [confirmingWithdrawOf, setConfirmingWithdrawOf] = useState<number>()
+  const [slipTakesFocus, setSlipTakesFocus] = useState(false)
   const busy = useRef(false)
-  const attestId = useId()
   const reasonId = useId()
+  const readingId = useId()
   const latest = latestVersionOf(detail)
   const approval = detail.approval
   const permissions = directory.permissions[viewerId] ?? []
@@ -46,53 +50,91 @@ function ProposalApproval({ detail, directory, onRecorded }: { detail: ProposalD
     hasLegs: latest.preview.trades.length > 0,
     attested: attestedVersion === latest.n,
   })
-  const blocks = latest.pretrade.violations.filter((v) => v.severity === 'block')
+  // A refusal belongs to the version it was about; once another version is on screen it no longer describes anything here.
+  const approveError = approve.isError && approve.variables.proposalId === detail.id && approve.variables.version === latest.n ? approve.error : undefined
   const pending = detail.staged.filter((o) => o.status === 'pending_compliance')
 
   // A ref, not render state, so a second click in the same frame cannot send a second act.
-  const record = (send: (callbacks: RecordCallbacks) => void) => {
+  const record = (send: (callbacks: RecordCallbacks) => void, afterRecorded?: () => void) => {
     if (busy.current) return
     busy.current = true
-    send({ onSuccess: (act) => { setAttestedVersion(undefined); onRecorded(act.id) }, onSettled: () => { busy.current = false } })
+    send({
+      onSuccess: (act) => { setAttestedVersion(undefined); afterRecorded?.(); onRecorded(act.id) },
+      onSettled: () => { busy.current = false },
+    })
   }
+  const openWithdraw = (version: number) => { withdraw.reset(); setSlipTakesFocus(false); setConfirmingWithdrawOf(version) }
+  const closeWithdraw = () => { withdraw.reset(); setConfirmingWithdrawOf(undefined) }
+  const confirmWithdraw = () => record(
+    (callbacks) => withdraw.mutate(detail.id, callbacks),
+    () => { setSlipTakesFocus(true); setConfirmingWithdrawOf(undefined) },
+  )
 
   return (
     <ContextSection title={`Approval · ${detail.title}`}>
       <ApprovalNote state={approval} />
       {canApprove ? (
         <div className="flex flex-col items-start gap-3">
-          <Attestation id={attestId} checked={attestedVersion === latest.n} onChange={(checked) => setAttestedVersion(checked ? latest.n : undefined)}>
-            {`I reviewed every leg of v${latest.n} and its pre-trade reading.`}
-          </Attestation>
+          <Checkbox label={`I reviewed every leg of v${latest.n} and its pre-trade reading.`} checked={attestedVersion === latest.n}
+            describedBy={hasReading(latest) ? readingId : undefined}
+            onChange={(checked) => setAttestedVersion(checked ? latest.n : undefined)} />
+          <PretradeReading id={readingId} version={latest} />
           <Button disabled={reason !== undefined || approve.isPending} aria-describedby={reason ? reasonId : undefined}
             onClick={() => record((callbacks) => approve.mutate({ proposalId: detail.id, version: latest.n, fingerprint: latest.fingerprint }, callbacks))}>
             {`Approve v${latest.n}`}
           </Button>
           {reason ? <p id={reasonId} className="text-body text-ink-2">{reason}</p> : null}
-          {blocks.map((v) => (
-            <p key={`${v.category}:${v.symbol ?? v.constraint}`} className="flex items-baseline gap-3 text-body"><StatusCode status="BLOCK" /><span>{v.message}</span></p>
-          ))}
+          {approveError ? <p role="alert" className="text-body">{approveError.message}</p> : null}
         </div>
       ) : null}
-      {approve.isError ? <p role="alert" className="text-body">{approve.error.message}</p> : null}
       {pending.length > 0 ? <StagedOrders orders={pending} /> : null}
       {withdrawableVersion !== undefined ? (
-        <Button rank="secondary" className="self-start" disabled={withdraw.isPending} onClick={() => record((callbacks) => withdraw.mutate(detail.id, callbacks))}>
+        <Button rank="secondary" className="self-start" onClick={() => openWithdraw(withdrawableVersion)}>
           {`Withdraw the approval of v${withdrawableVersion}`}
         </Button>
       ) : null}
-      {withdraw.isError ? <p role="alert" className="text-body">{withdraw.error.message}</p> : null}
+      <Dialog open={confirmingWithdrawOf !== undefined} onOpenChange={(open) => { if (!open) closeWithdraw() }} returnFocus={!slipTakesFocus}
+        title={`Withdraw the approval of v${confirmingWithdrawOf ?? ''}?`} description="The staged orders are withdrawn.">
+        <div className="flex flex-col gap-4">
+          {withdraw.isError ? <p role="alert" className="text-body">{withdraw.error.message}</p> : null}
+          <div className="flex justify-end gap-3">
+            <Button rank="secondary" onClick={closeWithdraw}>Cancel</Button>
+            <Button disabled={withdraw.isPending} onClick={confirmWithdraw}>Confirm</Button>
+          </div>
+        </div>
+      </Dialog>
     </ContextSection>
   )
 }
 
+const readingLines = (version: ProposalVersion) => version.pretrade.violations
+const hasReading = (version: ProposalVersion) => readingLines(version).length > 0
+
+/** Every block and warning the attestation covers, as the pre-trade check worded them. */
+function PretradeReading({ id, version }: { id: string; version: ProposalVersion }) {
+  const lines = readingLines(version)
+  if (lines.length === 0) return null
+  return (
+    <ul id={id} aria-label={`Pre-trade reading of v${version.n}`} className="flex flex-col gap-1">
+      {lines.map((v) => (
+        <li key={`${v.severity}:${v.category}:${v.symbol ?? v.constraint}`} className="flex items-baseline gap-3 text-body">
+          <StatusCode status={v.severity === 'block' ? 'BLOCK' : 'WARN'} /><span>{v.message}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function StagedOrders({ orders }: { orders: StagedOrder[] }) {
+  // The engine keeps one active approval, so every pending order traces to the same act.
+  const source = orders[0]
   return (
     <div className="flex flex-col gap-2 border-t border-rule pt-3">
       <p className="flex flex-wrap items-baseline gap-2 text-body">
         <Tag tone="hatch">PENDING COMPLIANCE REVIEW</Tag>
         <span className="text-ink-2">Staged, not released.</span>
       </p>
+      {source ? <p className="text-label text-ink-2">{`Staged from v${source.version} · ${source.approvalActId}`}</p> : null}
       <ul aria-label="Staged orders" className="flex flex-col gap-1 text-body">
         {orders.map((o) => (
           <li key={o.id} className="flex flex-wrap items-baseline justify-between gap-x-3">
