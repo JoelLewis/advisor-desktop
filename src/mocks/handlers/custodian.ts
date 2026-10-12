@@ -162,6 +162,14 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
   const accountSales = realisedSales.filter((s) => s.accountId === accountId)
   const soldSymbols = new Set(accountSales.map((s) => s.symbol))
   const heldBySymbol = new Map(held.map((p) => [p.symbol, p]))
+  // §0.7 · a position still held was opened when its oldest lot was bought: acc-002's INTC opening
+  // was dated 2025-12-27 against a lot bought 2022-07-25, and a long-term sale (rs-001) cannot come
+  // out of shares bought two months earlier.
+  const oldestLotDate = new Map<string, string>()
+  for (const lot of soldSymbols.size > 0 ? generateTaxLots(accountId, totalValue) : []) {
+    const known = oldestLotDate.get(lot.positionId)
+    if (known === undefined || lot.purchaseDate < known) oldestLotDate.set(lot.positionId, lot.purchaseDate)
+  }
 
   // Task 13's running-balance model starts every symbol at zero 60 days ago — already unrealistic
   // (it implicitly claims the account held nothing two months ago), and it makes an injected sell
@@ -187,7 +195,10 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
     const earliestSaleMs = Math.min(
       ...salesForSymbol.map((s) => new Date(`${s.saleDate}T00:00:00Z`).getTime()),
     )
-    const openingMs = Math.min(baseDate.getTime() - 60 * DAY_MS, earliestSaleMs - DAY_MS)
+    const openedOn = position ? oldestLotDate.get(position.id) : undefined
+    const openingMs = openedOn !== undefined
+      ? new Date(`${openedOn}T00:00:00Z`).getTime()
+      : Math.min(baseDate.getTime() - 60 * DAY_MS, earliestSaleMs - DAY_MS)
 
     txns.push({
       id: `txn-${accountId}-opening-${symbol}`,
