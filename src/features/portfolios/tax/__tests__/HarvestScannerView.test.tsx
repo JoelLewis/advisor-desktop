@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { screen, within } from '@testing-library/react'
 import { renderWithProviders } from '@/test/render'
 import { HarvestScannerView } from '../HarvestScannerView'
-import { estimatedTaxBenefit } from '../shared'
+import { estimatedTaxBenefit } from '@/lib/tax-rules'
 import type { TaxLot } from '@/types/portfolio'
 
 /**

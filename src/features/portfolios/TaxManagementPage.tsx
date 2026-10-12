@@ -11,8 +11,8 @@ import { useFormatCurrency } from '@/hooks/use-format-currency'
 import { useCurrencyConverter } from '@/hooks/use-fx'
 import { cn } from '@/lib/utils'
 import { harvestingDisclosureFor } from '@/lib/tax-treatment'
-import { isHarvestable, harvestsNow, harvestBenefitNow, lossAllowedNow, lossDeferred, lossDisallowed, computeCostBasisImpact, fxStatusFrom, harvestFxStatus } from './tax/shared'
-import { COST_BASIS_METHODS, type CostBasisMethod } from './tax/CostBasisMethodCard'
+import { isHarvestable, harvestsNow, harvestBenefitNow, lossAllowedNow, lossDeferred, lossDisallowed, computeCostBasisImpact, fxStatusFrom, harvestFxStatus } from '@/lib/tax-rules'
+import { COST_BASIS_METHODS, type CostBasisMethod } from '@/lib/cost-basis'
 import { TaxSummaryCards } from './tax/TaxSummaryCards'
 import { CostBasisMethodCard } from './tax/CostBasisMethodCard'
 import { TaxLotsView } from './tax/TaxLotsView'
@@ -46,7 +46,7 @@ export function TaxManagementPage() {
   // Fix-round-3 review: harvestOpportunities, the summary card, and the scanner tab all derive
   // their availability from this single value rather than the raw `fxStatus` — a USD-native
   // account's harvest computation never touches the FX rate map (see `harvestFxStatus` in
-  // tax/shared.tsx), so it must read 'ready' even while the global FX query is down. All but
+  // lib/tax-rules.ts), so it must read 'ready' even while the global FX query is down. All but
   // four fixture accounts are USD-native; gating them on `fxStatus` directly suppressed a
   // fully-known number across nearly the whole book over an outage irrelevant to them.
   const harvestStatus = harvestFxStatus(baseCurrency, fxStatus)
@@ -123,8 +123,8 @@ export function TaxManagementPage() {
     }
   }, [taxLots, harvestOpportunities])
 
-  // Cost basis method impact simulation — computeCostBasisImpact lives in tax/shared.tsx (not
-  // inline here) so it is independently importable and testable; see shared.tsx for why.
+  // Cost basis method impact simulation — computeCostBasisImpact lives in lib/tax-rules.ts (not
+  // inline here) so it is independently importable and testable; see lib/tax-rules.ts for why.
   const methodImpact = useMemo(() => {
     if (!taxLots || taxLots.length === 0) return null
     return COST_BASIS_METHODS.map((method) => ({

@@ -7,7 +7,7 @@ import { FX_RATES_USD_BASE } from '../data/currencies'
 import { convertCurrency } from '@/lib/currency'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { additionalCapitalGainsTax, netTaxForLegs, recognisedResult, type RealisedByCharacter, type TaxedLeg } from '@/lib/capital-gains'
-import { taxRateFor } from '@/features/portfolios/tax/shared'
+import { taxRateFor } from '@/lib/tax-rules'
 import { taxCharacterOf } from '@/lib/security-master'
 
 /**

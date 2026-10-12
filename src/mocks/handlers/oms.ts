@@ -16,7 +16,7 @@ import { estimateTaxOnReturns, openWashSaleWindowsFor } from './tax-return'
 import { generateTaxLots, boundedTradeQty, washSaleAcquisitions, type CustodianLot } from './custodian'
 import { repurchaseRestrictionsFor } from './repurchase-restrictions'
 import { settleBatchWashSales, type LegSale } from './batch-wash-sales'
-import { taxRateFor } from '@/features/portfolios/tax/shared'
+import { taxRateFor } from '@/lib/tax-rules'
 import type { Position } from '@/types/portfolio'
 import type { CurrencyCode } from '@/types/currency'
 

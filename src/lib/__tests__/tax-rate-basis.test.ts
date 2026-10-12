@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   SHORT_TERM_RATE, LONG_TERM_RATE, TOP_ORDINARY_RATE, TOP_LONG_TERM_GAINS_RATE, NIIT_RATE, TAX_RATE_BASIS, taxRateFor,
   TOP_COLLECTIBLES_RATE, COLLECTIBLE_LONG_TERM_RATE, RATE_DISCLOSURE,
-} from '@/features/portfolios/tax/shared'
+} from '@/lib/tax-rules'
 import { taxCharacterOf } from '@/lib/security-master'
 
 describe('§0.6 · both rates carry the 3.8% net investment income tax', () => {

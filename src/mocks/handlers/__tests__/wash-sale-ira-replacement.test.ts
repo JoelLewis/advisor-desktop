@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest'
-import { lossAllowedNow, lossDeferred, lossDisallowed } from '@/features/portfolios/tax/shared'
+import { lossAllowedNow, lossDeferred, lossDisallowed } from '@/lib/tax-rules'
 import type { TaxLot } from '@/types/portfolio'
 
 /**

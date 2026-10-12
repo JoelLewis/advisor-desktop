@@ -5,7 +5,21 @@ import { CurrencyValue } from '@/components/ui/CurrencyValue'
 import { formatDate, formatCalendarDate, cn } from '@/lib/utils'
 import type { TaxLot } from '@/types/portfolio'
 import type { CurrencyCode } from '@/types/currency'
-import { HOLDING_LABELS, Th } from './shared'
+import { HOLDING_LABELS } from '@/lib/tax-rules'
+
+const TH_ALIGN = {
+  left: 'text-left',
+  right: 'text-right',
+  center: 'text-center',
+} as const
+
+function Th({ children, align = 'left' }: { children: React.ReactNode; align?: 'left' | 'right' | 'center' }) {
+  return (
+    <th className={cn('px-4 py-2.5 text-caption font-medium text-text-secondary', TH_ALIGN[align])}>
+      {children}
+    </th>
+  )
+}
 
 const TaxLotRow = memo(function TaxLotRow({
   lot,

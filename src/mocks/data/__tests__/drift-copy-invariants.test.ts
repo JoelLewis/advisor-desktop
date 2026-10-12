@@ -6,7 +6,7 @@ import { MOCK_NOTIFICATIONS } from '@/mocks/data/notifications'
 import { accounts } from '@/mocks/data/accounts'
 import { clients } from '@/mocks/data/clients'
 import { computeDriftForAccount, modelDisplayName } from '@/mocks/handlers/pms'
-import { formatRatePercent } from '@/features/portfolios/tax/shared'
+import { formatRatePercent } from '@/lib/tax-rules'
 
 const drifted = accounts.map((a) => ({ account: a, drift: computeDriftForAccount(a) })).filter(({ drift }) => drift.needsRebalance)
 const bandOf = (modelId: string) => `${modelDisplayName(modelId)} ±${formatRatePercent(computeDriftForAccount(drifted.find(({ drift }) => drift.modelId === modelId)!.account).driftTolerance)}`

@@ -3,7 +3,7 @@ import { server } from '@/test/server'
 import { getAIInsights, sendMessage } from '@/services/ai'
 import type { AIInsight } from '@/types/ai'
 import type { TaxLot } from '@/types/portfolio'
-import { taxRateFor } from '@/features/portfolios/tax/shared'
+import { taxRateFor } from '@/lib/tax-rules'
 
 /**
  * §1091 takes only the loss on the shares a replacement was matched to (Treas. Reg.

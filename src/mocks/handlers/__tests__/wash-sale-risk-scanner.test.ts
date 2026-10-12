@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { lossAllowedNow, lossDeferred, lossDisallowed, washesOnSale } from '@/features/portfolios/tax/shared'
+import { lossAllowedNow, lossDeferred, lossDisallowed, washesOnSale } from '@/lib/tax-rules'
 
 /**
  * Sell-side §1091 for each lot the harvest scanner lists. No fixture has a loss lot whose sale

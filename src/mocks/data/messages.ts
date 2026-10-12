@@ -3,7 +3,7 @@ import { accounts } from './accounts'
 import { computeDriftForAccount, modelDisplayName } from '../handlers/pms'
 import { generateRebalanceTrades } from '../handlers/oms'
 import { ASSET_CLASS_LABELS } from '@/lib/labels'
-import { formatRatePercent } from '@/features/portfolios/tax/shared'
+import { formatRatePercent } from '@/lib/tax-rules'
 import { formatCurrency } from '@/lib/utils'
 import { roundTo } from '../handlers/utils'
 

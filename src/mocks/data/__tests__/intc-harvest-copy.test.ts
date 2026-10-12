@@ -5,7 +5,7 @@ import { accounts } from '@/mocks/data/accounts'
 import { getPositionsForAccount } from '@/mocks/data/positions'
 import { generateTaxLotsWithSaleRisk } from '@/mocks/handlers/custodian'
 import { taxReturnFor, ytdRealisedOnReturn } from '@/mocks/handlers/tax-return'
-import { lossAllowedNow } from '@/features/portfolios/tax/shared'
+import { lossAllowedNow } from '@/lib/tax-rules'
 import { formatCalendarDate } from '@/lib/utils'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 

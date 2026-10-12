@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest'
 import { previewRebalance, type RebalancePreview } from '@/services/oms'
 import { previewModelTrades } from '@/services/trading'
 import { additionalCapitalGainsTax, netTaxForLegs } from '@/lib/capital-gains'
-import { taxRateFor } from '@/features/portfolios/tax/shared'
+import { taxRateFor } from '@/lib/tax-rules'
 
 // The MSW server is started for every test file by src/test/setup.ts.
 let preview: RebalancePreview | undefined

@@ -3,9 +3,23 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { CurrencyValue } from '@/components/ui/CurrencyValue'
 import type { TaxLot } from '@/types/portfolio'
-import { formatCalendarDate } from '@/lib/utils'
+import { formatCalendarDate, cn } from '@/lib/utils'
 import type { CurrencyCode } from '@/types/currency'
-import { HOLDING_LABELS, Th, RATE_DISCLOSURE, harvestBenefitNow, lossAllowedNow, lossDeferred, lossDisallowed, washesOnSale, type FxStatus } from './shared'
+import { HOLDING_LABELS, RATE_DISCLOSURE, harvestBenefitNow, lossAllowedNow, lossDeferred, lossDisallowed, washesOnSale, type FxStatus } from '@/lib/tax-rules'
+
+const TH_ALIGN = {
+  left: 'text-left',
+  right: 'text-right',
+  center: 'text-center',
+} as const
+
+function Th({ children, align = 'left' }: { children: React.ReactNode; align?: 'left' | 'right' | 'center' }) {
+  return (
+    <th className={cn('px-4 py-2.5 text-caption font-medium text-text-secondary', TH_ALIGN[align])}>
+      {children}
+    </th>
+  )
+}
 
 type HarvestScannerViewProps = {
   harvestOpportunities: TaxLot[]

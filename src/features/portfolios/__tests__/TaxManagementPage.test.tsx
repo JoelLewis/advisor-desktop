@@ -8,7 +8,7 @@ import { server } from '@/test/server'
 import { TaxManagementPage } from '../TaxManagementPage'
 import { previewRebalance } from '@/services/oms'
 import { generateTaxLotsWithSaleRisk } from '@/mocks/handlers/custodian'
-import { estimatedTaxBenefit } from '../tax/shared'
+import { estimatedTaxBenefit } from '@/lib/tax-rules'
 import { formatCurrency } from '@/lib/utils'
 
 function renderPage(accountId: string) {

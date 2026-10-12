@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest'
+import { additionalCapitalGainsTax, netCapitalGainsTax } from '@/lib/capital-gains'
+import { taxCharacterOf } from '@/lib/security-master'
 import { preTradeCheck, previewRebalance } from '@/services/oms'
 import { checkTradeCompliance } from '@/services/compliance'
 import { getAccounts, getTaxLots } from '@/services/custodian'
@@ -6,9 +8,7 @@ import { getPositions, getDrift } from '@/services/pms'
 import { modelImplementationSecurity } from '@/mocks/handlers/pms'
 import { convertCurrency } from '@/lib/currency'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
-import { additionalCapitalGainsTax, netCapitalGainsTax } from '@/lib/capital-gains'
-import { LONG_TERM_RATE, SHORT_TERM_RATE, taxRateFor } from '@/features/portfolios/tax/shared'
-import { taxCharacterOf } from '@/lib/security-master'
+import { LONG_TERM_RATE, SHORT_TERM_RATE, taxRateFor } from '@/lib/tax-rules'
 
 describe('pre-trade concentration uses the account own value', () => {
   it('C27: a $600K trade is 5% of the $12M Chen Trust, not 24% — no violation, trade passes', async () => {
