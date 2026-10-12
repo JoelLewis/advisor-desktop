@@ -1,8 +1,21 @@
 import type { BindingAct, Draft, Message, Thread } from '@/types/workspace'
+import type { ApprovalRecord, Proposal, StagedOrder } from '@/types/workspace-proposal'
 import { eventTime } from '@/lib/clock'
 import { SEED_LAST_SEQUENCE, SEED_MESSAGES, SEED_THREADS } from './workspace-seed'
 
-export type WorkspaceState = { threads: Thread[]; messages: Message[]; acts: BindingAct[]; drafts: Draft[]; sequence: number; counters: Record<'msg' | 'draft' | 'act', number> }
+type Counter = 'msg' | 'draft' | 'act' | 'proposal' | 'staged'
+
+export type WorkspaceState = {
+  threads: Thread[]
+  messages: Message[]
+  acts: BindingAct[]
+  drafts: Draft[]
+  proposals: Proposal[]
+  approvals: ApprovalRecord[]
+  staged: StagedOrder[]
+  sequence: number
+  counters: Record<Counter, number>
+}
 
 function seed(): WorkspaceState {
   return {
@@ -10,32 +23,46 @@ function seed(): WorkspaceState {
     messages: SEED_MESSAGES.map((m) => ({ ...m })),
     acts: [],
     drafts: [],
+    proposals: [],
+    approvals: [],
+    staged: [],
     sequence: SEED_LAST_SEQUENCE,
-    counters: { msg: 0, draft: 0, act: 0 },
+    counters: { msg: 0, draft: 0, act: 0, proposal: 0, staged: 0 },
   }
 }
 
-let state = seed()
+// Seeded on first use, not at import: the seed reads the engine (Task 6 adds the Brief), and the
+// engine must finish loading before anything runs it.
+let state: WorkspaceState | undefined
 
 export function store(): WorkspaceState {
+  state ??= seed()
   return state
 }
 
 export function resetWorkspaceStore(): void {
-  state = seed()
+  state = undefined
 }
 
 export function nextAt(): string {
-  state.sequence += 1
-  return eventTime(state.sequence)
+  const s = store()
+  s.sequence += 1
+  return eventTime(s.sequence)
 }
 
+/** Allocates the next number on `counter`. */
+export function nextNumber(counter: Counter): number {
+  const s = store()
+  s.counters[counter] += 1
+  return s.counters[counter]
+}
+
+const pad = (n: number) => String(n).padStart(4, '0')
+
 export function nextId(prefix: 'msg' | 'draft'): string {
-  state.counters[prefix] += 1
-  return `${prefix}-${String(state.counters[prefix]).padStart(4, '0')}`
+  return `${prefix}-${pad(nextNumber(prefix))}`
 }
 
 export function commitActId(): string {
-  state.counters.act += 1
-  return `REC-${String(state.counters.act).padStart(4, '0')}`
+  return `REC-${pad(nextNumber('act'))}`
 }

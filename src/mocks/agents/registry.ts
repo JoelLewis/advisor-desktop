@@ -4,8 +4,15 @@ import { AGENTS } from '@/mocks/data/people'
 import { runDriftMonitor } from './drift-monitor'
 import { runPretradeCheck } from './pretrade-check'
 
-const RUNNERS: Record<AgentId, AgentDefinition['run']> = { 'drift-monitor': runDriftMonitor, 'pretrade-check': runPretradeCheck }
+/** Agents that report findings in a thread. The Proposal and Client Letter agents work through their own operations. */
+const RUNNERS: ReadonlyMap<AgentId, AgentDefinition['run']> = new Map<AgentId, AgentDefinition['run']>([
+  ['drift-monitor', runDriftMonitor],
+  ['pretrade-check', runPretradeCheck],
+])
 
 export const AGENT_DEFINITIONS: ReadonlyMap<AgentId, AgentDefinition> = new Map(
-  AGENTS.map((a) => [a.id, { ...a, run: RUNNERS[a.id] }]),
+  AGENTS.flatMap((a): [AgentId, AgentDefinition][] => {
+    const run = RUNNERS.get(a.id)
+    return run ? [[a.id, { ...a, run }]] : []
+  }),
 )

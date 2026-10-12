@@ -9,8 +9,11 @@ export const PEOPLE: readonly Person[] = [
 ]
 
 export const AGENTS: readonly AgentProfile[] = [
-  { id: 'drift-monitor', name: 'Drift Monitor', scope: { may: ['measure and flag'], mayNot: ['stage or release trades', 'post in a client thread'] } },
-  { id: 'pretrade-check', name: 'Pre-trade Check', scope: { may: ['run checks and report'], mayNot: ['clear a block', 'release orders', 'post in a client thread'] } },
+  { id: 'drift-monitor', name: 'Drift Monitor', produces: 'findings', scope: { may: ['measure and flag'], mayNot: ['stage or release trades', 'post in a client thread'] } },
+  { id: 'pretrade-check', name: 'Pre-trade Check', produces: 'findings', scope: { may: ['run checks and report'], mayNot: ['clear a block', 'release orders', 'post in a client thread'] } },
+  { id: 'harvest-scanner', name: 'Harvest Scanner', produces: 'findings', scope: { may: ['measure harvestable losses and their windows'], mayNot: ['stage trades', 'post in a client thread'] } },
+  { id: 'proposal', name: 'Proposal Agent', produces: 'proposals', scope: { may: ['draft and revise proposals under constraints'], mayNot: ['approve', 'release', 'post in a client thread'] } },
+  { id: 'client-letter', name: 'Client Letter Agent', produces: 'letters', scope: { may: ['draft a client message from an approved version'], mayNot: ['send', 'post in a client thread'] } },
 ]
 
 const PERMISSIONS: Readonly<Record<Person['role'], readonly Act[]>> = {
