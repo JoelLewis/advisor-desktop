@@ -220,11 +220,13 @@ test('one presenter runs Brief → proposal → revise → workbench → approve
   await expect(threadLinks).toHaveAccessibleName('Robert Johnson')
   await expect(conversation(page)).toContainText('Dear Robert,')
   await expect(conversation(page)).toContainText('I will call you on Friday to walk through it.')
-  // The firm's wording stays with the firm: no binding-act or supervisory language, no letter origin, no agents, no team thread.
-  const body = page.locator('body')
-  for (const hidden of ['binding', 'Supervisory review', 'fingerprint', 'edited by', 'Proposal', 'Client Letter Agent', 'Johnson Rebalance Review']) {
-    await expect(body).not.toContainText(hidden)
-  }
+  // His conversation is his question, the letter and its record: nothing else from the firm.
+  await expect(conversation(page).getByRole('listitem')).toHaveCount(3)
+  // The firm's provenance stays with the firm: no binding-act or supervisory language, no letter origin, no agents,
+  // no proposal or staging, no team thread. His own record slip may keep its fingerprint.
+  await expect(page.locator('body')).not.toContainText(
+    /binding|supervisory review|edited by|from v\d|proposal|client letter|drift monitor|harvest scanner|pre-trade check|johnson rebalance review|staged/i,
+  )
 
   // 9. Mark: the firm threads but not the Brief; the staged orders pending compliance review; nothing for him to approve.
   await viewAs.selectOption({ label: 'Mark Davis · Compliance' })
