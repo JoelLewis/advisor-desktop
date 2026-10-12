@@ -8,7 +8,7 @@ import { accounts } from '../data/accounts'
 import { getPositionsForAccount } from '../data/positions'
 import { FX_RATES_USD_BASE } from '../data/currencies'
 import { convertCurrency } from '@/lib/currency'
-import { securityKind, concentrationLimitFor, isMarketTradable, taxCharacterOf, SPOT_CRYPTO_SYMBOLS } from '@/lib/security-master'
+import { securityKind, concentrationLimitFor, isMarketTradable, isSubjectToWashSale, taxCharacterOf, SPOT_CRYPTO_SYMBOLS } from '@/lib/security-master'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { hasWashSaleRisk, isoDaysBefore, type SoldLossLot } from '@/lib/wash-sale'
@@ -18,7 +18,7 @@ import { repurchaseRestrictionsFor } from './repurchase-restrictions'
 import { settleBatchWashSales, type LegSale } from './batch-wash-sales'
 import { taxRateFor } from '@/lib/tax-rules'
 import type { Account } from '@/types/account'
-import type { Position } from '@/types/portfolio'
+import type { AssetClass, Position } from '@/types/portfolio'
 import type { CurrencyCode } from '@/types/currency'
 
 // Exported so `ai.ts`'s trading-desk chat response reads the same pending-order counts this
@@ -314,20 +314,92 @@ export type RebalanceProposal = {
   legs: ProposedTradeLeg[]
   /** What each sell leg disposes of, lot by lot, for `settleBatchWashSales`. */
   sales: ReadonlyMap<ProposedTradeLeg, LegSale>
+  /** Asset classes a constraint held away from target, with the constraint that did it. */
+  heldBack: ReadonlyMap<AssetClass, ResidualDriftReason>
+}
+
+/** Phase 3 · constraints a proposal is generated under. All optional; `{}` is the unconstrained generator. */
+export type GenerationConstraints = {
+  /** Sell only loss lots. Tax-advantaged accounts have no loss to harvest and sell nothing. */
+  harvestOnly?: boolean
+  /** Upper bound on realised gains (gain legs only, losses not netted), in the account's currency. */
+  capRealisedGains?: number
+  /** Asset classes the proposal leaves untouched. */
+  excludeAssetClasses?: readonly AssetClass[]
+  /** Never buy a symbol whose purchase would wash a loss of the same wash-sale taxpayer. */
+  avoidSelfWash?: boolean
+}
+
+type RealisedResult = Pick<ProposedTrade, 'realisedShortTerm' | 'realisedLongTerm'>
+
+const legGain = (l: RealisedResult) => Math.max(0, l.realisedShortTerm) + Math.max(0, l.realisedLongTerm)
+
+/**
+ * Gains realised by these legs, gain legs only: Σ max(0, short-term) + max(0, long-term). Losses
+ * are not netted, so the figure ties to the tax tape's "Gains realized".
+ */
+export function realisedGains(legs: readonly RealisedResult[]): number {
+  return legs.reduce((s, l) => s + legGain(l), 0)
+}
+
+/**
+ * IRC §1091 · the symbols a purchase must not be: every symbol with an open loss-sale window of the
+ * account's wash-sale taxpayer (owner and spouse, their IRAs and Roths included —
+ * `openWashSaleWindowsFor`), and every symbol this proposal itself sells at a loss. A coin held
+ * directly is outside §1091 and is never on the list.
+ */
+export function washingSymbols(openWindows: readonly { symbol: string }[], lossSoldSymbols: readonly string[]): Set<string> {
+  return new Set([...openWindows.map((w) => w.symbol), ...lossSoldSymbols].filter(isSubjectToWashSale))
+}
+
+/** Market value of `position`'s lots that stand at a loss: all a harvest of it may sell. */
+function lossLotValue(lots: readonly CustodianLot[], position: Position): number {
+  return lots.filter((l) => l.positionId === position.id && l.gainLoss < 0).reduce((s, l) => s + l.currentValue, 0)
+}
+
+/** How many times the gain cap may re-cut the top gain leg before the engine refuses (each pass is a full cash-band resolution). */
+const MAX_GAIN_CAP_PASSES = 32
+
+/**
+ * The largest whole-dollar sale, at most `ceiling`, whose realised gains stay at or under
+ * `allowedGain`. Found by bisection: in the tax-aware lot order a sale's gains only grow with its
+ * size (losses are drawn first), and the lower bound always satisfies the limit, so the answer
+ * does even where an oldest-first order makes the growth uneven.
+ */
+function largestSaleWithin(realise: (value: number) => RealisedResult, ceiling: number, allowedGain: number): number {
+  let lo = 0
+  let hi = Math.floor(ceiling)
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2)
+    if (legGain(realise(mid)) <= allowedGain) lo = mid
+    else hi = mid - 1
+  }
+  return lo
 }
 
 /**
  * `generateRebalanceTrades` with the lots each leg sells. A preview passes the batch's proposals
  * through `settleBatchWashSales`, which needs them; the legs are the same either way.
+ *
+ * Phase 3 · `constraints` narrow what the proposal may do, and every class a constraint holds away
+ * from target is named in `heldBack` with the constraint that did it:
+ * - `harvestOnly` sells only lots standing at a loss, and keeps the buys those sales and the cash
+ *   above target can fund. A tax-advantaged account has no loss to harvest and sells nothing.
+ * - `capRealisedGains` trims the gain leg with the most gain per dollar first until the proposal's
+ *   realised gains (losses not netted) are at or under the cap.
+ * - `excludeAssetClasses` leaves those classes untouched.
+ * - `avoidSelfWash` never proposes a buy that would wash one of the proposal's own loss sales or an
+ *   open loss sale of the same wash-sale taxpayer in any of their accounts.
  */
 export function generateRebalanceProposal(
   accountId: string,
   taxAware: boolean,
   driftThreshold = 0.005,
   modelId?: string,
+  constraints: GenerationConstraints = {},
 ): RebalanceProposal {
   const account = accounts.find((a) => a.id === accountId)
-  if (!account) return { legs: [], sales: new Map() }
+  if (!account) return { legs: [], sales: new Map(), heldBack: new Map() }
   const positions = getPositionsForAccount(account.id, account.totalValue)
   const drift = computeDriftForAccount(account, modelId)
   const taxable = isTaxableAccount(account.taxTreatment)
@@ -338,13 +410,26 @@ export function generateRebalanceProposal(
   const ownLots = generateTaxLots(account.id, account.totalValue)
   const recentlyOpened = recentlyOpenedPositions(ownLots, MOCK_TODAY_ISO)
   const acquisitions = washSaleAcquisitions(account, (a) => (a.id === account.id ? ownLots : generateTaxLots(a.id, a.totalValue)))
+  const harvestOnly = constraints.harvestOnly === true
+  // A harvest is tax-aware whatever the toggle says: it sells the deepest losses first, never a
+  // replacement still inside its hold, and only the loss lots themselves (specific
+  // identification), so no rounding of the share count can reach into a gain lot.
+  const sellTaxAware = taxAware || harvestOnly
+  const saleLots = harvestOnly ? ownLots.filter((l) => l.gainLoss < 0) : ownLots
+  const saleOf = (position: Position, value: number) => realiseSale(saleLots, position, value, sellTaxAware)
+  const excluded = new Set<AssetClass>(constraints.excludeAssetClasses ?? [])
+  const heldBack = new Map<AssetClass, ResidualDriftReason>()
+  const lossValueOf = (p: Position) => lossLotValue(ownLots, p)
 
   type RawLeg = { target: TradeCandidate; side: 'buy' | 'sell'; notional: number; sleeve: Sleeve }
-  const sales = new Map<ProposedTradeLeg, LegSale>()
 
-  const raw = drift.assetClassDrifts
+  const drafted = drift.assetClassDrifts
     .filter((d) => Math.abs(d.drift) > driftThreshold)
     .flatMap((d): RawLeg[] => {
+      if (excluded.has(d.assetClass)) {
+        heldBack.set(d.assetClass, 'excluded_by_constraint')
+        return []
+      }
       const held = positions.filter((p) => p.assetClass === d.assetClass && p.symbol !== 'CASH' && isMarketTradable(p.symbol))
       const side: 'buy' | 'sell' = d.actual > d.target ? 'sell' : 'buy'
       const rawNotional = Math.abs(d.drift) * account.totalValue
@@ -354,12 +439,15 @@ export function generateRebalanceProposal(
         // A sell can only ever come from a position actually held — there is no short side here.
         // Draw candidates in preference order and keep filling until the sleeve's notional is met
         // or the candidates are exhausted; each leg is still capped at its own position's market
-        // value, so long-only holds leg by leg as well as in aggregate.
+        // value (a harvest's at its loss lots' value), so long-only holds leg by leg as well as in
+        // aggregate.
+        const ordered = orderSellCandidates(held, sellTaxAware && taxable, recentlyOpened)
+        const candidates = harvestOnly ? (taxable ? ordered.filter((p) => lossValueOf(p) > 0) : []) : ordered
         let remaining = rawNotional
         const legs: RawLeg[] = []
-        for (const position of orderSellCandidates(held, taxAware && taxable, recentlyOpened)) {
+        for (const position of candidates) {
           if (remaining <= 0) break
-          const notional = Math.min(remaining, position.marketValue)
+          const notional = Math.min(remaining, harvestOnly ? lossValueOf(position) : position.marketValue)
           if (notional <= 0) continue
           legs.push({
             target: { symbol: position.symbol, name: position.name, price: position.price, position },
@@ -369,6 +457,10 @@ export function generateRebalanceProposal(
           })
           remaining -= notional
         }
+        // Held back for the harvest only where it left unsold value the sleeve could have sold: a
+        // position with no loss lot, or the gain lots of one it harvested.
+        const unconstrainedReach = Math.min(rawNotional, ordered.reduce((s, p) => s + p.marketValue, 0))
+        if (harvestOnly && rawNotional - remaining < unconstrainedReach - 1) heldBack.set(d.assetClass, 'harvest_only')
         return legs
       }
 
@@ -377,8 +469,19 @@ export function generateRebalanceProposal(
       return [{ target, side, notional: rawNotional, sleeve }]
     })
 
-  const totalSell = raw.filter((t) => t.side === 'sell').reduce((s, t) => s + t.notional, 0)
-  const totalBuy = raw.filter((t) => t.side === 'buy').reduce((s, t) => s + t.notional, 0)
+  // A buy of a symbol the taxpayer has an open loss window on, or that this proposal sells at a
+  // loss, is the replacement purchase §1091 looks for. Only a taxable account's sale realises a loss.
+  const lossSold = taxable
+    ? drafted.filter((l) => l.side === 'sell' && l.target.position && saleOf(l.target.position, l.notional).soldLosses.length > 0).map((l) => l.target.symbol)
+    : []
+  const washing = constraints.avoidSelfWash ? washingSymbols(lossWindows, lossSold) : new Set<string>()
+  const raw = drafted.filter((leg) => {
+    if (leg.side !== 'buy' || !washing.has(leg.target.symbol)) return true
+    heldBack.set(leg.sleeve.assetClass, 'wash_sale_avoided')
+    return false
+  })
+
+  // The cash band does not depend on the legs, so it is measured once, ahead of every resolution.
   // Cash is a model asset class with its own target, but it never yields a tradeable candidate,
   // so it can only ever absorb proceeds — never generate a buy. The **target** weight is read
   // from the same `computeDriftForAccount` result the trades come from, so the band shown on the
@@ -437,203 +540,244 @@ export function generateRebalanceProposal(
   // pin: acc-015 is 0.6 points *under* its cash target and still deploys the full buy.
   const cashAboveTarget = Math.max(0, cashValue - cashTargetValue)
 
-  /**
-   * Build one executable leg: scale the notional, convert it to a tradeable lot, and take the
-   * value **from the lot** rather than from the notional the lot came from.
-   */
-  const toTrade = ({ target, side, notional: rawNotional, sleeve }: RawLeg, scale: number): ProposedTradeLeg => {
-    const notional = rawNotional * scale
-      // §9.7 · `Math.round(notional / price)` rounded a share count **up**, so a sell could name
-      // more units than the account owns: acc-045 holds 22.5 ETH and 15,231.5 USDC (fractional
-      // crypto), and rounding 22.5 to 23 emitted an order to sell more ETH than exists — a
-      // custodian rejection. The value cap (`Math.min(rawNotional, position.marketValue)`) held
-      // throughout; only the rounded quantity broke it, which is why a sweep that tolerated a
-      // whole share of slack reported clean.
-      //
-      // `boundedTradeQty` in `custodian.ts` already is this codebase's rounding policy for "how
-      // many units may this trade name" — whole units floored and clamped to the cap, sub-unit
-      // caps kept to six decimals — and it was written for exactly this fractional-crypto case.
-      // Reused rather than restated: a second rounding rule in a second file is the divergence
-      // this phase exists to remove. The cap is the shares actually held for a sell, and what the
-      // notional affords for a buy (so a buy can never name more units than it pays for either,
-      // which `Math.round` also allowed).
-      //
-      // `estimatedValue` follows from the quantity actually being traded — `quantity x price`,
-      // rounded once — rather than from the un-floored notional. The preview renders both on the
-      // same row, so a row that does not multiply out is two numbers describing one trade and
-      // disagreeing on screen: "buy 15 VTI · $4,275" against 15 x $268.50 = $4,028 is $247 that
-      // is not there. Flooring made that systematic (25 of 273 legs were off by more than 0.5%,
-      // up to 5.8%) where `Math.round` had been symmetric and cost at most half a share. The
-      // notional is what the *drift* asks for; the trade is what can actually be executed, and
-      // the row must state the latter.
-      const rawQuantity = notional / target.price
-      const quantityCap = side === 'sell' && target.position ? target.position.quantity : rawQuantity
-      // 0: a sleeve whose notional cannot afford one whole lot trades nothing. The shared
-      // function's other caller wants a minimum of one unit; taking that policy here would round
-      // a sub-lot notional **up** to a whole lot — one BTC is $87,450 — and breach both the
-      // long-only value bound and the cash band. `estimatedValue <= 0` then drops the leg.
-      const quantity = boundedTradeQty(quantityCap, rawQuantity, 1, 0)
-      const estimatedValue = Math.round(quantity * target.price)
-      // Round 4 · the tax follows the **same** figure the row shows, not the notional the lot was
-      // derived from. Moving `estimatedValue` onto executed money and leaving `estimatedTax` on
-      // the pre-floor notional left the rendered row describing two different trades: acc-045's
-      // BTC leg read `quantity 2 · $174,900 · tax $10,231`, where the tax had been estimated on
-      // the $187,895 notional — 7.4% more BTC than the row says is being sold, because one BTC
-      // unit is half this leg's executed value. 48 taxed legs book-wide were affected; the
-      // exposure per leg is bounded by `unitPrice / estimatedValue`. All three numbers on the
-      // row now describe one trade.
-      const realised = side === 'sell' && taxable && target.position
-        ? realiseSale(ownLots, target.position, estimatedValue, taxAware)
-        : NOTHING_REALISED
-      const trade: ProposedTradeLeg = {
-        symbol: target.symbol,
-        name: target.name,
-        side,
-        quantity,
-        estimatedValue,
-        taxImpact: realised.tax,
-        realisedShortTerm: realised.shortTerm,
-        realisedLongTerm: realised.longTerm,
-        realisedCollectibleLongTerm: realised.collectibleLongTerm,
-        washSaleRisk: hasWashSaleRisk(
-          { symbol: target.symbol, side, realisesLoss: realised.shortTerm + realised.longTerm < 0, soldLotIds: realised.consumedLotIds },
-          lossWindows, acquisitions, MOCK_TODAY_ISO,
-        ),
-        currency,
-        ...sleeve,
+  type Resolved = { legs: ProposedTradeLeg[]; sales: Map<ProposedTradeLeg, LegSale>; rawOf: Map<ProposedTradeLeg, RawLeg> }
+
+  /** Executable legs for `rawLegs`, resolved onto the cash band. */
+  const resolve = (rawLegs: readonly RawLeg[]): Resolved => {
+    const sales = new Map<ProposedTradeLeg, LegSale>()
+    const totalSell = rawLegs.filter((t) => t.side === 'sell').reduce((s, t) => s + t.notional, 0)
+    const totalBuy = rawLegs.filter((t) => t.side === 'buy').reduce((s, t) => s + t.notional, 0)
+
+    /**
+     * Build one executable leg: scale the notional, convert it to a tradeable lot, and take the
+     * value **from the lot** rather than from the notional the lot came from.
+     */
+    const toTrade = ({ target, side, notional: rawNotional, sleeve }: RawLeg, scale: number): ProposedTradeLeg => {
+      const notional = rawNotional * scale
+        // §9.7 · `Math.round(notional / price)` rounded a share count **up**, so a sell could name
+        // more units than the account owns: acc-045 holds 22.5 ETH and 15,231.5 USDC (fractional
+        // crypto), and rounding 22.5 to 23 emitted an order to sell more ETH than exists — a
+        // custodian rejection. The value cap (`Math.min(rawNotional, position.marketValue)`) held
+        // throughout; only the rounded quantity broke it, which is why a sweep that tolerated a
+        // whole share of slack reported clean.
+        //
+        // `boundedTradeQty` in `custodian.ts` already is this codebase's rounding policy for "how
+        // many units may this trade name" — whole units floored and clamped to the cap, sub-unit
+        // caps kept to six decimals — and it was written for exactly this fractional-crypto case.
+        // Reused rather than restated: a second rounding rule in a second file is the divergence
+        // this phase exists to remove. The cap is the shares actually held for a sell, and what the
+        // notional affords for a buy (so a buy can never name more units than it pays for either,
+        // which `Math.round` also allowed).
+        //
+        // `estimatedValue` follows from the quantity actually being traded — `quantity x price`,
+        // rounded once — rather than from the un-floored notional. The preview renders both on the
+        // same row, so a row that does not multiply out is two numbers describing one trade and
+        // disagreeing on screen: "buy 15 VTI · $4,275" against 15 x $268.50 = $4,028 is $247 that
+        // is not there. Flooring made that systematic (25 of 273 legs were off by more than 0.5%,
+        // up to 5.8%) where `Math.round` had been symmetric and cost at most half a share. The
+        // notional is what the *drift* asks for; the trade is what can actually be executed, and
+        // the row must state the latter.
+        const rawQuantity = notional / target.price
+        const quantityCap = side === 'sell' && target.position ? target.position.quantity : rawQuantity
+        // 0: a sleeve whose notional cannot afford one whole lot trades nothing. The shared
+        // function's other caller wants a minimum of one unit; taking that policy here would round
+        // a sub-lot notional **up** to a whole lot — one BTC is $87,450 — and breach both the
+        // long-only value bound and the cash band. `estimatedValue <= 0` then drops the leg.
+        const quantity = boundedTradeQty(quantityCap, rawQuantity, 1, 0)
+        const estimatedValue = Math.round(quantity * target.price)
+        // Round 4 · the tax follows the **same** figure the row shows, not the notional the lot was
+        // derived from. Moving `estimatedValue` onto executed money and leaving `estimatedTax` on
+        // the pre-floor notional left the rendered row describing two different trades: acc-045's
+        // BTC leg read `quantity 2 · $174,900 · tax $10,231`, where the tax had been estimated on
+        // the $187,895 notional — 7.4% more BTC than the row says is being sold, because one BTC
+        // unit is half this leg's executed value. 48 taxed legs book-wide were affected; the
+        // exposure per leg is bounded by `unitPrice / estimatedValue`. All three numbers on the
+        // row now describe one trade.
+        const realised = side === 'sell' && taxable && target.position
+          ? saleOf(target.position, estimatedValue)
+          : NOTHING_REALISED
+        const trade: ProposedTradeLeg = {
+          symbol: target.symbol,
+          name: target.name,
+          side,
+          quantity,
+          estimatedValue,
+          taxImpact: realised.tax,
+          realisedShortTerm: realised.shortTerm,
+          realisedLongTerm: realised.longTerm,
+          realisedCollectibleLongTerm: realised.collectibleLongTerm,
+          washSaleRisk: hasWashSaleRisk(
+            { symbol: target.symbol, side, realisesLoss: realised.shortTerm + realised.longTerm < 0, soldLotIds: realised.consumedLotIds },
+            lossWindows, acquisitions, MOCK_TODAY_ISO,
+          ),
+          currency,
+          ...sleeve,
+        }
+        sales.set(trade, { soldLosses: realised.soldLosses, consumedLotIds: realised.consumedLotIds })
+        return trade
+    }
+
+    // Build one side of the proposal at a given scale and report the money it **actually** moves —
+    // the sum of the executed leg values, not of the un-floored notionals they came from. That
+    // figure is what both cash caps below are sized against.
+    const built = new Map<RawLeg, ProposedTradeLeg>()
+    const build = (side: 'buy' | 'sell', scale: number): number => {
+      let executed = 0
+      for (const leg of rawLegs) {
+        if (leg.side !== side) continue
+        const trade = toTrade(leg, scale)
+        // `delete`, not `continue`: a side can be rebuilt at a smaller scale (see the convergence
+        // loop below), and a leg that no longer affords a whole lot must leave the proposal rather
+        // than linger at the value the previous pass gave it.
+        if (trade.estimatedValue <= 0) { built.delete(leg); continue }
+        built.set(leg, trade)
+        executed += trade.estimatedValue
       }
-      sales.set(trade, { soldLosses: realised.soldLosses, consumedLotIds: realised.consumedLotIds })
-      return trade
-  }
-
-  // Build one side of the proposal at a given scale and report the money it **actually** moves —
-  // the sum of the executed leg values, not of the un-floored notionals they came from. That
-  // figure is what both cash caps below are sized against.
-  const built = new Map<RawLeg, ProposedTradeLeg>()
-  const build = (side: 'buy' | 'sell', scale: number): number => {
-    let executed = 0
-    for (const leg of raw) {
-      if (leg.side !== side) continue
-      const trade = toTrade(leg, scale)
-      // `delete`, not `continue`: a side can be rebuilt at a smaller scale (see the convergence
-      // loop below), and a leg that no longer affords a whole lot must leave the proposal rather
-      // than linger at the value the previous pass gave it.
-      if (trade.estimatedValue <= 0) { built.delete(leg); continue }
-      built.set(leg, trade)
-      executed += trade.estimatedValue
+      return executed
     }
-    return executed
-  }
 
-  // §9.6/§9.7 · the two caps are two halves of one statement about the money the proposal moves
-  // into cash. With `endCash = cashValue − executedBuy + executedSell` required to lie between
-  // where the account started and its own model cash target:
-  //
-  //     −cashAboveTarget  ≤  executedSell − executedBuy  ≤  cashHeadroom
-  //
-  // One bound is the target the account is moving toward; the other is where it started. **Both
-  // are real, and both must be measured on executed money** — which is the round-4 correction
-  // applied to only one of them. Round 4 made the *binding* cap on each branch read the executed
-  // total and left the *non*-binding one reading the pre-floor total, on the argument that the
-  // starting bound "sits far from either result". That argument is false for a thinly-drifted
-  // account: acc-033 is only 0.88 of a point overweight cash, its sell cap read the pre-floor
-  // `totalBuy` of 4,134 while the buy leg floored to 4,039 and the sell executed 4,115, and the
-  // account finished **more** overweight cash than it started — 5.8894% against 5.8796%, $76 the
-  // wrong way past its own starting balance. Neither whole-book cash sweep saw it, because both
-  // were stated as a weight tolerance ($156 on acc-033, $2,500 on acc-041) rather than in money.
-  //
-  // Each cap is written **once**, and each reads the other side's executed figure:
-  const buyScaleFor = (executedSell: number) =>
-    totalBuy > 0 ? Math.min(1, (executedSell + cashAboveTarget) / totalBuy) : 1
-  const sellScaleFor = (executedBuy: number) =>
-    totalSell > 0 ? Math.min(1, (executedBuy + cashHeadroom) / totalSell) : 1
+    // §9.6/§9.7 · the two caps are two halves of one statement about the money the proposal moves
+    // into cash. With `endCash = cashValue − executedBuy + executedSell` required to lie between
+    // where the account started and its own model cash target:
+    //
+    //     −cashAboveTarget  ≤  executedSell − executedBuy  ≤  cashHeadroom
+    //
+    // One bound is the target the account is moving toward; the other is where it started. **Both
+    // are real, and both must be measured on executed money** — which is the round-4 correction
+    // applied to only one of them. Round 4 made the *binding* cap on each branch read the executed
+    // total and left the *non*-binding one reading the pre-floor total, on the argument that the
+    // starting bound "sits far from either result". That argument is false for a thinly-drifted
+    // account: acc-033 is only 0.88 of a point overweight cash, its sell cap read the pre-floor
+    // `totalBuy` of 4,134 while the buy leg floored to 4,039 and the sell executed 4,115, and the
+    // account finished **more** overweight cash than it started — 5.8894% against 5.8796%, $76 the
+    // wrong way past its own starting balance. Neither whole-book cash sweep saw it, because both
+    // were stated as a weight tolerance ($156 on acc-033, $2,500 on acc-041) rather than in money.
+    //
+    // Each cap is written **once**, and each reads the other side's executed figure:
+    const buyScaleFor = (executedSell: number) =>
+      totalBuy > 0 ? Math.min(1, (executedSell + cashAboveTarget) / totalBuy) : 1
+    const sellScaleFor = (executedBuy: number) =>
+      totalSell > 0 ? Math.min(1, (executedBuy + cashHeadroom) / totalSell) : 1
 
-  // Which side is built first is still not arbitrary: **the binding cap's side is built second**,
-  // so the first pass already has the binding bound measured on executed money.
-  //
-  //  - Overweight cash (`cashAboveTarget > 0`): the model's cash *target* is the floor the account
-  //    is falling toward, so the binding cap is the buy cap — buys may not spend past what sells
-  //    raise plus the surplus. Sells first, buys against `executedSell`. Reading the pre-floor
-  //    `totalSell` there let acc-045 buy $411,894 against $370,372 genuinely raised (BTC alone
-  //    floors 2.1487 units to 2, dropping $13,003) and drove its cash to **−0.39%** — a proposal
-  //    the account cannot pay for.
-  //  - Underweight cash (`cashHeadroom > 0`): the target is the ceiling the account is rising
-  //    toward, so the binding cap is the sell cap — proceeds may not exceed what buys absorb plus
-  //    the gap to target. Buys first, sells against `executedBuy`. Reading the pre-floor
-  //    `totalBuy` there pushed seven accounts past their cash target by $58–$205 apiece.
-  //
-  // The two caps each read the other side's executed figure, so they are resolved by iterating
-  // rather than in one shot. Two distinct stopping conditions, and the difference between them is
-  // the point:
-  //
-  //  - **The band holds.** Done — this is the answer, and it is what every account reaches on the
-  //    first or second pass when it is measured against its own model.
-  //  - **The pair stops moving.** A fixed point `b = B(s), s = S(b)`. See the caveat on this one
-  //    below — it is very nearly, but not exactly, a proof that the band holds.
-  //
-  // Task 9 · the previous form ran a fixed **four** passes and then simply returned whatever it
-  // held, band or no band. That was sound while the only reachable inputs were each account
-  // against its own model — but the model-trade screen previews an account against *any* model,
-  // and acc-045 onto mod-003 (or mod-006) converges too slowly for four passes: the gap closed
-  // 12,088 -> 6,870 -> 2,142 -> 436 and the function returned the $436 breach.
-  //
-  // Every pass strictly shrinks both sides (a cap re-read on an executed total is never larger
-  // than the same cap read on the pre-floor total it replaces) and both are non-negative integer
-  // sums, so the iteration is a decreasing integer sequence bounded below and the fixed-point
-  // break must eventually fire. **But that bound is `executedSell₀ + executedBuy₀` — hundreds of
-  // thousands — not `MAX_PASSES`.** `MAX_PASSES` is a heuristic cutoff, and the whole lesson of
-  // the `4` it replaced is that a cutoff which returns a plausible-looking wrong answer is worse
-  // than one that fails. So the band is **asserted** after the loop rather than assumed. A demo
-  // that errors is honest; a demo that proposes a trade set the account cannot fund is the defect
-  // class this phase exists to remove. Review of this task constructed the case: across ~28,000
-  // synthetic account/model pairs, 7 exhausted a 32-pass loop and returned real breaches, the
-  // worst $5,412 below the account's own starting cash.
-  //
-  // Two known-inexact edges the post-loop assertion also backstops, neither reachable in the
-  // fixtures — it is the assertion, not the argument, that makes them safe:
-  //  - The fixed-point argument (`B(s) ≤ s + cashAboveTarget`) holds for the **notional** a side
-  //    is scaled to, not for its executed total: `estimatedValue` is `Math.round(quantity ×
-  //    price)`, which can round *up* by up to $0.50 per leg. Two constructed cases exit on the
-  //    fixed-point condition with $0.39 and $0.26 breaches.
-  //  - `MAX_PASSES` is measured, not derived. Over the whole reachable configuration space —
-  //    47 accounts x 7 models x 2 tax modes x 11 drift thresholds = 7,238 — 7,194 settle on the
-  //    first or second pass and the slowest is acc-045 onto mod-006 at a 0.10 threshold, settling
-  //    on the **tenth** (acc-045 onto mod-003 at 0.05 settles on the ninth). Every one settles on
-  //    the band: none on the fixed-point condition, none exhausted.
-  //    `model-trade-invariants` sweeps that whole space for the band in money at zero tolerance,
-  //    so a regression that pushes any configuration past the cutoff fails loudly rather than
-  //    quietly returning a proposal nobody bounded.
-  const withinCashBand = (executedSell: number, executedBuy: number) =>
-    executedSell - executedBuy <= cashHeadroom && executedBuy - executedSell <= cashAboveTarget
-  const sellsFirst = cashAboveTarget > 0
-  const MAX_PASSES = 32
-  let executedSell = 0
-  let executedBuy = 0
-  for (let pass = 0; pass < MAX_PASSES; pass++) {
-    const priorSell = executedSell
-    const priorBuy = executedBuy
-    if (sellsFirst) {
-      executedSell = build('sell', sellScaleFor(pass === 0 ? totalBuy : executedBuy))
-      executedBuy = build('buy', buyScaleFor(executedSell))
-    } else {
-      executedBuy = build('buy', buyScaleFor(pass === 0 ? totalSell : executedSell))
-      executedSell = build('sell', sellScaleFor(executedBuy))
+    // Which side is built first is still not arbitrary: **the binding cap's side is built second**,
+    // so the first pass already has the binding bound measured on executed money.
+    //
+    //  - Overweight cash (`cashAboveTarget > 0`): the model's cash *target* is the floor the account
+    //    is falling toward, so the binding cap is the buy cap — buys may not spend past what sells
+    //    raise plus the surplus. Sells first, buys against `executedSell`. Reading the pre-floor
+    //    `totalSell` there let acc-045 buy $411,894 against $370,372 genuinely raised (BTC alone
+    //    floors 2.1487 units to 2, dropping $13,003) and drove its cash to **−0.39%** — a proposal
+    //    the account cannot pay for.
+    //  - Underweight cash (`cashHeadroom > 0`): the target is the ceiling the account is rising
+    //    toward, so the binding cap is the sell cap — proceeds may not exceed what buys absorb plus
+    //    the gap to target. Buys first, sells against `executedBuy`. Reading the pre-floor
+    //    `totalBuy` there pushed seven accounts past their cash target by $58–$205 apiece.
+    //
+    // The two caps each read the other side's executed figure, so they are resolved by iterating
+    // rather than in one shot. Two distinct stopping conditions, and the difference between them is
+    // the point:
+    //
+    //  - **The band holds.** Done — this is the answer, and it is what every account reaches on the
+    //    first or second pass when it is measured against its own model.
+    //  - **The pair stops moving.** A fixed point `b = B(s), s = S(b)`. See the caveat on this one
+    //    below — it is very nearly, but not exactly, a proof that the band holds.
+    //
+    // Task 9 · the previous form ran a fixed **four** passes and then simply returned whatever it
+    // held, band or no band. That was sound while the only reachable inputs were each account
+    // against its own model — but the model-trade screen previews an account against *any* model,
+    // and acc-045 onto mod-003 (or mod-006) converges too slowly for four passes: the gap closed
+    // 12,088 -> 6,870 -> 2,142 -> 436 and the function returned the $436 breach.
+    //
+    // Every pass strictly shrinks both sides (a cap re-read on an executed total is never larger
+    // than the same cap read on the pre-floor total it replaces) and both are non-negative integer
+    // sums, so the iteration is a decreasing integer sequence bounded below and the fixed-point
+    // break must eventually fire. **But that bound is `executedSell₀ + executedBuy₀` — hundreds of
+    // thousands — not `MAX_PASSES`.** `MAX_PASSES` is a heuristic cutoff, and the whole lesson of
+    // the `4` it replaced is that a cutoff which returns a plausible-looking wrong answer is worse
+    // than one that fails. So the band is **asserted** after the loop rather than assumed. A demo
+    // that errors is honest; a demo that proposes a trade set the account cannot fund is the defect
+    // class this phase exists to remove. Review of this task constructed the case: across ~28,000
+    // synthetic account/model pairs, 7 exhausted a 32-pass loop and returned real breaches, the
+    // worst $5,412 below the account's own starting cash.
+    //
+    // Two known-inexact edges the post-loop assertion also backstops, neither reachable in the
+    // fixtures — it is the assertion, not the argument, that makes them safe:
+    //  - The fixed-point argument (`B(s) ≤ s + cashAboveTarget`) holds for the **notional** a side
+    //    is scaled to, not for its executed total: `estimatedValue` is `Math.round(quantity ×
+    //    price)`, which can round *up* by up to $0.50 per leg. Two constructed cases exit on the
+    //    fixed-point condition with $0.39 and $0.26 breaches.
+    //  - `MAX_PASSES` is measured, not derived. Over the whole reachable configuration space —
+    //    47 accounts x 7 models x 2 tax modes x 11 drift thresholds = 7,238 — 7,194 settle on the
+    //    first or second pass and the slowest is acc-045 onto mod-006 at a 0.10 threshold, settling
+    //    on the **tenth** (acc-045 onto mod-003 at 0.05 settles on the ninth). Every one settles on
+    //    the band: none on the fixed-point condition, none exhausted.
+    //    `model-trade-invariants` sweeps that whole space for the band in money at zero tolerance,
+    //    so a regression that pushes any configuration past the cutoff fails loudly rather than
+    //    quietly returning a proposal nobody bounded.
+    const withinCashBand = (executedSell: number, executedBuy: number) =>
+      executedSell - executedBuy <= cashHeadroom && executedBuy - executedSell <= cashAboveTarget
+    const sellsFirst = cashAboveTarget > 0
+    const MAX_PASSES = 32
+    let executedSell = 0
+    let executedBuy = 0
+    for (let pass = 0; pass < MAX_PASSES; pass++) {
+      const priorSell = executedSell
+      const priorBuy = executedBuy
+      if (sellsFirst) {
+        executedSell = build('sell', sellScaleFor(pass === 0 ? totalBuy : executedBuy))
+        executedBuy = build('buy', buyScaleFor(executedSell))
+      } else {
+        executedBuy = build('buy', buyScaleFor(pass === 0 ? totalSell : executedSell))
+        executedSell = build('sell', sellScaleFor(executedBuy))
+      }
+      if (withinCashBand(executedSell, executedBuy)) break
+      if (pass > 0 && executedSell === priorSell && executedBuy === priorBuy) break
     }
-    if (withinCashBand(executedSell, executedBuy)) break
-    if (pass > 0 && executedSell === priorSell && executedBuy === priorBuy) break
-  }
-  if (!withinCashBand(executedSell, executedBuy)) {
-    throw new Error(
-      `rebalance cap resolution did not reach the cash band for ${account.id} on ${drift.modelId}: `
-      + `sold ${executedSell}, bought ${executedBuy}, headroom ${Math.round(cashHeadroom)}, `
-      + `surplus ${Math.round(cashAboveTarget)} — refusing to propose trades the account cannot fund`,
-    )
+    if (!withinCashBand(executedSell, executedBuy)) {
+      throw new Error(
+        `rebalance cap resolution did not reach the cash band for ${account.id} on ${drift.modelId}: `
+        + `sold ${executedSell}, bought ${executedBuy}, headroom ${Math.round(cashHeadroom)}, `
+        + `surplus ${Math.round(cashAboveTarget)} — refusing to propose trades the account cannot fund`,
+      )
+    }
+
+
+    // Emitted in the drift surface's own asset-class order, so a preview reads the same way it did
+    // before sells and buys were built in separate passes.
+    const legs = rawLegs.map((leg) => built.get(leg)).filter((t): t is ProposedTradeLeg => t !== undefined)
+    return { legs, sales, rawOf: new Map([...built].map(([rawLeg, trade]) => [trade, rawLeg])) }
   }
 
-  // Emitted in the drift surface's own asset-class order, so a preview reads the same way it did
-  // before sells and buys were built in separate passes.
-  const legs = raw.map((leg) => built.get(leg)).filter((t): t is ProposedTradeLeg => t !== undefined)
-  return { legs, sales }
+  let current: readonly RawLeg[] = raw
+  let resolved = resolve(current)
+  const cap = constraints.capRealisedGains
+  if (cap !== undefined) {
+    // Trim the gain leg with the most gain per dollar first, re-resolving the cash band each pass:
+    // the gains realised last are the ones a cap gives up first. Each trim keeps the largest sale
+    // of that leg still inside the cap, so a leg that harvests losses before its gains keeps the
+    // harvest. Trimming one sale can let the band scale the others back up, hence the passes.
+    for (let pass = 0; pass < MAX_GAIN_CAP_PASSES && realisedGains(resolved.legs) > cap; pass++) {
+      const top = resolved.legs
+        .filter((l) => l.side === 'sell' && legGain(l) > 0)
+        .sort((a, b) => legGain(b) / b.estimatedValue - legGain(a) / a.estimatedValue)[0]
+      const source = top === undefined ? undefined : resolved.rawOf.get(top)
+      const position = source?.target.position
+      if (!top || !source || !position) break
+      heldBack.set(source.sleeve.assetClass, 'gains_capped')
+      const allowedGain = Math.max(0, legGain(top) - (realisedGains(resolved.legs) - cap))
+      const realise = (value: number): RealisedResult => {
+        const sale = saleOf(position, value)
+        return { realisedShortTerm: sale.shortTerm, realisedLongTerm: sale.longTerm }
+      }
+      const notional = largestSaleWithin(realise, top.estimatedValue, allowedGain)
+      current = current.flatMap((leg) => (leg !== source ? [leg] : notional > 0 ? [{ ...leg, notional }] : []))
+      resolved = resolve(current)
+    }
+    if (realisedGains(resolved.legs) > cap) {
+      throw new Error(`gain cap resolution did not reach ${cap} for ${account.id}: refusing to propose gains past the cap`)
+    }
+  }
+  return { legs: resolved.legs, sales: resolved.sales, heldBack }
 }
 
 /**
@@ -776,7 +920,8 @@ export function residualReason(facts: ResidualFacts): ResidualDriftReason {
  * function current drift comes from — run on `holdingsAfterTrades`. Every invested class whose
  * |drift| still exceeds `driftThreshold` (the threshold the trades were generated against) carries
  * the reason the proposal could not close it. Cash carries none: it is the balancing item the
- * other classes settle into (see the funding priority in `generateRebalanceTrades`).
+ * other classes settle into (see the funding priority in `generateRebalanceTrades`). A class a
+ * proposal constraint held back (`constrainedBy`, the proposal's `heldBack`) names that constraint.
  */
 export function projectDrift(
   accountId: string,
@@ -784,6 +929,7 @@ export function projectDrift(
   taxAware: boolean,
   driftThreshold = 0.005,
   modelId?: string,
+  constrainedBy: ReadonlyMap<AssetClass, ResidualDriftReason> = new Map(),
 ): ProjectedDrift {
   const account = accounts.find((a) => a.id === accountId)
   if (!account) throw new Error(`projectDrift: unknown account ${accountId}`)
@@ -822,7 +968,7 @@ export function projectDrift(
     withinBand: !after.needsRebalance,
     assetClassDrifts: after.assetClassDrifts.map((d) => (
       d.assetClass !== 'cash' && Math.abs(d.drift) > driftThreshold
-        ? { ...d, residualReason: residualReason(factsFor(d.assetClass, d.drift)) }
+        ? { ...d, residualReason: constrainedBy.get(d.assetClass) ?? residualReason(factsFor(d.assetClass, d.drift)) }
         : { ...d }
     )),
   }
@@ -869,7 +1015,7 @@ export function buildRebalancePreviews(
       // this account" from "taxed, and the result is zero".
       taxable: isTaxableAccount(account.taxTreatment),
       repurchaseRestrictions: repurchaseRestrictionsFor(account, asOfISO, proposals),
-      projectedDrift: projectDrift(account.id, trades, taxAware, driftThreshold),
+      projectedDrift: projectDrift(account.id, trades, taxAware, driftThreshold, undefined, proposed[i]!.heldBack),
     }
   })
 }

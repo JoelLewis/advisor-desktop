@@ -11,7 +11,8 @@ import { washSaleTaxpayer } from './tax-return'
 /** What one sell leg disposes of: every lot it draws on, and the shares of each it sells at a loss. */
 export type LegSale = { soldLosses: readonly SoldLossLot[]; consumedLotIds: readonly string[] }
 
-type BatchEntry = { account: Account } & RebalanceProposal
+/** Settlement needs only the legs and what they sell. */
+type BatchEntry = { account: Account } & Pick<RebalanceProposal, 'legs' | 'sales'>
 
 const NOTHING_SOLD: LegSale = { soldLosses: [], consumedLotIds: [] }
 

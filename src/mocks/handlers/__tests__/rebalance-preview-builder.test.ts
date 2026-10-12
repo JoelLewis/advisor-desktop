@@ -36,7 +36,7 @@ describe('buildRebalancePreviews', () => {
     const sales = new Map<ProposedTradeLeg, LegSale>([...proposal.sales].map(([l, sale]) => (l === intc ? [recut.leg, recut.sale] : [l, sale])))
 
     const [before] = buildRebalancePreviews([{ account, ...proposal }], true, 0.005, MOCK_TODAY_ISO)
-    const [after] = buildRebalancePreviews([{ account, legs, sales }], true, 0.005, MOCK_TODAY_ISO)
+    const [after] = buildRebalancePreviews([{ account, legs, sales, heldBack: proposal.heldBack }], true, 0.005, MOCK_TODAY_ISO)
     expect(after!.trades.find((t) => t.symbol === 'INTC')?.repurchaseBlockedUntil).toBe('2026-03-27')
     const lossNoLongerRealised = recut.leg.realisedLongTerm - intc.realisedLongTerm   // −19,650 − (−45,850)
     expect(lossNoLongerRealised).toBe(26_200)

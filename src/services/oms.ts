@@ -141,8 +141,13 @@ export type RepurchaseRestriction = {
     | { kind: 'projected'; accountId: string; saleDate: string }
 }
 
-/** Why an asset class is still away from target after the proposed trades. */
-export type ResidualDriftReason = 'not_market_tradable' | 'cash_capped' | 'replacement_hold' | 'below_lot_size'
+/**
+ * Why an asset class is still away from target after the proposed trades. The last four are a
+ * Phase 3 proposal constraint (or a workbench exclusion) holding the class back.
+ */
+export type ResidualDriftReason =
+  | 'not_market_tradable' | 'cash_capped' | 'replacement_hold' | 'below_lot_size'
+  | 'excluded_by_constraint' | 'harvest_only' | 'gains_capped' | 'wash_sale_avoided'
 
 export type ProjectedAssetClassDrift = {
   assetClass: AssetClass
