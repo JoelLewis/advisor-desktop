@@ -17,9 +17,11 @@ import { Stamp } from '@/kit/stamp/Stamp'
 import { RecordSlip } from '@/kit/record-slip/RecordSlip'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
 import { RecordTrail } from '@/kit/record-trail/RecordTrail'
-import { clientMoney, fmtDrift, fmtMoney, fmtTimestamp, fmtTolerance } from '@/kit/measure'
+import { clientMoney, fmtDrift, fmtMoney, fmtResult, fmtTimestamp, fmtTolerance } from '@/kit/measure'
 import { todayISO, now } from '@/lib/clock'
 import { RATE_DISCLOSURE } from '@/lib/tax-rules'
+import { CAPITAL_LOSS_SCOPE_NOTE, taxEstimateDirection } from '@/lib/capital-gains'
+import type { RebalancePreview } from '@/services/oms'
 import type { Status } from '@/kit/status/status'
 import { HoldingsTable, TaxLotsTable } from '@/workspace/full-views/account-columns'
 import { assetClassLabel } from '@/workspace/asset-class-label'
@@ -31,6 +33,15 @@ import type { KitData } from './use-kit-data'
 const STATUSES: Status[] = ['OUT', 'AT LIMIT', 'IN', 'BLOCK', 'WARN', 'CLEAR', 'OPEN']
 const TAX_SOURCE = 'Rebalance preview · estimated tax'
 
+/** What the preview's estimate nets against, read from the preview rather than assumed. */
+function taxScope({ ytdRealisedOnReturn: ytd, nettedWithAccountIds }: RebalancePreview): string {
+  if (!ytd) return 'A tax-advantaged account: its sales realise nothing taxable.'
+  const results = [`short-term ${fmtResult(ytd.shortTerm)}`, `long-term ${fmtResult(ytd.longTerm)}`]
+  if (ytd.collectibleLongTerm !== 0) results.push(`collectibles ${fmtResult(ytd.collectibleLongTerm)}`)
+  const batch = nettedWithAccountIds.length > 0 ? ', and with earlier accounts in this batch on the same return' : ''
+  return `Nets this proposal's legs with the return's year-to-date realised results (${results.join(', ')} USD)${batch}. ${CAPITAL_LOSS_SCOPE_NOTE}`
+}
+
 export function KitSections({ data }: { data: KitData }) {
   const { account, positions, drift, lots, windows, preview, approval, agentFinding } = data
   const [attested, setAttested] = useState(false)
@@ -39,6 +50,7 @@ export function KitSections({ data }: { data: KitData }) {
   const losses = preview.trades.reduce((s, t) => s + Math.min(0, t.realisedShortTerm) + Math.min(0, t.realisedLongTerm), 0)
   const netShortTerm = preview.trades.reduce((s, t) => s + t.realisedShortTerm, 0)
   const netLongTerm = preview.trades.reduce((s, t) => s + t.realisedLongTerm, 0)
+  const estimate = taxEstimateDirection(preview.estimatedTaxImpact)
   const restriction = windows[0]
   const gaugeDomain = sharedGaugeDomain(drift.assetClassDrifts.map((d) => d.drift), drift.driftTolerance)
   const stamp = now().toISOString()
@@ -120,8 +132,8 @@ export function KitSections({ data }: { data: KitData }) {
       <SidePanel label="Tax effect">
         <TaxTape gains={gains} losses={losses} netShortTerm={netShortTerm} netLongTerm={netLongTerm}
           grossTax={preview.grossTaxOnGains} netTax={preview.estimatedTaxImpact}
-          scope="Nets this proposal's legs only." rateBasis={RATE_DISCLOSURE} />
-        <p className="text-body">Estimated tax of about <FigureRef source={TAX_SOURCE} path="rebalance.estimatedTaxImpact" note={1}>{clientMoney(preview.estimatedTaxImpact)}</FigureRef>.</p>
+          scope={taxScope(preview)} rateBasis={RATE_DISCLOSURE} />
+        <p className="text-body">{`Estimated capital-gains tax ${estimate.direction} this return: about `}<FigureRef source={TAX_SOURCE} path="rebalance.estimatedTaxImpact" note={1}>{clientMoney(estimate.amount)}</FigureRef>.</p>
         <p className="text-label normal-case text-ink-3"><span aria-hidden="true">1. </span>{`Source: ${TAX_SOURCE} for ${account.name}, as of ${fmtTimestamp(stamp)}.`}</p>
         <SourceChips sources={[{ label: 'Rebalance preview', detail: account.name, asOf: stamp }, { label: 'Drift calculation', detail: `${drift.assetClassDrifts.length} asset classes`, asOf: stamp }]} />
       </SidePanel>

@@ -5,7 +5,8 @@ import { http, HttpResponse } from 'msw'
 import { renderRoutes } from '@/test/render'
 import { server } from '@/test/server'
 import { getSupervisionRecords } from '@/services/compliance'
-import { fmtTimestamp } from '@/kit/measure'
+import { fmtResult, fmtTimestamp } from '@/kit/measure'
+import { previewRebalance } from '@/services/oms'
 
 const renderAt = (path: string) => renderRoutes(routes, path)
 
@@ -46,6 +47,14 @@ describe('routes', () => {
     expect(r.getByRole('article', { name: 'Potential wash sale cleared — Johnson INTC/SMH' })).toBeInTheDocument()
     expect(records).not.toHaveTextContent('Advisor of record')
     expect(records).not.toHaveTextContent('REC-EXAMPLE')
+  })
+  it('the tax tape states the year-to-date results its estimate nets against', async () => {
+    await renderKitReady()
+    const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
+    const ytd = preview!.ytdRealisedOnReturn!
+    const tape = screen.getByRole('region', { name: 'Tax effect estimate' })
+    expect(tape).toHaveTextContent(`year-to-date realised results (short-term ${fmtResult(ytd.shortTerm)}, long-term ${fmtResult(ytd.longTerm)} USD)`)
+    expect(tape).not.toHaveTextContent("legs only")
   })
   it('the cash line has no share count or price', async () => {
     await renderKitReady()
