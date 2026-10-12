@@ -4,7 +4,9 @@ import { accounts } from '@/mocks/data/accounts'
 import { households } from '@/mocks/data/households'
 import { householdFees } from '@/mocks/data/billing'
 import { getPositionsForAccount } from '@/mocks/data/positions'
-import { harvestBenefitNow, washesOnSale } from '@/features/portfolios/tax/shared'
+import { lossAllowedNow, washesOnSale } from '@/features/portfolios/tax/shared'
+import { estimateTaxOnReturns } from '@/mocks/handlers/tax-return'
+import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { generateTaxLotsWithSaleRisk } from '@/mocks/handlers/custodian'
 import { getModels } from '@/services/pms'
 import { router } from '@/app/routes'
@@ -209,39 +211,46 @@ describe('D22: nba-002 states the post-Task-18 harvestable loss, not the stale p
     expect(nba.description).not.toContain('78.6')
   })
 
-  // §0.7 · each lot at its own holding-period rate, on the part of its loss §1091 leaves allowed
-  // (`harvestBenefitNow`): acc-015's INTC lot (bought 2025-05-25) is short-term, so its $93,250 is
-  // priced at 40.8%, not 23.8%. No INTC lot washes today, so the whole loss counts:
-  // 45,850 × 0.238 + 52,400 × 0.238 + 93,250 × 0.408 = 10,912.30 + 12,471.20 + 38,046.00 = 61,429.50,
-  // stated as "about $61,400".
-  const intcLots = ['acc-002', 'acc-011', 'acc-015'].flatMap((id) => {
-    const account = accounts.find((a) => a.id === id)!
-    const intc = positionsFor(id).find((p) => p.symbol === 'INTC')!
+  const intcAccounts = ['acc-002', 'acc-011', 'acc-015'].map((id) => accounts.find((a) => a.id === id)!)
+  const intcLotsOf = (account: (typeof accounts)[number]) => {
+    const intc = positionsFor(account.id).find((p) => p.symbol === 'INTC')!
     return generateTaxLotsWithSaleRisk(account.id, account.totalValue).filter((l) => l.positionId === intc.id)
-  })
-  const benefit = intcLots.reduce((sum, l) => sum + harvestBenefitNow(l), 0)
+  }
+  const intcLots = intcAccounts.flatMap(intcLotsOf)
 
-  it('no INTC lot washes on sale today, so the benefit counts every lot\'s whole loss', () => {
+  it('no INTC lot washes on sale today, so a harvest realises every lot\'s whole loss', () => {
     expect(intcLots.some(washesOnSale)).toBe(false)
   })
 
-  it('the appended benefit figure is each lot at its own rate, not the loss itself', () => {
-    expect(benefit).toBeCloseTo(61_429.5, 6)
-    expect(nba.description).toContain('$61,400')
-    expect(nba.description).toContain('not the benefit')
+  // §0.7 fix round 1 · the benefit was each lot's loss at its own holding-period rate ($61,400), as
+  // if every client had gains of that character to offset. They do not: the tax a harvest saves
+  // this year is what it takes off each client's own return (`estimateTaxOnReturns`, netted against
+  // `ytdRealisedOnReturn`). At 2026-02-25: acc-002's joint return is already −32,750 LT (rs-001)
+  // and acc-015's −24,867 ST (rs-003), so harvesting saves them nothing this year; acc-011's
+  // return has +6,260 LT (rs-004), so it saves 6,260 × 0.238 = 1,489.88, rounded 1,490.
+  const savingThisYear = intcAccounts.map((account) => {
+    const lots = intcLotsOf(account)
+    const allowed = (period: 'short' | 'long') => lots.filter((l) => l.holdingPeriod === period).reduce((s, l) => s + lossAllowedNow(l), 0)
+    const estimate = estimateTaxOnReturns([{ account, legs: [{ realisedShortTerm: allowed('short'), realisedLongTerm: allowed('long'), taxImpact: 0 }] }], MOCK_TODAY_ISO)[0]!
+    return 0 - estimate.net
   })
 
-  it('estimatedImpact is the derived tax benefit, not the raw harvestable loss now rendered on-screen', () => {
-    // Review round 1, Critical · nba-002's `estimatedImpact` was left at 224_000 (the stale loss
-    // figure, not even the corrected loss) while the description was fixed around it — three
-    // lines apart, on the NBA this task rewrote, in the task whose purpose is removing exactly
-    // this. NBACard now renders `estimatedImpact` on screen, so this was a live regression, not a
-    // dormant one. Tie the field to the same derived total the description itself uses, computed
-    // here from the fixtures rather than transcribed, so a hardcoded stand-in (e.g. 999_000)
-    // cannot slip back in.
-    expect(nba.estimatedImpact).toBe(Math.round(benefit))
+  it("each client's saving this year is what the harvest takes off their own return", () => {
+    expect(savingThisYear).toEqual([0, 1_490, 0])
+  })
+
+  it('estimatedImpact is the sum of those return-level savings, not a lot-rate benefit or the raw loss', () => {
+    // Review round 1, Critical · this was once 224_000, the raw loss; then 61,430, each lot at its
+    // own rate. Both price a loss against gains these clients have not realised.
+    expect(nba.estimatedImpact).toBe(savingThisYear.reduce((s, x) => s + x, 0))
     expect(nba.estimatedImpact).not.toBe(Math.abs(total))
     expect(nba.estimatedImpact).not.toBe(224_000)
+  })
+
+  it('states no pooled lot-rate benefit, and says the total loss is not the benefit', () => {
+    expect(nba.description).not.toContain('61,4')
+    expect(nba.description).not.toContain("each lot's own rate")
+    expect(nba.description).toContain('not the benefit')
   })
 })
 

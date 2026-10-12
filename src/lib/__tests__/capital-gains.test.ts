@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { netCapitalGainsTax, netTaxForLegs, additionalCapitalGainsTax, taxEstimateDirection } from '@/lib/capital-gains'
+import { netCapitalGainsTax, netTaxForLegs, additionalCapitalGainsTax, taxEstimateDirection, capitalLossUse } from '@/lib/capital-gains'
 
 const rate = (p: 'short' | 'long') => (p === 'short' ? 0.37 : 0.238)
 
@@ -128,5 +128,22 @@ describe('taxEstimateDirection', () => {
     expect(taxEstimateDirection(10_422)).toEqual({ direction: 'added to', amount: 10_422 })
     expect(taxEstimateDirection(-1_755)).toEqual({ direction: 'saved on', amount: 1_755 })
     expect(taxEstimateDirection(0)).toEqual({ direction: 'added to', amount: 0 })
+  })
+})
+
+describe('capitalLossUse (§1211(b) ordinary-income offset, §1212(b) carryforward)', () => {
+  it('a loss beyond the year\'s gains offsets up to the limit of ordinary income and carries the rest forward', () => {
+    // +6,260 − 52,400 = −46,140: 3,000 offsets ordinary income, 43,140 carries forward (6,260 + 3,000 + 43,140 = 52,400).
+    expect(capitalLossUse(6_260, -52_400, 3_000)).toEqual({ ordinaryIncomeOffset: 3_000, carriedForward: 43_140 })
+  })
+  it('once the year\'s earlier losses have taken the limit, an added loss only carries forward', () => {
+    expect(capitalLossUse(-32_750, -45_850, 3_000)).toEqual({ ordinaryIncomeOffset: 0, carriedForward: 45_850 })
+  })
+  it('takes only what is left of the limit', () => {
+    expect(capitalLossUse(-1_000, -5_000, 3_000)).toEqual({ ordinaryIncomeOffset: 2_000, carriedForward: 3_000 })
+    expect(capitalLossUse(-1_000, -5_000, 1_500)).toEqual({ ordinaryIncomeOffset: 500, carriedForward: 4_500 })
+  })
+  it('a loss the year\'s gains absorb neither offsets ordinary income nor carries forward', () => {
+    expect(capitalLossUse(10_000, -4_000, 3_000)).toEqual({ ordinaryIncomeOffset: 0, carriedForward: 0 })
   })
 })

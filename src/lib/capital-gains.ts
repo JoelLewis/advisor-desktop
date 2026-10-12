@@ -114,6 +114,27 @@ export function additionalCapitalGainsTax(
 
 /** §1211(b): net capital loss offsets up to this much ordinary income a year ($1,500 married filing separately). */
 export const ORDINARY_INCOME_OFFSET_LIMIT = 3_000 as const
+/** §1211(b)(1): the limit for a married individual filing a separate return. */
+export const ORDINARY_INCOME_OFFSET_LIMIT_SEPARATE = 1_500 as const
+
+/**
+ * What becomes of the net capital loss `added` puts on a return that had already netted
+ * `priorNet` this year (both signed, both characters together), beyond the capital gains it
+ * offsets (which `additionalCapitalGainsTax` prices): the part that newly offsets ordinary income,
+ * up to `limit` for the whole return a year (§1211(b)), and the part that carries forward to later
+ * years (§1212(b)). A loss the year's earlier losses have already taken the limit for only carries
+ * forward.
+ */
+export function capitalLossUse(priorNet: number, added: number, limit: number): { ordinaryIncomeOffset: number; carriedForward: number } {
+  const netLoss = (net: number) => Math.max(0, -net)
+  const offsetsOrdinary = (net: number) => Math.min(limit, netLoss(net))
+  const carried = (net: number) => netLoss(net) - offsetsOrdinary(net)
+  const after = priorNet + added
+  return {
+    ordinaryIncomeOffset: offsetsOrdinary(after) - offsetsOrdinary(priorNet),
+    carriedForward: carried(after) - carried(priorNet),
+  }
+}
 
 /** What every return-level tax estimate leaves out, stated wherever one is shown. */
 export const CAPITAL_LOSS_SCOPE_NOTE =

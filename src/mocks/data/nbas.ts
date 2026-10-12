@@ -4,9 +4,12 @@ import { clients } from './clients'
 import { getPositionsForAccount } from './positions'
 import { realisedSales } from './realised-sales'
 import { computeDriftForAccount, modelDisplayName } from '../handlers/pms'
+import { householdFixtures } from './households'
 import { generateTaxLotsWithSaleRisk } from '../handlers/custodian'
-import { formatRatePercent, harvestBenefitNow, lossAllowedNow, LONG_TERM_RATE, SHORT_TERM_RATE } from '@/features/portfolios/tax/shared'
-import { ORDINARY_INCOME_OFFSET_LIMIT } from '@/lib/capital-gains'
+import { estimateTaxOnReturns, taxReturnFor } from '../handlers/tax-return'
+import { formatRatePercent, lossAllowedNow } from '@/features/portfolios/tax/shared'
+import { capitalLossUse, ORDINARY_INCOME_OFFSET_LIMIT, ORDINARY_INCOME_OFFSET_LIMIT_SEPARATE, taxEstimateDirection, type TaxedLeg } from '@/lib/capital-gains'
+import type { Account } from '@/types/account'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { formatCalendarDate } from '@/lib/utils'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
@@ -40,50 +43,111 @@ export function driftBatchFacts() {
 }
 
 /**
- * §0.7 · the INTC harvest across the book: every taxable account still holding INTC below cost,
- * the loss a sale today realises (`lossAllowedNow`, so any share §1091 would wash is left out),
- * the tax benefit of that loss at each lot's own holding-period rate (`harvestBenefitNow`), and the
- * partial harvests already recorded in the realised-sales ledger.
+ * §0.7 · the INTC harvest across the book, return by return. For every taxable account still
+ * holding INTC below cost: the loss a sale today realises (`lossAllowedNow`, so any share §1091
+ * would wash is left out), the partial harvests already in the realised-sales ledger, and what
+ * harvesting the rest does on that client's own return this year. That is the capital-gains tax
+ * it saves against the year's realised results so far (`estimateTaxOnReturns`), the ordinary
+ * income it newly offsets under §1211(b), and the loss that carries forward under §1212(b)
+ * (`capitalLossUse`). §1222 nets within one return and never across two, so nothing here is pooled
+ * across clients except the face value of the losses.
  */
 export function intcHarvestFacts() {
-  const holders = accounts
+  const candidates = accounts
     .filter((a) => isTaxableAccount(a.taxTreatment))
     .flatMap((account) => {
       const position = getPositionsForAccount(account.id, account.totalValue).find((p) => p.symbol === 'INTC' && p.gainLoss < 0)
       if (!position) return []
       const lots = generateTaxLotsWithSaleRisk(account.id, account.totalValue).filter((l) => l.positionId === position.id)
-      return [{
-        account,
-        position,
-        loss: lots.reduce((s, l) => s + lossAllowedNow(l), 0),
-        benefit: lots.reduce((s, l) => s + harvestBenefitNow(l), 0),
-        sales: realisedSales.filter((r) => r.accountId === account.id && r.symbol === 'INTC'),
-      }]
+      const allowed = (period: 'short' | 'long') => lots.filter((l) => l.holdingPeriod === period).reduce((s, l) => s + lossAllowedNow(l), 0)
+      const leg: TaxedLeg = { realisedShortTerm: allowed('short'), realisedLongTerm: allowed('long'), taxImpact: 0 }
+      return [{ account, position, leg }]
     })
+  const estimates = estimateTaxOnReturns(candidates.map(({ account, leg }) => ({ account, legs: [leg] })), MOCK_TODAY_ISO)
+  // What earlier holders in this list have already added to a shared return, as the estimates net them.
+  const addedSoFar = new Map<string, number>()
+  const holders = candidates.map(({ account, position, leg }, i) => {
+    const estimate = estimates[i]
+    const returnId = taxReturnFor(account)
+    if (estimate === undefined || returnId === null || estimate.ytdRealisedOnReturn === null) throw new Error(`INTC holder ${account.id} has no return-level estimate`)
+    const loss = leg.realisedShortTerm + leg.realisedLongTerm
+    const ytdNet = estimate.ytdRealisedOnReturn.shortTerm + estimate.ytdRealisedOnReturn.longTerm
+    const priorNet = ytdNet + (addedSoFar.get(returnId) ?? 0)
+    addedSoFar.set(returnId, (addedSoFar.get(returnId) ?? 0) + loss)
+    const filing = ordinaryIncomeOffsetFiling(account)
+    return {
+      account,
+      position,
+      loss,
+      sales: realisedSales.filter((r) => r.accountId === account.id && r.symbol === 'INTC'),
+      jointReturn: returnId.startsWith('joint:'),
+      ytdNet,
+      priorNet,
+      savingThisYear: taxSaved(account, estimate.net),
+      ...filing,
+      ...capitalLossUse(priorNet, loss, filing.ordinaryIncomeLimit),
+    }
+  })
   return {
     holders,
     totalLoss: holders.reduce((s, h) => s + h.loss, 0),
-    totalBenefit: holders.reduce((s, h) => s + h.benefit, 0),
+    totalCost: holders.reduce((s, h) => s + h.position.costBasis, 0),
+    totalSavingThisYear: holders.reduce((s, h) => s + h.savingThisYear, 0),
   }
 }
 
+/** The tax a harvest saves on its return; a harvest realises only losses, so it can add none. */
+function taxSaved(account: Account, estimate: number): number {
+  const { direction, amount } = taxEstimateDirection(estimate)
+  if (direction === 'added to' && amount > 0) throw new Error(`an INTC harvest in ${account.id} adds ${amount} of tax`)
+  return direction === 'saved on' ? amount : 0
+}
+
 /**
- * A loss realised this year offsets this year's capital gains, then up to $3,000 of ordinary
- * income (§1211(b)); the rest carries forward (§1212(b)). It cannot reach last year's gains.
+ * §1211(b)'s limit on `account`'s return: $1,500 for a spouse the household records as filing
+ * separately, $3,000 otherwise. A married client whose household records no filing status is
+ * stated at $3,000 with the separate-return limit beside it.
  */
+function ordinaryIncomeOffsetFiling(account: Account): { ordinaryIncomeLimit: number; separateLimitUnconfirmed: boolean } {
+  const household = householdFixtures.find((h) => h.id === account.householdId)
+  const owner = household?.members.find((m) => m.clientId === account.clientId)
+  const married = (owner?.relationship === 'primary' || owner?.relationship === 'spouse')
+    && household?.members.some((m) => m.relationship === 'spouse') === true
+  if (married && household?.filingStatus === 'married_filing_separately') {
+    return { ordinaryIncomeLimit: ORDINARY_INCOME_OFFSET_LIMIT_SEPARATE, separateLimitUnconfirmed: false }
+  }
+  return { ordinaryIncomeLimit: ORDINARY_INCOME_OFFSET_LIMIT, separateLimitUnconfirmed: married && household?.filingStatus === undefined }
+}
+
+const intcHarvest = intcHarvestFacts()
+
+type IntcHolder = (typeof intcHarvest.holders)[number]
+
+function intcReturnSentence(h: IntcHolder): string {
+  const name = clientName(h.account.clientId)
+  const ytd = h.ytdNet === 0 ? 'no net capital gain or loss' : `a ${dollars(h.ytdNet)} net capital ${h.ytdNet < 0 ? 'loss' : 'gain'}`
+  const saving = h.savingThisYear > 0 ? `saves about ${dollars(h.savingThisYear)} of capital-gains tax` : 'saves no capital-gains tax'
+  const separately = h.separateLimitUnconfirmed ? ` (${dollars(ORDINARY_INCOME_OFFSET_LIMIT_SEPARATE)} if filing separately)` : ''
+  const ordinary = h.ordinaryIncomeOffset > 0
+    ? ` and offsets ${dollars(h.ordinaryIncomeOffset)} of ordinary income${separately}`
+    : h.priorNet <= -h.ordinaryIncomeLimit
+      ? `, and that loss already takes the ${dollars(h.ordinaryIncomeLimit)} ordinary-income offset${separately}`
+      : ''
+  const carried = h.carriedForward > 0 ? `; ${dollars(h.carriedForward)} carries forward to later years` : ''
+  return `On ${h.jointReturn ? 'a joint' : 'a'} return with ${ytd} so far this year, ${name} ${saving} this year by harvesting${ordinary}${carried}.`
+}
+
 function intcHarvestDescription(): string {
-  const { holders, totalLoss, totalBenefit } = intcHarvestFacts()
-  const taxYear = MOCK_TODAY_ISO.slice(0, 4)
-  const perAccount = holders.map(({ account, position, sales }) => {
-    const harvested = sales.map((s) => `harvested ${s.quantity.toLocaleString('en-US')} shares on ${formatCalendarDate(s.saleDate)} and `).join('')
-    return `${clientName(account.clientId)} ${harvested}holds ${position.quantity.toLocaleString('en-US')} at a ${dollars(position.gainLoss)} loss`
+  const { holders, totalLoss } = intcHarvest
+  const perAccount = holders.map((h) => {
+    const harvested = h.sales.map((s) => `harvested ${s.quantity.toLocaleString('en-US')} shares on ${formatCalendarDate(s.saleDate)} and `).join('')
+    return `${clientName(h.account.clientId)} ${harvested}holds ${h.position.quantity.toLocaleString('en-US')} at a ${dollars(h.loss)} loss. ${intcReturnSentence(h)}`
   })
-  return `Intel (INTC) is still below cost in ${holders.length} client accounts: ${perAccount.join('; ')}. ` +
-    `That is ${dollars(totalLoss)} of harvestable losses. Realised in ${taxYear}, they offset ${taxYear} capital gains, then up to ` +
-    `${dollars(ORDINARY_INCOME_OFFSET_LIMIT)} of ordinary income a year; any excess carries forward. ` +
-    `Against gains taxed at each lot's own rate (${formatRatePercent(SHORT_TERM_RATE)} short-term, ` +
-    `${formatRatePercent(LONG_TERM_RATE)} long-term), the estimated tax benefit is about ${dollars(Math.round(totalBenefit / 100) * 100)}; ` +
-    `the ${dollars(totalLoss)} is the harvestable loss, not the benefit.`
+  return `Intel (INTC) is still below cost in ${holders.length} client accounts, ${dollars(totalLoss)} of harvestable losses in all. ` +
+    `${perAccount.join(' ')} ` +
+    `Figures are capital-gains tax at top federal rates against each return's sales realised so far this year; ` +
+    `gains realised later in ${MOCK_TODAY_ISO.slice(0, 4)} would use loss shown as carried forward. State tax is not modelled. ` +
+    `The ${dollars(totalLoss)} is the harvestable loss, not the benefit.`
 }
 
 export const nbas: NBA[] = [
@@ -125,16 +189,17 @@ export const nbas: NBA[] = [
     description: intcHarvestDescription(),
     category: 'tax_management', priority: 'high',
     scoring: { urgency: 85, impact: 75, efficiency: 70, relationship: 40, confidence: 92, composite: 76 },
-    clients: [
-      { id: 'cli-001', name: 'Robert Johnson' }, { id: 'cli-004', name: 'David Williams' },
-      { id: 'cli-006', name: 'Michael Martinez' },
-    ],
+    clients: intcHarvest.holders.map(({ account }): NBAClient => ({ id: account.clientId, name: clientName(account.clientId) })),
     groupId: 'grp-002',
-    trigger: { source: 'pms', condition: 'unrealized_loss_threshold', value: '-18.7%', detectedAt: '2026-02-24T09:30:00Z' },
+    // The INTC still held, all accounts together: 191,500 / 1,045,000 = −18.3%. It was −18.7%, which
+    // is acc-002's own figure; acc-015's is −17.9%.
+    trigger: { source: 'pms', condition: 'unrealized_loss_threshold', value: percent(intcHarvest.totalLoss / intcHarvest.totalCost), detectedAt: '2026-02-24T09:30:00Z' },
     suggestedAction: 'Sell INTC, replace with semiconductor ETF (SMH) to maintain sector exposure',
-    // The benefit, not the harvestable loss: `harvestBenefitNow` summed over every remaining INTC
-    // lot, each at its own holding-period rate on the part of its loss §1091 leaves allowed.
-    estimatedImpact: Math.round(intcHarvestFacts().totalBenefit), createdAt: '2026-02-24T09:45:00Z', dismissed: false,
+    // §0.7 · the tax harvesting saves this year, return by return (`estimateTaxOnReturns`): not
+    // the harvestable loss, and not each lot's loss at its own rate, which assumed gains of that
+    // character these clients have not realised. Two of the three returns are already at a net
+    // loss for 2026, so only acc-011's $6,260 gain is there to offset.
+    estimatedImpact: intcHarvest.totalSavingThisYear, createdAt: '2026-02-24T09:45:00Z', dismissed: false,
     actionRoute: { path: '/portfolios/accounts/acc-002/tax' },
   },
   {
