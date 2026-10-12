@@ -15,7 +15,7 @@ import { DraftBar } from './DraftBar'
 import { LegDetail } from './LegDetail'
 import { WorkbenchLegs } from './WorkbenchLegs'
 import { WorkbenchSummary } from './WorkbenchSummary'
-import { isExcluded, lotsOf, quantityOf } from './edit-draft'
+import { isExcluded, lotsOf, quantityOf, type TypedQuantity } from './edit-draft'
 import { useDraftVersion } from './use-draft-version'
 import { useSaveShortcut } from './use-save-shortcut'
 
@@ -29,13 +29,16 @@ export function Workbench({ detail, directory }: { detail: ProposalDetail; direc
   // The open leg's typed-but-uncommitted quantity: committed before any save, so what is on screen is what saves.
   const pendingEdit = useRef<() => void>(undefined)
   const commitTyping = () => pendingEdit.current?.()
-  const [typedText, setTypedText] = useState(false)
+  const [typedText, setTypedText] = useState<TypedQuantity>('none')
   const { noteTyping } = draft
-  const onTypedText = useCallback((differs: boolean) => {
-    setTypedText(differs)
-    if (differs) noteTyping()
+  const onTypedText = useCallback((typed: TypedQuantity) => {
+    setTypedText(typed)
+    if (typed === 'differs') noteTyping()
   }, [noteTyping])
+  // Typed text that is not a number saves nothing; typed text that is commits first, even on a clean draft.
+  const saveEnabled = typedText === 'unparseable' ? false : draft.canSave || (typedText === 'differs' && !draft.saving)
   const saveOnScreen = () => {
+    if (!saveEnabled) return
     commitTyping()
     draft.save()
   }
@@ -63,7 +66,7 @@ export function Workbench({ detail, directory }: { detail: ProposalDetail; direc
         <ApprovalNote state={detail.approval} />
         <p className="text-body text-ink-2">The workbench never approves. Approval is a recorded act in the thread.</p>
       </header>
-      {canEdit ? <DraftBar draft={draft} latestVersion={latest.n} typedText={typedText} onBeforeSave={commitTyping} /> : null}
+      {canEdit ? <DraftBar draft={draft} latestVersion={latest.n} saveEnabled={saveEnabled} onBeforeSave={commitTyping} onSave={saveOnScreen} /> : null}
       {thread.data !== undefined && !canEdit ? <p className="text-body text-ink-3">You can read this proposal but not change it.</p> : null}
       <Pane title="Legs" meta={draft.dirty && !notPreviewed ? 'draft' : `v${latest.n}`}>
         <WorkbenchLegs view={view} caption={caption}

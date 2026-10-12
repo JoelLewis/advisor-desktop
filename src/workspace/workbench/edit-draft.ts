@@ -8,6 +8,16 @@ export type DraftAction =
   | { type: 'set_lots'; symbol: string; lotIds: string[] }
   | { type: 'reset'; base: number; edits: LegEdit[] }
 
+/** What the quantity field holds against the draft: nothing new, a quantity to commit, or text that is not a number. */
+export type TypedQuantity = 'none' | 'differs' | 'unparseable'
+
+/** Blank means the agent's quantity; anything else must read as a number. Whether it is a valid quantity is the engine's call. */
+export function parseQuantityText(text: string): { ok: true; quantity: number | undefined } | { ok: false } {
+  if (text.trim() === '') return { ok: true, quantity: undefined }
+  const quantity = Number(text.replace(/,/g, ''))
+  return Number.isFinite(quantity) ? { ok: true, quantity } : { ok: false }
+}
+
 const KIND_ORDER: Readonly<Record<LegEdit['kind'], number>> = { exclude: 0, quantity: 1, lots: 2 }
 
 export const normaliseDraftEdits = (edits: readonly LegEdit[]): LegEdit[] =>

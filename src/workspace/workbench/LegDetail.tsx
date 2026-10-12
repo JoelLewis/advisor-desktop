@@ -8,6 +8,7 @@ import { usePositions } from '@/hooks/use-portfolio'
 import { ApiClientError } from '@/services/api-client'
 import type { TaxLot } from '@/types/portfolio'
 import type { DraftPreview, LotTake } from '@/types/workspace-proposal'
+import { parseQuantityText, type TypedQuantity } from './edit-draft'
 import { SAVES_DRAFT_ATTRIBUTE } from './use-save-shortcut'
 
 type LegDetailProps = {
@@ -27,8 +28,8 @@ type LegDetailProps = {
   takesUnknown?: boolean
   /** Holds this leg's commit of typed text, so a save commits what is on screen first. */
   pendingEdit?: MutableRefObject<(() => void) | undefined>
-  /** Told whether the field holds typed text that differs from the draft, and told false when the leg closes. */
-  onTypedText?: (differs: boolean) => void
+  /** Told what the field holds against the draft, and told 'none' when the leg closes. */
+  onTypedText?: (typed: TypedQuantity) => void
 }
 
 const QUANTITY_REFUSALS = new Set(['BAD_QUANTITY', 'OVER_HELD'])
@@ -60,17 +61,20 @@ export function LegDetail({ accountId, view, symbol, excluded, quantity, lotIds,
   // Blank returns to the agent's quantity; an unchanged field (a blur with no edit) changes nothing.
   const commit = () => {
     if (!onQuantity || !trade) return
-    const typed = text.trim() === '' ? undefined : Number(text.replace(/,/g, ''))
-    if (typed !== undefined && !Number.isFinite(typed)) return
+    const parsed = parseQuantityText(text)
+    if (!parsed.ok) return
+    const typed = parsed.quantity
     if (typed === shownQuantity && quantity !== undefined) return
     if (typed === trade.quantity && quantity === undefined) return
     onQuantity(typed)
   }
-  const textDiffers = text !== (shownQuantity === undefined ? '' : String(shownQuantity))
+  const parsedText = parseQuantityText(text)
+  const typedState: TypedQuantity = !parsedText.ok ? 'unparseable'
+    : text !== (shownQuantity === undefined ? '' : String(shownQuantity)) ? 'differs' : 'none'
   useEffect(() => {
-    onTypedText?.(textDiffers)
-  }, [onTypedText, textDiffers])
-  useEffect(() => () => onTypedText?.(false), [onTypedText])
+    onTypedText?.(typedState)
+  }, [onTypedText, typedState])
+  useEffect(() => () => onTypedText?.('none'), [onTypedText])
   useEffect(() => {
     if (!pendingEdit) return
     pendingEdit.current = commit
@@ -100,7 +104,7 @@ export function LegDetail({ accountId, view, symbol, excluded, quantity, lotIds,
       <div className="flex flex-wrap items-end gap-6">
         <div {...{ [SAVES_DRAFT_ATTRIBUTE]: '' }}>
           <NumberInput label="Quantity" unit="sh" value={text} onChange={setText} onCommit={commit} disabled={!editable || excluded}
-            error={refusedAt === 'quantity' ? refusal?.message : undefined} />
+            error={!parsedText.ok ? 'Enter a number of shares' : refusedAt === 'quantity' ? refusal?.message : undefined} />
         </div>
         {onToggleExclude ? <Button rank="secondary" onClick={onToggleExclude}>{excluded ? 'Include this leg' : 'Exclude this leg'}</Button> : null}
       </div>
