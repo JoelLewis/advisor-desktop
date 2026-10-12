@@ -64,7 +64,12 @@ function ProposalApproval({ detail, directory, onRecorded }: { detail: ProposalD
     })
   }
   const openWithdraw = (version: number) => { withdraw.reset(); setSlipTakesFocus(false); setConfirmingWithdrawOf(version) }
-  const closeWithdraw = () => { withdraw.reset(); setConfirmingWithdrawOf(undefined) }
+  // An act in flight is not cancellable: closing would reset the mutation and drop the callbacks that release the busy ref.
+  const closeWithdraw = () => {
+    if (withdraw.isPending) return
+    withdraw.reset()
+    setConfirmingWithdrawOf(undefined)
+  }
   const confirmWithdraw = () => record(
     (callbacks) => withdraw.mutate(detail.id, callbacks),
     () => { setSlipTakesFocus(true); setConfirmingWithdrawOf(undefined) },
@@ -98,7 +103,7 @@ function ProposalApproval({ detail, directory, onRecorded }: { detail: ProposalD
         <div className="flex flex-col gap-4">
           {withdraw.isError ? <p role="alert" className="text-body">{withdraw.error.message}</p> : null}
           <div className="flex justify-end gap-3">
-            <Button rank="secondary" onClick={closeWithdraw}>Cancel</Button>
+            <Button rank="secondary" disabled={withdraw.isPending} onClick={closeWithdraw}>Cancel</Button>
             <Button disabled={withdraw.isPending} onClick={confirmWithdraw}>Confirm</Button>
           </div>
         </div>

@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http } from 'msw'
+import { server } from '@/test/server'
 import { routes } from '@/app/routes'
 import { createTestQueryClient, renderRoutes } from '@/test/render'
 import { approveProposal, createProposal, reviseProposal, saveProposalVersion } from '@/services/workspace'
@@ -89,6 +91,35 @@ describe('approving a proposal', () => {
     expect(store().acts).toHaveLength(2)
     await waitFor(() => expect(within(panel).queryByRole('list', { name: 'Staged orders' })).toBeNull())
     expect(within(panel).getByText('v1 is not approved')).toBeInTheDocument()
+  })
+
+  it('a withdrawal in flight cannot be dismissed; once it lands the slip takes focus and approving still works', async () => {
+    const created = await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
+    await approveProposal(ADRIAN, created.id, 1, created.versions[0]!.fingerprint)
+    let release = () => {}
+    const gate = new Promise<void>((resolve) => { release = resolve })
+    // Holds every act until released, then falls through to the real handler.
+    server.use(http.post('/api/workspace/acts', async () => { await gate }))
+    const panel = await openApproval()
+    const user = userEvent.setup()
+    await user.click(within(panel).getByRole('button', { name: 'Withdraw the approval of v1' }))
+    const confirm = await screen.findByRole('dialog', { name: 'Withdraw the approval of v1?' })
+    await user.click(within(confirm).getByRole('button', { name: 'Confirm' }))
+    await waitFor(() => expect(within(confirm).getByRole('button', { name: 'Confirm' })).toBeDisabled())
+    await user.keyboard('{Escape}')
+    await user.click(within(confirm).getByRole('button', { name: 'Close' }))
+    expect(screen.getByRole('dialog', { name: 'Withdraw the approval of v1?' })).toBeInTheDocument()
+    expect(within(confirm).getByRole('button', { name: 'Cancel' })).toBeDisabled()
+    release()
+    // The page behind a modal dialog is hidden from the accessibility tree, so the dialog closes first.
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await inContext().findByRole('article', { name: 'Withdrew the approval of v1 of the Johnson rebalance' })
+    await waitFor(() => expect(document.activeElement).toBe(document.getElementById('act-REC-0002')))
+    await user.click(within(panel).getByRole('checkbox', { name: 'I reviewed every leg of v1 and its pre-trade reading.' }))
+    await user.click(within(panel).getByRole('button', { name: 'Approve v1' }))
+    await waitFor(() => expect(document.activeElement).toBe(document.getElementById('act-REC-0003')))
+    expect(store().acts).toHaveLength(3)
+    expect(within(panel).getByText('v1 is approved')).toBeInTheDocument()
   })
 
   it('cancelling the withdrawal records nothing and keeps the approval', async () => {
