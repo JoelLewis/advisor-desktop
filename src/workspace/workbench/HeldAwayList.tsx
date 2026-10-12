@@ -5,9 +5,8 @@ import { useAccount } from '@/hooks/use-accounts'
 import { useHeldAway } from '@/hooks/use-held-away'
 import { useHousehold } from '@/hooks/use-households'
 import type { HeldAwayAsset } from '@/types/held-away'
+import { canHoldSecurities } from '@/lib/held-away'
 
-/** A holding that can hold or buy a listed security: not property, not private company stock (the harvest scanner's test). */
-const canHoldSecurities = (h: HeldAwayAsset) => !h.isPrivateCompanyStock && h.assetClasses.some((c) => c.assetClass !== 'real_estate')
 
 /** The household's accounts held elsewhere that could hold a substantially identical security, which no check here can see. */
 export function HeldAwayList({ accountId }: { accountId: string }) {

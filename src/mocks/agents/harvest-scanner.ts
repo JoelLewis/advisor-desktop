@@ -13,6 +13,7 @@ import { isHarvestable, lossAllowedNow, lossDeferred, lossDisallowed } from '@/l
 import { isSubjectToWashSale } from '@/lib/security-master'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { convertToBase } from '@/lib/currency'
+import { canHoldSecurities } from '@/lib/held-away'
 import { claimNameOf } from './claim-name'
 
 export type PositionLosses = { allowed: number; deferred: number; disallowed: number }
@@ -33,11 +34,6 @@ export function taxpayerHeldAway(account: Account): HeldAwayAsset[] {
   if (washSaleTaxpayer(account).startsWith('account:')) return []
   const people = new Set(sameWashSaleTaxpayer(account).map((a) => a.clientId))
   return heldAwayAssets.filter((h) => people.has(h.clientId))
-}
-
-/** Whether a held-away holding can hold or acquire a security that could be substantially identical to a listed one: not property, not private company stock. */
-export function canHoldSecurities(holding: HeldAwayAsset): boolean {
-  return !holding.isPrivateCompanyStock && holding.assetClasses.some((c) => c.assetClass !== 'real_estate')
 }
 
 /** "401(k) — Former employer" → "401(k)". */

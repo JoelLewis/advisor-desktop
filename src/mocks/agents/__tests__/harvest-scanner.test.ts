@@ -7,7 +7,8 @@ import { lossAllowedNow } from '@/lib/tax-rules'
 import { convertToBase } from '@/lib/currency'
 import { MOCK_NOW_ISO } from '@/lib/clock'
 import { heldAwayAssets } from '@/mocks/data/held-away'
-import { canHoldSecurities, harvestClaim, runHarvestScanner, taxpayerHeldAway } from '../harvest-scanner'
+import { harvestClaim, runHarvestScanner, taxpayerHeldAway } from '../harvest-scanner'
+import { canHoldSecurities } from '@/lib/held-away'
 
 const ctx = (id: string) => ({ asOf: MOCK_NOW_ISO, subject: { type: 'account' as const, id } })
 const figure = (findings: ReturnType<typeof runHarvestScanner>, label: string) => findings.flatMap((f) => f.figures).find((x) => x.label === label)

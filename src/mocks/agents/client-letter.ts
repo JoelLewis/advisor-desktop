@@ -10,7 +10,9 @@ import { clients } from '@/mocks/data/clients'
 import { personById } from '@/mocks/data/people'
 import { computeDriftForAccount, modelDisplayName } from '@/mocks/handlers/pms'
 import { sameWashSaleTaxpayer, taxReturnFor, washSaleTaxpayer } from '@/mocks/handlers/tax-return'
-import { canHoldSecurities, taxpayerHeldAway } from './harvest-scanner'
+import { taxpayerHeldAway } from './harvest-scanner'
+import { canHoldSecurities } from '@/lib/held-away'
+import { firstNameOf, joinWords } from '@/lib/words'
 import { RATE_DISCLOSURE } from '@/lib/tax-rules'
 import { capitalLossUse, ORDINARY_INCOME_OFFSET_LIMIT, ORDINARY_INCOME_OFFSET_LIMIT_SEPARATE, recognisedResult } from '@/lib/capital-gains'
 import { isSubjectToWashSale } from '@/lib/security-master'
@@ -26,8 +28,6 @@ const CLIENT_WORDS: Readonly<Record<AssetClass, string>> = {
   digital_assets: 'digital-asset funds', private_equity: 'private equity',
 }
 
-const joinWords = (words: readonly string[]): string =>
-  words.length <= 1 ? words.join('') : `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`
 const capitalise = (text: string) => `${text.charAt(0).toUpperCase()}${text.slice(1)}`
 const dayAfter = (iso: string) => new Date(Date.parse(`${iso}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10)
 const security = (t: Pick<ProposedTrade, 'name' | 'symbol'>) => `${t.name} (${t.symbol})`
@@ -38,7 +38,10 @@ const recognised = (t: ProposedTrade) => {
 }
 /** Client copy states dollars to the nearest hundred; `figures` keep the exact values. */
 const aboutMoney = (v: number) => clientMoney(Math.round(v / 100) * 100)
-const firstNameOf = (clientId: string) => clients.find((c) => c.id === clientId)?.firstName
+const clientFirstName = (clientId: string) => {
+  const named = clients.find((c) => c.id === clientId)
+  return named ? firstNameOf(named.fullName) : undefined
+}
 
 /**
  * The client's message about an approved version, in plain language. Every figure is the version's
@@ -78,7 +81,7 @@ export function writeClientLetter(proposal: Proposal, version: ProposalVersion, 
   const isTrust = account.type === 'trust_irrevocable'
   const spouses = ownTaxpayer ? [] : [...new Set(sameWashSaleTaxpayer(account).map((a) => a.clientId))]
     .filter((id) => id !== client.id)
-    .flatMap((id) => firstNameOf(id) ?? [])
+    .flatMap((id) => clientFirstName(id) ?? [])
   const where = isTrust ? "in any of the trust's accounts"
     : ownTaxpayer ? 'in this account'
       : spouses.length > 0 ? `in any of your accounts or ${joinWords(spouses.map((n) => `${n}'s`))}, including IRAs` : 'in any of your accounts, including IRAs'
@@ -102,7 +105,7 @@ export function writeClientLetter(proposal: Proposal, version: ProposalVersion, 
   }
   if (harvested.length > 0) {
     const away = taxpayerHeldAway(account).filter(canHoldSecurities).map((h) => {
-      const owner = h.clientId === client.id ? 'your' : `${firstNameOf(h.clientId) ?? 'your spouse'}'s`
+      const owner = h.clientId === client.id ? 'your' : `${clientFirstName(h.clientId) ?? 'your spouse'}'s`
       return `${owner} ${h.institutionName} ${h.accountType.split(' — ')[0] ?? h.accountType}`
     })
     const names = joinWords(harvested.map((t) => t.name))

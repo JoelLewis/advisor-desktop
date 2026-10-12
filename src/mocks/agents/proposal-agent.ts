@@ -4,6 +4,7 @@ import { clients } from '@/mocks/data/clients'
 import { computeDriftForAccount, modelDisplayName } from '@/mocks/handlers/pms'
 import { buildVersion, normaliseConstraints } from '@/mocks/workspace/proposal-engine'
 import { ASSET_CLASS_PROSE_LABELS } from '@/lib/labels'
+import { joinWords } from '@/lib/words'
 
 const NO_SELF_WASH = "buys nothing that would wash one of the taxpayer's losses"
 
@@ -16,9 +17,6 @@ const prose = (assetClass: string): string => {
   if (!name) throw new Error(`Proposal Agent: no display name for asset class "${assetClass}"`)
   return name
 }
-
-const joinWords = (words: readonly string[]): string =>
-  words.length <= 1 ? words.join('') : `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`
 
 const sameConstraints = (a: readonly ProposalConstraint[], b: readonly ProposalConstraint[]): boolean =>
   JSON.stringify(normaliseConstraints(a).map(constraintKey)) === JSON.stringify(normaliseConstraints(b).map(constraintKey))

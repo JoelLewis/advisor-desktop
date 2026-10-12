@@ -5,7 +5,8 @@ import { TextInput } from '@/kit/text-input/TextInput'
 import { fmtTimestamp } from '@/kit/measure'
 import { useDrafts, useProposals, useReviseDraft, useSendToClient } from '@/hooks/use-workspace'
 import { useViewer } from '@/workspace/viewer/use-viewer'
-import { firstNameOf, personIn } from '@/workspace/people/directory-people'
+import { personIn } from '@/workspace/people/directory-people'
+import { firstNameOf } from '@/lib/words'
 import type { Directory, Draft, Thread } from '@/types/workspace'
 import type { ProposalDetail } from '@/types/workspace-proposal'
 import { ContextSection } from './ContextSection'
@@ -42,7 +43,7 @@ export function DraftsPanel({ thread, directory, onSent }: DraftsPanelProps) {
   if (drafts.isPending) return <p role="status" className="py-5 text-body text-ink-3">Loading drafts…</p>
   if (drafts.isError) return <p role="alert" className="py-5 text-body">{drafts.error.message}</p>
   if (!canDraft && drafts.data.length === 0 && !send.error) return null
-  const clientFirstName = firstNameOf(client)
+  const clientFirstName = firstNameOf(client.name)
   return (
     <ContextSection title={`Drafts for ${clientFirstName}`}>
       {canDraft ? <LetterControl thread={thread} /> : null}
