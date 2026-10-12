@@ -6,7 +6,7 @@ import { renderRoutes } from '@/test/render'
 import { store } from '@/mocks/data/workspace-store'
 import { accounts } from '@/mocks/data/accounts'
 import { getPositionsForAccount } from '@/mocks/data/positions'
-import { createProposal } from '@/services/workspace'
+import { createProposal, saveProposalVersion } from '@/services/workspace'
 
 const contextColumn = () => within(screen.getByRole('complementary', { name: 'Thread context' }))
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
@@ -24,7 +24,7 @@ async function openReviseDialog() {
   const embed = await screen.findByRole('region', { name: 'Proposal · Johnson rebalance' })
   await user.click(within(embed).getByRole('button', { name: 'Revise' }))
   const dialog = await screen.findByRole('dialog', { name: 'Revise the proposal' })
-  return { user, embed, dialog }
+  return { user, ask, embed, dialog }
 }
 
 describe('asking and revising', () => {
@@ -58,17 +58,42 @@ describe('asking and revising', () => {
     held.delete('cash')
     expect(offered[0]).toBe('')
     expect(new Set(offered.slice(1))).toEqual(held)
+    expect(within(untouched).getByRole('option', { name: 'International Equity' })).toBeInTheDocument()
     expect(within(dialog).queryByRole('checkbox', { name: /wash/i })).toBeNull()
     expect(dialog).toHaveTextContent('Always on: no buy that would wash one of the taxpayer\'s losses.')
   })
 
-  it('refuses a negative cap before asking the engine', async () => {
+  it('refuses a negative cap before asking the engine, on Enter, and moves focus to the field', async () => {
     const { user, dialog } = await openReviseDialog()
     await user.click(within(dialog).getByRole('checkbox', { name: 'Cap realised gains' }))
-    await user.type(within(dialog).getByRole('textbox', { name: 'Realised gains cap USD' }), '-5')
+    const cap = within(dialog).getByRole('textbox', { name: 'Realised gains cap USD' })
+    await user.type(cap, '-5{Enter}')
+    expect(cap).toHaveAccessibleDescription('Enter the cap as a dollar amount, zero or more.')
+    expect(cap).toHaveFocus()
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Harvest only: sell only lots at a loss' }))
     await user.click(within(dialog).getByRole('button', { name: 'Ask Proposal Agent to revise' }))
-    expect(within(dialog).getByRole('textbox', { name: 'Realised gains cap USD' })).toHaveAccessibleDescription('Enter the cap as a dollar amount, zero or more.')
+    await waitFor(() => expect(cap).toHaveFocus())
     expect(store().proposals[0]!.versions).toHaveLength(1)
+  })
+
+  it('says workbench edits on the latest version are not carried into the revision', async () => {
+    await createProposal('user-001', 'th-johnson-review', 'acc-002')
+    await saveProposalVersion('user-001', 'prop-0001', [{ kind: 'exclude', symbol: 'SPY' }])
+    renderRoutes(routes, '/t/th-johnson-review')
+    const embed = await screen.findByRole('region', { name: 'Proposal · Johnson rebalance' })
+    await within(embed).findByRole('table', { name: 'Proposal legs · v2' })
+    await userEvent.setup().click(within(embed).getByRole('button', { name: 'Revise' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Revise the proposal' })
+    expect(dialog).toHaveTextContent('Edits made in v2 are not carried into the revision.')
+  })
+
+  it('stops saying v1 was posted once v2 is in the thread', async () => {
+    const { user, ask, dialog } = await openReviseDialog()
+    expect(within(ask).getByRole('status', { hidden: true })).toHaveTextContent('Proposal Agent posted v1 in the thread.')
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Harvest only: sell only lots at a loss' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Ask Proposal Agent to revise' }))
+    await screen.findByRole('article', { name: 'v2 · Proposal Agent' })
+    await waitFor(() => expect(within(ask).queryByRole('status')).toBeNull())
   })
 
   it('says plainly when a revision changes nothing, without an error', async () => {

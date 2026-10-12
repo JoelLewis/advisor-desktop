@@ -10,11 +10,12 @@ describe('palette detector', () => {
     'className="fill-[rgb(0,0,0)]"', 'className="bg-[color:var(--x)]"',
     'className="text-[var(--ws-ink)]"', 'className="bg-[var(--x)]"', 'className="bg-[color-mix(in_oklab,red,blue)]"',
     'className="bg-[light-dark(a,b)]"', 'className="bg-(--ws-ink)"', 'className="bg-(color:--x)"',
+    'className="checked:inset-ring-white"', 'className="inset-ring-[#fff]"', 'className="inset-ring-(--ws-face)"',
     '<rect fill="red" />', '<path stroke="black" />', "style={{ color: 'red' }}", "{ backgroundColor: 'white' }",
   ])('catches %s', (src) => expect(findPaletteViolations(src)).not.toEqual([]))
   it.each([
     'className="bg-ink text-face"', 'className="text-signal-ink border-rule-2"', 'className="text-label"',
-    'className="w-[64px] text-table"', 'className="bg-transparent"',
+    'className="w-[64px] text-table"', 'className="bg-transparent"', 'className="checked:inset-ring-3 checked:inset-ring-face"',
     'className="w-[min(560px,calc(100vw-32px))] h-[34px]"', 'className="grid-cols-[2rem_1fr_auto]"',
     '<rect fill="none" />', '<path stroke="currentColor" />', 'fill={`url(#id)`}', 'className="fill-ink"',
   ])('allows %s', (src) => expect(findPaletteViolations(src)).toEqual([]))

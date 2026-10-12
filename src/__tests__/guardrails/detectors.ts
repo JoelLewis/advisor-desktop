@@ -21,7 +21,7 @@ export function listSourceFiles(root: string): string[] {
 }
 
 const PALETTE = 'red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|slate|gray|zinc|neutral|stone|black|white'
-const COLOUR_PREFIX = 'bg|text|border(?:-[trblxyse])?|ring(?:-offset)?|fill|stroke|outline|decoration|divide|from|via|to|accent|caret|shadow|placeholder'
+const COLOUR_PREFIX = 'bg|text|border(?:-[trblxyse])?|(?:inset-)?ring(?:-offset)?|fill|stroke|outline|decoration|divide|from|via|to|accent|caret|shadow|placeholder'
 const PALETTE_CLASS = new RegExp(`(?<![\\w-])(?:${COLOUR_PREFIX})-(?:${PALETTE})(?:-\\d{2,3})?(?:\\/\\d+)?(?![\\w-])`, 'g')
 const ARBITRARY_COLOUR = /-\[(?:#|rgba?\(|hsla?\(|oklch\(|oklab\(|color:)/g
 const COLOUR_FROM_VARIABLE = new RegExp(

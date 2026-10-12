@@ -118,7 +118,7 @@ export function revisionSummary(
 ): string {
   const hadEdits = (previous?.edits.length ?? 0) > 0
   const onlyDropsEdits = previous !== undefined && hadEdits && sameConstraints(constraints, previous.constraints)
-  const cap = capBinds(constraints, built) === false ? ' The cap does not bind; the trades are unchanged.' : ''
+  const cap = capBinds(constraints, built) === false ? ' The cap changes no trade.' : ''
   const carried = hadEdits ? ' Workbench edits on the previous version are not carried into this one.' : ''
   return `${opening(constraints, onlyDropsEdits)}${cap}${bandResult(built)}${carried}`
 }

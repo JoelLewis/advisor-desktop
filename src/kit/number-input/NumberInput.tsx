@@ -7,7 +7,7 @@ type NumberInputProps = {
   unit?: string
   error?: string
   disabled?: boolean
-  /** Called on Enter and on blur: the caller turns the text into an edit. */
+  /** Called on Enter and on blur: the caller turns the text into an edit. Without it, Enter submits the enclosing form. */
   onCommit?: () => void
 }
 
@@ -23,7 +23,7 @@ export function NumberInput({ label, value, onChange, unit, error, disabled, onC
       <input id={id} type="text" inputMode="decimal" autoComplete="off" value={value} disabled={disabled}
         aria-invalid={error ? true : undefined} aria-describedby={error ? errorId : undefined}
         onChange={(e) => onChange(e.target.value)} onBlur={onCommit}
-        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onCommit?.() } }}
+        onKeyDown={(e) => { if (e.key === 'Enter' && onCommit) { e.preventDefault(); onCommit() } }}
         className="tabular w-full max-w-48 rounded-xs border border-ink bg-transparent px-3 py-1.5 text-copy text-ink aria-invalid:border-2 disabled:cursor-not-allowed disabled:border-rule-2 disabled:text-ink-3" />
       {error ? <p id={errorId} className="text-label normal-case text-ink">{error}</p> : null}
     </div>

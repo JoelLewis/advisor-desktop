@@ -112,14 +112,14 @@ describe('revising under constraints', () => {
     expect(held.detail.versions[1]!.changeSummary).toMatch(/^Revised to leave International Equity untouched\. /)
   })
 
-  it('says when a gain cap does not bind, and not when it does', () => {
+  it('says when a gain cap changes no trade, and not when it does', () => {
     const { id } = create()
     const loose = reviseProposal('user-001', id, [{ kind: 'cap_realised_gains', usd: 100_000_000 }])
     if (!loose.ok) throw new Error(loose.message)
-    expect(loose.detail.versions[1]!.changeSummary).toBe('Revised to cap the gains it realises. The cap does not bind; the trades are unchanged. Every asset class ends inside its band.')
+    expect(loose.detail.versions[1]!.changeSummary).toBe('Revised to cap the gains it realises. The cap changes no trade. Every asset class ends inside its band.')
     const tight = reviseProposal('user-001', id, [{ kind: 'cap_realised_gains', usd: 1_000 }])
     if (!tight.ok) throw new Error(tight.message)
-    expect(tight.detail.versions[2]!.changeSummary).not.toContain('does not bind')
+    expect(tight.detail.versions[2]!.changeSummary).not.toContain('The cap changes no trade.')
   })
 
   it('refuses the same constraints whatever their key order', () => {

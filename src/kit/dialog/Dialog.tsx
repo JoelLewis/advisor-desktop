@@ -33,7 +33,7 @@ export function Dialog({ open, onOpenChange, title, description, children, retur
           }}
         >
           <RadixDialog.Title className="pr-24 text-title">{title}</RadixDialog.Title>
-          {description ? <RadixDialog.Description className="mt-1 text-body text-ink-2">{description}</RadixDialog.Description> : null}
+          {description ? <RadixDialog.Description className="mt-1 pr-24 text-body text-ink-2">{description}</RadixDialog.Description> : null}
           <div className="mt-4">{children}</div>
           {/* Last in the DOM so opening still focuses the dialog's own first control; placed top-right. */}
           <Button rank="secondary" className="absolute right-6 top-6" onClick={() => onOpenChange(false)}>Close</Button>

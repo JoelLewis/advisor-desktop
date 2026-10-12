@@ -14,11 +14,12 @@ describe('the revise form', () => {
     expect(constraintsFromForm({ harvestOnly: false, capOn: true, cap: '0', exclude: '' }))
       .toEqual({ ok: true, constraints: [{ kind: 'cap_realised_gains', usd: 0 }] })
   })
-  it.each(['', 'abc', '-5', '1e999'])('refuses a cap of %j', (cap) => {
-    expect(constraintsFromForm({ harvestOnly: false, capOn: true, cap, exclude: '' }).ok).toBe(false)
+  it.each(['', 'abc', '-5', '1e999'])('refuses a cap of %j, on the cap field', (cap) => {
+    expect(constraintsFromForm({ harvestOnly: false, capOn: true, cap, exclude: '' }))
+      .toEqual({ ok: false, field: 'cap', problem: 'Enter the cap as a dollar amount, zero or more.' })
   })
-  it('refuses an unknown asset class, and cash', () => {
-    expect(constraintsFromForm({ harvestOnly: false, capOn: false, cap: '', exclude: 'gold' }).ok).toBe(false)
-    expect(constraintsFromForm({ harvestOnly: false, capOn: false, cap: '', exclude: 'cash' }).ok).toBe(false)
+  it.each(['gold', 'cash'])('refuses to leave %j untouched, on the exclusion field', (exclude) => {
+    expect(constraintsFromForm({ harvestOnly: false, capOn: false, cap: '', exclude }))
+      .toEqual({ ok: false, field: 'exclude', problem: 'Choose an asset class from the list.' })
   })
 })

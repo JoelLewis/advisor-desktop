@@ -7,16 +7,19 @@ import type { AgentProfile, Thread } from '@/types/workspace'
 export function ProposalAgentControl({ thread, agent }: { thread: Thread; agent: AgentProfile }) {
   const create = useCreateProposal(thread.id)
   const proposals = useProposals(thread.id)
-  const [report, setReport] = useState<string>()
+  const [asked, setAsked] = useState<{ proposalId: string; alreadyDrafted: boolean }>()
   const subject = thread.subject
   if (subject?.type !== 'account') return null
   const ask = () => {
-    const drafted = (proposals.data ?? []).some((p) => p.accountId === subject.id)
-    setReport(undefined)
-    create.mutate(subject.id, {
-      onSuccess: () => setReport(drafted ? `${agent.name} has already drafted this proposal; it is in the thread.` : `${agent.name} posted v1 in the thread.`),
-    })
+    const alreadyDrafted = (proposals.data ?? []).some((p) => p.accountId === subject.id)
+    setAsked(undefined)
+    create.mutate(subject.id, { onSuccess: (detail) => setAsked({ proposalId: detail.id, alreadyDrafted }) })
   }
+  // Read against the live proposal, so the line never names a version the thread has moved past.
+  const latestN = asked ? proposals.data?.find((p) => p.id === asked.proposalId)?.versions.length : undefined
+  const report = !asked || latestN === undefined ? undefined
+    : asked.alreadyDrafted ? `${agent.name} has already drafted this proposal; v${latestN} is in the thread.`
+    : latestN === 1 ? `${agent.name} posted v1 in the thread.` : undefined
   return (
     <div className="flex flex-col items-start gap-2">
       <Button rank="secondary" disabled={create.isPending} onClick={ask}>{`Ask ${agent.name}`}</Button>

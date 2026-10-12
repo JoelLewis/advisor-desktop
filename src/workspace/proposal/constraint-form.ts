@@ -4,6 +4,9 @@ import { ASSET_CLASS_LABELS } from '@/lib/labels'
 
 export type ConstraintForm = { harvestOnly: boolean; capOn: boolean; cap: string; exclude: string }
 
+/** A refusal, routed to the field it belongs to. */
+export type FormProblem = { field: 'cap' | 'exclude'; problem: string }
+
 const isAssetClass = (v: string): v is AssetClass => Object.prototype.hasOwnProperty.call(ASSET_CLASS_LABELS, v)
 
 export function formFromConstraints(constraints: readonly ProposalConstraint[]): ConstraintForm {
@@ -18,16 +21,16 @@ export function formFromConstraints(constraints: readonly ProposalConstraint[]):
 }
 
 /** The constraints to ask for, as a full replacement set. The agent adds "avoid self-washing buys" itself. */
-export function constraintsFromForm(form: ConstraintForm): { ok: true; constraints: ProposalConstraint[] } | { ok: false; message: string } {
+export function constraintsFromForm(form: ConstraintForm): { ok: true; constraints: ProposalConstraint[] } | ({ ok: false } & FormProblem) {
   const constraints: ProposalConstraint[] = []
   if (form.harvestOnly) constraints.push({ kind: 'harvest_only' })
   if (form.capOn) {
     const usd = Number(form.cap.replace(/[$,\s]/g, ''))
-    if (form.cap.trim() === '' || !Number.isFinite(usd) || usd < 0) return { ok: false, message: 'Enter the cap as a dollar amount, zero or more.' }
+    if (form.cap.trim() === '' || !Number.isFinite(usd) || usd < 0) return { ok: false, field: 'cap', problem: 'Enter the cap as a dollar amount, zero or more.' }
     constraints.push({ kind: 'cap_realised_gains', usd })
   }
   if (form.exclude !== '') {
-    if (!isAssetClass(form.exclude) || form.exclude === 'cash') return { ok: false, message: 'Choose an asset class from the list.' }
+    if (!isAssetClass(form.exclude) || form.exclude === 'cash') return { ok: false, field: 'exclude', problem: 'Choose an asset class from the list.' }
     constraints.push({ kind: 'exclude_asset_class', assetClass: form.exclude })
   }
   return { ok: true, constraints }
