@@ -3,6 +3,7 @@ import { Pane } from '@/kit/layout/Pane'
 import { useFocusAfter } from '@/kit/keyboard/use-focus-after'
 import { actAnchorId } from '@/workspace/context/act-anchor'
 import { ActRecordSlip } from '@/workspace/thread/ActRecordSlip'
+import type { ComplianceActMutation } from '@/hooks/use-workspace'
 import type { Directory } from '@/types/workspace'
 import { AlertEvidence } from './AlertEvidence'
 import { CorrespondenceEvidence } from './CorrespondenceEvidence'
@@ -10,10 +11,10 @@ import { DispositionPanel } from './DispositionPanel'
 import { OrdersEvidence } from './OrdersEvidence'
 import { ITEM_HEADING, type FoundItem } from './supervision-items'
 
-type ItemDetailProps = { found: FoundItem; directory: Directory; onRefused: (message: string) => void }
+type ItemDetailProps = { found: FoundItem; directory: Directory; record: ComplianceActMutation }
 
 /** One item beside the queue: its evidence, the disposition compliance may record, and what it recorded today. */
-export function ItemDetail({ found, directory, onRefused }: ItemDetailProps) {
+export function ItemDetail({ found, directory, record }: ItemDetailProps) {
   const titleId = useId()
   const focusAfter = useFocusAfter()
   const [recordedId, setRecordedId] = useState<string>()
@@ -29,7 +30,7 @@ export function ItemDetail({ found, directory, onRefused }: ItemDetailProps) {
       {item.kind === 'orders' ? <OrdersEvidence item={item} directory={directory} />
         : item.kind === 'alert' ? <AlertEvidence item={item} />
         : <CorrespondenceEvidence item={item} directory={directory} />}
-      <DispositionPanel item={item} open={open} directory={directory} onRecorded={setRecordedId} onRefused={onRefused} />
+      <DispositionPanel item={item} open={open} directory={directory} onRecorded={setRecordedId} record={record} />
       {recorded.length > 0 ? (
         <Pane title="Recorded today">
           <ul className="flex flex-col gap-3">

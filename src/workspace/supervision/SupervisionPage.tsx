@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PAGE_TITLE_ID } from '@/kit/page/ids'
-import { useDirectory, useSupervision } from '@/hooks/use-workspace'
+import { useDirectory, useRecordComplianceAct, useSupervision } from '@/hooks/use-workspace'
 import { isNotFound } from '@/workspace/is-not-found'
 import { isClientViewer } from '@/workspace/people/directory-people'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import type { Directory } from '@/types/workspace'
 import { ItemDetail } from './ItemDetail'
 import { SupervisionQueue } from './SupervisionQueue'
+import { itemOfRequest } from './disposition-options'
 import { findItem, isItemKind } from './supervision-items'
 
 /** Firm-only: a client is told Supervision does not exist, and a switch to a client goes home. */
@@ -31,8 +32,11 @@ function Supervision({ directory }: { directory: Directory }) {
   const { viewerId } = useViewer()
   const { kind, id } = useParams()
   const queue = useSupervision()
-  const [refusal, setRefusal] = useState<{ path: string; message: string }>()
-  const path = `${kind ?? ''}/${id ?? ''}`
+  // The mutation lives here, not in the item's panel: a refused act's item can leave the queue when
+  // the page refreshes, and the refusal must still be shown. A new confirm resets it; a success replaces it.
+  const record = useRecordComplianceAct()
+  const refusedItem = record.isError && record.variables ? itemOfRequest(record.variables) : undefined
+  const refusal = refusedItem && refusedItem.kind === kind && refusedItem.id === id ? record.error?.message : undefined
   if (queue.isError) return isNotFound(queue.error) ? <SupervisionNotFound /> : <p role="alert" className="text-body">{queue.error.message}</p>
   if (queue.isPending) return <p role="status" className="text-body text-ink-3">Loading supervision…</p>
   const found = kind !== undefined && id !== undefined && isItemKind(kind) ? findItem(queue.data, kind, id) : undefined
@@ -47,13 +51,13 @@ function Supervision({ directory }: { directory: Directory }) {
             : 'You can read the queue; only compliance records a disposition.'}
         </p>
       </header>
-      {refusal?.path === path ? <p role="alert" className="text-body">{refusal.message}</p> : null}
+      {refusal ? <p role="alert" className="text-body">{refusal}</p> : null}
       <div className="grid grid-cols-12 gap-x-6 gap-y-8">
         <div className="col-span-12 min-w-0 split:col-span-4">
           <SupervisionQueue queue={queue.data} directory={directory} />
         </div>
         <div className="col-span-12 min-w-0 split:col-span-8">
-          {found ? <ItemDetail key={`${found.item.kind}:${found.item.id}`} found={found} directory={directory} onRefused={(message) => setRefusal({ path, message })} />
+          {found ? <ItemDetail key={`${found.item.kind}:${found.item.id}`} found={found} directory={directory} record={record} />
             : kind !== undefined ? <p className="text-body text-ink-2">This item is not in the queue. It may have been disposed of on another day, withdrawn by the advisor, or never existed.</p>
             : <p className="text-body text-ink-3">Choose an item from the queue.</p>}
         </div>

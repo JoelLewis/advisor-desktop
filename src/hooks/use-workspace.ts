@@ -216,6 +216,8 @@ export function useRecordComplianceAct() {
   return useMutation({ mutationFn: (request: ComplianceActRequest) => api.recordComplianceAct(viewerId, request), onSettled: invalidate })
 }
 
+export type ComplianceActMutation = ReturnType<typeof useRecordComplianceAct>
+
 export function useActAsCco() {
   const { viewerId } = useViewer()
   const invalidate = useInvalidateEverything()

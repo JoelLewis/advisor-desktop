@@ -23,17 +23,17 @@ type ConfirmRecordProps<Variables> = {
   /** Why Confirm is unavailable right now; shown in the dialog and set as its description. */
   blockedReason?: string
   /**
-   * When given, a refused act closes the dialog and is handed here in the engine's words, for a page
-   * that outlives the dialog (the item may leave the queue); otherwise the dialog shows the refusal.
+   * The page shows a refusal from the mutation it owns, since it outlives the dialog (the item may
+   * leave the queue): a refused act closes the dialog. Otherwise the dialog shows the refusal.
    */
-  onRefused?: (message: string) => void
+  refusalShownByPage?: boolean
 }
 
 /**
  * The confirm step every binding act takes: a busy ref against double submission, a kit Dialog, and
  * focus handed to the new record slip (not back to the opener) once the act is recorded.
  */
-export function ConfirmRecord<Variables>({ open, onClose, title, description, mutation, variables, onRecorded, children, blockedReason, onRefused }: ConfirmRecordProps<Variables>) {
+export function ConfirmRecord<Variables>({ open, onClose, title, description, mutation, variables, onRecorded, children, blockedReason, refusalShownByPage = false }: ConfirmRecordProps<Variables>) {
   const [slipTakesFocus, setSlipTakesFocus] = useState(false)
   // A ref, not render state, so a second click in the same frame cannot record a second act.
   const busy = useRef(false)
@@ -50,7 +50,7 @@ export function ConfirmRecord<Variables>({ open, onClose, title, description, mu
     busy.current = true
     mutation.mutate(variables, {
       onSuccess: (act) => { setSlipTakesFocus(true); onClose(); onRecorded(act.id) },
-      onError: (error) => { if (onRefused) { onClose(); onRefused(error.message) } },
+      onError: () => { if (refusalShownByPage) onClose() },
       onSettled: () => { busy.current = false },
     })
   }
@@ -59,7 +59,7 @@ export function ConfirmRecord<Variables>({ open, onClose, title, description, mu
       <div className="flex flex-col gap-4">
         {children}
         {blockedReason ? <p id={blockedId} className="text-body text-ink-2">{blockedReason}</p> : null}
-        {!onRefused && mutation.isError && mutation.error ? <p role="alert" className="text-body">{mutation.error.message}</p> : null}
+        {!refusalShownByPage && mutation.isError && mutation.error ? <p role="alert" className="text-body">{mutation.error.message}</p> : null}
         <div className="flex justify-end gap-3">
           <Button rank="secondary" disabled={mutation.isPending} onClick={close}>Cancel</Button>
           <Button disabled={mutation.isPending || blockedReason !== undefined} aria-describedby={blockedReason ? blockedId : undefined} onClick={confirm}>Confirm</Button>

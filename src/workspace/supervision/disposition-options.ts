@@ -1,5 +1,5 @@
 import type { ComplianceActKind } from '@/types/workspace'
-import type { ComplianceActRequest, SupervisionItem } from '@/types/workspace-supervision'
+import type { ComplianceActRequest, SupervisionItem, SupervisionItemKind } from '@/types/workspace-supervision'
 
 /** One disposition compliance may record on an item, with the request it sends. */
 export type DispositionOption = { value: string; act: ComplianceActKind; label: string; consequence: string; request: (rationale: string) => ComplianceActRequest }
@@ -34,5 +34,16 @@ export function dispositionOptions(item: SupervisionItem, open: boolean): Dispos
         ...(item.flagged ? [] : [{ value: 'flagged', act: 'review_correspondence' as const, label: 'Flag for follow-up', consequence: 'The message is flagged for follow-up and stays in the queue.', request: review('flagged') }]),
       ]
     }
+  }
+}
+
+/** The queue item a disposition request acts on. */
+export function itemOfRequest(request: ComplianceActRequest): { kind: SupervisionItemKind; id: string } {
+  switch (request.kind) {
+    case 'release_orders':
+    case 'return_to_advisor':
+    case 'escalate': return { kind: 'orders', id: request.proposalId }
+    case 'dispose_alert': return { kind: 'alert', id: request.alertId }
+    case 'review_correspondence': return { kind: 'correspondence', id: request.messageId }
   }
 }

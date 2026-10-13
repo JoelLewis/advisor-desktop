@@ -2,7 +2,7 @@ import { useId, useState } from 'react'
 import { Button } from '@/kit/button/Button'
 import { Select } from '@/kit/select/Select'
 import { TextInput } from '@/kit/text-input/TextInput'
-import { useRecordComplianceAct } from '@/hooks/use-workspace'
+import type { ComplianceActMutation } from '@/hooks/use-workspace'
 import { ConfirmRecord } from '@/workspace/context/ConfirmRecord'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import type { Directory } from '@/types/workspace'
@@ -14,13 +14,12 @@ type DispositionPanelProps = {
   open: boolean
   directory: Directory
   onRecorded: (actId: string) => void
-  /** A refusal outlives this panel: the item may leave the queue when the page refreshes. */
-  onRefused: (message: string) => void
+  /** Owned by the Supervision page, which outlives this panel and shows its refusal: the item may leave the queue when the page refreshes. */
+  record: ComplianceActMutation
 }
 
-export function DispositionPanel({ item, open, directory, onRecorded, onRefused }: DispositionPanelProps) {
+export function DispositionPanel({ item, open, directory, onRecorded, record }: DispositionPanelProps) {
   const { viewerId } = useViewer()
-  const record = useRecordComplianceAct()
   const options = dispositionOptions(item, open)
   const [choice, setChoice] = useState(options[0]?.value ?? '')
   const [rationale, setRationale] = useState('')
@@ -54,7 +53,7 @@ export function DispositionPanel({ item, open, directory, onRecorded, onRefused 
       </div>
       <ConfirmRecord open={confirming} onClose={() => setConfirming(false)} mutation={record} variables={option.request(rationale.trim())}
         title={`${option.label}?`} description={option.consequence}
-        onRecorded={(actId) => { setRationale(''); onRecorded(actId) }} onRefused={onRefused}>
+        onRecorded={(actId) => { setRationale(''); onRecorded(actId) }} refusalShownByPage>
         <blockquote className="whitespace-pre-line border-l-2 border-rule-2 pl-4 text-copy">{rationale.trim()}</blockquote>
       </ConfirmRecord>
     </section>
