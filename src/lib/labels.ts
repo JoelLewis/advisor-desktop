@@ -14,6 +14,13 @@ export const ASSET_CLASS_LABELS: Record<string, string> = {
   private_equity: 'Private Equity',
 }
 
+/** Asset classes as a client reads them in a letter or a proposal. */
+export const CLIENT_ASSET_CLASS_WORDS: Readonly<Record<AssetClass, string>> = {
+  us_equity: 'US stocks', intl_equity: 'international stocks', emerging_markets: 'emerging-market stocks', fixed_income: 'bonds',
+  alternatives: 'alternative strategies', real_estate: 'real estate', commodities: 'commodities', cash: 'cash',
+  digital_assets: 'digital-asset funds', private_equity: 'private equity',
+}
+
 /** Full names for asset classes in running prose, where the column abbreviations would read oddly. */
 export const ASSET_CLASS_PROSE_LABELS: Readonly<Record<AssetClass, string>> = {
   us_equity: 'US Equity',

@@ -1,5 +1,4 @@
 import type { Figure } from '@/types/workspace'
-import type { AssetClass } from '@/types/portfolio'
 import type { ProposedTrade } from '@/services/oms'
 import type { Proposal, ProposalVersion } from '@/types/workspace-proposal'
 import type { Account } from '@/types/account'
@@ -14,20 +13,13 @@ import { taxpayerHeldAway } from './harvest-scanner'
 import { canHoldSecurities } from '@/lib/held-away'
 import { firstNameOf, joinWords } from '@/lib/words'
 import { buildClientRateDisclosure, formatRatePercent, NIIT_RATE, TAX_RATE_BASIS } from '@/lib/tax-rules'
-import { ACCOUNT_TYPE_LABELS } from '@/lib/labels'
+import { ACCOUNT_TYPE_LABELS, CLIENT_ASSET_CLASS_WORDS } from '@/lib/labels'
 import { capitalLossUse, ORDINARY_INCOME_OFFSET_LIMIT, ORDINARY_INCOME_OFFSET_LIMIT_SEPARATE, recognisedResult } from '@/lib/capital-gains'
 import { isSubjectToWashSale } from '@/lib/security-master'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { clientDate, clientMoney, clientPercent } from '@/kit/measure'
 
 export type ClientLetter = { body: string; figures: Figure[] }
-
-/** Asset classes as a client reads them. */
-const CLIENT_WORDS: Readonly<Record<AssetClass, string>> = {
-  us_equity: 'US stocks', intl_equity: 'international stocks', emerging_markets: 'emerging-market stocks', fixed_income: 'bonds',
-  alternatives: 'alternative strategies', real_estate: 'real estate', commodities: 'commodities', cash: 'cash',
-  digital_assets: 'digital-asset funds', private_equity: 'private equity',
-}
 
 const capitalise = (text: string) => `${text.charAt(0).toUpperCase()}${text.slice(1)}`
 const dayAfter = (iso: string) => new Date(Date.parse(`${iso}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10)
@@ -69,13 +61,13 @@ export function writeClientLetter(proposal: Proposal, version: ProposalVersion, 
   const sells = trades.filter((t) => t.side === 'sell')
   const buys = trades.filter((t) => t.side === 'buy')
   const figures: Figure[] = [
-    { label: `${capitalise(CLIENT_WORDS[worst.assetClass])} before the rebalance`, value: worst.actual, unit: '%', source: 'drift.assetClassDrifts.actual' },
-    { label: `${capitalise(CLIENT_WORDS[worst.assetClass])} target`, value: worst.target, unit: '%', source: 'drift.assetClassDrifts.target' },
+    { label: `${capitalise(CLIENT_ASSET_CLASS_WORDS[worst.assetClass])} before the rebalance`, value: worst.actual, unit: '%', source: 'drift.assetClassDrifts.actual' },
+    { label: `${capitalise(CLIENT_ASSET_CLASS_WORDS[worst.assetClass])} target`, value: worst.target, unit: '%', source: 'drift.assetClassDrifts.target' },
   ]
   const paragraphs = [
     `Dear ${client.firstName},`,
     opening(accountInWords(account, client.fullName), modelDisplayName(drift.modelId), version)
-      + ` ${capitalise(CLIENT_WORDS[worst.assetClass])} had grown to ${clientPercent(worst.actual)} of the account against a ${clientPercent(worst.target)} target, `
+      + ` ${capitalise(CLIENT_ASSET_CLASS_WORDS[worst.assetClass])} had grown to ${clientPercent(worst.actual)} of the account against a ${clientPercent(worst.target)} target, `
       + `so we plan to ${harvestOnly(version) ? `sell only ${sells.length === 1 ? 'a holding' : 'holdings'} at a loss` : 'sell some holdings'} and add to the areas below their targets.`,
     [
       sells.length > 0 ? `We plan to sell ${joinWords(sells.map(security))}` : '',

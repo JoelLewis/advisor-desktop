@@ -127,6 +127,11 @@ export function clientPercent(fraction: number): string {
   return `${unsigned(fraction, 1, 1, 2)}%`
 }
 
+/** A share in client copy where a whole percent reads naturally: "about 95%". */
+export function clientWholePercent(fraction: number): string {
+  return `${unsigned(fraction, 0, 0, 2)}%`
+}
+
 const clientDates = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
 export function clientDate(iso: string): string {
   return clientDates.format(parseIso(iso))

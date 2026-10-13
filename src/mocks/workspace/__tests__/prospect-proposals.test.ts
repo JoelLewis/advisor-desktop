@@ -48,22 +48,22 @@ describe('drafting her proposal', () => {
     withHerReply()
     const summary = created().versions[0]?.clientSummary ?? ''
     expect(summary).toContain('Dear Dr. Pell,')
-    expect(summary).toContain('Portfolio: Growth')
-    expect(summary).toContain('Stryker Corp. (SYK): 1,390 shares, $542,378, about 18.1% of your assets.')
+    expect(summary).toContain('Portfolio: Growth, our model for your answers: about 75% in stocks and 25% in bonds, alternatives, commodities and cash.')
+    expect(summary).toContain('Stryker Corp. (SYK): 1,390 shares, $542,378, about 18% of your assets.')
     expect(summary).toContain('a long-term gain of about $481,400, with an estimated federal tax of about $114,600 (estimate; consult your tax professional)')
-    expect(summary).toContain('Your TIAA 403(b) rollover: asked about; comparison to follow.')
-    expect(summary).toContain('Fees: $20,850 a year on $2,100,000 (a blended 0.99%), from our tiered schedule.')
+    expect(summary).toContain('Your TIAA 403(b): a rollover was asked about; comparison to follow.')
+    expect(summary).toContain("Fees: an estimated $20,850 a year on today's value of $2,100,000 (a blended 0.99%), from our tiered schedule; the fee moves with the account's value.")
     expect(summary).toContain('State tax is not modeled.')
     expect(summary).toContain('Prices as of 25 Feb 2026 close.')
     expect(summary).toContain('Adrian Hale\nLarkfield Advisory')
-    expect(summary).not.toMatch(/recommend|cleared|would exceed/i)
+    expect(summary).not.toMatch(/recommend|cleared|would exceed|the firm's model|US Equity/i)
   })
 
   it('states what she would hold if everything moves in kind against the model, and that reaching it takes sales', () => {
     withHerReply()
     const detail = created()
-    expect(detail.versions[0]?.clientSummary).toContain('Moved in kind, you would hold about 95.2% in US Equity (including Stryker Corp.), against 55.0% in the Growth model. Reaching the model would take sales, each a tax decision to make with your CPA.')
-    expect(detail.bestInterestDraft.inKindVsModel).toBe('Moved in kind, she would hold about 95.2% in US Equity (including Stryker Corp.), against 55.0% in the Growth model. Reaching the model would take sales, each a tax decision to make with her CPA.')
+    expect(detail.versions[0]?.clientSummary).toContain('Moved in kind, you would hold about 95% in US stocks (including Stryker Corp.), against 55% in the Growth model. Reaching the model would take sales, each a tax decision to make with your CPA.')
+    expect(detail.bestInterestDraft.inKindVsModel).toBe('Moved in kind, she would hold about 95% in US stocks (including Stryker Corp.), against 55% in the Growth model. Reaching the model would take sales, each a tax decision to make with her CPA.')
   })
 
   it('a second ask returns the proposal already drafted', () => {
@@ -86,7 +86,12 @@ describe('revising it', () => {
       { n: 2, taxYear: 2027, shares: 695, proceeds: 271_189, gain: 240_689, tax: 57_283.98 },
     ])
     expect(v2?.changeSummary).toBe('Documented a staged sale of Stryker Corp. over two tax years, to decide with her CPA; nothing sold.')
-    expect(v2?.clientSummary).toContain('One option to decide with your CPA: selling Stryker Corp. in two parts over the 2026 and 2027 tax years')
+    expect(v2?.clientSummary).toContain([
+      'One option to decide with your CPA: selling Stryker Corp. in two parts, one in each tax year:',
+      '- 2026: 695 shares, a gain of about $240,700, an estimated federal tax of about $57,300.',
+      '- 2027: 695 shares, a gain of about $240,700, an estimated federal tax of about $57,300.',
+      'Figures are at the 25 Feb 2026 close; gains in later years depend on the price when sold (estimate; consult your tax professional). Nothing is sold unless you decide to.',
+    ].join('\n'))
     expect(v2?.fingerprint).not.toBe(r.detail.versions[0]?.fingerprint)
     expect(store().messages.filter((m) => m.kind === 'prospect_proposal_version').map((m) => m.kind === 'prospect_proposal_version' && m.version)).toEqual([2])
   })

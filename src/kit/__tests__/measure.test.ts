@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   MINUS, MeasureError, normaliseMinus, isNegative, fmtMoney, fmtResult, fmtPrice, fmtWeight, fmtReturn, fmtDrift,
   fmtTolerance, fmtQuantity, splitFraction, fmtDays, fmtScore, fmtDate, fmtTimestamp, clientMoney,
-  clientPercent, clientDate, fmtEasternTime, fmtEasternDayTime, fmtEasternRange, clientRate, fmtDayMonthYear,
+  clientPercent, clientWholePercent, clientDate, fmtEasternTime, fmtEasternDayTime, fmtEasternRange, clientRate, fmtDayMonthYear,
 } from '@/kit/measure'
 
 describe('measure', () => {
@@ -47,6 +47,8 @@ describe('measure', () => {
     expect(clientMoney(45_850)).toBe('$45,850')
     expect(clientMoney(-45_850)).toBe(`${MINUS}$45,850`)
     expect(clientPercent(0.682)).toBe('68.2%')
+    expect(clientWholePercent(0.952)).toBe('95%')
+    expect(clientWholePercent(0.75)).toBe('75%')
     expect(clientDate('2026-03-27')).toBe('March 27, 2026')
   })
   it('normalises engine hyphen-minus and detects negatives', () => {
@@ -85,6 +87,7 @@ describe('measure', () => {
       ['fmtScore', (v) => fmtScore(v)],
       ['clientMoney', clientMoney],
       ['clientPercent', (v) => clientPercent(v)],
+      ['clientWholePercent', (v) => clientWholePercent(v)],
     ]
     it.each(formatters)('%s never prints a minus for a value that rounds to zero', (_name, fmt) => {
       for (const v of [-0, -0.0004]) {

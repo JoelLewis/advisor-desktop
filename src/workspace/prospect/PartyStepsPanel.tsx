@@ -30,10 +30,10 @@ export function PartyStepsPanel({ prospectId, onRecorded }: Props) {
       <ul className="flex flex-col gap-3">
         <StepLine label="Risk questionnaire" state={s.questionnaire} action="Answer the questionnaire" waiting="After your first meeting." pending={take.isPending} onRun={() => run('questionnaire')} />
         <StepLine label="Statements" state={s.statements} action="Share my statements" waiting="After your first meeting." pending={take.isPending} onRun={() => run('statements')} />
-        <StepLine label="Proposal" state={s.acceptance} action={`Accept v${s.sentVersion ?? ''}`} waiting="When a proposal is sent to you." pending={take.isPending} onRun={() => { take.reset(); setAccepting(true) }} />
+        <StepLine label="Proposal" state={s.acceptance} action="Accept the proposal" waiting="When a proposal is sent to you." pending={take.isPending} onRun={() => { take.reset(); setAccepting(true) }} />
       </ul>
       {take.isError && !accepting ? <p role="alert" className="text-body">{take.error.message}</p> : null}
-      <Dialog open={accepting} onOpenChange={(open) => { if (!open && !take.isPending) setAccepting(false) }} title={`Accept v${s.sentVersion ?? ''}?`}
+      <Dialog open={accepting} onOpenChange={(open) => { if (!open && !take.isPending) setAccepting(false) }} title="Accept the proposal?"
         description="Your acceptance is recorded, and the firm opens your account paperwork.">
         <div className="flex flex-col gap-4">
           {take.isError ? <p role="alert" className="text-body">{take.error.message}</p> : null}

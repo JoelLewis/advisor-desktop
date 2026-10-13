@@ -146,7 +146,7 @@ test('one presenter takes Dr. Pell from first contact to an onboarding opened; s
   const firmWork = /binding|Supervisory review|Prospect Profile|Transfer-In|best-interest|Balanced Growth|Staying self-directed|prospect work|scripted|presenter|Mike Chen/i
   await expect(page.getByRole('main')).not.toContainText(firmWork)
   await expect(context(page)).not.toContainText(firmWork)
-  await expect(context(page).getByRole('region', { name: 'Your steps' })).toContainText('Accept v2')
+  await expect(context(page).getByRole('region', { name: 'Your steps' })).toContainText('Accept the proposal')
 
   // 6. Back as Adrian: her acceptance on Monday's jump; the onboarding it opened.
   await viewAs(page, 'Adrian Hale · Advisor')
