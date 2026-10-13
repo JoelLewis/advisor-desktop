@@ -31,6 +31,8 @@ function Supervision({ directory }: { directory: Directory }) {
   const { viewerId } = useViewer()
   const { kind, id } = useParams()
   const queue = useSupervision()
+  const [refusal, setRefusal] = useState<{ path: string; message: string }>()
+  const path = `${kind ?? ''}/${id ?? ''}`
   if (queue.isError) return isNotFound(queue.error) ? <SupervisionNotFound /> : <p role="alert" className="text-body">{queue.error.message}</p>
   if (queue.isPending) return <p role="status" className="text-body text-ink-3">Loading supervision…</p>
   const found = kind !== undefined && id !== undefined && isItemKind(kind) ? findItem(queue.data, kind, id) : undefined
@@ -45,12 +47,13 @@ function Supervision({ directory }: { directory: Directory }) {
             : 'You can read the queue; only compliance records a disposition.'}
         </p>
       </header>
+      {refusal?.path === path ? <p role="alert" className="text-body">{refusal.message}</p> : null}
       <div className="grid grid-cols-12 gap-x-6 gap-y-8">
         <div className="col-span-12 min-w-0 split:col-span-4">
           <SupervisionQueue queue={queue.data} directory={directory} />
         </div>
         <div className="col-span-12 min-w-0 split:col-span-8">
-          {found ? <ItemDetail key={`${found.item.kind}:${found.item.id}`} found={found} directory={directory} />
+          {found ? <ItemDetail key={`${found.item.kind}:${found.item.id}`} found={found} directory={directory} onRefused={(message) => setRefusal({ path, message })} />
             : kind !== undefined ? <p className="text-body text-ink-2">This item is not in the queue. It may have been disposed of on another day, withdrawn by the advisor, or never existed.</p>
             : <p className="text-body text-ink-3">Choose an item from the queue.</p>}
         </div>
