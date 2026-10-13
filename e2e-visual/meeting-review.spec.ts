@@ -16,14 +16,32 @@ async function meetingView(page: Page) {
   await expect(liveThread(page).getByRole('list', { name: 'Thread feed' })).toBeVisible()
 }
 
+/**
+ * The morning (Phases 3–4): v1 approved and released through the presenter shortcut, so the meeting reads the moved book —
+ * as transcript t-02 says ("This morning we rebalanced … sold the rest of the Intel shares"). The store lives in the page,
+ * so every later step navigates inside the app.
+ */
+async function morning(page: Page, theme: Theme) {
+  await askProposalAgent(page, theme)
+  await approve(page, 1)
+  await releaseByShortcut(page)
+}
+
+async function toMeetingThread(page: Page) {
+  await threadLink(page, 'Johnson annual review').click()
+  await expect(heading(page)).toHaveText('Johnson annual review')
+}
+
 const meetingThread = async (page: Page) => {
-  await visit(page, '/t/th-johnson-meeting', 'light')
+  await morning(page, 'light')
+  await toMeetingThread(page)
   await runPrep(page)
   await settle(page)
 }
 
 const meetingBefore = (theme: Theme) => async (page: Page) => {
-  await visit(page, '/t/th-johnson-meeting', theme)
+  await morning(page, theme)
+  await toMeetingThread(page)
   await runPrep(page)
   await meetingView(page)
   await expect(page.getByRole('table', { name: 'Household accounts' })).toBeVisible()
@@ -31,7 +49,8 @@ const meetingBefore = (theme: Theme) => async (page: Page) => {
 }
 
 const meetingAfter = (theme: Theme) => async (page: Page) => {
-  await visit(page, '/t/th-johnson-meeting', theme)
+  await morning(page, theme)
+  await toMeetingThread(page)
   await runPrep(page)
   await meetingView(page)
   await holdTheMeeting(page)
@@ -52,14 +71,30 @@ const client = async (page: Page) => {
   await settle(page)
 }
 
-const robertRecap = async (page: Page) => {
-  await visit(page, '/t/th-johnson-meeting', 'light')
+async function recapDrafted(page: Page) {
+  await morning(page, 'light')
+  await toMeetingThread(page)
   await holdTheMeeting(page)
   await draftNotes(page)
   await fileRecord(page)
   await threadLink(page, 'Robert Johnson').click()
   await expect(heading(page)).toHaveText('Robert Johnson')
   await askForRecap(page)
+  await expect(letterDraft(page)).toContainText('The wash-sale window on the Intel sales runs through March 27, 2026.')
+}
+
+const robertRecap = async (page: Page) => {
+  await recapDrafted(page)
+  await settle(page)
+}
+
+/** Robert's own view once the recap is sent: his question, the recap and its slip. */
+const robertRecapClient = async (page: Page) => {
+  await recapDrafted(page)
+  await letterDraft(page).getByRole('button', { name: 'Send to Robert' }).click()
+  await expect(conversation(page)).toContainText('What we decided:')
+  await viewAs(page, 'Robert Johnson · Client')
+  await expect(conversation(page).getByRole('listitem')).toHaveCount(3)
   await settle(page)
 }
 
@@ -72,6 +107,7 @@ const SCENES: Scene[] = [
   { name: 'household-light', layout: 'full-width', open: household },
   { name: 'client-light', layout: 'full-width', open: client },
   { name: 'robert-recap-light', layout: 'three-panes', open: robertRecap },
+  { name: 'robert-recap-client-light', layout: 'three-panes', open: robertRecapClient },
 ]
 
 async function boxOf(region: Locator) {
@@ -82,6 +118,9 @@ async function boxOf(region: Locator) {
 
 for (const scene of SCENES) {
   test.describe(scene.name, () => {
+    // The morning's release runs before each meeting scene.
+    test.describe.configure({ timeout: 120_000 })
+
     test('baseline at 1440px', async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 900 })
       await scene.open(page)
@@ -170,6 +209,9 @@ test('one presenter runs the Johnson annual review end to end; Robert sees only 
   await page.getByRole('button', { name: 'Save notes' }).click()
   await expect(page.getByText('Unsaved edits')).toHaveCount(0)
   await fileRecord(page)
+  const filedLine = await page.getByText(/^Filed · REC-\d{4} · fingerprint [0-9A-F]{8}$/).textContent()
+  const [, filedId, filedFingerprint] = /^Filed · (REC-\d{4}) · fingerprint ([0-9A-F]{8})$/.exec(filedLine ?? '') ?? []
+  if (!filedId || !filedFingerprint) throw new Error(`the filed record names its id and fingerprint: ${filedLine}`)
   await expect(page.getByRole('table', { name: 'Follow-up tasks' })).toContainText('Sarah Mitchell')
   await expect(page.getByRole('table', { name: 'Follow-up tasks' })).toContainText('2026-03-02')
 
@@ -190,7 +232,10 @@ test('one presenter runs the Johnson annual review end to end; Robert sees only 
   await expect(conversation(page).getByRole('listitem')).toHaveCount(3)
   await expect(conversation(page)).toContainText('When is my annual review this year?')
   // Not the whole body: the presenter's "View as" select names every person, and "Who can see" names Sarah, a member of Robert's thread.
-  const firmRecord = /transcript|agenda|Meeting Notes|follow-up|filed record/i
+  // Robert's own send slip carries its own record id and fingerprint (the send act's), so the check names the filing's.
+  const firmRecord = new RegExp(`transcript|agenda|Meeting Notes|follow-up|filed record|${filedId}|${filedFingerprint}|fingerprint [0-9A-F]{8}`, 'i')
+  await expect(conversation(page).getByRole('listitem').last()).toContainText(/REC-\d{4}/)
+  await expect(conversation(page).getByRole('listitem').last()).not.toContainText(filedId)
   await expect(page.getByRole('main')).not.toContainText(firmRecord)
   await expect(page.getByRole('main')).not.toContainText(/Sarah Mitchell|Mike Chen/)
   await expect(context(page)).not.toContainText(firmRecord)
