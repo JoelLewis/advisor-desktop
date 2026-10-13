@@ -2,6 +2,8 @@ import { http, HttpResponse } from 'msw'
 import type { AgentId, BindingAct, Directory, Draft, Message, ThreadDetail } from '@/types/workspace'
 import { AGENTS, PEOPLE, can, permissionsOf, personById } from '../data/people'
 import { nextAt, nextId, store } from '../data/workspace-store'
+import { BRIEF_THREAD_ID } from '../workspace/brief'
+import { remeasureBrief } from '../workspace/brief-remeasure'
 import { sendToClient } from '../workspace/acts'
 import { carryFinding } from '../workspace/carry'
 import { draftLetter, draftsFor, reviseDraft } from '../workspace/letters'
@@ -42,6 +44,7 @@ export const workspaceHandlers = [
     if (!viewer) return unauthorised()
     const thread = store().threads.find((t) => t.id === params.id)
     if (!thread || !canSeeThread(viewer, thread)) return notFound()
+    if (thread.id === BRIEF_THREAD_ID) remeasureBrief()
     const messages = store().messages.filter((m) => m.threadId === thread.id).sort((a, b) => a.at.localeCompare(b.at))
     const detail: ThreadDetail = { thread, messages }
     return HttpResponse.json(detail)

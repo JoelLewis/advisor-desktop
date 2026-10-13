@@ -2,6 +2,7 @@ import type { AgentId, Message } from '@/types/workspace'
 import { AGENT_DEFINITIONS } from '@/mocks/agents/registry'
 import { SEED_THREADS } from '@/mocks/data/workspace-seed'
 import { MOCK_NOW_ISO } from '@/lib/clock'
+import { bookVersion } from '@/mocks/data/portfolio-ledger'
 import { runKeyOf } from './run-key'
 
 export const BRIEF_THREAD_ID = 'th-brief'
@@ -10,17 +11,14 @@ type Finding = Extract<Message, { kind: 'agent_finding' }>
 
 let composed: readonly Message[] | undefined
 
-/**
- * The Brief as it stands at the frozen morning: each of its agents' findings, computed at the
- * calculations' as-of, and a ranked summary ahead of them — findings that need attention first,
- * then in the order the Brief lists its agents. Deterministic, so it is composed once.
- */
-export function briefMessages(): Message[] {
-  composed ??= composeBrief()
-  return composed.map((m) => ({ ...m }))
-}
+const pad2 = (n: number) => String(n).padStart(2, '0')
 
-function composeBrief(): Message[] {
+/**
+ * The Brief as it stands: each of its agents' findings on the book as it is now, and a ranked
+ * summary ahead of them — findings that need attention first, then in the order the Brief lists
+ * its agents. `idOf(0)` names the summary, `idOf(n)` the nth finding.
+ */
+export function composeBrief(idOf: (index: number) => string, at: string): Message[] {
   const thread = SEED_THREADS.find((t) => t.id === BRIEF_THREAD_ID)
   const subject = thread?.subject
   if (!thread || !subject) throw new Error('The Brief thread needs a subject')
@@ -31,13 +29,21 @@ function composeBrief(): Message[] {
       const runKey = runKeyOf(agentId, thread.id, subject)
       return agent.run({ asOf: MOCK_NOW_ISO, subject }).map((f) => ({ ...f, agentId, runKey }))
     })
-    .map((f, i) => ({ kind: 'agent_finding', id: `msg-b${String(i + 1).padStart(2, '0')}`, threadId: thread.id, at: MOCK_NOW_ISO, ...f }))
+    .map((f, i) => ({ kind: 'agent_finding', id: idOf(i + 1), threadId: thread.id, at, ...f }))
   const order = (id: AgentId) => thread.agentIds.indexOf(id)
   const ranked = [...findings].sort((a, b) =>
     Number(b.attention === 'attention') - Number(a.attention === 'attention') || order(a.agentId) - order(b.agentId))
   const summary: Message = {
-    kind: 'brief_summary', id: 'msg-b00', threadId: thread.id, at: MOCK_NOW_ISO,
+    kind: 'brief_summary', id: idOf(0), threadId: thread.id, at,
     items: ranked.map((f) => ({ findingId: f.id, agentId: f.agentId, claim: f.claim, attention: f.attention })),
   }
   return [summary, ...findings]
+}
+
+/** The morning's Brief, at the calculations' as-of. Deterministic for the fixtures' book, so it is composed once. */
+export function briefMessages(): Message[] {
+  const morning = () => composeBrief((i) => `msg-b${pad2(i)}`, MOCK_NOW_ISO)
+  if (bookVersion() > 0) return morning()
+  composed ??= morning()
+  return composed.map((m) => ({ ...m }))
 }

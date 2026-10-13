@@ -1,0 +1,57 @@
+import { describe, it, expect } from 'vitest'
+import type { Message } from '@/types/workspace'
+import { resetWorkspaceStore, store } from '@/mocks/data/workspace-store'
+import { MOCK_NOW_ISO } from '@/lib/clock'
+import { BRIEF_THREAD_ID, briefMessages } from '../brief'
+import { remeasureBrief } from '../brief-remeasure'
+import { approvedStoryV3, approvedV1, release } from './story-fixture'
+
+type Finding = Extract<Message, { kind: 'agent_finding' }>
+const brief = () => store().messages.filter((m) => m.threadId === BRIEF_THREAD_ID)
+const findings = () => brief().filter((m): m is Finding => m.kind === 'agent_finding')
+const summary = () => {
+  const s = brief().find((m) => m.kind === 'brief_summary')
+  if (s?.kind !== 'brief_summary') throw new Error('The Brief has a summary')
+  return s
+}
+async function openBrief() {
+  const res = await fetch(`/api/workspace/threads/${BRIEF_THREAD_ID}`, { headers: { 'X-Viewer': 'user-001' } })
+  return (await res.json()) as { messages: Message[] }
+}
+
+describe('the Brief re-measures on view once the book has moved', () => {
+  it('is the morning\'s Brief until something fills', async () => {
+    const morning = briefMessages().map((m) => m.id)
+    remeasureBrief()
+    expect((await openBrief()).messages.map((m) => m.id)).toEqual(morning)
+  })
+
+  it("after the story's v3 fills: no INTC harvest, the recorded sale through 2026-03-27, US Equity still outside", async () => {
+    release(approvedStoryV3())
+    const { messages } = await openBrief()
+    expect(messages[0]).toMatchObject({ kind: 'brief_summary', id: 'msg-r1-00' })
+    expect(messages.every((m) => m.at > MOCK_NOW_ISO)).toBe(true)
+    expect(findings().some((f) => f.claim.startsWith('Intel Corp. can be sold at a loss today'))).toBe(false)
+    expect(findings().some((f) => f.citations.some((c) => c.source === 'Wash-sale window · rs-006 · INTC loss sale of 2026-02-25, open through 2026-03-27'))).toBe(true)
+    expect(summary().items[0]?.claim).toBe('US Equity is outside its tolerance band.')
+    expect(findings().every((f) => f.runKey.endsWith('|book 1'))).toBe(true)
+    const ids = brief().map((m) => m.id)
+    await openBrief()
+    expect(brief().map((m) => m.id)).toEqual(ids)
+  })
+
+  it('after v1 fills: every class inside its band, private equity still noted', async () => {
+    release(approvedV1())
+    await openBrief()
+    expect(summary().items.map((i) => i.claim)).toContain('Every asset class is inside its tolerance band.')
+    expect(findings().map((f) => f.claim)).toContain("Private Equity cannot be sold at market; it can only be reduced at the fund's periodic repurchase windows.")
+  })
+
+  it('a reset brings back the morning', async () => {
+    release(approvedV1())
+    await openBrief()
+    resetWorkspaceStore()
+    expect((await openBrief()).messages.map((m) => m.id)).toEqual(briefMessages().map((m) => m.id))
+    expect(brief()[0]?.id).toBe('msg-b00')
+  })
+})

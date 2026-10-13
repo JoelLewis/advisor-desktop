@@ -3,7 +3,7 @@ import type { BindingAct, Draft, Message, Thread } from '@/types/workspace'
 import type { ApprovalRecord, Proposal, StagedOrder } from '@/types/workspace-proposal'
 import { eventTime } from '@/lib/clock'
 import { briefMessages } from '@/mocks/workspace/brief'
-import { resetLedger } from './portfolio-ledger'
+import { bookVersion, resetLedger } from './portfolio-ledger'
 import { SEED_LAST_SEQUENCE, SEED_MESSAGES, SEED_THREADS } from './workspace-seed'
 
 type Counter = 'msg' | 'draft' | 'act' | 'proposal' | 'staged' | 'record'
@@ -17,6 +17,8 @@ export type WorkspaceState = {
   approvals: ApprovalRecord[]
   staged: StagedOrder[]
   supervisionRecords: SupervisionRecord[]
+  /** The book version the Brief's findings measured. */
+  briefBook: number
   sequence: number
   counters: Record<Counter, number>
 }
@@ -31,6 +33,7 @@ function seed(): WorkspaceState {
     approvals: [],
     staged: [],
     supervisionRecords: [],
+    briefBook: bookVersion(),
     sequence: SEED_LAST_SEQUENCE,
     counters: { msg: 0, draft: 0, act: 0, proposal: 0, staged: 0, record: 0 },
   }
