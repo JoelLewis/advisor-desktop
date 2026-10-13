@@ -3,6 +3,8 @@ import { cn } from '@/lib/utils'
 import { Pane } from '@/kit/layout/Pane'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
 import { useDirectory, useThreads } from '@/hooks/use-workspace'
+import { isClientViewer } from '@/workspace/people/directory-people'
+import { useViewer } from '@/workspace/viewer/use-viewer'
 import { AgentScope } from '@/workspace/people/AgentScope'
 import type { Thread, Visibility } from '@/types/workspace'
 
@@ -18,6 +20,7 @@ export function ThreadList() {
   if (threads.isError) return <p role="alert" className="text-body">{threads.error.message}</p>
   return (
     <div className="flex flex-col gap-8">
+      <DeskLinks />
       {GROUPS.map(({ visibility, title }) => {
         const group = threads.data.filter((t) => t.visibility === visibility)
         return group.length > 0 ? <ThreadGroup key={visibility} title={title} threads={group} /> : null
@@ -62,6 +65,28 @@ function DeskAgents({ threads }: { threads: Thread[] }) {
     <Pane title="Agents on this desk">
       <ul className="flex flex-col gap-4">
         {agents.map((a) => <li key={a.id}><AgentScope agent={a} /></li>)}
+      </ul>
+    </Pane>
+  )
+}
+
+/** Firm surfaces that are not threads. A client is never offered them. */
+const DESK: readonly { to: string; label: string }[] = [{ to: '/supervision', label: 'Supervision' }]
+
+function DeskLinks() {
+  const { viewerId } = useViewer()
+  const directory = useDirectory()
+  if (!directory.data || isClientViewer(directory.data, viewerId)) return null
+  return (
+    <Pane title="Desk">
+      <ul className="flex flex-col">
+        {DESK.map(({ to, label }) => (
+          <li key={to}>
+            <NavLink to={to} className={({ isActive }) => cn('flex border-l-2 py-2 pl-3 pr-2 text-body hover:bg-face', isActive ? 'border-ink bg-face font-semibold' : 'border-transparent')}>
+              {label}
+            </NavLink>
+          </li>
+        ))}
       </ul>
     </Pane>
   )

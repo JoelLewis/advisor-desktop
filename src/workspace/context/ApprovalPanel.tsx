@@ -1,22 +1,24 @@
 import { useId, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Button } from '@/kit/button/Button'
 import { Checkbox } from '@/kit/checkbox/Checkbox'
 import { Dialog } from '@/kit/dialog/Dialog'
 import { StatusCode } from '@/kit/status/StatusCode'
 import { Tag } from '@/kit/tag/Tag'
-import { fmtMoney, fmtPrice, fmtQuantity } from '@/kit/measure'
 import { useApproveProposal, useProposals, useWithdrawApproval } from '@/hooks/use-workspace'
 import { PRESENTER_ID } from '@/lib/presenter'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { ApprovalNote } from '@/workspace/proposal/ApprovalNote'
 import { isApprovedLatest } from '@/workspace/proposal/approval-words'
 import { latestVersionOf } from '@/workspace/proposal/latest-version'
-import { FILL_SIDE_WORDS, SIDE_WORDS } from '@/workspace/proposal/leg-status'
+import { FillList } from '@/workspace/proposal/FillList'
+import { StagedOrderList } from '@/workspace/proposal/StagedOrderList'
 import type { Directory, Thread } from '@/types/workspace'
 import type { Fill, ProposalDetail, ProposalVersion, StagedOrder } from '@/types/workspace-proposal'
 import { ContextSection } from './ContextSection'
 import { approveBlocker } from './approve-blocker'
 import { PresenterRelease } from './PresenterRelease'
+import { supervisionHref } from '@/workspace/supervision/supervision-items'
 
 type OnRecorded = (actId: string) => void
 type ApprovalPanelProps = { thread: Thread; directory: Directory; onRecorded: OnRecorded }
@@ -98,6 +100,11 @@ function ProposalApproval({ detail, directory, onRecorded }: { detail: ProposalD
         </div>
       ) : null}
       {pending.length > 0 ? <StagedOrders orders={pending} escalated={detail.escalation !== undefined} /> : null}
+      {pending.length > 0 && permissions.includes('release_orders') ? (
+        <Link to={supervisionHref('orders', detail.id)} className="self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink">
+          Review in Supervision <span aria-hidden="true">↗</span>
+        </Link>
+      ) : null}
       {pending.length > 0 && presents && pending[0] ? <PresenterRelease proposalId={detail.id} version={pending[0].version} directory={directory} onRecorded={onRecorded} /> : null}
       {approval.kind === 'released' ? <FilledOrders fills={detail.fills} version={approval.version} releaseActId={approval.releaseActId} /> : null}
       {returned ? <p className="text-body text-ink-2">{`Compliance returned v${returned.version} (${returned.closedByActId ?? ''}). Revise it, or approve it again, to stage new orders.`}</p> : null}
@@ -154,14 +161,7 @@ function StagedOrders({ orders, escalated }: { orders: StagedOrder[]; escalated:
         </p>
       ) : null}
       {source ? <p className="text-label text-ink-2">{`Staged from v${source.version} · ${source.approvalActId}`}</p> : null}
-      <ul aria-label="Staged orders" className="flex flex-col gap-1 text-body">
-        {orders.map((o) => (
-          <li key={o.id} className="flex flex-wrap items-baseline justify-between gap-x-3">
-            <span>{`${SIDE_WORDS[o.side]} ${fmtQuantity(o.quantity)} ${o.symbol}`}</span>
-            <span className="tabular text-ink-2">{fmtMoney(o.estimatedValue)} <span className="text-ink-3">{o.currency}</span></span>
-          </li>
-        ))}
-      </ul>
+      <StagedOrderList orders={orders} />
     </div>
   )
 }
@@ -174,14 +174,7 @@ function FilledOrders({ fills, version, releaseActId }: { fills: Fill[]; version
         <span className="text-ink-2">Released by compliance; filled at the day&apos;s prices.</span>
       </p>
       <p className="text-label text-ink-2">{`Filled from v${version} · released by ${releaseActId}`}</p>
-      <ul aria-label="Filled orders" className="flex flex-col gap-1 text-body">
-        {fills.map((f) => (
-          <li key={f.id} className="flex flex-wrap items-baseline justify-between gap-x-3">
-            <span>{`${FILL_SIDE_WORDS[f.side]} ${fmtQuantity(f.quantity)} ${f.symbol} at ${fmtPrice(f.price)}`}</span>
-            <span className="tabular text-ink-2">{fmtMoney(f.value)} <span className="text-ink-3">{f.currency}</span></span>
-          </li>
-        ))}
-      </ul>
+      <FillList fills={fills} label="Filled orders" />
     </div>
   )
 }

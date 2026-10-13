@@ -34,8 +34,8 @@ const threadLinks = () => within(threadNav()).getAllByRole('link').map(spokenTex
 describe('workspace shell', () => {
   it('as Adrian lists three threads under the three headings, with one h1', async () => {
     const { container } = await renderHome()
-    expect(groupHeadings()).toEqual(['Private', 'Internal', 'Client', 'Agents on this desk'])
-    expect(threadLinks()).toEqual(['Brief', 'Johnson Rebalance Review', 'Robert Johnson'])
+    await waitFor(() => expect(groupHeadings()).toEqual(['Desk', 'Private', 'Internal', 'Client', 'Agents on this desk']))
+    expect(threadLinks()).toEqual(['Supervision', 'Brief', 'Johnson Rebalance Review', 'Robert Johnson'])
     expect(within(threadNav()).getByRole('link', { name: 'Johnson Rebalance Review' })).toHaveAttribute('href', '/t/th-johnson-review')
     expect(container.querySelectorAll('h1')).toHaveLength(1)
     expect(screen.getByRole('heading', { level: 1, name: 'Workspace' })).toHaveAttribute('tabindex', '-1')
@@ -89,8 +89,8 @@ describe('workspace shell', () => {
   it('viewing as Mark Davis shows the two firm threads, not the private brief', async () => {
     await renderHome()
     await viewAs('Mark Davis · Compliance')
-    await waitFor(() => expect(threadLinks()).toEqual(['Johnson Rebalance Review', 'Robert Johnson']))
-    expect(groupHeadings()).toEqual(['Internal', 'Client', 'Agents on this desk'])
+    await waitFor(() => expect(threadLinks()).toEqual(['Supervision', 'Johnson Rebalance Review', 'Robert Johnson']))
+    expect(groupHeadings()).toEqual(['Desk', 'Internal', 'Client', 'Agents on this desk'])
   })
 
   it('shows a status while threads load', () => {

@@ -43,6 +43,7 @@ describe('keyboard in the shell', () => {
       'Thread · Johnson Rebalance Review',
       'Thread · Robert Johnson',
       'Account · Robert Johnson Individual',
+      'Supervision',
       'Component kit',
     ])
   })
