@@ -4,7 +4,7 @@ import { can, personById } from '@/mocks/data/people'
 import { advanceClockTo, commitActId, nextAt, nextId, nextNumber, store } from '@/mocks/data/workspace-store'
 import { SUPERVISION_RECORDS } from '@/mocks/handlers/compliance'
 import { actOnApproval } from '@/mocks/data/proposals-store'
-import { MOCK_NOW_ISO, MOCK_TODAY_ISO, eventTime } from '@/lib/clock'
+import { MOCK_TODAY_ISO, eventTime, minuteOf } from '@/lib/clock'
 import { isDuringNyseSession, nyseSessionUtc } from '@/lib/trading-calendar'
 import { applyFills } from './fills'
 import { ALERT_ACTION, alertById, alertDisposal, alertFingerprint, isOpenAlert } from './alerts'
@@ -68,8 +68,6 @@ function ordersGuard(viewerId: string, kind: OrdersKind, proposalId: string, app
   return { ok: true, proposal, approval, version }
 }
 
-const minuteOf = (iso: string) => Math.round((Date.parse(iso) - Date.parse(MOCK_NOW_ISO)) / 60_000)
-
 /**
  * The event-clock sequences `count` fills take: after the `pending` events still to be recorded
  * ahead of them, and never before the NYSE opens today. Undefined when the session would close first.
@@ -77,7 +75,8 @@ const minuteOf = (iso: string) => Math.round((Date.parse(iso) - Date.parse(MOCK_
 function sessionSequences(pending: number, count: number): number[] | undefined {
   const first = Math.max(store().sequence + pending + 1, minuteOf(nyseSessionUtc(MOCK_TODAY_ISO).open))
   const sequences = Array.from({ length: count }, (_, i) => first + i)
-  return sequences.every((n) => isDuringNyseSession(eventTime(n))) ? sequences : undefined
+  // Fills are priced at the frozen day's close: a session on any later day (after a clock jump) is out of scope.
+  return sequences.every((n) => eventTime(n).slice(0, 10) === MOCK_TODAY_ISO && isDuringNyseSession(eventTime(n))) ? sequences : undefined
 }
 
 export function releaseOrders(viewerId: string, proposalId: string, approvalActId: string, fingerprint: string, rationale: string, options: ActOptions = {}): Recorded | ComplianceFailure {

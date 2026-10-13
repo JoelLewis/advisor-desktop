@@ -24,3 +24,8 @@ export function startOfToday(): Date {
 export function eventTime(sequence: number): string {
   return new Date(Date.parse(MOCK_NOW_ISO) + sequence * 60_000).toISOString()
 }
+
+/** The event-clock sequence (minutes after the frozen now) of an instant. */
+export function minuteOf(iso: string): number {
+  return Math.round((Date.parse(iso) - Date.parse(MOCK_NOW_ISO)) / 60_000)
+}
