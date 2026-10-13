@@ -55,6 +55,15 @@ describe('the Brief re-measures on view once the book has moved', () => {
     expect(engineCites.every(({ at, asOf }) => asOf === at && asOf > MOCK_NOW_ISO)).toBe(true)
   })
 
+  it('after v1 fills: no two summary items read the same', async () => {
+    release(approvedV1())
+    await openBrief()
+    const claims = summary().items.map((i) => i.claim)
+    expect(new Set(claims).size).toBe(claims.length)
+    expect(claims).toContain('Intel Corp. was sold at a loss today; buying it back in any account of the same taxpayer, IRAs and Roths included, would wash that loss until its window closes.')
+    expect(claims).toContain('Intel Corp. was sold at a loss recently; buying it back in any account of the same taxpayer, IRAs and Roths included, would wash that loss until its window closes.')
+  })
+
   it('a reset brings back the morning', async () => {
     release(approvedV1())
     await openBrief()

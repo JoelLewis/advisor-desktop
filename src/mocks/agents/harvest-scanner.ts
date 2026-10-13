@@ -94,7 +94,7 @@ export function runHarvestScanner({ asOf, subject }: AgentContext): AgentFinding
 
   for (const w of openWashSaleWindowsFor(account, today)) {
     findings.push({
-      claim: `${claimNameOf(w.symbol, w.name)} was sold at a loss recently; buying it back in any account of the same taxpayer, IRAs and Roths included, would wash that loss until its window closes.`,
+      claim: `${claimNameOf(w.symbol, w.name)} was sold at a loss ${w.saleDate === today ? 'today' : 'recently'}; buying it back in any account of the same taxpayer, IRAs and Roths included, would wash that loss until its window closes.`,
       attention: 'info',
       figures: [
         { label: `Loss realised · ${w.symbol}`, value: w.realisedGainLoss, unit: 'USD', source: 'realisedSales.realisedGainLoss' },
