@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import { store } from '@/mocks/data/workspace-store'
+import type { Draft } from '@/types/workspace'
+import { nextAt, nextId, resetWorkspaceStore, store } from '@/mocks/data/workspace-store'
 import { canSeeThread, isExternalViewer, isFirmViewer, visibleThreads } from '../visibility'
 import { meetingSummaries, visibleMeeting } from '../meetings'
 import { clientView, householdView } from '../household-views'
@@ -14,6 +15,7 @@ import { draftingClientThread } from '../letters'
 import { sendToParty } from '../acts'
 import { disposeAlert, reviewCorrespondence } from '../compliance-acts'
 import { partyOf, partyOfThread } from '../party'
+import { threadParty } from '@/workspace/people/thread-party'
 
 const PELL = 'prsp-011'
 const ROBERT = 'cli-001'
@@ -44,6 +46,11 @@ describe('who is outside the firm', () => {
     expect(partyOf(ROBERT)).toEqual({ id: ROBERT, kind: 'client', name: 'Robert Johnson' })
     expect(partyOf('nobody')).toBeUndefined()
     expect(partyOfThread(thread('th-pell')).kind).toBe('prospect')
+  })
+  it('the UI and the engine agree on whose thread it is (subject type vs partyId)', () => {
+    for (const id of ['th-pell', 'th-pell-work']) expect(threadParty(thread(id)), id).toBe('prospect')
+    expect(threadParty(thread('th-robert'))).toBe(partyOfThread(thread('th-robert')).kind)
+    expect(threadParty(thread('th-pell'))).toBe(partyOfThread(thread('th-pell')).kind)
   })
 })
 
@@ -78,10 +85,22 @@ describe('every firm gate answers an external viewer as if nothing were there', 
     expect(createProposal(viewer, 'th-johnson-review', 'acc-002')).toMatchObject({ ok: false, status: 404 })
     expect(actAsCco(viewer, { kind: 'alert', id: 'comp-001' })).toMatchObject({ ok: false, status: 404 })
     expect(draftingClientThread(viewer, viewer === PELL ? 'th-pell' : 'th-robert')).toBeUndefined()
-    expect(sendToParty(viewer, 'draft-0001')).toMatchObject({ ok: false, status: 404 })
     expect(disposeAlert(viewer, 'comp-001', 'approve', 'X', 'Reviewed.')).toMatchObject({ ok: false, status: 404 })
-    expect(reviewCorrespondence(viewer, 'msg-0001', 'reviewed', 'X', 'Reviewed.')).toMatchObject({ ok: false, status: 404 })
   })
+  it.each([[PELL, 'th-pell'], [ROBERT, 'th-robert']] as const)(
+    '%s cannot send or review a real draft and a real sent message in their own thread: 404, not 403', (viewer, threadId) => {
+      resetWorkspaceStore()
+      const s = store()
+      const addDraft = () => {
+        const draft: Draft = { id: nextId('draft'), clientThreadId: threadId, authorId: ADRIAN, body: 'A note for you.', createdAt: nextAt() }
+        s.drafts.push(draft)
+        return draft.id
+      }
+      const sent = sendToParty(ADRIAN, addDraft())
+      if (!sent.ok || !sent.act.messageId) throw new Error('The advisor could not send the setup message')
+      expect(sendToParty(viewer, addDraft())).toMatchObject({ ok: false, status: 404, code: 'NO_DRAFT' })
+      expect(reviewCorrespondence(viewer, sent.act.messageId, 'reviewed', sent.act.fingerprint, 'Reviewed.')).toMatchObject({ ok: false, status: 404, code: 'NO_MESSAGE' })
+    })
   it('a proposal the firm drafted is invisible to both parties', () => {
     const r = createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
     if (!r.ok) throw new Error(r.message)

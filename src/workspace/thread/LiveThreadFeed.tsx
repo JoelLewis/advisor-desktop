@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
 import { useDirectory, useThread } from '@/hooks/use-workspace'
+import { threadParty } from '@/workspace/people/thread-party'
 import { Composer } from '@/workspace/thread/Composer'
 import { CompactMessage } from '@/workspace/workbench/CompactMessage'
 
@@ -18,7 +19,7 @@ export function LiveThreadFeed({ threadId }: { threadId: string }) {
         <span className="text-body font-semibold">{t.title}</span>
         <Link to={`/t/${encodeURIComponent(t.id)}`} className="text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink">Open the thread</Link>
       </div>
-      <VisibilityBand visibility={t.visibility} scale="message" />
+      <VisibilityBand visibility={t.visibility} scale="message" party={threadParty(t)} />
       <ol aria-label="Thread feed" className="flex min-w-0 flex-col">
         {messages.map((m) => (
           <li key={m.id} className="min-w-0 border-b border-rule py-3 first:pt-0 last:border-b-0">
