@@ -81,7 +81,7 @@ describe('her reply, on the clock jump', () => {
     expect(transferSummary(requireProspect(PELL))).toMatchObject({ pricesAsOf: '2026-02-25', transferValue: 2_100_000 })
   })
 
-  it('leaves the Johnson orders unreleasable: fills belong to the 25 Feb session', () => {
+  it('after the coffee (16:30 ET) today\'s session has closed: releasing the Johnson orders is refused MARKET_CLOSED, to the next session', () => {
     const proposal = ok(createProposal(ADRIAN, 'th-johnson-review', 'acc-002')).detail
     const fp = proposal.versions[0]?.fingerprint ?? ''
     const approval = ok(approveProposal(ADRIAN, proposal.id, 1, fp)).act
@@ -171,6 +171,7 @@ describe('her acceptance', () => {
       ['advisory_agreement', 'awaiting_signature', ADRIAN, '2026-03-09'], ['adv_2b', 'open', ADRIAN, '2026-03-03'], ['privacy_notice', 'open', ADRIAN, '2026-03-03'],
       ['acat', 'not_started', 'user-002', undefined],
     ])
+    expect(record.onboarding?.items.find((i) => i.id === 'trusted_contact')?.label).toBe('Trusted contact (custodian account form, FINRA Rule 4512)')
     expect(store().messages.filter((m) => m.kind === 'onboarding_opened')).toHaveLength(1)
     expect(advanceProspect(ADRIAN, PELL, 'acceptance')).toMatchObject({ ok: false, status: 409, code: 'ALREADY_ACCEPTED' })
     expect(herStep(PELL, PELL, 'accept')).toMatchObject({ ok: false, status: 409, code: 'ALREADY_ACCEPTED' })

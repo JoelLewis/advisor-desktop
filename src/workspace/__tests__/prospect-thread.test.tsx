@@ -5,7 +5,9 @@ import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
 import { store } from '@/mocks/data/workspace-store'
 import { PELL_REPLY } from '@/mocks/data/prospect-script'
-import { advanceProspect, approveProspectProposal, createProspectProposal, deliverDisclosure, recordCoffee } from '@/services/workspace'
+import {
+  advanceProspect, approveProspectProposal, createProspectProposal, deliverDisclosure, recordCoffee, reviseProspectProposal, sendProspectProposal,
+} from '@/services/workspace'
 
 const ADRIAN = 'user-001'
 const PELL = 'prsp-011'
@@ -23,6 +25,12 @@ async function approvedV1() {
   await advanceProspect(ADRIAN, PELL, 'reply')
   const proposal = await createProspectProposal(ADRIAN, PELL)
   await approveProspectProposal(ADRIAN, proposal.id, 1, proposal.versions[0]?.fingerprint ?? '', 'Growth fits her answers.')
+  return proposal
+}
+async function sentV1() {
+  const proposal = await approvedV1()
+  await deliverDisclosure(ADRIAN, PELL, 'form_crs')
+  await sendProspectProposal(ADRIAN, proposal.id)
 }
 
 describe('her thread, for the firm', () => {
@@ -40,7 +48,7 @@ describe('her thread, for the firm', () => {
     expect(await conversation().findByRole('article', { name: 'Delivered · Form CRS (client relationship summary)' })).toBeInTheDocument()
     expect(store().acts.filter((a) => a.kind === 'deliver_disclosure')).toHaveLength(1)
     await waitFor(() => expect(within(disclosures).queryByRole('button', { name: 'Deliver Form CRS' })).toBeNull())
-    expect(disclosures).toHaveTextContent('REC-0001')
+    expect(disclosures).toHaveTextContent(/Wed 25 Feb \d\d:\d\d ET · REC-0001/)
   })
 
   it('the advance waits for the coffee and says so; the presenter records the coffee and her reply arrives on Thursday', async () => {
@@ -105,6 +113,37 @@ describe('her thread, for the firm', () => {
   })
 })
 
+describe('her thread, for the firm, around the send and the acceptance', () => {
+  afterEach(() => sessionStorage.clear())
+
+  it('a version newer than the approved one blocks the send and says why', async () => {
+    const user = userEvent.setup()
+    const proposal = await approvedV1()
+    await deliverDisclosure(ADRIAN, PELL, 'form_crs')
+    await reviseProspectProposal(ADRIAN, PELL, proposal.id, [{ kind: 'stage_diversification', tranches: 2 }])
+    await openHerThread()
+    const proposalSection = await section('Proposal')
+    await user.click(within(proposalSection).getByRole('button', { name: 'Send v1 to Dr. Pell' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Send v1 to Dr. Pell?' })
+    expect(dialog).toHaveTextContent('v2 is newer than the approved v1; approve the version you mean to send.')
+    expect(within(dialog).getByRole('button', { name: 'Confirm' })).toBeDisabled()
+    expect(store().acts.filter((a) => a.kind === 'send_to_party')).toHaveLength(0)
+  })
+
+  it('the presenter accepts for her through the shortcut; it is recorded as her, marked, and the sent time reads Eastern', async () => {
+    const user = userEvent.setup()
+    await sentV1()
+    await openHerThread()
+    expect(await section('Proposal')).toHaveTextContent(/Sent v1 · REC-\d{4} · Thu 26 Feb \d\d:\d\d ET/)
+    const demo = await section('Demo · act as Dr. Pell')
+    await user.click(within(demo).getByRole('button', { name: 'Accept v1' }))
+    await user.click(within(await screen.findByRole('dialog', { name: 'Accept v1 as Dr. Pell?' })).getByRole('button', { name: 'Confirm' }))
+    await waitFor(() => expect(store().acts.filter((a) => a.kind === 'accept_proposal')).toHaveLength(1))
+    expect(store().acts.find((a) => a.kind === 'accept_proposal')).toMatchObject({ actorId: PELL, viaPresenter: { presenterId: ADRIAN, path: 'shortcut' } })
+    await waitFor(async () => expect(await section('Proposal')).toHaveTextContent('Accepted v1'))
+  })
+})
+
 describe('her thread, as she sees it', () => {
   afterEach(() => sessionStorage.clear())
 
@@ -125,5 +164,22 @@ describe('her thread, as she sees it', () => {
     for (const name of ['Prospect', 'Disclosures', 'Clock', 'Proposal', 'Demo · act as Dr. Pell']) expect(inContext().queryByRole('region', { name })).toBeNull()
     expect(screen.getByRole('main').textContent).not.toMatch(/binding|Supervisory review|Mike Chen|Transfer-In|Prospect Profile|best-interest|prospect work/i)
     await waitFor(() => expect(screen.getByRole('list', { name: 'Messages' })).toHaveTextContent('Document from Adrian Hale'))
+  })
+  it('she accepts the proposal sent to her through a dialog; her acceptance is recorded as her, through View as', async () => {
+    const user = userEvent.setup()
+    await sentV1()
+    viewAsOnLoad(PELL)
+    await openHerThread()
+    expect(within(screen.getByRole('navigation', { name: 'Threads' })).getByRole('heading', { name: 'Your conversation' })).toBeInTheDocument()
+    const steps = await section('Your steps')
+    await user.click(within(steps).getByRole('button', { name: 'Accept the proposal' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Accept the proposal?' })
+    expect(dialog).toHaveTextContent('Your acceptance is recorded, and the firm opens your account paperwork.')
+    await user.click(within(dialog).getByRole('button', { name: 'Accept' }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Accept the proposal?' })).toBeNull())
+    expect(store().acts.filter((a) => a.kind === 'accept_proposal')).toHaveLength(1)
+    expect(store().acts.find((a) => a.kind === 'accept_proposal')).toMatchObject({ actorId: PELL, version: 1, viaPresenter: { presenterId: ADRIAN, path: 'view_as' } })
+    await waitFor(() => expect(within(steps).queryByRole('button', { name: 'Accept the proposal' })).toBeNull())
+    expect(screen.getByRole('main').textContent).not.toMatch(/viaPresenter|view_as|presenter|REC-\d{4}.*bestInterest/i)
   })
 })
