@@ -6,7 +6,6 @@ import { personIn } from '@/workspace/people/directory-people'
 import { supervisionHref } from '@/workspace/supervision/supervision-items'
 import type { Directory } from '@/types/workspace'
 import type { ArchiveEntry } from '@/types/workspace-supervision'
-import { ARCHIVE_KIND_LABEL } from './archive-filters'
 
 const LINK = 'underline decoration-rule-2 underline-offset-4 hover:decoration-ink'
 
@@ -14,6 +13,17 @@ function recordedBy(entry: ArchiveEntry, directory: Directory): string {
   if (entry.kind === 'sent_message') return personIn(directory, entry.message.authorId).name
   const name = personIn(directory, entry.act.actorId).name
   return entry.act.viaPresenter ? `${name} · via the presenter shortcut` : name
+}
+
+function Recorded({ entry, directory }: { entry: ArchiveEntry; directory: Directory }) {
+  return <><span className="block whitespace-nowrap tabular">{fmtTimestamp(entry.at)}</span><span className="block">{recordedBy(entry, directory)}</span></>
+}
+
+/** The record id leads, so books-and-records keep their reference beside what was done. */
+function Summary({ entry }: { entry: ArchiveEntry }) {
+  const recordId = entry.kind === 'act' ? entry.act.id : entry.actId
+  const text = entry.kind === 'act' ? entry.act.summary : `Message to ${entry.clientName}`
+  return <><span className="tabular">{recordId}</span>{` · ${text}`}</>
 }
 
 function EntryLink({ entry }: { entry: ArchiveEntry }) {
@@ -26,11 +36,8 @@ export function ArchiveTable({ entries, directory }: { entries: ArchiveEntry[]; 
   return (
     <DataTable caption="Archive" rows={entries} getRowId={(e) => `${e.kind}:${e.id}`} noun={{ singular: 'record', plural: 'records' }} density="dense"
       columns={[
-        { id: 'at', header: 'At', cell: (e) => fmtTimestamp(e.at), sortValue: (e) => e.at },
-        { id: 'record', header: 'Record', cell: (e) => (e.kind === 'act' ? e.act.id : e.actId) },
-        { id: 'kind', header: 'Kind', cell: (e) => ARCHIVE_KIND_LABEL[e.kind === 'act' ? e.act.kind : 'sent_message'] },
-        { id: 'summary', header: 'Summary', wrap: true, cell: (e) => (e.kind === 'act' ? e.act.summary : `Message to ${e.clientName}`) },
-        { id: 'actor', header: 'Recorded by', cell: (e) => recordedBy(e, directory) },
+        { id: 'at', header: 'Recorded', wrap: true, cell: (e) => <Recorded entry={e} directory={directory} />, sortValue: (e) => e.at },
+        { id: 'summary', header: 'Summary', wrap: true, cell: (e) => <Summary entry={e} /> },
         { id: 'fingerprint', header: 'Fingerprint', cell: (e) => (e.kind === 'act' ? e.act.fingerprint : e.fingerprint) },
         { id: 'thread', header: 'Thread', cell: (e) => <EntryLink entry={e} /> },
       ]} />

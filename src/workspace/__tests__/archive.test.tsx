@@ -7,7 +7,7 @@ import { actAsCco, approveProposal, createProposal, draftLetter, recordComplianc
 
 const ADRIAN = 'user-001'
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
-const kindCell = (row: HTMLElement) => row.querySelectorAll('td')[2]?.textContent
+const summaryCell = (row: HTMLElement) => row.querySelectorAll('td')[1]?.textContent
 
 async function session() {
   const detail = await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
@@ -23,25 +23,30 @@ async function archiveRows() {
 }
 
 describe('the Archive', () => {
-  it('lists every record in order with its kind, actor, fingerprint and thread, and filters by kind through the URL', async () => {
+  it('lists every record in order with its record id, actor, fingerprint and thread, and filters by kind through the URL', async () => {
     await session()
     const { router } = renderRoutes(routes, '/archive')
     await screen.findByRole('heading', { level: 1, name: 'Archive' })
     const rows = await archiveRows()
-    expect(rows.map(kindCell)).toEqual(['Approve proposal', 'Send to client', 'Sent message', 'Release orders'])
+    expect(rows.map(summaryCell)).toEqual([
+      'REC-0001 · Approved v1 of the Johnson rebalance',
+      'REC-0002 · Message sent to the client',
+      'REC-0002 · Message to Robert Johnson',
+      'REC-0003 · Released the orders staged from v1 of the Johnson rebalance',
+    ])
     expect(rows[3]).toHaveTextContent('Mark Davis')
     expect(rows[3]).toHaveTextContent('Released the orders staged from v1 of the Johnson rebalance')
     expect(within(rows[3]!).getByRole('link', { name: 'Johnson Rebalance Review' })).toHaveAttribute('href', '/t/th-johnson-review')
     expect(within(rows[2]!).getByRole('link', { name: 'Robert Johnson' })).toHaveAttribute('href', '/t/th-robert')
     await userEvent.setup().selectOptions(screen.getByLabelText('Kind'), 'Release orders')
-    await waitFor(async () => expect((await archiveRows()).map(kindCell)).toEqual(['Release orders']))
+    await waitFor(async () => expect((await archiveRows()).map(summaryCell)).toEqual(['REC-0003 · Released the orders staged from v1 of the Johnson rebalance']))
     expect(router.state.location.search).toBe('?kind=release_orders')
   })
 
   it('reads its filters from the URL', async () => {
     await session()
     renderRoutes(routes, '/archive?kind=send_to_client&clientId=cli-001&from=2026-02-25')
-    await waitFor(async () => expect((await archiveRows()).map(kindCell)).toEqual(['Send to client']))
+    await waitFor(async () => expect((await archiveRows()).map(summaryCell)).toEqual(['REC-0002 · Message sent to the client']))
     expect(screen.getByLabelText('Client')).toHaveValue('cli-001')
   })
 
