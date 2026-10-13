@@ -16,6 +16,11 @@ export const PATH_WORDS: Readonly<Record<PresenterPath, (presenterName: string) 
   scripted: (name) => `Demo · a scripted step, run by ${name} on a clock jump`,
 }
 
+/** The archive's short note of how the one presenter made a record that names someone else. */
+export const PATH_NOTE: Readonly<Record<PresenterPath, string>> = {
+  shortcut: 'via the presenter shortcut', view_as: 'via the presenter, viewing as her', scripted: 'via a scripted clock jump',
+}
+
 export const DISCLOSURE_SHORT: Readonly<Record<DisclosureDocument, string>> = {
   form_crs: 'Form CRS', adv_2a: 'ADV Part 2A', adv_2b: 'ADV Part 2B', privacy_notice: 'privacy notice',
 }

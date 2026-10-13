@@ -5,9 +5,8 @@ import type { AlertItem, CorrespondenceItem, OrdersItem, SupervisionItem, Superv
 import { accounts } from '@/mocks/data/accounts'
 import { ledgerFills } from '@/mocks/data/portfolio-ledger'
 import { escalationOf, latestVersion } from '@/mocks/data/proposals-store'
-import { store } from '@/mocks/data/workspace-store'
+import { sessionNow, store } from '@/mocks/data/workspace-store'
 import { complianceAlerts } from '@/mocks/handlers/compliance'
-import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { alertById, alertContext, alertDisposal, alertFingerprint, isAlertOutcome, isOpenAlert, recordTrailFor } from './alerts'
 import { latestReview, sentMessage, sentMessages, type SentMessage } from './correspondence'
 import { visibleProposal } from './proposal-acts'
@@ -47,7 +46,7 @@ export function correspondenceItem(sent: SentMessage): CorrespondenceItem {
   const party = partyOfThread(sent.thread)
   return {
     kind: 'correspondence', id: sent.message.id, title: `Message to ${party.name}`, threadId: sent.thread.id,
-    clientId: party.id, clientName: party.name, message: sent.message, sendAct: sent.act,
+    partyId: party.id, partyName: party.name, partyKind: party.kind, message: sent.message, sendAct: sent.act,
     flagged: latestReview(sent.message.id)?.outcome === 'flagged', fingerprint: sent.act.fingerprint,
   }
 }
@@ -87,8 +86,10 @@ export function supervisionQueue(viewerId: string): SupervisionQueue | undefined
   const correspondence = sentMessages()
     .filter((m) => canSeeThread(viewerId, m.thread) && latestReview(m.message.id)?.outcome !== 'reviewed')
     .map(correspondenceItem)
+  // "Today" is the session clock's day: a review after a clock jump is today's review.
+  const today = sessionNow().slice(0, 10)
   const disposedToday = s.acts
-    .filter((a) => COMPLIANCE_ACT_KINDS.has(a.kind) && a.at.slice(0, 10) === MOCK_TODAY_ISO)
+    .filter((a) => COMPLIANCE_ACT_KINDS.has(a.kind) && a.at.slice(0, 10) === today)
     .reverse()
     .flatMap((act) => {
       const item = itemOf(viewerId, act)

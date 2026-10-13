@@ -108,7 +108,7 @@ describe('filing the meeting record', () => {
     ok(fileMeetingRecord(ADRIAN, 'evt-010', readyToFile()))
     for (const viewer of [ADRIAN, MARK, 'user-002']) {
       const entry = archiveFor(viewer, { kind: 'file_meeting_record' })?.entries[0]
-      expect(entry, viewer).toMatchObject({ kind: 'act', id: 'REC-0001', clientId: 'cli-001', clientName: 'Robert Johnson', threadId: 'th-johnson-meeting', threadTitle: 'Johnson annual review' })
+      expect(entry, viewer).toMatchObject({ kind: 'act', id: 'REC-0001', partyId: 'cli-001', partyName: 'Robert Johnson', threadId: 'th-johnson-meeting', threadTitle: 'Johnson annual review' })
     }
     expect(archiveFor('cli-001', {})).toBeUndefined()
   })

@@ -1,4 +1,5 @@
 import type { ComplianceAlert, SupervisionRecord } from './compliance'
+import type { PartyKind } from '@/lib/external-party'
 import type { AlertOutcome, BindingAct, BindingActKind, CorrespondenceOutcome, Message } from './workspace'
 import type { ApprovalRecord, Escalation, Fill, ProposalVersion, StagedOrder } from './workspace-proposal'
 
@@ -46,9 +47,10 @@ export type CorrespondenceItem = {
   id: string
   title: string
   threadId: string
-  clientId: string
-  clientName: string
-  /** The message exactly as the client received it. */
+  partyId: string
+  partyName: string
+  partyKind: PartyKind
+  /** The message exactly as the party received it. */
   message: TextMessage
   /** The firm's send record, with its provenance (basis, editors). */
   sendAct: BindingAct
@@ -68,11 +70,11 @@ export const ARCHIVE_KINDS: readonly ArchiveKind[] = [
 ]
 export const isArchiveKind = (value: string): value is ArchiveKind => (ARCHIVE_KINDS as readonly string[]).includes(value)
 export type ArchiveEntry =
-  | { kind: 'act'; id: string; at: string; act: BindingAct; clientId?: string; clientName?: string; threadId?: string; threadTitle?: string }
-  | { kind: 'sent_message'; id: string; at: string; message: TextMessage; actId: string; fingerprint: string; clientId: string; clientName: string; threadId: string; threadTitle: string }
-export type ArchiveFilters = { clientId?: string; kind?: ArchiveKind; from?: string; to?: string }
-/** The archive a viewer may read, filtered; `clients` and `dates` list what the unfiltered archive holds, for the filter controls. */
-export type Archive = { entries: ArchiveEntry[]; clients: { id: string; name: string }[]; dates: string[] }
+  | { kind: 'act'; id: string; at: string; act: BindingAct; partyId?: string; partyName?: string; threadId?: string; threadTitle?: string }
+  | { kind: 'sent_message'; id: string; at: string; message: TextMessage; actId: string; fingerprint: string; partyId: string; partyName: string; threadId: string; threadTitle: string }
+export type ArchiveFilters = { partyId?: string; kind?: ArchiveKind; from?: string; to?: string }
+/** The archive a viewer may read, filtered; `parties` and `dates` list what the unfiltered archive holds, for the filter controls. */
+export type Archive = { entries: ArchiveEntry[]; parties: { id: string; name: string }[]; dates: string[] }
 
 type Disposition = { fingerprint: string; rationale: string }
 export type OrdersActRequest = Disposition & { kind: 'release_orders' | 'return_to_advisor' | 'escalate'; proposalId: string; approvalActId: string }

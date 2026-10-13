@@ -3,6 +3,7 @@ import { DataTable } from '@/kit/data-table/DataTable'
 import { NotApplicable } from '@/kit/data-table/NotApplicable'
 import { fmtTimestamp } from '@/kit/measure'
 import { personIn } from '@/workspace/people/directory-people'
+import { PATH_NOTE } from '@/workspace/prospect/prospect-words'
 import { supervisionHref } from '@/workspace/supervision/supervision-items'
 import type { Directory } from '@/types/workspace'
 import type { ArchiveEntry } from '@/types/workspace-supervision'
@@ -12,7 +13,7 @@ const LINK = 'underline decoration-rule-2 underline-offset-4 hover:decoration-in
 function recordedBy(entry: ArchiveEntry, directory: Directory): string {
   if (entry.kind === 'sent_message') return personIn(directory, entry.message.authorId).name
   const name = personIn(directory, entry.act.actorId).name
-  return entry.act.viaPresenter ? `${name} · via the presenter shortcut` : name
+  return entry.act.viaPresenter ? `${name} · ${PATH_NOTE[entry.act.viaPresenter.path ?? 'shortcut']}` : name
 }
 
 function Recorded({ entry, directory }: { entry: ArchiveEntry; directory: Directory }) {
@@ -22,7 +23,7 @@ function Recorded({ entry, directory }: { entry: ArchiveEntry; directory: Direct
 /** The record id leads, so books-and-records keep their reference beside what was done. */
 function Summary({ entry }: { entry: ArchiveEntry }) {
   const recordId = entry.kind === 'act' ? entry.act.id : entry.actId
-  const text = entry.kind === 'act' ? entry.act.summary : `Message to ${entry.clientName}`
+  const text = entry.kind === 'act' ? entry.act.summary : `Message to ${entry.partyName}`
   return <><span className="tabular">{recordId}</span>{` · ${text}`}</>
 }
 

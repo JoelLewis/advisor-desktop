@@ -45,9 +45,9 @@ describe('the Archive', () => {
 
   it('reads its filters from the URL', async () => {
     await session()
-    renderRoutes(routes, '/archive?kind=send_to_party&clientId=cli-001&from=2026-02-25')
+    renderRoutes(routes, '/archive?kind=send_to_party&partyId=cli-001&from=2026-02-25')
     await waitFor(async () => expect((await archiveRows()).map(summaryCell)).toEqual(['REC-0002 · Message sent to the client']))
-    expect(screen.getByLabelText('Client')).toHaveValue('cli-001')
+    expect(screen.getByLabelText('Client or prospect')).toHaveValue('cli-001')
   })
 
   it('keeps a date from the URL selectable even when no record falls on it', async () => {

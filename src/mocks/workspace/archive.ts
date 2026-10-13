@@ -2,6 +2,7 @@ import type { BindingAct, Thread } from '@/types/workspace'
 import type { Archive, ArchiveEntry, ArchiveFilters, ArchiveKind } from '@/types/workspace-supervision'
 import { proposalById } from '@/mocks/data/proposals-store'
 import { store } from '@/mocks/data/workspace-store'
+import { prospectProposalById } from './prospect-proposals'
 import { alertById, alertContext } from './alerts'
 import { sentMessage } from './correspondence'
 import { meetingEvent } from './meetings'
@@ -12,7 +13,7 @@ export { ARCHIVE_KINDS, isArchiveKind } from '@/types/workspace-supervision'
 
 /** Code-unit order, the same on every machine. */
 const byCodeUnit = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
-const clientName = (id: string | undefined) => (id === undefined ? undefined : partyOf(id)?.name)
+const partyName = (id: string | undefined) => (id === undefined ? undefined : partyOf(id)?.name)
 
 /** The thread an act belongs to: where it was recorded, or for a correspondence review, the message's client thread. */
 function threadOf(act: BindingAct): Thread | undefined {
@@ -20,8 +21,10 @@ function threadOf(act: BindingAct): Thread | undefined {
   return id === undefined ? undefined : store().threads.find((t) => t.id === id)
 }
 
-function clientOf(act: BindingAct, thread: Thread | undefined): string | undefined {
+function partyIdOf(act: BindingAct, thread: Thread | undefined): string | undefined {
   if (act.subject?.type === 'proposal') return proposalById(act.subject.id)?.clientId
+  if (act.subject?.type === 'prospect_proposal') return prospectProposalById(act.subject.id)?.prospectId
+  if (act.subject?.type === 'prospect') return act.subject.id
   if (act.subject?.type === 'alert') {
     const alert = alertById(act.subject.id)
     return alert ? alertContext(alert).clientId : undefined
@@ -32,25 +35,25 @@ function clientOf(act: BindingAct, thread: Thread | undefined): string | undefin
 
 function entriesOf(act: BindingAct): ArchiveEntry[] {
   const thread = threadOf(act)
-  const clientId = clientOf(act, thread)
-  const name = clientName(clientId)
+  const partyId = partyIdOf(act, thread)
+  const name = partyName(partyId)
   const entry: ArchiveEntry = {
     kind: 'act', id: act.id, at: act.at, act,
-    ...(clientId ? { clientId } : {}), ...(name ? { clientName: name } : {}),
+    ...(partyId ? { partyId } : {}), ...(name ? { partyName: name } : {}),
     ...(thread ? { threadId: thread.id, threadTitle: thread.title } : {}),
   }
   const sent = act.kind === 'send_to_party' && act.messageId ? sentMessage(act.messageId) : undefined
-  const sentClient = sent?.thread.partyId
-  if (!sent || !sentClient) return [entry]
+  const sentParty = sent?.thread.partyId
+  if (!sent || !sentParty) return [entry]
   return [entry, {
     kind: 'sent_message', id: sent.message.id, at: sent.message.at, message: sent.message, actId: act.id, fingerprint: act.fingerprint,
-    clientId: sentClient, clientName: clientName(sentClient) ?? sent.thread.title, threadId: sent.thread.id, threadTitle: sent.thread.title,
+    partyId: sentParty, partyName: partyName(sentParty) ?? sent.thread.title, threadId: sent.thread.id, threadTitle: sent.thread.title,
   }]
 }
 
 const kindOf = (e: ArchiveEntry): ArchiveKind => (e.kind === 'act' ? e.act.kind : 'sent_message')
 
-/** The books-and-records surface: every act and sent client message the viewer may read, in order, filtered. */
+/** The books-and-records surface: every act and sent message the viewer may read, in order, filtered. */
 export function archiveFor(viewerId: string, filters: ArchiveFilters): Archive | undefined {
   if (!isFirmViewer(viewerId)) return undefined
   const readable = (act: BindingAct) => {
@@ -59,14 +62,14 @@ export function archiveFor(viewerId: string, filters: ArchiveFilters): Archive |
   }
   const all = store().acts.filter(readable).flatMap(entriesOf).sort((a, b) => byCodeUnit(a.at, b.at) || byCodeUnit(a.id, b.id))
   const day = (e: ArchiveEntry) => e.at.slice(0, 10)
-  const entries = all.filter((e) => (filters.clientId === undefined || e.clientId === filters.clientId)
+  const entries = all.filter((e) => (filters.partyId === undefined || e.partyId === filters.partyId)
     && (filters.kind === undefined || kindOf(e) === filters.kind)
     && (filters.from === undefined || day(e) >= filters.from)
     && (filters.to === undefined || day(e) <= filters.to))
-  const named = new Map(all.flatMap((e) => (e.clientId && e.clientName ? [[e.clientId, e.clientName] as const] : [])))
+  const named = new Map(all.flatMap((e) => (e.partyId && e.partyName ? [[e.partyId, e.partyName] as const] : [])))
   return {
     entries,
-    clients: [...named].map(([id, name]) => ({ id, name })).sort((a, b) => byCodeUnit(a.name, b.name)),
+    parties: [...named].map(([id, name]) => ({ id, name })).sort((a, b) => byCodeUnit(a.name, b.name)),
     dates: [...new Set(all.map(day))].sort(byCodeUnit),
   }
 }

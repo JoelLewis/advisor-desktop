@@ -1,4 +1,5 @@
 import type { BindingAct, Directory, Draft, LetterBasis, RecordBasis } from '@/types/workspace'
+import { DISCLOSURE_TITLES } from '@/types/workspace-prospect'
 import { personIn } from '@/workspace/people/directory-people'
 
 /** What an agent letter was written from: an approved version, or a filed meeting record. */
@@ -19,7 +20,12 @@ export function draftOrigin(draft: Draft, directory: Directory): string {
 
 /** Where a sent agent letter came from, for the firm's record: what it was written from and who edited it. Undefined for other acts. */
 export function sentLetterOrigin(act: BindingAct, directory: Directory): string | undefined {
-  if (act.kind !== 'send_to_party' || !act.editedBy) return undefined
+  if (act.kind !== 'send_to_party') return undefined
+  if (act.subject?.type === 'prospect_proposal' && act.basis) {
+    const delivered = (act.delivers ?? []).map((d) => DISCLOSURE_TITLES[d])
+    return `The approved v${act.basis.version} of the prospect proposal · fingerprint ${act.basis.fingerprint}${delivered.length > 0 ? ` · delivered with ${delivered.join(', ')}` : ''}`
+  }
+  if (!act.editedBy) return undefined
   const editors = act.editedBy.map((id) => personIn(directory, id).name)
   const edits = editors.length > 0 ? `edited by ${editors.join(' and ')}` : 'agent draft, unedited'
   const from = basisWords(act.basis, act.recordBasis)

@@ -48,14 +48,14 @@ export function recordComplianceAct(viewerId: string, r: ComplianceActRequest): 
 
 function archiveFilters(url: URL): { ok: true; filters: ArchiveFilters } | { ok: false; message: string } {
   const read = (key: string) => url.searchParams.get(key) || undefined
-  const clientId = read('clientId')
+  const partyId = read('partyId')
   const kind = read('kind')
   const from = read('from')
   const to = read('to')
   if (kind !== undefined && !isArchiveKind(kind)) return { ok: false, message: `${kind} is not a kind of record.` }
   if ((from !== undefined && !ISO_DAY.test(from)) || (to !== undefined && !ISO_DAY.test(to))) return { ok: false, message: 'Dates are YYYY-MM-DD.' }
   if (from !== undefined && to !== undefined && from > to) return { ok: false, message: 'The from date is after the to date.' }
-  return { ok: true, filters: { ...(clientId ? { clientId } : {}), ...(kind ? { kind } : {}), ...(from ? { from } : {}), ...(to ? { to } : {}) } }
+  return { ok: true, filters: { ...(partyId ? { partyId } : {}), ...(kind ? { kind } : {}), ...(from ? { from } : {}), ...(to ? { to } : {}) } }
 }
 
 const isPresenterItem = (value: unknown): value is PresenterItem =>

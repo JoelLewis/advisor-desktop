@@ -7,19 +7,19 @@ import { personIn } from '@/workspace/people/directory-people'
 import type { Directory } from '@/types/workspace'
 import type { CorrespondenceItem } from '@/types/workspace-supervision'
 
-/** The message exactly as the client received it, and — firm-only — where it came from. */
+/** The message exactly as the party received it, and — firm-only — where it came from. */
 export function CorrespondenceEvidence({ item, directory }: { item: CorrespondenceItem; directory: Directory }) {
   const sender = personIn(directory, item.message.authorId)
   const origin = sentLetterOrigin(item.sendAct, directory) ?? `Written by ${sender.name}; no agent draft.`
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <Pane title="As the client saw it">
-        <VisibilityBand visibility="client" scale="message" audience={item.clientName} />
+      <Pane title={`As ${item.partyName} saw it`}>
+        <VisibilityBand visibility="client" scale="message" audience={item.partyName} party={item.partyKind} />
         <p className="tabular text-label text-ink-3">{`Sent by ${sender.name} · ${fmtTimestamp(item.message.at)}`}</p>
         <p className="whitespace-pre-line text-copy">{item.message.body}</p>
       </Pane>
       <Pane title="Provenance">
-        <VisibilityBand visibility="internal" scale="message" />
+        <VisibilityBand visibility="internal" scale="message" party={item.partyKind} />
         <p className="text-body">{origin}</p>
         <p className="tabular text-label text-ink-3">{`Record ${item.sendAct.id} · fingerprint ${item.sendAct.fingerprint}`}</p>
       </Pane>

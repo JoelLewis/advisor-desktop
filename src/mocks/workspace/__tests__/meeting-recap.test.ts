@@ -203,7 +203,7 @@ describe('sending the recap', () => {
     file()
     const { act } = ok(sendToParty(ADRIAN, ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft.id))
     const item = supervisionQueue('cco-001')!.correspondence.find((c) => c.id === act.messageId)
-    expect(item).toMatchObject({ kind: 'correspondence', clientId: 'cli-001', sendAct: { recordBasis: { actId: 'REC-0001' } } })
+    expect(item).toMatchObject({ kind: 'correspondence', partyId: 'cli-001', sendAct: { recordBasis: { actId: 'REC-0001' } } })
     expect(archiveFor('cco-001', { kind: 'sent_message' })!.entries.map((e) => e.id)).toContain(act.messageId)
   })
 

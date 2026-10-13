@@ -21,7 +21,7 @@ describe('supervision and archive endpoints', () => {
   it('firm viewers read the queue and the archive; a client is told neither exists; no viewer is 401', async () => {
     expect((await call('GET', '/supervision', 'user-001')).body.alerts).toHaveLength(5)
     expect((await call('GET', '/supervision', 'cco-001')).status).toBe(200)
-    expect((await call('GET', '/archive', 'user-002')).body).toEqual({ entries: [], clients: [], dates: [] })
+    expect((await call('GET', '/archive', 'user-002')).body).toEqual({ entries: [], parties: [], dates: [] })
     expect((await call('GET', '/supervision', 'cli-001')).status).toBe(404)
     expect((await call('GET', '/archive', 'cli-001')).status).toBe(404)
     expect((await call('GET', '/archive?kind=bogus', 'cli-001')).status).toBe(404)
@@ -32,7 +32,7 @@ describe('supervision and archive endpoints', () => {
     for (const query of ['kind=bogus', 'from=2026-2-1', 'to=yesterday', 'from=2026-02-26&to=2026-02-25']) {
       expect(await call('GET', `/archive?${query}`, 'user-001')).toMatchObject({ status: 400, body: { code: 'BAD_FILTER' } })
     }
-    expect((await call('GET', '/archive?clientId=cli-999&kind=release_orders&from=2026-02-25&to=2026-02-25', 'user-001')).status).toBe(200)
+    expect((await call('GET', '/archive?partyId=cli-999&kind=release_orders&from=2026-02-25&to=2026-02-25', 'user-001')).status).toBe(200)
   })
 })
 

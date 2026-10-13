@@ -10,12 +10,12 @@ export const KIND_OPTIONS: readonly SelectOption[] = [{ value: '', label: 'All k
 
 /** The filters the URL states; a value the archive cannot read is left out rather than guessed at. */
 export function filtersFrom(params: URLSearchParams): ArchiveFilters {
-  const clientId = params.get('clientId') ?? ''
+  const partyId = params.get('partyId') ?? ''
   const kind = params.get('kind') ?? ''
   const from = params.get('from') ?? ''
   const to = params.get('to') ?? ''
   return {
-    ...(clientId ? { clientId } : {}), ...(isArchiveKind(kind) ? { kind } : {}),
+    ...(partyId ? { partyId } : {}), ...(isArchiveKind(kind) ? { kind } : {}),
     ...(ISO_DAY.test(from) ? { from } : {}), ...(ISO_DAY.test(to) ? { to } : {}),
   }
 }

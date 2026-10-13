@@ -52,8 +52,8 @@ function Archive({ directory }: { directory: Directory }) {
       {data ? (
         <>
           <div role="group" aria-label="Archive filters" className="flex flex-wrap items-end gap-4">
-            <Select label="Client" layout="stacked" value={filters.clientId ?? ''} onChange={set('clientId')}
-              options={[{ value: '', label: 'All clients' }, ...data.clients.map((c) => ({ value: c.id, label: c.name }))]} />
+            <Select label="Client or prospect" layout="stacked" value={filters.partyId ?? ''} onChange={set('partyId')}
+              options={[{ value: '', label: 'All clients and prospects' }, ...data.parties.map((c) => ({ value: c.id, label: c.name }))]} />
             <Select label="Kind" layout="stacked" value={filters.kind ?? ''} options={KIND_OPTIONS} onChange={set('kind')} />
             <Select label="From" layout="stacked" value={filters.from ?? ''} options={dates} onChange={set('from')} />
             <Select label="To" layout="stacked" value={filters.to ?? ''} options={dates} onChange={set('to')} />
