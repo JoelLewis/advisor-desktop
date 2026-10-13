@@ -124,7 +124,7 @@ describe('the household summary', () => {
     const windows = screen.getByRole('table', { name: 'Open wash-sale windows' })
     expect(within(windows).getByRole('row', { name: /INTC/ })).toHaveTextContent(/2026-02-20.*−32,750.*2026-03-22/)
     expect(screen.getByRole('region', { name: 'IPS and open items' })).toHaveTextContent('Johnson Family Trust — IPS · signed 2025-11-15')
-    expect(screen.getByRole('region', { name: 'IPS and open items' })).toHaveTextContent('Awaiting signature: Tax Loss Harvesting Proposal')
+    expect(screen.getByRole('region', { name: 'IPS and open items' })).not.toHaveTextContent('Awaiting signature')
   })
 
   it('states the IPS by its signature status in words', () => {

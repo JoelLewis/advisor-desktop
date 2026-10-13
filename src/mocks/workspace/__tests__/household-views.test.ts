@@ -67,8 +67,9 @@ describe('the household view', () => {
 
   it('states the IPS and its signature, and the open items', () => {
     expect(johnson().ips).toEqual({ documentId: 'doc-001', name: 'Johnson Family Trust — IPS', signatureStatus: 'signed', signedOn: '2025-11-15' })
-    expect(johnson().openItems.map((i) => i.id)).toEqual(['oi-001', 'doc-003'])
-    expect(johnson().openItems[1]).toEqual({ id: 'doc-003', text: 'Awaiting signature: Tax Loss Harvesting Proposal', source: 'doc-003' })
+    // doc-003 is the firm's record of the harvest it executed: it awaits no signature.
+    expect(johnson().openItems.map((i) => i.id)).toEqual(['oi-001'])
+    expect(johnson().documents.find((d) => d.id === 'doc-003')).toMatchObject({ name: 'Tax Loss Harvesting Proposal', signatureStatus: 'not_required' })
   })
 
   it('carries documents, communications and activity, latest first, none after the session clock', () => {
