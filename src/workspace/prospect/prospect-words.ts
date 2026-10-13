@@ -29,3 +29,11 @@ export const DISCLOSURE_TIMING: Readonly<Record<DisclosureDocument, string>> = {
 /** What the presenter starts from when recording the coffee; it is Adrian's note and he may change any of it. */
 export const COFFEE_NOTE_DRAFT =
   "Coffee with Dr. Pell after James Thompson's introduction. She holds a taxable brokerage account at Fidelity, with a large, low-basis Stryker position from early in her career, and a 403(b) from her former hospital employer. She asked about rolling over the 403(b); I said a comparison would follow. I gave her the risk questionnaire and asked for her statements."
+
+/** What the presenter starts from when approving; it is Adrian's own reasoning and he may change any of it. */
+export const RATIONALE_DRAFT =
+  'Growth matches her questionnaire and her long horizon. Her Stryker position moves in kind; any sale is staged with her CPA. The 403(b) stays where it is until the comparison.'
+
+export const TRANCHE_OPTIONS: readonly { value: '' | '2' | '3'; label: string }[] = [
+  { value: '', label: 'Not staged' }, { value: '2', label: 'Over two tax years' }, { value: '3', label: 'Over three tax years' },
+]

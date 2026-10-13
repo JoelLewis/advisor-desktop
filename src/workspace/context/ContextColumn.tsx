@@ -5,6 +5,7 @@ import { useActs, useDirectory, useThread } from '@/hooks/use-workspace'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { isExternalViewerIn } from '@/workspace/people/directory-people'
 import { threadParty } from '@/workspace/people/thread-party'
+import { ProspectWorkPanel } from '@/workspace/prospect/ProspectWorkPanel'
 import { PartyStepsPanel } from '@/workspace/prospect/PartyStepsPanel'
 import { ProspectPanel } from '@/workspace/prospect/ProspectPanel'
 import { canPostIn } from '@/workspace/thread/can-post'
@@ -55,6 +56,8 @@ function ThreadContext({ threadId }: { threadId: string }) {
         ? <PartyStepsPanel prospectId={t.partyId} onRecorded={setSentActId} /> : null}
       {t.visibility !== 'client' && !viewerIsExternal ? <ApprovalPanel thread={t} directory={dir} onRecorded={setSentActId} /> : null}
       {t.visibility === 'internal' && !viewerIsExternal ? <MeetingPanel thread={t} directory={dir} onRecorded={setSentActId} /> : null}
+      {t.visibility === 'internal' && t.subject?.type === 'prospect' && !viewerIsExternal
+        ? <ProspectWorkPanel prospectId={t.subject.id} directory={dir} onRecorded={setSentActId} /> : null}
       {t.visibility === 'client' && !viewerIsExternal
         ? <DraftsPanel thread={t} directory={dir} onSent={setSentActId} /> : null}
       {acts.isPending ? <p role="status" className="py-5 text-body text-ink-3">Loading the record…</p>

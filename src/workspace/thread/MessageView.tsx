@@ -3,7 +3,10 @@ import { Button } from '@/kit/button/Button'
 import { fmtTimestamp } from '@/kit/measure'
 import { usePositions } from '@/hooks/use-portfolio'
 import { useActs, useProposal } from '@/hooks/use-workspace'
+import { useProspectProposals } from '@/hooks/use-prospect-work'
 import { ReviseDialog } from '@/workspace/proposal/ReviseDialog'
+import { ProspectProposalEmbed } from '@/workspace/prospect/ProspectProposalEmbed'
+import { ReviseProspectDialog } from '@/workspace/prospect/ReviseProspectDialog'
 import { personIn } from '@/workspace/people/directory-people'
 import { ROLE_LABEL } from '@/workspace/people/role-label'
 import { useViewer } from '@/workspace/viewer/use-viewer'
@@ -85,10 +88,11 @@ export function MessageView({ message, thread, directory }: { message: Message; 
     case 'prospect_note':
       return <ProspectNoteView note={message} directory={directory} />
     case 'prospect_proposal': {
-      // Task 11 replaces this line with the proposal's embed.
       const agent = directory.agents.find((a) => a.id === message.agentId)
       if (!agent) throw new Error(`No agent "${message.agentId}" in the directory`)
-      return <ByAgent name={agent.name} at={message.at}><p className="text-copy">{`Drafted the ${message.title}.`}</p></ByAgent>
+      if (thread.subject?.type !== 'prospect') throw new Error(`Prospect proposal ${message.proposalId} sits outside a prospect thread`)
+      const actions = canPostIn(thread, viewerId, directory) ? <ReviseProspectAction prospectId={thread.subject.id} proposalId={message.proposalId} /> : undefined
+      return <ByAgent name={agent.name} at={message.at}><ProspectProposalEmbed prospectId={thread.subject.id} proposalId={message.proposalId} actions={actions} /></ByAgent>
     }
     case 'prospect_proposal_version':
       return <ProspectProposalVersionLine message={message} directory={directory} />
@@ -115,6 +119,20 @@ function ReviseAction({ proposalId }: { proposalId: string }) {
     <>
       <Button rank="secondary" onClick={() => setOpen(true)}>Revise</Button>
       {open ? <ReviseDialog open={open} onOpenChange={setOpen} detail={proposal.data} /> : null}
+    </>
+  )
+}
+
+/** Mounts the dialog only while open, so it starts from the latest version; gone once the proposal is sent. */
+function ReviseProspectAction({ prospectId, proposalId }: { prospectId: string; proposalId: string }) {
+  const [open, setOpen] = useState(false)
+  const proposals = useProspectProposals(prospectId)
+  const detail = proposals.data?.find((p) => p.id === proposalId)
+  if (!detail || detail.sent) return null
+  return (
+    <>
+      <Button rank="secondary" onClick={() => setOpen(true)}>Revise</Button>
+      {open ? <ReviseProspectDialog open={open} onOpenChange={setOpen} prospectId={prospectId} detail={detail} /> : null}
     </>
   )
 }

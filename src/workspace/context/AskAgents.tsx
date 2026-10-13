@@ -3,6 +3,7 @@ import { Button } from '@/kit/button/Button'
 import { useRunAgent, useThread } from '@/hooks/use-workspace'
 import type { AgentProfile, Thread } from '@/types/workspace'
 import { ContextSection } from './ContextSection'
+import { ProspectAgentControl } from '@/workspace/prospect/ProspectAgentControl'
 import { ProposalAgentControl } from './ProposalAgentControl'
 
 /**
@@ -14,7 +15,8 @@ export function AskAgents({ thread, agents, canPost }: { thread: Thread; agents:
   const detail = useThread(thread.id)
   const [report, setReport] = useState<string>()
   const runnable = agents.filter((a) => a.produces === 'findings')
-  const drafting = canPost && thread.subject?.type === 'account' ? agents.filter((a) => a.produces === 'proposals') : []
+  const subject = thread.subject
+  const drafting = canPost ? agents.filter((a) => a.produces === 'proposals') : []
 
   // The engine returns the earlier findings when a run repeats for the same as-of, so compare against what was already here.
   const ask = (agent: AgentProfile) => {
@@ -27,7 +29,8 @@ export function AskAgents({ thread, agents, canPost }: { thread: Thread; agents:
     })
   }
 
-  if (runnable.length === 0 && drafting.length === 0) return null
+  const draftsHere = subject?.type === 'account' || subject?.type === 'prospect'
+  if (runnable.length === 0 && !(draftsHere && drafting.length > 0)) return null
 
   return (
     <ContextSection title="Ask an agent">
@@ -42,7 +45,8 @@ export function AskAgents({ thread, agents, canPost }: { thread: Thread; agents:
           {report ? <p role="status" className="text-body text-ink-2">{report}</p> : null}
         </div>
       ) : null}
-      {drafting.map((a) => <ProposalAgentControl key={a.id} thread={thread} agent={a} />)}
+      {subject?.type === 'account' ? drafting.map((a) => <ProposalAgentControl key={a.id} thread={thread} agent={a} />) : null}
+      {subject?.type === 'prospect' ? drafting.map((a) => <ProspectAgentControl key={a.id} prospectId={subject.id} agent={a} />) : null}
     </ContextSection>
   )
 }
