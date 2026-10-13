@@ -15,7 +15,7 @@ const MEETING: Message[] = [
     start: '2026-02-25T19:00:00.000Z', end: '2026-02-25T20:15:00.000Z' },
   { kind: 'notes_drafted', id: 'msg-t3', threadId: 'th-johnson-meeting', at: '2026-02-25T20:16:00.000Z', eventId: 'evt-010', agentId: 'meeting-notes' },
   { kind: 'meeting_tasks', id: 'msg-t4', threadId: 'th-johnson-meeting', at: '2026-02-25T20:18:00.000Z', eventId: 'evt-010', filedActId: 'REC-0001',
-    tasks: [{ id: 'task-0001', title: 'Send the beneficiary checklist.', owner: { kind: 'person', personId: 'user-002' }, due: '2026-02-26', state: 'open', fromNoteLine: 'n-19' }] },
+    tasks: [{ id: 'task-0001', title: 'Send the beneficiary checklist.', owner: { kind: 'person', personId: 'user-002' }, due: '2026-02-26', state: 'open', fromNoteLine: 'n-22' }] },
 ]
 
 describe('meeting messages', () => {

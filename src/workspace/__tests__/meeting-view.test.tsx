@@ -52,7 +52,7 @@ describe('the meeting full view', () => {
     await user.click(screen.getByRole('button', { name: 'Hold the meeting' }))
     await user.click(within(screen.getByRole('dialog', { name: 'Hold the meeting?' })).getByRole('button', { name: 'Hold the meeting' }))
     const transcript = await screen.findByRole('list', { name: 'Transcript' })
-    expect(within(transcript).getAllByRole('listitem')).toHaveLength(25)
+    expect(within(transcript).getAllByRole('listitem')).toHaveLength(28)
     expect(transcript).toHaveTextContent('Patricia Johnson')
     expect(screen.getByText('No notes yet. Ask Meeting Notes for a draft.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Draft notes' }))

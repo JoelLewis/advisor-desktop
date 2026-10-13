@@ -64,7 +64,7 @@ describe('the meeting thread', () => {
     await waitFor(() => expect(document.activeElement).toBe(document.getElementById('act-REC-0001')))
     expect(conversation().getByRole('article', { name: 'Tasks from the filed record' })).toBeInTheDocument()
     const tasks = within(await meetingSection()).getByRole('table', { name: 'Follow-up tasks' })
-    expect(within(tasks).getAllByRole('row').filter((r) => r.querySelector('td'))).toHaveLength(6)
+    expect(within(tasks).getAllByRole('row').filter((r) => r.querySelector('td'))).toHaveLength(7)
     expect(tasks).toHaveTextContent('Mike Chen')
     expect(store().acts.filter((a) => a.kind === 'file_meeting_record')).toHaveLength(1)
   })

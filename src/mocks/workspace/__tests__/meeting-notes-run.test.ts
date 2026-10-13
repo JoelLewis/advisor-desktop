@@ -21,7 +21,7 @@ describe('drafting the notes', () => {
     held()
     const r = ok(draftMeetingNotes(ADRIAN, 'evt-010'))
     expect(r.created).toBe(true)
-    expect(draft()).toHaveLength(20)
+    expect(draft()).toHaveLength(23)
     const line = store().messages.find((m) => m.kind === 'notes_drafted')
     expect(line).toMatchObject({ threadId: 'th-johnson-meeting', eventId: 'evt-010', agentId: 'meeting-notes' })
     const view = meetingView(ADRIAN, 'evt-010')!
@@ -49,11 +49,11 @@ describe("Adrian's edits", () => {
     drafted()
     const before = meetingView(ADRIAN, 'evt-010')!.notesFingerprint
     const lines = edited(draft(), 'n-01', '  Reviewed the rebalance and the Intel harvest.  ').filter((l) => l.id !== 'n-07')
-    ok(saveNotes(ADRIAN, 'evt-010', [...lines, { section: 'discussion', text: 'Patricia agreed with the plan.', cites: ['t-25', 't-25'] }]))
-    expect(draft()).toHaveLength(20)
+    ok(saveNotes(ADRIAN, 'evt-010', [...lines, { section: 'discussion', text: 'Patricia agreed with the plan.', cites: ['t-28', 't-28'] }]))
+    expect(draft()).toHaveLength(23)
     expect(draft()[0]!.text).toBe('Reviewed the rebalance and the Intel harvest.')
     expect(draft().map((l) => l.id)).not.toContain('n-07')
-    expect(draft()[19]).toEqual({ id: 'n-0001', section: 'discussion', text: 'Patricia agreed with the plan.', cites: ['t-25'] })
+    expect(draft()[22]).toEqual({ id: 'n-0001', section: 'discussion', text: 'Patricia agreed with the plan.', cites: ['t-28'] })
     expect(meetingView(ADRIAN, 'evt-010')!.notesFingerprint).not.toBe(before)
   })
 
@@ -65,14 +65,14 @@ describe("Adrian's edits", () => {
     ['UNKNOWN_CITATION', () => draft().map((l) => (l.id === 'n-01' ? { ...l, cites: ['t-99'] } : l))],
     ['UNKNOWN_LINE', () => draft().map((l) => (l.id === 'n-01' ? { ...l, id: 'n-77' } : l))],
     ['DUPLICATE_LINE', () => [...draft(), draft()[0]!]],
-    ['FOLLOW_UP_INCOMPLETE', () => draft().map((l) => (l.id === 'n-15' ? { id: l.id, section: l.section, text: l.text, cites: l.cites } : l))],
-    ['UNKNOWN_OWNER', () => draft().map((l) => (l.id === 'n-15' ? { ...l, owner: { kind: 'person' as const, personId: 'cli-001' } } : l))],
+    ['FOLLOW_UP_INCOMPLETE', () => draft().map((l) => (l.id === 'n-17' ? { id: l.id, section: l.section, text: l.text, cites: l.cites } : l))],
+    ['UNKNOWN_OWNER', () => draft().map((l) => (l.id === 'n-17' ? { ...l, owner: { kind: 'person' as const, personId: 'cli-001' } } : l))],
     ['OWNER_ONLY_ON_FOLLOW_UP', () => draft().map((l) => (l.id === 'n-01' ? { ...l, owner: { kind: 'person' as const, personId: 'user-001' } } : l))],
     ['OWNER_ONLY_ON_FOLLOW_UP', () => draft().map((l) => (l.id === 'n-01' ? { ...l, due: '2026-02-26' } : l))],
-    ['DUE_NOT_TRADING_DAY', () => draft().map((l) => (l.id === 'n-15' ? { ...l, due: '2026-02-28' } : l))],
-    ['DUE_NOT_TRADING_DAY', () => draft().map((l) => (l.id === 'n-15' ? { ...l, due: '2026-02-24' } : l))],
-    ['DUE_NOT_TRADING_DAY', () => draft().map((l) => (l.id === 'n-15' ? { ...l, due: '2026-02-31' } : l))],
-    ['DUE_NOT_TRADING_DAY', () => draft().map((l) => (l.id === 'n-15' ? { ...l, due: '2027-01-04' } : l))],
+    ['DUE_NOT_TRADING_DAY', () => draft().map((l) => (l.id === 'n-17' ? { ...l, due: '2026-02-28' } : l))],
+    ['DUE_NOT_TRADING_DAY', () => draft().map((l) => (l.id === 'n-17' ? { ...l, due: '2026-02-24' } : l))],
+    ['DUE_NOT_TRADING_DAY', () => draft().map((l) => (l.id === 'n-17' ? { ...l, due: '2026-02-31' } : l))],
+    ['DUE_NOT_TRADING_DAY', () => draft().map((l) => (l.id === 'n-17' ? { ...l, due: '2027-01-04' } : l))],
   ] as const)('refuses %s and leaves the draft as it was', (code, lines) => {
     drafted()
     const before = JSON.parse(JSON.stringify(draft())) as NoteLine[]

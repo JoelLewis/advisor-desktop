@@ -23,7 +23,7 @@ describe('meeting endpoints', () => {
     expect(scheduled.status).toBe(200)
     expect(scheduled.body.transcript).toBeUndefined()
     expect((await call('POST', '/meetings/evt-010/hold', ADRIAN)).status).toBe(200)
-    expect((await call('GET', '/meetings/evt-010', 'user-003')).body.transcript).toHaveLength(25)
+    expect((await call('GET', '/meetings/evt-010', 'user-003')).body.transcript).toHaveLength(28)
     expect((await call('GET', '/meetings/evt-999', ADRIAN)).status).toBe(404)
   })
 
@@ -63,7 +63,7 @@ describe('meeting endpoints', () => {
     expect(again).toMatchObject({ status: 409, body: { code: 'ALREADY_FILED', message: 'The record was already filed (REC-0001).' } })
     expect((await call('POST', '/acts', 'user-002', { kind: 'file_meeting_record', eventId: 'evt-010', fingerprint: act.fingerprint })).status).toBe(403)
     expect((await call('POST', '/acts', ADRIAN, { kind: 'file_meeting_record', eventId: 'evt-010' })).status).toBe(400)
-    expect((await call('GET', '/meetings/evt-010', ADRIAN)).body.tasks).toHaveLength(6)
+    expect((await call('GET', '/meetings/evt-010', ADRIAN)).body.tasks).toHaveLength(7)
   })
 
   it('a filed record cannot be edited or deleted', async () => {

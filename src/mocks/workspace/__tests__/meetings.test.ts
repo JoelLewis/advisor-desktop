@@ -49,7 +49,7 @@ describe('holding the meeting', () => {
       kind: 'meeting_held', id: expect.any(String), threadId: 'th-johnson-meeting', at: '2026-02-25T20:15:00.000Z', eventId: 'evt-010',
       start: '2026-02-25T19:00:00.000Z', end: '2026-02-25T20:15:00.000Z',
     }])
-    expect(meetingView(ADRIAN, 'evt-010')?.transcript).toHaveLength(25)
+    expect(meetingView(ADRIAN, 'evt-010')?.transcript).toHaveLength(28)
     expect(nextAt()).toBe(eventTime(496))
   })
 

@@ -64,7 +64,7 @@ describe('the recap', () => {
     heldAndDrafted()
     file()
     const { body } = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft
-    expect(body).toContain('as firm policy: the rule for employer plans is unsettled')
+    expect(body).toContain('As firm policy, the held-away Vanguard 401(k) counts too: the rule for employer plans is unsettled.')
     expect(body).toContain('Reinvested dividends count as buying.\n- The Intel window runs through 2026-03-22.')
     expect(body).toContain('estimate; consult your tax professional')
   })
@@ -78,7 +78,7 @@ describe('the recap', () => {
 
   it("reads Adrian's edits, because it is written from the filed lines", () => {
     heldAndDrafted()
-    ok(saveNotes(ADRIAN, 'evt-010', edit('n-09', 'We keep the legacy goal; options to protect it come to the next review.')))
+    ok(saveNotes(ADRIAN, 'evt-010', edit('n-10', 'We keep the legacy goal; options to protect it come to the next review.')))
     ok(saveNotes(ADRIAN, 'evt-010', edit('n-01', 'Reviewed the rebalance and the harvest in detail.')))
     file()
     const { body } = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft
@@ -118,7 +118,7 @@ describe('the recap', () => {
 describe('the Intel window sentence', () => {
   it('follows the Intel decision wherever it moved, and ends the decisions when no decision mentions Intel', () => {
     heldAndDrafted()
-    ok(saveNotes(ADRIAN, 'evt-010', edit('n-08', 'Robert will not buy the stock back in any account until the window closes.')))
+    ok(saveNotes(ADRIAN, 'evt-010', edit('n-09', 'Robert will not buy the stock back in any account until the window closes.')))
     file()
     const { body } = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft
     expect(body).toContain('- The investment policy statement stays as signed; an ESG change would need a signed amendment.\n- The Intel window runs through 2026-03-22.')

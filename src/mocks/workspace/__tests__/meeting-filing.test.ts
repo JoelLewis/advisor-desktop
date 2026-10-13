@@ -34,12 +34,13 @@ describe('filing the meeting record', () => {
   it('creates one tracked task per follow-up, owner and due date from its line, all on trading days', () => {
     ok(fileMeetingRecord(ADRIAN, 'evt-010', readyToFile()))
     expect(meeting().tasks.map((t) => [t.id, t.fromNoteLine, t.owner, t.due, t.state])).toEqual([
-      ['task-0001', 'n-15', { kind: 'person', personId: 'user-003' }, '2026-03-02', 'open'],
-      ['task-0002', 'n-16', { kind: 'person', personId: 'user-003' }, '2026-03-06', 'open'],
-      ['task-0003', 'n-17', { kind: 'person', personId: 'user-001' }, '2026-02-27', 'open'],
-      ['task-0004', 'n-18', { kind: 'person', personId: 'user-002' }, '2026-03-04', 'open'],
-      ['task-0005', 'n-19', { kind: 'person', personId: 'user-002' }, '2026-02-26', 'open'],
-      ['task-0006', 'n-20', { kind: 'person', personId: 'user-001' }, '2026-03-13', 'open'],
+      ['task-0001', 'n-17', { kind: 'person', personId: 'user-003' }, '2026-03-02', 'open'],
+      ['task-0002', 'n-18', { kind: 'person', personId: 'user-001' }, '2026-03-02', 'open'],
+      ['task-0003', 'n-19', { kind: 'person', personId: 'user-003' }, '2026-03-06', 'open'],
+      ['task-0004', 'n-20', { kind: 'person', personId: 'user-001' }, '2026-02-27', 'open'],
+      ['task-0005', 'n-21', { kind: 'person', personId: 'user-002' }, '2026-03-04', 'open'],
+      ['task-0006', 'n-22', { kind: 'person', personId: 'user-002' }, '2026-02-26', 'open'],
+      ['task-0007', 'n-23', { kind: 'person', personId: 'user-001' }, '2026-03-13', 'open'],
     ])
     for (const t of meeting().tasks) expect(isTradingDay(t.due), t.id).toBe(true)
     expect(meeting().tasks[0]!.title).toBe('Plan scenarios for the legacy goal.')
@@ -61,7 +62,7 @@ describe('filing the meeting record', () => {
     expect(fileMeetingRecord(ADRIAN, 'evt-010', fingerprint)).toEqual({ ok: false, status: 409, code: 'ALREADY_FILED', message: 'The record was already filed (REC-0001).' })
     expect(fileActs()).toHaveLength(1)
     expect(store().messages.filter((m) => m.kind === 'meeting_tasks')).toHaveLength(1)
-    expect(meeting().tasks).toHaveLength(6)
+    expect(meeting().tasks).toHaveLength(7)
   })
 
   it('refuses notes that moved after they were read, and files nothing', () => {
