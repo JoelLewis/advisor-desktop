@@ -1,16 +1,17 @@
-import type { Draft } from '@/types/workspace'
+import type { Draft, Thread } from '@/types/workspace'
 import { can, personById } from '@/mocks/data/people'
 import { nextAt, nextId, store } from '@/mocks/data/workspace-store'
 import { activeApproval, isDraftStale } from '@/mocks/data/proposals-store'
 import { writeClientLetter } from '@/mocks/agents/client-letter'
 import { visibleProposal } from './proposal-acts'
+import { isStale } from './draft-staleness'
 import { canSeeThread } from './visibility'
 
 export type LetterFailure = { ok: false; status: 400 | 404 | 409; code: string; message: string }
 const NO_THREAD: LetterFailure = { ok: false, status: 404, code: 'NO_THREAD', message: 'Thread not found.' }
 
 /** A client thread the viewer may draft in; anyone else is told it does not exist. */
-function draftingClientThread(viewerId: string, threadId: string) {
+export function draftingClientThread(viewerId: string, threadId: string): Thread | undefined {
   const thread = store().threads.find((t) => t.id === threadId)
   if (!thread || !canSeeThread(viewerId, thread) || personById(viewerId)?.role === 'client' || !can(viewerId, 'draft_for_client')) return undefined
   return thread
@@ -45,14 +46,15 @@ export function reviseDraft(viewerId: string, clientThreadId: string, draftId: s
   const old = s.drafts.find((d) => d.id === draftId && d.clientThreadId === thread.id)
   if (!old) return { ok: false, status: 404, code: 'NO_DRAFT', message: 'Draft not found.' }
   if (body.trim().length === 0) return { ok: false, status: 400, code: 'BAD_REQUEST', message: 'A non-empty body is required.' }
-  // The edit keeps the letter's basis (so it still goes stale with the approval) but not its figures: the text is now the editor's.
-  const draft: Draft = { id: nextId('draft'), clientThreadId: thread.id, authorId: viewerId, body, createdAt: nextAt(), agentId: old.agentId, basis: old.basis, supersedes: old.id,
+  // The edit keeps the letter's basis (so it still goes stale with the approval or the filing) but not its figures: the text is now the editor's.
+  const draft: Draft = { id: nextId('draft'), clientThreadId: thread.id, authorId: viewerId, body, createdAt: nextAt(), agentId: old.agentId, basis: old.basis,
+    ...(old.recordBasis ? { recordBasis: old.recordBasis } : {}), supersedes: old.id,
     editorIds: [...new Set([...(old.editorIds ?? []), viewerId])] }
   s.drafts = s.drafts.map((d) => (d.id === old.id ? draft : d))
   return { ok: true, draft }
 }
 
-/** A client thread's drafts as a firm viewer sees them: each marked stale when its basis is no longer the approval. */
+/** A client thread's drafts as a firm viewer sees them: each marked stale when its basis is no longer the approval or the filed record. */
 export function draftsFor(clientThreadId: string): Draft[] {
-  return store().drafts.filter((d) => d.clientThreadId === clientThreadId).map((d) => ({ ...d, stale: isDraftStale(d) }))
+  return store().drafts.filter((d) => d.clientThreadId === clientThreadId).map((d) => ({ ...d, stale: isStale(d) }))
 }

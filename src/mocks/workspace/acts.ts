@@ -2,7 +2,7 @@ import type { BindingAct, Message } from '@/types/workspace'
 import { can, personById } from '@/mocks/data/people'
 import { commitActId, nextAt, nextId, store } from '@/mocks/data/workspace-store'
 import { fingerprint } from '@/lib/fingerprint'
-import { isDraftStale } from '@/mocks/data/proposals-store'
+import { isStale, staleMessage } from './draft-staleness'
 import { canSeeThread } from './visibility'
 
 type Failure = { ok: false; status: 403 | 404 | 409; code: string; message: string }
@@ -23,9 +23,7 @@ export function sendToClient(viewerId: string, draftId: string): { ok: true; act
   const thread = s.threads.find((t) => t.id === draft.clientThreadId)
   if (!thread || !canSeeThread(viewerId, thread)) return noDraft
   if (!can(viewerId, 'send_to_client')) return { ok: false, status: 403, code: 'NOT_PERMITTED', message: 'Only the advisor of record can send to a client.' }
-  if (isDraftStale(draft)) {
-    return { ok: false, status: 409, code: 'STALE_DRAFT', message: `This letter was drafted from v${draft.basis?.version ?? 0}, which is no longer the approved version. Ask for a new letter.` }
-  }
+  if (isStale(draft)) return { ok: false, status: 409, code: 'STALE_DRAFT', message: staleMessage(draft) }
 
   const at = nextAt()
   const text: Message = { kind: 'text', id: nextId('msg'), threadId: thread.id, authorId: viewerId, at, body: draft.body }
@@ -33,8 +31,12 @@ export function sendToClient(viewerId: string, draftId: string): { ok: true; act
     id: commitActId(), kind: 'send_to_client', actorId: viewerId, at, threadId: thread.id,
     subject: { type: 'draft', id: draftId }, fingerprint: fingerprint(draft.body), messageId: text.id,
     summary: 'Message sent to the client',
-    // Books and records: an agent's letter records the approved version it came from and every person who edited it.
-    ...(draft.agentId ? { basis: draft.basis, editedBy: draft.editorIds ?? [] } : {}),
+    // Books and records: an agent's letter records what it came from (an approved version or a filed record) and every person who edited it.
+    ...(draft.agentId ? {
+      ...(draft.basis ? { basis: draft.basis } : {}),
+      ...(draft.recordBasis ? { recordBasis: draft.recordBasis } : {}),
+      editedBy: draft.editorIds ?? [],
+    } : {}),
   }
   const marker: Message = { kind: 'act', id: nextId('msg'), threadId: thread.id, at: nextAt(), actId: act.id }
   s.acts.push(act)
