@@ -432,25 +432,25 @@ export const nbas: NBA[] = [
   },
   // ── Compliance ──
   {
-    id: 'nba-012', title: 'IPS review overdue — Johnson Household',
-    // Terminology · "SEC best practice" attributed a firm practice to a regulator; the SEC does
-    // not mandate this cadence. Corrected to attribute it to firm policy.
-    description: 'The Johnson Household IPS was last reviewed on 2024-09-10 — over 17 months ago. Firm policy requires an annual IPS review.',
+    id: 'nba-012', title: 'Annual review today — Johnson Household',
+    // Phase 5 · one IPS story: the IPS on file (doc-001) was signed on 2025-11-15, and its annual review
+    // is on the agenda of today's annual review (evt-010). The old "last reviewed 2024-09-10, over 17
+    // months ago" contradicted the signed document. Terminology · the cadence is firm policy, not an SEC rule.
+    description: 'The Johnson Family Trust IPS was signed on 2025-11-15. Firm policy requires an annual IPS review; it is on the agenda for the annual review on 2026-02-25.',
     category: 'compliance', priority: 'medium',
     scoring: { urgency: 65, impact: 45, efficiency: 55, relationship: 50, confidence: 90, composite: 60 },
     clients: [{ id: 'cli-001', name: 'Robert Johnson' }, { id: 'cli-002', name: 'Patricia Johnson' }],
-    trigger: { source: 'compliance', condition: 'ips_review_overdue', value: 'Last: 2024-09-10', detectedAt: '2026-02-15T08:00:00Z' },
-    suggestedAction: 'Schedule IPS review; AI can generate updated IPS draft',
+    trigger: { source: 'compliance', condition: 'ips_annual_review', value: 'IPS signed 2025-11-15', detectedAt: '2026-02-15T08:00:00Z' },
+    suggestedAction: 'Review the IPS at the annual review',
     estimatedImpact: 0, createdAt: '2026-02-15T08:15:00Z', dismissed: false,
     actionRoute: { path: '/accounts/acc-002' },
     complianceInfo: {
       nonDismissible: true,
       escalationLevel: 'advisor',
-      deadline: '2026-03-15T23:59:00Z',
+      deadline: '2026-02-25T23:59:00Z',
       auditTrail: [
-        { action: 'created', timestamp: '2026-02-15T08:15:00Z', actor: 'system', note: 'IPS review overdue >12 months' },
+        { action: 'created', timestamp: '2026-02-15T08:15:00Z', actor: 'system', note: 'Annual IPS review on the agenda for the annual review' },
         { action: 'viewed', timestamp: '2026-02-20T09:30:00Z', actor: 'advisor-sarah-kim' },
-        { action: 'escalated', timestamp: '2026-02-25T08:00:00Z', actor: 'system', note: 'Auto-escalated: 10 days remaining before deadline' },
       ],
     },
   },

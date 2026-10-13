@@ -223,6 +223,7 @@ describe('Terminology: firm policy vs regulatory citation', () => {
     const nba = nbas.find((n) => n.id === 'nba-012')!
     expect(nba.description).not.toContain('SEC best practice')
     expect(nba.description).toContain('Firm policy requires an annual IPS review')
+    expect(nba.description).not.toContain('2024-09-10')
   })
 
   it('nba-013 attributes the $100K documentation threshold to firm policy and names the real rule', () => {
