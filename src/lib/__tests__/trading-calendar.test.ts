@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isTradingDay, tradingDayOnOrBefore, nyseSessionUtc, isDuringNyseSession } from '@/lib/trading-calendar'
+import { isTradingDay, tradingDayOnOrBefore, nyseSessionUtc, isDuringNyseSession, tradingDaysAfter, isCoveredTradingDay } from '@/lib/trading-calendar'
 
 describe('isTradingDay', () => {
   it('is false on weekends', () => {
@@ -57,5 +57,32 @@ describe('the NYSE regular session in UTC', () => {
     expect(isDuringNyseSession('2026-02-20T10:15:03Z')).toBe(false) // 5:15 ET
     expect(isDuringNyseSession('2026-02-23T21:00:00Z')).toBe(true) // the 4:00 PM ET close, a fund's NAV
     expect(isDuringNyseSession('2026-02-21T15:15:00Z')).toBe(false) // a Saturday
+  })
+})
+
+describe('tradingDaysAfter', () => {
+  it('counts NYSE trading days forward, skipping weekends and holidays', () => {
+    expect(tradingDaysAfter('2026-02-25', 1)).toBe('2026-02-26')
+    expect(tradingDaysAfter('2026-02-25', 2)).toBe('2026-02-27')
+    expect(tradingDaysAfter('2026-02-25', 3)).toBe('2026-03-02')
+    expect(tradingDaysAfter('2026-02-25', 12)).toBe('2026-03-13')
+    expect(tradingDaysAfter('2026-04-02', 1)).toBe('2026-04-06')
+  })
+  it('refuses a count that is not a whole number of days', () => {
+    expect(() => tradingDaysAfter('2026-02-25', 0)).toThrow()
+    expect(() => tradingDaysAfter('2026-02-25', 1.5)).toThrow()
+  })
+})
+
+describe('isCoveredTradingDay', () => {
+  it('is true only for a real date the calendar covers on which the exchange trades', () => {
+    expect(isCoveredTradingDay('2026-02-26')).toBe(true)
+    expect(isCoveredTradingDay('2026-02-28')).toBe(false)
+    expect(isCoveredTradingDay('2026-04-03')).toBe(false)
+    expect(isCoveredTradingDay('2026-02-31')).toBe(false)
+    expect(isCoveredTradingDay('2027-01-04')).toBe(false)
+    expect(isCoveredTradingDay('2021-12-31')).toBe(false)
+    expect(isCoveredTradingDay('2026-02-26T00:00:00Z')).toBe(false)
+    expect(isCoveredTradingDay('soon')).toBe(false)
   })
 })

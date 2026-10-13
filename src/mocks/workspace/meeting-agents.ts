@@ -3,7 +3,8 @@ import type { AgendaItem, Meeting } from '@/types/workspace-meeting'
 import { nextAt, nextId, nextNumber, pad, store } from '@/mocks/data/workspace-store'
 import { AGENDA_V1_SUMMARY, runMeetingPrepAgent } from '@/mocks/agents/meeting-prep'
 import { runKeyOf } from './run-key'
-import { appendAgenda, preparing, refuseMeeting, type MeetingFailure } from './meetings'
+import { draftNotesFromTranscript } from '@/mocks/agents/meeting-notes'
+import { alreadyFiled, appendAgenda, meetingDay, preparing, refuseMeeting, replaceMeeting, type MeetingFailure } from './meetings'
 
 export type AgentMessage = Extract<Message, { kind: 'agent_finding' }>
 
@@ -38,4 +39,18 @@ export function runMeetingPrep(viewerId: string, eventId: string): { ok: true; m
     meeting = appendAgenda(meeting, items, { kind: 'agent', agentId: 'meeting-prep' }, AGENDA_V1_SUMMARY)
   }
   return { ok: true, meeting, findings, created: true }
+}
+
+/** Meeting Notes drafts the record from the transcript, once the meeting is held; a second request keeps the draft as Adrian left it. */
+export function draftMeetingNotes(viewerId: string, eventId: string): { ok: true; meeting: Meeting; created: boolean } | MeetingFailure {
+  const prepared = preparing(viewerId, eventId)
+  if (!prepared.ok) return prepared
+  const { meeting } = prepared
+  if (meeting.state === 'scheduled') return refuseMeeting(409, 'NOT_HELD', 'Hold the meeting first: the notes are drafted from its transcript.')
+  if (meeting.state === 'filed') return alreadyFiled(meeting)
+  if (meeting.notesDraft) return { ok: true, meeting, created: false }
+  const next: Meeting = { ...meeting, notesDraft: draftNotesFromTranscript(meeting.eventId, meetingDay(meeting)) }
+  replaceMeeting(next)
+  store().messages.push({ kind: 'notes_drafted', id: nextId('msg'), threadId: meeting.threadId, at: nextAt(), eventId: meeting.eventId, agentId: 'meeting-notes' })
+  return { ok: true, meeting: next, created: true }
 }

@@ -1,15 +1,17 @@
 
 import type { VersionAuthor } from '@/types/workspace'
 import type {
-  AgendaItem, AgendaItemInput, AgendaVersion, Meeting, MeetingEvent, MeetingSummary, MeetingView, NoteLine,
+  AgendaItem, AgendaItemInput, AgendaVersion, Meeting, MeetingEvent, MeetingSummary, MeetingView, NoteLine, NoteLineInput, TaskOwner,
 } from '@/types/workspace-meeting'
+import { isNoteSection } from '@/types/workspace-meeting'
 import { calendarEvents } from '@/mocks/data/calendar'
 import { clients } from '@/mocks/data/clients'
-import { can, personById } from '@/mocks/data/people'
+import { AGENTS, can, personById } from '@/mocks/data/people'
 import { transcriptOf } from '@/mocks/data/meeting-transcripts'
 import { advanceClockTo, nextAt, nextId, nextNumber, pad, store } from '@/mocks/data/workspace-store'
 import { fingerprint } from '@/lib/fingerprint'
 import { MOCK_NOW_ISO } from '@/lib/clock'
+import { isCoveredTradingDay } from '@/lib/trading-calendar'
 import { canSeeThread } from './visibility'
 
 export type MeetingFailure = { ok: false; status: 400 | 403 | 404 | 409; code: string; message: string }
@@ -188,4 +190,76 @@ export function holdMeeting(viewerId: string, eventId: string): MeetingResult {
   replaceMeeting(held)
   store().messages.push({ kind: 'meeting_held', id: nextId('msg'), threadId: meeting.threadId, at, eventId: meeting.eventId, start: event.start, end: event.end })
   return { ok: true, meeting: held }
+}
+
+export const NOTE_TEXT_MAX = 2000
+
+/** The meeting's calendar date where it happens (Eastern), from its event. */
+export function meetingDay(meeting: Meeting): string {
+  const event = calendarEvents.find((e) => e.id === meeting.eventId)
+  if (!event) throw new Error(`Meeting ${meeting.eventId} names no calendar event`)
+  return event.startTime.slice(0, 10)
+}
+
+const isOwner = (owner: TaskOwner): boolean => (owner.kind === 'person'
+  ? personById(owner.personId) !== undefined && personById(owner.personId)?.role !== 'client'
+  : AGENTS.some((a) => a.id === owner.agentId))
+
+/** Every line checked before anything is saved: section, text, citations, ids, and a follow-up's owner and due date. */
+function lineRefusal(meeting: Meeting, input: readonly NoteLineInput[]): MeetingFailure | undefined {
+  if (input.length === 0) return refuseMeeting(400, 'NO_LINES', 'The notes need at least one line.')
+  const transcript = new Set((transcriptOf(meeting.eventId) ?? []).map((l) => l.id))
+  const existing = new Set((meeting.notesDraft ?? []).map((l) => l.id))
+  const day = meetingDay(meeting)
+  const seen = new Set<string>()
+  for (const line of input) {
+    if (!isNoteSection(line.section)) return refuseMeeting(400, 'BAD_SECTION', 'A line belongs to discussion, decisions, client requests or follow-ups.')
+    const text = line.text.trim()
+    if (text.length === 0) return refuseMeeting(400, 'NOTE_TEXT_REQUIRED', 'Every line needs its text.')
+    if (text.length > NOTE_TEXT_MAX) return refuseMeeting(400, 'NOTE_TEXT_TOO_LONG', `Keep a line to ${NOTE_TEXT_MAX} characters or fewer.`)
+    if (line.cites.length === 0) return refuseMeeting(400, 'CITATION_REQUIRED', 'Every line cites the transcript line it records.')
+    const unknown = line.cites.find((id) => !transcript.has(id))
+    if (unknown !== undefined) return refuseMeeting(400, 'UNKNOWN_CITATION', `${unknown} is not a line of the transcript.`)
+    if (line.id !== undefined) {
+      if (!existing.has(line.id)) return refuseMeeting(400, 'UNKNOWN_LINE', `${line.id} is not a line of the draft.`)
+      if (seen.has(line.id)) return refuseMeeting(400, 'DUPLICATE_LINE', `${line.id} appears twice.`)
+      seen.add(line.id)
+    }
+    if (line.section !== 'follow_ups' && (line.owner !== undefined || line.due !== undefined)) {
+      return refuseMeeting(400, 'OWNER_ONLY_ON_FOLLOW_UP', 'Only a follow-up has an owner and a due date.')
+    }
+    if (line.section === 'follow_ups') {
+      if (!line.owner || line.due === undefined) return refuseMeeting(400, 'FOLLOW_UP_INCOMPLETE', 'A follow-up needs an owner and a due date.')
+      if (!isOwner(line.owner)) return refuseMeeting(400, 'UNKNOWN_OWNER', 'A follow-up is owned by someone at the firm or by an agent.')
+      if (!isCoveredTradingDay(line.due) || line.due < day) {
+        return refuseMeeting(400, 'DUE_NOT_TRADING_DAY', `A due date is an NYSE trading day on or after the meeting (${day}), within the calendar the firm holds.`)
+      }
+    }
+  }
+  return undefined
+}
+
+/** The refusal for a record already filed; a filed meeting without its filing is a broken invariant. */
+export function alreadyFiled(meeting: Meeting): MeetingFailure {
+  if (!meeting.filed) throw new Error(`Meeting ${meeting.eventId} is filed but holds no filing`)
+  return refuseMeeting(409, 'ALREADY_FILED', `The record was already filed (${meeting.filed.actId}); it cannot be edited.`)
+}
+
+/** Adrian's edits to the notes draft, until it is filed. Nothing is saved unless every line passes. */
+export function saveNotes(viewerId: string, eventId: string, input: readonly NoteLineInput[]): MeetingResult {
+  const prepared = preparing(viewerId, eventId)
+  if (!prepared.ok) return prepared
+  const { meeting } = prepared
+  if (meeting.state === 'scheduled') return refuseMeeting(409, 'NOT_HELD', 'Hold the meeting first: the notes are drafted from its transcript.')
+  if (meeting.state === 'filed') return alreadyFiled(meeting)
+  if (!meeting.notesDraft) return refuseMeeting(409, 'NO_NOTES', 'Ask Meeting Notes for a draft first.')
+  const refusal = lineRefusal(meeting, input)
+  if (refusal) return refusal
+  const lines: NoteLine[] = input.map((l) => ({
+    id: l.id ?? `n-${pad(nextNumber('note'))}`, section: l.section, text: l.text.trim(), cites: [...new Set(l.cites)],
+    ...(l.section === 'follow_ups' && l.owner && l.due !== undefined ? { owner: l.owner, due: l.due } : {}),
+  }))
+  const next: Meeting = { ...meeting, notesDraft: lines }
+  replaceMeeting(next)
+  return { ok: true, meeting: next }
 }
