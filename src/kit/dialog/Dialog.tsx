@@ -24,7 +24,11 @@ export function Dialog({ open, onOpenChange, title, description, children, retur
           }}
           onCloseAutoFocus={(event) => {
             event.preventDefault()
-            if (!returnFocus) { opener.current = null; return }
+            // Radix reports the close a tick after unmounting; by then the page may have moved focus on purpose
+            // (e.g. to a record slip when the dialog's panel left the page), and that focus stands.
+            const active = document.activeElement
+            const movedOnPurpose = active instanceof HTMLElement && active !== document.body && active.isConnected
+            if (!returnFocus || movedOnPurpose) { opener.current = null; return }
             const target = opener.current?.isConnected && opener.current !== document.body
               ? opener.current
               : document.getElementById(PAGE_TITLE_ID)

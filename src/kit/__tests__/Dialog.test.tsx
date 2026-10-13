@@ -79,3 +79,31 @@ it('has a visible Close button that closes and returns focus to the opener', asy
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   await waitFor(() => expect(trigger).toHaveFocus())
 })
+
+it('leaves focus where the page put it when the dialog was torn down with its panel', async () => {
+  function Panel() {
+    const [panelShown, setPanelShown] = useState(true)
+    const [open, setOpen] = useState(false)
+    return (
+      <Page title="Kit">
+        {panelShown ? (
+          <>
+            <Button onClick={() => setOpen(true)}>Open keys</Button>
+            <Dialog open={open} onOpenChange={setOpen} title="Keyboard">
+              <Button onClick={() => setPanelShown(false)}>Finish</Button>
+            </Dialog>
+          </>
+        ) : null}
+        <p id="slip" tabIndex={-1}>The new record</p>
+      </Page>
+    )
+  }
+  render(<Panel />)
+  await userEvent.click(screen.getByRole('button', { name: 'Open keys' }))
+  act(() => within(screen.getByRole('dialog', { name: 'Keyboard' })).getByRole('button', { name: 'Finish' }).click())
+  const slip = screen.getByText('The new record')
+  // The page hands focus to the new record before Radix's 0ms close timer runs.
+  slip.focus()
+  await act(() => new Promise((resolve) => setTimeout(resolve, 20)))
+  expect(slip).toHaveFocus()
+})
