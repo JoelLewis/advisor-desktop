@@ -15,7 +15,10 @@ export function MeetingControls({ meeting, canPrepare, onRecorded, filingBlocked
   switch (meeting.state) {
     case 'scheduled': return <BeforeTheMeeting meeting={meeting} />
     case 'held': return <AfterTheMeeting meeting={meeting} onRecorded={onRecorded} filingBlockedReason={filingBlockedReason} />
-    case 'filed': return <p className="text-body text-ink-2">{`Filed · ${meeting.filedActId ?? ''}`}</p>
+    case 'filed': {
+      if (meeting.filedActId === undefined) throw new Error(`Meeting ${meeting.eventId} is filed but names no filing act`)
+      return <p className="text-body text-ink-2">{`Filed · ${meeting.filedActId}`}</p>
+    }
   }
 }
 

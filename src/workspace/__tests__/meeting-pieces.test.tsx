@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '@/test/render'
@@ -9,7 +9,7 @@ import { MeetingControls } from '@/workspace/meeting/MeetingControls'
 import { AgendaEditor } from '@/workspace/meeting/AgendaEditor'
 import { agendaFindings } from '@/workspace/meeting/agenda-findings'
 import { HouseholdSummaryPanes } from '@/workspace/household/HouseholdSummaryPanes'
-import { ipsLine } from '@/workspace/household/household-words'
+import { heldAwayPolicy, ipsLine } from '@/workspace/household/household-words'
 
 const ADRIAN = 'user-001'
 const meeting = () => store().meetings[0]!
@@ -65,6 +65,20 @@ describe('meeting controls', () => {
     const dialog = screen.getByRole('dialog', { name: 'File the record of the Johnson annual review?' })
     expect(dialog).toHaveTextContent('Save your edits before filing.')
     expect(within(dialog).getByRole('button', { name: 'Confirm' })).toBeDisabled()
+  })
+
+  it('a filed meeting names its act; one with no act id is a broken invariant', async () => {
+    const view = await getMeeting(ADRIAN, 'evt-010')
+    renderWithProviders(<MeetingControls meeting={{ ...view, state: 'filed', filedActId: 'REC-0001' }} canPrepare onRecorded={() => undefined} />)
+    expect(screen.getByText('Filed · REC-0001')).toBeInTheDocument()
+    // React reports the thrown render to the console and to jsdom's window: keep the output quiet, the throw is the assertion.
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const swallow = (e: ErrorEvent) => e.preventDefault()
+    window.addEventListener('error', swallow)
+    expect(() => renderWithProviders(<MeetingControls meeting={{ ...view, state: 'filed', filedActId: undefined }} canPrepare onRecorded={() => undefined} />))
+      .toThrow('Meeting evt-010 is filed but names no filing act')
+    window.removeEventListener('error', swallow)
+    quiet.mockRestore()
   })
 
   it('a firm viewer who does not run the meeting sees why, and no control', async () => {
@@ -145,6 +159,9 @@ describe('the household summary', () => {
     const accounts = screen.getByRole('table', { name: 'Household accounts' })
     expect(within(accounts).getAllByRole('row').map((r) => r.textContent).join('|')).toContain('Johnson Family Trust')
     expect(accounts).toHaveTextContent('Robert Johnson Individual')
+    // A drift and its unit never break apart.
+    expect(accounts.textContent).toMatch(/\d\u00a0pp/)
+    expect(accounts.textContent).not.toMatch(/\d pp/)
     expect(screen.getByRole('table', { name: 'Held-away accounts' })).toHaveTextContent('2,400,000')
     expect(screen.getByText("The firm does not manage these and cannot see their holdings. A purchase in an IRA or Roth still counts for the taxpayer's wash-sale windows; the firm treats purchases in the held-away 401(k) and 403(b) as if they count, though the rule for employer plans is unsettled.")).toBeInTheDocument()
     const goals = screen.getByRole('table', { name: 'Plan goals' })
@@ -160,5 +177,12 @@ describe('the household summary', () => {
     expect(ipsLine({ ...ips, signatureStatus: 'pending' })).toBe('Trust — IPS · awaiting signature')
     expect(ipsLine({ ...ips, signatureStatus: 'not_required' })).toBe('Trust — IPS · no signature required')
     expect(ipsLine(undefined)).toBe('No investment policy statement on file.')
+  })
+
+  it('names the held-away employer plans the household has, or says employer plans', () => {
+    const tail = 'as if they count, though the rule for employer plans is unsettled.'
+    expect(heldAwayPolicy([{ accountType: '401(k)' }])).toContain(`the firm treats purchases in the held-away 401(k) ${tail}`)
+    expect(heldAwayPolicy([{ accountType: '403(b)' }, { accountType: '401(k) Roth' }, { accountType: '403(b)' }])).toContain('the held-away 403(b) and 401(k) as if')
+    expect(heldAwayPolicy([{ accountType: 'Brokerage' }])).toContain(`the firm treats purchases in held-away employer plans ${tail}`)
   })
 })

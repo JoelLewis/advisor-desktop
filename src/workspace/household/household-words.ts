@@ -3,6 +3,7 @@ import type { DocumentType, SignatureStatus } from '@/types/document'
 import type { CommChannel } from '@/types/client-comms'
 import type { IpsOnFile } from '@/types/workspace-household'
 import { fmtDate } from '@/kit/measure'
+import { joinWords } from '@/lib/words'
 
 export const GOAL_STATUS_TAG: Readonly<Record<GoalStatus, string>> = { on_track: 'ON TRACK', at_risk: 'AT RISK', off_track: 'OFF TRACK', not_analyzed: 'NOT ANALYZED' }
 
@@ -15,6 +16,13 @@ export function ipsLine(ips: IpsOnFile | undefined): string {
   if (!ips) return 'No investment policy statement on file.'
   const status = ips.signatureStatus === 'signed' && ips.signedOn ? `signed ${fmtDate(ips.signedOn)}` : SIGNATURE_WORDS[ips.signatureStatus]
   return `${ips.name} · ${status}`
+}
+
+/** The held-away pane's wash-sale policy, naming the household's held-away employer plans as Meeting Prep does. */
+export function heldAwayPolicy(heldAway: readonly { accountType: string }[]): string {
+  const planNames = [...new Set(heldAway.flatMap((h) => h.accountType.match(/^(?:401\(k\)|403\(b\))/) ?? []))]
+  const plans = planNames.length > 0 ? `the held-away ${joinWords(planNames)}` : 'held-away employer plans'
+  return `The firm does not manage these and cannot see their holdings. A purchase in an IRA or Roth still counts for the taxpayer's wash-sale windows; the firm treats purchases in ${plans} as if they count, though the rule for employer plans is unsettled.`
 }
 
 export const DOCUMENT_TYPE_WORDS: Readonly<Record<DocumentType, string>> = {

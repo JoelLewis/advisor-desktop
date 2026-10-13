@@ -15,6 +15,9 @@ export function createTestQueryClient() {
   })
 }
 
+/** The flags a MemoryRouter takes, as the app's router sets them. */
+const memoryRouterFuture = { v7_relativeSplatPath: routerFuture.v7_relativeSplatPath, v7_startTransition: providerFuture.v7_startTransition }
+
 type ProvidersProps = {
   children: ReactNode
   queryClient?: QueryClient
@@ -26,7 +29,7 @@ function Providers({ children, queryClient, initialEntries = ['/'] }: ProvidersP
   return (
     <QueryClientProvider client={client}>
       <ViewerProvider>
-        <MemoryRouter initialEntries={initialEntries}>
+        <MemoryRouter initialEntries={initialEntries} future={memoryRouterFuture}>
           {children}
         </MemoryRouter>
       </ViewerProvider>

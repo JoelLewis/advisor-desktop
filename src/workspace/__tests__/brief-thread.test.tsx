@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { delay, http } from 'msw'
+import { server } from '@/test/server'
 import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
 import { carryFinding } from '@/services/workspace'
@@ -62,5 +64,17 @@ describe('the Brief', () => {
     renderRoutes(routes, '/t/th-brief')
     const intc = await screen.findByRole('article', { name: `Harvest Scanner: ${INTC_CLAIM}` })
     expect(within(intc).queryByRole('button', { name: 'Take to team thread' })).toBeNull()
+  })
+
+  it("offers the team thread at once; the meeting thread joins when the account's household arrives", async () => {
+    let release: () => void = () => undefined
+    const arrived = new Promise<void>((resolve) => { release = resolve })
+    server.use(http.get('/api/custodian/accounts/:id', async () => { await arrived; await delay(0); return undefined }))
+    renderRoutes(routes, '/t/th-brief')
+    const intc = await screen.findByRole('article', { name: `Harvest Scanner: ${INTC_CLAIM}` })
+    expect(await within(intc).findByRole('button', { name: 'Take to team thread' })).toBeInTheDocument()
+    expect(within(intc).queryByRole('button', { name: 'Take to Johnson annual review' })).toBeNull()
+    release()
+    expect(await within(intc).findByRole('button', { name: 'Take to Johnson annual review' })).toBeInTheDocument()
   })
 })

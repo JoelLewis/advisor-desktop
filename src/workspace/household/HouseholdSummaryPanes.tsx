@@ -6,7 +6,7 @@ import { Tag } from '@/kit/tag/Tag'
 import { UNIT, fmtDate, fmtMoney, fmtResult, fmtWeight } from '@/kit/measure'
 import type { HouseholdSummary } from '@/types/workspace-household'
 import { AccountsTable } from './AccountsTable'
-import { GOAL_STATUS_TAG, ipsLine } from './household-words'
+import { GOAL_STATUS_TAG, heldAwayPolicy, ipsLine } from './household-words'
 
 /** The household as the engine measures it: managed accounts against their models, what is held away, the plan, the taxpayer's windows, the IPS. */
 export function HouseholdSummaryPanes({ summary }: { summary: HouseholdSummary }) {
@@ -17,7 +17,7 @@ export function HouseholdSummaryPanes({ summary }: { summary: HouseholdSummary }
         <AccountsTable caption="Household accounts" accounts={summary.accounts} totalValue={summary.managedValue} totalLabel="Managed" />
       </Pane>
       <Pane title="Held away · outside the firm's view" meta={`${fmtMoney(summary.heldAwayValue)} ${UNIT.usd}`}>
-        <p className="text-body text-ink-2">The firm does not manage these and cannot see their holdings. A purchase in an IRA or Roth still counts for the taxpayer's wash-sale windows; the firm treats purchases in the held-away 401(k) and 403(b) as if they count, though the rule for employer plans is unsettled.</p>
+        <p className="text-body text-ink-2">{heldAwayPolicy(summary.heldAway)}</p>
         <DataTable caption="Held-away accounts" rows={summary.heldAway} getRowId={(h) => h.id} total={summary.heldAway.length}
           noun={{ singular: 'account', plural: 'accounts' }}
           columns={[

@@ -16,6 +16,8 @@ const MEETING: Message[] = [
   { kind: 'notes_drafted', id: 'msg-t3', threadId: 'th-johnson-meeting', at: '2026-02-25T20:16:00.000Z', eventId: 'evt-010', agentId: 'meeting-notes' },
   { kind: 'meeting_tasks', id: 'msg-t4', threadId: 'th-johnson-meeting', at: '2026-02-25T20:18:00.000Z', eventId: 'evt-010', filedActId: 'REC-0001',
     tasks: [{ id: 'task-0001', title: 'Send the beneficiary checklist.', owner: { kind: 'person', personId: 'user-002' }, due: '2026-02-26', state: 'open', fromNoteLine: 'n-22' }] },
+  { kind: 'agenda_version', id: 'msg-t5', threadId: 'th-johnson-meeting', at: '2026-02-25T12:11:00.000Z', eventId: 'evt-010', version: 2,
+    author: { kind: 'person', personId: 'user-001' }, changeSummary: 'Moved an item up.' },
 ]
 
 describe('meeting messages', () => {
@@ -34,6 +36,10 @@ describe('meeting messages', () => {
     await screen.findByRole('heading', { level: 1, name: 'Johnson annual review' })
     const agenda = await conversation().findByRole('article', { name: 'Agenda v1 · Meeting Prep' })
     expect(agenda).toHaveTextContent('Proposed an agenda ordered by what needs attention first.')
+    expect(agenda).toHaveTextContent('Agent')
+    // A person's version is tagged by their role.
+    const byAdrian = conversation().getByRole('article', { name: 'Agenda v2 · Adrian Hale' })
+    expect(byAdrian).toHaveTextContent(/^Agenda v2Adrian HaleAdvisor/)
     expect(within(agenda).getByRole('link', { name: /Open the meeting view/ })).toHaveAttribute('href', '/meetings/evt-010?from=th-johnson-meeting')
     expect(conversation().getByRole('article', { name: 'Meeting held' })).toHaveTextContent('Meeting held · 14:00–15:15 ET · transcript received')
     expect(conversation().getByRole('article', { name: 'Notes drafted · Meeting Notes' })).toHaveTextContent('Drafted the notes from the transcript; every line cites the lines it records.')

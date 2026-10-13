@@ -7,7 +7,7 @@ import { assetClassLabel } from '@/workspace/asset-class-label'
 import type { HouseholdAccount } from '@/types/workspace-household'
 
 const outsideWords = (a: HouseholdAccount) => a.outside
-  .map((o) => `${assetClassLabel(o.assetClass)} ${fmtDrift(o.drift)} ${UNIT.pp}${o.residual ? ` · ${RESIDUAL_WORDS[o.residual]}` : ''}`).join('; ')
+  .map((o) => `${assetClassLabel(o.assetClass)} ${fmtDrift(o.drift)}\u00a0${UNIT.pp}${o.residual ? ` · ${RESIDUAL_WORDS[o.residual]}` : ''}`).join('; ')
 
 type AccountsTableProps = { caption: string; accounts: HouseholdAccount[]; totalValue: number; totalLabel: string }
 

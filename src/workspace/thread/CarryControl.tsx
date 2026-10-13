@@ -15,8 +15,8 @@ export function CarryControl({ thread, findingId }: { thread: Thread; findingId:
   const subject = thread.subject
   const account = useAccount(subject?.type === 'account' ? subject.id : '')
   const targets = carryTargets(threads.data ?? [], viewerId, subject, account.data?.householdId)
-  // The account's household decides whether a meeting thread is a target, so wait for it before offering any.
-  if (thread.ownerId !== viewerId || (account.isPending && subject?.type === 'account') || targets.length === 0) return null
+  // The team thread is offered at once; the household's meeting thread joins it once the account's household arrives.
+  if (thread.ownerId !== viewerId || targets.length === 0) return null
   return (
     <div className="flex flex-wrap items-center gap-3">
       {targets.map(({ thread: target, label }) => (
