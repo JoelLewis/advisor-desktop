@@ -64,7 +64,7 @@ export function useActs(threadId: string) {
 export const WORKSPACE_QUERY_PREFIX = ['workspace'] as const
 
 /** A write changes what every viewer sees (a sent draft reaches the client), so it marks the whole workspace stale, not just the writer's view. */
-function useInvalidateWorkspace() {
+export function useInvalidateWorkspace() {
   const queryClient = useQueryClient()
   return () => queryClient.invalidateQueries({ queryKey: WORKSPACE_QUERY_PREFIX })
 }

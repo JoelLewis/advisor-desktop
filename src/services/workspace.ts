@@ -1,7 +1,9 @@
-import { get, post } from './api-client'
+import { get, post, put } from './api-client'
 import type { AgentId, BindingAct, Directory, Draft, Message, Thread, ThreadDetail } from '@/types/workspace'
 import type { Archive, ArchiveFilters, ComplianceActRequest, PresenterItem, SupervisionQueue } from '@/types/workspace-supervision'
 import type { DraftPreview, LegEdit, ProposalConstraint, ProposalDetail } from '@/types/workspace-proposal'
+import type { AgendaItemInput, MeetingSummary, MeetingView, NoteLineInput } from '@/types/workspace-meeting'
+import type { ClientView, HouseholdView } from '@/types/workspace-household'
 
 const as = (viewer: string) => ({ 'X-Viewer': viewer })
 
@@ -61,3 +63,26 @@ export const getArchive = (viewer: string, filters: ArchiveFilters) =>
 /** The presenter shortcut: Mark's default disposition, recorded as Mark with the shortcut marked. */
 export const actAsCco = (viewer: string, item: PresenterItem) =>
   post<BindingAct>('/workspace/presenter/act-as-cco', { item }, as(viewer))
+
+export const getMeetings = (viewer: string) =>
+  get<MeetingSummary[]>('/workspace/meetings', undefined, as(viewer))
+export const getMeeting = (viewer: string, eventId: string) =>
+  get<MeetingView>(`/workspace/meetings/${eventId}`, undefined, as(viewer))
+export const runMeetingPrep = (viewer: string, eventId: string) =>
+  post<MeetingView>(`/workspace/meetings/${eventId}/prep`, undefined, as(viewer))
+export const reviseAgenda = (viewer: string, eventId: string, items: AgendaItemInput[]) =>
+  post<MeetingView>(`/workspace/meetings/${eventId}/agenda`, { items }, as(viewer))
+export const holdMeeting = (viewer: string, eventId: string) =>
+  post<MeetingView>(`/workspace/meetings/${eventId}/hold`, undefined, as(viewer))
+export const draftMeetingNotes = (viewer: string, eventId: string) =>
+  post<MeetingView>(`/workspace/meetings/${eventId}/notes/draft`, undefined, as(viewer))
+export const saveMeetingNotes = (viewer: string, eventId: string, lines: NoteLineInput[]) =>
+  put<MeetingView>(`/workspace/meetings/${eventId}/notes`, { lines }, as(viewer))
+export const fileMeetingRecord = (viewer: string, eventId: string, fingerprint: string) =>
+  post<BindingAct>('/workspace/acts', { kind: 'file_meeting_record', eventId, fingerprint }, as(viewer))
+export const draftRecap = (viewer: string, clientThreadId: string, eventId: string) =>
+  post<Draft>(`/workspace/threads/${clientThreadId}/drafts/recap`, { eventId }, as(viewer))
+export const getHousehold = (viewer: string, householdId: string) =>
+  get<HouseholdView>(`/workspace/households/${householdId}`, undefined, as(viewer))
+export const getClientView = (viewer: string, clientId: string) =>
+  get<ClientView>(`/workspace/clients/${clientId}`, undefined, as(viewer))

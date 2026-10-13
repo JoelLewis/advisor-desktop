@@ -5,6 +5,7 @@ import { nextAt, nextId, store } from '../data/workspace-store'
 import { BRIEF_THREAD_ID } from '../workspace/brief'
 import { remeasureBrief } from '../workspace/brief-remeasure'
 import { sendToClient } from '../workspace/acts'
+import { fileMeetingRecord } from '../workspace/meeting-acts'
 import { carryFinding } from '../workspace/carry'
 import { draftLetter, draftsFor, reviseDraft } from '../workspace/letters'
 import { approveProposal, visibleProposal, withdrawApproval } from '../workspace/proposal-acts'
@@ -12,6 +13,7 @@ import { previewAgent, runAgent } from '../workspace/run-agent'
 import { canSeeThread, viewerFrom, visibleThreads } from '../workspace/visibility'
 import { notFound } from './utils'
 import { badRequest, firmViewer, nonEmptyString, readJson, refusal, unauthorised } from './workspace-http'
+import { workspaceMeetingHandlers } from './workspace-meetings'
 import { workspaceProposalHandlers } from './workspace-proposals'
 import { parseComplianceAct, recordComplianceAct, workspaceSupervisionHandlers } from './workspace-supervision'
 
@@ -23,7 +25,7 @@ function clientDirectory(clientId: string): Directory {
   return { people: PEOPLE.filter((p) => ids.has(p.id)), agents: [], permissions: { [clientId]: permissionsOf(clientId) } }
 }
 
-const withoutProvenance = ({ subject: _subject, basis: _basis, editedBy: _editedBy, messageId: _messageId, viaPresenter: _via, rationale: _rationale, ...act }: BindingAct): BindingAct => act
+const withoutProvenance = ({ subject: _subject, basis: _basis, recordBasis: _recordBasis, editedBy: _editedBy, messageId: _messageId, viaPresenter: _via, rationale: _rationale, ...act }: BindingAct): BindingAct => act
 
 const isAgentId = (value: string): value is AgentId => AGENTS.some((a) => a.id === value)
 
@@ -129,6 +131,11 @@ export const workspaceHandlers = [
         const r = withdrawApproval(viewer, body.proposalId)
         return r.ok ? HttpResponse.json(r.act, { status: 201 }) : refusal(r)
       }
+      case 'file_meeting_record': {
+        if (!nonEmptyString(body.eventId) || !nonEmptyString(body.fingerprint)) return badRequest('eventId and fingerprint are required.')
+        const r = fileMeetingRecord(viewer, body.eventId, body.fingerprint)
+        return r.ok ? HttpResponse.json(r.act, { status: 201 }) : refusal(r)
+      }
       case 'release_orders':
       case 'return_to_advisor':
       case 'escalate':
@@ -199,6 +206,7 @@ export const workspaceHandlers = [
 
   ...workspaceProposalHandlers,
   ...workspaceSupervisionHandlers,
+  ...workspaceMeetingHandlers,
 
   // Workspace handlers must be registered above this catch-all.
   http.all('/api/workspace/*', () => HttpResponse.json({ code: 'METHOD_NOT_ALLOWED', message: 'Workspace records cannot be edited or deleted.' }, { status: 405 })),

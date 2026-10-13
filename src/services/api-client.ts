@@ -47,10 +47,10 @@ export function post<T>(path: string, body?: unknown, headers?: Record<string, s
   }).then(handleResponse<T>)
 }
 
-export function put<T>(path: string, body: unknown): Promise<T> {
+export function put<T>(path: string, body: unknown, headers?: Record<string, string>): Promise<T> {
   return fetch(`${BASE_URL}${path}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...headers },
     body: JSON.stringify(body),
   }).then(handleResponse<T>)
 }
