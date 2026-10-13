@@ -5,11 +5,10 @@ import { NotApplicable } from '@/kit/data-table/NotApplicable'
 import { Tag } from '@/kit/tag/Tag'
 import { fmtDate } from '@/kit/measure'
 import { useDeliverDisclosure } from '@/hooks/use-prospect-work'
-import { AT_ONBOARDING } from '@/mocks/workspace/disclosures'
 import { personIn } from '@/workspace/people/directory-people'
 import { ConfirmRecord } from '@/workspace/context/ConfirmRecord'
 import type { Directory } from '@/types/workspace'
-import type { DisclosureDocument, ProspectView } from '@/types/workspace-prospect'
+import { AT_ONBOARDING, type DisclosureDocument, type ProspectView } from '@/types/workspace-prospect'
 import { DISCLOSURE_SHORT, ONBOARDING_STATUS_WORDS } from './prospect-words'
 
 type Props = { view: ProspectView; directory: Directory; canDeliver: boolean; onRecorded: (actId: string) => void }

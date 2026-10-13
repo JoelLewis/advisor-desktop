@@ -1,6 +1,6 @@
 import type { BindingAct } from '@/types/workspace'
 import type { DisclosureDelivery, DisclosureDocument, ProspectRecord } from '@/types/workspace-prospect'
-import { DISCLOSURE_DOCUMENTS, DISCLOSURE_TITLES } from '@/types/workspace-prospect'
+import { AT_ONBOARDING, DISCLOSURE_DOCUMENTS, DISCLOSURE_TITLES } from '@/types/workspace-prospect'
 import { can } from '@/mocks/data/people'
 import { commitActId, nextAt, nextId, store } from '@/mocks/data/workspace-store'
 import { fingerprint } from '@/lib/fingerprint'
@@ -9,9 +9,6 @@ import { visibleProspect } from './prospects'
 
 export type DisclosureFailure = { ok: false; status: 403 | 404 | 409; code: string; message: string }
 const refuse = (status: DisclosureFailure['status'], code: string, message: string): DisclosureFailure => ({ ok: false, status, code, message })
-
-/** Firm policy: these two are delivered when onboarding opens (ADV 2B with the agreement for her signature). */
-export const AT_ONBOARDING: ReadonlySet<DisclosureDocument> = new Set<DisclosureDocument>(['adv_2b', 'privacy_notice'])
 
 export const deliveryOf = (record: ProspectRecord, document: DisclosureDocument): DisclosureDelivery | undefined =>
   record.disclosures.find((d) => d.document === document)

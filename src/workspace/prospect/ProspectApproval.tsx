@@ -3,11 +3,12 @@ import { Attestation } from '@/kit/attestation/Attestation'
 import { Button } from '@/kit/button/Button'
 import { TextInput } from '@/kit/text-input/TextInput'
 import { clientRate, fmtMoney, fmtPoints, fmtWeight } from '@/kit/measure'
+import { useActs } from '@/hooks/use-workspace'
 import { useApproveProspectProposal } from '@/hooks/use-prospect-work'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { ConfirmRecord } from '@/workspace/context/ConfirmRecord'
 import type { Directory } from '@/types/workspace'
-import type { ProspectProposalDetail } from '@/types/workspace-prospect'
+import type { BestInterestDraft, BestInterestRecord, ProspectProposalDetail } from '@/types/workspace-prospect'
 import { RATIONALE_DRAFT } from './prospect-words'
 
 type Props = { detail: ProspectProposalDetail; directory: Directory; onRecorded: (actId: string) => void }
@@ -23,7 +24,10 @@ export function ProspectApproval({ detail, directory, onRecorded }: Props) {
   const [confirming, setConfirming] = useState(false)
   const latest = detail.versions[detail.versions.length - 1]
   if (!latest) throw new Error(`Proposal ${detail.id} has no versions`)
+  const acts = useActs(detail.threadId)
   const draft = detail.bestInterestDraft
+  const filedAct = detail.approval ? acts.data?.find((a) => a.id === detail.approval?.actId) : undefined
+  const filed = filedAct?.bestInterest
   const canApprove = (directory.permissions[viewerId] ?? []).includes('approve_proposal') && !detail.sent && detail.approval?.version !== latest.n
   const blocked = attestedVersion !== latest.n ? `Tick the review of v${latest.n} first.` : rationale.trim().length === 0 ? 'Say why, in your own words.' : undefined
   return (
@@ -31,21 +35,7 @@ export function ProspectApproval({ detail, directory, onRecorded }: Props) {
       <h2 id={titleId} className="text-label uppercase text-ink-2">{`Approval · ${detail.title}`}</h2>
       {detail.approval ? <p className="tabular text-body">{`v${detail.approval.version} is approved (${detail.approval.actId}).`}</p> : null}
       {detail.approval && detail.approval.version !== latest.n ? <p className="text-body">{`v${latest.n} is newer and not approved.`}</p> : null}
-      <div className="flex flex-col gap-2 border-l-2 border-rule-2 pl-3">
-        <p className="text-label uppercase text-ink-3">Best-interest record · firm only</p>
-        <p className="tabular text-body">{`${draft.modelName} for the ${draft.profileLabel} band (score ${fmtPoints(draft.score)}).`}</p>
-        <ul aria-label="Alternatives considered" className="flex flex-col gap-2">
-          {draft.alternatives.map((a) => (
-            <li key={a.kind} className="flex flex-col gap-0.5">
-              <span className="tabular text-body font-semibold">{`${a.name} · ${fmtMoney(a.annualFee)} USD a year`}</span>
-              <span className="text-body text-ink-2">{a.why}</span>
-            </li>
-          ))}
-        </ul>
-        <p className="tabular text-body">{`Costs · ${draft.costs.scheduleName} · ${fmtMoney(draft.costs.annualFee)} USD a year · blended ${clientRate(draft.costs.blendedRate)}`}</p>
-        {draft.concentration ? <p className="tabular text-body">{`Concentration · ${draft.concentration.name} · ${fmtWeight(draft.concentration.weightOfAssets)}% of her assets · tax if sold now ${fmtMoney(draft.concentration.taxIfSoldNow)} USD (estimate)`}</p> : null}
-        <p className="text-body">{draft.rollover}</p>
-      </div>
+      <BestInterestView record={filed ?? draft} heading={filed ? 'Best-interest record · filed with the approval · firm only' : 'Best-interest record · draft, not yet filed · firm only'} />
       {canApprove ? (
         <>
           <TextInput label="Why this recommendation (your words)" value={rationale} onChange={setRationale} rows={4} />
@@ -61,5 +51,26 @@ export function ProspectApproval({ detail, directory, onRecorded }: Props) {
         </>
       ) : null}
     </section>
+  )
+}
+
+function BestInterestView({ record, heading }: { record: BestInterestDraft | BestInterestRecord; heading: string }) {
+  return (
+    <div className="flex flex-col gap-2 border-l-2 border-rule-2 pl-3">
+      <p className="text-label uppercase text-ink-3">{heading}</p>
+      <p className="tabular text-body">{`${record.modelName} for the ${record.profileLabel} band (score ${fmtPoints(record.score)}).`}</p>
+      <ul aria-label="Alternatives considered" className="flex flex-col gap-2">
+        {record.alternatives.map((a) => (
+          <li key={a.kind} className="flex flex-col gap-0.5">
+            <span className="tabular text-body font-semibold">{`${a.name} · ${fmtMoney(a.annualFee)} USD a year`}</span>
+            <span className="text-body text-ink-2">{a.why}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="tabular text-body">{`Costs · ${record.costs.scheduleName} · ${fmtMoney(record.costs.annualFee)} USD a year · blended ${clientRate(record.costs.blendedRate)}`}</p>
+      {record.concentration ? <p className="tabular text-body">{`Concentration · ${record.concentration.name} · ${fmtWeight(record.concentration.weightOfAssets)}% of her assets · tax if sold now ${fmtMoney(record.concentration.taxIfSoldNow)} USD (estimate)`}</p> : null}
+      <p className="text-body">{record.rollover}</p>
+      {'rationale' in record ? <p className="text-body">{`Why, in the advisor's words: ${record.rationale}`}</p> : null}
+    </div>
   )
 }

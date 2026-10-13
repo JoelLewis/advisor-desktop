@@ -23,7 +23,8 @@ export function ProspectProposalEmbed({ prospectId, proposalId, actions }: Props
   if (proposals.isPending) return <p role="status" className="text-body text-ink-3">Loading the proposal…</p>
   if (proposals.isError) return <p role="alert" className="text-body">{proposals.error.message}</p>
   const detail = proposals.data.find((p) => p.id === proposalId)
-  if (!detail) throw new Error(`Proposal ${proposalId} is not among her proposals`)
+  // A proposal just drafted may not be in the list until it refetches.
+  if (!detail) return <p role="status" className="text-body text-ink-3">Loading the proposal…</p>
   const v = detail.versions[detail.versions.length - 1]
   if (!v) throw new Error(`Proposal ${proposalId} has no versions`)
   return (
@@ -47,7 +48,7 @@ export function ProspectProposalEmbed({ prospectId, proposalId, actions }: Props
         <p key={h.statementId} className="tabular text-body">{`${h.custodian} 403(b) · ${fmtMoney(h.value)} USD · rollover: asked about; comparison to follow`}</p>
       ))}
       <p className="tabular text-body">{`Fees · ${v.fees.scheduleName} · ${fmtMoney(v.fees.annual)} USD a year on ${fmtMoney(v.fees.base)} USD · blended ${clientRate(v.fees.blendedRate)}`}</p>
-      <p className="text-label normal-case text-ink-3">{`Prices as of ${fmtDayMonthYear(v.pricesAsOf)} close. Tax figures are estimates at the top federal rate; state tax is not modelled; consult your tax professional.`}</p>
+      <p className="text-label normal-case text-ink-3">{`Prices as of ${fmtDayMonthYear(v.pricesAsOf)} close. ${v.taxNote}`}</p>
       <ol aria-label="Versions" className="flex flex-col gap-1">
         {detail.versions.map((x) => <li key={x.n} className="tabular text-label text-ink-3">{`v${x.n} · fingerprint ${x.fingerprint}`}</li>)}
       </ol>
@@ -74,7 +75,7 @@ function TransferTable({ version }: { version: ProspectProposalVersion }) {
         { id: 'holding', header: 'Holding', wrap: true, cell: (l) => `${l.name} (${l.symbol})` },
         { id: 'shares', header: 'Shares', unit: 'sh', align: 'right', cell: (l) => <Num text={fmtQuantity(l.quantity)} /> },
         { id: 'value', header: 'Value', unit: 'USD', align: 'right', cell: (l) => <Num text={fmtMoney(l.marketValue)} /> },
-        { id: 'unrealised', header: 'Unrealised', unit: 'USD', align: 'right', cell: (l) => <Num text={fmtResult(l.unrealised)} /> },
+        { id: 'unrealised', header: 'Unrealized', unit: 'USD', align: 'right', cell: (l) => <Num text={fmtResult(l.unrealised)} /> },
         { id: 'tax', header: 'Tax if sold now', unit: 'USD', align: 'right', cell: (l) => <Num text={fmtMoney(l.taxIfSoldNow)} /> },
         { id: 'plan', header: 'Plan', cell: () => 'In kind' },
       ]} />

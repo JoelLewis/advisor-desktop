@@ -10,7 +10,7 @@ import {
 } from '@/mocks/agents/prospect-proposal-agent'
 import { blendedTieredFee } from '@/lib/fees'
 import { fingerprint } from '@/lib/fingerprint'
-import { taxRateFor } from '@/lib/tax-rules'
+import { TAX_ESTIMATE_NOTE, taxRateFor } from '@/lib/tax-rules'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { bestInterestDraftOf } from './best-interest'
 import { modelWeights } from './prospect-model'
@@ -95,6 +95,7 @@ export function buildProspectVersion(record: ProspectRecord, constraints: readon
     transfer: summary.lines, cash: summary.cash, transferValue: summary.transferValue, totalAssets: summary.totalAssets,
     sleeves: sleevesOf(profile.modelId, summary), ...(concentration ? { concentration } : {}),
     tranches: staged && line ? tranchesOf(staged.tranches, line) : [], heldAway: summary.heldAway, fees: feesOn(summary.transferValue), pricesAsOf: summary.pricesAsOf,
+    taxNote: TAX_ESTIMATE_NOTE,
   }
   const clientSummary = clientSummaryOf(record, content)
   const identity = [content.modelId, content.transfer.map((l) => [l.symbol, l.quantity, l.price, l.costBasis]), content.cash, content.tranches, content.fees.annual, clientSummary]

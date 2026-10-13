@@ -44,6 +44,7 @@ describe('the prospect work thread', () => {
     expect(proposal).toHaveTextContent('Growth · Moderate Aggressive · score 66')
     expect(proposal).toHaveTextContent('TIAA 403(b) · 900,000 USD · rollover: asked about; comparison to follow')
     expect(proposal).toHaveTextContent('Prices as of 25 Feb 2026 close.')
+    expect(proposal).toHaveTextContent('state tax is not modeled')
     expect(proposal).toHaveTextContent('Not approved')
   })
 
@@ -127,5 +128,40 @@ describe('the prospect work thread', () => {
     const approval = await inContext().findByRole('region', { name: 'Approval · Pell proposal' })
     expect(within(approval).queryByRole('button', { name: /^Approve/ })).toBeNull()
     expect(approval).toHaveTextContent('Staying self-directed')
+  })
+
+  it('after approval the approval shows the filed record with her rationale, not the live draft', async () => {
+    const user = userEvent.setup()
+    await replied()
+    await createProspectProposal(ADRIAN, PELL)
+    await openWork()
+    const approval = await inContext().findByRole('region', { name: 'Approval · Pell proposal' })
+    expect(approval).toHaveTextContent('draft, not yet filed')
+    await user.click(within(approval).getByRole('checkbox', { name: /^I reviewed v1/ }))
+    await user.click(within(approval).getByRole('button', { name: 'Approve v1' }))
+    await user.click(within(await screen.findByRole('dialog', { name: 'Approve v1 of the Pell proposal?' })).getByRole('button', { name: 'Confirm' }))
+    await waitFor(() => expect(approval).toHaveTextContent('filed with the approval'))
+    expect(approval).not.toHaveTextContent('draft, not yet filed')
+    expect(approval).toHaveTextContent("Why, in the advisor's words: Growth matches her questionnaire")
+  })
+
+  it('Mark sees no Revise button on the proposal', async () => {
+    await replied()
+    await createProspectProposal(ADRIAN, PELL)
+    viewAsOnLoad('cco-001')
+    await openWork()
+    const proposal = await embed()
+    expect(within(proposal).queryByRole('button', { name: 'Revise' })).toBeNull()
+  })
+
+  it('Revise is gone once the proposal is sent', async () => {
+    await replied()
+    const created = await createProspectProposal(ADRIAN, PELL)
+    await approveProspectProposal(ADRIAN, created.id, 1, created.versions[0]?.fingerprint ?? '', 'Growth fits her answers.')
+    await deliverDisclosure(ADRIAN, PELL, 'form_crs')
+    await sendProspectProposal(ADRIAN, created.id)
+    await openWork()
+    const proposal = await embed()
+    expect(within(proposal).queryByRole('button', { name: 'Revise' })).toBeNull()
   })
 })

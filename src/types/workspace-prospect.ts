@@ -19,6 +19,8 @@ export const DISCLOSURE_TITLES: Readonly<Record<DisclosureDocument, string>> = {
   adv_2b: 'Form ADV Part 2B (brochure supplement)',
   privacy_notice: 'Privacy notice',
 }
+/** Firm policy: these two are delivered when onboarding opens (ADV 2B with the agreement for her signature). */
+export const AT_ONBOARDING: ReadonlySet<DisclosureDocument> = new Set<DisclosureDocument>(['adv_2b', 'privacy_notice'])
 /** Append-only: each delivery names the act that recorded it. */
 export type DisclosureDelivery = { document: DisclosureDocument; actId: string; at: string; deliveredBy: string }
 
@@ -97,6 +99,8 @@ export type ProspectProposalVersion = {
   heldAway: HeldAwayLine[]
   fees: FeeEstimate
   pricesAsOf: string
+  /** The caveat every tax figure in this version carries. */
+  taxNote: string
   /** What she reads when it is sent: plain language, figures formatted for a client. */
   clientSummary: string
   changeSummary: string
