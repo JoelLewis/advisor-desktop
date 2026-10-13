@@ -7,9 +7,11 @@ import { getPositionsForAccount } from '@/mocks/data/positions'
 import { evaluateProposal } from '@/mocks/handlers/compliance'
 import type { LegSale } from '@/mocks/handlers/batch-wash-sales'
 import {
-  buildRebalancePreviews, generateRebalanceProposal, realisedGains, recutLeg,
+  buildRebalancePreviews, generateRebalanceProposal, realisedGains, recutLeg, standingHarvestSubstitutions,
   type GenerationConstraints, type ProposedTradeLeg, type RebalanceProposal,
 } from '@/mocks/handlers/oms'
+import { harvestOpportunities } from '@/mocks/agents/harvest-scanner'
+import { sameWashSaleTaxpayer } from '@/mocks/handlers/tax-return'
 import { claimNameOf } from '@/mocks/agents/claim-name'
 import { ASSET_CLASS_LABELS, ASSET_CLASS_PROSE_LABELS } from '@/lib/labels'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
@@ -187,6 +189,11 @@ function unexcludable(account: Account, constraints: readonly ProposalConstraint
   return undefined
 }
 
+/** What the Harvest Scanner flags for the account's wash-sale taxpayer: buying one of these forecloses its harvest. */
+function flaggedHarvests(account: Account): Set<string> {
+  return new Set(sameWashSaleTaxpayer(account).flatMap(harvestOpportunities).map((o) => o.position.symbol))
+}
+
 /**
  * One version: the agent's legs under `constraints`, `edits` on top, then the engine's preview
  * (§1091 settled, the return-level estimate against year-to-date results, drift after the trades)
@@ -198,7 +205,10 @@ export function buildVersion(accountId: string, constraints: readonly ProposalCo
   if (!account) return fail('NO_ACCOUNT', 'Account not found.')
   const refused = unexcludable(account, constraints)
   if (refused) return refused
-  const generated = generateRebalanceProposal(accountId, true, PROPOSAL_DRIFT_THRESHOLD, undefined, generationConstraintsOf(constraints))
+  const avoidsWash = constraints.some((c) => c.kind === 'avoid_self_wash')
+  const generated = generateRebalanceProposal(accountId, true, PROPOSAL_DRIFT_THRESHOLD, undefined, {
+    ...generationConstraintsOf(constraints), ...(avoidsWash ? { protectHarvests: flaggedHarvests(account) } : {}),
+  })
   const symbols = generated.legs.map((l) => l.symbol)
   if (new Set(symbols).size !== symbols.length) throw new Error(`The proposal for ${accountId} names a symbol twice; edits address legs by symbol`)
   const edited = applyEdits(accountId, generated, edits)
@@ -228,7 +238,7 @@ export function buildVersion(accountId: string, constraints: readonly ProposalCo
   }
   return {
     ok: true,
-    built: { preview, pretrade, legFacts, excludedLegs: edited.excludedLegs, harvestSubstitutions: [], summary: taxSummaryOf(preview), fingerprint: fingerprint(JSON.stringify(content)) },
+    built: { preview, pretrade, legFacts, excludedLegs: edited.excludedLegs, harvestSubstitutions: standingHarvestSubstitutions(generated.harvestSubstitutions, preview.trades), summary: taxSummaryOf(preview), fingerprint: fingerprint(JSON.stringify(content)) },
     names: new Map(generated.legs.map((l) => [l.symbol, l.name])),
   }
 }

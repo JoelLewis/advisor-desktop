@@ -60,7 +60,8 @@ export function proposalTitle(accountId: string): string {
 /**
  * A buy of a security the Harvest Scanner flags for the same taxpayer forecloses that harvest: a
  * sale of its loss lots within thirty days of the purchase would be washed (§1091 looks back as
- * well as forward). The engine does not route such a buy to a substitute yet, so the agent says so.
+ * well as forward). The engine buys a substitute where the class has one (`harvestSubstitutions`);
+ * a flagged buy that remains has none, so the agent says what it forecloses.
  */
 export function foreclosedHarvestCaveat(accountId: string, built: DraftPreview): string {
   const account = accounts.find((a) => a.id === accountId)
@@ -75,6 +76,17 @@ export function foreclosedHarvestCaveat(accountId: string, built: DraftPreview):
     : ` ${joinWords(names)} are bought here, so their losses cannot be harvested for thirty days without a wash sale.`
 }
 
+/** What the agent did instead of foreclosing a flagged harvest, in words with no digits. */
+export function harvestSubstitutionSentence(built: DraftPreview): string {
+  return built.harvestSubstitutions.map((s) => {
+    const foreclosed = claimNameOf(s.foreclosed.symbol, s.foreclosed.name)
+    const bought = claimNameOf(s.bought.symbol, s.bought.name)
+    return s.harvested
+      ? ` It sells the ${foreclosed} lots at a loss and buys ${bought} in their place, so that harvest is not foreclosed.`
+      : ` It buys ${bought} rather than ${foreclosed}, so the taxpayer's ${foreclosed} harvest is not foreclosed.`
+  }).join('')
+}
+
 /** Lot choice only changes the tax in an account whose sales are taxed. */
 export function draftSummary(accountId: string, built: DraftPreview): string {
   const account = accounts.find((a) => a.id === accountId)
@@ -84,10 +96,10 @@ export function draftSummary(accountId: string, built: DraftPreview): string {
   switch (account.taxTreatment) {
     case 'taxable':
     case 'trust_taxable':
-      return `Drafted a tax-aware rebalance toward ${toward}. Where it sells, it sells loss lots first, then the lots that cost the least tax, and it ${NO_SELF_WASH}.${foreclosedHarvestCaveat(accountId, built)}`
+      return `Drafted a tax-aware rebalance toward ${toward}. Where it sells, it sells loss lots first, then the lots that cost the least tax, and it ${NO_SELF_WASH}.${harvestSubstitutionSentence(built)}${foreclosedHarvestCaveat(accountId, built)}`
     case 'tax_deferred':
     case 'tax_free':
-      return `Drafted a rebalance toward ${toward}. Sales in this account are not taxed when they happen, so the choice of lots does not change the tax; it still ${NO_SELF_WASH}.${foreclosedHarvestCaveat(accountId, built)}`
+      return `Drafted a rebalance toward ${toward}. Sales in this account are not taxed when they happen, so the choice of lots does not change the tax; it still ${NO_SELF_WASH}.${harvestSubstitutionSentence(built)}${foreclosedHarvestCaveat(accountId, built)}`
   }
 }
 
@@ -140,5 +152,5 @@ export function revisionSummary(
   const onlyDropsEdits = previous !== undefined && hadEdits && sameConstraints(constraints, previous.constraints)
   const cap = capBinds(constraints, built) === false ? ' The cap changes no trade.' : ''
   const carried = hadEdits ? ' Workbench edits on the previous version are not carried into this one.' : ''
-  return `${opening(constraints, onlyDropsEdits)}${cap}${bandResult(built)}${foreclosedHarvestCaveat(built.preview.accountId, built)}${carried}`
+  return `${opening(constraints, onlyDropsEdits)}${cap}${bandResult(built)}${harvestSubstitutionSentence(built)}${foreclosedHarvestCaveat(built.preview.accountId, built)}${carried}`
 }

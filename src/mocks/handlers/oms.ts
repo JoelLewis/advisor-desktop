@@ -8,6 +8,7 @@ import { accounts } from '../data/accounts'
 import { cashBalanceOf, getPositionsForAccount } from '../data/positions'
 import { FX_RATES_USD_BASE } from '../data/currencies'
 import { convertCurrency } from '@/lib/currency'
+import type { HarvestSubstitution } from '@/types/workspace-proposal'
 import { securityKind, concentrationLimitFor, isMarketTradable, isSubjectToWashSale, taxCharacterOf, SPOT_CRYPTO_SYMBOLS } from '@/lib/security-master'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
@@ -404,6 +405,18 @@ export type RebalanceProposal = {
   heldBack: ReadonlyMap<AssetClass, ResidualDriftReason>
 }
 
+/** A generated proposal, with the harvests it kept open by buying a substitute. */
+export type GeneratedProposal = RebalanceProposal & { harvestSubstitutions: HarvestSubstitution[] }
+
+/** The substitutions the trades actually carry: the substitute is bought and, if a loss was harvested, the flagged security is sold. */
+export function standingHarvestSubstitutions(
+  substitutions: readonly HarvestSubstitution[],
+  trades: readonly { side: 'buy' | 'sell'; symbol: string }[],
+): HarvestSubstitution[] {
+  const traded = (side: 'buy' | 'sell', symbol: string) => trades.some((t) => t.side === side && t.symbol === symbol)
+  return substitutions.filter((s) => traded('buy', s.bought.symbol) && (!s.harvested || traded('sell', s.foreclosed.symbol)))
+}
+
 /** Phase 3 · constraints a proposal is generated under. All optional; `{}` is the unconstrained generator. */
 export type GenerationConstraints = {
   /** Sell only loss lots. Tax-advantaged accounts have no loss to harvest and sell nothing. */
@@ -414,6 +427,12 @@ export type GenerationConstraints = {
   excludeAssetClasses?: readonly AssetClass[]
   /** Never buy a symbol whose purchase would wash a loss of the same wash-sale taxpayer. */
   avoidSelfWash?: boolean
+  /**
+   * Securities the Harvest Scanner flags for the account's wash-sale taxpayer. A buy of one would
+   * foreclose its harvest (a sale of its loss lots within thirty days would be washed), so the buy
+   * moves to a non-identical substitute in the class where one exists, and a loss held here is harvested.
+   */
+  protectHarvests?: ReadonlySet<string>
 }
 
 type RealisedResult = Pick<ProposedTrade, 'realisedShortTerm' | 'realisedLongTerm'>
@@ -485,9 +504,9 @@ export function generateRebalanceProposal(
   driftThreshold = 0.005,
   modelId?: string,
   constraints: GenerationConstraints = {},
-): RebalanceProposal {
+): GeneratedProposal {
   const account = accounts.find((a) => a.id === accountId)
-  if (!account) return { legs: [], sales: new Map(), heldBack: new Map() }
+  if (!account) return { legs: [], sales: new Map(), heldBack: new Map(), harvestSubstitutions: [] }
   const positions = getPositionsForAccount(account.id, account.totalValue)
   const drift = computeDriftForAccount(account, modelId)
   const taxable = isTaxableAccount(account.taxTreatment)
@@ -563,15 +582,43 @@ export function generateRebalanceProposal(
       return [{ target, side, notional: rawNotional, sleeve }]
     })
 
+  // Phase 4 · a buy of a security the Harvest Scanner flags for this taxpayer forecloses that harvest.
+  // Where the class has a non-identical substitute that is neither flagged nor washing, the substitute
+  // is bought instead; a loss this account holds in the flagged security is harvested now, its loss
+  // lots only, and its proceeds go to the substitute. With no substitute the buy stands.
+  const protectedHarvests: ReadonlySet<string> = taxable ? constraints.protectHarvests ?? new Set<string>() : new Set<string>()
+  const lossSoldIn = (legs: readonly RawLeg[]) => (taxable
+    ? legs.filter((l) => l.side === 'sell' && l.target.position && saleOf(l.target.position, l.notional).soldLosses.length > 0).map((l) => l.target.symbol)
+    : [])
+  const harvestSubstitutions: HarvestSubstitution[] = []
+  const withHarvests = drafted.flatMap((leg): RawLeg[] => {
+    if (leg.side !== 'buy' || !protectedHarvests.has(leg.target.symbol)) return [leg]
+    const held = positions.filter((p) => p.assetClass === leg.sleeve.assetClass && p.symbol !== 'CASH' && isMarketTradable(p.symbol))
+    const avoid = new Set([...protectedHarvests, ...washingSymbols(lossWindows, lossSoldIn(drafted))])
+    const substitute = substituteBuyCandidate(held, drift.modelId, leg.sleeve.assetClass, currency, avoid)
+    if (!substitute) return [leg]
+    const lossHolding = positions.find((p) => p.symbol === leg.target.symbol && isMarketTradable(p.symbol) && lossValueOf(p) > 0)
+    const harvest = lossHolding && !drafted.some((l) => l.side === 'sell' && l.target.symbol === leg.target.symbol) ? lossHolding : undefined
+    harvestSubstitutions.push({
+      assetClass: leg.sleeve.assetClass, foreclosed: { symbol: leg.target.symbol, name: leg.target.name },
+      bought: { symbol: substitute.symbol, name: substitute.name }, harvested: harvest !== undefined,
+    })
+    if (!harvest) return [{ ...leg, substitute }]
+    const notional = lossValueOf(harvest)
+    return [
+      { target: { symbol: harvest.symbol, name: harvest.name, price: harvest.price, position: harvest }, side: 'sell', notional, sleeve: leg.sleeve },
+      { ...leg, notional: leg.notional + notional, substitute },
+    ]
+  })
+
   // A buy of a symbol the taxpayer has an open loss window on, or that this proposal sells at a
   // loss, is the replacement purchase §1091 looks for. Only a taxable account's sale realises a loss.
-  const lossSold = taxable
-    ? drafted.filter((l) => l.side === 'sell' && l.target.position && saleOf(l.target.position, l.notional).soldLosses.length > 0).map((l) => l.target.symbol)
-    : []
+  const lossSold = lossSoldIn(withHarvests)
   const washing = constraints.avoidSelfWash ? washingSymbols(lossWindows, lossSold) : new Set<string>()
   // A washing buy moves to a substitute in the same class; only a class with none is held back.
-  const raw = drafted.map((leg): RawLeg => {
-    if (leg.side !== 'buy' || !washing.has(leg.target.symbol)) return leg
+  // A buy already moved to a substitute above keeps it.
+  const raw = withHarvests.map((leg): RawLeg => {
+    if (leg.side !== 'buy' || leg.substitute || !washing.has(leg.target.symbol)) return leg
     const held = positions.filter((p) => p.assetClass === leg.sleeve.assetClass && p.symbol !== 'CASH' && isMarketTradable(p.symbol))
     const substitute = substituteBuyCandidate(held, drift.modelId, leg.sleeve.assetClass, currency, washing)
     if (substitute) return { ...leg, substitute }
@@ -890,7 +937,10 @@ export function generateRebalanceProposal(
       throw new Error(`gain cap resolution did not reach ${cap} for ${account.id}: refusing to propose gains past the cap`)
     }
   }
-  return { legs: resolved.legs, sales: resolved.sales, heldBack }
+  return {
+    legs: resolved.legs, sales: resolved.sales, heldBack,
+    harvestSubstitutions: standingHarvestSubstitutions(harvestSubstitutions, resolved.legs),
+  }
 }
 
 /**
