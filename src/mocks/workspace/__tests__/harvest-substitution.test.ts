@@ -57,6 +57,13 @@ describe('harvest-plus-substitute', () => {
     expect(summary).not.toMatch(/\d/)
   })
 
+  it('acc-013, a Roth, buys a flagged harvest with no substitute: the loss would be disallowed for good, not deferred', () => {
+    expect(accounts.find((a) => a.id === 'acc-013')!.taxTreatment).toBe('tax_free')
+    const summary = draftSummary('acc-013', built('acc-013'))
+    expect(summary).toContain("IQ Hedge Multi-Strategy Tracker ETF is bought here, in a retirement account: a loss sale of it in the taxpayer's taxable accounts within thirty days would be disallowed for good, not deferred.")
+    expect(summary).not.toContain('cannot be harvested for thirty days')
+  })
+
   it('across the book, a substitute is never a flagged harvest, and a harvest sells only loss lots', () => {
     let substituted = 0
     for (const account of accounts) {

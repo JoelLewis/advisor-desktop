@@ -8,6 +8,7 @@ import { harvestOpportunities } from '@/mocks/agents/harvest-scanner'
 import { claimNameOf } from '@/mocks/agents/claim-name'
 import { sameWashSaleTaxpayer } from '@/mocks/handlers/tax-return'
 import { isSubjectToWashSale } from '@/lib/security-master'
+import { isTaxableAccount } from '@/lib/tax-treatment'
 import { buildVersion } from '../proposal-engine'
 import { createProposal, previewEdits, readableProposals, reviseProposal, saveVersion } from '../proposals'
 import { runAgent } from '../run-agent'
@@ -255,7 +256,9 @@ describe('the Proposal Agent never claims a harvest its own buys foreclose', () 
       for (const summary of summaries) {
         expect(summary).not.toMatch(/harvests losses first/)
         expect(summary).not.toMatch(/\d/)
-        expect(summary.includes('cannot be harvested for thirty days without a wash sale')).toBe(forecloses.length > 0)
+        const taxable = isTaxableAccount(accounts.find((a) => a.id === id)!.taxTreatment)
+        expect(summary.includes('cannot be harvested for thirty days without a wash sale')).toBe(taxable && forecloses.length > 0)
+        expect(summary.includes('would be disallowed for good, not deferred')).toBe(!taxable && forecloses.length > 0)
         for (const t of forecloses) expect(summary).toContain(claimNameOf(t.symbol, t.name))
       }
     }

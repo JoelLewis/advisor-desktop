@@ -9,6 +9,7 @@ import { isSubjectToWashSale } from '@/lib/security-master'
 import { harvestOpportunities } from './harvest-scanner'
 import { claimNameOf } from './claim-name'
 import { joinWords } from '@/lib/words'
+import { isTaxableAccount } from '@/lib/tax-treatment'
 
 const NO_SELF_WASH = "buys nothing that would wash one of the taxpayer's losses"
 
@@ -60,8 +61,10 @@ export function proposalTitle(accountId: string): string {
 /**
  * A buy of a security the Harvest Scanner flags for the same taxpayer forecloses that harvest: a
  * sale of its loss lots within thirty days of the purchase would be washed (§1091 looks back as
- * well as forward). The engine buys a substitute where the class has one (`harvestSubstitutions`);
- * a flagged buy that remains has none, so the agent says what it forecloses.
+ * well as forward). In a taxable account the washed loss is deferred into the new shares; bought in
+ * an IRA or Roth, the loss is disallowed for good (Rev. Rul. 2008-5). The engine buys a substitute
+ * where the class has one (`harvestSubstitutions`); a flagged buy that remains has none, so the agent
+ * says what it forecloses.
  */
 export function foreclosedHarvestCaveat(accountId: string, built: DraftPreview): string {
   const account = accounts.find((a) => a.id === accountId)
@@ -71,9 +74,11 @@ export function foreclosedHarvestCaveat(accountId: string, built: DraftPreview):
     .filter((t) => t.side === 'buy' && isSubjectToWashSale(t.symbol) && flagged.has(t.symbol))
     .map((t) => claimNameOf(t.symbol, t.name)))]
   if (names.length === 0) return ''
-  return names.length === 1
-    ? ` ${names[0]} is bought here, so its loss cannot be harvested for thirty days without a wash sale.`
-    : ` ${joinWords(names)} are bought here, so their losses cannot be harvested for thirty days without a wash sale.`
+  const one = names.length === 1
+  const bought = one ? `${names[0]} is bought here` : `${joinWords(names)} are bought here`
+  return isTaxableAccount(account.taxTreatment)
+    ? ` ${bought}, so ${one ? 'its loss' : 'their losses'} cannot be harvested for thirty days without a wash sale.`
+    : ` ${bought}, in a retirement account: a loss sale of ${one ? 'it' : 'them'} in the taxpayer's taxable accounts within thirty days would be disallowed for good, not deferred.`
 }
 
 /**
