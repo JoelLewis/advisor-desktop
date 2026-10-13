@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import type { MetricsSummary, AllocationSlice } from '@/services/pms'
-import type { DriftStatus, BenchmarkKind, Position } from '@/types/portfolio'
+import type { AssetClass, DriftStatus, BenchmarkKind, Position } from '@/types/portfolio'
 import type { RiskMetrics, FactorExposure, StressScenario } from '@/types/risk'
 import type {
   BenchmarkComparison, PerformanceSeries, AttributionResult, AttributionResponse,
@@ -249,14 +249,14 @@ function findModel(modelId: string): ModelDefinition | undefined {
  * rebalance engine a mix of currencies wearing no label. Every symbol here is therefore a USD
  * quote, and `oms.ts` converts it into the buying account's currency exactly once.
  */
-const USD_SECURITY_QUOTES: ReadonlyMap<string, { name: string; price: number }> = (() => {
-  const quotes = new Map<string, { name: string; price: number }>()
+const USD_SECURITY_QUOTES: ReadonlyMap<string, { name: string; price: number; assetClass: AssetClass }> = (() => {
+  const quotes = new Map<string, { name: string; price: number; assetClass: AssetClass }>()
   for (const account of accounts) {
     if ((account.baseCurrency ?? 'USD') !== 'USD') continue
     for (const position of getPositionsForAccount(account.id, account.totalValue)) {
       // CASH is a per-account balance masquerading as a price, not a quote for a tradeable security.
       if (position.symbol === 'CASH' || position.price <= 0) continue
-      quotes.set(position.symbol, { name: position.name, price: position.price })
+      quotes.set(position.symbol, { name: position.name, price: position.price, assetClass: position.assetClass })
     }
   }
   return quotes
@@ -280,7 +280,7 @@ export function modelImplementationSecurity(modelId: string, assetClass: string)
 }
 
 /** Exported so the invariant test checks the same map the engine reads, not a re-derivation. */
-export function usdQuoteFor(symbol: string): { name: string; price: number } | undefined {
+export function usdQuoteFor(symbol: string): { name: string; price: number; assetClass: AssetClass } | undefined {
   return USD_SECURITY_QUOTES.get(symbol)
 }
 
