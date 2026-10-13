@@ -4,6 +4,7 @@ import { store } from '@/mocks/data/workspace-store'
 import { approvalState, detailOf, proposalById } from '@/mocks/data/proposals-store'
 import { ledgerFills } from '@/mocks/data/portfolio-ledger'
 import { escalate, releaseOrders, returnToAdvisor } from '../compliance-acts'
+import { LedgerInvariantError } from '../fills'
 import { approveProposal, withdrawApproval } from '../proposal-acts'
 import { createProposal, previewEdits, reviseProposal, saveVersion } from '../proposals'
 import { ADRIAN, MARK, RATIONALE, approvedStoryV3, approvedV1, ok, release } from './story-fixture'
@@ -64,6 +65,17 @@ describe('release_orders needs the matching active approval', () => {
 })
 
 describe("releasing the story's v3", () => {
+  it('a release whose fills break the ledger records nothing and leaves the event clock where it was', () => {
+    const a = approvedV1()
+    const s = store()
+    // A staged sell larger than the holding: the ledger refuses it when the release applies the fills.
+    s.staged = s.staged.map((o) => (o.side === 'sell' && o.symbol === 'SPY' ? { ...o, quantity: 1_000_000 } : o))
+    const before = { sequence: s.sequence, acts: s.acts.length, messages: s.messages.length }
+    expect(() => releaseOrders(MARK, a.proposalId, a.approvalActId, a.fingerprint, RATIONALE)).toThrow(LedgerInvariantError)
+    expect({ sequence: s.sequence, acts: s.acts.length, messages: s.messages.length }).toEqual(before)
+    expect(ledgerFills()).toEqual([])
+  })
+
   it('records one act and its marker, then fills at the open and posts the fills', () => {
     const a = approvedStoryV3()
     const act = release(a)

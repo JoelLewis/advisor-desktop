@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import type { Fill } from '@/types/workspace-proposal'
 import { resetWorkspaceStore } from '../workspace-store'
-import { bookOf, bookVersion, commitMove, ledgerFills, nextLedgerNumber, recordedSales } from '../portfolio-ledger'
+import { bookOf, bookVersion, commitMove, ledgerFills, recordedSales } from '../portfolio-ledger'
 
 const fill: Fill = {
   id: 'fill-0001', stagedOrderId: 'stg-0001', proposalId: 'prop-0001', version: 1, accountId: 'acc-002', symbol: 'INTC', name: 'Intel Corp.',
@@ -19,14 +19,12 @@ describe('the portfolio ledger state', () => {
     expect(recordedSales()).toEqual([])
   })
 
-  it('resets with the workspace store: no moved book, no fills, counters from the start', () => {
+  it('resets with the workspace store: no moved book, no fills, no recorded sales', () => {
     commitMove('acc-002', { positions: [], lots: [] }, [], [fill])
-    expect(nextLedgerNumber('fill')).toBe(1)
     resetWorkspaceStore()
     expect(bookVersion()).toBe(0)
     expect(bookOf('acc-002')).toBeUndefined()
     expect(ledgerFills()).toEqual([])
-    expect(nextLedgerNumber('fill')).toBe(1)
-    expect(nextLedgerNumber('sale')).toBe(1)
+    expect(recordedSales()).toEqual([])
   })
 })

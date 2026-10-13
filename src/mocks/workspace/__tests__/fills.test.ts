@@ -132,4 +132,25 @@ describe('the invariants hold or nothing is committed', () => {
     expect(recordedSales()).toEqual([])
     expect(held(generateTaxLots(account.id, account.totalValue))).toBeCloseTo(before - sell.quantity, 6)
   })
+
+  it('a taxable sale whose version names no lots is refused: specific identification never falls back to the book order', () => {
+    const base = v3()
+    const unnamed: ProposalVersion = { ...base, legFacts: base.legFacts.map((f) => (f.symbol === 'INTC' ? { ...f, lots: [], lotIds: [] } : f)) }
+    expect(() => fill(unnamed)).toThrow(LedgerInvariantError)
+    expect(() => fill(unnamed)).toThrow(/names no lots for its INTC sale/)
+    expect(bookVersion()).toBe(0)
+    expect(position('INTC')?.quantity).toBe(7000)
+  })
+
+  it('buys that would overdraw cash are refused, and a refused release numbers nothing', () => {
+    const base = v3()
+    const overdrawn: ProposalVersion = { ...base, preview: { ...base.preview, trades: base.preview.trades.map((t) => (t.symbol === 'AGG' ? { ...t, quantity: 100_000 } : t)) } }
+    expect(() => fill(overdrawn)).toThrow(LedgerInvariantError)
+    expect(() => fill(overdrawn)).toThrow(/overdraw its cash/)
+    expect(bookVersion()).toBe(0)
+    expect(position('CASH')?.marketValue).toBeGreaterThan(0)
+    const fills = fill(v3())
+    expect(fills.map((f) => f.id)).toEqual(['fill-0001', 'fill-0002', 'fill-0003', 'fill-0004', 'fill-0005'])
+    expect(recordedSales().map((r) => r.id)).toEqual(['rs-006'])
+  })
 })

@@ -6,7 +6,7 @@ import { accounts } from '@/mocks/data/accounts'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
 import { seedPositionsForAccount } from '@/mocks/data/positions'
 import { realisedSales, type RealisedSale } from '@/mocks/data/realised-sales'
-import { bookOf, commitMove, nextLedgerNumber, type AccountBook, type LedgerLot } from '@/mocks/data/portfolio-ledger'
+import { bookOf, commitMove, ledgerFills, recordedSales, type AccountBook, type LedgerLot } from '@/mocks/data/portfolio-ledger'
 import { seedTaxLots } from '@/mocks/handlers/custodian'
 import { currencyForAccount } from '@/mocks/handlers/oms'
 import { usdQuoteFor } from '@/mocks/handlers/pms'
@@ -26,6 +26,7 @@ const EPSILON = 1e-6
 const cents = (v: number) => Math.round(v * 100) / 100
 const pad4 = (n: number) => String(n).padStart(4, '0')
 
+/** `times[i]` is the time of the i-th fill in fill order (sells first, then buys, each in the orders' order), not of `orders[i]`. */
 export type FillInput = { accountId: string; proposalId: string; version: ProposalVersion; orders: readonly StagedOrder[]; times: readonly string[] }
 
 type Take = { lotId: string; shares: number }
@@ -52,12 +53,16 @@ function unitPrice(account: Account, held: PositionSeed | undefined, symbol: str
 /**
  * The lots a sell consumes: the approved version's specific identification when it names shares;
  * else the lots it names in sale order; else (an account whose sales are not taxed names none) the
- * position's own lots in the order the book holds them.
+ * position's own lots in the order the book holds them. A taxable sale that names no lots is
+ * refused: the lots it sells set the tax, so they are never chosen for it here.
  */
-function takesFor(version: ProposalVersion, held: PositionSeed, quantity: number, lots: readonly LedgerLot[]): Take[] {
+function takesFor(account: Account, version: ProposalVersion, held: PositionSeed, quantity: number, lots: readonly LedgerLot[]): Take[] {
   const facts = version.legFacts.find((f) => f.symbol === held.symbol)
   if (!facts) throw new LedgerInvariantError(`v${version.n} records no lots for its ${held.symbol} sale`)
   if (facts.lots.length > 0) return facts.lots.map((t) => ({ lotId: t.lotId, shares: t.shares }))
+  if (facts.lotIds.length === 0 && isTaxableAccount(account.taxTreatment)) {
+    throw new LedgerInvariantError(`v${version.n} names no lots for its ${held.symbol} sale in ${account.id}, whose sales are taxed`)
+  }
   const inSaleOrder = facts.lotIds.length > 0 ? facts.lotIds : lots.filter((l) => l.positionId === held.id).map((l) => l.id)
   let left = quantity
   return inSaleOrder.flatMap((lotId) => {
@@ -119,8 +124,8 @@ function moveCash(positions: readonly PositionSeed[], delta: number): PositionSe
   })
 }
 
-/** One realised sale per holding period the sale touches; none in an account whose sales are not taxed. */
-function realisedSalesOf(account: Account, fill: Fill, taken: readonly Taken[], trade: ProposedTrade, replacement: string | undefined): RealisedSale[] {
+/** One realised sale per holding period the sale touches, numbered from `firstNumber`; none in an account whose sales are not taxed. */
+function realisedSalesOf(account: Account, fill: Fill, taken: readonly Taken[], trade: ProposedTrade, replacement: string | undefined, firstNumber: number): RealisedSale[] {
   if (!isTaxableAccount(account.taxTreatment)) return []
   const groups = (['short', 'long'] as const)
     .map((period) => ({ period, takes: taken.filter((t) => t.lot.holdingPeriod === period) }))
@@ -134,7 +139,7 @@ function realisedSalesOf(account: Account, fill: Fill, taken: readonly Taken[], 
     const realisedGainLoss = Math.round(proceeds - costBasis)
     const washed = g.period === 'short' ? trade.washedLoss?.shortTerm ?? 0 : trade.washedLoss?.longTerm ?? 0
     return {
-      id: `rs-${String(realisedSales.length + nextLedgerNumber('sale')).padStart(3, '0')}`,
+      id: `rs-${String(firstNumber + i).padStart(3, '0')}`,
       accountId: account.id, householdId: account.householdId, symbol: fill.symbol, name: fill.name, saleDate: fill.at.slice(0, 10),
       quantity: shares, proceeds, costBasis, realisedGainLoss, holdingPeriod: g.period,
       ...(washed < 0 ? { washedLoss: washed } : {}),
@@ -147,7 +152,8 @@ function realisedSalesOf(account: Account, fill: Fill, taken: readonly Taken[], 
  * Phase 4 · released orders fill at the frozen day's prices and move the account's book. Sells
  * settle first, then buys, each in the version's order. The move is committed whole, or — when any
  * invariant would break (a lot consumed twice, a share count that does not reconcile, a fill outside
- * the NYSE session) — not at all.
+ * the NYSE session, cash overdrawn) — not at all. Fill and sale numbers follow those already
+ * committed, so a refused move numbers nothing.
  */
 export function applyFills({ accountId, proposalId, version, orders, times }: FillInput): Fill[] {
   const account = accounts.find((a) => a.id === accountId)
@@ -168,14 +174,14 @@ export function applyFills({ accountId, proposalId, version, orders, times }: Fi
     if (!trade) throw new LedgerInvariantError(`${order.id} is not a leg of v${version.n}`)
     const held = positions.find((p) => p.symbol === order.symbol && p.symbol !== 'CASH')
     const price = unitPrice(account, held, order.symbol)
-    const base = { id: `fill-${pad4(nextLedgerNumber('fill'))}`, stagedOrderId: order.id, proposalId, version: version.n, accountId, symbol: order.symbol, name: trade.name, quantity: order.quantity, price, currency: order.currency, at }
+    const base = { id: `fill-${pad4(ledgerFills().length + fills.length + 1)}`, stagedOrderId: order.id, proposalId, version: version.n, accountId, symbol: order.symbol, name: trade.name, quantity: order.quantity, price, currency: order.currency, at }
 
     if (order.side === 'sell') {
       if (!held) throw new LedgerInvariantError(`${accountId} sells ${order.symbol} but holds none`)
       if (order.quantity > held.quantity + EPSILON) throw new LedgerInvariantError(`${accountId} sells ${order.quantity} ${order.symbol} but holds ${held.quantity}`)
       const whole = Math.abs(order.quantity - held.quantity) <= EPSILON
       const fill: Fill = { ...base, side: 'sell', value: whole ? held.marketValue : cents(order.quantity * price) }
-      const consumed = consume(lots, takesFor(version, held, order.quantity, lots), order.quantity, order.symbol)
+      const consumed = consume(lots, takesFor(account, version, held, order.quantity, lots), order.quantity, order.symbol)
       lots = consumed.lots
       if (whole) {
         if (lots.some((l) => l.positionId === held.id)) throw new LedgerInvariantError(`${order.symbol} was sold whole but lots remain`)
@@ -186,7 +192,7 @@ export function applyFills({ accountId, proposalId, version, orders, times }: Fi
         lots = restated.lots
       }
       const replacement = version.harvestSubstitutions.find((s) => s.harvested && s.foreclosed.symbol === order.symbol)?.bought.symbol
-      sales.push(...realisedSalesOf(account, fill, consumed.taken, trade, replacement))
+      sales.push(...realisedSalesOf(account, fill, consumed.taken, trade, replacement, realisedSales.length + recordedSales().length + sales.length + 1))
       positions = moveCash(positions, fill.value)
       fills.push(fill)
       return
@@ -218,6 +224,9 @@ export function applyFills({ accountId, proposalId, version, orders, times }: Fi
   }
   const ids = lots.map((l) => l.id)
   if (new Set(ids).size !== ids.length) throw new LedgerInvariantError(`${accountId} holds a lot twice`)
+  const cash = positions.find((p) => p.symbol === 'CASH')
+  if (!cash) throw new LedgerInvariantError(`${accountId} has no cash position for its fills to settle through`)
+  if (cash.marketValue < -0.01) throw new LedgerInvariantError(`${accountId}'s fills would overdraw its cash to ${cash.marketValue}`)
   commitMove(accountId, { positions, lots }, sales, fills)
   return fills
 }

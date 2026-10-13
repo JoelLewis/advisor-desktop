@@ -88,10 +88,11 @@ export function releaseOrders(viewerId: string, proposalId: string, approvalActI
   // The act and its marker come first; the fills follow, at the open if the release is before it.
   const sequences = sessionSequences(2, orders.length)
   if (!sequences) return refuse(409, 'MARKET_CLOSED', "Today's session has closed; staged orders can be released at the next session.")
+  // Applied before anything is recorded: a fill that would break the ledger throws and records
+  // nothing, the clock included. `sessionSequences` has already kept the act's and marker's times.
+  const fills = applyFills({ accountId: proposal.accountId, proposalId: proposal.id, version, orders, times: sequences.map(eventTime) })
   const at = nextAt()
   const markerAt = nextAt()
-  // Applied before anything is recorded: a fill that would break the ledger throws and records nothing.
-  const fills = applyFills({ accountId: proposal.accountId, proposalId: proposal.id, version, orders, times: sequences.map(eventTime) })
   advanceClockTo(sequences[sequences.length - 1] ?? store().sequence)
   const act: BindingAct = {
     id: commitActId(), kind: 'release_orders', actorId: viewerId, at, threadId: proposal.threadId,
