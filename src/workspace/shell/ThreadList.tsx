@@ -15,8 +15,14 @@ const GROUPS: readonly { visibility: Visibility; title: string }[] = [
   { visibility: 'client', title: 'Clients and prospects' },
 ]
 
+/** An outsider sees only their own conversation with the firm, titled as theirs. */
+const EXTERNAL_GROUP_TITLE = 'Your conversation'
+
 export function ThreadList() {
   const threads = useThreads()
+  const { viewerId } = useViewer()
+  const directory = useDirectory()
+  const external = directory.data !== undefined && isExternalViewerIn(directory.data, viewerId)
   if (threads.isPending) return <p role="status" className="text-body text-ink-3">Loading threads…</p>
   if (threads.isError) return <p role="alert" className="text-body">{threads.error.message}</p>
   return (
@@ -24,7 +30,7 @@ export function ThreadList() {
       <DeskLinks />
       {GROUPS.map(({ visibility, title }) => {
         const group = threads.data.filter((t) => t.visibility === visibility)
-        return group.length > 0 ? <ThreadGroup key={visibility} title={title} threads={group} /> : null
+        return group.length > 0 ? <ThreadGroup key={visibility} title={external && visibility === 'client' ? EXTERNAL_GROUP_TITLE : title} threads={group} /> : null
       })}
       <DeskAgents threads={threads.data} />
     </div>

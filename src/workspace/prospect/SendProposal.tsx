@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Button } from '@/kit/button/Button'
-import { fmtTimestamp } from '@/kit/measure'
+import { fmtEasternDayTime } from '@/kit/measure'
 import { useSendProspectProposal } from '@/hooks/use-prospect-work'
 import { ContextSection } from '@/workspace/context/ContextSection'
 import { ConfirmRecord } from '@/workspace/context/ConfirmRecord'
@@ -20,8 +20,8 @@ export function SendProposal({ view, canSend, onRecorded }: Props) {
   if (proposal.sent) {
     return (
       <ContextSection title="Proposal">
-        <p className="tabular text-body">{`Sent v${proposal.sent.version} · ${proposal.sent.actId} · ${fmtTimestamp(proposal.sent.at)}`}</p>
-        {proposal.accepted ? <p className="tabular text-body">{`Accepted v${proposal.accepted.version} · ${proposal.accepted.actId} · ${fmtTimestamp(proposal.accepted.at)}`}</p> : null}
+        <p className="tabular text-body">{`Sent v${proposal.sent.version} · ${proposal.sent.actId} · ${fmtEasternDayTime(proposal.sent.at)}`}</p>
+        {proposal.accepted ? <p className="tabular text-body">{`Accepted v${proposal.accepted.version} · ${proposal.accepted.actId} · ${fmtEasternDayTime(proposal.accepted.at)}`}</p> : null}
       </ContextSection>
     )
   }

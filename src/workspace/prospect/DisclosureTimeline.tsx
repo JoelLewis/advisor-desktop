@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Button } from '@/kit/button/Button'
 import { Tag } from '@/kit/tag/Tag'
-import { fmtTimestamp } from '@/kit/measure'
+import { fmtEasternDayTime } from '@/kit/measure'
 import { useDeliverDisclosure } from '@/hooks/use-prospect-work'
 import { ContextSection } from '@/workspace/context/ContextSection'
 import { ConfirmRecord } from '@/workspace/context/ConfirmRecord'
@@ -26,7 +26,7 @@ export function DisclosureTimeline({ view, canDeliver, onRecorded }: Props) {
                 {delivered ? <Tag tone="solid">Delivered</Tag> : null}
               </div>
               {delivered
-                ? <span className="tabular text-label text-ink-3">{`${fmtTimestamp(delivered.at)} · ${delivered.actId}`}</span>
+                ? <span className="tabular text-label text-ink-3">{`${fmtEasternDayTime(delivered.at)} · ${delivered.actId}`}</span>
                 : <span className="text-label text-ink-3">{DISCLOSURE_TIMING[document]}</span>}
               {!delivered && canDeliver && view.deliverable.includes(document) ? (
                 <Button rank="secondary" onClick={() => { deliver.reset(); setConfirming(document) }}>{`Deliver ${DISCLOSURE_SHORT[document]}`}</Button>

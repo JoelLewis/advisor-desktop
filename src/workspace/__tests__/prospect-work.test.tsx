@@ -1,6 +1,8 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { delay, http } from 'msw'
+import { server } from '@/test/server'
 import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
 import { store } from '@/mocks/data/workspace-store'
@@ -143,6 +145,17 @@ describe('the prospect work thread', () => {
     await waitFor(() => expect(approval).toHaveTextContent('filed with the approval'))
     expect(approval).not.toHaveTextContent('draft, not yet filed')
     expect(approval).toHaveTextContent("Why, in the advisor's words: Growth matches her questionnaire")
+  })
+
+  it('while the approval\'s record is loading it says so, never "draft, not yet filed"', async () => {
+    await replied()
+    const created = await createProspectProposal(ADRIAN, PELL)
+    await approveProspectProposal(ADRIAN, created.id, 1, created.versions[0]?.fingerprint ?? '', 'Growth fits her answers.')
+    server.use(http.get('/api/workspace/acts', async () => { await delay('infinite') }))
+    await openWork()
+    const approval = await inContext().findByRole('region', { name: 'Approval · Pell proposal' })
+    expect(within(approval).getByRole('status')).toHaveTextContent('Loading the filed best-interest record…')
+    expect(approval).not.toHaveTextContent('draft, not yet filed')
   })
 
   it('Mark sees no Revise button on the proposal', async () => {

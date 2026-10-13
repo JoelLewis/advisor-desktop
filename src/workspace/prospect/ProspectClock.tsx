@@ -49,7 +49,7 @@ export function ProspectClock({ view, canRecordCoffee, presents }: Props) {
       {jump ? (
         <div className="flex flex-col items-start gap-1.5">
           <Button rank="secondary" disabled={advance.isPending || jump.blockedReason !== undefined} aria-describedby={jump.blockedReason ? reasonId : undefined} onClick={() => go(jump.to)}>
-            {`Advance to her ${jump.to} · ${fmtEasternDayTime(jump.at)}`}
+            {`Advance to her ${jump.to} · `}<span className="whitespace-nowrap">{fmtEasternDayTime(jump.at)}</span>
           </Button>
           {jump.blockedReason ? <p id={reasonId} className="text-label text-ink-3">{jump.blockedReason}</p> : null}
         </div>

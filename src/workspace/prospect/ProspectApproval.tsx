@@ -35,7 +35,9 @@ export function ProspectApproval({ detail, directory, onRecorded }: Props) {
       <h2 id={titleId} className="text-label uppercase text-ink-2">{`Approval · ${detail.title}`}</h2>
       {detail.approval ? <p className="tabular text-body">{`v${detail.approval.version} is approved (${detail.approval.actId}).`}</p> : null}
       {detail.approval && detail.approval.version !== latest.n ? <p className="text-body">{`v${latest.n} is newer and not approved.`}</p> : null}
-      <BestInterestView record={filed ?? draft} heading={filed ? 'Best-interest record · filed with the approval · firm only' : 'Best-interest record · draft, not yet filed · firm only'} />
+      {acts.isError ? <p role="alert" className="text-body">{acts.error.message}</p>
+        : detail.approval && !filed ? <p role="status" className="text-body text-ink-3">Loading the filed best-interest record…</p>
+        : <BestInterestView record={filed ?? draft} heading={filed ? 'Best-interest record · filed with the approval · firm only' : 'Best-interest record · draft, not yet filed · firm only'} />}
       {canApprove ? (
         <>
           <TextInput label="Why this recommendation (your words)" value={rationale} onChange={setRationale} rows={4} />

@@ -74,7 +74,7 @@ describe('workspace shell', () => {
     await renderHome()
     await viewAs('Robert Johnson · Client')
     await waitFor(() => expect(threadLinks()).toEqual(['Robert Johnson']))
-    expect(groupHeadings()).toEqual(['Clients and prospects'])
+    await waitFor(() => expect(groupHeadings()).toEqual(['Your conversation']))
     expect(within(threadNav()).queryByText('Drift Monitor')).toBeNull()
     expect(screen.getByRole('combobox', { name: 'View as' })).toHaveValue('cli-001')
   })
