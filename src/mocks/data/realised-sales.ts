@@ -6,6 +6,8 @@
  *
  * Leaf data: the firm's realised sales for the trailing quarter. Windows are derived.
  */
+import { recordedSales } from './portfolio-ledger'
+
 export type RealisedSale = {
   id: string
   accountId: string
@@ -19,6 +21,8 @@ export type RealisedSale = {
   /** Negative values are loss sales and open a wash-sale window. */
   realisedGainLoss: number
   holdingPeriod: 'short' | 'long'
+  /** ≤ 0: the part of a loss §1091 washed when the sale was made; it is not recognised on the return. */
+  washedLoss?: number
   /**
    * The security bought with the proceeds to keep the market exposure the harvest gave up, when
    * there was one. Selling it does not itself cause a wash sale; the window governs buying back
@@ -37,6 +41,11 @@ export const realisedSales: RealisedSale[] = [
   { id: 'rs-004', accountId: 'acc-011', householdId: 'hh-003', symbol: 'EFA', name: 'iShares MSCI EAFE ETF', saleDate: '2026-02-12', quantity: 1_200, proceeds: 98_760, costBasis: 92_500, realisedGainLoss: 6_260, holdingPeriod: 'long' },
   { id: 'rs-005', accountId: 'acc-022', householdId: 'hh-006', symbol: 'TLT', name: 'iShares 20+ Year Treasury Bond ETF', saleDate: '2026-02-05', quantity: 900, proceeds: 86_220, costBasis: 94_500, realisedGainLoss: -8_280, holdingPeriod: 'short' },
 ]
+
+/** Every realised sale: the fixtures' trailing quarter, then the sales the session's fills recorded. */
+export function allRealisedSales(): RealisedSale[] {
+  return [...realisedSales, ...recordedSales()]
+}
 
 const DAY_MS = 1000 * 60 * 60 * 24
 
@@ -57,7 +66,7 @@ export type OpenWashSaleWindow = RealisedSale & {
 
 export function openWashSaleWindows(asOf: string, householdId?: string): OpenWashSaleWindow[] {
   const asOfMs = new Date(`${asOf}T00:00:00Z`).getTime()
-  return realisedSales
+  return allRealisedSales()
     .filter((s) => s.realisedGainLoss < 0)
     .filter((s) => householdId === undefined || s.householdId === householdId)
     .map((s) => {

@@ -2,7 +2,7 @@ import type { Account } from '@/types/account'
 import type { CurrencyCode } from '@/types/currency'
 import { accounts } from '../data/accounts'
 import { householdFixtures } from '../data/households'
-import { realisedSales, openWashSaleWindows, type OpenWashSaleWindow } from '../data/realised-sales'
+import { allRealisedSales, openWashSaleWindows, type OpenWashSaleWindow } from '../data/realised-sales'
 import { FX_RATES_USD_BASE } from '../data/currencies'
 import { convertCurrency } from '@/lib/currency'
 import { isTaxableAccount } from '@/lib/tax-treatment'
@@ -75,11 +75,11 @@ const toUSD = (amount: number, from: CurrencyCode) => convertCurrency(amount, fr
 /** Realised results on `returnId` from 1 January of `asOfISO`'s year through `asOfISO`, in USD. */
 export function ytdRealisedOnReturn(returnId: string, asOfISO: string): Required<RealisedByCharacter> {
   const yearStart = `${asOfISO.slice(0, 4)}-01-01`
-  return realisedSales.reduce((total, sale) => {
+  return allRealisedSales().reduce((total, sale) => {
     const account = accounts.find((a) => a.id === sale.accountId)
     if (!account) throw new Error(`realised sale ${sale.id} names unknown account ${sale.accountId}`)
     if (sale.saleDate < yearStart || sale.saleDate > asOfISO || taxReturnFor(account) !== returnId) return total
-    const usd = toUSD(sale.realisedGainLoss, currencyOf(account))
+    const usd = toUSD(sale.realisedGainLoss - (sale.washedLoss ?? 0), currencyOf(account))
     if (sale.holdingPeriod === 'short') return { ...total, shortTerm: total.shortTerm + usd }
     const collectible = taxCharacterOf(sale.symbol) === 'collectible' ? usd : 0
     return { ...total, longTerm: total.longTerm + usd, collectibleLongTerm: total.collectibleLongTerm + collectible }

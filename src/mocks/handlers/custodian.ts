@@ -2,7 +2,8 @@ import { http, HttpResponse } from 'msw'
 import type { Transaction } from '@/services/custodian'
 import type { TaxLot } from '@/types/portfolio'
 import { accounts } from '../data/accounts'
-import { getPositionsForAccount } from '../data/positions'
+import { cashBalanceOf, getPositionsForAccount, seedPositionsForAccount } from '../data/positions'
+import { bookOf, ledgerFills } from '../data/portfolio-ledger'
 import { realisedSales } from '../data/realised-sales'
 import { openWashSaleWindowsFor, sameWashSaleTaxpayer } from './tax-return'
 import { isTaxableAccount } from '@/lib/tax-treatment'
@@ -150,7 +151,7 @@ function heldOn(pos: { id: string }, dateISO: string): boolean {
 export function generateTransactions(accountId: string, totalValue: number): Transaction[] {
   const baseDate = startOfToday()
   const rand = seeded(`txn:${accountId}`)
-  const held = getPositionsForAccount(accountId, totalValue).filter((p) => p.symbol !== 'CASH')
+  const held = seedPositionsForAccount(accountId, totalValue).filter((p) => p.symbol !== 'CASH')
   const txns: Transaction[] = []
   const trades: TradeShell[] = []
 
@@ -167,7 +168,7 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
   // was dated 2025-12-27 against a lot bought 2022-07-25, and a long-term sale (rs-001) cannot come
   // out of shares bought two months earlier.
   const oldestLotDate = new Map<string, string>()
-  for (const lot of soldSymbols.size > 0 ? generateTaxLots(accountId, totalValue) : []) {
+  for (const lot of soldSymbols.size > 0 ? seedTaxLots(accountId, totalValue) : []) {
     const known = oldestLotDate.get(lot.positionId)
     if (known === undefined || lot.purchaseDate < known) oldestLotDate.set(lot.positionId, lot.purchaseDate)
   }
@@ -337,6 +338,15 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
     })
   }
 
+  // The session's fills follow the fixture history, as the custodian would report them.
+  for (const fill of ledgerFills().filter((f) => f.accountId === accountId)) {
+    txns.push({
+      id: `txn-${fill.id}`, accountId, date: fill.at, type: fill.side, symbol: fill.symbol,
+      description: `${fill.side === 'buy' ? 'Bought' : 'Sold'} ${fill.quantity.toLocaleString()} shares ${fill.symbol}`,
+      amount: fill.side === 'buy' ? -fill.value : fill.value, quantity: fill.quantity, price: fill.price,
+    })
+  }
+
   return txns.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 }
 
@@ -404,19 +414,24 @@ export function generateTaxLotsWithSaleRisk(accountId: string, totalValue: numbe
   return own.map((lot) => ({ ...lot, saleWash: washed.get(lot.id) ?? { deferredShares: 0, disallowedShares: 0 } }))
 }
 
-export function generateTaxLots(accountId: string, totalValue: number): CustodianLot[] {
-  const positions = getPositionsForAccount(accountId, totalValue)
+/**
+ * C12 · tax-loss-harvesting — the last day each symbol may not be bought back, for the account's
+ * wash-sale taxpayer (`openWashSaleWindowsFor`), IRAs and Roths included. Windows arrive sorted by
+ * `end`, so the last one written per symbol is the latest to close. An account that can't be
+ * resolved restricts nothing.
+ */
+function repurchaseBlocksFor(accountId: string): Map<string, string> {
+  const account = accounts.find((a) => a.id === accountId)
+  return new Map(account ? openWashSaleWindowsFor(account, MOCK_TODAY_ISO).map((w) => [w.symbol, w.end]) : [])
+}
+
+/** The fixtures' lots, partitioning each fixture position: the book before the session moved it. */
+export function seedTaxLots(accountId: string, totalValue: number): CustodianLot[] {
+  const positions = seedPositionsForAccount(accountId, totalValue)
   const anchor = startOfToday()
   const lots: CustodianLot[] = []
 
-  const account = accounts.find((a) => a.id === accountId)
-  // C12 · tax-loss-harvesting — scoped to the wash-sale taxpayer (`openWashSaleWindowsFor`), IRAs
-  // and Roths included, because a repurchase in any of them triggers §1091 (the "IRA wash-sale
-  // trap"). An account that can't be resolved must restrict nothing, not everything.
-  // Windows arrive sorted by `end`, so the last one written per symbol is the latest to close.
-  const repurchaseBlockedUntil = new Map(
-    account ? openWashSaleWindowsFor(account, MOCK_TODAY_ISO).map((w) => [w.symbol, w.end]) : [],
-  )
+  const repurchaseBlockedUntil = repurchaseBlocksFor(accountId)
 
   for (const pos of positions) {
     if (pos.symbol === 'CASH') continue
@@ -495,6 +510,17 @@ export function generateTaxLots(accountId: string, totalValue: number): Custodia
   return lots
 }
 
+/** The account's lots as they stand: the ledger's once the session has moved the account, else the fixtures'. */
+export function generateTaxLots(accountId: string, totalValue: number): CustodianLot[] {
+  const moved = bookOf(accountId)
+  if (!moved) return seedTaxLots(accountId, totalValue)
+  const blocked = repurchaseBlocksFor(accountId)
+  const symbolOf = new Map(moved.positions.map((p) => [p.id, p.symbol]))
+  return moved.lots.map((lot) => ({ ...lot, repurchaseBlockedUntil: blocked.get(symbolOf.get(lot.positionId) ?? '') ?? null }))
+}
+
+const withBookCash = (a: Account): Account => ({ ...a, cashBalance: cashBalanceOf(a) })
+
 export const custodianHandlers = [
   http.get('/api/custodian/accounts', ({ request }) => {
     const url = new URL(request.url)
@@ -505,13 +531,13 @@ export const custodianHandlers = [
     if (clientId) filtered = filtered.filter((a) => a.clientId === clientId)
     if (householdId) filtered = filtered.filter((a) => a.householdId === householdId)
 
-    return HttpResponse.json(filtered)
+    return HttpResponse.json(filtered.map(withBookCash))
   }),
 
   http.get('/api/custodian/accounts/:accountId', ({ params }) => {
     const account = accounts.find((a) => a.id === params.accountId)
     if (!account) return notFound()
-    return HttpResponse.json(account)
+    return HttpResponse.json(withBookCash(account))
   }),
 
   http.get('/api/custodian/accounts/:accountId/balances', ({ params }) => {
@@ -519,7 +545,7 @@ export const custodianHandlers = [
     if (!account) return notFound()
     return HttpResponse.json({
       totalValue: account.totalValue,
-      cashBalance: account.cashBalance,
+      cashBalance: cashBalanceOf(account),
       marginBalance: 0,
     })
   }),

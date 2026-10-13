@@ -1,4 +1,6 @@
 import type { Position, PositionSeed } from '@/types/portfolio'
+import type { Account } from '@/types/account'
+import { bookOf } from './portfolio-ledger'
 
 // ─── acc-001: Johnson Family Trust ($8.2M, mod-001 Balanced Growth) ──────────
 const trustPositions: PositionSeed[] = [
@@ -289,12 +291,12 @@ function withDerivedWeights(seeds: readonly PositionSeed[], totalValue: number):
 }
 
 /**
- * Positions for an account, weights derived. Two paths: the 17 accounts with explicit rows in
+ * Positions as the fixtures state them, weights derived: the book before the session moved it. Two paths: the 17 accounts with explicit rows in
  * `allPositions`, and a generated allocation for the rest. Both go through `withDerivedWeights` —
  * the generated path used to hand-type the same seven weights (0.348/0.145/0.087/0.210/0.140/
  * 0.050/0.020) that its own market values already implied.
  */
-export function getPositionsForAccount(accountId: string, totalValue: number): Position[] {
+export function seedPositionsForAccount(accountId: string, totalValue: number): Position[] {
   const explicit = allPositions.filter((p) => p.accountId === accountId)
   if (explicit.length > 0) return withDerivedWeights(explicit, totalValue)
 
@@ -313,4 +315,15 @@ export function getPositionsForAccount(accountId: string, totalValue: number): P
     { id: `gen-${accountId}-6`, accountId, symbol: 'GLD', name: 'SPDR Gold Shares', assetClass: 'commodities', quantity: Math.round(other / 215.6), price: 215.60, costBasis: other * 0.9, marketValue: other, gainLoss: other * 0.1, gainLossPercent: 0.111 },
     { id: `gen-${accountId}-7`, accountId, symbol: 'CASH', name: 'Money Market Fund', assetClass: 'cash', quantity: 1, price: cash, costBasis: cash, marketValue: cash, gainLoss: 0, gainLossPercent: 0 },
   ], totalValue)
+}
+
+/** Positions for an account as they stand: the ledger's book once the session has moved it, else the fixtures'. */
+export function getPositionsForAccount(accountId: string, totalValue: number): Position[] {
+  const moved = bookOf(accountId)
+  return moved ? withDerivedWeights(moved.positions, totalValue) : seedPositionsForAccount(accountId, totalValue)
+}
+
+/** The account's cash as the book stands: its CASH position, which is the fixture `cashBalance` until a fill moves it. */
+export function cashBalanceOf(account: Pick<Account, 'id' | 'totalValue' | 'cashBalance'>): number {
+  return getPositionsForAccount(account.id, account.totalValue).find((p) => p.symbol === 'CASH')?.marketValue ?? account.cashBalance
 }

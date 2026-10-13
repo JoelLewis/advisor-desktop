@@ -20,7 +20,7 @@ import { sumAccountsUSD } from '@/lib/aum'
 import { formatCalendarDate, formatDate } from '@/lib/utils'
 import { estimatedTaxBenefit, isHarvestable, harvestsNow, lossAllowedNow } from '@/lib/tax-rules'
 import { isTaxableAccount } from '@/lib/tax-treatment'
-import { getPositionsForAccount } from '../data/positions'
+import { cashBalanceOf, getPositionsForAccount } from '../data/positions'
 import { securityKind, concentrationLimitFor } from '@/lib/security-master'
 import { orders, generateRebalanceTrades } from './oms'
 import { ASSET_CLASS_LABELS } from '@/lib/labels'
@@ -379,7 +379,7 @@ export const aiHandlers = [
       if (account) {
         const metrics: BriefingMetric[] = [
           { label: 'Account Value', value: formatAUM(account.totalValue) },
-          { label: 'Cash', value: formatAUM(account.cashBalance) },
+          { label: 'Cash', value: formatAUM(cashBalanceOf(account)) },
           { label: 'Type', value: account.type.replace(/_/g, ' ') },
           { label: 'Custodian', value: account.custodian },
         ]

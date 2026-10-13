@@ -14,16 +14,19 @@ const ROTH_INTC = 'pos-test-acc-004-intc'
 
 vi.mock('@/mocks/data/positions', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/mocks/data/positions')>()
+  // The planted holding is part of the book both ways the fixtures reach it: the live read and the seed the lots partition.
+  const withPlanted = (read: typeof original.getPositionsForAccount) => (accountId: string, totalValue: number) => {
+    const positions = read(accountId, totalValue)
+    if (scenario.current !== 'roth-buys-intc' || accountId !== 'acc-004') return positions
+    return [...positions, {
+      id: ROTH_INTC, accountId, symbol: 'INTC', name: 'Intel Corp.', assetClass: 'us_equity',
+      quantity: 100, price: 28.45, costBasis: 2_845, marketValue: 2_845, gainLoss: 0, gainLossPercent: 0, weight: 0,
+    }]
+  }
   return {
     ...original,
-    getPositionsForAccount: (accountId: string, totalValue: number) => {
-      const positions = original.getPositionsForAccount(accountId, totalValue)
-      if (scenario.current !== 'roth-buys-intc' || accountId !== 'acc-004') return positions
-      return [...positions, {
-        id: ROTH_INTC, accountId, symbol: 'INTC', name: 'Intel Corp.', assetClass: 'us_equity',
-        quantity: 100, price: 28.45, costBasis: 2_845, marketValue: 2_845, gainLoss: 0, gainLossPercent: 0, weight: 0,
-      }]
-    },
+    getPositionsForAccount: withPlanted(original.getPositionsForAccount),
+    seedPositionsForAccount: withPlanted(original.seedPositionsForAccount),
   }
 })
 

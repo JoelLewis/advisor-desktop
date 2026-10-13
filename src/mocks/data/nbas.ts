@@ -2,7 +2,7 @@ import type { NBA, NBAClient, NBAPriority, NBAScoring, TriggerSignal } from '@/t
 import { accounts } from './accounts'
 import { clients } from './clients'
 import { getPositionsForAccount } from './positions'
-import { realisedSales } from './realised-sales'
+import { allRealisedSales } from './realised-sales'
 import { computeDriftForAccount, modelDisplayName } from '../handlers/pms'
 import { householdFixtures } from './households'
 import { generateTaxLotsWithSaleRisk } from '../handlers/custodian'
@@ -113,7 +113,7 @@ export function intcHarvestFacts() {
       account,
       position,
       loss,
-      sales: realisedSales.filter((r) => r.accountId === account.id && r.symbol === 'INTC'),
+      sales: allRealisedSales().filter((r) => r.accountId === account.id && r.symbol === 'INTC'),
       jointReturn: returnId.startsWith('joint:'),
       ytdNet,
       priorNet,

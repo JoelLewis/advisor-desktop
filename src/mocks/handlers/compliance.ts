@@ -3,7 +3,7 @@ import type { ComplianceAlert, SupervisionRecord, TradeComplianceRequest, TradeC
 import { todayISO } from '@/lib/clock'
 import { securityKind, concentrationLimitFor } from '@/lib/security-master'
 import { accounts } from '../data/accounts'
-import { getPositionsForAccount } from '../data/positions'
+import { cashBalanceOf, getPositionsForAccount } from '../data/positions'
 import { personById } from '../data/people'
 import { openWashSaleWindowsFor } from './tax-return'
 import type { ProposalTradeLeg, ProposalViolation, ProposalLegResult, PreTradeCheckProposalResult } from '@/services/oms'
@@ -169,9 +169,10 @@ export function evaluateProposal(accountId: string, trades: readonly ProposalTra
   }
 
   // ── Cash: sells settle first, then buys draw down in proposal order ──
+  const startingCash = cashBalanceOf(account)
   const minimumCash = accountValue * CASH_MINIMUM_PCT
   const sellProceeds = trades.reduce((sum, t) => sum + (t.side === 'sell' ? t.estimatedValue : 0), 0)
-  let cash = account.cashBalance + sellProceeds
+  let cash = startingCash + sellProceeds
   const crossing: number[] = []
   trades.forEach((t, i) => {
     if (t.side !== 'buy') return
@@ -189,18 +190,18 @@ export function evaluateProposal(accountId: string, trades: readonly ProposalTra
       limit: pct(CASH_MINIMUM_PCT),
       message: `Cash after this proposal would be ${pct(projectedCashPct)} of the account, below the ${pct0(CASH_MINIMUM_PCT)} minimum reserve.`,
       legs: crossing,
-      preExisting: account.cashBalance < minimumCash,
-      currentWeight: account.cashBalance / accountValue,
+      preExisting: startingCash < minimumCash,
+      currentWeight: startingCash / accountValue,
       projectedWeight: projectedCashPct,
       limitWeight: CASH_MINIMUM_PCT,
     })
   }
   // Cash's own concentration limit (C23 — 15%), on projected cash.
   const cashLimit = concentrationLimitFor('cash')
-  const cashNow = account.cashBalance / accountValue
+  const cashNow = startingCash / accountValue
   if (projectedCashPct > cashLimit * WARN_AT) {
-    const rose = projectedCash > account.cashBalance
-    const fell = projectedCash < account.cashBalance
+    const rose = projectedCash > startingCash
+    const fell = projectedCash < startingCash
     const overLimit = projectedCashPct > cashLimit
     violations.push({
       category: 'concentration_limit',

@@ -5,7 +5,7 @@ import { notFound } from './utils'
 import { RESTRICTED_SECURITIES, CASH_MINIMUM_PCT, TECH_SYMBOLS, SECTOR_LIMIT, evaluateProposal, invalidProposal } from './compliance'
 import { computeDriftForAccount, computeDriftForHoldings, modelImplementationSecurity, usdQuoteFor, type DriftHolding } from './pms'
 import { accounts } from '../data/accounts'
-import { getPositionsForAccount } from '../data/positions'
+import { cashBalanceOf, getPositionsForAccount } from '../data/positions'
 import { FX_RATES_USD_BASE } from '../data/currencies'
 import { convertCurrency } from '@/lib/currency'
 import { securityKind, concentrationLimitFor, isMarketTradable, isSubjectToWashSale, taxCharacterOf, SPOT_CRYPTO_SYMBOLS } from '@/lib/security-master'
@@ -1277,7 +1277,7 @@ export const omsHandlers = [
     // raw notional threshold. A buy that leaves cash comfortably above the floor must not warn
     // just because it happened to be a large trade.
     if (isBuy) {
-      const postTradeCash = account.cashBalance - estValue
+      const postTradeCash = cashBalanceOf(account) - estValue
       const postTradeCashPct = (postTradeCash / accountValue) * 100
       if (postTradeCashPct < CASH_MINIMUM_PCT * 100) {
         violations.push({

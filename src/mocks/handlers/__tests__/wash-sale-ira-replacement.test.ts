@@ -21,24 +21,27 @@ const ROTH_SMH = 'pos-test-acc-004-smh'
 
 vi.mock('@/mocks/data/positions', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/mocks/data/positions')>()
+  // The planted holding is part of the book both ways the fixtures reach it: the live read and the seed the lots partition.
+  const withPlanted = (read: typeof original.getPositionsForAccount) => (accountId: string, totalValue: number) => {
+    const positions = read(accountId, totalValue)
+    if (accountId === 'acc-001') {
+      return [...positions, {
+        id: TRUST_SMH, accountId, symbol: 'SMH', name: 'VanEck Semiconductor ETF', assetClass: 'us_equity' as const,
+        quantity: 400, price: 245.20, costBasis: 120_000, marketValue: 98_080, gainLoss: -21_920, gainLossPercent: -18.27, weight: 0,
+      }]
+    }
+    if (accountId === 'acc-004') {
+      return [...positions, {
+        id: ROTH_SMH, accountId, symbol: 'SMH', name: 'VanEck Semiconductor ETF', assetClass: 'us_equity' as const,
+        quantity: 100, price: 245.20, costBasis: 24_520, marketValue: 24_520, gainLoss: 0, gainLossPercent: 0, weight: 0,
+      }]
+    }
+    return positions
+  }
   return {
     ...original,
-    getPositionsForAccount: (accountId: string, totalValue: number) => {
-      const positions = original.getPositionsForAccount(accountId, totalValue)
-      if (accountId === 'acc-001') {
-        return [...positions, {
-          id: TRUST_SMH, accountId, symbol: 'SMH', name: 'VanEck Semiconductor ETF', assetClass: 'us_equity' as const,
-          quantity: 400, price: 245.20, costBasis: 120_000, marketValue: 98_080, gainLoss: -21_920, gainLossPercent: -18.27, weight: 0,
-        }]
-      }
-      if (accountId === 'acc-004') {
-        return [...positions, {
-          id: ROTH_SMH, accountId, symbol: 'SMH', name: 'VanEck Semiconductor ETF', assetClass: 'us_equity' as const,
-          quantity: 100, price: 245.20, costBasis: 24_520, marketValue: 24_520, gainLoss: 0, gainLossPercent: 0, weight: 0,
-        }]
-      }
-      return positions
-    },
+    getPositionsForAccount: withPlanted(original.getPositionsForAccount),
+    seedPositionsForAccount: withPlanted(original.seedPositionsForAccount),
   }
 })
 
