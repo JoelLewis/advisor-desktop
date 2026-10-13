@@ -81,7 +81,9 @@ surface. Robert sees nothing new.
 ## Effects of the moved book
 
 - Account view and drift reflect fills; residual reasons (private equity) remain.
-- Brief re-measures on view: Drift Monitor reports acc-002 inside its bands except private equity;
+- Brief re-measures on view: Drift Monitor reports what the moved book measures (after a full
+  rebalance, acc-002 inside its bands except private equity; after the harvest-only v3, US Equity
+  still outside its band);
   the Harvest Scanner no longer offers INTC; the recorded INTC sale (2026-02-25, replacement as
   named) shows its window through 2026-03-27.
 - The proposal reads filled; a new proposal for acc-002 starts from the new book.
