@@ -24,19 +24,30 @@ async function openCommandLine() {
 const destinationNames = () => screen.getAllByRole('option').map((o) => o.textContent)
 
 describe('keyboard in the shell', () => {
-  it('/ then "Johnson" and Enter opens the thread and focuses its heading', async () => {
+  it('/ then "Johnson Rebalance" and Enter opens the thread and focuses its heading', async () => {
     const { router } = await renderAt('/')
     await openCommandLine()
-    await userEvent.keyboard('Johnson{Enter}')
+    await userEvent.keyboard('Johnson Rebalance{Enter}')
     await waitFor(() => expect(router.state.location.pathname).toBe('/t/th-johnson-review'))
     const title = await screen.findByRole('heading', { level: 1, name: 'Johnson Rebalance Review' })
     await waitFor(() => expect(title).toHaveFocus())
   })
 
-  it('offers every visible thread, the accounts they are about, home and the kit', async () => {
+  it('/ then "Johnson", named exactly, opens the household', async () => {
+    const { router } = await renderAt('/')
+    const box = await openCommandLine()
+    await waitFor(() => expect(destinationNames()).toContain('Household · Johnson'))
+    await userEvent.type(box, 'Johnson{Enter}')
+    await waitFor(() => expect(router.state.location.pathname).toBe('/households/hh-001'))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Johnson Household' })).toBeInTheDocument()
+  })
+
+  it('offers every visible thread, the accounts they are about, the household and its clients, the meeting, home and the kit', async () => {
     await renderAt('/')
     await openCommandLine()
     await waitFor(() => expect(destinationNames()).toContain('Account · Robert Johnson Individual'))
+    await waitFor(() => expect(destinationNames()).toContain('Client · Patricia Johnson'))
+    await waitFor(() => expect(destinationNames()).toContain('Meeting · Johnson annual review'))
     expect(destinationNames()).toEqual([
       'Workspace home',
       'Thread · Brief',
@@ -44,6 +55,10 @@ describe('keyboard in the shell', () => {
       'Thread · Johnson annual review',
       'Thread · Robert Johnson',
       'Account · Robert Johnson Individual',
+      'Household · Johnson',
+      'Client · Robert Johnson',
+      'Client · Patricia Johnson',
+      'Meeting · Johnson annual review',
       'Supervision',
       'Archive',
       'Component kit',

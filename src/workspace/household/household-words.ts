@@ -1,5 +1,6 @@
 import type { GoalStatus } from '@/types/planning'
-import type { SignatureStatus } from '@/types/document'
+import type { DocumentType, SignatureStatus } from '@/types/document'
+import type { CommChannel } from '@/types/client-comms'
 import type { IpsOnFile } from '@/types/workspace-household'
 import { fmtDate } from '@/kit/measure'
 
@@ -15,3 +16,10 @@ export function ipsLine(ips: IpsOnFile | undefined): string {
   const status = ips.signatureStatus === 'signed' && ips.signedOn ? `signed ${fmtDate(ips.signedOn)}` : SIGNATURE_WORDS[ips.signatureStatus]
   return `${ips.name} · ${status}`
 }
+
+export const DOCUMENT_TYPE_WORDS: Readonly<Record<DocumentType, string>> = {
+  ips: 'IPS', proposal: 'Proposal', agreement: 'Agreement', statement: 'Statement', tax_report: 'Tax report',
+  correspondence: 'Correspondence', compliance: 'Compliance', meeting_notes: 'Meeting notes', other: 'Other',
+}
+
+export const CHANNEL_WORDS: Readonly<Record<CommChannel, string>> = { email: 'Email', phone: 'Phone', video: 'Video', in_person: 'In person', letter: 'Letter' }

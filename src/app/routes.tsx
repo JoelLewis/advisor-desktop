@@ -3,6 +3,8 @@ import { createBrowserRouter, type RouteObject } from 'react-router-dom'
 import { WorkspaceShell } from '@/workspace/shell/WorkspaceShell'
 import { WorkspaceHome } from '@/workspace/shell/WorkspaceHome'
 import { AccountView } from '@/workspace/full-views/AccountView'
+import { HouseholdView } from '@/workspace/full-views/HouseholdView'
+import { ClientView } from '@/workspace/full-views/ClientView'
 import { ThreadPage } from '@/workspace/thread/ThreadPage'
 import { ContextColumn } from '@/workspace/context/ContextColumn'
 import { useThreadContextAvailable } from '@/workspace/context/use-thread-context-available'
@@ -44,6 +46,8 @@ export const routes: RouteObject[] = [
           { index: true, element: <WorkspaceHome /> },
           { path: 't/:threadId', element: <ThreadPage />, handle: threadHandle },
           { path: 'accounts/:accountId', element: <AccountView /> },
+          { path: 'households/:householdId', element: <HouseholdView /> },
+          { path: 'clients/:clientId', element: <ClientView /> },
           { path: 'archive', element: <ArchivePage /> },
           { path: 'supervision', element: <SupervisionPage />, handle: fullWidthHandle },
           { path: 'supervision/:kind/:id', element: <SupervisionPage />, handle: fullWidthHandle },
