@@ -4,6 +4,9 @@ import { useFocusAfter } from '@/kit/keyboard/use-focus-after'
 import { useActs, useDirectory, useThread } from '@/hooks/use-workspace'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { isExternalViewerIn } from '@/workspace/people/directory-people'
+import { threadParty } from '@/workspace/people/thread-party'
+import { PartyStepsPanel } from '@/workspace/prospect/PartyStepsPanel'
+import { ProspectPanel } from '@/workspace/prospect/ProspectPanel'
 import { canPostIn } from '@/workspace/thread/can-post'
 import { actAnchorId } from './act-anchor'
 import { ActsPanel } from './ActsPanel'
@@ -46,6 +49,10 @@ function ThreadContext({ threadId }: { threadId: string }) {
   return (
     <div className="flex min-w-0 flex-col divide-y divide-rule">
       <WhoCanSee thread={t} directory={dir} viewerIsExternal={viewerIsExternal} />
+      {t.visibility === 'client' && threadParty(t) === 'prospect' && t.partyId !== undefined && !viewerIsExternal
+        ? <ProspectPanel prospectId={t.partyId} directory={dir} onRecorded={setSentActId} /> : null}
+      {t.visibility === 'client' && threadParty(t) === 'prospect' && t.partyId !== undefined && viewerIsExternal
+        ? <PartyStepsPanel prospectId={t.partyId} onRecorded={setSentActId} /> : null}
       {t.visibility !== 'client' && !viewerIsExternal ? <ApprovalPanel thread={t} directory={dir} onRecorded={setSentActId} /> : null}
       {t.visibility === 'internal' && !viewerIsExternal ? <MeetingPanel thread={t} directory={dir} onRecorded={setSentActId} /> : null}
       {t.visibility === 'client' && !viewerIsExternal

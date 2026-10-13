@@ -106,6 +106,13 @@ export function fmtEasternTime(iso: string): string {
   return easternClock.format(parseIso(iso))
 }
 
+const easternDay = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'America/New_York' })
+
+/** A moment on the story's clock as its control names it: "Thu 26 Feb 09:10 ET". */
+export function fmtEasternDayTime(iso: string): string {
+  return `${easternDay.format(parseIso(iso)).replace(',', '')} ${fmtEasternTime(iso)} ET`
+}
+
 /** A meeting's window in New York time, with the zone: "14:00–15:15 ET". */
 export function fmtEasternRange(start: string, end: string): string {
   return `${fmtEasternTime(start)}–${fmtEasternTime(end)} ET`

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   MINUS, MeasureError, normaliseMinus, isNegative, fmtMoney, fmtResult, fmtPrice, fmtWeight, fmtReturn, fmtDrift,
   fmtTolerance, fmtQuantity, splitFraction, fmtDays, fmtScore, fmtDate, fmtTimestamp, clientMoney,
-  clientPercent, clientDate, fmtEasternTime, fmtEasternRange, clientRate, fmtDayMonthYear,
+  clientPercent, clientDate, fmtEasternTime, fmtEasternDayTime, fmtEasternRange, clientRate, fmtDayMonthYear,
 } from '@/kit/measure'
 
 describe('measure', () => {
@@ -141,5 +141,12 @@ describe('prospect-proposal formats', () => {
   it('states a fee rate to two places and a price date as the proposal says it', () => {
     expect(clientRate(20_850 / 2_100_000)).toBe('0.99%')
     expect(fmtDayMonthYear('2026-02-25')).toBe('25 Feb 2026')
+  })
+})
+
+describe('fmtEasternDayTime', () => {
+  it('states a jump as the control names it', () => {
+    expect(fmtEasternDayTime('2026-02-26T14:10:00.000Z')).toBe('Thu 26 Feb 09:10 ET')
+    expect(fmtEasternDayTime('2026-03-02T15:00:00.000Z')).toBe('Mon 2 Mar 10:00 ET')
   })
 })
