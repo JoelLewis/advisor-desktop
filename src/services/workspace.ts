@@ -1,5 +1,6 @@
 import { get, post } from './api-client'
 import type { AgentId, BindingAct, Directory, Draft, Message, Thread, ThreadDetail } from '@/types/workspace'
+import type { Archive, ArchiveFilters, ComplianceActRequest, PresenterItem, SupervisionQueue } from '@/types/workspace-supervision'
 import type { DraftPreview, LegEdit, ProposalConstraint, ProposalDetail } from '@/types/workspace-proposal'
 
 const as = (viewer: string) => ({ 'X-Viewer': viewer })
@@ -49,3 +50,14 @@ export const draftLetter = (viewer: string, clientThreadId: string, proposalId: 
   post<Draft>(`/workspace/threads/${clientThreadId}/drafts/letter`, { proposalId }, as(viewer))
 export const reviseDraft = (viewer: string, clientThreadId: string, draftId: string, body: string) =>
   post<Draft>(`/workspace/threads/${clientThreadId}/drafts/${draftId}/revisions`, { body }, as(viewer))
+
+export const recordComplianceAct = (viewer: string, request: ComplianceActRequest) =>
+  post<BindingAct>('/workspace/acts', request, as(viewer))
+export const getSupervision = (viewer: string) =>
+  get<SupervisionQueue>('/workspace/supervision', undefined, as(viewer))
+/** Only the filters that are set travel as query parameters. */
+export const getArchive = (viewer: string, filters: ArchiveFilters) =>
+  get<Archive>('/workspace/archive', Object.fromEntries(Object.entries(filters).filter((e): e is [string, string] => typeof e[1] === 'string')), as(viewer))
+/** The presenter shortcut: Mark's default disposition, recorded as Mark with the shortcut marked. */
+export const actAsCco = (viewer: string, item: PresenterItem) =>
+  post<BindingAct>('/workspace/presenter/act-as-cco', { item }, as(viewer))

@@ -13,6 +13,7 @@ import { canSeeThread, viewerFrom, visibleThreads } from '../workspace/visibilit
 import { notFound } from './utils'
 import { badRequest, firmViewer, nonEmptyString, readJson, refusal, unauthorised } from './workspace-http'
 import { workspaceProposalHandlers } from './workspace-proposals'
+import { parseComplianceAct, recordComplianceAct, workspaceSupervisionHandlers } from './workspace-supervision'
 
 const fullDirectory = (): Directory => ({ people: [...PEOPLE], agents: [...AGENTS], permissions: Object.fromEntries(PEOPLE.map((p) => [p.id, permissionsOf(p.id)])) })
 
@@ -22,7 +23,7 @@ function clientDirectory(clientId: string): Directory {
   return { people: PEOPLE.filter((p) => ids.has(p.id)), agents: [], permissions: { [clientId]: permissionsOf(clientId) } }
 }
 
-const withoutProvenance = ({ subject: _subject, basis: _basis, editedBy: _editedBy, ...act }: BindingAct): BindingAct => act
+const withoutProvenance = ({ subject: _subject, basis: _basis, editedBy: _editedBy, messageId: _messageId, viaPresenter: _via, rationale: _rationale, ...act }: BindingAct): BindingAct => act
 
 const isAgentId = (value: string): value is AgentId => AGENTS.some((a) => a.id === value)
 
@@ -97,16 +98,19 @@ export const workspaceHandlers = [
     const thread = store().threads.find((t) => t.id === threadId)
     if (!thread || !canSeeThread(viewer, thread)) return notFound()
     const acts = store().acts.filter((a) => a.threadId === thread.id)
-    // A client sees the record of what reached them, not what it was made from (the firm's draft, its proposal, its editors).
-    return HttpResponse.json(personById(viewer)?.role === 'client' ? acts.map(withoutProvenance) : acts)
+    // A client sees the record of what reached them, not what it was made from (the firm's draft, its proposal, its editors) nor how the firm reviewed it.
+    return HttpResponse.json(personById(viewer)?.role === 'client'
+      ? acts.filter((a) => a.kind === 'send_to_client').map(withoutProvenance)
+      : acts)
   }),
 
   http.post('/api/workspace/acts', async ({ request }) => {
     const viewer = viewerFrom(request)
     if (!viewer) return unauthorised()
+    // A client is told the surface does not exist before anything about the body is read.
+    if (personById(viewer)?.role === 'client') return notFound()
     const body = await readJson(request)
     if (!body || typeof body.kind !== 'string') return badRequest('kind must be a string.')
-    const isClient = personById(viewer)?.role === 'client'
     switch (body.kind) {
       case 'send_to_client': {
         if (!nonEmptyString(body.draftId)) return badRequest('draftId must be a string.')
@@ -114,7 +118,6 @@ export const workspaceHandlers = [
         return r.ok ? HttpResponse.json(r.act, { status: 201 }) : refusal(r)
       }
       case 'approve_proposal': {
-        if (isClient) return notFound()
         if (!nonEmptyString(body.proposalId)) return badRequest('proposalId is required.')
         if (!visibleProposal(viewer, body.proposalId)) return notFound()
         if (typeof body.version !== 'number' || !nonEmptyString(body.fingerprint)) return badRequest('version (a number) and fingerprint are required.')
@@ -122,13 +125,22 @@ export const workspaceHandlers = [
         return r.ok ? HttpResponse.json(r.act, { status: 201 }) : refusal(r)
       }
       case 'withdraw_approval': {
-        if (isClient) return notFound()
         if (!nonEmptyString(body.proposalId)) return badRequest('proposalId is required.')
         const r = withdrawApproval(viewer, body.proposalId)
         return r.ok ? HttpResponse.json(r.act, { status: 201 }) : refusal(r)
       }
+      case 'release_orders':
+      case 'return_to_advisor':
+      case 'escalate':
+      case 'dispose_alert':
+      case 'review_correspondence': {
+        const parsed = parseComplianceAct(body)
+        if (!parsed.ok) return badRequest(parsed.message)
+        const r = recordComplianceAct(viewer, parsed.request)
+        return r.ok ? HttpResponse.json(r.act, { status: 201 }) : refusal(r)
+      }
       default:
-        return HttpResponse.json({ code: 'NOT_IN_PHASE', message: 'That act is not recorded in this phase.' }, { status: 400 })
+        return HttpResponse.json({ code: 'UNKNOWN_ACT', message: 'That is not a recorded act.' }, { status: 400 })
     }
   }),
 
@@ -186,6 +198,7 @@ export const workspaceHandlers = [
   }),
 
   ...workspaceProposalHandlers,
+  ...workspaceSupervisionHandlers,
 
   // Workspace handlers must be registered above this catch-all.
   http.all('/api/workspace/*', () => HttpResponse.json({ code: 'METHOD_NOT_ALLOWED', message: 'Workspace records cannot be edited or deleted.' }, { status: 405 })),

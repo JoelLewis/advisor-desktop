@@ -76,6 +76,7 @@ describe('directory scoping', () => {
     const client = await call('/acts?threadId=th-robert', 'cli-001')
     expect(client.body[0]).not.toHaveProperty('basis')
     expect(client.body[0]).not.toHaveProperty('editedBy')
+    expect(client.body[0]).not.toHaveProperty('messageId')
     const thread = await call('/threads/th-robert', 'cli-001')
     expect(JSON.stringify(thread.body)).not.toMatch(/basis|editedBy|editorIds|client-letter|prop-/)
   })

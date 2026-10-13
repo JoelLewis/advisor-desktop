@@ -9,6 +9,8 @@ export const PEOPLE: readonly Person[] = [
 ]
 
 export const CCO_ID = 'cco-001'
+/** The one human in the demo: the advisor presenting it. */
+export const PRESENTER_ID = 'user-001'
 
 export const AGENTS: readonly AgentProfile[] = [
   { id: 'drift-monitor', name: 'Drift Monitor', produces: 'findings', scope: { may: ['measure and flag'], mayNot: ['stage or release trades', 'post in a client thread'] } },

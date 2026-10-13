@@ -3,6 +3,7 @@ import * as api from '@/services/workspace'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { DEFAULT_VIEWER_ID } from '@/workspace/viewer/viewer-context'
 import type { AgentId } from '@/types/workspace'
+import type { ArchiveFilters, ComplianceActRequest, PresenterItem } from '@/types/workspace-supervision'
 import type { LegEdit, ProposalConstraint } from '@/types/workspace-proposal'
 
 export function useDirectory() {
@@ -187,4 +188,36 @@ export function useReviseDraft(clientThreadId: string) {
     mutationFn: ({ draftId, body }: { draftId: string; body: string }) => api.reviseDraft(viewerId, clientThreadId, draftId, body),
     onSettled: invalidate,
   })
+}
+
+export function useSupervision() {
+  const { viewerId } = useViewer()
+  return useQuery({ queryKey: ['workspace', viewerId, 'supervision'], queryFn: () => api.getSupervision(viewerId) })
+}
+
+export function useArchive(filters: ArchiveFilters) {
+  const { viewerId } = useViewer()
+  return useQuery({
+    queryKey: ['workspace', viewerId, 'archive', JSON.stringify(filters)],
+    queryFn: () => api.getArchive(viewerId, filters),
+    placeholderData: keepPreviousData,
+  })
+}
+
+/** A compliance act can move the book (a release fills): accounts, positions, drift and lots are stale too, not only the workspace. */
+function useInvalidateEverything() {
+  const queryClient = useQueryClient()
+  return () => queryClient.invalidateQueries()
+}
+
+export function useRecordComplianceAct() {
+  const { viewerId } = useViewer()
+  const invalidate = useInvalidateEverything()
+  return useMutation({ mutationFn: (request: ComplianceActRequest) => api.recordComplianceAct(viewerId, request), onSettled: invalidate })
+}
+
+export function useActAsCco() {
+  const { viewerId } = useViewer()
+  const invalidate = useInvalidateEverything()
+  return useMutation({ mutationFn: (item: PresenterItem) => api.actAsCco(viewerId, item), onSettled: invalidate })
 }
