@@ -25,7 +25,8 @@ export function Workbench({ detail, directory }: { detail: ProposalDetail; direc
   const thread = useThread(detail.threadId)
   const draft = useDraftVersion(detail)
   const [expanded, setExpanded] = useState<string>()
-  const canEdit = thread.data !== undefined && canPostIn(thread.data.thread, viewerId, directory)
+  const closed = detail.approval.kind === 'released'
+  const canEdit = !closed && thread.data !== undefined && canPostIn(thread.data.thread, viewerId, directory)
   // The open leg's typed-but-uncommitted quantity: committed before any save, so what is on screen is what saves.
   const pendingEdit = useRef<() => void>(undefined)
   const commitTyping = () => pendingEdit.current?.()
@@ -66,8 +67,11 @@ export function Workbench({ detail, directory }: { detail: ProposalDetail; direc
         <ApprovalNote state={detail.approval} />
         <p className="text-body text-ink-2">The workbench never approves. Approval is a recorded act in the thread.</p>
       </header>
+      {detail.approval.kind === 'released'
+        ? <p className="text-body text-ink-2">{`The orders from v${detail.approval.version} were filled. This proposal is closed; ask the Proposal Agent for a new one from the moved book.`}</p>
+        : null}
       {canEdit ? <DraftBar draft={draft} latestVersion={latest.n} saveEnabled={saveEnabled} onBeforeSave={commitTyping} onSave={saveOnScreen} /> : null}
-      {thread.data !== undefined && !canEdit ? <p className="text-body text-ink-3">You can read this proposal but not change it.</p> : null}
+      {thread.data !== undefined && !canEdit && !closed ? <p className="text-body text-ink-3">You can read this proposal but not change it.</p> : null}
       <Pane title="Legs" meta={draft.dirty && !notPreviewed ? 'draft' : `v${latest.n}`}>
         <WorkbenchLegs view={view} caption={caption}
           onExpand={(s) => setExpanded((open) => (open === s ? undefined : s))}

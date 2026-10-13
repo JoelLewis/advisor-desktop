@@ -11,7 +11,7 @@ export function ProposalAgentControl({ thread, agent }: { thread: Thread; agent:
   const subject = thread.subject
   if (subject?.type !== 'account') return null
   const ask = () => {
-    const alreadyDrafted = (proposals.data ?? []).some((p) => p.accountId === subject.id)
+    const alreadyDrafted = (proposals.data ?? []).some((p) => p.accountId === subject.id && p.approval.kind !== 'released')
     setAsked(undefined)
     create.mutate(subject.id, { onSuccess: (detail) => setAsked({ proposalId: detail.id, alreadyDrafted }) })
   }

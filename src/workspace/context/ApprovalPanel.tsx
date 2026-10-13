@@ -4,17 +4,19 @@ import { Checkbox } from '@/kit/checkbox/Checkbox'
 import { Dialog } from '@/kit/dialog/Dialog'
 import { StatusCode } from '@/kit/status/StatusCode'
 import { Tag } from '@/kit/tag/Tag'
-import { fmtMoney, fmtQuantity } from '@/kit/measure'
+import { fmtMoney, fmtPrice, fmtQuantity } from '@/kit/measure'
 import { useApproveProposal, useProposals, useWithdrawApproval } from '@/hooks/use-workspace'
+import { PRESENTER_ID } from '@/lib/presenter'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { ApprovalNote } from '@/workspace/proposal/ApprovalNote'
 import { isApprovedLatest } from '@/workspace/proposal/approval-words'
 import { latestVersionOf } from '@/workspace/proposal/latest-version'
-import { SIDE_WORDS } from '@/workspace/proposal/leg-status'
+import { FILL_SIDE_WORDS, SIDE_WORDS } from '@/workspace/proposal/leg-status'
 import type { Directory, Thread } from '@/types/workspace'
-import type { ProposalDetail, ProposalVersion, StagedOrder } from '@/types/workspace-proposal'
+import type { Fill, ProposalDetail, ProposalVersion, StagedOrder } from '@/types/workspace-proposal'
 import { ContextSection } from './ContextSection'
 import { approveBlocker } from './approve-blocker'
+import { PresenterRelease } from './PresenterRelease'
 
 type OnRecorded = (actId: string) => void
 type ApprovalPanelProps = { thread: Thread; directory: Directory; onRecorded: OnRecorded }
@@ -42,7 +44,7 @@ function ProposalApproval({ detail, directory, onRecorded }: { detail: ProposalD
   const latest = latestVersionOf(detail)
   const approval = detail.approval
   const permissions = directory.permissions[viewerId] ?? []
-  const canApprove = permissions.includes('approve_proposal') && !isApprovedLatest(approval)
+  const canApprove = permissions.includes('approve_proposal') && approval.kind !== 'released' && !isApprovedLatest(approval)
   const withdrawableVersion = approval.kind === 'approved' && approval.approverId === viewerId && permissions.includes('withdraw_approval')
     ? approval.version : undefined
   const reason = approveBlocker({
@@ -53,6 +55,9 @@ function ProposalApproval({ detail, directory, onRecorded }: { detail: ProposalD
   // A refusal belongs to the version it was about; once another version is on screen it no longer describes anything here.
   const approveError = approve.isError && approve.variables.proposalId === detail.id && approve.variables.version === latest.n ? approve.error : undefined
   const pending = detail.staged.filter((o) => o.status === 'pending_compliance')
+  const returned = approval.kind === 'unapproved' ? detail.staged.filter((o) => o.status === 'returned').pop() : undefined
+  // The one presenter acts for compliance through a labelled shortcut; compliance itself records in Supervision.
+  const presents = viewerId === PRESENTER_ID && !permissions.includes('release_orders')
 
   // A ref, not render state, so a second click in the same frame cannot send a second act.
   const record = (send: (callbacks: RecordCallbacks) => void, afterRecorded?: () => void) => {
@@ -92,7 +97,10 @@ function ProposalApproval({ detail, directory, onRecorded }: { detail: ProposalD
           {approveError ? <p role="alert" className="text-body">{approveError.message}</p> : null}
         </div>
       ) : null}
-      {pending.length > 0 ? <StagedOrders orders={pending} /> : null}
+      {pending.length > 0 ? <StagedOrders orders={pending} escalated={detail.escalation !== undefined} /> : null}
+      {pending.length > 0 && presents && pending[0] ? <PresenterRelease proposalId={detail.id} version={pending[0].version} directory={directory} onRecorded={onRecorded} /> : null}
+      {approval.kind === 'released' ? <FilledOrders fills={detail.fills} version={approval.version} releaseActId={approval.releaseActId} /> : null}
+      {returned ? <p className="text-body text-ink-2">{`Compliance returned v${returned.version} (${returned.closedByActId ?? ''}). Revise it, or approve it again, to stage new orders.`}</p> : null}
       {withdrawableVersion !== undefined ? (
         <Button rank="secondary" className="self-start" onClick={() => openWithdraw(withdrawableVersion)}>
           {`Withdraw the approval of v${withdrawableVersion}`}
@@ -130,7 +138,7 @@ function PretradeReading({ id, version }: { id: string; version: ProposalVersion
   )
 }
 
-function StagedOrders({ orders }: { orders: StagedOrder[] }) {
+function StagedOrders({ orders, escalated }: { orders: StagedOrder[]; escalated: boolean }) {
   // The engine keeps one active approval, so every pending order traces to the same act.
   const source = orders[0]
   return (
@@ -139,12 +147,38 @@ function StagedOrders({ orders }: { orders: StagedOrder[] }) {
         <Tag tone="hatch">PENDING COMPLIANCE REVIEW</Tag>
         <span className="text-ink-2">Staged, not released.</span>
       </p>
+      {escalated ? (
+        <p className="flex flex-wrap items-baseline gap-2 text-body">
+          <Tag tone="solid">ESCALATED</Tag>
+          <span className="text-ink-2">Held by compliance for further review.</span>
+        </p>
+      ) : null}
       {source ? <p className="text-label text-ink-2">{`Staged from v${source.version} · ${source.approvalActId}`}</p> : null}
       <ul aria-label="Staged orders" className="flex flex-col gap-1 text-body">
         {orders.map((o) => (
           <li key={o.id} className="flex flex-wrap items-baseline justify-between gap-x-3">
             <span>{`${SIDE_WORDS[o.side]} ${fmtQuantity(o.quantity)} ${o.symbol}`}</span>
             <span className="tabular text-ink-2">{fmtMoney(o.estimatedValue)} <span className="text-ink-3">{o.currency}</span></span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function FilledOrders({ fills, version, releaseActId }: { fills: Fill[]; version: number; releaseActId: string }) {
+  return (
+    <div className="flex flex-col gap-2 border-t border-rule pt-3">
+      <p className="flex flex-wrap items-baseline gap-2 text-body">
+        <Tag tone="solid">FILLED</Tag>
+        <span className="text-ink-2">Released by compliance; filled at the day&apos;s prices.</span>
+      </p>
+      <p className="text-label text-ink-2">{`Filled from v${version} · released by ${releaseActId}`}</p>
+      <ul aria-label="Filled orders" className="flex flex-col gap-1 text-body">
+        {fills.map((f) => (
+          <li key={f.id} className="flex flex-wrap items-baseline justify-between gap-x-3">
+            <span>{`${FILL_SIDE_WORDS[f.side]} ${fmtQuantity(f.quantity)} ${f.symbol} at ${fmtPrice(f.price)}`}</span>
+            <span className="tabular text-ink-2">{fmtMoney(f.value)} <span className="text-ink-3">{f.currency}</span></span>
           </li>
         ))}
       </ul>

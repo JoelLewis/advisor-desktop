@@ -71,7 +71,7 @@ function ReviseAction({ proposalId }: { proposalId: string }) {
   const proposal = useProposal(proposalId)
   // Warm the holdings the dialog's "Leave untouched" list reads, so it opens complete.
   usePositions(proposal.data?.accountId ?? '')
-  if (!proposal.data) return null
+  if (!proposal.data || proposal.data.approval.kind === 'released') return null
   return (
     <>
       <Button rank="secondary" onClick={() => setOpen(true)}>Revise</Button>
