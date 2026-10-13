@@ -1,58 +1,12 @@
 import { test, expect, type Locator, type Page } from '@playwright/test'
 import { SCREENSHOT, clippedLabels, pageOverflowX } from './layout-checks'
+import {
+  approvalOf, approve, askForLetter, askProposalAgent, context, conversation, embedOf, heading, letterDraft, sendLetter,
+  settle, threadLink, visit, type Theme,
+} from './workspace-steps'
 
-type Theme = 'light' | 'dark'
 type Layout = 'three-panes' | 'workbench'
 type Scene = { name: string; layout: Layout; open: (page: Page) => Promise<void> }
-
-async function settle(page: Page) {
-  await expect(page.getByRole('status').filter({ hasText: /^(Loading|Updating|Saving)/ })).toHaveCount(0, { timeout: 15_000 })
-  await page.evaluate(() => document.fonts.ready)
-  // No hover or focus ring in a baseline: the pointer rests off every control and nothing holds focus.
-  await page.mouse.move(0, 0)
-  await page.evaluate(() => (document.activeElement instanceof HTMLElement ? document.activeElement.blur() : undefined))
-}
-
-async function visit(page: Page, path: string, theme: Theme) {
-  await page.emulateMedia({ colorScheme: theme })
-  await page.goto(`${path}${path.includes('?') ? '&' : '?'}theme=${theme}`)
-  await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 15_000 })
-}
-
-const heading = (page: Page) => page.getByRole('heading', { level: 1 })
-const conversation = (page: Page) => page.getByRole('list', { name: 'Messages' })
-const context = (page: Page) => page.getByRole('complementary', { name: 'Thread context' })
-const threadLink = (page: Page, name: string) => page.getByRole('navigation', { name: 'Threads' }).getByRole('link', { name, exact: true })
-const embedOf = (page: Page) => page.getByRole('region', { name: 'Proposal · Johnson rebalance' })
-const approvalOf = (page: Page) => context(page).getByRole('region', { name: 'Approval · Johnson rebalance' })
-const letterDraft = (page: Page) => context(page).getByRole('article', { name: 'Draft · not sent' })
-
-async function askProposalAgent(page: Page, theme: Theme) {
-  await visit(page, '/t/th-johnson-review', theme)
-  await context(page).getByRole('button', { name: 'Ask Proposal Agent' }).click()
-  await expect(embedOf(page).getByRole('table', { name: 'Proposal legs · v1' })).toBeVisible()
-}
-
-async function approve(page: Page, version: number) {
-  const approval = approvalOf(page)
-  await approval.getByRole('checkbox', { name: `I reviewed every leg of v${version} and its pre-trade reading.` }).check()
-  await approval.getByRole('button', { name: `Approve v${version}` }).click()
-  await expect(approval).toContainText(`v${version} is approved`)
-  await expect(approval).toContainText('PENDING COMPLIANCE REVIEW')
-}
-
-async function askForLetter(page: Page) {
-  await threadLink(page, 'Robert Johnson').click()
-  await expect(heading(page)).toHaveText('Robert Johnson')
-  await context(page).getByRole('button', { name: 'Ask Client Letter Agent' }).click()
-  await expect(letterDraft(page)).toContainText('Dear Robert,')
-}
-
-async function sendLetter(page: Page) {
-  await letterDraft(page).getByRole('button', { name: 'Send to Robert' }).click()
-  await expect(conversation(page)).toContainText('Dear Robert,')
-  await expect(letterDraft(page)).toHaveCount(0)
-}
 
 const brief = (theme: Theme) => async (page: Page) => {
   await visit(page, '/t/th-brief', theme)

@@ -1,0 +1,65 @@
+import { expect, type Page } from '@playwright/test'
+
+export type Theme = 'light' | 'dark'
+
+export async function settle(page: Page) {
+  await expect(page.getByRole('status').filter({ hasText: /^(Loading|Updating|Saving)/ })).toHaveCount(0, { timeout: 15_000 })
+  await page.evaluate(() => document.fonts.ready)
+  // No hover or focus ring in a baseline: the pointer rests off every control and nothing holds focus.
+  await page.mouse.move(0, 0)
+  await page.evaluate(() => (document.activeElement instanceof HTMLElement ? document.activeElement.blur() : undefined))
+}
+
+export async function visit(page: Page, path: string, theme: Theme) {
+  await page.emulateMedia({ colorScheme: theme })
+  await page.goto(`${path}${path.includes('?') ? '&' : '?'}theme=${theme}`)
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 15_000 })
+}
+
+export const heading = (page: Page) => page.getByRole('heading', { level: 1 })
+export const conversation = (page: Page) => page.getByRole('list', { name: 'Messages' })
+export const context = (page: Page) => page.getByRole('complementary', { name: 'Thread context' })
+export const threadLink = (page: Page, name: string) => page.getByRole('navigation', { name: 'Threads' }).getByRole('link', { name, exact: true })
+export const embedOf = (page: Page) => page.getByRole('region', { name: 'Proposal · Johnson rebalance' })
+export const approvalOf = (page: Page) => context(page).getByRole('region', { name: 'Approval · Johnson rebalance' })
+export const letterDraft = (page: Page) => context(page).getByRole('article', { name: 'Draft · not sent' })
+
+export async function askProposalAgent(page: Page, theme: Theme) {
+  await visit(page, '/t/th-johnson-review', theme)
+  await context(page).getByRole('button', { name: 'Ask Proposal Agent' }).click()
+  await expect(embedOf(page).getByRole('table', { name: 'Proposal legs · v1' })).toBeVisible()
+}
+
+export async function approve(page: Page, version: number) {
+  const approval = approvalOf(page)
+  await approval.getByRole('checkbox', { name: `I reviewed every leg of v${version} and its pre-trade reading.` }).check()
+  await approval.getByRole('button', { name: `Approve v${version}` }).click()
+  await expect(approval).toContainText(`v${version} is approved`)
+  await expect(approval).toContainText('PENDING COMPLIANCE REVIEW')
+}
+
+export async function askForLetter(page: Page) {
+  await threadLink(page, 'Robert Johnson').click()
+  await expect(heading(page)).toHaveText('Robert Johnson')
+  await context(page).getByRole('button', { name: 'Ask Client Letter Agent' }).click()
+  await expect(letterDraft(page)).toContainText('Dear Robert,')
+}
+
+export async function sendLetter(page: Page) {
+  await letterDraft(page).getByRole('button', { name: 'Send to Robert' }).click()
+  await expect(conversation(page)).toContainText('Dear Robert,')
+  await expect(letterDraft(page)).toHaveCount(0)
+}
+
+export const viewAs = (page: Page, label: string) => page.getByLabel('View as').selectOption({ label })
+/** A firm surface from the Desk pane at the top of the thread list. */
+export const deskLink = (page: Page, name: 'Supervision' | 'Archive') =>
+  page.getByRole('navigation', { name: 'Threads' }).getByRole('link', { name, exact: true })
+
+/** The presenter's shortcut beside pending staged orders: Mark's default release, confirmed. */
+export async function releaseByShortcut(page: Page) {
+  const panel = approvalOf(page)
+  await panel.getByRole('button', { name: 'Demo · act as Mark Davis' }).click()
+  await page.getByRole('dialog', { name: /^Release v\d+ as Mark Davis\?$/ }).getByRole('button', { name: 'Confirm' }).click()
+  await expect(panel).toContainText('Released by compliance; filled at the day\'s prices.')
+}
