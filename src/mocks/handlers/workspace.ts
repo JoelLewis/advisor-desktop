@@ -1,16 +1,16 @@
 import { http, HttpResponse } from 'msw'
-import type { AgentId, BindingAct, Directory, Draft, Message, ThreadDetail } from '@/types/workspace'
-import { AGENTS, PEOPLE, can, permissionsOf, personById } from '../data/people'
+import type { AgentId, BindingAct, BindingActKind, Directory, Draft, Message, ThreadDetail } from '@/types/workspace'
+import { AGENTS, PEOPLE, can, permissionsOf } from '../data/people'
 import { nextAt, nextId, store } from '../data/workspace-store'
 import { BRIEF_THREAD_ID } from '../workspace/brief'
 import { briefOrder, remeasureBrief } from '../workspace/brief-remeasure'
-import { sendToClient } from '../workspace/acts'
+import { sendToParty } from '../workspace/acts'
 import { fileMeetingRecord } from '../workspace/meeting-acts'
 import { carryFinding } from '../workspace/carry'
 import { draftLetter, draftsFor, reviseDraft } from '../workspace/letters'
 import { approveProposal, visibleProposal, withdrawApproval } from '../workspace/proposal-acts'
 import { previewAgent, runAgent } from '../workspace/run-agent'
-import { canSeeThread, viewerFrom, visibleThreads } from '../workspace/visibility'
+import { canSeeThread, isExternalViewer, viewerFrom, visibleThreads } from '../workspace/visibility'
 import { notFound } from './utils'
 import { badRequest, firmViewer, nonEmptyString, readJson, refusal, unauthorised } from './workspace-http'
 import { workspaceMeetingHandlers } from './workspace-meetings'
@@ -19,11 +19,15 @@ import { parseComplianceAct, recordComplianceAct, workspaceSupervisionHandlers }
 
 const fullDirectory = (): Directory => ({ people: [...PEOPLE], agents: [...AGENTS], permissions: Object.fromEntries(PEOPLE.map((p) => [p.id, permissionsOf(p.id)])) })
 
-function clientDirectory(clientId: string): Directory {
-  const ids = new Set([clientId])
-  for (const thread of visibleThreads(clientId)) thread.memberIds.forEach((id) => ids.add(id))
-  return { people: PEOPLE.filter((p) => ids.has(p.id)), agents: [], permissions: { [clientId]: permissionsOf(clientId) } }
+/** An outsider's directory: themselves and the people in their own thread. No agents, no firm permissions. */
+function externalDirectory(partyId: string): Directory {
+  const ids = new Set([partyId])
+  for (const thread of visibleThreads(partyId)) thread.memberIds.forEach((id) => ids.add(id))
+  return { people: PEOPLE.filter((p) => ids.has(p.id)), agents: [], permissions: { [partyId]: permissionsOf(partyId) } }
 }
+
+/** The record kinds an outsider may read in their own thread: what reached them. */
+const PARTY_VISIBLE_ACTS: ReadonlySet<BindingActKind> = new Set<BindingActKind>(['send_to_party'])
 
 const withoutProvenance = ({ subject: _subject, basis: _basis, recordBasis: _recordBasis, editedBy: _editedBy, messageId: _messageId, viaPresenter: _via, rationale: _rationale, ...act }: BindingAct): BindingAct => act
 
@@ -33,7 +37,7 @@ export const workspaceHandlers = [
   http.get('/api/workspace/people', ({ request }) => {
     const viewer = viewerFrom(request)
     if (!viewer) return unauthorised()
-    return HttpResponse.json(personById(viewer)?.role === 'client' ? clientDirectory(viewer) : fullDirectory())
+    return HttpResponse.json(isExternalViewer(viewer) ? externalDirectory(viewer) : fullDirectory())
   }),
 
   http.get('/api/workspace/threads', ({ request }) => {
@@ -59,11 +63,11 @@ export const workspaceHandlers = [
     if (!viewer) return unauthorised()
     const thread = store().threads.find((t) => t.id === params.id)
     if (!thread || !canSeeThread(viewer, thread)) return notFound()
-    const isClient = personById(viewer)?.role === 'client'
+    const external = isExternalViewer(viewer)
     const allowed = thread.visibility === 'client'
-      ? isClient && thread.clientId === viewer
-      : !isClient && (thread.memberIds.includes(viewer) || thread.ownerId === viewer)
-    if (!allowed) return HttpResponse.json({ code: 'NOT_PERMITTED', message: thread.visibility === 'client' ? 'Write a draft; sending to the client is a recorded act.' : 'Only members can post here.' }, { status: 403 })
+      ? external && thread.partyId === viewer
+      : !external && (thread.memberIds.includes(viewer) || thread.ownerId === viewer)
+    if (!allowed) return HttpResponse.json({ code: 'NOT_PERMITTED', message: thread.visibility === 'client' ? 'Write a draft; sending is a recorded act.' : 'Only members can post here.' }, { status: 403 })
     const json = await readJson(request)
     if (!json || !nonEmptyString(json.body)) return badRequest('A non-empty body is required.')
     const { body } = json
@@ -76,7 +80,7 @@ export const workspaceHandlers = [
     const viewer = viewerFrom(request)
     if (!viewer) return unauthorised()
     const thread = store().threads.find((t) => t.id === params.id)
-    if (!thread || !canSeeThread(viewer, thread) || personById(viewer)?.role === 'client') return notFound()
+    if (!thread || !canSeeThread(viewer, thread) || isExternalViewer(viewer)) return notFound()
     return HttpResponse.json(draftsFor(thread.id))
   }),
 
@@ -101,23 +105,23 @@ export const workspaceHandlers = [
     const thread = store().threads.find((t) => t.id === threadId)
     if (!thread || !canSeeThread(viewer, thread)) return notFound()
     const acts = store().acts.filter((a) => a.threadId === thread.id)
-    // A client sees the record of what reached them, not what it was made from (the firm's draft, its proposal, its editors) nor how the firm reviewed it.
-    return HttpResponse.json(personById(viewer)?.role === 'client'
-      ? acts.filter((a) => a.kind === 'send_to_client').map(withoutProvenance)
+    // An outsider sees the record of what reached them, not what it was made from (the firm's draft, its proposal, its editors) nor how the firm reviewed it.
+    return HttpResponse.json(isExternalViewer(viewer)
+      ? acts.filter((a) => PARTY_VISIBLE_ACTS.has(a.kind)).map(withoutProvenance)
       : acts)
   }),
 
   http.post('/api/workspace/acts', async ({ request }) => {
     const viewer = viewerFrom(request)
     if (!viewer) return unauthorised()
-    // A client is told the surface does not exist before anything about the body is read.
-    if (personById(viewer)?.role === 'client') return notFound()
+    // An outsider is told the surface does not exist before anything about the body is read.
+    if (isExternalViewer(viewer)) return notFound()
     const body = await readJson(request)
     if (!body || typeof body.kind !== 'string') return badRequest('kind must be a string.')
     switch (body.kind) {
-      case 'send_to_client': {
+      case 'send_to_party': {
         if (!nonEmptyString(body.draftId)) return badRequest('draftId must be a string.')
-        const r = sendToClient(viewer, body.draftId)
+        const r = sendToParty(viewer, body.draftId)
         return r.ok ? HttpResponse.json(r.act, { status: 201 }) : refusal(r)
       }
       case 'approve_proposal': {

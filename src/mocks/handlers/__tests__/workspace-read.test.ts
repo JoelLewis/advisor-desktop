@@ -30,8 +30,8 @@ describe('workspace read API', () => {
     const { body } = await call('/people', 'user-001')
     expect(body.people.find((p: { id: string }) => p.id === 'user-001').name).toBe('Adrian Hale')
     expect(body.agents.map((a: { id: string }) => a.id)).toEqual(['drift-monitor', 'pretrade-check', 'harvest-scanner', 'proposal', 'client-letter', 'meeting-prep', 'meeting-notes'])
-    expect(body.permissions['user-001']).toContain('send_to_client')
-    expect(body.permissions['user-002']).not.toContain('send_to_client')
+    expect(body.permissions['user-001']).toContain('send_to_party')
+    expect(body.permissions['user-002']).not.toContain('send_to_party')
   })
 })
 
@@ -53,14 +53,14 @@ describe('directory scoping', () => {
       method: 'POST', headers: { 'X-Viewer': 'user-001', 'Content-Type': 'application/json' }, body: JSON.stringify({ body: 'Your statement is ready.' }),
     })).json()
     await fetch('/api/workspace/acts', {
-      method: 'POST', headers: { 'X-Viewer': 'user-001', 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'send_to_client', draftId: draft.id }),
+      method: 'POST', headers: { 'X-Viewer': 'user-001', 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'send_to_party', draftId: draft.id }),
     })
     const firm = await call('/acts?threadId=th-robert', 'user-001')
     expect(firm.body[0].subject).toEqual({ type: 'draft', id: draft.id })
     const client = await call('/acts?threadId=th-robert', 'cli-001')
     expect(client.body).toHaveLength(1)
     expect(client.body[0]).not.toHaveProperty('subject')
-    expect(client.body[0]).toMatchObject({ id: 'REC-0001', kind: 'send_to_client', actorId: 'user-001' })
+    expect(client.body[0]).toMatchObject({ id: 'REC-0001', kind: 'send_to_party', actorId: 'user-001' })
   })
   it("a client is served a sent letter's act without its proposal basis or its editors", async () => {
     const post = (path: string, body: unknown) => fetch(`/api/workspace${path}`, {
@@ -70,7 +70,7 @@ describe('directory scoping', () => {
     await post('/acts', { kind: 'approve_proposal', proposalId: proposal.id, version: 1, fingerprint: proposal.versions[0].fingerprint })
     const letter = await post('/threads/th-robert/drafts/letter', { proposalId: proposal.id })
     const edited = await post(`/threads/th-robert/drafts/${letter.id}/revisions`, { body: `${letter.body}\n\nAdrian` })
-    await post('/acts', { kind: 'send_to_client', draftId: edited.id })
+    await post('/acts', { kind: 'send_to_party', draftId: edited.id })
     const firm = await call('/acts?threadId=th-robert', 'user-001')
     expect(firm.body[0]).toMatchObject({ basis: { proposalId: proposal.id, version: 1 }, editedBy: ['user-001'] })
     const client = await call('/acts?threadId=th-robert', 'cli-001')

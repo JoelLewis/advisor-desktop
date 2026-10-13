@@ -3,7 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
-import { approveProposal, createProposal, draftLetter, reviseProposal, sendToClient, withdrawApproval } from '@/services/workspace'
+import { approveProposal, createProposal, draftLetter, reviseProposal, sendToParty, withdrawApproval } from '@/services/workspace'
 import { store } from '@/mocks/data/workspace-store'
 
 const ADRIAN = 'user-001'
@@ -86,7 +86,7 @@ describe('recording a disposition', () => {
   it('a flagged letter stays in the queue, flagged, with only "Mark reviewed" left to choose', async () => {
     await approved()
     const draft = await draftLetter(ADRIAN, 'th-robert', 'prop-0001')
-    const sent = await sendToClient(ADRIAN, draft.id)
+    const sent = await sendToParty(ADRIAN, draft.id)
     viewAsOnLoad('cco-001')
     const { item, panel } = await openItem(`/supervision/correspondence/${sent.messageId}`, 'Correspondence · Message to Robert Johnson')
     const user = userEvent.setup()

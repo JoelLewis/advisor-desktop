@@ -22,7 +22,7 @@ export function latestIntelWindowEnd(clientId: string): string | undefined {
 }
 
 const clientOfDraft = (draft: Draft): string | undefined => {
-  const clientId = store().threads.find((t) => t.id === draft.clientThreadId)?.clientId
+  const clientId = store().threads.find((t) => t.id === draft.clientThreadId)?.partyId
   return clientId
 }
 

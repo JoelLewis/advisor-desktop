@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { resetWorkspaceStore, store } from '@/mocks/data/workspace-store'
 import { createProposal, reviseProposal } from '../proposals'
 import { approveProposal } from '../proposal-acts'
-import { sendToClient } from '../acts'
+import { sendToParty } from '../acts'
 import { draftLetter, draftsFor, reviseDraft } from '../letters'
 
 function approvedJohnson() {
@@ -52,7 +52,7 @@ describe('letter drafts', () => {
     expect(draftsFor('th-robert')[0]!.stale).toBe(false)
     approveProposal('user-001', id, 2, revised.detail.versions[1]!.fingerprint)
     expect(draftsFor('th-robert')[0]!.stale).toBe(true)
-    expect(sendToClient('user-001', r.draft.id)).toMatchObject({ ok: false, status: 409, code: 'STALE_DRAFT' })
+    expect(sendToParty('user-001', r.draft.id)).toMatchObject({ ok: false, status: 409, code: 'STALE_DRAFT' })
     const fresh = draftLetter('user-001', 'th-robert', id)
     expect(fresh).toMatchObject({ ok: true, created: true, draft: { basis: { version: 2 } } })
   })
@@ -68,7 +68,7 @@ describe('letter drafts', () => {
     expect(draftsFor('th-robert').map((d) => d.id)).toEqual([edited.draft.id])
     expect(reviseDraft('user-001', 'th-robert', edited.draft.id, '  ')).toMatchObject({ ok: false, status: 400 })
     expect(reviseDraft('cli-001', 'th-robert', edited.draft.id, 'x')).toMatchObject({ ok: false, status: 404 })
-    const sent = sendToClient('user-001', edited.draft.id)
+    const sent = sendToParty('user-001', edited.draft.id)
     expect(sent.ok).toBe(true)
     const robertSees = store().messages.filter((m) => m.threadId === 'th-robert' && m.kind === 'text').map((m) => (m.kind === 'text' ? m.body : ''))
     expect(robertSees[robertSees.length - 1]).toContain('P.S. Call me any time.')
@@ -82,7 +82,7 @@ describe('letter drafts', () => {
     if (!bySarah.ok) throw new Error(bySarah.message)
     const byAdrian = reviseDraft('user-001', 'th-robert', bySarah.draft.id, `${bySarah.draft.body}\n\nAdrian`)
     if (!byAdrian.ok) throw new Error(byAdrian.message)
-    const sent = sendToClient('user-001', byAdrian.draft.id)
+    const sent = sendToParty('user-001', byAdrian.draft.id)
     if (!sent.ok) throw new Error(sent.message)
     expect(sent.act).toMatchObject({ basis: { proposalId: id, version: 1, fingerprint: v1.fingerprint }, editedBy: ['user-002', 'user-001'] })
   })
@@ -91,13 +91,13 @@ describe('letter drafts', () => {
     const { id } = approvedJohnson()
     const r = draftLetter('user-001', 'th-robert', id)
     if (!r.ok) throw new Error(r.message)
-    const sent = sendToClient('user-001', r.draft.id)
+    const sent = sendToParty('user-001', r.draft.id)
     if (!sent.ok) throw new Error(sent.message)
     expect(sent.act.editedBy).toEqual([])
     expect(sent.act.basis).toEqual(r.draft.basis)
     const own = { id: 'draft-own', clientThreadId: 'th-robert', authorId: 'user-001', body: 'Your statement is ready.', createdAt: 'x' }
     store().drafts.push(own)
-    const plain = sendToClient('user-001', own.id)
+    const plain = sendToParty('user-001', own.id)
     if (!plain.ok) throw new Error(plain.message)
     expect(plain.act).not.toHaveProperty('basis')
     expect(plain.act).not.toHaveProperty('editedBy')

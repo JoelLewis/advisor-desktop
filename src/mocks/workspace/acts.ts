@@ -1,20 +1,20 @@
 import type { BindingAct, Message } from '@/types/workspace'
-import { can, personById } from '@/mocks/data/people'
+import { can } from '@/mocks/data/people'
 import { commitActId, nextAt, nextId, store } from '@/mocks/data/workspace-store'
 import { fingerprint } from '@/lib/fingerprint'
 import { isStale, staleMessage } from './draft-staleness'
-import { canSeeThread } from './visibility'
+import { canSeeThread, isFirmViewer } from './visibility'
+import { partyOfThread } from './party'
 
 type Failure = { ok: false; status: 403 | 404 | 409; code: string; message: string }
 
-export function sendToClient(viewerId: string, draftId: string): { ok: true; act: BindingAct } | Failure {
+export function sendToParty(viewerId: string, draftId: string): { ok: true; act: BindingAct } | Failure {
   const s = store()
-  const isClient = personById(viewerId)?.role === 'client'
   const noDraft: Failure = { ok: false, status: 404, code: 'NO_DRAFT', message: 'Draft not found.' }
-  if (isClient) return noDraft
+  if (!isFirmViewer(viewerId)) return noDraft
   const draft = s.drafts.find((d) => d.id === draftId)
   if (!draft) {
-    const sent = s.acts.find((a) => a.kind === 'send_to_client' && a.subject?.type === 'draft' && a.subject.id === draftId)
+    const sent = s.acts.find((a) => a.kind === 'send_to_party' && a.subject?.type === 'draft' && a.subject.id === draftId)
     const sentThread = sent && s.threads.find((t) => t.id === sent.threadId)
     return sent && sentThread && canSeeThread(viewerId, sentThread)
       ? { ok: false, status: 409, code: 'ALREADY_SENT', message: `This draft was already sent (${sent.id}).` }
@@ -22,15 +22,16 @@ export function sendToClient(viewerId: string, draftId: string): { ok: true; act
   }
   const thread = s.threads.find((t) => t.id === draft.clientThreadId)
   if (!thread || !canSeeThread(viewerId, thread)) return noDraft
-  if (!can(viewerId, 'send_to_client')) return { ok: false, status: 403, code: 'NOT_PERMITTED', message: 'Only the advisor of record can send to a client.' }
+  if (!can(viewerId, 'send_to_party')) return { ok: false, status: 403, code: 'NOT_PERMITTED', message: 'Only the advisor of record can send to a client or prospect.' }
   if (isStale(draft)) return { ok: false, status: 409, code: 'STALE_DRAFT', message: staleMessage(draft) }
+  const party = partyOfThread(thread)
 
   const at = nextAt()
   const text: Message = { kind: 'text', id: nextId('msg'), threadId: thread.id, authorId: viewerId, at, body: draft.body }
   const act: BindingAct = {
-    id: commitActId(), kind: 'send_to_client', actorId: viewerId, at, threadId: thread.id,
+    id: commitActId(), kind: 'send_to_party', actorId: viewerId, at, threadId: thread.id,
     subject: { type: 'draft', id: draftId }, fingerprint: fingerprint(draft.body), messageId: text.id,
-    summary: 'Message sent to the client',
+    summary: `Message sent to the ${party.kind}`,
     // Books and records: an agent's letter records what it came from (an approved version or a filed record) and every person who edited it.
     ...(draft.agentId ? {
       ...(draft.basis ? { basis: draft.basis } : {}),

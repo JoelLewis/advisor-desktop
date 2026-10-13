@@ -19,7 +19,7 @@ export function RecapControl({ thread }: { thread: Thread }) {
   const reasonId = useId()
   if (meetings.isPending) return <p role="status" className="text-body text-ink-3">Loading the meetings…</p>
   if (meetings.isError) return <p role="alert" className="text-body">{meetings.error.message}</p>
-  const withClient = meetings.data.filter((m) => m.clientId === thread.clientId)
+  const withClient = meetings.data.filter((m) => m.clientId === thread.partyId)
   if (withClient.length === 0) return null
   const ask = (meeting: MeetingSummary) => {
     if (asking.current) return

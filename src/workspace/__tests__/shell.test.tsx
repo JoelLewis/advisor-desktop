@@ -34,7 +34,7 @@ const threadLinks = () => within(threadNav()).getAllByRole('link').map(spokenTex
 describe('workspace shell', () => {
   it('as Adrian lists four threads under the three headings, with one h1', async () => {
     const { container } = await renderHome()
-    await waitFor(() => expect(groupHeadings()).toEqual(['Desk', 'Private', 'Internal', 'Client', 'Agents on this desk']))
+    await waitFor(() => expect(groupHeadings()).toEqual(['Desk', 'Private', 'Internal', 'Clients and prospects', 'Agents on this desk']))
     expect(threadLinks()).toEqual(['Supervision', 'Archive', 'Brief', 'Johnson Rebalance Review', 'Johnson annual review', 'Robert Johnson'])
     expect(within(threadNav()).getByRole('link', { name: 'Johnson Rebalance Review' })).toHaveAttribute('href', '/t/th-johnson-review')
     expect(container.querySelectorAll('h1')).toHaveLength(1)
@@ -65,7 +65,7 @@ describe('workspace shell', () => {
     const select = await screen.findByRole('combobox', { name: 'View as' })
     await within(select).findByRole('option', { name: 'Mark Davis · Compliance' })
     expect(within(select).getAllByRole('option').map((o) => o.textContent)).toEqual([
-      'Adrian Hale · Advisor', 'Sarah Mitchell · Client service', 'Mike Chen · Analyst', 'Mark Davis · Compliance', 'Robert Johnson · Client',
+      'Adrian Hale · Advisor', 'Sarah Mitchell · Client service', 'Mike Chen · Analyst', 'Mark Davis · Compliance', 'Robert Johnson · Client', 'Dr. Amanda Pell · Prospect',
     ])
     expect(select).toHaveValue('user-001')
   })
@@ -74,7 +74,7 @@ describe('workspace shell', () => {
     await renderHome()
     await viewAs('Robert Johnson · Client')
     await waitFor(() => expect(threadLinks()).toEqual(['Robert Johnson']))
-    expect(groupHeadings()).toEqual(['Client'])
+    expect(groupHeadings()).toEqual(['Clients and prospects'])
     expect(within(threadNav()).queryByText('Drift Monitor')).toBeNull()
     expect(screen.getByRole('combobox', { name: 'View as' })).toHaveValue('cli-001')
   })
@@ -83,14 +83,14 @@ describe('workspace shell', () => {
     await renderHome()
     await viewAs('Robert Johnson · Client')
     await waitFor(() => expect(threadLinks()).toEqual(['Robert Johnson']))
-    expect(within(screen.getByRole('combobox', { name: 'View as' })).getAllByRole('option')).toHaveLength(5)
+    expect(within(screen.getByRole('combobox', { name: 'View as' })).getAllByRole('option')).toHaveLength(6)
   })
 
   it('viewing as Mark Davis shows the two firm threads, not the private brief', async () => {
     await renderHome()
     await viewAs('Mark Davis · Compliance')
     await waitFor(() => expect(threadLinks()).toEqual(['Supervision', 'Archive', 'Johnson Rebalance Review', 'Johnson annual review', 'Robert Johnson']))
-    expect(groupHeadings()).toEqual(['Desk', 'Internal', 'Client', 'Agents on this desk'])
+    expect(groupHeadings()).toEqual(['Desk', 'Internal', 'Clients and prospects', 'Agents on this desk'])
   })
 
   it('shows a status while threads load', () => {

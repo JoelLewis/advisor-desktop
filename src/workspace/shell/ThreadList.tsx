@@ -3,7 +3,8 @@ import { cn } from '@/lib/utils'
 import { Pane } from '@/kit/layout/Pane'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
 import { useDirectory, useThreads } from '@/hooks/use-workspace'
-import { isClientViewer } from '@/workspace/people/directory-people'
+import { isExternalViewerIn } from '@/workspace/people/directory-people'
+import { threadParty } from '@/workspace/people/thread-party'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { AgentScope } from '@/workspace/people/AgentScope'
 import type { Thread, Visibility } from '@/types/workspace'
@@ -11,7 +12,7 @@ import type { Thread, Visibility } from '@/types/workspace'
 const GROUPS: readonly { visibility: Visibility; title: string }[] = [
   { visibility: 'private', title: 'Private' },
   { visibility: 'internal', title: 'Internal' },
-  { visibility: 'client', title: 'Client' },
+  { visibility: 'client', title: 'Clients and prospects' },
 ]
 
 export function ThreadList() {
@@ -42,7 +43,7 @@ function ThreadGroup({ title, threads }: { title: string; threads: Thread[] }) {
             )}>
               {({ isActive }) => (
                 <>
-                  <div aria-hidden="true"><VisibilityBand visibility={t.visibility} scale="message" /></div>
+                  <div aria-hidden="true"><VisibilityBand visibility={t.visibility} scale="message" party={threadParty(t)} /></div>
                   <span className={cn('text-body', isActive && 'font-semibold')}>{t.title}</span>
                 </>
               )}
@@ -76,7 +77,7 @@ const DESK: readonly { to: string; label: string }[] = [{ to: '/supervision', la
 function DeskLinks() {
   const { viewerId } = useViewer()
   const directory = useDirectory()
-  if (!directory.data || isClientViewer(directory.data, viewerId)) return null
+  if (!directory.data || isExternalViewerIn(directory.data, viewerId)) return null
   return (
     <Pane title="Desk">
       <ul className="flex flex-col">

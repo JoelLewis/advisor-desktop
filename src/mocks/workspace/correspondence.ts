@@ -10,7 +10,7 @@ export type SentMessage = { act: BindingAct; message: TextMessage; thread: Threa
 export function sentMessages(): SentMessage[] {
   const s = store()
   return s.acts.flatMap((act) => {
-    if (act.kind !== 'send_to_client' || !act.messageId) return []
+    if (act.kind !== 'send_to_party' || !act.messageId) return []
     const message = s.messages.find((m): m is TextMessage => m.kind === 'text' && m.id === act.messageId)
     const thread = s.threads.find((t) => t.id === act.threadId)
     return message && thread ? [{ act, message, thread }] : []

@@ -17,7 +17,7 @@ export function LetterControl({ thread }: { thread: Thread }) {
   const asking = useRef(false)
   if (proposals.isPending) return <p role="status" className="text-body text-ink-3">Loading the proposals…</p>
   if (proposals.isError) return <p role="alert" className="text-body">{proposals.error.message}</p>
-  const forClient = proposals.data.filter((p) => p.clientId === thread.clientId)
+  const forClient = proposals.data.filter((p) => p.clientId === thread.partyId)
   const approved = forClient.flatMap((p) => (p.approval.kind === 'approved' ? [{ p, version: p.approval.version }] : []))
   if (approved.length === 0) {
     return (

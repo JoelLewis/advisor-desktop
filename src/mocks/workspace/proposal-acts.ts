@@ -1,9 +1,9 @@
 import type { BindingAct, Message } from '@/types/workspace'
 import type { ApprovalRecord, Proposal, StagedOrder } from '@/types/workspace-proposal'
-import { can, personById } from '@/mocks/data/people'
+import { can } from '@/mocks/data/people'
 import { commitActId, nextAt, nextId, store } from '@/mocks/data/workspace-store'
 import { activeApproval, filledMessage, nextStagedId, proposalById, releasedApproval } from '@/mocks/data/proposals-store'
-import { canSeeThread } from './visibility'
+import { canSeeThread, isFirmViewer } from './visibility'
 
 export type ActFailure = { ok: false; status: 403 | 404 | 409; code: string; message: string }
 type Recorded = { ok: true; act: BindingAct }
@@ -12,7 +12,7 @@ const NOT_FOUND: ActFailure = { ok: false, status: 404, code: 'NO_PROPOSAL', mes
 
 export function visibleProposal(viewerId: string, proposalId: string): Proposal | undefined {
   const proposal = proposalById(proposalId)
-  if (!proposal || personById(viewerId)?.role === 'client') return undefined
+  if (!proposal || !isFirmViewer(viewerId)) return undefined
   const thread = store().threads.find((t) => t.id === proposal.threadId)
   return thread && canSeeThread(viewerId, thread) ? proposal : undefined
 }

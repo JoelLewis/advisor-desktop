@@ -12,7 +12,7 @@ import { advanceClockTo, nextAt, nextId, nextNumber, pad, store } from '@/mocks/
 import { fingerprint } from '@/lib/fingerprint'
 import { MOCK_NOW_ISO } from '@/lib/clock'
 import { isCoveredTradingDay } from '@/lib/trading-calendar'
-import { canSeeThread } from './visibility'
+import { canSeeThread, isFirmViewer } from './visibility'
 
 export type MeetingFailure = { ok: false; status: 400 | 403 | 404 | 409; code: string; message: string }
 export type MeetingResult = { ok: true; meeting: Meeting } | MeetingFailure
@@ -56,8 +56,7 @@ export function meetingTitle(meeting: Meeting): string {
 
 /** The meeting a viewer may read: a firm viewer who can see its thread. A client, or anyone else, is told it does not exist. */
 export function visibleMeeting(viewerId: string, eventId: string): Meeting | undefined {
-  const viewer = personById(viewerId)
-  if (!viewer || viewer.role === 'client') return undefined
+  if (!isFirmViewer(viewerId)) return undefined
   const meeting = meetingOf(eventId)
   const thread = meeting && store().threads.find((t) => t.id === meeting.threadId)
   return meeting && thread && canSeeThread(viewerId, thread) ? meeting : undefined
@@ -73,8 +72,7 @@ function summaryOf(meeting: Meeting): MeetingSummary {
 
 /** The meetings a firm viewer may read; undefined for a client or an unknown viewer, whom the endpoint answers 404. */
 export function meetingSummaries(viewerId: string): MeetingSummary[] | undefined {
-  const viewer = personById(viewerId)
-  if (!viewer || viewer.role === 'client') return undefined
+  if (!isFirmViewer(viewerId)) return undefined
   return store().meetings.filter((m) => visibleMeeting(viewerId, m.eventId) !== undefined).map(summaryOf)
 }
 
@@ -205,7 +203,7 @@ export function meetingDay(meeting: Meeting): string {
 }
 
 const isOwner = (owner: TaskOwner): boolean => (owner.kind === 'person'
-  ? personById(owner.personId) !== undefined && personById(owner.personId)?.role !== 'client'
+  ? isFirmViewer(owner.personId)
   : AGENTS.some((a) => a.id === owner.agentId))
 
 /** Every line checked before anything is saved: section, text, citations, ids, and a follow-up's owner and due date. */

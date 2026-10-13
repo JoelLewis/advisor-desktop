@@ -3,7 +3,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
-import { approveProposal, createProposal, draftLetter, getProposal, saveProposalVersion, sendToClient } from '@/services/workspace'
+import { approveProposal, createProposal, draftLetter, getProposal, saveProposalVersion, sendToParty } from '@/services/workspace'
 
 const ADRIAN = 'user-001'
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
@@ -64,7 +64,7 @@ describe('Supervision', () => {
   it("opens a sent letter as Robert saw it, with the firm-only provenance", async () => {
     await approved()
     const draft = await draftLetter(ADRIAN, 'th-robert', 'prop-0001')
-    const act = await sendToClient(ADRIAN, draft.id)
+    const act = await sendToParty(ADRIAN, draft.id)
     viewAsOnLoad('cco-001')
     await open(`/supervision/correspondence/${act.messageId}`)
     const item = await screen.findByRole('region', { name: 'Correspondence · Message to Robert Johnson' })

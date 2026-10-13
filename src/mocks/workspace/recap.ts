@@ -19,11 +19,11 @@ const intelWindowSentence = (sales: number, end: string) =>
 export function draftRecap(viewerId: string, clientThreadId: string, eventId: string): { ok: true; draft: Draft; created: boolean } | LetterFailure {
   const thread = draftingClientThread(viewerId, clientThreadId)
   if (!thread) return refuse(404, 'NO_THREAD', 'Thread not found.')
-  if (thread.visibility !== 'client' || thread.clientId === undefined) return refuse(400, 'NOT_CLIENT_THREAD', 'A recap is drafted in a client thread.')
+  if (thread.visibility !== 'client' || thread.partyId === undefined) return refuse(400, 'NOT_CLIENT_THREAD', 'A recap is drafted in a client thread.')
   const meeting = visibleMeeting(viewerId, eventId)
   const event = meeting && meetingEvent(meeting.eventId)
   if (!meeting || !event) return refuse(404, 'NO_MEETING', 'Meeting not found.')
-  const client = clients.find((c) => c.id === thread.clientId)
+  const client = clients.find((c) => c.id === thread.partyId)
   if (!client || client.householdId !== meeting.householdId) return refuse(400, 'NOT_THIS_CLIENT', "That meeting is not with this thread's client.")
   if (!meeting.filed) return refuse(409, 'NOT_FILED', `File the record of the ${meetingTitle(meeting)} before asking for its recap.`)
 

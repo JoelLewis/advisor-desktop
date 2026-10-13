@@ -15,21 +15,17 @@ import { calendarEvents } from '@/mocks/data/calendar'
 import { OPEN_ITEMS } from '@/mocks/data/open-items'
 import { getPositionsForAccount } from '@/mocks/data/positions'
 import { openWashSaleWindows } from '@/mocks/data/realised-sales'
-import { personById } from '@/mocks/data/people'
 import { sessionNow } from '@/mocks/data/workspace-store'
 import { computeDriftForAccount, modelDisplayName } from '@/mocks/handlers/pms'
 import { projectDrift } from '@/mocks/handlers/oms'
 import { ACCOUNT_TYPE_LABELS, capitalize } from '@/lib/labels'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { meetingOf, meetingTitle } from './meetings'
+import { isFirmViewer } from './visibility'
 
 const STRUCTURAL: ReadonlySet<string> = new Set<StructuralResidual>(['not_market_tradable', 'replacement_hold'])
 const isStructural = (reason: string | undefined): reason is StructuralResidual => reason !== undefined && STRUCTURAL.has(reason)
 const latestFirst = <T>(at: (x: T) => string) => (a: T, b: T) => Date.parse(at(b)) - Date.parse(at(a))
-const isFirmViewer = (viewerId: string) => {
-  const viewer = personById(viewerId)
-  return viewer !== undefined && viewer.role !== 'client'
-}
 
 function clientName(clientId: string): string {
   const client = clients.find((c) => c.id === clientId)

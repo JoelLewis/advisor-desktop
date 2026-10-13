@@ -1,13 +1,13 @@
 import type { Message, Thread } from '@/types/workspace'
 import type { DraftPreview, LegEdit, Proposal, ProposalConstraint, ProposalDetail, ProposalVersion } from '@/types/workspace-proposal'
 import { accounts } from '@/mocks/data/accounts'
-import { can, personById } from '@/mocks/data/people'
+import { can } from '@/mocks/data/people'
 import { nextAt, nextId, store } from '@/mocks/data/workspace-store'
 import { detailOf, filledMessage, latestVersion, nextProposalId, proposalsInThread, releasedApproval } from '@/mocks/data/proposals-store'
 import { agentConstraints, draftSummary, proposalTitle, revisionSummary } from '@/mocks/agents/proposal-agent'
 import { buildVersion, editSummary, normaliseEdits } from './proposal-engine'
 import { visibleProposal } from './proposal-acts'
-import { canSeeThread } from './visibility'
+import { canSeeThread, isFirmViewer } from './visibility'
 
 export type ProposalFailure = { ok: false; status: 400 | 403 | 404 | 409; code: string; message: string }
 const refuse = (status: ProposalFailure['status'], code: string, message: string): ProposalFailure => ({ ok: false, status, code, message })
@@ -20,7 +20,7 @@ const NOT_FOUND = refuse(404, 'NO_PROPOSAL', 'Proposal not found.')
  */
 function draftingThread(viewerId: string, threadId: string): { ok: true; thread: Thread } | ProposalFailure {
   // Proposals are a firm surface: a client sees no trace of them, even in their own thread.
-  if (personById(viewerId)?.role === 'client') return refuse(404, 'NOT_FOUND', 'Not found.')
+  if (!isFirmViewer(viewerId)) return refuse(404, 'NOT_FOUND', 'Not found.')
   const thread = store().threads.find((t) => t.id === threadId)
   if (!thread || !canSeeThread(viewerId, thread)) return refuse(404, 'NO_THREAD', 'Thread not found.')
   if (thread.visibility === 'client') return refuse(400, 'CLIENT_THREAD', 'Agents never post in a client thread.')
@@ -126,8 +126,7 @@ export function previewEdits(viewerId: string, proposalId: string, edits: readon
 
 /** Undefined means 404: a client viewer, or a thread the viewer cannot see or that holds no proposals by design. */
 export function readableProposals(viewerId: string, threadId?: string): ProposalDetail[] | undefined {
-  const viewer = personById(viewerId)
-  if (!viewer || viewer.role === 'client') return undefined
+  if (!isFirmViewer(viewerId)) return undefined
   const s = store()
   if (threadId !== undefined) {
     const thread = s.threads.find((t) => t.id === threadId)

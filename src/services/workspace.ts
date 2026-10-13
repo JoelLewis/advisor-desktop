@@ -21,8 +21,8 @@ export const createDraft = (viewer: string, threadId: string, body: string) =>
   post<Draft>(`/workspace/threads/${threadId}/drafts`, { body }, as(viewer))
 export const getActs = (viewer: string, threadId: string) =>
   get<BindingAct[]>('/workspace/acts', { threadId }, as(viewer))
-export const sendToClient = (viewer: string, draftId: string) =>
-  post<BindingAct>('/workspace/acts', { kind: 'send_to_client', draftId }, as(viewer))
+export const sendToParty = (viewer: string, draftId: string) =>
+  post<BindingAct>('/workspace/acts', { kind: 'send_to_party', draftId }, as(viewer))
 export const runAgent = (viewer: string, threadId: string, agentId: AgentId) =>
   post<Message[]>(`/workspace/threads/${threadId}/agents/${agentId}/run`, undefined, as(viewer))
 /** Read-only: what the agent would find on this thread, without posting anything. */

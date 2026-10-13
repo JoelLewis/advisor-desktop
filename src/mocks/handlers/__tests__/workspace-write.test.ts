@@ -44,23 +44,23 @@ describe('drafts (rule 4)', () => {
 describe('send to client (rules 5–6)', () => {
   it('records one act, posts the message to the client thread, consumes the draft', async () => {
     const draft = (await call('POST', '/threads/th-robert/drafts', 'user-001', { body: 'Sarah will be in touch this week.' })).body
-    const sent = await call('POST', '/acts', 'user-001', { kind: 'send_to_client', draftId: draft.id })
+    const sent = await call('POST', '/acts', 'user-001', { kind: 'send_to_party', draftId: draft.id })
     expect(sent.status).toBe(201)
-    expect(sent.body).toMatchObject({ id: 'REC-0001', kind: 'send_to_client', actorId: 'user-001', threadId: 'th-robert' })
+    expect(sent.body).toMatchObject({ id: 'REC-0001', kind: 'send_to_party', actorId: 'user-001', threadId: 'th-robert' })
     expect(sent.body.fingerprint).toMatch(/^[0-9A-F]{8}$/)
     const seen = (await call('GET', '/threads/th-robert', 'cli-001')).body
     const last = seen.messages.slice(-2)
     expect(last[0]).toMatchObject({ kind: 'text', authorId: 'user-001', body: 'Sarah will be in touch this week.' })
     expect(last[1]).toMatchObject({ kind: 'act', actId: 'REC-0001' })
-    expect((await call('POST', '/acts', 'user-001', { kind: 'send_to_client', draftId: draft.id })).status).toBe(409)
+    expect((await call('POST', '/acts', 'user-001', { kind: 'send_to_party', draftId: draft.id })).status).toBe(409)
   })
   it('a csa may draft but not send', async () => {
     const draft = (await call('POST', '/threads/th-robert/drafts', 'user-002', { body: 'x' })).body
-    expect((await call('POST', '/acts', 'user-002', { kind: 'send_to_client', draftId: draft.id })).status).toBe(403)
+    expect((await call('POST', '/acts', 'user-002', { kind: 'send_to_party', draftId: draft.id })).status).toBe(403)
   })
   it('acts are listed per thread and visible to the client only for their thread', async () => {
     const draft = (await call('POST', '/threads/th-robert/drafts', 'user-001', { body: 'y' })).body
-    await call('POST', '/acts', 'user-001', { kind: 'send_to_client', draftId: draft.id })
+    await call('POST', '/acts', 'user-001', { kind: 'send_to_party', draftId: draft.id })
     expect((await call('GET', '/acts?threadId=th-robert', 'cli-001')).body).toHaveLength(1)
     expect((await call('GET', '/acts?threadId=th-johnson-review', 'cli-001')).status).toBe(404)
   })
@@ -78,14 +78,14 @@ describe('send to client (rules 5–6)', () => {
 describe('information leaks and malformed input', () => {
   it('a client gets 404 for a real pending draft', async () => {
     const draft = (await call('POST', '/threads/th-robert/drafts', 'user-001', { body: 'x' })).body
-    expect((await call('POST', '/acts', 'cli-001', { kind: 'send_to_client', draftId: draft.id })).status).toBe(404)
+    expect((await call('POST', '/acts', 'cli-001', { kind: 'send_to_party', draftId: draft.id })).status).toBe(404)
   })
   it('a consumed draft is 409 only for those who can see its thread', async () => {
     const draft = (await call('POST', '/threads/th-robert/drafts', 'user-001', { body: 'x' })).body
-    await call('POST', '/acts', 'user-001', { kind: 'send_to_client', draftId: draft.id })
-    expect((await call('POST', '/acts', 'user-003', { kind: 'send_to_client', draftId: draft.id })).status).toBe(404)
-    expect((await call('POST', '/acts', 'cli-001', { kind: 'send_to_client', draftId: draft.id })).status).toBe(404)
-    expect((await call('POST', '/acts', 'user-001', { kind: 'send_to_client', draftId: draft.id })).status).toBe(409)
+    await call('POST', '/acts', 'user-001', { kind: 'send_to_party', draftId: draft.id })
+    expect((await call('POST', '/acts', 'user-003', { kind: 'send_to_party', draftId: draft.id })).status).toBe(404)
+    expect((await call('POST', '/acts', 'cli-001', { kind: 'send_to_party', draftId: draft.id })).status).toBe(404)
+    expect((await call('POST', '/acts', 'user-001', { kind: 'send_to_party', draftId: draft.id })).status).toBe(409)
   })
   it('malformed bodies are 400 with a code', async () => {
     const bad = async (path: string, viewer: string, body: unknown) => (await call('POST', path, viewer, body))

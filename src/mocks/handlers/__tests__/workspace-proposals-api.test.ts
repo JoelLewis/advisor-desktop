@@ -57,7 +57,7 @@ describe('proposal endpoints', () => {
       ['POST', '/acts', { kind: 'approve_proposal', proposalId: 'prop-0001', version: 1, fingerprint: 'X' }],
       ['POST', '/acts', { kind: 'approve_proposal', proposalId: 'prop-0001' }],
       ['POST', '/acts', { kind: 'withdraw_approval', proposalId: 'prop-0001' }],
-      ['POST', '/acts', { kind: 'send_to_client', draftId: letter.id }],
+      ['POST', '/acts', { kind: 'send_to_party', draftId: letter.id }],
       ['POST', `/threads/th-brief/findings/${finding.id}/carry`, { toThreadId: 'th-johnson-review' }],
       ['POST', `/threads/th-brief/findings/${finding.id}/carry`, {}],
     ] as const) {
@@ -142,7 +142,7 @@ describe('proposal endpoints', () => {
     const v2 = await call('POST', '/proposals/prop-0001/revise', 'user-001', { constraints: [{ kind: 'harvest_only' }] })
     await call('POST', '/acts', 'user-001', { kind: 'approve_proposal', proposalId: 'prop-0001', version: 2, fingerprint: v2.body.versions[1].fingerprint })
     expect((await call('GET', '/threads/th-robert/drafts', 'user-001')).body[0].stale).toBe(true)
-    expect((await call('POST', '/acts', 'user-001', { kind: 'send_to_client', draftId: edited.body.id })).body.code).toBe('STALE_DRAFT')
+    expect((await call('POST', '/acts', 'user-001', { kind: 'send_to_party', draftId: edited.body.id })).body.code).toBe('STALE_DRAFT')
   })
 
   it('carries a Brief finding once', async () => {

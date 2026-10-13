@@ -21,6 +21,6 @@ it("says a recap came from the filed record, and records it on the send", () => 
   const recordBasis = { eventId: 'evt-010', actId: 'REC-0001', fingerprint: '1A2B3C4D' }
   expect(draftOrigin(draft({ agentId: 'client-letter', recordBasis }), directory))
     .toBe("Drafted by Client Letter Agent at Adrian Hale's request · from the filed record REC-0001 · fingerprint 1A2B3C4D")
-  const act = { id: 'REC-0002', kind: 'send_to_client' as const, actorId: 'user-001', at: '2026-02-25T20:30:00.000Z', fingerprint: 'X', summary: 'Message sent to the client', recordBasis, editedBy: [] }
+  const act = { id: 'REC-0002', kind: 'send_to_party' as const, actorId: 'user-001', at: '2026-02-25T20:30:00.000Z', fingerprint: 'X', summary: 'Message sent to the client', recordBasis, editedBy: [] }
   expect(sentLetterOrigin(act, directory)).toBe('from the filed record REC-0001 · fingerprint 1A2B3C4D · agent draft, unedited')
 })

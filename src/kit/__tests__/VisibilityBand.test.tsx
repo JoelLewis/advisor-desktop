@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
-import { VISIBILITY_WORDS } from '@/kit/visibility/visibility'
+import { VISIBILITY_WORDS, visibilityWords } from '@/kit/visibility/visibility'
 
 describe('VisibilityBand', () => {
   it('uses the exact words', () => {
@@ -28,5 +28,18 @@ describe('VisibilityBand', () => {
   it('names the client audience on client threads', () => {
     render(<VisibilityBand visibility="client" audience="Robert Johnson" />)
     expect(screen.getByText('Robert Johnson')).toBeInTheDocument()
+  })
+})
+
+describe('the band names the party', () => {
+  it('reads the client words by default and the prospect words for prospect work', () => {
+    expect(visibilityWords('client')).toBe('CLIENT CAN SEE')
+    expect(visibilityWords('client', 'prospect')).toBe('PROSPECT CAN SEE')
+    expect(visibilityWords('internal', 'prospect')).toBe("Firm only · prospect can't see")
+    expect(visibilityWords('private', 'prospect')).toBe('Only you')
+  })
+  it('renders the prospect band with its accessible name', () => {
+    render(<VisibilityBand visibility="client" party="prospect" audience="Dr. Amanda Pell" />)
+    expect(screen.getByRole('note', { name: 'Visibility: PROSPECT CAN SEE' })).toHaveTextContent('Dr. Amanda Pell')
   })
 })

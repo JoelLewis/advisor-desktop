@@ -7,6 +7,7 @@ export const PEOPLE: readonly Person[] = [
   { id: 'user-003', name: 'Mike Chen', role: 'analyst' },
   { id: 'cco-001', name: 'Mark Davis', role: 'compliance' },
   { id: 'cli-001', name: 'Robert Johnson', role: 'client' },
+  { id: 'prsp-011', name: 'Dr. Amanda Pell', role: 'prospect' },
 ]
 
 export const CCO_ID = 'cco-001'
@@ -23,11 +24,12 @@ export const AGENTS: readonly AgentProfile[] = [
 ]
 
 const PERMISSIONS: Readonly<Record<Person['role'], readonly Act[]>> = {
-  advisor: ['post_firm', 'draft_for_client', 'send_to_client', 'approve_proposal', 'withdraw_approval', 'prepare_meeting', 'file_meeting_record'],
+  advisor: ['post_firm', 'draft_for_client', 'send_to_party', 'approve_proposal', 'withdraw_approval', 'prepare_meeting', 'file_meeting_record'],
   csa: ['post_firm', 'draft_for_client'],
   analyst: ['post_firm'],
   compliance: ['post_firm', 'read_all_firm_threads', 'release_orders', 'return_to_advisor', 'escalate', 'dispose_alert', 'review_correspondence'],
   client: [],
+  prospect: [],
 }
 
 export function personById(id: string): Person | undefined {

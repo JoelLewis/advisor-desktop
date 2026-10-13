@@ -97,12 +97,12 @@ describe('the presenter shortcut', () => {
   it("Robert's records stay his: only the send record, without provenance", async () => {
     await approvedV1()
     const { body: draft } = await call('POST', '/threads/th-robert/drafts/letter', 'user-001', { proposalId: 'prop-0001' })
-    await call('POST', '/acts', 'user-001', { kind: 'send_to_client', draftId: draft.id })
+    await call('POST', '/acts', 'user-001', { kind: 'send_to_party', draftId: draft.id })
     await call('POST', '/presenter/act-as-cco', 'user-001', { item: { kind: 'orders', id: 'prop-0001' } })
-    const messageId = store().acts.find((x) => x.kind === 'send_to_client')!.messageId!
+    const messageId = store().acts.find((x) => x.kind === 'send_to_party')!.messageId!
     await call('POST', '/presenter/act-as-cco', 'user-001', { item: { kind: 'correspondence', id: messageId } })
     const { body: acts } = await call('GET', '/acts?threadId=th-robert', 'cli-001')
-    expect(acts.map((x: { kind: string }) => x.kind)).toEqual(['send_to_client'])
+    expect(acts.map((x: { kind: string }) => x.kind)).toEqual(['send_to_party'])
     expect(JSON.stringify(acts)).not.toMatch(/viaPresenter|rationale|basis|editedBy|messageId/)
   })
 

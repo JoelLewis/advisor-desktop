@@ -15,7 +15,7 @@ export function Composer({ thread, directory }: { thread: Thread; directory: Dir
     case 'post':
       return <PostComposer threadId={thread.id} action={mode.action} />
     case 'draft':
-      return <DraftComposer threadId={thread.id} clientFirstName={mode.clientFirstName} />
+      return <DraftComposer threadId={thread.id} addressName={mode.addressName} />
   }
 }
 
@@ -25,10 +25,10 @@ function PostComposer({ threadId, action }: { threadId: string; action: string }
     submit={(body, onSaved) => post.mutate(body, { onSuccess: onSaved })} />
 }
 
-function DraftComposer({ threadId, clientFirstName }: { threadId: string; clientFirstName: string }) {
+function DraftComposer({ threadId, addressName }: { threadId: string; addressName: string }) {
   const draft = useCreateDraft(threadId)
   return <ComposerForm label="Draft" action="Save draft" pending={draft.isPending} error={draft.error}
-    placeholder={`Write a draft for ${clientFirstName} (not sent until you send it)`} savedNote="Draft saved — not sent."
+    placeholder={`Write a draft for ${addressName} (not sent until you send it)`} savedNote="Draft saved — not sent."
     submit={(body, onSaved) => draft.mutate(body, { onSuccess: onSaved })} />
 }
 

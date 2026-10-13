@@ -3,8 +3,6 @@ import type { BindingAct, BindingActKind } from '@/types/workspace'
 import type { ApprovalRecord, Proposal } from '@/types/workspace-proposal'
 import type { AlertItem, CorrespondenceItem, OrdersItem, SupervisionItem, SupervisionQueue } from '@/types/workspace-supervision'
 import { accounts } from '@/mocks/data/accounts'
-import { clients } from '@/mocks/data/clients'
-import { personById } from '@/mocks/data/people'
 import { ledgerFills } from '@/mocks/data/portfolio-ledger'
 import { escalationOf, latestVersion } from '@/mocks/data/proposals-store'
 import { store } from '@/mocks/data/workspace-store'
@@ -13,7 +11,8 @@ import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { alertById, alertContext, alertDisposal, alertFingerprint, isAlertOutcome, isOpenAlert, recordTrailFor } from './alerts'
 import { latestReview, sentMessage, sentMessages, type SentMessage } from './correspondence'
 import { visibleProposal } from './proposal-acts'
-import { canSeeThread } from './visibility'
+import { canSeeThread, isFirmViewer } from './visibility'
+import { partyOfThread } from './party'
 
 export const COMPLIANCE_ACT_KINDS: ReadonlySet<BindingActKind> = new Set(['release_orders', 'return_to_advisor', 'escalate', 'dispose_alert', 'review_correspondence'])
 
@@ -45,11 +44,10 @@ export function alertItem(alert: ComplianceAlert): AlertItem {
 }
 
 export function correspondenceItem(sent: SentMessage): CorrespondenceItem {
-  const client = clients.find((c) => c.id === sent.thread.clientId)
-  if (!client) throw new Error(`Thread ${sent.thread.id} names no client`)
+  const party = partyOfThread(sent.thread)
   return {
-    kind: 'correspondence', id: sent.message.id, title: `Message to ${client.fullName}`, threadId: sent.thread.id,
-    clientId: client.id, clientName: client.fullName, message: sent.message, sendAct: sent.act,
+    kind: 'correspondence', id: sent.message.id, title: `Message to ${party.name}`, threadId: sent.thread.id,
+    clientId: party.id, clientName: party.name, message: sent.message, sendAct: sent.act,
     flagged: latestReview(sent.message.id)?.outcome === 'flagged', fingerprint: sent.act.fingerprint,
   }
 }
@@ -75,8 +73,7 @@ function itemOf(viewerId: string, act: BindingAct): SupervisionItem | undefined 
 
 /** The queue as the viewer may read it. Every firm viewer reads it; only compliance acts on it. */
 export function supervisionQueue(viewerId: string): SupervisionQueue | undefined {
-  const viewer = personById(viewerId)
-  if (!viewer || viewer.role === 'client') return undefined
+  if (!isFirmViewer(viewerId)) return undefined
   const s = store()
   const orders = s.approvals.filter((a) => a.status === 'active').flatMap((approval) => {
     const proposal = visibleProposal(viewerId, approval.proposalId)

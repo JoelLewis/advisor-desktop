@@ -9,7 +9,7 @@ export const SEED_THREADS: readonly Thread[] = [
     agentIds: ['drift-monitor', 'pretrade-check', 'proposal'], subject: { type: 'account', id: 'acc-002' } },
   { id: 'th-johnson-meeting', title: 'Johnson annual review', visibility: 'internal', memberIds: ['user-001', 'user-002', 'user-003'],
     agentIds: ['meeting-prep', 'meeting-notes'], subject: { type: 'household', id: 'hh-001' } },
-  { id: 'th-robert', title: 'Robert Johnson', visibility: 'client', clientId: 'cli-001', memberIds: ['cli-001', 'user-001', 'user-002'],
+  { id: 'th-robert', title: 'Robert Johnson', visibility: 'client', partyId: 'cli-001', memberIds: ['cli-001', 'user-001', 'user-002'],
     agentIds: [], subject: { type: 'client', id: 'cli-001' } },
 ]
 

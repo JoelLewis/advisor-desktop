@@ -7,7 +7,7 @@ import { renderRoutes } from '@/test/render'
 import { server } from '@/test/server'
 import { accounts } from '@/mocks/data/accounts'
 import { computeDriftForAccount } from '@/mocks/handlers/pms'
-import { createDraft, getDrafts, runAgent, sendToClient } from '@/services/workspace'
+import { createDraft, getDrafts, runAgent, sendToParty } from '@/services/workspace'
 import { eventTime } from '@/lib/clock'
 import { fmtDrift, fmtTimestamp, fmtTolerance, UNIT } from '@/kit/measure'
 import { assetClassLabel } from '@/workspace/asset-class-label'
@@ -175,11 +175,11 @@ describe('thread view', () => {
 
   it('a recorded act appears in the conversation as a record slip in firm terms; only the context column anchors it', async () => {
     const draft = await createDraft(ADRIAN, 'th-robert', 'Sarah will be in touch this week.')
-    const act = await sendToClient(ADRIAN, draft.id)
+    const act = await sendToParty(ADRIAN, draft.id)
     const { container } = await openThread('/t/th-robert', 'Robert Johnson')
     const slip = await within(conversation()).findByRole('article', { name: act.summary })
     const s = within(slip)
-    expect(s.getByText('Send to client · binding')).toBeInTheDocument()
+    expect(s.getByText('Send to client or prospect · binding')).toBeInTheDocument()
     expect(s.getByText(act.id)).toBeInTheDocument()
     expect(s.getByText('Adrian Hale, Advisor')).toBeInTheDocument()
     expect(s.getByText('Supervisory review')).toBeInTheDocument()
@@ -192,7 +192,7 @@ describe('thread view', () => {
 
   it('the client sees the same record in their own terms: a message sent to them, kept as a record', async () => {
     const draft = await createDraft(ADRIAN, 'th-robert', 'Sarah will be in touch this week.')
-    const act = await sendToClient(ADRIAN, draft.id)
+    const act = await sendToParty(ADRIAN, draft.id)
     viewAsOnLoad('cli-001')
     await openThread('/t/th-robert', 'Robert Johnson')
     const slip = await within(conversation()).findByRole('article', { name: 'Sent to you' })

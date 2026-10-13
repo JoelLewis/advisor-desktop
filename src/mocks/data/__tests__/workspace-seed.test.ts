@@ -17,7 +17,7 @@ describe('workspace seed', () => {
     expect(brief).toMatchObject({ ownerId: 'user-001', memberIds: ['user-001'] })
     expect(review).toMatchObject({ title: 'Johnson Rebalance Review', subject: { type: 'account', id: 'acc-002' } })
     expect(review!.agentIds).toEqual(['drift-monitor', 'pretrade-check', 'proposal'])
-    expect(client).toMatchObject({ clientId: 'cli-001', agentIds: [] })
+    expect(client).toMatchObject({ partyId: 'cli-001', agentIds: [] })
     expect(client!.memberIds).toEqual(expect.arrayContaining(['cli-001', 'user-001', 'user-002']))
   })
   it('the meeting thread is internal, about the Johnson household, with the two meeting agents', () => {
@@ -62,7 +62,7 @@ describe('workspace seed', () => {
   it('reset restores the seed and act ids restart', () => {
     resetWorkspaceStore()
     expect(commitActId()).toBe('REC-0001')
-    store().acts.push({ id: 'REC-0001', kind: 'send_to_client', actorId: 'user-001', at: 'x', threadId: 't', fingerprint: 'x', summary: 'x' })
+    store().acts.push({ id: 'REC-0001', kind: 'send_to_party', actorId: 'user-001', at: 'x', threadId: 't', fingerprint: 'x', summary: 'x' })
     resetWorkspaceStore()
     expect(store().acts).toEqual([])
     expect(commitActId()).toBe('REC-0001')

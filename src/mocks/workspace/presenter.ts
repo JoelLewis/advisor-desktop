@@ -1,11 +1,11 @@
 import type { PresenterItem, SupervisionItemKind } from '@/types/workspace-supervision'
-import { CCO_ID, PRESENTER_ID, personById } from '@/mocks/data/people'
+import { CCO_ID, PRESENTER_ID } from '@/mocks/data/people'
 import { activeApproval, releasedApproval } from '@/mocks/data/proposals-store'
 import { alertById, alertFingerprint } from './alerts'
 import { disposeAlert, releaseOrders, reviewCorrespondence, type ComplianceFailure, type Recorded } from './compliance-acts'
 import { sentMessage } from './correspondence'
 import { visibleProposal } from './proposal-acts'
-import { canSeeThread } from './visibility'
+import { canSeeThread, isFirmViewer } from './visibility'
 
 /** What Mark writes when the presenter acts for him: the review his default disposition rests on. */
 export const CCO_DEFAULT_RATIONALE: Readonly<Record<SupervisionItemKind, string>> = {
@@ -21,8 +21,7 @@ const refuse = (status: ComplianceFailure['status'], code: string, message: stri
  * Mark (`cco-001`) with the firm-only `viaPresenter` marker naming who pressed it. Only the presenter may press it.
  */
 export function actAsCco(presenterId: string, item: PresenterItem): Recorded | ComplianceFailure {
-  const presenter = personById(presenterId)
-  if (!presenter || presenter.role === 'client') return refuse(404, 'NOT_FOUND', 'Not found.')
+  if (!isFirmViewer(presenterId)) return refuse(404, 'NOT_FOUND', 'Not found.')
   if (presenterId !== PRESENTER_ID) return refuse(403, 'NOT_PERMITTED', 'Only the presenter can act as the compliance officer.')
   const options = { viaPresenter: { presenterId } }
   switch (item.kind) {

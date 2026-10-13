@@ -2,22 +2,22 @@ import { describe, it, expect } from 'vitest'
 import { PEOPLE, AGENTS, CCO_ID, can, personById } from '../people'
 
 describe('people and permissions', () => {
-  it('has the five roles and no real names', () => {
-    expect(PEOPLE.map((p) => p.role).sort()).toEqual(['advisor', 'analyst', 'client', 'compliance', 'csa'])
+  it('has the six roles and no real names', () => {
+    expect(PEOPLE.map((p) => p.role).sort()).toEqual(['advisor', 'analyst', 'client', 'compliance', 'csa', 'prospect'])
     expect(personById('user-001')?.name).toBe('Adrian Hale')
     expect(PEOPLE.some((p) => /joel/i.test(p.name))).toBe(false)
   })
   it.each([
-    ['user-001', 'send_to_client', true], ['user-001', 'approve_proposal', true], ['user-001', 'draft_for_client', true],
-    ['user-002', 'draft_for_client', true], ['user-002', 'send_to_client', false], ['user-002', 'approve_proposal', false],
+    ['user-001', 'send_to_party', true], ['user-001', 'approve_proposal', true], ['user-001', 'draft_for_client', true],
+    ['user-002', 'draft_for_client', true], ['user-002', 'send_to_party', false], ['user-002', 'approve_proposal', false],
     ['user-003', 'draft_for_client', false], ['user-003', 'post_firm', true],
     ['cco-001', 'release_orders', true], ['cco-001', 'return_to_advisor', true], ['cco-001', 'escalate', true],
     ['cco-001', 'dispose_alert', true], ['cco-001', 'review_correspondence', true],
-    ['cco-001', 'read_all_firm_threads', true], ['cco-001', 'send_to_client', false], ['cco-001', 'approve_proposal', false],
+    ['cco-001', 'read_all_firm_threads', true], ['cco-001', 'send_to_party', false], ['cco-001', 'approve_proposal', false],
     ['user-001', 'release_orders', false], ['user-001', 'dispose_alert', false], ['user-002', 'review_correspondence', false],
     ['cli-001', 'release_orders', false],
-    ['cli-001', 'post_firm', false], ['cli-001', 'send_to_client', false],
-    ['drift-monitor', 'send_to_client', false], ['nobody', 'post_firm', false],
+    ['cli-001', 'post_firm', false], ['cli-001', 'send_to_party', false],
+    ['drift-monitor', 'send_to_party', false], ['nobody', 'post_firm', false], ['prsp-011', 'post_firm', false], ['prsp-011', 'send_to_party', false],
     ['user-001', 'prepare_meeting', true], ['user-001', 'file_meeting_record', true],
     ['user-002', 'prepare_meeting', false], ['user-002', 'file_meeting_record', false],
     ['user-003', 'file_meeting_record', false], ['cco-001', 'file_meeting_record', false], ['cli-001', 'prepare_meeting', false],

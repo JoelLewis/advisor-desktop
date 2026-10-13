@@ -1,19 +1,18 @@
 import type { BindingAct, Thread } from '@/types/workspace'
 import type { Archive, ArchiveEntry, ArchiveFilters, ArchiveKind } from '@/types/workspace-supervision'
-import { clients } from '@/mocks/data/clients'
-import { personById } from '@/mocks/data/people'
 import { proposalById } from '@/mocks/data/proposals-store'
 import { store } from '@/mocks/data/workspace-store'
 import { alertById, alertContext } from './alerts'
 import { sentMessage } from './correspondence'
 import { meetingEvent } from './meetings'
-import { canSeeThread } from './visibility'
+import { canSeeThread, isFirmViewer } from './visibility'
+import { partyOf } from './party'
 
 export { ARCHIVE_KINDS, isArchiveKind } from '@/types/workspace-supervision'
 
 /** Code-unit order, the same on every machine. */
 const byCodeUnit = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
-const clientName = (id: string | undefined) => clients.find((c) => c.id === id)?.fullName
+const clientName = (id: string | undefined) => (id === undefined ? undefined : partyOf(id)?.name)
 
 /** The thread an act belongs to: where it was recorded, or for a correspondence review, the message's client thread. */
 function threadOf(act: BindingAct): Thread | undefined {
@@ -28,7 +27,7 @@ function clientOf(act: BindingAct, thread: Thread | undefined): string | undefin
     return alert ? alertContext(alert).clientId : undefined
   }
   if (act.subject?.type === 'meeting') return meetingEvent(act.subject.id)?.clientId
-  return thread?.clientId
+  return thread?.partyId
 }
 
 function entriesOf(act: BindingAct): ArchiveEntry[] {
@@ -40,8 +39,8 @@ function entriesOf(act: BindingAct): ArchiveEntry[] {
     ...(clientId ? { clientId } : {}), ...(name ? { clientName: name } : {}),
     ...(thread ? { threadId: thread.id, threadTitle: thread.title } : {}),
   }
-  const sent = act.kind === 'send_to_client' && act.messageId ? sentMessage(act.messageId) : undefined
-  const sentClient = sent?.thread.clientId
+  const sent = act.kind === 'send_to_party' && act.messageId ? sentMessage(act.messageId) : undefined
+  const sentClient = sent?.thread.partyId
   if (!sent || !sentClient) return [entry]
   return [entry, {
     kind: 'sent_message', id: sent.message.id, at: sent.message.at, message: sent.message, actId: act.id, fingerprint: act.fingerprint,
@@ -53,8 +52,7 @@ const kindOf = (e: ArchiveEntry): ArchiveKind => (e.kind === 'act' ? e.act.kind 
 
 /** The books-and-records surface: every act and sent client message the viewer may read, in order, filtered. */
 export function archiveFor(viewerId: string, filters: ArchiveFilters): Archive | undefined {
-  const viewer = personById(viewerId)
-  if (!viewer || viewer.role === 'client') return undefined
+  if (!isFirmViewer(viewerId)) return undefined
   const readable = (act: BindingAct) => {
     const thread = threadOf(act)
     return thread ? canSeeThread(viewerId, thread) : act.kind === 'dispose_alert'

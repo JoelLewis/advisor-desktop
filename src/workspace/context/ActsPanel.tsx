@@ -6,15 +6,15 @@ import type { BindingAct, Directory } from '@/types/workspace'
 import { actAnchorId } from './act-anchor'
 import { ContextSection } from './ContextSection'
 
-type ActsPanelProps = { acts: BindingAct[]; directory: Directory; viewerIsClient: boolean }
+type ActsPanelProps = { acts: BindingAct[]; directory: Directory; viewerIsExternal: boolean }
 
-export function ActsPanel({ acts, directory, viewerIsClient }: ActsPanelProps) {
+export function ActsPanel({ acts, directory, viewerIsExternal }: ActsPanelProps) {
   const steps = acts.map((a) => {
     const actor = personIn(directory, a.actorId)
-    return { label: actWording(a, actor, viewerIsClient).trailLabel, actor: actor.name, state: 'DONE' as const, at: a.at }
+    return { label: actWording(a, actor, viewerIsExternal).trailLabel, actor: actor.name, state: 'DONE' as const, at: a.at }
   })
   return (
-    <ContextSection title={viewerIsClient ? 'Records' : 'Binding acts'}>
+    <ContextSection title={viewerIsExternal ? 'Records' : 'Binding acts'}>
       {acts.length === 0 ? <p className="text-body text-ink-3">None in this thread</p> : (
         <>
           <RecordTrail steps={steps} />

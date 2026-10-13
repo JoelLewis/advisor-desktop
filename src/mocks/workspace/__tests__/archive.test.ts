@@ -17,7 +17,7 @@ const kinds = (viewer: string, filters = {}) => archiveFor(viewer, filters)!.ent
 describe('the archive', () => {
   it('lists every recorded act and sent message in order, each with its thread and client', () => {
     session()
-    expect(kinds(MARK)).toEqual(['approve_proposal', 'send_to_client', 'sent_message', 'release_orders', 'dispose_alert', 'review_correspondence'])
+    expect(kinds(MARK)).toEqual(['approve_proposal', 'send_to_party', 'sent_message', 'release_orders', 'dispose_alert', 'review_correspondence'])
     const entries = archiveFor(MARK, {})!.entries
     expect(entries.find((e) => e.kind === 'act' && e.act.kind === 'release_orders')).toMatchObject({ threadId: 'th-johnson-review', threadTitle: 'Johnson Rebalance Review', clientId: 'cli-001', clientName: 'Robert Johnson' })
     expect(entries.find((e) => e.kind === 'act' && e.act.kind === 'review_correspondence')).toMatchObject({ threadId: 'th-robert', clientId: 'cli-001' })

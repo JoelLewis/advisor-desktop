@@ -19,7 +19,7 @@ export function draftOrigin(draft: Draft, directory: Directory): string {
 
 /** Where a sent agent letter came from, for the firm's record: what it was written from and who edited it. Undefined for other acts. */
 export function sentLetterOrigin(act: BindingAct, directory: Directory): string | undefined {
-  if (act.kind !== 'send_to_client' || !act.editedBy) return undefined
+  if (act.kind !== 'send_to_party' || !act.editedBy) return undefined
   const editors = act.editedBy.map((id) => personIn(directory, id).name)
   const edits = editors.length > 0 ? `edited by ${editors.join(' and ')}` : 'agent draft, unedited'
   const from = basisWords(act.basis, act.recordBasis)

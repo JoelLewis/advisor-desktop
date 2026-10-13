@@ -6,7 +6,7 @@ import { useDirectory, useProposals, useThreads } from '@/hooks/use-workspace'
 import { useMeetings } from '@/hooks/use-meetings'
 import { proposalWorkbenchHref } from '@/workspace/proposal/proposal-href'
 import { clientFullViewHref, householdFullViewHref, meetingFullViewHref } from '@/workspace/full-views/full-view-href'
-import { isClientViewer } from '@/workspace/people/directory-people'
+import { isExternalViewerIn } from '@/workspace/people/directory-people'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import type { Destination } from '@/kit/keyboard/keys'
 
@@ -18,7 +18,7 @@ export function useDestinations(): Destination[] {
   const navigate = useNavigate()
   const { viewerId } = useViewer()
   const directory = useDirectory().data
-  const firmViewer = directory !== undefined && !isClientViewer(directory, viewerId)
+  const firmViewer = directory !== undefined && !isExternalViewerIn(directory, viewerId)
   const threads = useThreads().data ?? []
   const proposals = useProposals(undefined, firmViewer).data ?? []
   const meetings = useMeetings(firmViewer).data ?? []

@@ -6,6 +6,7 @@ export const ROLE_LABEL: Readonly<Record<Role, string>> = {
   analyst: 'Analyst',
   compliance: 'Compliance',
   client: 'Client',
+  prospect: 'Prospect',
 }
 
 export const personWithRole = (person: Person) => `${person.name} · ${ROLE_LABEL[person.role]}`

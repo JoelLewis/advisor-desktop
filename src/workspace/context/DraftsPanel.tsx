@@ -3,10 +3,11 @@ import { Button } from '@/kit/button/Button'
 import { Tag } from '@/kit/tag/Tag'
 import { TextInput } from '@/kit/text-input/TextInput'
 import { fmtTimestamp } from '@/kit/measure'
-import { useDrafts, useProposals, useReviseDraft, useSendToClient } from '@/hooks/use-workspace'
+import { useDrafts, useProposals, useReviseDraft, useSendToParty } from '@/hooks/use-workspace'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { personIn } from '@/workspace/people/directory-people'
-import { firstNameOf } from '@/lib/words'
+import { threadParty } from '@/workspace/people/thread-party'
+import { addressNameOf } from '@/lib/words'
 import type { Directory, Draft, Thread } from '@/types/workspace'
 import type { ProposalDetail } from '@/types/workspace-proposal'
 import { ContextSection } from './ContextSection'
@@ -17,17 +18,17 @@ import { Unbroken } from '@/kit/unbroken/Unbroken'
 
 type DraftsPanelProps = { thread: Thread; directory: Directory; onSent: (actId: string) => void }
 
-/** Drafts held for the client. Sending one is the binding act; only a viewer the engine permits sees the Send button. */
+/** Drafts held for the party. Sending one is the binding act; only a viewer the engine permits sees the Send button. */
 export function DraftsPanel({ thread, directory, onSent }: DraftsPanelProps) {
   const { viewerId } = useViewer()
   const drafts = useDrafts(thread.id, true)
   const proposals = useProposals()
-  const send = useSendToClient()
+  const send = useSendToParty()
   const sending = useRef(new Set<string>())
-  if (!thread.clientId) throw new Error(`Thread "${thread.id}" has no client to send to`)
-  const client = personIn(directory, thread.clientId)
+  if (!thread.partyId) throw new Error(`Thread "${thread.id}" has no party to send to`)
+  const party = personIn(directory, thread.partyId)
   const acts = directory.permissions[viewerId] ?? []
-  const canSend = acts.includes('send_to_client')
+  const canSend = acts.includes('send_to_party')
   const canDraft = acts.includes('draft_for_client')
 
   // A ref, not render state, so a second click in the same frame as the first cannot start a second send.
@@ -45,15 +46,15 @@ export function DraftsPanel({ thread, directory, onSent }: DraftsPanelProps) {
   if (drafts.isPending) return <p role="status" className="py-5 text-body text-ink-3">Loading drafts…</p>
   if (drafts.isError) return <p role="alert" className="py-5 text-body">{drafts.error.message}</p>
   if (!canDraft && drafts.data.length === 0 && !send.error) return null
-  const clientFirstName = firstNameOf(client.name)
+  const name = addressNameOf(party.name)
   return (
-    <ContextSection title={`Drafts for ${clientFirstName}`}>
-      {canDraft ? <LetterControl thread={thread} /> : null}
-      {canDraft ? <RecapControl thread={thread} /> : null}
+    <ContextSection title={`Drafts for ${name}`}>
+      {canDraft && threadParty(thread) === 'client' ? <LetterControl thread={thread} /> : null}
+      {canDraft && threadParty(thread) === 'client' ? <RecapControl thread={thread} /> : null}
       {drafts.data.map((d) => (
         <DraftView key={d.id} draft={d} directory={directory} threadId={thread.id} canEdit={canDraft}
           staleReason={d.stale ? staleReason(d, proposals.data) : undefined}
-          sendLabel={canSend ? `Send to ${clientFirstName}` : undefined} sending={send.isPending} onSend={() => sendDraft(d.id)} />
+          sendLabel={canSend ? `Send to ${name}` : undefined} sending={send.isPending} onSend={() => sendDraft(d.id)} />
       ))}
       {send.error ? <p role="alert" className="text-body">{send.error.message}</p> : null}
     </ContextSection>

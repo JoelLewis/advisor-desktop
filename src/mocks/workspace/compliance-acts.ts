@@ -2,7 +2,6 @@ import type { AlertOutcome, BindingAct, CorrespondenceOutcome, Message, ViaPrese
 import type { ApprovalRecord, Proposal, ProposalVersion } from '@/types/workspace-proposal'
 import { can, personById } from '@/mocks/data/people'
 import { advanceClockTo, commitActId, nextAt, nextId, nextNumber, store } from '@/mocks/data/workspace-store'
-import { clients } from '@/mocks/data/clients'
 import { SUPERVISION_RECORDS } from '@/mocks/handlers/compliance'
 import { actOnApproval } from '@/mocks/data/proposals-store'
 import { MOCK_NOW_ISO, MOCK_TODAY_ISO, eventTime } from '@/lib/clock'
@@ -10,7 +9,8 @@ import { isDuringNyseSession, nyseSessionUtc } from '@/lib/trading-calendar'
 import { applyFills } from './fills'
 import { ALERT_ACTION, alertById, alertDisposal, alertFingerprint, isOpenAlert } from './alerts'
 import { latestReview, sentMessage } from './correspondence'
-import { canSeeThread } from './visibility'
+import { canSeeThread, isExternalViewer, isFirmViewer } from './visibility'
+import { partyOfThread } from './party'
 import { closeStaging, recordAct, setApprovalStatus, visibleProposal } from './proposal-acts'
 
 export type ComplianceFailure = { ok: false; status: 400 | 403 | 404 | 409; code: string; message: string }
@@ -155,11 +155,9 @@ const ALERT_SUMMARY: Readonly<Record<AlertOutcome, (title: string) => string>> =
   request_changes: (title) => `Requested changes on the alert: ${title}`,
 }
 
-const isClient = (viewerId: string) => personById(viewerId)?.role === 'client'
-
 export function disposeAlert(viewerId: string, alertId: string, outcome: AlertOutcome, fingerprint: string, rationale: string, options: ActOptions = {}): Recorded | ComplianceFailure {
   const alert = alertById(alertId)
-  if (!alert || isClient(viewerId) || !personById(viewerId)) return refuse(404, 'NO_ALERT', 'Alert not found.')
+  if (!alert || !isFirmViewer(viewerId)) return refuse(404, 'NO_ALERT', 'Alert not found.')
   if (!can(viewerId, 'dispose_alert')) return refuse(403, 'NOT_PERMITTED', 'Only compliance can dispose of an alert.')
   const badRationale = rationaleRefusal(rationale)
   if (badRationale) return badRationale
@@ -184,19 +182,18 @@ export function disposeAlert(viewerId: string, alertId: string, outcome: AlertOu
 
 export function reviewCorrespondence(viewerId: string, messageId: string, outcome: CorrespondenceOutcome, fingerprint: string, rationale: string, options: ActOptions = {}): Recorded | ComplianceFailure {
   const sent = sentMessage(messageId)
-  if (!sent || isClient(viewerId) || !canSeeThread(viewerId, sent.thread)) return refuse(404, 'NO_MESSAGE', 'Message not found.')
-  if (!can(viewerId, 'review_correspondence')) return refuse(403, 'NOT_PERMITTED', 'Only compliance can review client correspondence.')
+  if (!sent || isExternalViewer(viewerId) || !canSeeThread(viewerId, sent.thread)) return refuse(404, 'NO_MESSAGE', 'Message not found.')
+  if (!can(viewerId, 'review_correspondence')) return refuse(403, 'NOT_PERMITTED', 'Only compliance can review correspondence with a client or prospect.')
   const badRationale = rationaleRefusal(rationale)
   if (badRationale) return badRationale
   const last = latestReview(messageId)
   if (last?.outcome === 'reviewed') return refuse(409, 'ALREADY_REVIEWED', `This message was already reviewed (${last.id}).`)
   if (last?.outcome === 'flagged' && outcome === 'flagged') return refuse(409, 'ALREADY_FLAGGED', `This message is already flagged (${last.id}).`)
   if (sent.act.fingerprint !== fingerprint) return refuse(409, 'FINGERPRINT_MISMATCH', 'This is not the message as it was sent. Open it again.')
-  const client = clients.find((c) => c.id === sent.thread.clientId)
-  if (!client) throw new Error(`Thread ${sent.thread.id} names no client`)
+  const party = partyOfThread(sent.thread)
   const act: BindingAct = {
     id: commitActId(), kind: 'review_correspondence', actorId: viewerId, at: nextAt(), subject: { type: 'message', id: messageId },
-    fingerprint, summary: outcome === 'reviewed' ? `Reviewed the message sent to ${client.fullName}` : `Flagged the message sent to ${client.fullName} for follow-up`,
+    fingerprint, summary: outcome === 'reviewed' ? `Reviewed the message sent to ${party.name}` : `Flagged the message sent to ${party.name} for follow-up`,
     rationale: rationale.trim(), outcome, ...via(options),
   }
   recordAct(act)

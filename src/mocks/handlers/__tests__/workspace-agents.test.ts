@@ -18,7 +18,7 @@ describe('agent runs (rule 7)', () => {
     expect((await run('th-johnson-review', 'drift-monitor', 'cli-001')).status).toBe(404)
   })
   it('an agent can never record an act', async () => {
-    const r = await fetch('/api/workspace/acts', { method: 'POST', headers: { 'X-Viewer': 'drift-monitor', 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'send_to_client', draftId: 'x' }) })
+    const r = await fetch('/api/workspace/acts', { method: 'POST', headers: { 'X-Viewer': 'drift-monitor', 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'send_to_party', draftId: 'x' }) })
     expect(r.status).toBe(401)
   })
   it('a preview writes nothing and finds the same claims as a run', async () => {

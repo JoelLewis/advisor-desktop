@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { resetWorkspaceStore, store } from '@/mocks/data/workspace-store'
 import { approvalState } from '@/mocks/data/proposals-store'
 import { approveProposal, withdrawApproval } from '../proposal-acts'
-import { sendToClient } from '../acts'
+import { sendToParty } from '../acts'
 import { AGENT_CONSTRAINTS, seedJohnsonProposal, versionOf } from './proposal-fixture'
 
 describe('approve_proposal', () => {
@@ -107,7 +107,7 @@ describe('withdraw_approval', () => {
   })
 })
 
-describe('send_to_client refuses a stale letter', () => {
+describe('send_to_party refuses a stale letter', () => {
   beforeEach(() => resetWorkspaceStore())
 
   it('a letter drafted from v1 cannot be sent once v2 is the approval', () => {
@@ -118,7 +118,7 @@ describe('send_to_client refuses a stale letter', () => {
     const v2 = versionOf(2, [...AGENT_CONSTRAINTS, { kind: 'harvest_only' }])
     p.versions.push(v2)
     approveProposal('user-001', p.id, 2, v2.fingerprint)
-    expect(sendToClient('user-001', 'draft-0001')).toMatchObject({ ok: false, status: 409, code: 'STALE_DRAFT' })
+    expect(sendToParty('user-001', 'draft-0001')).toMatchObject({ ok: false, status: 409, code: 'STALE_DRAFT' })
     expect(store().messages.some((m) => m.kind === 'text' && m.body === 'Letter')).toBe(false)
   })
 })

@@ -7,7 +7,7 @@ import { fmtDate } from '@/kit/measure'
 import { useArchive, useDirectory } from '@/hooks/use-workspace'
 import { FullViewNotFound } from '@/workspace/full-views/FullViewNotFound'
 import { isNotFound } from '@/workspace/is-not-found'
-import { isClientViewer } from '@/workspace/people/directory-people'
+import { isExternalViewerIn } from '@/workspace/people/directory-people'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import type { Directory } from '@/types/workspace'
 import type { ArchiveFilters } from '@/types/workspace-supervision'
@@ -20,14 +20,14 @@ export function ArchivePage() {
   const [openedAs] = useState(viewerId)
   const navigate = useNavigate()
   const directory = useDirectory()
-  const viewerIsClient = directory.data !== undefined && isClientViewer(directory.data, viewerId)
-  const switchedToClient = viewerIsClient && viewerId !== openedAs
+  const viewerIsExternal = directory.data !== undefined && isExternalViewerIn(directory.data, viewerId)
+  const switchedToClient = viewerIsExternal && viewerId !== openedAs
   useEffect(() => {
     if (switchedToClient) navigate('/', { replace: true })
   }, [switchedToClient, navigate])
   if (switchedToClient || directory.isPending) return <p role="status" className="text-body text-ink-3">Loading the archive…</p>
   if (directory.isError) return <p role="alert" className="text-body">{directory.error.message}</p>
-  if (viewerIsClient) return <FullViewNotFound subject="Archive" />
+  if (viewerIsExternal) return <FullViewNotFound subject="Archive" />
   return <Archive directory={directory.data} />
 }
 

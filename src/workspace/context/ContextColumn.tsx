@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useFocusAfter } from '@/kit/keyboard/use-focus-after'
 import { useActs, useDirectory, useThread } from '@/hooks/use-workspace'
 import { useViewer } from '@/workspace/viewer/use-viewer'
-import { isClientViewer } from '@/workspace/people/directory-people'
+import { isExternalViewerIn } from '@/workspace/people/directory-people'
 import { canPostIn } from '@/workspace/thread/can-post'
 import { actAnchorId } from './act-anchor'
 import { ActsPanel } from './ActsPanel'
@@ -40,21 +40,21 @@ function ThreadContext({ threadId }: { threadId: string }) {
 
   const { thread: t } = thread.data
   const dir = directory.data
-  const viewerIsClient = isClientViewer(dir, viewerId)
+  const viewerIsExternal = isExternalViewerIn(dir, viewerId)
   const agents = dir.agents.filter((a) => t.agentIds.includes(a.id))
   const subject = t.subject
   return (
     <div className="flex min-w-0 flex-col divide-y divide-rule">
-      <WhoCanSee thread={t} directory={dir} viewerIsClient={viewerIsClient} />
-      {t.visibility !== 'client' && !viewerIsClient ? <ApprovalPanel thread={t} directory={dir} onRecorded={setSentActId} /> : null}
-      {t.visibility === 'internal' && !viewerIsClient ? <MeetingPanel thread={t} directory={dir} onRecorded={setSentActId} /> : null}
-      {t.visibility === 'client' && !viewerIsClient
+      <WhoCanSee thread={t} directory={dir} viewerIsExternal={viewerIsExternal} />
+      {t.visibility !== 'client' && !viewerIsExternal ? <ApprovalPanel thread={t} directory={dir} onRecorded={setSentActId} /> : null}
+      {t.visibility === 'internal' && !viewerIsExternal ? <MeetingPanel thread={t} directory={dir} onRecorded={setSentActId} /> : null}
+      {t.visibility === 'client' && !viewerIsExternal
         ? <DraftsPanel thread={t} directory={dir} onSent={setSentActId} /> : null}
       {acts.isPending ? <p role="status" className="py-5 text-body text-ink-3">Loading the record…</p>
         : acts.isError ? <p role="alert" className="py-5 text-body">{acts.error.message}</p>
-        : <ActsPanel acts={acts.data} directory={dir} viewerIsClient={viewerIsClient} />}
+        : <ActsPanel acts={acts.data} directory={dir} viewerIsExternal={viewerIsExternal} />}
       {t.visibility !== 'client' && agents.length > 0 ? <AskAgents thread={t} agents={agents} canPost={canPostIn(t, viewerId, dir)} /> : null}
-      {subject && !viewerIsClient ? <FullViews subject={subject} threadId={t.id} /> : null}
+      {subject && !viewerIsExternal ? <FullViews subject={subject} threadId={t.id} /> : null}
     </div>
   )
 }

@@ -1,11 +1,11 @@
 import type { Draft, Thread } from '@/types/workspace'
-import { can, personById } from '@/mocks/data/people'
+import { can } from '@/mocks/data/people'
 import { nextAt, nextId, store } from '@/mocks/data/workspace-store'
 import { activeApproval, isDraftStale } from '@/mocks/data/proposals-store'
 import { writeClientLetter } from '@/mocks/agents/client-letter'
 import { visibleProposal } from './proposal-acts'
 import { isStale, staleMessage } from './draft-staleness'
-import { canSeeThread } from './visibility'
+import { canSeeThread, isFirmViewer } from './visibility'
 
 export type LetterFailure = { ok: false; status: 400 | 404 | 409; code: string; message: string }
 const NO_THREAD: LetterFailure = { ok: false, status: 404, code: 'NO_THREAD', message: 'Thread not found.' }
@@ -13,7 +13,7 @@ const NO_THREAD: LetterFailure = { ok: false, status: 404, code: 'NO_THREAD', me
 /** A client thread the viewer may draft in; anyone else is told it does not exist. */
 export function draftingClientThread(viewerId: string, threadId: string): Thread | undefined {
   const thread = store().threads.find((t) => t.id === threadId)
-  if (!thread || !canSeeThread(viewerId, thread) || personById(viewerId)?.role === 'client' || !can(viewerId, 'draft_for_client')) return undefined
+  if (!thread || !canSeeThread(viewerId, thread) || !isFirmViewer(viewerId) || !can(viewerId, 'draft_for_client')) return undefined
   return thread
 }
 
@@ -23,7 +23,7 @@ export function draftLetter(viewerId: string, clientThreadId: string, proposalId
   if (thread.visibility !== 'client') return { ok: false, status: 400, code: 'NOT_CLIENT_THREAD', message: 'Letters are drafted in a client thread.' }
   const proposal = visibleProposal(viewerId, proposalId)
   if (!proposal) return { ok: false, status: 404, code: 'NO_PROPOSAL', message: 'Proposal not found.' }
-  if (proposal.clientId !== thread.clientId) return { ok: false, status: 400, code: 'NOT_THIS_CLIENT', message: "That proposal is not for this thread's client." }
+  if (proposal.clientId !== thread.partyId) return { ok: false, status: 400, code: 'NOT_THIS_CLIENT', message: "That proposal is not for this thread's client." }
   const active = activeApproval(proposal.id)
   if (!active) return { ok: false, status: 409, code: 'NO_APPROVED_VERSION', message: 'Approve a version before asking for the client letter.' }
   const version = proposal.versions.find((v) => v.n === active.version)

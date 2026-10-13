@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils'
-import { VISIBILITY_WORDS, type Visibility } from './visibility'
+import { visibilityWords, type Party, type Visibility } from './visibility'
 
 const RULE: Record<Visibility, string> = {
   private: 'border-t-2 border-dashed border-ink-2',
@@ -7,10 +7,10 @@ const RULE: Record<Visibility, string> = {
   client: 'border-t-4 border-ink',
 }
 
-type BandProps = { visibility: Visibility; scale?: 'thread' | 'message'; audience?: string }
+type BandProps = { visibility: Visibility; scale?: 'thread' | 'message'; audience?: string; party?: Party }
 
-export function VisibilityBand({ visibility, scale = 'thread', audience }: BandProps) {
-  const words = VISIBILITY_WORDS[visibility]
+export function VisibilityBand({ visibility, scale = 'thread', audience, party = 'client' }: BandProps) {
+  const words = visibilityWords(visibility, party)
   return (
     <div role="note" aria-label={`Visibility: ${words}`} data-visibility={visibility} data-scale={scale}
       className={cn('flex flex-col', scale === 'thread' ? 'gap-1.5' : 'gap-1')}>

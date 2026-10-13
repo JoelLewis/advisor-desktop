@@ -3,7 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
-import { actAsCco, approveProposal, createProposal, draftLetter, recordComplianceAct, sendToClient } from '@/services/workspace'
+import { actAsCco, approveProposal, createProposal, draftLetter, recordComplianceAct, sendToParty } from '@/services/workspace'
 
 const ADRIAN = 'user-001'
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
@@ -14,7 +14,7 @@ async function session() {
   const fingerprint = detail.versions[0]!.fingerprint
   const approval = await approveProposal(ADRIAN, detail.id, 1, fingerprint)
   const draft = await draftLetter(ADRIAN, 'th-robert', detail.id)
-  await sendToClient(ADRIAN, draft.id)
+  await sendToParty(ADRIAN, draft.id)
   await recordComplianceAct('cco-001', { kind: 'release_orders', proposalId: detail.id, approvalActId: approval.id, fingerprint, rationale: 'Reviewed.' })
 }
 async function archiveRows() {
@@ -45,7 +45,7 @@ describe('the Archive', () => {
 
   it('reads its filters from the URL', async () => {
     await session()
-    renderRoutes(routes, '/archive?kind=send_to_client&clientId=cli-001&from=2026-02-25')
+    renderRoutes(routes, '/archive?kind=send_to_party&clientId=cli-001&from=2026-02-25')
     await waitFor(async () => expect((await archiveRows()).map(summaryCell)).toEqual(['REC-0002 · Message sent to the client']))
     expect(screen.getByLabelText('Client')).toHaveValue('cli-001')
   })

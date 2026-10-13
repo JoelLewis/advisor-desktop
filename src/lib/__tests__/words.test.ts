@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { firstNameOf, joinWords } from '@/lib/words'
+import { addressNameOf, firstNameOf, joinWords } from '@/lib/words'
 
 describe('joinWords', () => {
   it('joins none, one, two and three', () => {
@@ -15,4 +15,9 @@ describe('firstNameOf', () => {
     expect(firstNameOf('Patricia Johnson')).toBe('Patricia')
     expect(firstNameOf('Robert')).toBe('Robert')
   })
+})
+
+describe('addressNameOf', () => {
+  it.each([['Dr. Amanda Pell', 'Dr. Pell'], ['Robert Johnson', 'Robert'], ["Mrs. Karen O'Brien", "Mrs. O'Brien"], ['Cher', 'Cher']])(
+    '%s → %s', (name, expected) => expect(addressNameOf(name)).toBe(expected))
 })

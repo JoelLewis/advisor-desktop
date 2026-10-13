@@ -1,9 +1,9 @@
 import type { Directory, Thread } from '@/types/workspace'
-import { firstNameOf } from '@/lib/words'
+import { addressNameOf } from '@/lib/words'
 
 export type ComposerMode =
   | { kind: 'post'; action: 'Post' | 'Send' }
-  | { kind: 'draft'; clientFirstName: string }
+  | { kind: 'draft'; addressName: string }
   | { kind: 'read-only' }
 
 /**
@@ -13,11 +13,11 @@ export type ComposerMode =
 export function composerModeOf(thread: Thread, viewerId: string, directory: Directory): ComposerMode {
   const acts = directory.permissions[viewerId] ?? []
   if (thread.visibility === 'client') {
-    if (thread.clientId === viewerId) return { kind: 'post', action: 'Send' }
+    if (thread.partyId === viewerId) return { kind: 'post', action: 'Send' }
     if (!acts.includes('draft_for_client')) return { kind: 'read-only' }
-    const client = directory.people.find((p) => p.id === thread.clientId)
-    if (!client) throw new Error(`The client of thread "${thread.id}" is not in the directory`)
-    return { kind: 'draft', clientFirstName: firstNameOf(client.name) }
+    const party = directory.people.find((p) => p.id === thread.partyId)
+    if (!party) throw new Error(`The party of thread "${thread.id}" is not in the directory`)
+    return { kind: 'draft', addressName: addressNameOf(party.name) }
   }
   const belongs = thread.memberIds.includes(viewerId) || thread.ownerId === viewerId
   return belongs && acts.includes('post_firm') ? { kind: 'post', action: 'Post' } : { kind: 'read-only' }

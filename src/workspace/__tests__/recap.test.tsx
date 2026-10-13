@@ -3,7 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
-import { draftMeetingNotes, draftRecap, fileMeetingRecord, getMeeting, holdMeeting, sendToClient } from '@/services/workspace'
+import { draftMeetingNotes, draftRecap, fileMeetingRecord, getMeeting, holdMeeting, sendToParty } from '@/services/workspace'
 import { store } from '@/mocks/data/workspace-store'
 
 const ADRIAN = 'user-001'
@@ -55,7 +55,7 @@ describe("Robert's recap", () => {
   it('Robert sees exactly the recap, and nothing of the firm-only record', async () => {
     await filed()
     const draft = await draftRecap(ADRIAN, 'th-robert', 'evt-010')
-    await sendToClient(ADRIAN, draft.id)
+    await sendToParty(ADRIAN, draft.id)
     viewAsOnLoad('cli-001')
     renderRoutes(routes, '/t/th-robert')
     await screen.findByRole('heading', { level: 1, name: 'Robert Johnson' })
@@ -73,7 +73,7 @@ describe("Robert's recap", () => {
   it('Mark sees the recap in Supervision with its provenance, and the filing in the Archive', async () => {
     await filed()
     const draft = await draftRecap(ADRIAN, 'th-robert', 'evt-010')
-    await sendToClient(ADRIAN, draft.id)
+    await sendToParty(ADRIAN, draft.id)
     viewAsOnLoad('cco-001')
     const { unmount } = renderRoutes(routes, '/supervision')
     await screen.findByRole('heading', { level: 1, name: 'Supervision' })

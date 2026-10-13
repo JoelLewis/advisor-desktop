@@ -83,7 +83,7 @@ describe('thread context column', () => {
     expect(sarahsView).toHaveTextContent('Only the advisor of record can send this. Sending is recorded as a binding act.')
     expect(within(sarahsView).queryByRole('button', { name: 'Send to Robert' })).toBeNull()
     expect(within(sarahsView).getByRole('button', { name: 'Edit' })).toBeInTheDocument()
-    expect(within(section('Binding acts')).getByText('Send to client · binding')).toBeInTheDocument()
+    expect(within(section('Binding acts')).getByText('Send to client or prospect · binding')).toBeInTheDocument()
   })
 
   it('a double-click on Send records exactly one act', async () => {

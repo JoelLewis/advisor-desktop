@@ -76,7 +76,7 @@ describe('meeting endpoints', () => {
     expect((await call('PATCH', '/acts', ADRIAN, {})).status).toBe(405)
   })
 
-  it('the recap: 409 before filing, 201 then 200 after, sent through send_to_client', async () => {
+  it('the recap: 409 before filing, 201 then 200 after, sent through send_to_party', async () => {
     expect((await call('POST', '/threads/th-robert/drafts/recap', ADRIAN, { eventId: 'evt-010' }))).toMatchObject({ status: 409, body: { code: 'NOT_FILED' } })
     await filed()
     const draft = await call('POST', '/threads/th-robert/drafts/recap', ADRIAN, { eventId: 'evt-010' })
@@ -84,7 +84,7 @@ describe('meeting endpoints', () => {
     expect(draft.body.recordBasis).toMatchObject({ eventId: 'evt-010', actId: 'REC-0001' })
     expect((await call('POST', '/threads/th-robert/drafts/recap', ADRIAN, { eventId: 'evt-010' })).status).toBe(200)
     expect((await call('POST', '/threads/th-robert/drafts/recap', ADRIAN, {})).status).toBe(400)
-    const sent = await call('POST', '/acts', ADRIAN, { kind: 'send_to_client', draftId: draft.body.id })
+    const sent = await call('POST', '/acts', ADRIAN, { kind: 'send_to_party', draftId: draft.body.id })
     expect(sent.status).toBe(201)
     expect(sent.body.recordBasis).toMatchObject({ actId: 'REC-0001' })
   })
@@ -115,7 +115,7 @@ describe('a client probing the meeting', () => {
   it("sees the sent recap's record without the firm's provenance", async () => {
     await filed()
     const draft = await call('POST', '/threads/th-robert/drafts/recap', ADRIAN, { eventId: 'evt-010' })
-    await call('POST', '/acts', ADRIAN, { kind: 'send_to_client', draftId: draft.body.id })
+    await call('POST', '/acts', ADRIAN, { kind: 'send_to_party', draftId: draft.body.id })
     const acts = (await call('GET', '/acts?threadId=th-robert', ROBERT)).body as Record<string, unknown>[]
     expect(acts).toHaveLength(1)
     expect(acts[0]).not.toHaveProperty('recordBasis')

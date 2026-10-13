@@ -8,7 +8,7 @@ import { fileMeetingRecord } from '../meeting-acts'
 import { draftRecap } from '../recap'
 import { writeMeetingRecap } from '@/mocks/agents/meeting-recap'
 import { draftsFor, reviseDraft } from '../letters'
-import { sendToClient } from '../acts'
+import { sendToParty } from '../acts'
 import { supervisionQueue } from '../supervision'
 import { archiveFor } from '../archive'
 import { approvedV1, ok, release } from './story-fixture'
@@ -192,8 +192,8 @@ describe('sending the recap', () => {
     file()
     const before = robertsTexts().length
     const { draft } = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010'))
-    const { act } = ok(sendToClient(ADRIAN, draft.id))
-    expect(act).toMatchObject({ kind: 'send_to_client', recordBasis: draft.recordBasis, editedBy: [] })
+    const { act } = ok(sendToParty(ADRIAN, draft.id))
+    expect(act).toMatchObject({ kind: 'send_to_party', recordBasis: draft.recordBasis, editedBy: [] })
     expect(robertsTexts()).toHaveLength(before + 1)
     expect(robertsTexts()[before]).toMatchObject({ authorId: ADRIAN, body: draft.body })
   })
@@ -201,7 +201,7 @@ describe('sending the recap', () => {
   it("reaches Mark's correspondence review and the Archive", () => {
     heldAndDrafted()
     file()
-    const { act } = ok(sendToClient(ADRIAN, ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft.id))
+    const { act } = ok(sendToParty(ADRIAN, ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft.id))
     const item = supervisionQueue('cco-001')!.correspondence.find((c) => c.id === act.messageId)
     expect(item).toMatchObject({ kind: 'correspondence', clientId: 'cli-001', sendAct: { recordBasis: { actId: 'REC-0001' } } })
     expect(archiveFor('cco-001', { kind: 'sent_message' })!.entries.map((e) => e.id)).toContain(act.messageId)
@@ -216,7 +216,7 @@ describe('sending the recap', () => {
     expect(draftsFor('th-robert').find((d) => d.id === draft.id)).toMatchObject({
       stale: true, staleReason: 'This recap states the Intel wash-sale window through March 22, 2026, but it now runs through March 27, 2026. Ask for a new recap.',
     })
-    expect(sendToClient(ADRIAN, draft.id)).toEqual({
+    expect(sendToParty(ADRIAN, draft.id)).toEqual({
       ok: false, status: 409, code: 'STALE_DRAFT', message: 'This recap states the Intel wash-sale window through March 22, 2026, but it now runs through March 27, 2026. Ask for a new recap.',
     })
     const fresh = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010'))
@@ -232,7 +232,7 @@ describe('sending the recap', () => {
       agentId: 'client-letter', recordBasis: { eventId: 'evt-010', actId: 'REC-0001', fingerprint: 'DEADBEEF' },
     })
     expect(draftsFor('th-robert').find((d) => d.id === 'draft-9001')?.stale).toBe(true)
-    expect(sendToClient(ADRIAN, 'draft-9001')).toEqual({
+    expect(sendToParty(ADRIAN, 'draft-9001')).toEqual({
       ok: false, status: 409, code: 'STALE_DRAFT', message: 'This recap was drafted from REC-0001, which no longer matches the filed record. Ask for a new recap.',
     })
     expect(robertsTexts().some((m) => m.kind === 'text' && m.body === 'Dear Robert, an older recap.')).toBe(false)

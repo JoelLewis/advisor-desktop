@@ -87,11 +87,11 @@ export function useCreateDraft(threadId: string) {
   })
 }
 
-export function useSendToClient() {
+export function useSendToParty() {
   const { viewerId } = useViewer()
   const invalidate = useInvalidateWorkspace()
   return useMutation({
-    mutationFn: (draftId: string) => api.sendToClient(viewerId, draftId),
+    mutationFn: (draftId: string) => api.sendToParty(viewerId, draftId),
     onSuccess: invalidate,
   })
 }
