@@ -60,7 +60,7 @@ describe('asking and revising', () => {
     expect(new Set(offered.slice(1))).toEqual(held)
     expect(within(untouched).getByRole('option', { name: 'International Equity' })).toBeInTheDocument()
     expect(within(dialog).queryByRole('checkbox', { name: /wash/i })).toBeNull()
-    expect(dialog).toHaveTextContent('Always on: no buy that would wash one of the taxpayer\'s losses.')
+    expect(dialog).toHaveTextContent('Always on: no buy that would wash a loss the taxpayer has taken or this proposal takes.')
   })
 
   it('refuses a negative cap before asking the engine, on Enter, and moves focus to the field', async () => {

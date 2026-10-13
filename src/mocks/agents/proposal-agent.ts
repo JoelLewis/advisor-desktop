@@ -11,7 +11,7 @@ import { claimNameOf } from './claim-name'
 import { joinWords } from '@/lib/words'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 
-const NO_SELF_WASH = "buys nothing that would wash one of the taxpayer's losses"
+const NO_SELF_WASH = 'buys nothing that would wash a loss the taxpayer has taken or this proposal takes'
 
 const hasDigit = (text: string) => /\d/.test(text)
 
@@ -46,7 +46,7 @@ function capBinds(constraints: readonly ProposalConstraint[], built: DraftPrevie
   return legsOf(uncapped.built) !== legsOf(built)
 }
 
-/** The agent never drafts a buy that would wash one of the taxpayer's losses, whatever else is asked. */
+/** The agent never drafts a buy that would wash a loss the taxpayer has taken or this proposal takes, whatever else is asked. */
 export function agentConstraints(requested: readonly ProposalConstraint[]): ProposalConstraint[] {
   return normaliseConstraints([{ kind: 'avoid_self_wash' }, ...requested])
 }

@@ -1,3 +1,4 @@
+import type { Message } from '@/types/workspace'
 import { bookVersion } from '@/mocks/data/portfolio-ledger'
 import { nextAt, store } from '@/mocks/data/workspace-store'
 import { BRIEF_THREAD_ID, composeBrief } from './brief'
@@ -17,4 +18,16 @@ export function remeasureBrief(): void {
     ...measured,
   ]
   s.briefBook = book
+}
+
+const isMeasured = (m: Message) => m.kind === 'brief_summary' || m.kind === 'agent_finding'
+const byTime = (a: Message, b: Message) => a.at.localeCompare(b.at)
+
+/**
+ * The Brief reads as it does in the morning whenever it was measured: the ranked summary and its
+ * findings first, then the day's lines (the meeting notice) in time order. A re-measure stamps the
+ * measured messages later than the seeded lines, so time order alone would lift those lines above them.
+ */
+export function briefOrder(messages: readonly Message[]): Message[] {
+  return [...messages.filter(isMeasured).sort(byTime), ...messages.filter((m) => !isMeasured(m)).sort(byTime)]
 }

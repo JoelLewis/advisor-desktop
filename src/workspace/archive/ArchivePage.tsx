@@ -38,7 +38,9 @@ function Archive({ directory }: { directory: Directory }) {
   const set = (key: keyof ArchiveFilters) => (value: string) => setParams(withFilter(params, key, value), { replace: true })
   if (archive.isError && isNotFound(archive.error)) return <FullViewNotFound subject="Archive" />
   const data = archive.data
-  const dates = [{ value: '', label: 'Any date' }, ...(data?.dates ?? []).map((d) => ({ value: d, label: fmtDate(d) }))]
+  // A date the URL names stays selectable even when no record falls on it, so the select shows the filter in force.
+  const knownDates = [...new Set([...(data?.dates ?? []), ...(filters.from ? [filters.from] : []), ...(filters.to ? [filters.to] : [])])].sort()
+  const dates = [{ value: '', label: 'Any date' }, ...knownDates.map((d) => ({ value: d, label: fmtDate(d) }))]
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <header className="flex flex-col gap-3">

@@ -8,9 +8,25 @@ export async function pageOverflowX(page: Page): Promise<number> {
 
 const LABEL_SELECTOR = 'th, [data-status], [data-tone], [data-stamp], [data-part="label"], [data-visibility] span'
 
-// Text extent (Range over the contents) against the element's own box and its nearest overflow-clipping ancestor.
+// Visible text extent (a Range over each text node, leaving out screen-reader-only text, which is laid out
+// at full width but clipped to nothing) against the element's own box and its nearest overflow-clipping ancestor.
 export async function clippedLabels(page: Page): Promise<string[]> {
   return page.evaluate((selector) => {
+    const visibleTextExtent = (el: HTMLElement): { left: number; right: number; width: number } => {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+      let left = Infinity
+      let right = -Infinity
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        if (node.parentElement?.closest('.sr-only')) continue
+        const range = document.createRange()
+        range.selectNodeContents(node)
+        const rect = range.getBoundingClientRect()
+        if (rect.width === 0) continue
+        left = Math.min(left, rect.left)
+        right = Math.max(right, rect.right)
+      }
+      return right < left ? { left: 0, right: 0, width: 0 } : { left, right, width: right - left }
+    }
     const clipper = (el: HTMLElement): HTMLElement | null => {
       for (let node = el.parentElement; node; node = node.parentElement) {
         if (getComputedStyle(node).overflowX !== 'visible') return node
@@ -19,9 +35,7 @@ export async function clippedLabels(page: Page): Promise<string[]> {
     }
     const out: string[] = []
     for (const el of document.querySelectorAll<HTMLElement>(selector)) {
-      const range = document.createRange()
-      range.selectNodeContents(el)
-      const text = range.getBoundingClientRect()
+      const text = visibleTextExtent(el)
       if (text.width === 0) continue
       const own = el.getBoundingClientRect()
       const ancestor = clipper(el)?.getBoundingClientRect()

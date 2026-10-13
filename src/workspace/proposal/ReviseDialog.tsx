@@ -71,7 +71,7 @@ export function ReviseDialog({ open, onOpenChange, detail }: ReviseDialogProps) 
             <Select label="Leave untouched" layout="stacked" value={form.exclude} error={problemOn('exclude')} onChange={(v) => edit({ exclude: v })}
               options={[{ value: '', label: 'Nothing' }, ...excludableClasses(positions.data).map((c) => ({ value: c, label: ASSET_CLASS_PROSE_LABELS[c] }))]} />
           )}
-        <p className="border-t border-rule pt-3 text-body text-ink-2">Always on: no buy that would wash one of the taxpayer&apos;s losses.</p>
+        <p className="border-t border-rule pt-3 text-body text-ink-2">Always on: no buy that would wash a loss the taxpayer has taken or this proposal takes.</p>
         {code === 'NO_CHANGE' ? <p role="status" className="text-body text-ink-2">That changes nothing in the proposal.</p> : null}
         {revise.isError && code !== 'NO_CHANGE' && code !== 'NOT_EXCLUDABLE' ? <p role="alert" className="text-body">{revise.error.message}</p> : null}
         <div className="flex justify-end">

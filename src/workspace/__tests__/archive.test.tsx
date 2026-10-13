@@ -50,6 +50,14 @@ describe('the Archive', () => {
     expect(screen.getByLabelText('Client')).toHaveValue('cli-001')
   })
 
+  it('keeps a date from the URL selectable even when no record falls on it', async () => {
+    await session()
+    renderRoutes(routes, '/archive?from=2026-02-20&to=2026-02-27')
+    await archiveRows()
+    expect(screen.getByLabelText('From')).toHaveValue('2026-02-20')
+    expect(screen.getByLabelText('To')).toHaveValue('2026-02-27')
+  })
+
   it('names the presenter shortcut, and links an alert disposition to its Supervision item', async () => {
     await actAsCco(ADRIAN, { kind: 'alert', id: 'comp-002' })
     renderRoutes(routes, '/archive')

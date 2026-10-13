@@ -35,7 +35,7 @@ describe('asking the Proposal Agent', () => {
     expect(detail).toMatchObject({ id: 'prop-0001', title: 'Johnson rebalance', accountId: 'acc-002', clientId: 'cli-001', threadId: 'th-johnson-review' })
     const v1 = detail.versions[0]!
     expect(v1).toMatchObject({ n: 1, author: { kind: 'agent', agentId: 'proposal' }, constraints: [{ kind: 'avoid_self_wash' }], edits: [] })
-    expect(v1.changeSummary).toBe("Drafted a tax-aware rebalance toward the Growth model. Where it sells, it sells loss lots first, then the lots that cost the least tax, and it buys nothing that would wash one of the taxpayer's losses. "
+    expect(v1.changeSummary).toBe("Drafted a tax-aware rebalance toward the Growth model. Where it sells, it sells loss lots first, then the lots that cost the least tax, and it buys nothing that would wash a loss the taxpayer has taken or this proposal takes. "
       + 'iShares Core US Aggregate Bond ETF is bought here, so its loss cannot be harvested for thirty days without a wash sale.')
     expect(detail.approval).toEqual({ kind: 'unapproved', latestVersion: 1 })
     const posted = store().messages.filter((m) => m.kind === 'proposal')
@@ -102,7 +102,7 @@ describe('revising under constraints', () => {
       const summary = draftSummary(account.id, built.built)
       expect(summary).toMatch(/^Drafted a rebalance toward /)
       expect(summary).not.toMatch(/tax-aware|least tax|harvests/)
-      expect(summary).toContain("buys nothing that would wash one of the taxpayer's losses")
+      expect(summary).toContain("buys nothing that would wash a loss the taxpayer has taken or this proposal takes")
     }
   })
 
@@ -143,12 +143,12 @@ describe('revising under constraints', () => {
     saveVersion('user-001', id, [{ kind: 'exclude', symbol: 'QAI' }])
     const bare = reviseProposal('user-001', id, [])
     if (!bare.ok) throw new Error(bare.message)
-    expect(bare.detail.versions[2]!.changeSummary).toMatch(/^Back to the agent's own legs; it still buys nothing that would wash one of the taxpayer's losses\. .* Workbench edits on the previous version are not carried into this one\.$/)
+    expect(bare.detail.versions[2]!.changeSummary).toMatch(/^Back to the agent's own legs; it still buys nothing that would wash a loss the taxpayer has taken or this proposal takes\. .* Workbench edits on the previous version are not carried into this one\.$/)
     reviseProposal('user-001', id, [{ kind: 'harvest_only' }])
     saveVersion('user-001', id, [{ kind: 'exclude', symbol: 'INTC' }])
     const harvest = reviseProposal('user-001', id, [{ kind: 'harvest_only' }])
     if (!harvest.ok) throw new Error(harvest.message)
-    expect(harvest.detail.versions[5]!.changeSummary).toMatch(/^Back to the agent's legs under the rule to sell only lots at a loss; it still buys nothing that would wash one of the taxpayer's losses\. /)
+    expect(harvest.detail.versions[5]!.changeSummary).toMatch(/^Back to the agent's legs under the rule to sell only lots at a loss; it still buys nothing that would wash a loss the taxpayer has taken or this proposal takes\. /)
   })
 
   it('says when workbench edits on the previous version are not carried', () => {

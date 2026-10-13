@@ -17,6 +17,10 @@ describe('StatusCode', () => {
     render(<StatusCode status="OUT" label="limit breached" />)
     expect(screen.getByText('limit breached')).toHaveClass('sr-only')
   })
+  it('positions its screen-reader label against itself, so a scrolling table contains it instead of widening the page', () => {
+    render(<StatusCode status="OUT" label="outside its band" />)
+    expect(screen.getByText('outside its band').closest('[data-status]')).toHaveClass('relative')
+  })
   it('WARN is ink, not signal', () => {
     render(<StatusCode status="WARN" />)
     expect(screen.getByText('WARN').closest('[data-status]')).toHaveAttribute('data-signal', 'false')

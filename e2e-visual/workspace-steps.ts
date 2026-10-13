@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test'
+import { expect, type Locator, type Page } from '@playwright/test'
 
 export type Theme = 'light' | 'dark'
 
@@ -26,7 +26,7 @@ export const letterDraft = (page: Page) => context(page).getByRole('article', { 
 
 export async function askProposalAgent(page: Page, theme: Theme) {
   await visit(page, '/t/th-johnson-review', theme)
-  await context(page).getByRole('button', { name: 'Ask Proposal Agent' }).click()
+  await context(page).getByRole('button', { name: 'Ask Proposal Agent', exact: true }).click()
   await expect(embedOf(page).getByRole('table', { name: 'Proposal legs · v1' })).toBeVisible()
 }
 
@@ -41,7 +41,7 @@ export async function approve(page: Page, version: number) {
 export async function askForLetter(page: Page) {
   await threadLink(page, 'Robert Johnson').click()
   await expect(heading(page)).toHaveText('Robert Johnson')
-  await context(page).getByRole('button', { name: 'Ask Client Letter Agent' }).click()
+  await context(page).getByRole('button', { name: 'Ask Client Letter Agent', exact: true }).click()
   await expect(letterDraft(page)).toContainText('Dear Robert,')
 }
 
@@ -62,4 +62,43 @@ export async function releaseByShortcut(page: Page) {
   await panel.getByRole('button', { name: 'Demo · act as Mark Davis' }).click()
   await page.getByRole('dialog', { name: /^Release v\d+ as Mark Davis\?$/ }).getByRole('button', { name: 'Confirm' }).click()
   await expect(panel).toContainText('Released by compliance; filled at the day\'s prices.')
+}
+
+/** The meeting thread's context panel. */
+export const meetingPanel = (page: Page): Locator => context(page).getByRole('region', { name: 'Meeting' })
+
+/** Meeting Prep's findings and agenda v1 — from the meeting thread's panel or the meeting view, wherever the button is. */
+export async function runPrep(page: Page) {
+  await page.getByRole('button', { name: 'Run prep', exact: true }).click()
+  await expect(page.getByRole('list', { name: 'Agenda · v1' })).toBeVisible()
+}
+
+export async function holdTheMeeting(page: Page) {
+  await page.getByRole('button', { name: 'Hold the meeting', exact: true }).click()
+  await page.getByRole('dialog', { name: 'Hold the meeting?' }).getByRole('button', { name: 'Hold the meeting', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Draft notes', exact: true })).toBeVisible()
+}
+
+export async function draftNotes(page: Page) {
+  await page.getByRole('button', { name: 'Draft notes', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'File the record', exact: true })).toBeVisible()
+}
+
+export async function fileRecord(page: Page) {
+  await page.getByRole('button', { name: 'File the record', exact: true }).click()
+  await page.getByRole('dialog', { name: /^File the record of the .+\?$/ }).getByRole('button', { name: 'Confirm', exact: true }).click()
+  await expect(page.getByText(/^Filed · REC-\d{4}/).first()).toBeVisible()
+}
+
+export async function askForRecap(page: Page) {
+  await context(page).getByRole('button', { name: 'Ask Client Letter Agent for the recap', exact: true }).click()
+  await expect(letterDraft(page)).toContainText('What you asked us:')
+}
+
+/** The command line: nothing holds focus, then "/" and the destination's label. */
+export async function goTo(page: Page, destination: string) {
+  await page.evaluate(() => (document.activeElement instanceof HTMLElement ? document.activeElement.blur() : undefined))
+  await page.keyboard.press('/')
+  await page.getByRole('combobox', { name: 'Go to' }).fill(destination)
+  await page.keyboard.press('Enter')
 }

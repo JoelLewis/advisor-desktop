@@ -106,7 +106,7 @@ test('one presenter runs Brief → proposal → revise → workbench → approve
   await expect(conversation(page).getByRole('article', { name: /^Carried from the Brief: Intel Corp\./ })).toHaveCount(1)
 
   // 3. The Proposal Agent drafts v1.
-  await context(page).getByRole('button', { name: 'Ask Proposal Agent' }).click()
+  await context(page).getByRole('button', { name: 'Ask Proposal Agent', exact: true }).click()
   const embed = embedOf(page)
   await expect(embed.getByRole('table', { name: 'Proposal legs · v1' })).toBeVisible()
   await expect(embed).toContainText('v1 is not approved')

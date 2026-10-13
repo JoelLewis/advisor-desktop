@@ -3,7 +3,7 @@ import type { AgentId, BindingAct, Directory, Draft, Message, ThreadDetail } fro
 import { AGENTS, PEOPLE, can, permissionsOf, personById } from '../data/people'
 import { nextAt, nextId, store } from '../data/workspace-store'
 import { BRIEF_THREAD_ID } from '../workspace/brief'
-import { remeasureBrief } from '../workspace/brief-remeasure'
+import { briefOrder, remeasureBrief } from '../workspace/brief-remeasure'
 import { sendToClient } from '../workspace/acts'
 import { fileMeetingRecord } from '../workspace/meeting-acts'
 import { carryFinding } from '../workspace/carry'
@@ -48,7 +48,8 @@ export const workspaceHandlers = [
     const thread = store().threads.find((t) => t.id === params.id)
     if (!thread || !canSeeThread(viewer, thread)) return notFound()
     if (thread.id === BRIEF_THREAD_ID) remeasureBrief()
-    const messages = store().messages.filter((m) => m.threadId === thread.id).sort((a, b) => a.at.localeCompare(b.at))
+    const inThread = store().messages.filter((m) => m.threadId === thread.id)
+    const messages = thread.id === BRIEF_THREAD_ID ? briefOrder(inThread) : inThread.sort((a, b) => a.at.localeCompare(b.at))
     const detail: ThreadDetail = { thread, messages }
     return HttpResponse.json(detail)
   }),

@@ -66,6 +66,22 @@ describe('the Brief re-measures on view once the book has moved', () => {
     expect(claims).toContain('Intel Corp. was sold at a loss recently; buying it back in any account of the same taxpayer, IRAs and Roths included, would wash that loss until its window closes.')
   })
 
+  it("the meeting line survives a re-measure, unchanged, and still reads below the ranked summary and its findings", async () => {
+    const morningNotice = store().messages.find((m) => m.kind === 'meeting_notice')
+    const kinds = async () => {
+      const res = await fetch(`/api/workspace/threads/${BRIEF_THREAD_ID}`, { headers: { 'X-Viewer': 'user-001' } })
+      return ((await res.json()) as { messages: Message[] }).messages
+    }
+    const morning = await kinds()
+    expect(morning[0]?.kind).toBe('brief_summary')
+    expect(morning[morning.length - 1]?.kind).toBe('meeting_notice')
+    release(approvedV1())
+    const remeasured = await kinds()
+    expect(remeasured[0]).toMatchObject({ kind: 'brief_summary', id: 'msg-r1-00' })
+    expect(remeasured[remeasured.length - 1]).toEqual(morningNotice)
+    expect(remeasured.filter((m) => m.kind === 'meeting_notice')).toHaveLength(1)
+  })
+
   it('a reset brings back the morning', async () => {
     release(approvedV1())
     await openBrief()

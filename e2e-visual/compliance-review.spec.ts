@@ -200,7 +200,7 @@ test('one presenter closes the supervisory loop; the book moves; Robert sees not
   await viewAs(page, 'Adrian Hale · Advisor')
   await threadLink(page, 'Johnson Rebalance Review').click()
   await expect(conversation(page).getByRole('article', { name: /^Fills · / })).toHaveCount(0)
-  await context(page).getByRole('button', { name: 'Ask Proposal Agent' }).click()
+  await context(page).getByRole('button', { name: 'Ask Proposal Agent', exact: true }).click()
   await expect(embedOf(page).getByRole('table', { name: 'Proposal legs · v1' })).toBeVisible()
   await approve(page, 1)
   await releaseByShortcut(page)
