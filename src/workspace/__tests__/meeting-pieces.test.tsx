@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '@/test/render'
 import { getHousehold, getMeeting, reviseAgenda, runMeetingPrep, holdMeeting, draftMeetingNotes } from '@/services/workspace'
@@ -143,6 +143,32 @@ describe('the agenda editor', () => {
     await user.click(within(v3).getByRole('button', { name: `Drop “${v1[2]!.title}”` }))
     const v4 = await screen.findByRole('list', { name: 'Agenda · v4' })
     expect(within(v4).getByRole('button', { name: `Drop “${v1[0]!.title}”` })).toHaveFocus()
+  })
+
+  it('holds its status region from the start, empty until the first change', async () => {
+    await runMeetingPrep(ADRIAN, 'evt-010')
+    const v1 = meeting().agenda[0]!.items
+    renderWithProviders(<LiveAgenda />)
+    const list = await screen.findByRole('list', { name: 'Agenda · v1' })
+    const status = screen.getByRole('status')
+    expect(status).toBeEmptyDOMElement()
+    await userEvent.setup().click(within(list).getByRole('button', { name: `Move “${v1[1]!.title}” up` }))
+    await screen.findByRole('list', { name: 'Agenda · v2' })
+    // The same element, now filled: a live region announces a change, not its own arrival.
+    expect(screen.getByRole('status')).toBe(status)
+    expect(status).toHaveTextContent(/^Agenda v2: /)
+  })
+
+  it('after adding a free-text item, focus goes to the new item', async () => {
+    await runMeetingPrep(ADRIAN, 'evt-010')
+    renderWithProviders(<LiveAgenda />)
+    const user = userEvent.setup()
+    await screen.findByRole('list', { name: 'Agenda · v1' })
+    await user.type(screen.getByRole('textbox', { name: 'New agenda item' }), 'Questions from Patricia')
+    await user.click(screen.getByRole('button', { name: 'Add to agenda' }))
+    const v2 = await screen.findByRole('list', { name: 'Agenda · v2' })
+    await waitFor(() => expect(within(v2).getByRole('button', { name: 'Move “Questions from Patricia” up' })).toHaveFocus())
+    expect(screen.getByRole('textbox', { name: 'New agenda item' })).toHaveValue('')
   })
 
   it('a read-only agenda has no controls', async () => {

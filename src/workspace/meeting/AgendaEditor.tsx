@@ -52,6 +52,7 @@ export function AgendaEditor({ meeting, findings, editable }: AgendaEditorProps)
   const v1Titles = new Map((meeting.agenda[0]?.items ?? []).flatMap((i) => (i.source.kind === 'finding' ? [[i.source.messageId, i.title] as const] : [])))
   const titleOf = (f: AgendaFinding) => v1Titles.get(f.messageId) ?? f.claim
   const unplaced = findings.filter((f) => !onAgenda.has(f.messageId))
+  const announcement = announced && current ? `Agenda v${current.n}: ${current.changeSummary}` : ''
   return (
     <div ref={editor} className="flex min-w-0 flex-col gap-4">
       {current ? (
@@ -83,12 +84,13 @@ export function AgendaEditor({ meeting, findings, editable }: AgendaEditorProps)
           })}
         </ol>
       ) : <p className="text-body text-ink-3">No agenda yet. Run prep, or add the first item.</p>}
-      {announced && current ? <p ref={statusLine} tabIndex={-1} role="status" className="text-label text-ink-2">{`Agenda v${current.n}: ${current.changeSummary}`}</p> : null}
+      {/* Mounted from the start and filled on change, so the first change is announced; empty, it takes no space. */}
+      <p ref={statusLine} tabIndex={-1} role="status" className={announcement ? 'text-label text-ink-2' : 'sr-only'}>{announcement}</p>
       {editable ? (
         <div className="flex flex-col items-start gap-2">
           <TextInput label="New agenda item" rows={1} value={title} onChange={setTitle} />
           <Button rank="secondary" disabled={title.trim() === '' || revise.isPending}
-            onClick={() => send([...items.map(asInput), { title, source: { kind: 'advisor' } }], undefined, () => setTitle(''))}>Add to agenda</Button>
+            onClick={() => send([...items.map(asInput), { title, source: { kind: 'advisor' } }], { kind: 'add_text', priorIds: items.map((i) => i.id) }, () => setTitle(''))}>Add to agenda</Button>
         </div>
       ) : null}
       {editable && unplaced.length > 0 ? (
