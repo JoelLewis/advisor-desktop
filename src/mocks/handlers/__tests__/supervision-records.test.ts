@@ -11,9 +11,9 @@ describe('§0.3 · supervision records reference the CCO by directory id', () =>
     expect(record.reviewer).toBe('Mark Davis (CCO)')
   })
 
-  it('every reviewer may dispose of a compliance exception', async () => {
+  it('every reviewer may dispose of an alert', async () => {
     for (const alertId of ['comp-002', 'comp-004', 'comp-006']) {
-      for (const record of await getSupervisionRecords(alertId)) expect(can(record.reviewerId, 'dispose_exception'), record.id).toBe(true)
+      for (const record of await getSupervisionRecords(alertId)) expect(can(record.reviewerId, 'dispose_alert'), record.id).toBe(true)
     }
   })
 })

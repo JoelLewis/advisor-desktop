@@ -17,6 +17,7 @@ export function CompactMessage({ message, directory }: { message: Message; direc
     case 'act': return <Line who="Record" at={message.at}>{`Binding act recorded · ${message.actId}`}</Line>
     case 'carried': return <Line who={personIn(directory, message.carriedBy).name} at={message.at}>{`From the Brief: ${message.finding.claim}`}</Line>
     case 'brief_summary': return <Line who="Brief" at={message.at}>Ranked summary.</Line>
+    case 'fills': return <Line who="Execution" at={message.at}>{`${message.fills.length} ${message.fills.length === 1 ? 'order' : 'orders'} filled from v${message.version}.`}</Line>
   }
 }
 

@@ -2,6 +2,7 @@ import type { BindingAct, Draft, Message, Thread } from '@/types/workspace'
 import type { ApprovalRecord, Proposal, StagedOrder } from '@/types/workspace-proposal'
 import { eventTime } from '@/lib/clock'
 import { briefMessages } from '@/mocks/workspace/brief'
+import { resetLedger } from './portfolio-ledger'
 import { SEED_LAST_SEQUENCE, SEED_MESSAGES, SEED_THREADS } from './workspace-seed'
 
 type Counter = 'msg' | 'draft' | 'act' | 'proposal' | 'staged'
@@ -43,6 +44,7 @@ export function store(): WorkspaceState {
 
 export function resetWorkspaceStore(): void {
   state = undefined
+  resetLedger()
 }
 
 export function nextAt(): string {

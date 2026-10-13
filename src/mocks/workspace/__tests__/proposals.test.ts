@@ -190,7 +190,7 @@ describe('workbench versions', () => {
     for (const v of r.detail.versions) {
       const fresh = buildVersion('acc-002', v.constraints, v.edits)
       if (!fresh.ok) throw new Error(fresh.message)
-      expect({ preview: v.preview, pretrade: v.pretrade, legFacts: v.legFacts, excludedLegs: v.excludedLegs, summary: v.summary, fingerprint: v.fingerprint }).toEqual(fresh.built)
+      expect({ preview: v.preview, pretrade: v.pretrade, legFacts: v.legFacts, excludedLegs: v.excludedLegs, harvestSubstitutions: v.harvestSubstitutions, summary: v.summary, fingerprint: v.fingerprint }).toEqual(fresh.built)
     }
   })
 

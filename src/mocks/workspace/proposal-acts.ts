@@ -17,21 +17,24 @@ export function visibleProposal(viewerId: string, proposalId: string): Proposal 
   return thread && canSeeThread(viewerId, thread) ? proposal : undefined
 }
 
-function record(act: BindingAct): void {
+/** Records an act; one recorded in a thread also posts its marker there. */
+export function recordAct(act: BindingAct): void {
   const s = store()
   s.acts.push(act)
+  if (act.threadId === undefined) return
   const marker: Message = { kind: 'act', id: nextId('msg'), threadId: act.threadId, at: nextAt(), actId: act.id }
   s.messages.push(marker)
 }
 
-function withdrawStaging(actId: string): void {
+/** Closes the approval's pending orders, naming the act that closed them. */
+export function closeStaging(approvalActId: string, closedByActId: string, status: 'withdrawn' | 'returned'): void {
   const s = store()
-  s.staged = s.staged.map((o) => (o.approvalActId === actId && o.status === 'pending_compliance' ? { ...o, status: 'withdrawn' } : o))
+  s.staged = s.staged.map((o) => (o.approvalActId === approvalActId && o.status === 'pending_compliance' ? { ...o, status, closedByActId } : o))
 }
 
-function setStatus(approval: ApprovalRecord, status: ApprovalRecord['status']): void {
+export function setApprovalStatus(approval: ApprovalRecord, status: ApprovalRecord['status']): void {
   const s = store()
-  s.approvals = s.approvals.map((a) => (a === approval ? { ...a, status } : a))
+  s.approvals = s.approvals.map((a) => (a.actId === approval.actId ? { ...a, status } : a))
 }
 
 export function approveProposal(viewerId: string, proposalId: string, version: number, fingerprint: string): Recorded | ActFailure {
@@ -49,8 +52,8 @@ export function approveProposal(viewerId: string, proposalId: string, version: n
   const at = nextAt()
   const actId = commitActId()
   if (previous) {
-    setStatus(previous, 'superseded')
-    withdrawStaging(previous.actId)
+    setApprovalStatus(previous, 'superseded')
+    closeStaging(previous.actId, actId, 'withdrawn')
   }
   const act: BindingAct = {
     id: actId, kind: 'approve_proposal', actorId: viewerId, at, threadId: proposal.threadId,
@@ -67,25 +70,25 @@ export function approveProposal(viewerId: string, proposalId: string, version: n
     quantity: t.quantity, estimatedValue: t.estimatedValue, currency: t.currency, status: 'pending_compliance', stagedAt: at, approvalActId: actId,
   }))
   s.staged.push(...staged)
-  record(act)
+  recordAct(act)
   return { ok: true, act }
 }
 
 export function withdrawApproval(viewerId: string, proposalId: string): Recorded | ActFailure {
   const proposal = visibleProposal(viewerId, proposalId)
   if (!proposal) return NOT_FOUND
+  const notPermitted: ActFailure = { ok: false, status: 403, code: 'NOT_PERMITTED', message: 'Only the approver can withdraw this approval.' }
+  if (!can(viewerId, 'withdraw_approval')) return notPermitted
   const active = activeApproval(proposal.id)
   if (!active) return { ok: false, status: 409, code: 'NOT_APPROVED', message: 'No version of this proposal is approved.' }
-  if (!can(viewerId, 'withdraw_approval') || active.approverId !== viewerId) {
-    return { ok: false, status: 403, code: 'NOT_PERMITTED', message: 'Only the approver can withdraw this approval.' }
-  }
+  if (active.approverId !== viewerId) return notPermitted
   const act: BindingAct = {
     id: commitActId(), kind: 'withdraw_approval', actorId: viewerId, at: nextAt(), threadId: proposal.threadId,
     subject: { type: 'proposal', id: proposal.id }, version: active.version, fingerprint: active.fingerprint,
     summary: `Withdrew the approval of v${active.version} of the ${proposal.title}`,
   }
-  setStatus(active, 'withdrawn')
-  withdrawStaging(active.actId)
-  record(act)
+  setApprovalStatus(active, 'withdrawn')
+  closeStaging(active.actId, act.id, 'withdrawn')
+  recordAct(act)
   return { ok: true, act }
 }

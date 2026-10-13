@@ -72,6 +72,7 @@ describe('approve_proposal', () => {
     expect(store().approvals.map((a) => [a.version, a.status])).toEqual([[1, 'superseded'], [2, 'active']])
     expect(store().staged.filter((o) => o.version === 1).every((o) => o.status === 'withdrawn')).toBe(true)
     expect(store().staged.filter((o) => o.version === 2).every((o) => o.status === 'pending_compliance')).toBe(true)
+    expect(store().staged.filter((o) => o.version === 1).every((o) => o.closedByActId === r.act.id)).toBe(true)
   })
 })
 
@@ -90,6 +91,19 @@ describe('withdraw_approval', () => {
     expect(approvalState(p).kind).toBe('unapproved')
     expect(store().staged.every((o) => o.status === 'withdrawn')).toBe(true)
     expect(new Set(store().staged.map((o) => o.status))).not.toContain('released')
+  })
+
+  it('a firm viewer who may not withdraw is told so before being told nothing is approved', () => {
+    const p = seedJohnsonProposal()
+    expect(withdrawApproval('user-002', p.id)).toMatchObject({ ok: false, status: 403, code: 'NOT_PERMITTED' })
+  })
+
+  it('withdrawn staged orders name the act that withdrew them', () => {
+    const p = seedJohnsonProposal()
+    approveProposal('user-001', p.id, 1, p.versions[0]!.fingerprint)
+    const r = withdrawApproval('user-001', p.id)
+    if (!r.ok) throw new Error(r.message)
+    expect(store().staged.every((o) => o.status === 'withdrawn' && o.closedByActId === r.act.id)).toBe(true)
   })
 })
 

@@ -1,3 +1,5 @@
+import type { Fill } from './workspace-proposal'
+
 export type Role = 'advisor' | 'csa' | 'analyst' | 'compliance' | 'client'
 export type Person = { id: string; name: string; role: Role }
 export type AgentId = 'drift-monitor' | 'pretrade-check' | 'harvest-scanner' | 'proposal' | 'client-letter'
@@ -6,7 +8,7 @@ export type AgentScope = { may: string[]; mayNot: string[] }
 export type AgentOutput = 'findings' | 'proposals' | 'letters'
 export type AgentProfile = { id: AgentId; name: string; produces: AgentOutput; scope: AgentScope }
 export type Visibility = 'private' | 'internal' | 'client'
-export type Subject = { type: 'account' | 'household' | 'client' | 'draft' | 'proposal'; id: string }
+export type Subject = { type: 'account' | 'household' | 'client' | 'draft' | 'proposal' | 'alert' | 'message'; id: string }
 export type Thread = { id: string; title: string; visibility: Visibility; ownerId?: string; clientId?: string; memberIds: string[]; agentIds: AgentId[]; subject?: Subject }
 export type FigureUnit = 'USD' | 'pp' | '%' | 'sh' | 'd'
 export type Figure = { label: string; value: number; unit: FigureUnit; source: string }   // pp and % values are fractions (0.132)
@@ -25,8 +27,37 @@ export type Message =
   | { kind: 'proposal_version'; id: string; threadId: string; at: string; proposalId: string; version: number; author: VersionAuthor; changeSummary: string }
   | { kind: 'carried'; id: string; threadId: string; at: string; carriedBy: string; fromThreadId: string; findingId: string; finding: CarriedFinding }
   | { kind: 'brief_summary'; id: string; threadId: string; at: string; items: BriefItem[] }
-export type BindingActKind = 'approve_proposal' | 'withdraw_approval' | 'dispose_exception' | 'send_to_client'
-export type BindingAct = { id: string; kind: BindingActKind; actorId: string; at: string; threadId: string; subject?: Subject; version?: number; fingerprint: string; summary: string; basis?: LetterBasis; editedBy?: string[] }
+  /** The execution report for released orders, posted in the proposal's team thread after its fills. */
+  | { kind: 'fills'; id: string; threadId: string; at: string; proposalId: string; title: string; version: number; releaseActId: string; fills: Fill[] }
+/** The acts only compliance performs. */
+export type ComplianceActKind = 'release_orders' | 'return_to_advisor' | 'escalate' | 'dispose_alert' | 'review_correspondence'
+export type BindingActKind = 'approve_proposal' | 'withdraw_approval' | 'send_to_client' | ComplianceActKind
+export type AlertOutcome = 'approve' | 'reject' | 'request_changes'
+export type CorrespondenceOutcome = 'reviewed' | 'flagged'
+/** Firm-only: the act was recorded through the presenter's "Demo · act as Mark Davis" shortcut, by this presenter. */
+export type ViaPresenter = { presenterId: string }
+export type BindingAct = {
+  id: string
+  kind: BindingActKind
+  actorId: string
+  at: string
+  /** Where the act's record slip is posted. An alert disposition and a correspondence review are recorded outside any thread. */
+  threadId?: string
+  subject?: Subject
+  version?: number
+  fingerprint: string
+  summary: string
+  basis?: LetterBasis
+  editedBy?: string[]
+  /** The message a send_to_client act delivered. */
+  messageId?: string
+  /** Why compliance disposed of the item as it did; every compliance act carries one. */
+  rationale?: string
+  outcome?: AlertOutcome | CorrespondenceOutcome
+  /** The approval a release, return or escalation acted on. */
+  approvalActId?: string
+  viaPresenter?: ViaPresenter
+}
 export type LetterBasis = { proposalId: string; version: number; fingerprint: string }
 export type Draft = { id: string; clientThreadId: string; authorId: string; body: string; createdAt: string; agentId?: AgentId; basis?: LetterBasis; figures?: Figure[]; supersedes?: string; editorIds?: string[]; stale?: boolean }
 export type ThreadDetail = { thread: Thread; messages: Message[] }

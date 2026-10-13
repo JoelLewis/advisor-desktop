@@ -228,7 +228,7 @@ export function buildVersion(accountId: string, constraints: readonly ProposalCo
   }
   return {
     ok: true,
-    built: { preview, pretrade, legFacts, excludedLegs: edited.excludedLegs, summary: taxSummaryOf(preview), fingerprint: fingerprint(JSON.stringify(content)) },
+    built: { preview, pretrade, legFacts, excludedLegs: edited.excludedLegs, harvestSubstitutions: [], summary: taxSummaryOf(preview), fingerprint: fingerprint(JSON.stringify(content)) },
     names: new Map(generated.legs.map((l) => [l.symbol, l.name])),
   }
 }

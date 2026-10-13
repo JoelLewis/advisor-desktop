@@ -10,6 +10,7 @@ import { useViewer } from '@/workspace/viewer/use-viewer'
 import type { Directory, Message, Person, Thread } from '@/types/workspace'
 import { ActRecordSlip } from './ActRecordSlip'
 import { AgentFindingView } from './AgentFindingView'
+import { FillsView } from './FillsView'
 import { BriefSummaryView } from './BriefSummaryView'
 import { CarriedFindingView } from './CarriedFindingView'
 import { CarryControl } from './CarryControl'
@@ -52,6 +53,8 @@ export function MessageView({ message, thread, directory }: { message: Message; 
       return <CarriedFindingView message={message} directory={directory} />
     case 'brief_summary':
       return <BriefSummaryView summary={message} directory={directory} />
+    case 'fills':
+      return <FillsView message={message} />
     default:
       return unknownKind(message)
   }

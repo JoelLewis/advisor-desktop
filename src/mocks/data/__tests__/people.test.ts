@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { PEOPLE, AGENTS, can, personById } from '../people'
+import { PEOPLE, AGENTS, CCO_ID, can, personById } from '../people'
 
 describe('people and permissions', () => {
   it('has the five roles and no real names', () => {
@@ -11,7 +11,11 @@ describe('people and permissions', () => {
     ['user-001', 'send_to_client', true], ['user-001', 'approve_proposal', true], ['user-001', 'draft_for_client', true],
     ['user-002', 'draft_for_client', true], ['user-002', 'send_to_client', false], ['user-002', 'approve_proposal', false],
     ['user-003', 'draft_for_client', false], ['user-003', 'post_firm', true],
-    ['cco-001', 'dispose_exception', true], ['cco-001', 'read_all_firm_threads', true], ['cco-001', 'send_to_client', false],
+    ['cco-001', 'release_orders', true], ['cco-001', 'return_to_advisor', true], ['cco-001', 'escalate', true],
+    ['cco-001', 'dispose_alert', true], ['cco-001', 'review_correspondence', true],
+    ['cco-001', 'read_all_firm_threads', true], ['cco-001', 'send_to_client', false], ['cco-001', 'approve_proposal', false],
+    ['user-001', 'release_orders', false], ['user-001', 'dispose_alert', false], ['user-002', 'review_correspondence', false],
+    ['cli-001', 'release_orders', false],
     ['cli-001', 'post_firm', false], ['cli-001', 'send_to_client', false],
     ['drift-monitor', 'send_to_client', false], ['nobody', 'post_firm', false],
   ] as const)('can(%s, %s) is %s', (person, act, expected) => {
@@ -36,5 +40,15 @@ describe('phase 3 agents', () => {
     expect(AGENTS.find((a) => a.id === 'proposal')?.scope.mayNot).toEqual(['approve', 'release', 'post in a client thread'])
     expect(AGENTS.find((a) => a.id === 'client-letter')?.scope.mayNot).toEqual(['send', 'post in a client thread'])
     expect(AGENTS.find((a) => a.id === 'harvest-scanner')?.scope.mayNot).toEqual(['stage trades', 'post in a client thread'])
+  })
+})
+
+describe('phase 4 · separation of duties', () => {
+  it('only the compliance officer holds the five compliance acts, and he approves and sends nothing', () => {
+    const compliance = ['release_orders', 'return_to_advisor', 'escalate', 'dispose_alert', 'review_correspondence'] as const
+    for (const person of PEOPLE) {
+      for (const act of compliance) expect(can(person.id, act), `${person.id} ${act}`).toBe(person.id === CCO_ID)
+    }
+    expect(personById(CCO_ID)?.name).toBe('Mark Davis')
   })
 })

@@ -1,5 +1,6 @@
-import type { Draft } from '@/types/workspace'
-import type { ApprovalRecord, ApprovalState, Proposal, ProposalDetail, ProposalVersion, StagedOrder } from '@/types/workspace-proposal'
+import type { BindingAct, BindingActKind, Draft } from '@/types/workspace'
+import type { ApprovalRecord, ApprovalState, Escalation, Proposal, ProposalDetail, ProposalVersion, StagedOrder } from '@/types/workspace-proposal'
+import { ledgerFills } from './portfolio-ledger'
 import { nextNumber, store } from './workspace-store'
 
 const pad = (n: number) => String(n).padStart(4, '0')
@@ -25,12 +26,29 @@ export function activeApproval(proposalId: string): ApprovalRecord | undefined {
   return store().approvals.find((a) => a.proposalId === proposalId && a.status === 'active')
 }
 
-/** Approval belongs to one exact version; a newer version leaves it on the older one. */
+export function releasedApproval(proposalId: string): ApprovalRecord | undefined {
+  return store().approvals.find((a) => a.proposalId === proposalId && a.status === 'released')
+}
+
+/** The act of `kind` that acted on the approval recorded as `approvalActId`. */
+export function actOnApproval(kind: BindingActKind, approvalActId: string): BindingAct | undefined {
+  return store().acts.find((a) => a.kind === kind && a.approvalActId === approvalActId)
+}
+
+export function escalationOf(approvalActId: string): Escalation | undefined {
+  const act = actOnApproval('escalate', approvalActId)
+  return act ? { actId: act.id, at: act.at } : undefined
+}
+
+/** Approval belongs to one exact version; a newer version leaves it on the older one. Released orders close the proposal. */
 export function approvalState(proposal: Proposal): ApprovalState {
   const latest = latestVersion(proposal).n
   const active = activeApproval(proposal.id)
-  return active
-    ? { kind: 'approved', version: active.version, latestVersion: latest, approverId: active.approverId, actId: active.actId }
+  if (active) return { kind: 'approved', version: active.version, latestVersion: latest, approverId: active.approverId, actId: active.actId }
+  const released = releasedApproval(proposal.id)
+  const release = released && actOnApproval('release_orders', released.actId)
+  return released && release
+    ? { kind: 'released', version: released.version, latestVersion: latest, approverId: released.approverId, actId: released.actId, releaseActId: release.id }
     : { kind: 'unapproved', latestVersion: latest }
 }
 
@@ -39,7 +57,13 @@ export function stagedFor(proposalId: string): StagedOrder[] {
 }
 
 export function detailOf(proposal: Proposal): ProposalDetail {
-  return { ...proposal, approval: approvalState(proposal), staged: stagedFor(proposal.id) }
+  const active = activeApproval(proposal.id)
+  const escalation = active && escalationOf(active.actId)
+  return {
+    ...proposal, approval: approvalState(proposal), staged: stagedFor(proposal.id),
+    fills: ledgerFills().filter((f) => f.proposalId === proposal.id),
+    ...(escalation ? { escalation } : {}),
+  }
 }
 
 /** A letter is current only while the exact version it was written from is the active approval. */

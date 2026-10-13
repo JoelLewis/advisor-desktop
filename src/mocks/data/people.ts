@@ -8,6 +8,8 @@ export const PEOPLE: readonly Person[] = [
   { id: 'cli-001', name: 'Robert Johnson', role: 'client' },
 ]
 
+export const CCO_ID = 'cco-001'
+
 export const AGENTS: readonly AgentProfile[] = [
   { id: 'drift-monitor', name: 'Drift Monitor', produces: 'findings', scope: { may: ['measure and flag'], mayNot: ['stage or release trades', 'post in a client thread'] } },
   { id: 'pretrade-check', name: 'Pre-trade Check', produces: 'findings', scope: { may: ['run checks and report'], mayNot: ['clear a block', 'release orders', 'post in a client thread'] } },
@@ -20,7 +22,7 @@ const PERMISSIONS: Readonly<Record<Person['role'], readonly Act[]>> = {
   advisor: ['post_firm', 'draft_for_client', 'send_to_client', 'approve_proposal', 'withdraw_approval'],
   csa: ['post_firm', 'draft_for_client'],
   analyst: ['post_firm'],
-  compliance: ['post_firm', 'read_all_firm_threads', 'dispose_exception'],
+  compliance: ['post_firm', 'read_all_firm_threads', 'release_orders', 'return_to_advisor', 'escalate', 'dispose_alert', 'review_correspondence'],
   client: [],
 }
 

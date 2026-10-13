@@ -3,8 +3,12 @@ import type { BindingAct, BindingActKind, Person } from '@/types/workspace'
 export const ACT_KIND_LABEL: Readonly<Record<BindingActKind, string>> = {
   approve_proposal: 'Approve proposal',
   withdraw_approval: 'Withdraw approval',
-  dispose_exception: 'Dispose exception',
   send_to_client: 'Send to client',
+  release_orders: 'Release orders',
+  return_to_advisor: 'Return to advisor',
+  escalate: 'Escalate',
+  dispose_alert: 'Dispose alert',
+  review_correspondence: 'Review correspondence',
 }
 
 export type ActWording = { kind: string; title: string; archive: string; trailLabel: string }

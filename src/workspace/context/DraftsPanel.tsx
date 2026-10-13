@@ -61,7 +61,8 @@ export function DraftsPanel({ thread, directory, onSent }: DraftsPanelProps) {
 function staleReason(draft: Draft, proposals: ProposalDetail[] | undefined): string {
   const from = `v${draft.basis?.version ?? ''}`
   const approval = proposals?.find((p) => p.id === draft.basis?.proposalId)?.approval
-  const why = approval?.kind === 'approved' && approval.version !== draft.basis?.version ? `The approval moved to v${approval.version}; this letter is from ${from}.`
+  const why = approval?.kind === 'released' ? `The orders from ${from} were filled; this letter was written before they were placed.`
+    : approval?.kind === 'approved' && approval.version !== draft.basis?.version ? `The approval moved to v${approval.version}; this letter is from ${from}.`
     : approval?.kind === 'unapproved' ? `The approval of ${from} was withdrawn.`
     : `${from} is no longer the approved version.`
   return `${why} Ask the Client Letter Agent for a new letter.`

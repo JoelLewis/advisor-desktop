@@ -3,7 +3,7 @@ import type { Draft } from '@/types/workspace'
 import type { Proposal, ProposalVersion } from '@/types/workspace-proposal'
 import { resetWorkspaceStore, store } from '../workspace-store'
 import {
-  activeApproval, approvalState, detailOf, isDraftStale, latestVersion, nextProposalId, nextStagedId, proposalById, proposalsInThread,
+  activeApproval, approvalState, detailOf, escalationOf, isDraftStale, latestVersion, nextProposalId, nextStagedId, proposalById, proposalsInThread, releasedApproval,
 } from '../proposals-store'
 
 function version(n: number, fingerprint: string): ProposalVersion {
@@ -15,7 +15,7 @@ function version(n: number, fingerprint: string): ProposalVersion {
       projectedDrift: { driftTolerance: 0.05, driftThreshold: 0.005, totalDrift: 0, maxAbsDrift: 0, withinBand: true, assetClassDrifts: [] },
     },
     pretrade: { accountId: 'acc-002', passed: true, violations: [], legs: [], projectedCash: 0, projectedCashPct: 0, minimumCash: 0 },
-    legFacts: [], excludedLegs: [],
+    legFacts: [], excludedLegs: [], harvestSubstitutions: [],
     summary: { sold: 0, bought: 0, gains: 0, losses: 0, netShortTerm: 0, netLongTerm: 0, washed: 0, grossTax: 0, netTax: 0 },
     fingerprint, changeSummary: 'Drafted a rebalance.',
   }
@@ -89,5 +89,25 @@ describe('proposals store', () => {
     expect(isDraftStale(letter({ proposalId: p.id, version: 1, fingerprint: 'AAAAAAAA' }))).toBe(false)
     expect(isDraftStale(letter({ proposalId: p.id, version: 1, fingerprint: 'CCCCCCCC' }))).toBe(true)
     expect(isDraftStale(letter({ proposalId: 'prop-9999', version: 1, fingerprint: 'AAAAAAAA' }))).toBe(true)
+  })
+
+  it('a released approval reads as released, with the act that released it, and is no longer the active one', () => {
+    const p = seedProposal()
+    store().approvals.push({ proposalId: p.id, version: 1, fingerprint: 'AAAAAAAA', actId: 'REC-0001', approverId: 'user-001', at: 'x', status: 'released' })
+    store().acts.push({ id: 'REC-0002', kind: 'release_orders', actorId: 'cco-001', at: 'x', threadId: 'th-johnson-review', subject: { type: 'proposal', id: p.id }, version: 1, fingerprint: 'AAAAAAAA', summary: 'x', rationale: 'Reviewed.', approvalActId: 'REC-0001' })
+    expect(activeApproval(p.id)).toBeUndefined()
+    expect(releasedApproval(p.id)?.actId).toBe('REC-0001')
+    expect(approvalState(p)).toEqual({ kind: 'released', version: 1, latestVersion: 1, approverId: 'user-001', actId: 'REC-0001', releaseActId: 'REC-0002' })
+    expect(detailOf(p).fills).toEqual([])
+    expect(isDraftStale(letter({ proposalId: p.id, version: 1, fingerprint: 'AAAAAAAA' }))).toBe(true)
+  })
+
+  it('an escalation of the active approval is on the detail', () => {
+    const p = seedProposal()
+    store().approvals.push({ proposalId: p.id, version: 1, fingerprint: 'AAAAAAAA', actId: 'REC-0001', approverId: 'user-001', at: 'x', status: 'active' })
+    expect(detailOf(p).escalation).toBeUndefined()
+    store().acts.push({ id: 'REC-0002', kind: 'escalate', actorId: 'cco-001', at: '2026-02-25T12:30:00.000Z', threadId: 'th-johnson-review', fingerprint: 'AAAAAAAA', summary: 'x', rationale: 'Needs the CIO.', approvalActId: 'REC-0001' })
+    expect(escalationOf('REC-0001')).toEqual({ actId: 'REC-0002', at: '2026-02-25T12:30:00.000Z' })
+    expect(detailOf(p).escalation).toEqual({ actId: 'REC-0002', at: '2026-02-25T12:30:00.000Z' })
   })
 })

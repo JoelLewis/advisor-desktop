@@ -48,4 +48,10 @@ describe('proposal wording', () => {
       { assetClass: 'private_equity', before: 0.0268, after: 0.0268, reason: 'not_market_tradable' },
     ])
   })
+
+  it('a released version reads as released and filled, never as approved', () => {
+    const released = { kind: 'released', version: 3, latestVersion: 3, approverId: 'user-001', actId: 'REC-0001', releaseActId: 'REC-0003' } as const
+    expect(approvalWords(released)).toBe('v3 was released by compliance and filled')
+    expect(isApprovedLatest(released)).toBe(false)
+  })
 })
