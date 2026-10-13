@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { isDisclosureDocument } from '@/types/workspace-prospect'
-import type { AgentId, BindingAct, BindingActKind, Directory, Draft, Message, ThreadDetail } from '@/types/workspace'
+import type { AgentId, BindingActKind, Directory, Draft, Message, ThreadDetail } from '@/types/workspace'
 import { AGENTS, PEOPLE, can, permissionsOf } from '../data/people'
 import { nextAt, nextId, store } from '../data/workspace-store'
 import { BRIEF_THREAD_ID } from '../workspace/brief'
