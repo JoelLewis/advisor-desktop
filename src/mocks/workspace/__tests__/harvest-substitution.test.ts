@@ -28,6 +28,7 @@ describe('harvest-plus-substitute', () => {
     expect(v.preview.trades.some((t) => t.side === 'buy' && t.symbol === 'CSBGU0.SW')).toBe(false)
     const summary = draftSummary('acc-043', v)
     expect(summary).toContain('lots at a loss and buys iShares Core US Aggregate Bond ETF in their place, so that harvest is not foreclosed.')
+    expect(summary).toContain('Whether funds that track similar indices are substantially identical is unsettled, so confirm the substitute before relying on the harvest.')
     expect(summary).not.toMatch(/\d/)
   })
 
@@ -36,6 +37,7 @@ describe('harvest-plus-substitute', () => {
     expect(v.harvestSubstitutions).toEqual([])
     expect(v.preview.trades.some((t) => t.side === 'buy' && t.symbol === 'AGG')).toBe(true)
     expect(draftSummary('acc-002', v)).toContain('iShares Core US Aggregate Bond ETF is bought here, so its loss cannot be harvested for thirty days without a wash sale.')
+    expect(draftSummary('acc-002', v)).not.toContain('substantially identical')
   })
 
   it("acc-035, an IRA, buys BND rather than the taxpayer's flagged AGG: an IRA purchase would disallow that loss permanently", () => {
@@ -51,6 +53,8 @@ describe('harvest-plus-substitute', () => {
     const summary = draftSummary('acc-035', v)
     expect(summary).toContain("It buys Vanguard Total Bond Market ETF rather than iShares Core US Aggregate Bond ETF, so the taxpayer's iShares Core US Aggregate Bond ETF harvest is not foreclosed.")
     expect(summary).not.toContain('cannot be harvested for thirty days')
+    expect(summary).toContain('substantially identical is unsettled, so confirm the substitute')
+    expect(summary).not.toMatch(/\d/)
   })
 
   it('across the book, a substitute is never a flagged harvest, and a harvest sells only loss lots', () => {

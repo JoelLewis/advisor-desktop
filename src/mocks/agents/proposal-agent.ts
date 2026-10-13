@@ -76,15 +76,22 @@ export function foreclosedHarvestCaveat(accountId: string, built: DraftPreview):
     : ` ${joinWords(names)} are bought here, so their losses cannot be harvested for thirty days without a wash sale.`
 }
 
+/**
+ * Whether two funds tracking similar indices are substantially identical is unsettled (the IRS has
+ * not ruled), so the agent never asserts a substitute avoids a wash sale without saying so.
+ */
+const SUBSTITUTE_HEDGE = ' Whether funds that track similar indices are substantially identical is unsettled, so confirm the substitute before relying on the harvest.'
+
 /** What the agent did instead of foreclosing a flagged harvest, in words with no digits. */
 export function harvestSubstitutionSentence(built: DraftPreview): string {
+  if (built.harvestSubstitutions.length === 0) return ''
   return built.harvestSubstitutions.map((s) => {
     const foreclosed = claimNameOf(s.foreclosed.symbol, s.foreclosed.name)
     const bought = claimNameOf(s.bought.symbol, s.bought.name)
     return s.harvested
       ? ` It sells the ${foreclosed} lots at a loss and buys ${bought} in their place, so that harvest is not foreclosed.`
       : ` It buys ${bought} rather than ${foreclosed}, so the taxpayer's ${foreclosed} harvest is not foreclosed.`
-  }).join('')
+  }).join('') + SUBSTITUTE_HEDGE
 }
 
 /** Lot choice only changes the tax in an account whose sales are taxed. */
