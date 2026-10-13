@@ -36,6 +36,13 @@ describe('workspace seed', () => {
       title: 'Johnson annual review', start: new Date(event.startTime).toISOString(), end: new Date(event.endTime).toISOString(),
     })
   })
+  it('the Brief\'s referral line dates the introduction 20 Feb and labels the Form CRS timing firm policy', () => {
+    resetWorkspaceStore()
+    expect(store().messages.find((m) => m.id === 'msg-s08')).toMatchObject({
+      kind: 'next_action', nbaId: 'nba-015',
+      detail: 'James Thompson introduced her on 20 Feb. Coffee with Adrian Hale today at 15:30 ET; firm policy: deliver Form CRS before it.',
+    })
+  })
   it('seeds the Johnson annual review as scheduled, with no agenda, notes or tasks', () => {
     resetWorkspaceStore()
     expect(store().meetings).toEqual([{ eventId: 'evt-010', householdId: 'hh-001', threadId: 'th-johnson-meeting', state: 'scheduled', agenda: [], tasks: [] }])

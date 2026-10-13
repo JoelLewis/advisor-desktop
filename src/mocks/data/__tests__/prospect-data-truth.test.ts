@@ -38,6 +38,12 @@ describe('Dr. Amanda Pell, the referral', () => {
     })
   })
 
+  it('nba-015 counts only her transferable account\'s fee, dates the introduction 20 Feb and labels the Form CRS timing firm policy', () => {
+    const nba = nbas.find((n) => n.id === 'nba-015')
+    expect(nba).toMatchObject({ estimatedImpact: 20_850, suggestedAction: 'Firm policy: deliver Form CRS before the coffee. Send James a thank-you note' })
+    expect(nba?.description).toContain('on 20 Feb.')
+  })
+
   it('names her in nba-015, note-009, task-004 and act-019, each crediting James Thompson', () => {
     const texts = [
       nbas.find((n) => n.id === 'nba-015')?.description, notes.find((n) => n.id === 'note-009')?.content,
@@ -104,6 +110,12 @@ describe('the firm', () => {
       const text = readFileSync(file, 'utf8')
       expect(text, file).not.toMatch(/Mitchell Wealth|mitchellwealth|Sarah Mitchell, CFP/)
     }
+  })
+
+  it('the archive\'s drafts are Adrian Hale\'s, signed with the firm, never an invented "James Mitchell"', () => {
+    const text = readFileSync('src/mocks/data/archives.ts', 'utf8')
+    expect(text).not.toMatch(/James Mitchell|Senior Wealth Advisor/)
+    expect(text).toContain("advisorName: 'Adrian Hale'")
   })
 
   it('is the fictional Larkfield Advisory', () => {

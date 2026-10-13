@@ -481,12 +481,12 @@ export const nbas: NBA[] = [
   // ── Growth ──
   {
     id: 'nba-014', title: 'Held-away 401(k) review — Williams $1.2M',
-    // Compliance §5.4 · reg-bi / fiduciary-standards / fee-disclosure / conflicts-of-interest —
+    // Compliance §5.4 · fiduciary-standards / fee-disclosure / conflicts-of-interest —
     // this previously read "Consolidating could save ~$4,800/year in fees". The Williams household
     // is billed at 85 bps, so rolling $1.2M into an advisor-managed IRA ADDS roughly $10,200/year
     // against a plan cost of about $5,400 — a net increase of ~$4,800, not a saving. Rollover
-    // recommendations are the exact fact pattern Reg BI's Care Obligation and DOL PTE 2020-02
-    // target, and "you will save money" is the specific claim that gets cited.
+    // recommendations are the exact fact pattern the Advisers Act fiduciary duty (and DOL PTE
+    // 2020-02 for an ERISA plan) targets, and "you will save money" is the specific claim that gets cited.
     description: "David Williams holds $1.2M in a 401(k) at a former employer (Fidelity). Estimated plan cost is 0.45% ($5,400 a year); our schedule for this household is 0.85% ($10,200 a year), so a rollover would raise annual cost by about $4,800. Weigh that against consolidated tax management, household-level rebalancing and planning. Present both options, including leaving the assets in the plan.",
     category: 'growth', priority: 'medium',
     scoring: { urgency: 35, impact: 75, efficiency: 45, relationship: 65, confidence: 70, composite: 55 },
@@ -505,13 +505,14 @@ export const nbas: NBA[] = [
   },
   {
     id: 'nba-015', title: 'Referral: Dr. Amanda Pell',
-    description: 'James Thompson introduced his colleague Dr. Amanda Pell (orthopedic surgeon, about $3M investable) on Feb 20. Coffee with Adrian Hale today at 15:30 ET.',
+    description: 'James Thompson introduced his colleague Dr. Amanda Pell (orthopedic surgeon, about $3M investable) on 20 Feb. Coffee with Adrian Hale today at 15:30 ET.',
     category: 'growth', priority: 'medium',
     scoring: { urgency: 70, impact: 80, efficiency: 65, relationship: 75, confidence: 60, composite: 71 },
     clients: [{ id: 'cli-008', name: 'James Thompson' }],
     trigger: { source: 'crm', condition: 'referral_mention', value: 'Dr. Amanda Pell — ~$3M', detectedAt: '2026-02-20T14:00:00Z' },
-    suggestedAction: 'Deliver Form CRS before the coffee; send James a thank-you note',
-    estimatedImpact: 22_500, createdAt: '2026-02-20T14:15:00Z', dismissed: false,
+    suggestedAction: 'Firm policy: deliver Form CRS before the coffee. Send James a thank-you note',
+    // Her transferable account only (the tiered fee on $2.1M); the 403(b) rollover is asked about, never revenue.
+    estimatedImpact: 20_850, createdAt: '2026-02-20T14:15:00Z', dismissed: false,
     actionRoute: { path: '/t/th-pell' },
   },
   // ── Additional batch items for volume ──

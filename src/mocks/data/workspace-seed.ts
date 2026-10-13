@@ -40,7 +40,7 @@ export const SEED_MESSAGES: readonly Message[] = [
   { kind: 'text', id: 'msg-s07', threadId: PELL_THREAD_ID, authorId: PELL_ID, at: eventTime(7), body: PELL_INTRO },
   // The Brief's line for the referral (nba-015), linking to her thread.
   { kind: 'next_action', id: 'msg-s08', threadId: 'th-brief', at: eventTime(8), nbaId: 'nba-015', title: 'Referral: Dr. Amanda Pell',
-    detail: 'James Thompson introduced her on Feb 20. Coffee with Adrian Hale today at 15:30 ET; deliver Form CRS before it.',
+    detail: 'James Thompson introduced her on 20 Feb. Coffee with Adrian Hale today at 15:30 ET; firm policy: deliver Form CRS before it.',
     targetThreadId: PELL_THREAD_ID, linkLabel: 'Open her thread' },
 ]
 

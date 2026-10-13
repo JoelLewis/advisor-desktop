@@ -101,9 +101,9 @@ type NBA = {
   suggestedAction: string;
   estimatedImpact: Currency;
   /**
-   * Explains why `estimatedImpact` is 0 or otherwise not a revenue figure — e.g. a Reg BI rollover
-   * recommendation that must not be scored on the fee it would generate. Rendered under the
-   * impact figure when present.
+   * Explains why `estimatedImpact` is 0 or otherwise not a revenue figure — e.g. a rollover
+   * recommendation (Advisers Act fiduciary duty; DOL PTE 2020-02 for an ERISA plan) that must not
+   * be scored on the fee it would generate. Rendered under the impact figure when present.
    */
   estimatedImpactNote?: string;
   createdAt: string;

@@ -234,7 +234,7 @@ describe('Terminology: firm policy vs regulatory citation', () => {
   })
 })
 
-describe('Reg BI / DOL PTE 2020-02 rollover framing', () => {
+describe('rollover framing: Advisers Act fiduciary duty; DOL PTE 2020-02 for an ERISA plan', () => {
   const rollover = nbas.find((n) => n.id === 'nba-014')!
 
   it('does not claim a rollover saves money when it adds cost', () => {
