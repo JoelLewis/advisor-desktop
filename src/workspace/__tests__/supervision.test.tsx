@@ -3,7 +3,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
-import { approveProposal, createProposal, draftLetter, sendToClient } from '@/services/workspace'
+import { approveProposal, createProposal, draftLetter, getProposal, saveProposalVersion, sendToClient } from '@/services/workspace'
 
 const ADRIAN = 'user-001'
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
@@ -37,6 +37,18 @@ describe('Supervision', () => {
     expect(within(item).getByRole('table', { name: 'Approved legs · v1' })).toBeInTheDocument()
     expect(within(item).getByRole('link', { name: /Team thread/ })).toHaveAttribute('href', '/t/th-johnson-review')
     expect(within(item).getByRole('link', { name: /Workbench/ })).toHaveAttribute('href', '/proposals/prop-0001?from=th-johnson-review')
+    expect(item).not.toHaveTextContent('is newer and unapproved')
+  })
+
+  it('says so when a newer, unapproved version exists than the one approved', async () => {
+    await approved()
+    const symbol = (await getProposal(ADRIAN, 'prop-0001')).versions[0]!.preview.trades[0]!.symbol
+    await saveProposalVersion(ADRIAN, 'prop-0001', [{ kind: 'exclude', symbol }])
+    viewAsOnLoad('cco-001')
+    const queue = await open('/supervision')
+    await userEvent.setup().click(queue.getByRole('link', { name: /^Johnson rebalance · v1/ }))
+    const item = await screen.findByRole('region', { name: 'Orders · Johnson rebalance · v1' })
+    expect(item).toHaveTextContent('v2 is newer and unapproved; these orders are from v1.')
   })
 
   it('opens the AAPL alert with its record trail and account context', async () => {
