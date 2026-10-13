@@ -379,11 +379,15 @@ export function washSaleAcquisitions(account: Account, lotsFor: (a: Account) => 
 
 /**
  * The account's lots, each with `saleWash`: how many of its shares would have their loss taken by
- * §1091 if the taxpayer harvested every loss lot today (`matchWashedShares`), split by whether
+ * §1091 if this account harvested every loss lot today (`matchWashedShares`), split by whether
  * that loss is deferred into a taxable replacement's basis or permanently disallowed by an IRA or
  * Roth replacement. A lot at a gain, and every lot in an account whose sales are not taxed, has
  * nothing to lose and reads 0/0; so does a coin held directly, which §1091 does not reach
  * (`matchWashedShares` skips it, `isSubjectToWashSale`).
+ *
+ * Each account is asked on its own, against every acquisition of its taxpayer. A total summed
+ * across accounts (the book-level reading in `ai.ts`) may therefore count one replacement share
+ * against two accounts' losses: it overstates what washes, the safe direction for a harvest.
  *
  * The rebalance engine reads the same acquisitions. Its generator's first `washSaleRisk` on a sell
  * leg judges the whole leg on its net result (`hasWashSaleRisk`); the preview then settles every
@@ -403,13 +407,14 @@ export function generateTaxLotsWithSaleRisk(accountId: string, totalValue: numbe
     if (symbol === undefined) throw new Error(`tax lot ${lotId} is missing from its taxpayer's acquisitions`)
     return symbol
   }
-  // Losses on lots in taxable accounts are the ones a harvest realises; they compete, across the
-  // taxpayer's accounts, for the same replacement shares.
-  const lossLots = sameWashSaleTaxpayer(account)
-    .filter((a) => isTaxableAccount(a.taxTreatment))
-    .flatMap((a) => lotsFor(a).filter((l) => l.gainLoss < 0).map((l) => ({
+  // Only this account's loss lots are sold in the question asked; replacements come from every
+  // account of the taxpayer. Matching other accounts' losses too would let an older lot elsewhere
+  // absorb the replacement shares and show this account's loss as clean.
+  const lossLots = isTaxableAccount(account.taxTreatment)
+    ? own.filter((l) => l.gainLoss < 0).map((l) => ({
       lotId: l.id, symbol: symbolOf(l.id), purchaseDate: l.purchaseDate, quantity: l.quantity,
-    })))
+    }))
+    : []
   const washed = matchWashedShares(lossLots, acquisitions, MOCK_TODAY_ISO)
   return own.map((lot) => ({ ...lot, saleWash: washed.get(lot.id) ?? { deferredShares: 0, disallowedShares: 0 } }))
 }

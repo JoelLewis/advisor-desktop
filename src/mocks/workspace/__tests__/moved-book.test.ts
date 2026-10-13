@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { accounts } from '@/mocks/data/accounts'
 import { runDriftMonitor } from '@/mocks/agents/drift-monitor'
 import { runHarvestScanner } from '@/mocks/agents/harvest-scanner'
+import { generateTaxLotsWithSaleRisk } from '@/mocks/handlers/custodian'
 import { taxReturnFor, ytdRealisedOnReturn } from '@/mocks/handlers/tax-return'
 import { proposalById } from '@/mocks/data/proposals-store'
 import { MOCK_NOW_ISO, MOCK_TODAY_ISO } from '@/lib/clock'
@@ -50,5 +51,18 @@ describe('after v1 (the full rebalance) fills', () => {
     const privateEquity = next.preview.projectedDrift.assetClassDrifts.find((d) => d.assetClass === 'private_equity')!
     expect(privateEquity.residualReason).toBeDefined()
     expect(privateEquity.residualReason).toBe(v1PrivateEquity.residualReason)
+  })
+
+  it("v1's AGG purchase washes part of acc-002's own AGG loss: the account's loss lots compete for it, not another account's", () => {
+    release(approvedV1())
+    const agg = generateTaxLotsWithSaleRisk('acc-002', acc002.totalValue).find((l) => l.id === 'lot-pos-024-0')!
+    expect(agg.gainLoss).toBeLessThan(0)
+    expect(agg.saleWash).toEqual({ deferredShares: 1567, disallowedShares: 0 })
+    const finding = runHarvestScanner(ctx).find((f) => f.figures.some((g) => g.label === 'Loss allowed now · AGG'))
+    expect(finding?.claim).toBe('iShares Core US Aggregate Bond ETF can be sold at a loss today; part of the loss would be deferred into the replacement shares.')
+    expect(finding?.figures.slice(0, 2).map((f) => f.value)).toEqual([-2_043, -911])
+    const acc001 = accounts.find((a) => a.id === 'acc-001')!
+    const aggInAcc001 = generateTaxLotsWithSaleRisk('acc-001', acc001.totalValue).find((l) => l.id === 'lot-pos-007-0')!
+    expect(aggInAcc001.saleWash.deferredShares).toBe(1567)
   })
 })
