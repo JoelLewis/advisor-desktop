@@ -1,25 +1,30 @@
 import { useState } from 'react'
 import { Button } from '@/kit/button/Button'
+import { useAccount } from '@/hooks/use-accounts'
 import { useCarryFinding, useThreads } from '@/hooks/use-workspace'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import type { Thread } from '@/types/workspace'
+import { carryTargets } from './carry-targets'
 
-/** "Take to team thread": the brief's owner sends a finding to the team thread about the same subject. */
+/** "Take to …": the brief's owner sends a finding to a team thread about the same subject, or to its household's meeting thread. */
 export function CarryControl({ thread, findingId }: { thread: Thread; findingId: string }) {
   const { viewerId } = useViewer()
   const threads = useThreads()
   const carry = useCarryFinding(thread.id)
   const [taken, setTaken] = useState<string>()
   const subject = thread.subject
-  const target = subject && (threads.data ?? []).find((t) => t.visibility === 'internal' && t.memberIds.includes(viewerId)
-    && t.subject?.type === subject.type && t.subject.id === subject.id)
-  if (thread.ownerId !== viewerId || !target) return null
+  const account = useAccount(subject?.type === 'account' ? subject.id : '')
+  const targets = carryTargets(threads.data ?? [], viewerId, subject, account.data?.householdId)
+  // The account's household decides whether a meeting thread is a target, so wait for it before offering any.
+  if (thread.ownerId !== viewerId || (account.isPending && subject?.type === 'account') || targets.length === 0) return null
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <Button rank="secondary" disabled={carry.isPending}
-        onClick={() => carry.mutate({ messageId: findingId, toThreadId: target.id }, { onSuccess: () => setTaken(target.title) })}>
-        Take to team thread
-      </Button>
+      {targets.map(({ thread: target, label }) => (
+        <Button key={target.id} rank="secondary" disabled={carry.isPending}
+          onClick={() => carry.mutate({ messageId: findingId, toThreadId: target.id }, { onSuccess: () => setTaken(target.title) })}>
+          {label}
+        </Button>
+      ))}
       {taken ? <p role="status" className="text-body text-ink-2">{`Taken to ${taken}.`}</p> : null}
       {carry.isError ? <p role="alert" className="text-body">{carry.error.message}</p> : null}
     </div>

@@ -11,6 +11,7 @@ import { ApprovalPanel } from './ApprovalPanel'
 import { AskAgents } from './AskAgents'
 import { DraftsPanel } from './DraftsPanel'
 import { FullViews } from './FullViews'
+import { MeetingPanel } from './MeetingPanel'
 import { WhoCanSee } from './WhoCanSee'
 
 export function ContextColumn() {
@@ -41,18 +42,19 @@ function ThreadContext({ threadId }: { threadId: string }) {
   const dir = directory.data
   const viewerIsClient = isClientViewer(dir, viewerId)
   const agents = dir.agents.filter((a) => t.agentIds.includes(a.id))
-  const accountId = t.subject?.type === 'account' ? t.subject.id : undefined
+  const subject = t.subject
   return (
     <div className="flex min-w-0 flex-col divide-y divide-rule">
       <WhoCanSee thread={t} directory={dir} viewerIsClient={viewerIsClient} />
       {t.visibility !== 'client' && !viewerIsClient ? <ApprovalPanel thread={t} directory={dir} onRecorded={setSentActId} /> : null}
+      {t.visibility === 'internal' && !viewerIsClient ? <MeetingPanel thread={t} directory={dir} onRecorded={setSentActId} /> : null}
       {t.visibility === 'client' && !viewerIsClient
         ? <DraftsPanel thread={t} directory={dir} onSent={setSentActId} /> : null}
       {acts.isPending ? <p role="status" className="py-5 text-body text-ink-3">Loading the record…</p>
         : acts.isError ? <p role="alert" className="py-5 text-body">{acts.error.message}</p>
         : <ActsPanel acts={acts.data} directory={dir} viewerIsClient={viewerIsClient} />}
       {t.visibility !== 'client' && agents.length > 0 ? <AskAgents thread={t} agents={agents} canPost={canPostIn(t, viewerId, dir)} /> : null}
-      {accountId && !viewerIsClient ? <FullViews accountId={accountId} threadId={t.id} /> : null}
+      {subject && !viewerIsClient ? <FullViews subject={subject} threadId={t.id} /> : null}
     </div>
   )
 }
