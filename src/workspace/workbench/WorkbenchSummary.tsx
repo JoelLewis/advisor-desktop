@@ -37,7 +37,7 @@ export function WorkbenchSummary({ detail, view, notPreviewed = false }: Workben
         </>}
       </Pane>
       <Pane title="Drift before and after">
-        {notPreviewed ? <NotPreviewed /> : <DriftComparison accountId={detail.accountId} projected={view.preview.projectedDrift} />}
+        {notPreviewed ? <NotPreviewed /> : <DriftComparison driftBefore={view.driftBefore} projected={view.preview.projectedDrift} />}
       </Pane>
       <Pane title="Wash-sale taxpayer">
         {notPreviewed ? <NotPreviewed /> : <RestrictionRulers restrictions={view.preview.repurchaseRestrictions} />}

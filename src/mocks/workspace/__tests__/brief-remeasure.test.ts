@@ -47,6 +47,14 @@ describe('the Brief re-measures on view once the book has moved', () => {
     expect(findings().map((f) => f.claim)).toContain("Private Equity cannot be sold at market; it can only be reduced at the fund's periodic repurchase windows.")
   })
 
+  it('after v1 fills: the re-measured readings carry the re-measure time as their as-of, not the morning', async () => {
+    release(approvedV1())
+    await openBrief()
+    const engineCites = findings().flatMap((f) => f.citations.filter((c) => !c.source.startsWith('Held-away assets')).map((c) => ({ at: f.at, asOf: c.asOf })))
+    expect(engineCites.length).toBeGreaterThan(0)
+    expect(engineCites.every(({ at, asOf }) => asOf === at && asOf > MOCK_NOW_ISO)).toBe(true)
+  })
+
   it('a reset brings back the morning', async () => {
     release(approvedV1())
     await openBrief()

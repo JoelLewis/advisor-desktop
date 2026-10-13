@@ -3,6 +3,7 @@ import { screen, within } from '@testing-library/react'
 import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
 import { approveProposal, createProposal, reviseProposal, saveProposalVersion } from '@/services/workspace'
+import { approvedV1, release } from '@/mocks/workspace/__tests__/story-fixture'
 
 const ADRIAN = 'user-001'
 
@@ -70,5 +71,13 @@ describe('the proposal in the team thread', () => {
     expect(bands(/^US Equity/)).toEqual(['OUT', 'IN'])
     expect(bands(/^Emerging Mkts/)).toEqual(['AT LIMIT', 'IN'])
     expect(bands(/^Private Equity/)).toEqual(['IN', 'IN'])
+  })
+
+  it("a released version's Before column is the drift it was built against, not the moved book", async () => {
+    release(approvedV1())
+    const embed = await openJohnson()
+    const drift = await within(embed).findByRole('table', { name: 'Drift before and after' })
+    const bands = (name: RegExp) => [...within(drift).getByRole('row', { name }).querySelectorAll('[data-status]')].map((s) => s.getAttribute('data-status'))
+    expect(bands(/^US Equity/)).toEqual(['OUT', 'IN'])
   })
 })

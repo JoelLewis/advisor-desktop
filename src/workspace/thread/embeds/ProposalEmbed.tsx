@@ -45,7 +45,7 @@ export function ProposalEmbed({ proposalId, threadId, actions }: ProposalEmbedPr
         <p className="text-label normal-case text-ink-3">{taxScope(latest.preview)}</p>
       </div>
       <RestrictionList restrictions={latest.preview.repurchaseRestrictions} />
-      <DriftBeforeAfter accountId={p.accountId} projected={latest.preview.projectedDrift} />
+      <DriftBeforeAfter before={latest.driftBefore} projected={latest.preview.projectedDrift} />
       <PretradeNotes pretrade={latest.pretrade} />
       <div className="flex flex-wrap items-center gap-4">
         <Link to={proposalWorkbenchHref(p.id, threadId)} className="text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink">

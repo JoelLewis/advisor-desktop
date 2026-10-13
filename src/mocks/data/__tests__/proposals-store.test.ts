@@ -14,6 +14,10 @@ function version(n: number, fingerprint: string): ProposalVersion {
       taxable: true, repurchaseRestrictions: [],
       projectedDrift: { driftTolerance: 0.05, driftThreshold: 0.005, totalDrift: 0, maxAbsDrift: 0, withinBand: true, assetClassDrifts: [] },
     },
+    driftBefore: {
+      accountId: 'acc-002', modelId: 'mod-001', driftTolerance: 0.05, rebalanceFrequency: 'quarterly', totalDrift: 0, maxAbsDrift: 0,
+      assetClassDrifts: [], lastCalculated: '2026-02-25T12:00:00Z', needsRebalance: false,
+    },
     pretrade: { accountId: 'acc-002', passed: true, violations: [], legs: [], projectedCash: 0, projectedCashPct: 0, minimumCash: 0 },
     legFacts: [], excludedLegs: [], harvestSubstitutions: [],
     summary: { sold: 0, bought: 0, gains: 0, losses: 0, netShortTerm: 0, netLongTerm: 0, washed: 0, grossTax: 0, netTax: 0 },

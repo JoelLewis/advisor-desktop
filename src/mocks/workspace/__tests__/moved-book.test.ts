@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { accounts } from '@/mocks/data/accounts'
 import { runDriftMonitor } from '@/mocks/agents/drift-monitor'
+import { computeDriftForAccount } from '@/mocks/handlers/pms'
+import { ledgerFills } from '@/mocks/data/portfolio-ledger'
 import { runHarvestScanner } from '@/mocks/agents/harvest-scanner'
 import { generateTaxLotsWithSaleRisk } from '@/mocks/handlers/custodian'
 import { taxReturnFor, ytdRealisedOnReturn } from '@/mocks/handlers/tax-return'
@@ -64,5 +66,13 @@ describe('after v1 (the full rebalance) fills', () => {
     const acc001 = accounts.find((a) => a.id === 'acc-001')!
     const aggInAcc001 = generateTaxLotsWithSaleRisk('acc-001', acc001.totalValue).find((l) => l.id === 'lot-pos-007-0')!
     expect(aggInAcc001.saleWash.deferredShares).toBe(1567)
+  })
+
+  it("the drift reading is as of the account's last fill, not the morning", () => {
+    expect(computeDriftForAccount(acc002).lastCalculated).toBe(MOCK_NOW_ISO)
+    release(approvedV1())
+    const lastFill = ledgerFills().filter((f) => f.accountId === 'acc-002').map((f) => f.at).sort().pop()!
+    expect(lastFill > MOCK_NOW_ISO).toBe(true)
+    expect(computeDriftForAccount(acc002).lastCalculated).toBe(lastFill)
   })
 })

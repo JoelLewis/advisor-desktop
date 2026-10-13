@@ -16,7 +16,8 @@ const pad2 = (n: number) => String(n).padStart(2, '0')
 /**
  * The Brief as it stands: each of its agents' findings on the book as it is now, and a ranked
  * summary ahead of them — findings that need attention first, then in the order the Brief lists
- * its agents. `idOf(0)` names the summary, `idOf(n)` the nth finding.
+ * its agents. `idOf(0)` names the summary, `idOf(n)` the nth finding. `at` is when it is measured,
+ * so it is also every agent's as-of: a re-measure states the time it read the moved book.
  */
 export function composeBrief(idOf: (index: number) => string, at: string): Message[] {
   const thread = SEED_THREADS.find((t) => t.id === BRIEF_THREAD_ID)
@@ -27,7 +28,7 @@ export function composeBrief(idOf: (index: number) => string, at: string): Messa
       const agent = AGENT_DEFINITIONS.get(agentId)
       if (!agent) throw new Error(`The Brief lists ${agentId}, which reports no findings`)
       const runKey = runKeyOf(agentId, thread.id, subject)
-      return agent.run({ asOf: MOCK_NOW_ISO, subject }).map((f) => ({ ...f, agentId, runKey }))
+      return agent.run({ asOf: at, subject }).map((f) => ({ ...f, agentId, runKey }))
     })
     .map((f, i) => ({ kind: 'agent_finding', id: idOf(i + 1), threadId: thread.id, at, ...f }))
   const order = (id: AgentId) => thread.agentIds.indexOf(id)

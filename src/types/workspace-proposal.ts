@@ -1,4 +1,4 @@
-import type { AssetClass } from './portfolio'
+import type { AssetClass, DriftStatus } from './portfolio'
 import type { CurrencyCode } from './currency'
 import type { VersionAuthor } from './workspace'
 import type { PreTradeCheckProposalResult, ProposedTrade, RebalancePreview } from '@/services/oms'
@@ -55,6 +55,8 @@ export type ProposalVersion = {
   constraints: ProposalConstraint[]
   edits: LegEdit[]
   preview: RebalancePreview
+  /** The account's drift when the version was built: the Before its trades are measured from. A record, outside the fingerprint. */
+  driftBefore: DriftStatus
   pretrade: PreTradeCheckProposalResult
   legFacts: LegFacts[]
   excludedLegs: ExcludedLeg[]
@@ -65,7 +67,7 @@ export type ProposalVersion = {
 }
 
 /** A version-shaped result that has not been saved, for previewing workbench edits. */
-export type DraftPreview = Pick<ProposalVersion, 'preview' | 'pretrade' | 'legFacts' | 'excludedLegs' | 'harvestSubstitutions' | 'summary' | 'fingerprint'>
+export type DraftPreview = Pick<ProposalVersion, 'preview' | 'driftBefore' | 'pretrade' | 'legFacts' | 'excludedLegs' | 'harvestSubstitutions' | 'summary' | 'fingerprint'>
 
 /** A proposal for one account, with every version it has had. */
 export type Proposal = { id: string; title: string; accountId: string; clientId: string; threadId: string; versions: ProposalVersion[] }

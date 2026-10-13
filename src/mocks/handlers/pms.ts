@@ -19,6 +19,7 @@ import { computeWaterfallDomain, type WaterfallBar } from '@/lib/waterfall'
 import { MOCK_NOW_ISO, MOCK_TODAY_ISO, startOfToday } from '@/lib/clock'
 import { FX_RATES_USD_BASE } from '../data/currencies'
 import { getPositionsForAccount } from '../data/positions'
+import { ledgerFills } from '../data/portfolio-ledger'
 import { accounts } from '../data/accounts'
 import { households } from '../data/households'
 import { householdFees } from '../data/billing'
@@ -577,7 +578,13 @@ const MODEL_BANDS: Record<string, { driftTolerance: number; rebalanceFrequency: 
 // what drift means. An unknown model id throws rather than falling back to mod-001 — a silently
 // substituted model here would be a trade instruction against a policy nobody chose.
 export function computeDriftForAccount(account: typeof accounts[0], modelIdOverride?: string): DriftStatus {
-  return computeDriftForHoldings(account, getPositionsForAccount(account.id, account.totalValue), modelIdOverride)
+  const drift = computeDriftForHoldings(account, getPositionsForAccount(account.id, account.totalValue), modelIdOverride)
+  return { ...drift, lastCalculated: holdingsAsOf(account.id) }
+}
+
+/** When the account's holdings last changed: its latest fill this session, else the fixtures' as-of. */
+function holdingsAsOf(accountId: string): string {
+  return ledgerFills().filter((f) => f.accountId === accountId).reduce<string>((latest, f) => (f.at > latest ? f.at : latest), MOCK_NOW_ISO)
 }
 
 /** What drift reads from a holding: its asset class and its weight in the account. */
