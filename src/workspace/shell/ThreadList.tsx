@@ -71,7 +71,7 @@ function DeskAgents({ threads }: { threads: Thread[] }) {
 }
 
 /** Firm surfaces that are not threads. A client is never offered them. */
-const DESK: readonly { to: string; label: string }[] = [{ to: '/supervision', label: 'Supervision' }]
+const DESK: readonly { to: string; label: string }[] = [{ to: '/supervision', label: 'Supervision' }, { to: '/archive', label: 'Archive' }]
 
 function DeskLinks() {
   const { viewerId } = useViewer()

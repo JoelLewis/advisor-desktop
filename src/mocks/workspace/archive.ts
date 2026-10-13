@@ -8,10 +8,7 @@ import { alertById, alertContext } from './alerts'
 import { sentMessage } from './correspondence'
 import { canSeeThread } from './visibility'
 
-export const ARCHIVE_KINDS: readonly ArchiveKind[] = [
-  'approve_proposal', 'withdraw_approval', 'send_to_client', 'release_orders', 'return_to_advisor', 'escalate', 'dispose_alert', 'review_correspondence', 'sent_message',
-]
-export const isArchiveKind = (value: string): value is ArchiveKind => (ARCHIVE_KINDS as readonly string[]).includes(value)
+export { ARCHIVE_KINDS, isArchiveKind } from '@/types/workspace-supervision'
 
 /** Code-unit order, the same on every machine. */
 const byCodeUnit = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)

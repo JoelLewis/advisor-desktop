@@ -62,6 +62,10 @@ export type DisposedItem = { item: SupervisionItem; act: BindingAct }
 export type SupervisionQueue = { orders: OrdersItem[]; alerts: AlertItem[]; correspondence: CorrespondenceItem[]; disposedToday: DisposedItem[] }
 
 export type ArchiveKind = BindingActKind | 'sent_message'
+export const ARCHIVE_KINDS: readonly ArchiveKind[] = [
+  'approve_proposal', 'withdraw_approval', 'send_to_client', 'sent_message', 'release_orders', 'return_to_advisor', 'escalate', 'dispose_alert', 'review_correspondence',
+]
+export const isArchiveKind = (value: string): value is ArchiveKind => (ARCHIVE_KINDS as readonly string[]).includes(value)
 export type ArchiveEntry =
   | { kind: 'act'; id: string; at: string; act: BindingAct; clientId?: string; clientName?: string; threadId?: string; threadTitle?: string }
   | { kind: 'sent_message'; id: string; at: string; message: TextMessage; actId: string; fingerprint: string; clientId: string; clientName: string; threadId: string; threadTitle: string }

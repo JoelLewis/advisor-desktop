@@ -44,6 +44,7 @@ describe('keyboard in the shell', () => {
       'Thread · Robert Johnson',
       'Account · Robert Johnson Individual',
       'Supervision',
+      'Archive',
       'Component kit',
     ])
   })

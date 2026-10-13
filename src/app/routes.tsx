@@ -9,6 +9,7 @@ import { useThreadContextAvailable } from '@/workspace/context/use-thread-contex
 import { WorkbenchPage } from '@/workspace/workbench/WorkbenchPage'
 import { WorkbenchThreadColumn } from '@/workspace/workbench/WorkbenchThreadColumn'
 import { useWorkbenchThreadAvailable } from '@/workspace/workbench/use-workbench-thread-available'
+import { ArchivePage } from '@/workspace/archive/ArchivePage'
 import { SupervisionPage } from '@/workspace/supervision/SupervisionPage'
 import type { ShellHandle } from '@/workspace/shell/context-column'
 import { RootLayout } from './RootLayout'
@@ -36,6 +37,7 @@ export const routes: RouteObject[] = [
           { index: true, element: <WorkspaceHome /> },
           { path: 't/:threadId', element: <ThreadPage />, handle: threadHandle },
           { path: 'accounts/:accountId', element: <AccountView /> },
+          { path: 'archive', element: <ArchivePage /> },
           { path: 'supervision', element: <SupervisionPage />, handle: fullWidthHandle },
           { path: 'supervision/:kind/:id', element: <SupervisionPage />, handle: fullWidthHandle },
           { path: 'proposals/:proposalId', element: <WorkbenchPage />, handle: workbenchHandle },

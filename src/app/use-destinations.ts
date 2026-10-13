@@ -27,6 +27,7 @@ export function useDestinations(): Destination[] {
       : [])),
     ...proposals.map((p) => ({ id: `proposal-${p.id}`, label: `Proposal · ${p.title}`, aliases: ['workbench'], run: () => navigate(proposalWorkbenchHref(p.id, p.threadId)) })),
     ...(firmViewer ? [{ id: 'supervision', label: 'Supervision', aliases: ['queue', 'compliance'], run: () => navigate('/supervision') }] : []),
+    ...(firmViewer ? [{ id: 'archive', label: 'Archive', aliases: ['records', 'books and records'], run: () => navigate('/archive') }] : []),
     ...(firmViewer ? [{ id: 'kit', label: 'Component kit', aliases: ['kit', 'components', 'gallery'], run: () => navigate('/kit') }] : []),
   ]
 }
