@@ -48,7 +48,8 @@ describe('releasing every account\'s approvable proposal, one after another', ()
         expect(Math.abs((after.get(d.assetClass) ?? 0) - d.drift), `${account.id} ${d.assetClass} drift`).toBeLessThan(0.0005)
       }
     }
-    expect(released).toBe(10)
+    // acc-012, an IRA, buys BND for the taxpayer's flagged AGG (Rev. Rul. 2008-5), which keeps it inside the pooled-vehicle limit.
+    expect(released).toBe(11)
     const ids = accounts.flatMap((a) => generateTaxLots(a.id, a.totalValue).map((l) => l.id))
     expect(new Set(ids).size).toBe(ids.length)
   }, 180_000)

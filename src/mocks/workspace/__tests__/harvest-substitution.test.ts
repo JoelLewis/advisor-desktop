@@ -38,6 +38,21 @@ describe('harvest-plus-substitute', () => {
     expect(draftSummary('acc-002', v)).toContain('iShares Core US Aggregate Bond ETF is bought here, so its loss cannot be harvested for thirty days without a wash sale.')
   })
 
+  it("acc-035, an IRA, buys BND rather than the taxpayer's flagged AGG: an IRA purchase would disallow that loss permanently", () => {
+    expect(accounts.find((a) => a.id === 'acc-035')!.taxTreatment).toBe('tax_deferred')
+    expect(flaggedFor('acc-035').has('AGG')).toBe(true)
+    const v = built('acc-035')
+    expect(v.harvestSubstitutions).toEqual([{
+      assetClass: 'fixed_income', foreclosed: { symbol: 'AGG', name: 'iShares Core US Aggregate Bond ETF' },
+      bought: { symbol: 'BND', name: 'Vanguard Total Bond Market ETF' }, harvested: false,
+    }])
+    expect(v.preview.trades.some((t) => t.side === 'buy' && t.symbol === 'BND')).toBe(true)
+    expect(v.preview.trades.some((t) => t.symbol === 'AGG')).toBe(false)
+    const summary = draftSummary('acc-035', v)
+    expect(summary).toContain("It buys Vanguard Total Bond Market ETF rather than iShares Core US Aggregate Bond ETF, so the taxpayer's iShares Core US Aggregate Bond ETF harvest is not foreclosed.")
+    expect(summary).not.toContain('cannot be harvested for thirty days')
+  })
+
   it('across the book, a substitute is never a flagged harvest, and a harvest sells only loss lots', () => {
     let substituted = 0
     for (const account of accounts) {

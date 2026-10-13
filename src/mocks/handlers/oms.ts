@@ -585,8 +585,11 @@ export function generateRebalanceProposal(
   // Phase 4 · a buy of a security the Harvest Scanner flags for this taxpayer forecloses that harvest.
   // Where the class has a non-identical substitute that is neither flagged nor washing, the substitute
   // is bought instead; a loss this account holds in the flagged security is harvested now, its loss
-  // lots only, and its proceeds go to the substitute. With no substitute the buy stands.
-  const protectedHarvests: ReadonlySet<string> = taxable ? constraints.protectHarvests ?? new Set<string>() : new Set<string>()
+  // lots only, and its proceeds go to the substitute. With no substitute the buy stands. The rule
+  // holds in an IRA or Roth too: its purchase washes the taxpayer's taxable loss and disallows it
+  // permanently (Rev. Rul. 2008-5), so it moves to the substitute; only the harvest leg needs a
+  // taxable account, since only there does a sale realise a loss.
+  const protectedHarvests: ReadonlySet<string> = constraints.protectHarvests ?? new Set<string>()
   const lossSoldIn = (legs: readonly RawLeg[]) => (taxable
     ? legs.filter((l) => l.side === 'sell' && l.target.position && saleOf(l.target.position, l.notional).soldLosses.length > 0).map((l) => l.target.symbol)
     : [])
@@ -598,7 +601,7 @@ export function generateRebalanceProposal(
     const substitute = substituteBuyCandidate(held, drift.modelId, leg.sleeve.assetClass, currency, avoid)
     if (!substitute) return [leg]
     const lossHolding = positions.find((p) => p.symbol === leg.target.symbol && isMarketTradable(p.symbol) && lossValueOf(p) > 0)
-    const harvest = lossHolding && !drafted.some((l) => l.side === 'sell' && l.target.symbol === leg.target.symbol) ? lossHolding : undefined
+    const harvest = taxable && lossHolding && !drafted.some((l) => l.side === 'sell' && l.target.symbol === leg.target.symbol) ? lossHolding : undefined
     harvestSubstitutions.push({
       assetClass: leg.sleeve.assetClass, foreclosed: { symbol: leg.target.symbol, name: leg.target.name },
       bought: { symbol: substitute.symbol, name: substitute.name }, harvested: harvest !== undefined,
