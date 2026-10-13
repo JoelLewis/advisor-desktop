@@ -72,8 +72,8 @@ export type BindingAct = {
   viaPresenter?: ViaPresenter
 }
 export type LetterBasis = { proposalId: string; version: number; fingerprint: string }
-/** A recap's basis: the filing it was written from. It is stale once the meeting's filing no longer matches. */
-export type RecordBasis = { eventId: string; actId: string; fingerprint: string }
+/** A recap's basis: the filing it was written from and the Intel window end it states. It is stale once either no longer matches. */
+export type RecordBasis = { eventId: string; actId: string; fingerprint: string; windowEnd?: string }
 export type Draft = { id: string; clientThreadId: string; authorId: string; body: string; createdAt: string; agentId?: AgentId; basis?: LetterBasis; recordBasis?: RecordBasis; figures?: Figure[]; supersedes?: string; editorIds?: string[]; stale?: boolean }
 export type ThreadDetail = { thread: Thread; messages: Message[] }
 export type Act = BindingActKind | 'post_firm' | 'draft_for_client' | 'read_all_firm_threads' | 'prepare_meeting'

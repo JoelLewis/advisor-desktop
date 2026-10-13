@@ -115,6 +115,16 @@ describe('the recap', () => {
   })
 })
 
+describe('the Intel window sentence', () => {
+  it('follows the Intel decision wherever it moved, and ends the decisions when no decision mentions Intel', () => {
+    heldAndDrafted()
+    ok(saveNotes(ADRIAN, 'evt-010', edit('n-08', 'Robert will not buy the stock back in any account until the window closes.')))
+    file()
+    const { body } = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft
+    expect(body).toContain('- The investment policy statement stays as signed; an ESG change would need a signed amendment.\n- The Intel window runs through 2026-03-22.')
+  })
+})
+
 describe('sending the recap', () => {
   it('is one new message in Robert\'s thread, recorded with the filing it came from', () => {
     heldAndDrafted()
@@ -134,6 +144,21 @@ describe('sending the recap', () => {
     const item = supervisionQueue('cco-001')!.correspondence.find((c) => c.id === act.messageId)
     expect(item).toMatchObject({ kind: 'correspondence', clientId: 'cli-001', sendAct: { recordBasis: { actId: 'REC-0001' } } })
     expect(archiveFor('cco-001', { kind: 'sent_message' })!.entries.map((e) => e.id)).toContain(act.messageId)
+  })
+
+  it('refuses a recap whose Intel window moved after it was drafted, and a new request drafts a fresh one', () => {
+    heldAndDrafted()
+    file()
+    const { draft } = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010'))
+    expect(draft.body).toContain('through 2026-03-22.')
+    release(approvedV1())
+    expect(draftsFor('th-robert').find((d) => d.id === draft.id)?.stale).toBe(true)
+    expect(sendToClient(ADRIAN, draft.id)).toEqual({
+      ok: false, status: 409, code: 'STALE_DRAFT', message: 'This recap states the Intel window through 2026-03-22, but the window now runs through 2026-03-27. Ask for a new recap.',
+    })
+    const fresh = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010'))
+    expect(fresh).toMatchObject({ created: true, draft: { recordBasis: { windowEnd: '2026-03-27' } } })
+    expect(fresh.draft.body).toContain('through 2026-03-27.')
   })
 
   it('refuses a recap whose filing it no longer matches', () => {
