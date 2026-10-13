@@ -6,6 +6,7 @@ import { renderRoutes } from '@/test/render'
 import { approveProposal, createProposal, draftLetter, reviseDraft, reviseProposal, withdrawApproval } from '@/services/workspace'
 import { store } from '@/mocks/data/workspace-store'
 import { buildClientRateDisclosure, TAX_RATE_BASIS } from '@/lib/tax-rules'
+import { approvedV1 as fixtureApprovedV1, release } from '@/mocks/workspace/__tests__/story-fixture'
 
 const ADRIAN = 'user-001'
 const inContext = () => within(screen.getByRole('complementary', { name: 'Thread context' }))
@@ -130,5 +131,21 @@ describe('the client letter', () => {
     const ask = await within(drafts).findByRole('button', { name: 'Ask Client Letter Agent' })
     expect(ask).toBeDisabled()
     expect(ask).toHaveAccessibleDescription('Approve a proposal first.')
+  })
+
+  it('once the approved proposal\'s orders are filled, says so instead of asking for an approval', async () => {
+    const releaseAct = release(fixtureApprovedV1())
+    const drafts = await openRobert()
+    const ask = await within(drafts).findByRole('button', { name: 'Ask Client Letter Agent' })
+    expect(ask).toBeDisabled()
+    expect(ask).toHaveAccessibleDescription(`The orders from v1 of the Johnson rebalance were filled (${releaseAct.id}); no approved proposal awaits a letter.`)
+    expect(within(drafts).getByText(releaseAct.id)).toHaveClass('whitespace-nowrap')
+  })
+
+  it('with a filled proposal and a new one still to approve, asks for the approval', async () => {
+    release(fixtureApprovedV1())
+    await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
+    const drafts = await openRobert()
+    expect(await within(drafts).findByRole('button', { name: 'Ask Client Letter Agent' })).toHaveAccessibleDescription('Approve a proposal first.')
   })
 })

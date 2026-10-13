@@ -2,6 +2,8 @@ import { useId, useRef, useState } from 'react'
 import { Button } from '@/kit/button/Button'
 import { useDraftLetter, useDrafts, useProposals } from '@/hooks/use-workspace'
 import type { Draft, Thread } from '@/types/workspace'
+import type { ProposalDetail } from '@/types/workspace-proposal'
+import { Unbroken } from '@/kit/unbroken/Unbroken'
 
 type Asked = { draftId: string; version: number; title: string; created: boolean }
 
@@ -15,12 +17,13 @@ export function LetterControl({ thread }: { thread: Thread }) {
   const asking = useRef(false)
   if (proposals.isPending) return <p role="status" className="text-body text-ink-3">Loading the proposals…</p>
   if (proposals.isError) return <p role="alert" className="text-body">{proposals.error.message}</p>
-  const approved = proposals.data.flatMap((p) => (p.clientId === thread.clientId && p.approval.kind === 'approved' ? [{ p, version: p.approval.version }] : []))
+  const forClient = proposals.data.filter((p) => p.clientId === thread.clientId)
+  const approved = forClient.flatMap((p) => (p.approval.kind === 'approved' ? [{ p, version: p.approval.version }] : []))
   if (approved.length === 0) {
     return (
       <div className="flex flex-col items-start gap-2">
         <Button rank="secondary" disabled aria-describedby={reasonId}>Ask Client Letter Agent</Button>
-        <span id={reasonId} className="text-label text-ink-3">Approve a proposal first.</span>
+        <span id={reasonId} className="text-label text-ink-3"><Unbroken text={noLetterReason(forClient)} /></span>
       </div>
     )
   }
@@ -54,4 +57,15 @@ export function LetterControl({ thread }: { thread: Thread }) {
       {report ? <p role="status" className="text-body text-ink-2">{report}</p> : null}
     </div>
   )
+}
+
+/**
+ * Why there is nothing to write from. A letter explains an approved version before its orders are placed:
+ * a proposal still to approve comes first; otherwise, once the latest approval's orders are filled, no approval is waiting for one.
+ */
+function noLetterReason(forClient: readonly ProposalDetail[]): string {
+  const toApprove = forClient.some((p) => p.approval.kind === 'unapproved')
+  const filled = forClient.flatMap((p) => (p.approval.kind === 'released' ? [{ title: p.title, ...p.approval }] : [])).pop()
+  return filled && !toApprove ? `The orders from v${filled.version} of the ${filled.title} were filled (${filled.releaseActId}); no approved proposal awaits a letter.`
+    : 'Approve a proposal first.'
 }
