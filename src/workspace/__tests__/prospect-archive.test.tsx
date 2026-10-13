@@ -43,5 +43,8 @@ describe('Mark, on prospect work', () => {
     expect(main).toHaveTextContent('Dear Dr. Pell,')
     expect(main).toHaveTextContent('The approved v1 of the prospect proposal')
     expect(main).toHaveTextContent('delivered with Form ADV Part 2A (firm brochure)')
+    const provenance = within(main).getByRole('heading', { name: 'Provenance' }).closest('section')
+    if (!provenance) throw new Error('The Provenance heading sits outside its pane')
+    expect(within(provenance).getByRole('note', { name: "Visibility: Firm only · prospect can't see" })).toBeInTheDocument()
   })
 })

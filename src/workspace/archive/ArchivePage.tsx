@@ -46,7 +46,7 @@ function Archive({ directory }: { directory: Directory }) {
       <header className="flex flex-col gap-3">
         <VisibilityBand visibility="internal" scale="message" />
         <h1 id={PAGE_TITLE_ID} tabIndex={-1} className="text-title">Archive</h1>
-        <p className="text-body text-ink-2">Every recorded act and every message sent to a client, in the order they happened.</p>
+        <p className="text-body text-ink-2">Every recorded act and every message sent to a client or prospect, in the order they happened.</p>
       </header>
       {archive.isError ? <p role="alert" className="text-body">{archive.error.message}</p> : null}
       {data ? (
