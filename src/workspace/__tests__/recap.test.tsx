@@ -95,7 +95,21 @@ describe("Robert's recap", () => {
     const panel = await openRobert()
     const draft = await within(panel).findByRole('article', { name: 'Draft · not sent' })
     expect(draft).toHaveTextContent('STALE')
-    expect(draft).toHaveTextContent('The filed record no longer matches this recap (REC-0001). Ask the Client Letter Agent for a new recap.')
+    expect(draft).toHaveTextContent('This recap was drafted from REC-0001, which no longer matches the filed record. Ask for a new recap.')
+    expect(within(draft).getByRole('button', { name: 'Send to Robert' })).toBeDisabled()
+  })
+  it('a recap whose Intel window moved says so, not that the filed record changed', async () => {
+    await filed()
+    const filing = store().meetings.find((m) => m.eventId === 'evt-010')!.filed!
+    store().drafts.push({
+      id: 'draft-9002', clientThreadId: 'th-robert', authorId: ADRIAN, body: 'Dear Robert, a recap with an older window.', createdAt: '2026-02-25T20:30:00.000Z',
+      agentId: 'client-letter', recordBasis: { eventId: 'evt-010', actId: filing.actId, fingerprint: filing.fingerprint, windowEnd: '2026-03-20' },
+    })
+    const panel = await openRobert()
+    const draft = await within(panel).findByRole('article', { name: 'Draft · not sent' })
+    expect(draft).toHaveTextContent('STALE')
+    expect(draft).toHaveTextContent('This recap states the Intel wash-sale window through March 20, 2026, but it now runs through March 22, 2026. Ask for a new recap.')
+    expect(draft).not.toHaveTextContent('no longer matches the filed record')
     expect(within(draft).getByRole('button', { name: 'Send to Robert' })).toBeDisabled()
   })
 })

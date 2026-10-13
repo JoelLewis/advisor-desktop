@@ -4,7 +4,7 @@ import { nextAt, nextId, store } from '@/mocks/data/workspace-store'
 import { activeApproval, isDraftStale } from '@/mocks/data/proposals-store'
 import { writeClientLetter } from '@/mocks/agents/client-letter'
 import { visibleProposal } from './proposal-acts'
-import { isStale } from './draft-staleness'
+import { isStale, staleMessage } from './draft-staleness'
 import { canSeeThread } from './visibility'
 
 export type LetterFailure = { ok: false; status: 400 | 404 | 409; code: string; message: string }
@@ -56,5 +56,8 @@ export function reviseDraft(viewerId: string, clientThreadId: string, draftId: s
 
 /** A client thread's drafts as a firm viewer sees them: each marked stale when its basis is no longer the approval or the filed record. */
 export function draftsFor(clientThreadId: string): Draft[] {
-  return store().drafts.filter((d) => d.clientThreadId === clientThreadId).map((d) => ({ ...d, stale: isStale(d) }))
+  return store().drafts.filter((d) => d.clientThreadId === clientThreadId).map((d) => {
+    const stale = isStale(d)
+    return stale ? { ...d, stale, staleReason: staleMessage(d) } : { ...d, stale }
+  })
 }

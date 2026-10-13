@@ -152,7 +152,9 @@ describe('sending the recap', () => {
     const { draft } = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010'))
     expect(draft.body).toContain('through March 22, 2026.')
     release(approvedV1())
-    expect(draftsFor('th-robert').find((d) => d.id === draft.id)?.stale).toBe(true)
+    expect(draftsFor('th-robert').find((d) => d.id === draft.id)).toMatchObject({
+      stale: true, staleReason: 'This recap states the Intel wash-sale window through March 22, 2026, but it now runs through March 27, 2026. Ask for a new recap.',
+    })
     expect(sendToClient(ADRIAN, draft.id)).toEqual({
       ok: false, status: 409, code: 'STALE_DRAFT', message: 'This recap states the Intel wash-sale window through March 22, 2026, but it now runs through March 27, 2026. Ask for a new recap.',
     })
