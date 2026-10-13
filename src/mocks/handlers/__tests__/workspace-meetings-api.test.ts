@@ -53,6 +53,9 @@ describe('meeting endpoints', () => {
     const uncited = lines.map((l: { id: string }) => (l.id === 'n-01' ? { ...l, cites: ['t-99'] } : l))
     expect((await call('PUT', '/meetings/evt-010/notes', ADRIAN, { lines: uncited }))).toMatchObject({ status: 400, body: { code: 'UNKNOWN_CITATION' } })
     expect((await call('PUT', '/meetings/evt-010/notes', ADRIAN, { lines: [{ section: 'minutes', text: 'x', cites: ['t-01'] }] }))).toMatchObject({ status: 400, body: { code: 'BAD_REQUEST' } })
+    expect(saved.body.notesDraft.find((l: { id: string }) => l.id === 'n-09').toClient).toMatchObject({ clientId: 'cli-001' })
+    const badWording = lines.map((l: { id: string }) => (l.id === 'n-10' ? { ...l, toClient: { clientId: 'cli-001' } } : l))
+    expect((await call('PUT', '/meetings/evt-010/notes', ADRIAN, { lines: badWording }))).toMatchObject({ status: 400, body: { code: 'BAD_REQUEST' } })
     expect((await call('PUT', '/meetings/evt-010/notes', 'user-002', { lines }))).toMatchObject({ status: 403, body: { code: 'NOT_PERMITTED' } })
   })
 

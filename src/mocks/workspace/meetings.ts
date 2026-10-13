@@ -92,9 +92,12 @@ export function meetingView(viewerId: string, eventId: string): MeetingView | un
   }
 }
 
-/** What a filing fingerprints: every line's id, section, text, citations, owner and due date, in order. */
+/**
+ * What a filing fingerprints: every line's id, section, text, citations, owner and due date, in order, and
+ * the client wording a line carries (what the client will read is part of what is filed).
+ */
 export function notesFingerprint(lines: readonly NoteLine[]): string {
-  return fingerprint(JSON.stringify(lines.map((l) => [l.id, l.section, l.text, l.cites, l.owner ?? null, l.due ?? null])))
+  return fingerprint(JSON.stringify(lines.map((l) => [l.id, l.section, l.text, l.cites, l.owner ?? null, l.due ?? null, ...(l.toClient ? [l.toClient] : [])])))
 }
 
 /** A meeting the viewer may prepare: visible (else 404), and the viewer runs meetings (else 403). */
@@ -225,6 +228,13 @@ function lineRefusal(meeting: Meeting, input: readonly NoteLineInput[]): Meeting
       if (seen.has(line.id)) return refuseMeeting(400, 'DUPLICATE_LINE', `${line.id} appears twice.`)
       seen.add(line.id)
     }
+    if (line.toClient !== undefined) {
+      if (line.section !== 'decisions' && line.section !== 'client_requests') return refuseMeeting(400, 'CLIENT_WORDING_ONLY_ON_CLIENT_LINE', 'Only a decision or a client request has wording for the client.')
+      if (!clients.some((c) => c.id === line.toClient?.clientId && c.householdId === meeting.householdId)) return refuseMeeting(400, 'UNKNOWN_CLIENT', 'Client wording is for a client of the meeting.')
+      const worded = line.toClient.text.trim()
+      if (worded.length === 0) return refuseMeeting(400, 'NOTE_TEXT_REQUIRED', 'Client wording needs its text.')
+      if (worded.length > NOTE_TEXT_MAX) return refuseMeeting(400, 'NOTE_TEXT_TOO_LONG', `Keep a line to ${NOTE_TEXT_MAX} characters or fewer.`)
+    }
     if (line.section !== 'follow_ups' && (line.owner !== undefined || line.due !== undefined)) {
       return refuseMeeting(400, 'OWNER_ONLY_ON_FOLLOW_UP', 'Only a follow-up has an owner and a due date.')
     }
@@ -245,6 +255,19 @@ export function alreadyFiled(meeting: Meeting): MeetingFailure {
   return refuseMeeting(409, 'ALREADY_FILED', `The record was already filed (${meeting.filed.actId}); it cannot be edited.`)
 }
 
+/**
+ * A line's client wording after an edit. New wording the edit names is taken as given. The line's own
+ * wording — named again, or left out — stays only while the line's section and text are as they were:
+ * once the advisor rewrites a line, the wording of the old text no longer speaks for it, and the recap
+ * reads the line as filed.
+ */
+function clientWordingKept(input: NoteLineInput, was: NoteLine | undefined): NoteLine['toClient'] {
+  const named = input.toClient && { clientId: input.toClient.clientId, text: input.toClient.text.trim() }
+  const echoed = named !== undefined && was?.toClient !== undefined && named.clientId === was.toClient.clientId && named.text === was.toClient.text
+  if (named && !echoed) return named
+  return was?.toClient && was.section === input.section && was.text === input.text.trim() ? was.toClient : undefined
+}
+
 /** Adrian's edits to the notes draft, until it is filed. Nothing is saved unless every line passes. */
 export function saveNotes(viewerId: string, eventId: string, input: readonly NoteLineInput[]): MeetingResult {
   const prepared = preparing(viewerId, eventId)
@@ -255,10 +278,15 @@ export function saveNotes(viewerId: string, eventId: string, input: readonly Not
   if (!meeting.notesDraft) return refuseMeeting(409, 'NO_NOTES', 'Ask Meeting Notes for a draft first.')
   const refusal = lineRefusal(meeting, input)
   if (refusal) return refusal
-  const lines: NoteLine[] = input.map((l) => ({
-    id: l.id ?? `n-${pad(nextNumber('note'))}`, section: l.section, text: l.text.trim(), cites: [...new Set(l.cites)],
-    ...(l.section === 'follow_ups' && l.owner && l.due !== undefined ? { owner: l.owner, due: l.due } : {}),
-  }))
+  const before = new Map(meeting.notesDraft.map((l) => [l.id, l]))
+  const lines: NoteLine[] = input.map((l) => {
+    const toClient = clientWordingKept(l, l.id === undefined ? undefined : before.get(l.id))
+    return {
+      id: l.id ?? `n-${pad(nextNumber('note'))}`, section: l.section, text: l.text.trim(), cites: [...new Set(l.cites)],
+      ...(l.section === 'follow_ups' && l.owner && l.due !== undefined ? { owner: l.owner, due: l.due } : {}),
+      ...(toClient ? { toClient } : {}),
+    }
+  })
   const next: Meeting = { ...meeting, notesDraft: lines }
   replaceMeeting(next)
   return { ok: true, meeting: next }

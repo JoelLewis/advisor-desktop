@@ -9,6 +9,8 @@ const PLAN_NAMES = /401\(k\)|403\(b\)/g
 const notes = draftNotesFromTranscript('evt-010', '2026-02-25')
 const transcript = new Map(JOHNSON_REVIEW_TRANSCRIPT.map((l) => [l.id, l]))
 const toClient = notes.filter((l) => l.section === 'decisions' || l.section === 'client_requests')
+/** Every text a client may read: the firm's line, and its client wording where it has one. */
+const clientTexts = toClient.flatMap((l) => [{ id: l.id, text: l.text }, ...(l.toClient ? [{ id: `${l.id} (to client)`, text: l.toClient.text }] : [])])
 
 describe('Meeting Notes', () => {
   it('drafts twenty-three lines in the four sections', () => {
@@ -26,6 +28,7 @@ describe('Meeting Notes', () => {
 
   it('states no figure (the plan names aside)', () => {
     for (const line of notes) expect(line.text.replace(PLAN_NAMES, ''), line.id).not.toMatch(/\d/)
+    for (const line of clientTexts) expect(line.text.replace(PLAN_NAMES, ''), line.id).not.toMatch(/\d/)
   })
 
   it('assigns each follow-up as the meeting did, due on a trading day', () => {
@@ -57,7 +60,7 @@ describe('Meeting Notes', () => {
   })
 
   it('adds no recommendation nobody made; a rollover is only asked about', () => {
-    for (const line of notes) expect(line.text, line.id).not.toMatch(/\bwe recommend|\brecommend (that|you)|\brecommends\b|should (roll|move|consolidate)/i)
+    for (const line of [...notes, ...clientTexts]) expect(line.text, line.id).not.toMatch(/\bwe recommend|\brecommend (that|you)|\brecommends\b|should (roll|move|consolidate)/i)
     const rollover = toClient.filter((l) => /consolidat|roll ?over|401\(k\).*403\(b\)/i.test(l.text))
     expect(rollover.map((l) => l.id)).toEqual(['n-15'])
     for (const line of rollover) expect(line.text).toContain('asked about; comparison to follow')
@@ -70,7 +73,7 @@ describe('Meeting Notes', () => {
   })
 
   it('names no colleague in a line the client will read, and scopes wash sales to the taxpayer', () => {
-    for (const line of toClient) expect(line.text, line.id).not.toMatch(/Sarah|Mike|Mitchell|Chen/)
+    for (const line of clientTexts) expect(line.text, line.id).not.toMatch(/Sarah|Mike|Mitchell|Chen/)
     for (const line of notes) expect(line.text, line.id).not.toMatch(/household/i)
   })
 
@@ -87,6 +90,21 @@ describe('Meeting Notes', () => {
     expect(line('n-09').text).toContain('until the wash-sale window closes. As firm policy, the held-away Vanguard 401(k) counts too: the rule for employer plans is unsettled.')
     expect(line('n-10').text).toBe('We keep the legacy goal and will bring the options to the next review.')
     expect(line('n-21').cites).toEqual(['t-16', 't-18'])
+  })
+
+  it("words for Robert, in the second person, each line that names him; the meaning and the citations stay the line's", () => {
+    const worded = notes.filter((l) => l.toClient)
+    expect(worded.map((l) => [l.id, l.toClient!.clientId])).toEqual([['n-09', 'cli-001'], ['n-12', 'cli-001'], ['n-14', 'cli-001']])
+    for (const line of notes) expect(line.toClient === undefined || line.section === 'decisions' || line.section === 'client_requests', line.id).toBe(true)
+    for (const line of toClient.filter((l) => /\bRobert\b/.test(l.text))) expect(line.toClient, line.id).toBeDefined()
+    for (const line of worded) {
+      expect(line.toClient!.text, line.id).not.toMatch(/\bRobert\b/)
+      expect(line.toClient!.text, line.id).toMatch(/\byou(r)?\b/i)
+    }
+    const to = (id: string) => notes.find((l) => l.id === id)!.toClient!.text
+    expect(to('n-09')).toBe("You will not buy Intel in any of your or Patricia's accounts, including the IRAs, until the wash-sale window closes. As firm policy, your held-away Vanguard 401(k) counts too: the rule for employer plans is unsettled. Reinvested dividends count as buying.")
+    expect(to('n-12')).toBe('You will contact the Vanguard plan administrator to correct the beneficiary; we will send our beneficiary checklist.')
+    expect(to('n-14')).toContain('estimate; consult your tax professional')
   })
 
   it('has no script for a meeting without a transcript', () => {

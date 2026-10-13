@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw'
-import type { AgendaItemInput, AgendaSource, NoteLineInput, TaskOwner } from '@/types/workspace-meeting'
+import type { AgendaItemInput, AgendaSource, ClientWording, NoteLineInput, TaskOwner } from '@/types/workspace-meeting'
 import { isNoteSection } from '@/types/workspace-meeting'
 import { AGENTS } from '../data/people'
 import { holdMeeting, meetingSummaries, meetingView, reviseAgenda, saveNotes } from '../workspace/meetings'
@@ -44,6 +44,12 @@ function parseOwner(value: unknown): Parsed<TaskOwner | undefined> {
   return { ok: false, message: 'An owner is a person or an agent.' }
 }
 
+function parseClientWording(value: unknown): { ok: true; value?: ClientWording } | { ok: false; message: string } {
+  if (value === undefined) return { ok: true }
+  if (isRecord(value) && nonEmptyString(value.clientId) && typeof value.text === 'string') return { ok: true, value: { clientId: value.clientId, text: value.text } }
+  return { ok: false, message: 'Client wording names the client and its text.' }
+}
+
 /** A notes body, checked for shape; the engine checks the citations, the owners and the due dates. */
 export function parseNoteLines(value: unknown): { ok: true; lines: NoteLineInput[] } | { ok: false; message: string } {
   if (!Array.isArray(value)) return { ok: false, message: 'lines must be a list.' }
@@ -56,9 +62,12 @@ export function parseNoteLines(value: unknown): { ok: true; lines: NoteLineInput
     if (raw.due !== undefined && typeof raw.due !== 'string') return { ok: false, message: 'A due date is a string.' }
     const owner = parseOwner(raw.owner)
     if (!owner.ok) return owner
+    const toClient = parseClientWording(raw.toClient)
+    if (!toClient.ok) return toClient
     lines.push({
       ...(typeof raw.id === 'string' ? { id: raw.id } : {}), section: raw.section, text: raw.text, cites: raw.cites,
       ...(owner.value ? { owner: owner.value } : {}), ...(typeof raw.due === 'string' ? { due: raw.due } : {}),
+      ...(toClient.value ? { toClient: toClient.value } : {}),
     })
   }
   return { ok: true, lines }

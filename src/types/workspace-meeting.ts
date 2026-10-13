@@ -20,12 +20,21 @@ export const isNoteSection = (value: unknown): value is NoteSection =>
 /** Who owns a follow-up: a person at the firm or an agent. */
 export type TaskOwner = VersionAuthor
 /**
+ * A decision or client request as one client reads it in the recap: the same meaning, addressed to them
+ * ("you" for the firm's "Robert"), resting on the line's own citations. It is part of the filed record.
+ */
+export type ClientWording = { clientId: string; text: string }
+/**
  * One line of the notes. `cites` names the transcript lines it records (at least one). A follow-up
  * also carries its owner — as stated in the meeting, cited — and its due date, an NYSE trading day.
+ * A decision or client request may carry its wording for the client it names (`toClient`).
  */
-export type NoteLine = { id: string; section: NoteSection; text: string; cites: string[]; owner?: TaskOwner; due?: string }
-/** A line as an edit names it: an existing line keeps its id; a new one has none yet. */
-export type NoteLineInput = { id?: string; section: NoteSection; text: string; cites: string[]; owner?: TaskOwner; due?: string }
+export type NoteLine = { id: string; section: NoteSection; text: string; cites: string[]; owner?: TaskOwner; due?: string; toClient?: ClientWording }
+/**
+ * A line as an edit names it: an existing line keeps its id; a new one has none yet. Without `toClient`,
+ * an existing line keeps its client wording only while its section and text are unchanged.
+ */
+export type NoteLineInput = { id?: string; section: NoteSection; text: string; cites: string[]; owner?: TaskOwner; due?: string; toClient?: ClientWording }
 
 /** A follow-up tracked from the filed record. Nobody but the presenter acts live, so tasks are tracked, not worked. */
 export type MeetingTask = { id: string; title: string; owner: TaskOwner; due: string; state: 'open' | 'done'; fromNoteLine: string }

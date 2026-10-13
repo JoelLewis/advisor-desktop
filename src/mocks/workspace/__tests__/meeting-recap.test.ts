@@ -2,10 +2,11 @@ import { describe, it, expect } from 'vitest'
 import { store } from '@/mocks/data/workspace-store'
 import { JOHNSON_REVIEW_TRANSCRIPT } from '@/mocks/data/meeting-transcripts'
 import { notes } from '@/mocks/data/notes'
-import { holdMeeting, meetingView, saveNotes } from '../meetings'
+import { holdMeeting, meetingView, notesFingerprint, saveNotes } from '../meetings'
 import { draftMeetingNotes } from '../meeting-agents'
 import { fileMeetingRecord } from '../meeting-acts'
 import { draftRecap } from '../recap'
+import { writeMeetingRecap } from '@/mocks/agents/meeting-recap'
 import { draftsFor, reviseDraft } from '../letters'
 import { sendToClient } from '../acts'
 import { supervisionQueue } from '../supervision'
@@ -39,12 +40,15 @@ describe('the recap', () => {
     expect(draft.body.endsWith('If anything here is not as you remember it, please tell me.\n\nAdrian Hale')).toBe(true)
   })
 
-  it('carries every client request and decision as filed, and nothing else', () => {
+  it('carries every client request and decision as filed — in the wording filed for Robert where there is one — and nothing else', () => {
     heldAndDrafted()
     file()
     const { body } = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft
     const lines = meeting().filed!.lines
-    for (const l of lines.filter((x) => x.section === 'client_requests' || x.section === 'decisions')) expect(body, l.id).toContain(l.text)
+    for (const l of lines.filter((x) => x.section === 'client_requests' || x.section === 'decisions')) {
+      expect(body, l.id).toContain(l.toClient?.clientId === 'cli-001' ? l.toClient.text : l.text)
+    }
+    for (const l of lines.filter((x) => x.toClient)) expect(body, l.id).not.toContain(l.text)
     for (const l of lines.filter((x) => x.section === 'discussion' || x.section === 'follow_ups')) expect(body, l.id).not.toContain(l.text)
     expect(body.indexOf('What you asked us:')).toBeLessThan(body.indexOf('What we decided:'))
     expect(body).toContain('asked about; comparison to follow')
@@ -64,7 +68,7 @@ describe('the recap', () => {
     heldAndDrafted()
     file()
     const { body } = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft
-    expect(body).toContain('As firm policy, the held-away Vanguard 401(k) counts too: the rule for employer plans is unsettled.')
+    expect(body).toContain('As firm policy, your held-away Vanguard 401(k) counts too: the rule for employer plans is unsettled.')
     expect(body).toContain('Reinvested dividends count as buying.\n- The wash-sale window on the Intel sale runs through March 22, 2026.')
     expect(body).toContain('estimate; consult your tax professional')
   })
@@ -84,6 +88,63 @@ describe('the recap', () => {
     const { body } = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft
     expect(body).toContain('We keep the legacy goal; options to protect it come to the next review.')
     expect(body).not.toContain('Reviewed the rebalance and the harvest in detail.')
+  })
+
+  it('speaks to Robert as "you" past the greeting; Patricia, who is not the addressee, stays Patricia', () => {
+    heldAndDrafted()
+    file()
+    const { body } = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft
+    const [greeting, ...rest] = body.split('\n\n')
+    expect(greeting).toBe('Dear Robert,')
+    expect(rest.join('\n\n')).not.toMatch(/\bRobert\b/)
+    expect(body).toContain("- You will not buy Intel in any of your or Patricia's accounts, including the IRAs, until the wash-sale window closes.")
+    expect(body).toContain('- You will contact the Vanguard plan administrator to correct the beneficiary; we will send our beneficiary checklist.')
+    expect(body).toContain("- Model Roth conversion amounts for the years before your required distributions begin. This is an estimate; consult your tax professional.")
+    expect(body).toContain("- No trades in Patricia's accounts until her risk profile and models are reviewed.")
+  })
+
+  it('files the client wording with the record, in the fingerprint; the firm lines stay as filed', () => {
+    heldAndDrafted()
+    const draft = meeting().notesDraft!
+    file()
+    const filed = meeting().filed!
+    expect(filed.lines).toEqual(draft)
+    expect(filed.lines.find((l) => l.id === 'n-09')).toMatchObject({
+      text: expect.stringMatching(/^Robert will not buy Intel/), toClient: { clientId: 'cli-001', text: expect.stringMatching(/^You will not buy Intel/) },
+    })
+    expect(filed.fingerprint).toBe(notesFingerprint(draft))
+    const reworded = draft.map((l) => (l.id === 'n-09' ? { ...l, toClient: { clientId: 'cli-001', text: 'You will not buy Intel until the window closes.' } } : l))
+    expect(notesFingerprint(reworded)).not.toBe(filed.fingerprint)
+  })
+
+  it('a rewritten line loses its client wording and is read as filed; untouched lines keep theirs', () => {
+    heldAndDrafted()
+    ok(saveNotes(ADRIAN, 'evt-010', edit('n-12', 'Robert will ask Vanguard to correct the beneficiary; we will send our checklist.')))
+    file()
+    const lines = meeting().filed!.lines
+    expect(lines.find((l) => l.id === 'n-12')!.toClient).toBeUndefined()
+    expect(lines.find((l) => l.id === 'n-09')!.toClient?.clientId).toBe('cli-001')
+    const { body } = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft
+    expect(body).toContain('- Robert will ask Vanguard to correct the beneficiary; we will send our checklist.')
+    expect(body).toContain('- You will not buy Intel')
+  })
+
+  it('takes new client wording named in an edit, only on a line the client reads, only for a client of the meeting', () => {
+    heldAndDrafted()
+    const worded = (id: string, clientId: string) => meeting().notesDraft!.map((l) => (l.id === id ? { ...l, toClient: { clientId, text: 'We keep your legacy goal and will bring the options to your next review.' } } : l))
+    expect(saveNotes(ADRIAN, 'evt-010', worded('n-01', 'cli-001'))).toMatchObject({ status: 400, code: 'CLIENT_WORDING_ONLY_ON_CLIENT_LINE' })
+    expect(saveNotes(ADRIAN, 'evt-010', worded('n-10', 'cli-003'))).toMatchObject({ status: 400, code: 'UNKNOWN_CLIENT' })
+    ok(saveNotes(ADRIAN, 'evt-010', worded('n-10', 'cli-001')))
+    file()
+    expect(ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft.body).toContain('- We keep your legacy goal and will bring the options to your next review.')
+  })
+
+  it('reads a line worded for another client as filed', () => {
+    heldAndDrafted()
+    file()
+    const { body } = writeMeetingRecap({ addresseeId: 'cli-002', greetingName: 'Patricia', withOthers: true, filing: meeting().filed!, signerName: 'Adrian Hale' })
+    expect(body).toContain("- Robert will not buy Intel in any of his or Patricia's accounts")
+    expect(body).not.toContain('You will not buy Intel')
   })
 
   it('asking again returns the same draft', () => {

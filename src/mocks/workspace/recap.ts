@@ -38,7 +38,7 @@ export function draftRecap(viewerId: string, clientThreadId: string, eventId: st
   if (!signer) throw new Error(`The filing ${recordBasis.actId} names no recorded actor`)
   const withOthers = event.attendees.some((a) => a.id !== client.id && clients.some((c) => c.id === a.id))
   const letter = writeMeetingRecap({
-    greetingName: firstNameOf(client.fullName), withOthers, filing: meeting.filed, signerName: signer.name,
+    addresseeId: client.id, greetingName: firstNameOf(client.fullName), withOthers, filing: meeting.filed, signerName: signer.name,
     windowSentence: windowEnd === undefined ? undefined : intelWindowSentence(openIntelWindows(client.id).length, windowEnd),
   })
   const draft: Draft = {
