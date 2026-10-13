@@ -7,9 +7,9 @@ import { actAsProspect, advanceProspect, herStep, partySteps, recordCoffee, type
 import {
   createProspectProposal, parseProspectConstraints, previewProspectRevision, readableProspectProposals, reviseProspectProposal, visibleProspectProposal,
 } from '../workspace/prospect-proposals'
-import { viewerFrom } from '../workspace/visibility'
+import { isExternalViewer, viewerFrom } from '../workspace/visibility'
 import { notFound } from './utils'
-import { badRequest, firmViewer, nonEmptyString, readJson, refusal, unauthorised } from './workspace-http'
+import { badRequest, firmViewer, nonEmptyString, readJson, refusal, unauthorised, withoutProvenance } from './workspace-http'
 
 function parseAnswers(value: unknown): { ok: true; value?: RiskAnswer[] } | { ok: false; message: string } {
   if (value === undefined) return { ok: true }
@@ -23,7 +23,12 @@ function parseAnswers(value: unknown): { ok: true; value?: RiskAnswer[] } | { ok
   return { ok: true, value: answers }
 }
 
-const stepped = (r: StepDone | StepFailure) => (r.ok ? HttpResponse.json({ steps: r.steps, ...(r.act ? { act: r.act } : {}) }, { status: 201 }) : refusal(r))
+/** A step's answer. An outsider (she, viewing as herself) reads the act stripped of the firm's provenance. */
+function stepped(r: StepDone | StepFailure, viewer: string) {
+  if (!r.ok) return refusal(r)
+  const act = r.act && isExternalViewer(viewer) ? withoutProvenance(r.act) : r.act
+  return HttpResponse.json({ steps: r.steps, ...(act ? { act } : {}) }, { status: 201 })
+}
 
 /** A step of hers: answered for her, the firm (told 403 by the engine) and no one else; the body is read only after that. */
 function herRoute(step: ProspectStepName) {
@@ -36,13 +41,13 @@ function herRoute(step: ProspectStepName) {
     if (step === 'questionnaire') {
       const answers = parseAnswers(body.answers)
       if (!answers.ok) return badRequest(answers.message)
-      return stepped(herStep(viewer, id, step, answers.value ? { answers: answers.value } : {}))
+      return stepped(herStep(viewer, id, step, answers.value ? { answers: answers.value } : {}), viewer)
     }
     if (step === 'accept') {
       if (body.version !== undefined && typeof body.version !== 'number') return badRequest('version is a number.')
-      return stepped(herStep(viewer, id, step, typeof body.version === 'number' ? { version: body.version } : {}))
+      return stepped(herStep(viewer, id, step, typeof body.version === 'number' ? { version: body.version } : {}), viewer)
     }
-    return stepped(herStep(viewer, id, step))
+    return stepped(herStep(viewer, id, step), viewer)
   })
 }
 
@@ -83,7 +88,7 @@ export const workspaceProspectHandlers = [
     if (!visibleProspect(viewer.viewerId, id)) return notFound()
     const to = (await readJson(request))?.to
     if (to !== 'reply' && to !== 'acceptance') return badRequest("to must be 'reply' or 'acceptance'.")
-    return stepped(advanceProspect(viewer.viewerId, id, to))
+    return stepped(advanceProspect(viewer.viewerId, id, to), viewer.viewerId)
   }),
 
   herRoute('questionnaire'),
@@ -131,6 +136,6 @@ export const workspaceProspectHandlers = [
     if (!viewer.ok) return viewer.response
     const body = await readJson(request)
     if (!body || !nonEmptyString(body.prospectId) || !isProspectStepName(body.step)) return badRequest('prospectId and step (questionnaire, statements or accept) are required.')
-    return stepped(actAsProspect(viewer.viewerId, body.prospectId, body.step))
+    return stepped(actAsProspect(viewer.viewerId, body.prospectId, body.step), viewer.viewerId)
   }),
 ]

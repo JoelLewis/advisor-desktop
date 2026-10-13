@@ -1,4 +1,5 @@
 import { HttpResponse } from 'msw'
+import type { BindingAct } from '@/types/workspace'
 import { isFirmViewer, viewerFrom } from '../workspace/visibility'
 import { notFound } from './utils'
 
@@ -23,3 +24,6 @@ export function firmViewer(request: Request): { ok: true; viewerId: string } | {
   if (!isFirmViewer(viewerId)) return { ok: false, response: notFound() }
   return { ok: true, viewerId }
 }
+
+/** An act as an outsider may read it: what reached them, without the firm's subject, basis, rationale or presenter marker. */
+export const withoutProvenance = ({ subject: _subject, basis: _basis, recordBasis: _recordBasis, editedBy: _editedBy, messageId: _messageId, viaPresenter: _via, rationale: _rationale, bestInterest: _bestInterest, ...act }: BindingAct): BindingAct => act

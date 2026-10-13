@@ -89,6 +89,26 @@ describe('prospect acts over HTTP', () => {
     expect((await call('GET', '/acts?threadId=th-pell-work', PELL)).status).toBe(404)
   })
 
+  it('her own step responses carry none of the firm\'s provenance', async () => {
+    const FIRM_ONLY = ['subject', 'basis', 'recordBasis', 'bestInterest', 'viaPresenter', 'rationale', 'editedBy', 'messageId']
+    await call('POST', '/prospects/prsp-011/coffee', ADRIAN, { body: 'Coffee.' })
+    const answered = await call('POST', '/prospects/prsp-011/questionnaire', PELL, {})
+    const statements = await call('POST', '/prospects/prsp-011/statements', PELL, {})
+    const { body: proposal } = await call('POST', '/prospects/prsp-011/proposals', ADRIAN, {})
+    await call('POST', '/acts', ADRIAN, { kind: 'approve_proposal', proposalId: proposal.id, version: 1, fingerprint: proposal.versions[0].fingerprint, rationale: 'Growth fits her answers.' })
+    await call('POST', '/acts', ADRIAN, { kind: 'deliver_disclosure', prospectId: PELL, document: 'form_crs' })
+    expect((await call('POST', '/acts', ADRIAN, { kind: 'send_to_party', proposalId: proposal.id })).status).toBe(201)
+    const accepted = await call('POST', '/prospects/prsp-011/accept', PELL, { version: 1 })
+    expect(accepted).toMatchObject({ status: 201, body: { act: { kind: 'accept_proposal' } } })
+    for (const [step, res] of [['questionnaire', answered], ['statements', statements], ['accept', accepted]] as const) {
+      expect(res.status, step).toBe(201)
+      if (res.body.act) for (const key of FIRM_ONLY) expect(res.body.act, `${step} ${key}`).not.toHaveProperty(key)
+    }
+    const firmCopy = (await call('GET', '/acts?threadId=th-pell', ADRIAN)).body.find((a: { kind: string }) => a.kind === 'accept_proposal')
+    expect(firmCopy).toMatchObject({ subject: { id: proposal.id } })
+    expect(firmCopy).toHaveProperty('viaPresenter')
+  })
+
   it('proposals over HTTP: list, revise, preview; nothing is edited or deleted', async () => {
     await call('POST', '/prospects/prsp-011/coffee', ADRIAN, { body: 'Coffee.' })
     await call('POST', '/prospects/prsp-011/advance', ADRIAN, { to: 'reply' })
