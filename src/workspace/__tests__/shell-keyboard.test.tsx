@@ -41,6 +41,7 @@ describe('keyboard in the shell', () => {
       'Workspace home',
       'Thread · Brief',
       'Thread · Johnson Rebalance Review',
+      'Thread · Johnson annual review',
       'Thread · Robert Johnson',
       'Account · Robert Johnson Individual',
       'Supervision',

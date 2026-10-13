@@ -13,7 +13,7 @@ it('switching viewer refetches and never shows the previous viewer\'s threads', 
     <QueryClientProvider client={client}><ViewerProvider>{children}</ViewerProvider></QueryClientProvider>
   )
   const { result } = renderHook(() => ({ v: useViewer(), t: useThreads() }), { wrapper })
-  await waitFor(() => expect(result.current.t.data?.length).toBe(3))
+  await waitFor(() => expect(result.current.t.data?.length).toBe(4))
   act(() => result.current.v.setViewerId('cli-001'))
   await waitFor(() => expect(result.current.t.data?.map((t) => t.id)).toEqual(['th-robert']))
   expect(client.getQueryData(['workspace', 'cli-001', 'threads'])).toBeDefined()

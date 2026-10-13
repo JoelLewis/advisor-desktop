@@ -18,6 +18,9 @@ describe('people and permissions', () => {
     ['cli-001', 'release_orders', false],
     ['cli-001', 'post_firm', false], ['cli-001', 'send_to_client', false],
     ['drift-monitor', 'send_to_client', false], ['nobody', 'post_firm', false],
+    ['user-001', 'prepare_meeting', true], ['user-001', 'file_meeting_record', true],
+    ['user-002', 'prepare_meeting', false], ['user-002', 'file_meeting_record', false],
+    ['user-003', 'file_meeting_record', false], ['cco-001', 'file_meeting_record', false], ['cli-001', 'prepare_meeting', false],
   ] as const)('can(%s, %s) is %s', (person, act, expected) => {
     expect(can(person, act)).toBe(expected)
   })
@@ -30,10 +33,10 @@ describe('people and permissions', () => {
 })
 
 describe('phase 3 agents', () => {
-  it('the desk has five agents, each producing one kind of output', () => {
+  it('the desk has seven agents, each producing one kind of output', () => {
     expect(AGENTS.map((a) => [a.id, a.produces])).toEqual([
       ['drift-monitor', 'findings'], ['pretrade-check', 'findings'], ['harvest-scanner', 'findings'],
-      ['proposal', 'proposals'], ['client-letter', 'letters'],
+      ['proposal', 'proposals'], ['client-letter', 'letters'], ['meeting-prep', 'agenda'], ['meeting-notes', 'notes'],
     ])
   })
   it('the Proposal Agent may not approve or release; the Client Letter Agent may not send', () => {
@@ -50,5 +53,30 @@ describe('phase 4 · separation of duties', () => {
       for (const act of compliance) expect(can(person.id, act), `${person.id} ${act}`).toBe(person.id === CCO_ID)
     }
     expect(personById(CCO_ID)?.name).toBe('Mark Davis')
+  })
+})
+
+describe('phase 5 · meeting agents', () => {
+  it('Meeting Prep measures and proposes; it files nothing and contacts no one', () => {
+    expect(AGENTS.find((a) => a.id === 'meeting-prep')).toMatchObject({
+      name: 'Meeting Prep', scope: { may: ['measure the household', 'propose an agenda'], mayNot: ['file notes', 'contact the client', 'post in a client thread'] },
+    })
+  })
+  it('Meeting Notes drafts with citations; it never files, assigns or recommends', () => {
+    expect(AGENTS.find((a) => a.id === 'meeting-notes')).toMatchObject({
+      name: 'Meeting Notes',
+      scope: { may: ['draft notes from the transcript, each line citing it'], mayNot: ['file', 'assign people', 'add a recommendation nobody made', 'post in a client thread'] },
+    })
+  })
+  it('the Client Letter Agent may also draft a recap from a filed record, and still never sends', () => {
+    expect(AGENTS.find((a) => a.id === 'client-letter')?.scope).toEqual({
+      may: ['draft a client message from an approved version', 'draft a meeting recap from a filed record'], mayNot: ['send', 'post in a client thread'],
+    })
+  })
+  it('only the advisor prepares a meeting and files its record', () => {
+    for (const person of PEOPLE) {
+      expect(can(person.id, 'prepare_meeting'), person.id).toBe(person.role === 'advisor')
+      expect(can(person.id, 'file_meeting_record'), person.id).toBe(person.role === 'advisor')
+    }
   })
 })

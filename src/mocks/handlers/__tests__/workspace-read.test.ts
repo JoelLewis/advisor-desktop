@@ -29,7 +29,7 @@ describe('workspace read API', () => {
   it('the directory lists people and agents', async () => {
     const { body } = await call('/people', 'user-001')
     expect(body.people.find((p: { id: string }) => p.id === 'user-001').name).toBe('Adrian Hale')
-    expect(body.agents.map((a: { id: string }) => a.id)).toEqual(['drift-monitor', 'pretrade-check', 'harvest-scanner', 'proposal', 'client-letter'])
+    expect(body.agents.map((a: { id: string }) => a.id)).toEqual(['drift-monitor', 'pretrade-check', 'harvest-scanner', 'proposal', 'client-letter', 'meeting-prep', 'meeting-notes'])
     expect(body.permissions['user-001']).toContain('send_to_client')
     expect(body.permissions['user-002']).not.toContain('send_to_client')
   })
@@ -45,7 +45,7 @@ describe('directory scoping', () => {
   it('a firm viewer keeps the full directory', async () => {
     const { body } = await call('/people', 'user-001')
     expect(body.people.length).toBeGreaterThan(3)
-    expect(body.agents).toHaveLength(5)
+    expect(body.agents).toHaveLength(7)
     expect(Object.keys(body.permissions).length).toBe(body.people.length)
   })
   it('a client is served the acts in their thread without the subject they were made from', async () => {

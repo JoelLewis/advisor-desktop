@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   MINUS, MeasureError, normaliseMinus, isNegative, fmtMoney, fmtResult, fmtPrice, fmtWeight, fmtReturn, fmtDrift,
   fmtTolerance, fmtQuantity, splitFraction, fmtDays, fmtScore, fmtDate, fmtTimestamp, clientMoney,
-  clientPercent, clientDate,
+  clientPercent, clientDate, fmtEasternTime, fmtEasternRange,
 } from '@/kit/measure'
 
 describe('measure', () => {
@@ -127,5 +127,12 @@ describe('measure', () => {
     it('converts an offset datetime to UTC', () => {
       expect(fmtTimestamp('2026-02-25T07:00:00-05:00')).toBe('2026-02-25 12:00 UTC')
     })
+  })
+  it('reads a time in Eastern Time, 24-hour, and a range with its zone', () => {
+    expect(fmtEasternTime('2026-02-25T19:00:00.000Z')).toBe('14:00')
+    expect(fmtEasternTime('2026-02-25T14:00:00-05:00')).toBe('14:00')
+    expect(fmtEasternTime('2026-02-25T05:05:00Z')).toBe('00:05')
+    expect(fmtEasternRange('2026-02-25T19:00:00.000Z', '2026-02-25T20:15:00.000Z')).toBe('14:00–15:15 ET')
+    expect(() => fmtEasternTime('2026-02-25T14:00:00')).toThrow(MeasureError)
   })
 })

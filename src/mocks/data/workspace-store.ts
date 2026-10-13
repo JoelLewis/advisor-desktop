@@ -1,12 +1,13 @@
 import type { SupervisionRecord } from '@/types/compliance'
+import type { Meeting } from '@/types/workspace-meeting'
 import type { BindingAct, Draft, Message, Thread } from '@/types/workspace'
 import type { ApprovalRecord, Proposal, StagedOrder } from '@/types/workspace-proposal'
 import { eventTime } from '@/lib/clock'
 import { briefMessages } from '@/mocks/workspace/brief'
 import { bookVersion, resetLedger } from './portfolio-ledger'
-import { SEED_LAST_SEQUENCE, SEED_MESSAGES, SEED_THREADS } from './workspace-seed'
+import { SEED_LAST_SEQUENCE, SEED_MEETINGS, SEED_MESSAGES, SEED_THREADS } from './workspace-seed'
 
-type Counter = 'msg' | 'draft' | 'act' | 'proposal' | 'staged' | 'record'
+type Counter = 'msg' | 'draft' | 'act' | 'proposal' | 'staged' | 'record' | 'agenda' | 'task' | 'note'
 
 export type WorkspaceState = {
   threads: Thread[]
@@ -17,6 +18,8 @@ export type WorkspaceState = {
   approvals: ApprovalRecord[]
   staged: StagedOrder[]
   supervisionRecords: SupervisionRecord[]
+  /** The session's meetings: each one's state machine, agenda versions, notes, filing and tasks. */
+  meetings: Meeting[]
   /** The book version the Brief's findings measured. */
   briefBook: number
   sequence: number
@@ -33,9 +36,10 @@ function seed(): WorkspaceState {
     approvals: [],
     staged: [],
     supervisionRecords: [],
+    meetings: SEED_MEETINGS.map((m) => ({ ...m, agenda: [], tasks: [] })),
     briefBook: bookVersion(),
     sequence: SEED_LAST_SEQUENCE,
-    counters: { msg: 0, draft: 0, act: 0, proposal: 0, staged: 0, record: 0 },
+    counters: { msg: 0, draft: 0, act: 0, proposal: 0, staged: 0, record: 0, agenda: 0, task: 0, note: 0 },
   }
 }
 
@@ -66,7 +70,7 @@ export function nextNumber(counter: Counter): number {
   return s.counters[counter]
 }
 
-const pad = (n: number) => String(n).padStart(4, '0')
+export const pad = (n: number) => String(n).padStart(4, '0')
 
 export function nextId(prefix: 'msg' | 'draft'): string {
   return `${prefix}-${pad(nextNumber(prefix))}`
@@ -80,4 +84,9 @@ export function commitActId(): string {
 export function advanceClockTo(sequence: number): void {
   const s = store()
   s.sequence = Math.max(s.sequence, sequence)
+}
+
+/** The session clock's present: the time of the latest recorded event (the frozen now plus the sequence). */
+export function sessionNow(): string {
+  return eventTime(store().sequence)
 }

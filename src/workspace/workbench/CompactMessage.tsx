@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { fmtTimestamp } from '@/kit/measure'
+import { fmtEasternRange, fmtEasternTime, fmtTimestamp } from '@/kit/measure'
 import { personIn } from '@/workspace/people/directory-people'
 import { authorName } from '@/workspace/proposal/author-name'
 import type { AgentId, Directory, Message } from '@/types/workspace'
@@ -18,6 +18,11 @@ export function CompactMessage({ message, directory }: { message: Message; direc
     case 'carried': return <Line who={personIn(directory, message.carriedBy).name} at={message.at}>{`From the Brief: ${message.finding.claim}`}</Line>
     case 'brief_summary': return <Line who="Brief" at={message.at}>Ranked summary.</Line>
     case 'fills': return <Line who="Execution" at={message.at}>{`${message.fills.length} ${message.fills.length === 1 ? 'order' : 'orders'} filled from v${message.version}.`}</Line>
+    case 'meeting_notice': return <Line who="Brief" at={message.at}>{`Meeting at ${fmtEasternTime(message.start)} ET · ${message.title}`}</Line>
+    case 'agenda_version': return <Line who={authorName(message.author, directory)} at={message.at}>{`Agenda v${message.version} · ${message.changeSummary}`}</Line>
+    case 'meeting_held': return <Line who="Record" at={message.at}>{`Meeting held · ${fmtEasternRange(message.start, message.end)} · transcript received`}</Line>
+    case 'notes_drafted': return <Line who={agentName(directory, message.agentId)} at={message.at}>Drafted the notes from the transcript.</Line>
+    case 'meeting_tasks': return <Line who="Record" at={message.at}>{`${message.tasks.length} follow-up ${message.tasks.length === 1 ? 'task' : 'tasks'} from ${message.filedActId}.`}</Line>
   }
 }
 

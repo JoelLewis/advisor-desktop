@@ -11,6 +11,11 @@ import type { Directory, Message, Person, Thread } from '@/types/workspace'
 import { ActRecordSlip } from './ActRecordSlip'
 import { AgentFindingView } from './AgentFindingView'
 import { FillsView } from './FillsView'
+import { AgendaVersionLine } from './AgendaVersionLine'
+import { MeetingHeldLine } from './MeetingHeldLine'
+import { MeetingNoticeView } from './MeetingNoticeView'
+import { MeetingTasksView } from './MeetingTasksView'
+import { NotesDraftedLine } from './NotesDraftedLine'
 import { BriefSummaryView } from './BriefSummaryView'
 import { CarriedFindingView } from './CarriedFindingView'
 import { CarryControl } from './CarryControl'
@@ -55,6 +60,16 @@ export function MessageView({ message, thread, directory }: { message: Message; 
       return <BriefSummaryView summary={message} directory={directory} />
     case 'fills':
       return <FillsView message={message} />
+    case 'meeting_notice':
+      return <MeetingNoticeView notice={message} />
+    case 'agenda_version':
+      return <AgendaVersionLine message={message} directory={directory} />
+    case 'meeting_held':
+      return <MeetingHeldLine message={message} />
+    case 'notes_drafted':
+      return <NotesDraftedLine message={message} directory={directory} />
+    case 'meeting_tasks':
+      return <MeetingTasksView message={message} directory={directory} />
     default:
       return unknownKind(message)
   }

@@ -98,6 +98,18 @@ export function fmtTimestamp(iso: string): string {
   return `${utc.slice(0, 10)} ${utc.slice(11, 16)} UTC`
 }
 
+const easternClock = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'America/New_York' })
+
+/** A time as the calendar states it, in New York: "14:00". The instant must state its offset. */
+export function fmtEasternTime(iso: string): string {
+  return easternClock.format(parseIso(iso))
+}
+
+/** A meeting's window in New York time, with the zone: "14:00–15:15 ET". */
+export function fmtEasternRange(start: string, end: string): string {
+  return `${fmtEasternTime(start)}–${fmtEasternTime(end)} ET`
+}
+
 export function clientMoney(v: number): string {
   assertFinite(v)
   return sign(v, `$${numberFormat(0, 0).format(Math.abs(v))}`, false)

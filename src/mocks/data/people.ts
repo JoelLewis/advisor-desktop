@@ -17,11 +17,13 @@ export const AGENTS: readonly AgentProfile[] = [
   { id: 'pretrade-check', name: 'Pre-trade Check', produces: 'findings', scope: { may: ['run checks and report'], mayNot: ['clear a block', 'release orders', 'post in a client thread'] } },
   { id: 'harvest-scanner', name: 'Harvest Scanner', produces: 'findings', scope: { may: ['measure harvestable losses and their windows'], mayNot: ['stage trades', 'post in a client thread'] } },
   { id: 'proposal', name: 'Proposal Agent', produces: 'proposals', scope: { may: ['draft and revise proposals under constraints'], mayNot: ['approve', 'release', 'post in a client thread'] } },
-  { id: 'client-letter', name: 'Client Letter Agent', produces: 'letters', scope: { may: ['draft a client message from an approved version'], mayNot: ['send', 'post in a client thread'] } },
+  { id: 'client-letter', name: 'Client Letter Agent', produces: 'letters', scope: { may: ['draft a client message from an approved version', 'draft a meeting recap from a filed record'], mayNot: ['send', 'post in a client thread'] } },
+  { id: 'meeting-prep', name: 'Meeting Prep', produces: 'agenda', scope: { may: ['measure the household', 'propose an agenda'], mayNot: ['file notes', 'contact the client', 'post in a client thread'] } },
+  { id: 'meeting-notes', name: 'Meeting Notes', produces: 'notes', scope: { may: ['draft notes from the transcript, each line citing it'], mayNot: ['file', 'assign people', 'add a recommendation nobody made', 'post in a client thread'] } },
 ]
 
 const PERMISSIONS: Readonly<Record<Person['role'], readonly Act[]>> = {
-  advisor: ['post_firm', 'draft_for_client', 'send_to_client', 'approve_proposal', 'withdraw_approval'],
+  advisor: ['post_firm', 'draft_for_client', 'send_to_client', 'approve_proposal', 'withdraw_approval', 'prepare_meeting', 'file_meeting_record'],
   csa: ['post_firm', 'draft_for_client'],
   analyst: ['post_firm'],
   compliance: ['post_firm', 'read_all_firm_threads', 'release_orders', 'return_to_advisor', 'escalate', 'dispose_alert', 'review_correspondence'],

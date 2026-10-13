@@ -7,16 +7,18 @@ import { remeasureBrief } from '../brief-remeasure'
 import { approvedStoryV3, approvedV1, release } from './story-fixture'
 
 type Finding = Extract<Message, { kind: 'agent_finding' }>
-const brief = () => store().messages.filter((m) => m.threadId === BRIEF_THREAD_ID)
+const brief = () => store().messages.filter((m) => m.threadId === BRIEF_THREAD_ID && m.kind !== 'meeting_notice')
 const findings = () => brief().filter((m): m is Finding => m.kind === 'agent_finding')
 const summary = () => {
   const s = brief().find((m) => m.kind === 'brief_summary')
   if (s?.kind !== 'brief_summary') throw new Error('The Brief has a summary')
   return s
 }
+/** The Brief's measured messages; the meeting line is seeded, not measured, so it is left out. */
 async function openBrief() {
   const res = await fetch(`/api/workspace/threads/${BRIEF_THREAD_ID}`, { headers: { 'X-Viewer': 'user-001' } })
-  return (await res.json()) as { messages: Message[] }
+  const { messages } = (await res.json()) as { messages: Message[] }
+  return { messages: messages.filter((m) => m.kind !== 'meeting_notice') }
 }
 
 describe('the Brief re-measures on view once the book has moved', () => {
