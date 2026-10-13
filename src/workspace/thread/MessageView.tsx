@@ -18,6 +18,12 @@ import { MeetingTasksView } from './MeetingTasksView'
 import { NotesDraftedLine } from './NotesDraftedLine'
 import { BriefSummaryView } from './BriefSummaryView'
 import { CarriedFindingView } from './CarriedFindingView'
+import { DisclosureLine } from './DisclosureLine'
+import { NextActionView } from './NextActionView'
+import { OnboardingOpenedView } from './OnboardingOpenedView'
+import { PartyStepLine } from './PartyStepLine'
+import { ProspectNoteView } from './ProspectNoteView'
+import { ProspectProposalVersionLine } from './ProspectProposalVersionLine'
 import { CarryControl } from './CarryControl'
 import { canPostIn } from './can-post'
 import { ProposalVersionLine } from './ProposalVersionLine'
@@ -70,6 +76,24 @@ export function MessageView({ message, thread, directory }: { message: Message; 
       return <NotesDraftedLine message={message} directory={directory} />
     case 'meeting_tasks':
       return <MeetingTasksView message={message} directory={directory} />
+    case 'next_action':
+      return <NextActionView action={message} />
+    case 'disclosure_delivered':
+      return <DisclosureLine message={message} />
+    case 'party_step':
+      return <PartyStepLine message={message} directory={directory} />
+    case 'prospect_note':
+      return <ProspectNoteView note={message} directory={directory} />
+    case 'prospect_proposal': {
+      // Task 11 replaces this line with the proposal's embed.
+      const agent = directory.agents.find((a) => a.id === message.agentId)
+      if (!agent) throw new Error(`No agent "${message.agentId}" in the directory`)
+      return <ByAgent name={agent.name} at={message.at}><p className="text-copy">{`Drafted the ${message.title}.`}</p></ByAgent>
+    }
+    case 'prospect_proposal_version':
+      return <ProspectProposalVersionLine message={message} directory={directory} />
+    case 'onboarding_opened':
+      return <OnboardingOpenedView message={message} directory={directory} />
     default:
       return unknownKind(message)
   }

@@ -512,7 +512,7 @@ export const nbas: NBA[] = [
     trigger: { source: 'crm', condition: 'referral_mention', value: 'Dr. Amanda Pell — ~$3M', detectedAt: '2026-02-20T14:00:00Z' },
     suggestedAction: 'Deliver Form CRS before the coffee; send James a thank-you note',
     estimatedImpact: 22_500, createdAt: '2026-02-20T14:15:00Z', dismissed: false,
-    actionRoute: { path: '/' },
+    actionRoute: { path: '/t/th-pell' },
   },
   // ── Additional batch items for volume ──
   {

@@ -72,7 +72,7 @@ describe('holding the meeting', () => {
     for (const viewer of ['user-002', 'user-003', 'cco-001']) expect(holdMeeting(viewer, 'evt-010'), viewer).toMatchObject({ ok: false, status: 403, code: 'NOT_PERMITTED' })
     expect(holdMeeting('cli-001', 'evt-010')).toMatchObject({ ok: false, status: 404, code: 'NO_MEETING' })
     expect(store().meetings[0]?.state).toBe('scheduled')
-    expect(store().sequence).toBe(6)
+    expect(store().sequence).toBe(8)
   })
 })
 

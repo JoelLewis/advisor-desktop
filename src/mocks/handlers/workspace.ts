@@ -27,9 +27,9 @@ function externalDirectory(partyId: string): Directory {
 }
 
 /** The record kinds an outsider may read in their own thread: what reached them. */
-const PARTY_VISIBLE_ACTS: ReadonlySet<BindingActKind> = new Set<BindingActKind>(['send_to_party'])
+const PARTY_VISIBLE_ACTS: ReadonlySet<BindingActKind> = new Set<BindingActKind>(['send_to_party', 'deliver_disclosure', 'accept_proposal'])
 
-const withoutProvenance = ({ subject: _subject, basis: _basis, recordBasis: _recordBasis, editedBy: _editedBy, messageId: _messageId, viaPresenter: _via, rationale: _rationale, ...act }: BindingAct): BindingAct => act
+const withoutProvenance = ({ subject: _subject, basis: _basis, recordBasis: _recordBasis, editedBy: _editedBy, messageId: _messageId, viaPresenter: _via, rationale: _rationale, bestInterest: _bestInterest, ...act }: BindingAct): BindingAct => act
 
 const isAgentId = (value: string): value is AgentId => AGENTS.some((a) => a.id === value)
 

@@ -1,6 +1,8 @@
 import type { Message, Thread } from '@/types/workspace'
 import type { Meeting } from '@/types/workspace-meeting'
 import { eventTime } from '@/lib/clock'
+import { PELL_ID, PELL_THREAD_ID, PELL_WORK_THREAD_ID } from './prospect-seed'
+import { PELL_INTRO } from './prospect-script'
 
 export const SEED_THREADS: readonly Thread[] = [
   { id: 'th-brief', title: 'Brief', visibility: 'private', ownerId: 'user-001', memberIds: ['user-001'], agentIds: ['drift-monitor', 'harvest-scanner'],
@@ -11,6 +13,10 @@ export const SEED_THREADS: readonly Thread[] = [
     agentIds: ['meeting-prep', 'meeting-notes'], subject: { type: 'household', id: 'hh-001' } },
   { id: 'th-robert', title: 'Robert Johnson', visibility: 'client', partyId: 'cli-001', memberIds: ['cli-001', 'user-001', 'user-002'],
     agentIds: [], subject: { type: 'client', id: 'cli-001' } },
+  { id: PELL_THREAD_ID, title: 'Dr. Amanda Pell', visibility: 'client', partyId: PELL_ID, memberIds: [PELL_ID, 'user-001', 'user-002'],
+    agentIds: [], subject: { type: 'prospect', id: PELL_ID } },
+  { id: PELL_WORK_THREAD_ID, title: 'Pell · prospect work', visibility: 'internal', memberIds: ['user-001', 'user-002', 'user-003'],
+    agentIds: [], subject: { type: 'prospect', id: PELL_ID } },
 ]
 
 /**
@@ -31,10 +37,15 @@ export const SEED_MESSAGES: readonly Message[] = [
     title: 'Johnson annual review', start: '2026-02-25T19:00:00.000Z', end: '2026-02-25T20:15:00.000Z' },
   { kind: 'text', id: 'msg-s06', threadId: 'th-johnson-meeting', authorId: 'user-002', at: eventTime(6),
     body: "Robert and Patricia confirmed this afternoon's annual review." },
+  { kind: 'text', id: 'msg-s07', threadId: PELL_THREAD_ID, authorId: PELL_ID, at: eventTime(7), body: PELL_INTRO },
+  // The Brief's line for the referral (nba-015), linking to her thread.
+  { kind: 'next_action', id: 'msg-s08', threadId: 'th-brief', at: eventTime(8), nbaId: 'nba-015', title: 'Referral: Dr. Amanda Pell',
+    detail: 'James Thompson introduced her on Feb 20. Coffee with Adrian Hale today at 15:30 ET; deliver Form CRS before it.',
+    targetThreadId: PELL_THREAD_ID, linkLabel: 'Open her thread' },
 ]
 
 /** The last event-clock sequence the seed uses; the session's own events follow it. */
-export const SEED_LAST_SEQUENCE = 6
+export const SEED_LAST_SEQUENCE = 8
 
 export const MEETING_THREAD_ID = 'th-johnson-meeting'
 

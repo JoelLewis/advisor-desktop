@@ -34,13 +34,13 @@ describe('the Brief, ready on load', () => {
   })
 
   it('is in the store on load, and asking its agents again adds nothing', () => {
-    const before = store().messages.filter((m) => m.threadId === BRIEF_THREAD_ID && m.kind !== 'meeting_notice').map((m) => m.id)
+    const before = store().messages.filter((m) => m.threadId === BRIEF_THREAD_ID && m.kind !== 'meeting_notice' && m.kind !== 'next_action').map((m) => m.id)
     expect(before).toEqual(briefMessages().map((m) => m.id))
     for (const agent of ['drift-monitor', 'harvest-scanner'] as const) {
       const r = runAgent('user-001', BRIEF_THREAD_ID, agent)
       if (!r.ok) throw new Error(r.message)
       expect(r.findings.every((f) => before.includes(f.id))).toBe(true)
     }
-    expect(store().messages.filter((m) => m.threadId === BRIEF_THREAD_ID && m.kind !== 'meeting_notice')).toHaveLength(before.length)
+    expect(store().messages.filter((m) => m.threadId === BRIEF_THREAD_ID && m.kind !== 'meeting_notice' && m.kind !== 'next_action')).toHaveLength(before.length)
   })
 })

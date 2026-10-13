@@ -1,5 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { ensurePellThreads } from '@/mocks/workspace/__tests__/pell-threads'
+import { describe, it, expect } from 'vitest'
 
 async function call(method: string, path: string, viewer: string | undefined, body?: unknown) {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -22,7 +21,6 @@ const FIRM_ROUTES: readonly (readonly [string, string, unknown?])[] = [
   ['POST', '/threads/th-robert/drafts/recap', { eventId: 'evt-010' }],
 ]
 
-beforeEach(ensurePellThreads)
 
 describe('the boundary over HTTP', () => {
   it.each(['prsp-011', 'cli-001'])('%s gets 404 from every firm route, before any body is read', async (viewer) => {

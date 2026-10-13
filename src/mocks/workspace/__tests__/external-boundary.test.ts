@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { store } from '@/mocks/data/workspace-store'
@@ -14,7 +14,6 @@ import { draftingClientThread } from '../letters'
 import { sendToParty } from '../acts'
 import { disposeAlert, reviewCorrespondence } from '../compliance-acts'
 import { partyOf, partyOfThread } from '../party'
-import { ensurePellThreads } from './pell-threads'
 
 const PELL = 'prsp-011'
 const ROBERT = 'cli-001'
@@ -34,7 +33,6 @@ function sourceFiles(dir: string): string[] {
   })
 }
 
-beforeEach(ensurePellThreads)
 
 describe('who is outside the firm', () => {
   it.each([[PELL, true], [ROBERT, true], [ADRIAN, false], ['cco-001', false], ['nobody', false]] as const)(

@@ -1,5 +1,6 @@
 import type { Fill } from './workspace-proposal'
 import type { MeetingTask } from './workspace-meeting'
+import type { BestInterestRecord, DisclosureDocument, OnboardingItem } from './workspace-prospect'
 
 export type Role = 'advisor' | 'csa' | 'analyst' | 'compliance' | 'client' | 'prospect'
 export type Person = { id: string; name: string; role: Role }
@@ -9,7 +10,7 @@ export type AgentScope = { may: string[]; mayNot: string[] }
 export type AgentOutput = 'findings' | 'proposals' | 'letters' | 'agenda' | 'notes'
 export type AgentProfile = { id: AgentId; name: string; produces: AgentOutput; scope: AgentScope }
 export type Visibility = 'private' | 'internal' | 'client'
-export type Subject = { type: 'account' | 'household' | 'client' | 'prospect' | 'draft' | 'proposal' | 'alert' | 'message' | 'meeting'; id: string }
+export type Subject = { type: 'account' | 'household' | 'client' | 'prospect' | 'draft' | 'proposal' | 'prospect_proposal' | 'alert' | 'message' | 'meeting'; id: string }
 export type Thread = { id: string; title: string; visibility: Visibility; ownerId?: string; partyId?: string; memberIds: string[]; agentIds: AgentId[]; subject?: Subject }
 export type FigureUnit = 'USD' | 'pp' | '%' | 'sh' | 'd'
 export type Figure = { label: string; value: number; unit: FigureUnit; source: string }   // pp and % values are fractions (0.132)
@@ -40,13 +41,27 @@ export type Message =
   | { kind: 'notes_drafted'; id: string; threadId: string; at: string; eventId: string; agentId: AgentId }
   /** The follow-up tasks the filing created, as they were created. */
   | { kind: 'meeting_tasks'; id: string; threadId: string; at: string; eventId: string; filedActId: string; tasks: MeetingTask[] }
+  /** The Brief's line for a next-best action, linking to the thread where it is worked. */
+  | { kind: 'next_action'; id: string; threadId: string; at: string; nbaId: string; title: string; detail: string; targetThreadId: string; linkLabel: string }
+  /** A disclosure delivered to a prospect, in her thread. */
+  | { kind: 'disclosure_delivered'; id: string; threadId: string; at: string; prospectId: string; document: DisclosureDocument; actId: string }
+  /** A step she took: her questionnaire answered, her statements shared. */
+  | { kind: 'party_step'; id: string; threadId: string; at: string; authorId: string; step: 'questionnaire' | 'statements'; summary: string }
+  /** A labelled firm note about a prospect meeting that is not a Meeting record (the coffee). */
+  | { kind: 'prospect_note'; id: string; threadId: string; at: string; authorId: string; prospectId: string; eventId: string; title: string; start: string; end: string; body: string }
+  /** The Proposal Agent drafted a prospect proposal. */
+  | { kind: 'prospect_proposal'; id: string; threadId: string; at: string; agentId: AgentId; proposalId: string; title: string }
+  | { kind: 'prospect_proposal_version'; id: string; threadId: string; at: string; proposalId: string; version: number; author: VersionAuthor; changeSummary: string }
+  /** Her acceptance opened onboarding: the checklist as it was opened. */
+  | { kind: 'onboarding_opened'; id: string; threadId: string; at: string; prospectId: string; acceptanceActId: string; items: OnboardingItem[] }
 /** The acts only compliance performs. */
 export type ComplianceActKind = 'release_orders' | 'return_to_advisor' | 'escalate' | 'dispose_alert' | 'review_correspondence'
-export type BindingActKind = 'approve_proposal' | 'withdraw_approval' | 'send_to_party' | 'file_meeting_record' | ComplianceActKind
+export type BindingActKind = 'approve_proposal' | 'withdraw_approval' | 'send_to_party' | 'deliver_disclosure' | 'accept_proposal' | 'file_meeting_record' | ComplianceActKind
 export type AlertOutcome = 'approve' | 'reject' | 'request_changes'
 export type CorrespondenceOutcome = 'reviewed' | 'flagged'
-/** Firm-only: the act was recorded through the presenter's "Demo · act as Mark Davis" shortcut, by this presenter. */
-export type ViaPresenter = { presenterId: string }
+export type PresenterPath = 'shortcut' | 'view_as' | 'scripted'
+/** Firm-only: how the one presenter performed an act recorded as someone else. No path: the shortcut. */
+export type ViaPresenter = { presenterId: string; path?: PresenterPath }
 export type BindingAct = {
   id: string
   kind: BindingActKind
@@ -70,6 +85,10 @@ export type BindingAct = {
   /** The approval a release, return or escalation acted on. */
   approvalActId?: string
   viaPresenter?: ViaPresenter
+  /** The disclosures this act delivered: the one a deliver_disclosure act names, or ADV 2A delivered with a proposal. */
+  delivers?: DisclosureDocument[]
+  /** Firm only: filed with the approval of a prospect proposal. */
+  bestInterest?: BestInterestRecord
 }
 export type LetterBasis = { proposalId: string; version: number; fingerprint: string }
 /** A recap's basis: the filing it was written from and the Intel window end it states. It is stale once either no longer matches. */
