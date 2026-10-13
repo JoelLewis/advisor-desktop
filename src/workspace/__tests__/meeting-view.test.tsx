@@ -73,6 +73,19 @@ describe('the meeting full view', () => {
     expect(transcriptLine('t-07')).not.toHaveAttribute('data-highlighted')
     act(() => cite.focus())
     await waitFor(() => expect(transcriptLine('t-07')).toHaveAttribute('data-highlighted', 'true'))
+    // The pointer leaving a focused citation keeps its line lit: focus still points at it.
+    await user.hover(cite)
+    await user.unhover(cite)
+    expect(transcriptLine('t-07')).toHaveAttribute('data-highlighted', 'true')
+  })
+
+  it('a citation is described by the transcript line it cites', async () => {
+    await heldWithNotes()
+    await openMeeting()
+    const decisions = await screen.findByRole('list', { name: 'Decisions' })
+    const cite = within(decisions).getByRole('button', { name: 'Cites t-07 · Patricia Johnson' })
+    expect(cite).toHaveAttribute('aria-describedby', 'transcript-t-07')
+    expect(cite).toHaveAccessibleDescription(transcriptLine('t-07')!.textContent!)
   })
 
   it('unsaved edits block filing; saved, the record files from here, once, with its tasks', async () => {

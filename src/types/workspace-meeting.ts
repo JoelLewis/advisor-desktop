@@ -10,7 +10,7 @@ export type AgendaItem = { id: string; title: string; source: AgendaSource }
 /** An item as a write names it: an existing item keeps its id; a new one has none yet. */
 export type AgendaItemInput = { id?: string; title: string; source: AgendaSource }
 /** Append-only: each change to the agenda is a new version. */
-export type AgendaVersion = { n: number; items: AgendaItem[]; author: VersionAuthor; at: string }
+export type AgendaVersion = { n: number; items: AgendaItem[]; author: VersionAuthor; at: string; changeSummary: string }
 
 export const NOTE_SECTIONS = ['discussion', 'decisions', 'client_requests', 'follow_ups'] as const
 export type NoteSection = (typeof NOTE_SECTIONS)[number]

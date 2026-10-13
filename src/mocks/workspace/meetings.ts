@@ -115,7 +115,7 @@ export const currentAgenda = (meeting: Meeting): AgendaVersion | undefined => me
 /** Appends an agenda version and posts its line in the meeting thread. */
 export function appendAgenda(meeting: Meeting, items: AgendaItem[], author: VersionAuthor, changeSummary: string): Meeting {
   const at = nextAt()
-  const version: AgendaVersion = { n: meeting.agenda.length + 1, items, author, at }
+  const version: AgendaVersion = { n: meeting.agenda.length + 1, items, author, at, changeSummary }
   const next: Meeting = { ...meeting, agenda: [...meeting.agenda, version] }
   replaceMeeting(next)
   store().messages.push({ kind: 'agenda_version', id: nextId('msg'), threadId: meeting.threadId, at, eventId: meeting.eventId, version: version.n, author, changeSummary })

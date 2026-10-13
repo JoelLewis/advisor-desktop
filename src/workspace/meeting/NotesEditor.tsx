@@ -77,8 +77,9 @@ function NoteSectionList({ section, lines, directory, editable, editing, onEdit,
             <div className="flex flex-wrap items-center gap-1">
               <span className="text-label uppercase text-ink-3">Cites</span>
               {line.cites.map((cite) => (
-                <Button key={cite} rank="quiet" aria-label={`Cites ${cite} · ${speakerFor(cite)}`}
-                  onMouseEnter={() => onCite(cite)} onMouseLeave={() => onCite(undefined)} onFocus={() => onCite(cite)} onBlur={() => onCite(undefined)}>
+                <Button key={cite} rank="quiet" aria-label={`Cites ${cite} · ${speakerFor(cite)}`} aria-describedby={`transcript-${cite}`}
+                  onMouseEnter={() => onCite(cite)} onFocus={() => onCite(cite)} onBlur={() => onCite(undefined)}
+                  onMouseLeave={(e) => { if (document.activeElement !== e.currentTarget) onCite(undefined) }}>
                   {cite}
                 </Button>
               ))}

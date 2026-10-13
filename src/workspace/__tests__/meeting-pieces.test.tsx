@@ -101,6 +101,34 @@ describe('the agenda editor', () => {
     expect(meeting().agenda.map((v) => v.n)).toEqual([1, 2, 3, 4, 5, 6])
   })
 
+  it('keeps focus on the moved item, says what changed, and says why an edge control is off', async () => {
+    await runMeetingPrep(ADRIAN, 'evt-010')
+    const v1 = meeting().agenda[0]!.items
+    renderWithProviders(<LiveAgenda />)
+    const user = userEvent.setup()
+    const list = await screen.findByRole('list', { name: 'Agenda · v1' })
+    const first = within(list).getByRole('button', { name: `Move “${v1[0]!.title}” up` })
+    expect(first).toBeDisabled()
+    expect(first).toHaveAttribute('title', 'Already first on the agenda')
+    expect(within(list).getByRole('button', { name: `Move “${v1[v1.length - 1]!.title}” down` })).toHaveAttribute('title', 'Already last on the agenda')
+
+    await user.click(within(list).getByRole('button', { name: `Move “${v1[2]!.title}” up` }))
+    const v2 = await screen.findByRole('list', { name: 'Agenda · v2' })
+    expect(within(v2).getByRole('button', { name: `Move “${v1[2]!.title}” up` })).toHaveFocus()
+    const summary = (n: number) => store().messages.flatMap((m) => (m.kind === 'agenda_version' && m.version === n ? [m.changeSummary] : []))[0]
+    expect(screen.getByRole('status')).toHaveTextContent(`Agenda v2: ${summary(2)}`)
+
+    await user.keyboard('{Enter}')
+    const v3 = await screen.findByRole('list', { name: 'Agenda · v3' })
+    // At the top, Move up is off: focus goes to the same item's Move down.
+    expect(within(v3).getByRole('button', { name: `Move “${v1[2]!.title}” down` })).toHaveFocus()
+    expect(screen.getByRole('status')).toHaveTextContent(`Agenda v3: ${summary(3)}`)
+
+    await user.click(within(v3).getByRole('button', { name: `Drop “${v1[2]!.title}”` }))
+    const v4 = await screen.findByRole('list', { name: 'Agenda · v4' })
+    expect(within(v4).getByRole('button', { name: `Drop “${v1[0]!.title}”` })).toHaveFocus()
+  })
+
   it('a read-only agenda has no controls', async () => {
     await runMeetingPrep(ADRIAN, 'evt-010')
     const view = await getMeeting(ADRIAN, 'evt-010')
