@@ -65,7 +65,7 @@ describe('the recap', () => {
     file()
     const { body } = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft
     expect(body).toContain('As firm policy, the held-away Vanguard 401(k) counts too: the rule for employer plans is unsettled.')
-    expect(body).toContain('Reinvested dividends count as buying.\n- The Intel window runs through 2026-03-22.')
+    expect(body).toContain('Reinvested dividends count as buying.\n- The wash-sale window on the Intel sale runs through March 22, 2026.')
     expect(body).toContain('estimate; consult your tax professional')
   })
 
@@ -73,7 +73,7 @@ describe('the recap', () => {
     release(approvedV1())
     heldAndDrafted()
     file()
-    expect(ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft.body).toContain('The Intel window runs through 2026-03-27.')
+    expect(ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft.body).toContain('The wash-sale window on the Intel sales runs through March 27, 2026.')
   })
 
   it("reads Adrian's edits, because it is written from the filed lines", () => {
@@ -121,7 +121,7 @@ describe('the Intel window sentence', () => {
     ok(saveNotes(ADRIAN, 'evt-010', edit('n-09', 'Robert will not buy the stock back in any account until the window closes.')))
     file()
     const { body } = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft
-    expect(body).toContain('- The investment policy statement stays as signed; an ESG change would need a signed amendment.\n- The Intel window runs through 2026-03-22.')
+    expect(body).toContain('- The investment policy statement stays as signed; an ESG change would need a signed amendment.\n- The wash-sale window on the Intel sale runs through March 22, 2026.')
   })
 })
 
@@ -150,15 +150,15 @@ describe('sending the recap', () => {
     heldAndDrafted()
     file()
     const { draft } = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010'))
-    expect(draft.body).toContain('through 2026-03-22.')
+    expect(draft.body).toContain('through March 22, 2026.')
     release(approvedV1())
     expect(draftsFor('th-robert').find((d) => d.id === draft.id)?.stale).toBe(true)
     expect(sendToClient(ADRIAN, draft.id)).toEqual({
-      ok: false, status: 409, code: 'STALE_DRAFT', message: 'This recap states the Intel window through 2026-03-22, but the window now runs through 2026-03-27. Ask for a new recap.',
+      ok: false, status: 409, code: 'STALE_DRAFT', message: 'This recap states the Intel wash-sale window through March 22, 2026, but it now runs through March 27, 2026. Ask for a new recap.',
     })
     const fresh = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010'))
     expect(fresh).toMatchObject({ created: true, draft: { recordBasis: { windowEnd: '2026-03-27' } } })
-    expect(fresh.draft.body).toContain('through 2026-03-27.')
+    expect(fresh.draft.body).toContain('through March 27, 2026.')
   })
 
   it('refuses a recap whose filing it no longer matches', () => {

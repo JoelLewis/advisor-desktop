@@ -5,10 +5,15 @@ import { nextAt, nextId, store } from '@/mocks/data/workspace-store'
 import { writeMeetingRecap } from '@/mocks/agents/meeting-recap'
 import { firstNameOf } from '@/lib/words'
 import { draftingClientThread, type LetterFailure } from './letters'
-import { isRecapStale, latestIntelWindowEnd } from './draft-staleness'
+import { isRecapStale, latestIntelWindowEnd, openIntelWindows } from './draft-staleness'
+import { clientDate } from '@/kit/measure'
 import { meetingEvent, meetingTitle, visibleMeeting } from './meetings'
 
 const refuse = (status: LetterFailure['status'], code: string, message: string): LetterFailure => ({ ok: false, status, code, message })
+
+/** The window the recap states, in the client's words: the latest end among the client's open Intel sales. */
+const intelWindowSentence = (sales: number, end: string) =>
+  `The wash-sale window on the Intel ${sales === 1 ? 'sale' : 'sales'} runs through ${clientDate(end)}.`
 
 /** The Client Letter Agent's recap of a filed meeting, drafted in the client thread of a member of the meeting's household. */
 export function draftRecap(viewerId: string, clientThreadId: string, eventId: string): { ok: true; draft: Draft; created: boolean } | LetterFailure {
@@ -34,7 +39,7 @@ export function draftRecap(viewerId: string, clientThreadId: string, eventId: st
   const withOthers = event.attendees.some((a) => a.id !== client.id && clients.some((c) => c.id === a.id))
   const letter = writeMeetingRecap({
     greetingName: firstNameOf(client.fullName), withOthers, filing: meeting.filed, signerName: signer.name,
-    windowSentence: windowEnd === undefined ? undefined : `The Intel window runs through ${windowEnd}.`,
+    windowSentence: windowEnd === undefined ? undefined : intelWindowSentence(openIntelWindows(client.id).length, windowEnd),
   })
   const draft: Draft = {
     id: nextId('draft'), clientThreadId: thread.id, authorId: viewerId, body: letter.body, createdAt: nextAt(),

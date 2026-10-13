@@ -3,15 +3,22 @@ import { isDraftStale } from '@/mocks/data/proposals-store'
 import { accounts } from '@/mocks/data/accounts'
 import { store } from '@/mocks/data/workspace-store'
 import { openWashSaleWindowsFor } from '@/mocks/handlers/tax-return'
+import type { OpenWashSaleWindow } from '@/mocks/data/realised-sales'
 import { todayISO } from '@/lib/clock'
+import { clientDate } from '@/kit/measure'
 
-/** The latest end among the client's open INTC windows (their own wash-sale taxpayer's), from the engine. */
-export function latestIntelWindowEnd(clientId: string): string | undefined {
-  const ends = accounts.filter((a) => a.clientId === clientId)
+/** The client's open INTC loss-sale windows (their own wash-sale taxpayer's), from the engine, each sale once. */
+export function openIntelWindows(clientId: string): readonly OpenWashSaleWindow[] {
+  const bySale = new Map(accounts.filter((a) => a.clientId === clientId)
     .flatMap((a) => openWashSaleWindowsFor(a, todayISO()))
     .filter((w) => w.symbol === 'INTC')
-    .map((w) => w.end)
-  return [...ends].sort().pop()
+    .map((w) => [w.id, w]))
+  return [...bySale.values()]
+}
+
+/** The latest end among the client's open INTC windows. */
+export function latestIntelWindowEnd(clientId: string): string | undefined {
+  return openIntelWindows(clientId).map((w) => w.end).sort().pop()
 }
 
 const clientOfDraft = (draft: Draft): string | undefined => {
@@ -43,7 +50,11 @@ export const isStale = (draft: Draft): boolean => isDraftStale(draft) || isRecap
 
 export function staleMessage(draft: Draft): string {
   if (draft.recordBasis && !filingMoved(draft)) {
-    return `This recap states the Intel window through ${draft.recordBasis.windowEnd ?? 'no date'}, but the window now runs through ${latestIntelWindowEnd(clientOfDraft(draft) ?? '') ?? 'no date'}. Ask for a new recap.`
+    const stated = draft.recordBasis.windowEnd
+    const now = latestIntelWindowEnd(clientOfDraft(draft) ?? '')
+    if (stated === undefined) return `This recap states no Intel wash-sale window, but one now runs through ${now === undefined ? 'no date' : clientDate(now)}. Ask for a new recap.`
+    if (now === undefined) return `This recap states the Intel wash-sale window through ${clientDate(stated)}, but no window is open now. Ask for a new recap.`
+    return `This recap states the Intel wash-sale window through ${clientDate(stated)}, but it now runs through ${clientDate(now)}. Ask for a new recap.`
   }
   return draft.recordBasis
     ? `This recap was drafted from ${draft.recordBasis.actId}, which no longer matches the filed record. Ask for a new recap.`
