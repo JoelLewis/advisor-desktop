@@ -34,3 +34,10 @@ it('can be disabled and described', () => {
   expect(box).toBeDisabled()
   expect(box).toHaveAccessibleDescription('Firm only')
 })
+
+it('fills its container, so its width never comes from cols and the font metrics', () => {
+  render(<TextInput label="Message" value="" rows={1} onChange={() => {}} />)
+  const box = screen.getByRole('textbox', { name: 'Message' })
+  expect(box).toHaveClass('w-full')
+  expect(box.parentElement).toHaveClass('w-full')
+})

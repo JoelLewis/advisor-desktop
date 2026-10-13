@@ -13,7 +13,7 @@ type TextInputProps = {
 export function TextInput({ label, value, onChange, placeholder, rows = 3, disabled, describedBy }: TextInputProps) {
   const id = useId()
   return (
-    <div className="flex min-w-0 flex-col gap-1.5">
+    <div className="flex w-full min-w-0 flex-col gap-1.5">
       <label htmlFor={id} className="text-label uppercase text-ink-3">{label}</label>
       <textarea id={id} value={value} rows={rows} placeholder={placeholder} disabled={disabled} aria-describedby={describedBy}
         onChange={(e) => onChange(e.target.value)}
