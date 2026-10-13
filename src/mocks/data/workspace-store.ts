@@ -69,3 +69,9 @@ export function nextId(prefix: 'msg' | 'draft'): string {
 export function commitActId(): string {
   return `REC-${pad(nextNumber('act'))}`
 }
+
+/** Moves the event clock forward to `sequence` (fills wait for the open); it never runs backwards. */
+export function advanceClockTo(sequence: number): void {
+  const s = store()
+  s.sequence = Math.max(s.sequence, sequence)
+}

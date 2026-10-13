@@ -3,7 +3,7 @@ import type { DraftPreview, LegEdit, Proposal, ProposalConstraint, ProposalDetai
 import { accounts } from '@/mocks/data/accounts'
 import { can, personById } from '@/mocks/data/people'
 import { nextAt, nextId, store } from '@/mocks/data/workspace-store'
-import { detailOf, latestVersion, nextProposalId, proposalsInThread } from '@/mocks/data/proposals-store'
+import { detailOf, filledMessage, latestVersion, nextProposalId, proposalsInThread, releasedApproval } from '@/mocks/data/proposals-store'
 import { agentConstraints, draftSummary, proposalTitle, revisionSummary } from '@/mocks/agents/proposal-agent'
 import { buildVersion, editSummary, normaliseEdits } from './proposal-engine'
 import { visibleProposal } from './proposal-acts'
@@ -30,6 +30,12 @@ function draftingThread(viewerId: string, threadId: string): { ok: true; thread:
   return { ok: true, thread }
 }
 
+/** A proposal whose orders were filled is closed. */
+function closedRefusal(proposal: Proposal): ProposalFailure | undefined {
+  const released = releasedApproval(proposal.id)
+  return released ? refuse(409, 'FILLED', filledMessage(released.version)) : undefined
+}
+
 function append(proposal: Proposal, version: Omit<ProposalVersion, 'n' | 'createdAt'>): ProposalDetail {
   const at = nextAt()
   const n = latestVersion(proposal).n + 1
@@ -44,7 +50,8 @@ export function createProposal(viewerId: string, threadId: string, accountId: st
   if (!guard.ok) return guard
   const { thread } = guard
   if (thread.subject?.type !== 'account' || thread.subject.id !== accountId) return refuse(400, 'NOT_THE_SUBJECT', "A proposal here is for the thread's own account.")
-  const existing = proposalsInThread(thread.id).find((p) => p.accountId === accountId)
+  const forAccount = proposalsInThread(thread.id).filter((p) => p.accountId === accountId)
+  const existing = forAccount.find((p) => releasedApproval(p.id) === undefined)
   if (existing) return { ok: true, detail: detailOf(existing), created: false }
   const account = accounts.find((a) => a.id === accountId)
   if (!account) return refuse(404, 'NO_ACCOUNT', 'Account not found.')
@@ -53,7 +60,7 @@ export function createProposal(viewerId: string, threadId: string, accountId: st
   if (!built.ok) return refuse(400, built.code, built.message)
   const at = nextAt()
   const proposal: Proposal = {
-    id: nextProposalId(), title: proposalTitle(accountId), accountId, clientId: account.clientId, threadId: thread.id,
+    id: nextProposalId(), title: forAccount.length === 0 ? proposalTitle(accountId) : `${proposalTitle(accountId)} ${forAccount.length + 1}`, accountId, clientId: account.clientId, threadId: thread.id,
     versions: [{ n: 1, author: { kind: 'agent', agentId: 'proposal' }, createdAt: at, constraints, edits: [], changeSummary: draftSummary(accountId, built.built), ...built.built }],
   }
   const s = store()
@@ -66,6 +73,8 @@ export function createProposal(viewerId: string, threadId: string, accountId: st
 export function reviseProposal(viewerId: string, proposalId: string, requested: readonly ProposalConstraint[]): { ok: true; detail: ProposalDetail } | ProposalFailure {
   const proposal = visibleProposal(viewerId, proposalId)
   if (!proposal) return NOT_FOUND
+  const closed = closedRefusal(proposal)
+  if (closed) return closed
   const guard = draftingThread(viewerId, proposal.threadId)
   if (!guard.ok) return guard
   const latest = latestVersion(proposal)
@@ -88,6 +97,8 @@ export function reviseProposal(viewerId: string, proposalId: string, requested: 
 export function saveVersion(viewerId: string, proposalId: string, edits: readonly LegEdit[]): { ok: true; detail: ProposalDetail } | ProposalFailure {
   const proposal = visibleProposal(viewerId, proposalId)
   if (!proposal) return NOT_FOUND
+  const closed = closedRefusal(proposal)
+  if (closed) return closed
   const guard = draftingThread(viewerId, proposal.threadId)
   if (!guard.ok) return guard
   const latest = latestVersion(proposal)
@@ -107,6 +118,8 @@ export function saveVersion(viewerId: string, proposalId: string, edits: readonl
 export function previewEdits(viewerId: string, proposalId: string, edits: readonly LegEdit[]): { ok: true; preview: DraftPreview } | ProposalFailure {
   const proposal = visibleProposal(viewerId, proposalId)
   if (!proposal) return NOT_FOUND
+  const closed = closedRefusal(proposal)
+  if (closed) return closed
   const built = buildVersion(proposal.accountId, latestVersion(proposal).constraints, edits)
   return built.ok ? { ok: true, preview: built.built } : refuse(400, built.code, built.message)
 }

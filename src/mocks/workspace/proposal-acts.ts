@@ -2,7 +2,7 @@ import type { BindingAct, Message } from '@/types/workspace'
 import type { ApprovalRecord, Proposal, StagedOrder } from '@/types/workspace-proposal'
 import { can, personById } from '@/mocks/data/people'
 import { commitActId, nextAt, nextId, store } from '@/mocks/data/workspace-store'
-import { activeApproval, nextStagedId, proposalById } from '@/mocks/data/proposals-store'
+import { activeApproval, filledMessage, nextStagedId, proposalById, releasedApproval } from '@/mocks/data/proposals-store'
 import { canSeeThread } from './visibility'
 
 export type ActFailure = { ok: false; status: 403 | 404 | 409; code: string; message: string }
@@ -41,6 +41,8 @@ export function approveProposal(viewerId: string, proposalId: string, version: n
   const proposal = visibleProposal(viewerId, proposalId)
   if (!proposal) return NOT_FOUND
   if (!can(viewerId, 'approve_proposal')) return { ok: false, status: 403, code: 'NOT_PERMITTED', message: 'Only the advisor of record can approve a proposal.' }
+  const released = releasedApproval(proposal.id)
+  if (released) return { ok: false, status: 409, code: 'FILLED', message: filledMessage(released.version) }
   const v = proposal.versions.find((x) => x.n === version)
   if (!v) return { ok: false, status: 404, code: 'NO_VERSION', message: `There is no v${version} of this proposal.` }
   if (v.fingerprint !== fingerprint) return { ok: false, status: 409, code: 'FINGERPRINT_MISMATCH', message: `v${version} is not the content you reviewed. Open it again before approving.` }

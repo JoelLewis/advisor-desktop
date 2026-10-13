@@ -1,0 +1,144 @@
+import type { BindingAct, Message, ViaPresenter } from '@/types/workspace'
+import type { ApprovalRecord, Proposal, ProposalVersion } from '@/types/workspace-proposal'
+import { can } from '@/mocks/data/people'
+import { advanceClockTo, commitActId, nextAt, nextId, store } from '@/mocks/data/workspace-store'
+import { actOnApproval } from '@/mocks/data/proposals-store'
+import { MOCK_NOW_ISO, MOCK_TODAY_ISO, eventTime } from '@/lib/clock'
+import { isDuringNyseSession, nyseSessionUtc } from '@/lib/trading-calendar'
+import { applyFills } from './fills'
+import { closeStaging, recordAct, setApprovalStatus, visibleProposal } from './proposal-acts'
+
+export type ComplianceFailure = { ok: false; status: 400 | 403 | 404 | 409; code: string; message: string }
+export type Recorded = { ok: true; act: BindingAct }
+/** How the act was performed: through the presenter shortcut, it carries the firm-only marker. */
+export type ActOptions = { viaPresenter?: ViaPresenter }
+
+export const RATIONALE_MAX = 2000
+
+const refuse = (status: ComplianceFailure['status'], code: string, message: string): ComplianceFailure => ({ ok: false, status, code, message })
+const via = (options: ActOptions) => (options.viaPresenter ? { viaPresenter: options.viaPresenter } : {})
+
+/** Every disposition carries a rationale: something other than whitespace, and not an essay. */
+export function rationaleRefusal(rationale: string): ComplianceFailure | undefined {
+  const trimmed = rationale.trim()
+  if (trimmed.length === 0) return refuse(400, 'RATIONALE_REQUIRED', 'A rationale is required for every disposition.')
+  if (trimmed.length > RATIONALE_MAX) return refuse(400, 'RATIONALE_TOO_LONG', `Keep the rationale to ${RATIONALE_MAX} characters or fewer.`)
+  return undefined
+}
+
+type OrdersKind = 'release_orders' | 'return_to_advisor' | 'escalate'
+type Guarded = { ok: true; proposal: Proposal; approval: ApprovalRecord; version: ProposalVersion }
+
+/** The id of the act that closed an approval; the engine records one for every closed approval. */
+function closedBy(kind: 'release_orders' | 'return_to_advisor', approval: ApprovalRecord): string {
+  const act = actOnApproval(kind, approval.actId)
+  if (!act) throw new Error(`Approval ${approval.actId} is ${approval.status} with no ${kind} act`)
+  return act.id
+}
+
+function notActive(approval: ApprovalRecord): ComplianceFailure | undefined {
+  const v = `v${approval.version}`
+  switch (approval.status) {
+    case 'active': return undefined
+    case 'withdrawn': return refuse(409, 'APPROVAL_WITHDRAWN', `The approval of ${v} (${approval.actId}) was withdrawn by the advisor; nothing from it can be released.`)
+    case 'superseded': return refuse(409, 'APPROVAL_SUPERSEDED', `The approval of ${v} (${approval.actId}) was superseded by a newer approval. Open the queue again.`)
+    case 'returned': return refuse(409, 'APPROVAL_RETURNED', `${v} was already returned to the advisor (${closedBy('return_to_advisor', approval)}).`)
+    case 'released': return refuse(409, 'ALREADY_RELEASED', `The orders from ${v} were already released (${closedBy('release_orders', approval)}).`)
+  }
+}
+
+function ordersGuard(viewerId: string, kind: OrdersKind, proposalId: string, approvalActId: string, fingerprint: string, rationale: string): Guarded | ComplianceFailure {
+  const proposal = visibleProposal(viewerId, proposalId)
+  if (!proposal) return refuse(404, 'NO_PROPOSAL', 'Proposal not found.')
+  if (!can(viewerId, kind)) return refuse(403, 'NOT_PERMITTED', 'Only compliance can release, return or escalate staged orders.')
+  const badRationale = rationaleRefusal(rationale)
+  if (badRationale) return badRationale
+  const approval = store().approvals.find((a) => a.proposalId === proposal.id && a.actId === approvalActId)
+  if (!approval) return refuse(409, 'NOT_THIS_APPROVAL', `${approvalActId} is not an approval of the ${proposal.title}.`)
+  const stale = notActive(approval)
+  if (stale) return stale
+  if (approval.fingerprint !== fingerprint) return refuse(409, 'FINGERPRINT_MISMATCH', `The evidence you reviewed is not v${approval.version} as approved. Open it again.`)
+  const version = proposal.versions.find((v) => v.n === approval.version)
+  if (!version) throw new Error(`Approval ${approval.actId} names a missing version`)
+  return { ok: true, proposal, approval, version }
+}
+
+const minuteOf = (iso: string) => Math.round((Date.parse(iso) - Date.parse(MOCK_NOW_ISO)) / 60_000)
+
+/**
+ * The event-clock sequences `count` fills take: after the `pending` events still to be recorded
+ * ahead of them, and never before the NYSE opens today. Undefined when the session would close first.
+ */
+function sessionSequences(pending: number, count: number): number[] | undefined {
+  const first = Math.max(store().sequence + pending + 1, minuteOf(nyseSessionUtc(MOCK_TODAY_ISO).open))
+  const sequences = Array.from({ length: count }, (_, i) => first + i)
+  return sequences.every((n) => isDuringNyseSession(eventTime(n))) ? sequences : undefined
+}
+
+export function releaseOrders(viewerId: string, proposalId: string, approvalActId: string, fingerprint: string, rationale: string, options: ActOptions = {}): Recorded | ComplianceFailure {
+  const guard = ordersGuard(viewerId, 'release_orders', proposalId, approvalActId, fingerprint, rationale)
+  if (!guard.ok) return guard
+  const { proposal, approval, version } = guard
+  const orders = store().staged.filter((o) => o.approvalActId === approval.actId && o.status === 'pending_compliance')
+  // The act and its marker come first; the fills follow, at the open if the release is before it.
+  const sequences = sessionSequences(2, orders.length)
+  if (!sequences) return refuse(409, 'MARKET_CLOSED', "Today's session has closed; staged orders can be released at the next session.")
+  const at = nextAt()
+  const markerAt = nextAt()
+  // Applied before anything is recorded: a fill that would break the ledger throws and records nothing.
+  const fills = applyFills({ accountId: proposal.accountId, proposalId: proposal.id, version, orders, times: sequences.map(eventTime) })
+  advanceClockTo(sequences[sequences.length - 1] ?? store().sequence)
+  const act: BindingAct = {
+    id: commitActId(), kind: 'release_orders', actorId: viewerId, at, threadId: proposal.threadId,
+    subject: { type: 'proposal', id: proposal.id }, version: approval.version, fingerprint: approval.fingerprint,
+    summary: `Released the orders staged from v${approval.version} of the ${proposal.title}`,
+    rationale: rationale.trim(), approvalActId: approval.actId, ...via(options),
+  }
+  const s = store()
+  s.acts.push(act)
+  s.messages.push({ kind: 'act', id: nextId('msg'), threadId: proposal.threadId, at: markerAt, actId: act.id })
+  const fillOf = new Map(fills.map((f) => [f.stagedOrderId, f.id]))
+  s.staged = s.staged.map((o) => {
+    const fillId = fillOf.get(o.id)
+    return fillId ? { ...o, status: 'filled', closedByActId: act.id, fillId } : o
+  })
+  setApprovalStatus(approval, 'released')
+  const report: Message = {
+    kind: 'fills', id: nextId('msg'), threadId: proposal.threadId, at: nextAt(), proposalId: proposal.id,
+    title: proposal.title, version: approval.version, releaseActId: act.id, fills,
+  }
+  s.messages.push(report)
+  return { ok: true, act }
+}
+
+export function returnToAdvisor(viewerId: string, proposalId: string, approvalActId: string, fingerprint: string, rationale: string, options: ActOptions = {}): Recorded | ComplianceFailure {
+  const guard = ordersGuard(viewerId, 'return_to_advisor', proposalId, approvalActId, fingerprint, rationale)
+  if (!guard.ok) return guard
+  const { proposal, approval } = guard
+  const act: BindingAct = {
+    id: commitActId(), kind: 'return_to_advisor', actorId: viewerId, at: nextAt(), threadId: proposal.threadId,
+    subject: { type: 'proposal', id: proposal.id }, version: approval.version, fingerprint: approval.fingerprint,
+    summary: `Returned v${approval.version} of the ${proposal.title} to the advisor; the approval is withdrawn`,
+    rationale: rationale.trim(), approvalActId: approval.actId, ...via(options),
+  }
+  setApprovalStatus(approval, 'returned')
+  closeStaging(approval.actId, act.id, 'returned')
+  recordAct(act)
+  return { ok: true, act }
+}
+
+export function escalate(viewerId: string, proposalId: string, approvalActId: string, fingerprint: string, rationale: string, options: ActOptions = {}): Recorded | ComplianceFailure {
+  const guard = ordersGuard(viewerId, 'escalate', proposalId, approvalActId, fingerprint, rationale)
+  if (!guard.ok) return guard
+  const { proposal, approval } = guard
+  const earlier = actOnApproval('escalate', approval.actId)
+  if (earlier) return refuse(409, 'ALREADY_ESCALATED', `The orders from v${approval.version} are already escalated (${earlier.id}).`)
+  const act: BindingAct = {
+    id: commitActId(), kind: 'escalate', actorId: viewerId, at: nextAt(), threadId: proposal.threadId,
+    subject: { type: 'proposal', id: proposal.id }, version: approval.version, fingerprint: approval.fingerprint,
+    summary: `Escalated the orders staged from v${approval.version} of the ${proposal.title}; they stay held`,
+    rationale: rationale.trim(), approvalActId: approval.actId, ...via(options),
+  }
+  recordAct(act)
+  return { ok: true, act }
+}

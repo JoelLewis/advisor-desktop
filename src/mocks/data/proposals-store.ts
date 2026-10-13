@@ -73,3 +73,7 @@ export function isDraftStale(draft: Draft): boolean {
   const active = activeApproval(proposalId)
   return !active || active.version !== version || active.fingerprint !== fingerprint
 }
+
+/** Why a filled proposal refuses every change: its orders were filled, so the next proposal starts from the moved book. */
+export const filledMessage = (version: number): string =>
+  `The orders from v${version} were filled; this proposal is closed. Ask the Proposal Agent for a new one from the moved book.`
