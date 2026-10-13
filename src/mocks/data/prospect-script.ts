@@ -30,6 +30,9 @@ export const PELL_STATEMENTS: readonly Statement[] = [
 
 export const PELL_INTRO = 'James Thompson suggested I get in touch. Looking forward to coffee this afternoon.'
 export const PELL_REPLY = 'Thank you for the coffee. Here are my answers to the questionnaire and my two statements.'
+/** Her reply when part of it is already on file (the presenter's shortcut or View as took the other step). */
+export const PELL_REPLY_STATEMENTS_ONLY = 'Thank you for the coffee. Here are my two statements.'
+export const PELL_REPLY_QUESTIONNAIRE_ONLY = 'Thank you for the coffee. Here are my answers to the questionnaire.'
 export const PELL_ACCEPTANCE = "I've read the proposal and I'd like to go ahead."
 
 /** Thu 26 Feb 09:10 ET and Mon 2 Mar 10:00 ET: when her scripted reply and acceptance arrive. */

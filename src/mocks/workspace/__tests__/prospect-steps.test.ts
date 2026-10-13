@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { advanceClockTo, sessionNow, store } from '@/mocks/data/workspace-store'
-import { PELL_REPLY, PELL_ACCEPTANCE } from '@/mocks/data/prospect-script'
+import { PELL_REPLY, PELL_ACCEPTANCE, PELL_REPLY_QUESTIONNAIRE_ONLY, PELL_REPLY_STATEMENTS_ONLY } from '@/mocks/data/prospect-script'
 import { eventTime } from '@/lib/clock'
 import { requireProspect } from '../prospects'
 import { createProspectProposal } from '../prospect-proposals'
@@ -86,7 +86,9 @@ describe('her reply, on the clock jump', () => {
     const fp = proposal.versions[0]?.fingerprint ?? ''
     const approval = ok(approveProposal(ADRIAN, proposal.id, 1, fp)).act
     coffee()
-    expect(releaseOrders('cco-001', proposal.id, approval.id, fp, 'Reviewed.')).toMatchObject({ ok: false, status: 409, code: 'MARKET_CLOSED' })
+    expect(releaseOrders('cco-001', proposal.id, approval.id, fp, 'Reviewed.')).toEqual({
+      ok: false, status: 409, code: 'MARKET_CLOSED', message: "Today's session has closed; staged orders can be released at the next session.",
+    })
   })
 })
 
@@ -99,6 +101,20 @@ describe('her steps through the shortcut and through View as', () => {
     expect(actAsProspect(ADRIAN, PELL, 'questionnaire')).toMatchObject({ ok: false, status: 409, code: 'ALREADY_ANSWERED' })
     ok(advanceProspect(ADRIAN, PELL, 'reply'))
     expect(requireProspect(PELL).steps.map((s) => [s.kind, s.viaPresenter.path])).toEqual([['questionnaire', 'shortcut'], ['statements', 'scripted']])
+  })
+
+  it('the jump\'s message names only what she still sends: her statements after the shortcut answered, her answers after it shared', () => {
+    coffee()
+    ok(actAsProspect(ADRIAN, PELL, 'questionnaire'))
+    ok(advanceProspect(ADRIAN, PELL, 'reply'))
+    expect(herThread().filter((m) => m.kind === 'text').map((m) => m.kind === 'text' && m.body)).toEqual([PELL_REPLY_STATEMENTS_ONLY])
+  })
+
+  it('after the shortcut shares her statements, the jump\'s message brings only her answers', () => {
+    coffee()
+    ok(actAsProspect(ADRIAN, PELL, 'statements'))
+    ok(advanceProspect(ADRIAN, PELL, 'reply'))
+    expect(herThread().filter((m) => m.kind === 'text').map((m) => m.kind === 'text' && m.body)).toEqual([PELL_REPLY_QUESTIONNAIRE_ONLY])
   })
 
   it('as herself she takes her own steps, marked view_as; the firm is told the step is hers; Robert is told she does not exist', () => {
@@ -168,7 +184,9 @@ describe('her acceptance', () => {
     const approval = ok(approveProposal(ADRIAN, proposal.id, 1, fp)).act
     sentToHer()
     ok(advanceProspect(ADRIAN, PELL, 'acceptance'))
-    expect(releaseOrders('cco-001', proposal.id, approval.id, fp, 'Reviewed.')).toMatchObject({ ok: false, status: 409, code: 'MARKET_CLOSED' })
+    expect(releaseOrders('cco-001', proposal.id, approval.id, fp, 'Reviewed.')).toEqual({
+      ok: false, status: 409, code: 'MARKET_CLOSED', message: 'Fills are priced only in the 25 Feb session; after a clock jump, staged orders stay staged.',
+    })
   })
 })
 

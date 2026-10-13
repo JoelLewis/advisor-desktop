@@ -1,7 +1,7 @@
 import type { AlertOutcome, BindingAct, CorrespondenceOutcome, Message, ViaPresenter } from '@/types/workspace'
 import type { ApprovalRecord, Proposal, ProposalVersion } from '@/types/workspace-proposal'
 import { can, personById } from '@/mocks/data/people'
-import { advanceClockTo, commitActId, nextAt, nextId, nextNumber, store } from '@/mocks/data/workspace-store'
+import { advanceClockTo, commitActId, nextAt, nextId, nextNumber, sessionNow, store } from '@/mocks/data/workspace-store'
 import { SUPERVISION_RECORDS } from '@/mocks/handlers/compliance'
 import { actOnApproval } from '@/mocks/data/proposals-store'
 import { MOCK_TODAY_ISO, eventTime, minuteOf } from '@/lib/clock'
@@ -79,6 +79,11 @@ function sessionSequences(pending: number, count: number): number[] | undefined 
   return sequences.every((n) => eventTime(n).slice(0, 10) === MOCK_TODAY_ISO && isDuringNyseSession(eventTime(n))) ? sequences : undefined
 }
 
+/** Why no session prices the fills: the frozen day's has closed, or a clock jump has left the frozen day behind. */
+const marketClosedMessage = () => sessionNow().slice(0, 10) > MOCK_TODAY_ISO
+  ? 'Fills are priced only in the 25 Feb session; after a clock jump, staged orders stay staged.'
+  : "Today's session has closed; staged orders can be released at the next session."
+
 export function releaseOrders(viewerId: string, proposalId: string, approvalActId: string, fingerprint: string, rationale: string, options: ActOptions = {}): Recorded | ComplianceFailure {
   const guard = ordersGuard(viewerId, 'release_orders', proposalId, approvalActId, fingerprint, rationale)
   if (!guard.ok) return guard
@@ -86,7 +91,7 @@ export function releaseOrders(viewerId: string, proposalId: string, approvalActI
   const orders = store().staged.filter((o) => o.approvalActId === approval.actId && o.status === 'pending_compliance')
   // The act and its marker come first; the fills follow, at the open if the release is before it.
   const sequences = sessionSequences(2, orders.length)
-  if (!sequences) return refuse(409, 'MARKET_CLOSED', "Today's session has closed; staged orders can be released at the next session.")
+  if (!sequences) return refuse(409, 'MARKET_CLOSED', marketClosedMessage())
   // Applied before anything is recorded: a fill that would break the ledger throws and records
   // nothing, the clock included. `sessionSequences` has already kept the act's and marker's times.
   const fills = applyFills({ accountId: proposal.accountId, proposalId: proposal.id, version, orders, times: sequences.map(eventTime) })

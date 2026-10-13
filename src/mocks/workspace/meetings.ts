@@ -10,7 +10,7 @@ import { AGENTS, can, personById } from '@/mocks/data/people'
 import { transcriptOf } from '@/mocks/data/meeting-transcripts'
 import { advanceClockTo, nextAt, nextId, nextNumber, pad, store } from '@/mocks/data/workspace-store'
 import { fingerprint } from '@/lib/fingerprint'
-import { MOCK_NOW_ISO } from '@/lib/clock'
+import { minuteOf } from '@/lib/clock'
 import { isCoveredTradingDay } from '@/lib/trading-calendar'
 import { canSeeThread, isFirmViewer } from './visibility'
 
@@ -21,7 +21,6 @@ export const refuseMeeting = (status: MeetingFailure['status'], code: string, me
 const NO_MEETING = refuseMeeting(404, 'NO_MEETING', 'Meeting not found.')
 const TITLE_MAX = 300
 const toUtc = (local: string) => new Date(local).toISOString()
-const minuteOf = (iso: string) => Math.round((Date.parse(iso) - Date.parse(MOCK_NOW_ISO)) / 60_000)
 
 /** A firm person's name from the directory, a client's from the CRM (Patricia is a client, not a viewer). */
 function nameOf(id: string): string {

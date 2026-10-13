@@ -4,7 +4,9 @@ import type { NextJump, OnboardingItem, PartySteps, ProspectRecord, ProspectStep
 import { calendarEvents } from '@/mocks/data/calendar'
 import { PRESENTER_ID, can } from '@/mocks/data/people'
 import { advanceClockTo, commitActId, nextAt, nextId, store } from '@/mocks/data/workspace-store'
-import { ACCEPTANCE_AT, PELL_ACCEPTANCE, PELL_ANSWERS, PELL_REPLY, PELL_STATEMENTS, REPLY_AT } from '@/mocks/data/prospect-script'
+import {
+  ACCEPTANCE_AT, PELL_ACCEPTANCE, PELL_ANSWERS, PELL_REPLY, PELL_REPLY_QUESTIONNAIRE_ONLY, PELL_REPLY_STATEMENTS_ONLY, PELL_STATEMENTS, REPLY_AT,
+} from '@/mocks/data/prospect-script'
 import { PELL_ID } from '@/mocks/data/prospect-seed'
 import { minuteOf } from '@/lib/clock'
 import { tradingDaysAfter } from '@/lib/trading-calendar'
@@ -31,7 +33,15 @@ const jumpTo = (iso: string) => advanceClockTo(minuteOf(iso) - 1)
 /** Her scripted content. Only Dr. Pell has a script; any other prospect is a fixture error. */
 function scriptOf(record: ProspectRecord) {
   if (record.id !== PELL_ID) throw new Error(`No script for prospect ${record.id}`)
-  return { answers: PELL_ANSWERS, statements: PELL_STATEMENTS, reply: PELL_REPLY, acceptance: PELL_ACCEPTANCE }
+  return { answers: PELL_ANSWERS, statements: PELL_STATEMENTS, acceptance: PELL_ACCEPTANCE }
+}
+
+/** Her reply's words name only what she still sends. */
+function replyText(record: ProspectRecord): string {
+  const questionnairePending = !record.questionnaire
+  const statementsPending = record.statements.length === 0
+  if (questionnairePending && statementsPending) return PELL_REPLY
+  return questionnairePending ? PELL_REPLY_QUESTIONNAIRE_ONLY : PELL_REPLY_STATEMENTS_ONLY
 }
 
 /** Her onboarding, in the order the firm works it; dues are trading days after the acceptance day. */
@@ -178,7 +188,7 @@ export function advanceProspect(viewerId: string, prospectId: string, to: 'reply
     if (!record.coffee) return COFFEE_FIRST
     if (record.questionnaire && record.statements.length > 0) return refuse(409, 'ALREADY_REPLIED', 'Her reply is already on file.')
     jumpTo(REPLY_AT)
-    postHerText(record, script.reply)
+    postHerText(record, replyText(record))
     for (const step of ['questionnaire', 'statements'] as const) {
       const pending = step === 'questionnaire' ? !record.questionnaire : record.statements.length === 0
       if (!pending) continue
