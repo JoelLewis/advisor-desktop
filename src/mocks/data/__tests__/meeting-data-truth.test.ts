@@ -33,7 +33,7 @@ describe('the calendar', () => {
     for (const e of calendarEvents) expect([0, 6], `${e.id} ${e.startTime}`).not.toContain(weekdayOf(e.startTime))
   })
 
-  it('holds the Johnson annual review this afternoon, between the Patel call and the Foster meeting, overlapping nothing', () => {
+  it('holds the Johnson annual review this afternoon, between the Patel call and Dr. Pell\'s coffee, overlapping nothing', () => {
     expect(evt010()).toMatchObject({
       title: 'Annual Review — Johnson Household', clientId: 'cli-001', householdId: 'hh-001', meetingType: 'annual_review',
       startTime: '2026-02-25T14:00:00-05:00', endTime: '2026-02-25T15:15:00-05:00', location: 'Office — Main',

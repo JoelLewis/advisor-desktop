@@ -1,3 +1,5 @@
+import { FIRM_NAME } from '@/lib/firm'
+
 export type TemplateCategory = 'email' | 'meeting_prep' | 'proposal' | 'presentation' | 'compliance'
 
 export const TEMPLATE_CATEGORIES: { value: TemplateCategory; label: string }[] = [
@@ -18,9 +20,9 @@ export const TEMPLATE_VARIABLES: TemplateVariable[] = [
   { key: 'client.name', label: 'Client Name', sampleValue: 'Robert Johnson' },
   { key: 'client.first_name', label: 'Client First Name', sampleValue: 'Robert' },
   { key: 'client.email', label: 'Client Email', sampleValue: 'robert.johnson@email.com' },
-  { key: 'advisor.name', label: 'Advisor Name', sampleValue: 'Sarah Mitchell' },
-  { key: 'advisor.title', label: 'Advisor Title', sampleValue: 'Senior Financial Advisor' },
-  { key: 'advisor.firm', label: 'Firm Name', sampleValue: 'Mitchell Wealth Advisors' },
+  { key: 'advisor.name', label: 'Advisor Name', sampleValue: 'Adrian Hale' },
+  { key: 'advisor.title', label: 'Advisor Title', sampleValue: 'Wealth Advisor' },
+  { key: 'advisor.firm', label: 'Firm Name', sampleValue: FIRM_NAME },
   { key: 'portfolio.total_value', label: 'Portfolio Value', sampleValue: '$2,450,000' },
   { key: 'portfolio.ytd_return', label: 'YTD Return', sampleValue: '+8.2%' },
   { key: 'portfolio.benchmark_return', label: 'Benchmark Return', sampleValue: '+7.1%' },

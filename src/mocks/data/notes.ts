@@ -16,7 +16,7 @@ export const notes: Note[] = [
 
   // ── Thompson ──
   { id: 'note-008', clientId: 'cli-008', content: 'James turns 73 this year — first RMD due by April 1, 2027 (year after turning 73). Discussed Roth conversion ladder strategy to reduce future RMD burden. He wants to proceed gradually.', createdAt: '2026-02-24T09:30:00Z', updatedAt: '2026-02-24T09:30:00Z', createdBy: 'Sarah Mitchell', pinned: true, aiGenerated: false },
-  { id: 'note-009', clientId: 'cli-008', content: 'James referred Dr. Amanda Foster — sent contact details via email. Follow up this week.', createdAt: '2026-02-20T14:30:00Z', updatedAt: '2026-02-20T14:30:00Z', createdBy: 'Sarah Mitchell', pinned: false, aiGenerated: false },
+  { id: 'note-009', clientId: 'cli-008', content: 'James referred Dr. Amanda Pell — sent her contact details by email. Coffee with Adrian on Feb 25.', createdAt: '2026-02-20T14:30:00Z', updatedAt: '2026-02-20T14:30:00Z', createdBy: 'Sarah Mitchell', pinned: false, aiGenerated: false },
 
   // ── Patel ──
   { id: 'note-010', clientId: 'cli-011', content: 'Raj and Priya had a baby girl. Discussed increasing 529 contributions and adding life insurance coverage. Beneficiary designations updated.', createdAt: '2026-02-23T16:00:00Z', updatedAt: '2026-02-23T16:00:00Z', createdBy: 'Sarah Mitchell', pinned: true, aiGenerated: false },
@@ -25,5 +25,5 @@ export const notes: Note[] = [
   { id: 'note-011', clientId: 'cli-009', content: 'Richard received $250K wire from property sale. Source-of-funds documentation collected. Compliance cleared for deposit.', createdAt: '2026-02-24T16:00:00Z', updatedAt: '2026-02-24T16:00:00Z', createdBy: 'Sarah Mitchell', pinned: false, aiGenerated: false },
 
   // ── Foster ──
-  { id: 'note-012', clientId: 'cli-017', content: 'William opening individual brokerage account. Application uploaded, pending compliance suitability review.', createdAt: '2026-02-22T11:30:00Z', updatedAt: '2026-02-22T11:30:00Z', createdBy: 'Sarah Mitchell', pinned: false, aiGenerated: false },
+  { id: 'note-012', clientId: 'cli-017', content: 'William updated his investor profile (risk tolerance and experience). Form uploaded; pending the compliance suitability review.', createdAt: '2026-02-22T11:30:00Z', updatedAt: '2026-02-22T11:30:00Z', createdBy: 'Sarah Mitchell', pinned: false, aiGenerated: false },
 ]

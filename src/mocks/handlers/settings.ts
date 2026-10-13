@@ -1,4 +1,5 @@
 import { http, HttpResponse, delay } from 'msw'
+import { FIRM_NAME } from '@/lib/firm'
 import { nextEventTime, nextRecordNumber } from './event-clock'
 import type { AISettings, NBASettings, NotificationSettings, DisplaySettings, CustomPrompt, DelegationRule } from '@/types/settings'
 import type { StandingRule, AIPermissionMatrix, StandingRuleAction, TriggerType } from '@/types/standing-rule'
@@ -16,7 +17,7 @@ const aiSettings: AISettings = {
   verbosity: 'standard',
   persona: {
     defaultGreeting: 'Good morning! Here\'s your daily briefing.',
-    emailSignature: 'Best regards,\n{advisor_name}\nSenior Financial Advisor\nMitchell Wealth Advisors',
+    emailSignature: `Best regards,\n{advisor_name}\nWealth Advisor\n${FIRM_NAME}`,
     preferredChannels: ['email', 'video'],
     followUpCadence: '1_week',
   },

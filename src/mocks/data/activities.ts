@@ -112,8 +112,8 @@ export const activities: ActivityItem[] = [
   },
   {
     id: 'act-013', type: 'document', source: 'crm',
-    title: 'New document uploaded — Foster account application',
-    description: 'William Foster individual brokerage application uploaded. Pending review.',
+    title: 'New document uploaded — Foster investor profile update',
+    description: 'William Foster uploaded an updated investor profile form. Pending review.',
     entityType: 'client', entityId: 'cli-017', entityName: 'William Foster',
     timestamp: '2026-02-22T19:00:00Z', read: true,
   },
@@ -154,7 +154,7 @@ export const activities: ActivityItem[] = [
   {
     id: 'act-019', type: 'email', source: 'crm',
     title: 'Email received — Thompson referral details',
-    description: 'James Thompson sent contact details for Dr. Amanda Foster.',
+    description: 'James Thompson sent contact details for Dr. Amanda Pell.',
     entityType: 'client', entityId: 'cli-008', entityName: 'James Thompson',
     timestamp: '2026-02-20T14:30:00Z', read: true,
   },

@@ -1,5 +1,7 @@
 import { http, HttpResponse, delay } from 'msw'
 import { nextRecordNumber } from './event-clock'
+import { modelDisplayName } from './pms'
+import { bandFor } from '@/lib/risk-profile'
 import { riskQuestions, accountRequirements } from '../data/onboarding'
 import type { RiskResult, OnboardingApplication } from '@/types/onboarding'
 
@@ -12,11 +14,9 @@ function calculateRiskProfile(answers: { questionId: string; selectedOption: num
 
   const avgScore = answers.length > 0 ? Math.round(totalScore / answers.length) : 50
 
-  if (avgScore <= 25) return { score: avgScore, profile: 'conservative', label: 'Conservative', recommendedModel: 'Conservative Income (20/80)' }
-  if (avgScore <= 40) return { score: avgScore, profile: 'moderate_conservative', label: 'Moderate Conservative', recommendedModel: 'Balanced Conservative (40/60)' }
-  if (avgScore <= 55) return { score: avgScore, profile: 'moderate', label: 'Moderate', recommendedModel: 'Balanced Growth (60/40)' }
-  if (avgScore <= 75) return { score: avgScore, profile: 'moderate_aggressive', label: 'Moderate Aggressive', recommendedModel: 'Growth (75/25)' }
-  return { score: avgScore, profile: 'aggressive', label: 'Aggressive', recommendedModel: 'Aggressive Growth (90/10)' }
+  // The firm's one table names the model; the label is the model's own name, never an invented blend.
+  const band = bandFor(avgScore)
+  return { score: avgScore, profile: band.profile, label: band.label, recommendedModel: modelDisplayName(band.modelId) }
 }
 
 export const onboardingHandlers = [

@@ -38,6 +38,6 @@ export const documents: Document[] = [
   { id: 'doc-020', name: "Brian O'Brien — Account Agreement", type: 'agreement', clientId: 'cli-013', accountId: 'acc-030', fileUrl: '/docs/obrien-agreement.pdf', signatureStatus: 'signed', createdAt: '2022-02-01T10:00:00Z', updatedAt: '2022-02-01T10:00:00Z', createdBy: 'Sarah Mitchell', aiGenerated: false },
 
   // ── Foster Household ──
-  { id: 'doc-021', name: 'William Foster — Account Application', type: 'agreement', clientId: 'cli-017', fileUrl: '/docs/foster-app.pdf', signatureStatus: 'pending', createdAt: '2026-02-22T11:00:00Z', updatedAt: '2026-02-22T11:00:00Z', createdBy: 'William Foster', aiGenerated: false },
-  { id: 'doc-022', name: 'Compliance Review — Foster Suitability', type: 'compliance', clientId: 'cli-017', fileUrl: '/docs/foster-compliance.pdf', signatureStatus: 'not_required', createdAt: '2026-02-22T14:00:00Z', updatedAt: '2026-02-22T14:00:00Z', createdBy: 'System', aiGenerated: false },
+  { id: 'doc-021', name: 'William Foster — Investor Profile Update', type: 'compliance', clientId: 'cli-017', fileUrl: '/docs/foster-profile-update.pdf', signatureStatus: 'pending', createdAt: '2026-02-22T11:00:00Z', updatedAt: '2026-02-22T11:00:00Z', createdBy: 'William Foster', aiGenerated: false },
+  { id: 'doc-022', name: 'Compliance Review — Foster Suitability Update', type: 'compliance', clientId: 'cli-017', fileUrl: '/docs/foster-compliance.pdf', signatureStatus: 'not_required', createdAt: '2026-02-22T14:00:00Z', updatedAt: '2026-02-22T14:00:00Z', createdBy: 'System', aiGenerated: false },
 ]

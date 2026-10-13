@@ -12,9 +12,9 @@ export const prospects: Prospect[] = [
     source: 'referral',
     stage: 'lead',
     probability: 0.15,
-    assignedAdvisor: 'Sarah Mitchell',
+    assignedAdvisor: 'Adrian Hale',
     nextAction: 'Schedule introductory call',
-    nextActionDate: '2026-02-28T10:00:00Z',
+    nextActionDate: '2026-02-27T15:00:00Z',
     activities: [
       { id: 'act-001', type: 'email', description: 'Introduction email sent by referring client Robert Johnson', date: '2026-02-20T09:00:00Z' },
     ],
@@ -31,9 +31,9 @@ export const prospects: Prospect[] = [
     source: 'website',
     stage: 'lead',
     probability: 0.1,
-    assignedAdvisor: 'Sarah Mitchell',
+    assignedAdvisor: 'Adrian Hale',
     nextAction: 'Review intake form and call',
-    nextActionDate: '2026-03-01T14:00:00Z',
+    nextActionDate: '2026-03-02T14:00:00Z',
     activities: [
       { id: 'act-002', type: 'note', description: 'Submitted website inquiry form — interested in retirement planning', date: '2026-02-22T11:15:00Z' },
     ],
@@ -50,7 +50,7 @@ export const prospects: Prospect[] = [
     source: 'event',
     stage: 'lead',
     probability: 0.2,
-    assignedAdvisor: 'Sarah Mitchell',
+    assignedAdvisor: 'Adrian Hale',
     nextAction: 'Send follow-up from charity gala',
     nextActionDate: '2026-02-27T09:00:00Z',
     activities: [
@@ -73,7 +73,7 @@ export const prospects: Prospect[] = [
     source: 'referral',
     stage: 'discovery',
     probability: 0.35,
-    assignedAdvisor: 'Sarah Mitchell',
+    assignedAdvisor: 'Adrian Hale',
     nextAction: 'Prepare needs assessment presentation',
     nextActionDate: '2026-03-03T10:00:00Z',
     activities: [
@@ -95,11 +95,11 @@ export const prospects: Prospect[] = [
     source: 'existing_client',
     stage: 'discovery',
     probability: 0.4,
-    assignedAdvisor: 'Sarah Mitchell',
+    assignedAdvisor: 'Adrian Hale',
     nextAction: 'Schedule meeting to review concentrated stock position',
     nextActionDate: '2026-03-02T11:00:00Z',
     activities: [
-      { id: 'act-008', type: 'call', description: 'Referred by Michael Chen (cli-003) — initial phone screen', date: '2026-02-12T16:00:00Z' },
+      { id: 'act-008', type: 'call', description: 'Referred by Margaret Chen (cli-003) — initial phone screen', date: '2026-02-12T16:00:00Z' },
       { id: 'act-009', type: 'email', description: 'Received brokerage statements for review — heavy NVDA concentration', date: '2026-02-14T10:30:00Z' },
     ],
     createdAt: '2026-02-12T16:00:00Z',
@@ -118,7 +118,7 @@ export const prospects: Prospect[] = [
     source: 'cold_outreach',
     stage: 'proposal',
     probability: 0.55,
-    assignedAdvisor: 'Sarah Mitchell',
+    assignedAdvisor: 'Adrian Hale',
     nextAction: 'Present investment proposal and IPS draft',
     nextActionDate: '2026-03-04T13:00:00Z',
     activities: [
@@ -139,9 +139,9 @@ export const prospects: Prospect[] = [
     source: 'event',
     stage: 'proposal',
     probability: 0.5,
-    assignedAdvisor: 'Sarah Mitchell',
+    assignedAdvisor: 'Adrian Hale',
     nextAction: 'Send revised proposal with Roth conversion analysis',
-    nextActionDate: '2026-03-01T15:00:00Z',
+    nextActionDate: '2026-03-02T16:00:00Z',
     activities: [
       { id: 'act-013', type: 'meeting', description: 'Met at women in finance networking event', date: '2026-01-25T18:00:00Z' },
       { id: 'act-014', type: 'call', description: 'Follow-up call — recently widowed, needs help consolidating late husband\'s accounts', date: '2026-02-03T11:00:00Z' },
@@ -163,9 +163,9 @@ export const prospects: Prospect[] = [
     source: 'referral',
     stage: 'decision',
     probability: 0.75,
-    assignedAdvisor: 'Sarah Mitchell',
+    assignedAdvisor: 'Adrian Hale',
     nextAction: 'Finalize fee schedule and sign advisory agreement',
-    nextActionDate: '2026-02-28T14:00:00Z',
+    nextActionDate: '2026-02-27T14:00:00Z',
     activities: [
       { id: 'act-016', type: 'call', description: 'Referred by James Thompson (cli-008) — initial call', date: '2026-01-15T10:00:00Z' },
       { id: 'act-017', type: 'meeting', description: 'Comprehensive planning session at Atlanta office', date: '2026-01-30T09:00:00Z' },
@@ -186,7 +186,7 @@ export const prospects: Prospect[] = [
     source: 'website',
     stage: 'decision',
     probability: 0.7,
-    assignedAdvisor: 'Sarah Mitchell',
+    assignedAdvisor: 'Adrian Hale',
     nextAction: 'Send revised IPS incorporating 401(k) plan review',
     nextActionDate: '2026-02-26T10:00:00Z',
     activities: [
@@ -210,7 +210,7 @@ export const prospects: Prospect[] = [
     source: 'referral',
     stage: 'onboarding',
     probability: 0.95,
-    assignedAdvisor: 'Sarah Mitchell',
+    assignedAdvisor: 'Adrian Hale',
     nextAction: 'Initiate ACAT transfer from Merrill Lynch',
     nextActionDate: '2026-02-27T09:00:00Z',
     activities: [
@@ -222,5 +222,26 @@ export const prospects: Prospect[] = [
     createdAt: '2026-01-08T10:00:00Z',
     stageChangedAt: '2026-02-12T08:00:00Z',
     notes: 'DC-area consultant. Transferring $5.7M from Merrill Lynch. Advisory agreement signed, ACAT pending.',
+  },
+
+  // ── Referral this week (Phase 6) ──
+  {
+    id: 'prsp-011',
+    name: 'Dr. Amanda Pell',
+    email: 'amanda.pell@example.com',
+    phone: '(303) 555-0190',
+    estimatedAUM: 3_000_000,
+    source: 'referral',
+    stage: 'lead',
+    probability: 0.3,
+    assignedAdvisor: 'Adrian Hale',
+    nextAction: 'Coffee with Adrian Hale',
+    nextActionDate: '2026-02-25T20:30:00Z',
+    activities: [
+      { id: 'act-027', type: 'email', description: 'Referred by James Thompson (cli-008) — contact details received', date: '2026-02-20T14:30:00Z' },
+    ],
+    createdAt: '2026-02-20T14:30:00Z',
+    stageChangedAt: '2026-02-20T14:30:00Z',
+    notes: 'Orthopedic surgeon, 52, married filing jointly (spouse not a party). A taxable brokerage account and a 403(b) from a former hospital employer.',
   },
 ]

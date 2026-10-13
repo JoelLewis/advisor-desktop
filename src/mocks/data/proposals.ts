@@ -1,5 +1,6 @@
 import type { ProposalTemplate, ProposalSectionType, ProposalFeeTier } from '@/types/proposal'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
+import { ADVISOR_EMAIL, FIRM_CITY, FIRM_NAME } from '@/lib/firm'
 import { blendedTieredFee, type FeeTier } from '@/lib/fees'
 import { formatCurrency } from '@/lib/utils'
 import { commissionSchedule } from '@/lib/commission'
@@ -9,7 +10,7 @@ import { commissionSchedule } from '@/lib/commission'
  * data uses `{ minAUM, maxAUM, rate, label }`. `upTo` is exactly `maxAUM` — the tiers are
  * contiguous from 0, so `minAUM`/`label` carry no information `blendedTieredFee` needs.
  */
-function toFeeTiers(tiers: readonly ProposalFeeTier[]): FeeTier[] {
+export function toFeeTiers(tiers: readonly ProposalFeeTier[]): FeeTier[] {
   return tiers.map((t) => ({ upTo: t.maxAUM, rate: t.rate }))
 }
 
@@ -108,23 +109,22 @@ export function generateSectionContent(
         '',
         `**Date:** ${today}`,
         '',
-        '**Prepared by:** Sarah Mitchell, CFP, CFA',
+        '**Prepared by:** Adrian Hale',
         '',
-        '**Senior Wealth Advisor**',
+        '**Wealth Advisor**',
         '',
         '---',
         '',
-        '**Mitchell Wealth Advisors**',
+        `**${FIRM_NAME}**`,
         '',
-        '200 Park Avenue, Suite 3200',
-        'New York, NY 10166',
+        FIRM_CITY,
         '',
         'Tel: (212) 555-0142',
-        'Email: sarah.mitchell@mitchellwealth.com',
+        `Email: ${ADVISOR_EMAIL}`,
         '',
         '---',
         '',
-        '*This proposal is confidential and intended solely for the named recipient. It contains proprietary investment recommendations tailored to your specific financial situation, objectives, and risk tolerance. Please do not distribute without prior written consent from Mitchell Wealth Advisors.*',
+        `*This proposal is confidential and intended solely for the named recipient. It contains proprietary investment recommendations tailored to your specific financial situation, objectives, and risk tolerance. Please do not distribute without prior written consent from ${FIRM_NAME}.*`,
       ].join('\n')
 
     case 'executive_summary':
@@ -251,7 +251,7 @@ export function generateSectionContent(
         '',
         '- **Industry average (RIA):** 1.00% – 1.25% for portfolios under $1M',
         '- **Wirehouse average:** 1.25% – 1.50% including platform fees',
-        '- **Mitchell Wealth Advisors:** Our tiered structure ensures fees decrease as your assets grow',
+        `- **${FIRM_NAME}:** Our tiered structure ensures fees decrease as your assets grow`,
         '',
         '### What Is Included',
         '',
@@ -283,7 +283,7 @@ export function generateSectionContent(
         '',
         '### Regulatory Disclosures',
         '',
-        'Mitchell Wealth Advisors is a registered investment advisor. Registration does not imply a certain level of skill or training. A copy of our current Form ADV Part 2A (Firm Brochure) and Part 2B (Brochure Supplement) is available upon request or at [adviserinfo.sec.gov](https://adviserinfo.sec.gov).',
+        `${FIRM_NAME} is a registered investment adviser. Registration does not imply a certain level of skill or training. A copy of our current Form ADV Part 2A (Firm Brochure) and Part 2B (Brochure Supplement) is available upon request or at [adviserinfo.sec.gov](https://adviserinfo.sec.gov).`,
         '',
         'This proposal does not constitute an offer to sell or a solicitation of an offer to buy any securities. The information contained herein is for informational purposes only and should not be construed as legal, tax, or accounting advice. Clients are encouraged to consult with their own tax and legal advisors.',
         '',

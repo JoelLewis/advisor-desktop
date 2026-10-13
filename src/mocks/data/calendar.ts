@@ -3,8 +3,8 @@ import type { CalendarEvent } from '@/types/calendar'
 /**
  * The advisor's calendar around the frozen today (Wednesday 2026-02-25), in Eastern Time with the
  * offset stated (UTC−5 until daylight time starts on 2026-03-08), so every time parses to one instant.
- * Phase 5 · the Johnson annual review is this afternoon, between the Patel call and the Foster
- * meeting; no event falls on a weekend.
+ * Phase 5 · the Johnson annual review is this afternoon, between the Patel call and Dr. Pell's
+ * coffee; no event falls on a weekend.
  */
 export const calendarEvents: CalendarEvent[] = [
   // Today — Wed Feb 25
@@ -33,10 +33,10 @@ export const calendarEvents: CalendarEvent[] = [
     attendees: ['cli-001', 'cli-002', 'user-001'],
   },
   {
-    id: 'evt-004', title: 'Prospect Meeting — Dr. Amanda Foster',
+    id: 'evt-004', title: 'Coffee — Dr. Amanda Pell (prospect)',
     meetingType: 'prospect',
     startTime: '2026-02-25T15:30:00-05:00', endTime: '2026-02-25T16:30:00-05:00',
-    location: 'Coffee — Blue Bottle (Referral from James Thompson)', prepCompleted: false, attendees: ['user-001'],
+    location: 'Blue Bottle Coffee', notes: 'Referral from James Thompson; bring the risk questionnaire.', prepCompleted: false, attendees: ['user-001'],
   },
   // Thu Feb 26
   {
