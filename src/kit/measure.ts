@@ -124,3 +124,14 @@ const clientDates = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'nume
 export function clientDate(iso: string): string {
   return clientDates.format(parseIso(iso))
 }
+
+/** A fee rate in client copy, to two places: "0.99%". */
+export function clientRate(fraction: number): string {
+  return `${unsigned(fraction, 2, 2, 2)}%`
+}
+
+const dayMonthYear = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+/** A date as the proposal's price line states it: "25 Feb 2026". */
+export function fmtDayMonthYear(iso: string): string {
+  return dayMonthYear.format(parseIso(iso))
+}

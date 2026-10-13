@@ -31,7 +31,7 @@ export function runTransferIn({ asOf, subject }: AgentContext): AgentFinding[] {
       figures: [
         { label: 'Market value', value: l.marketValue, unit: 'USD', source: 'transfer.marketValue' },
         { label: 'Cost basis', value: l.costBasis, unit: 'USD', source: 'statement.costBasis' },
-        { label: 'Unrealised', value: l.unrealised, unit: 'USD', source: 'transfer.unrealised' },
+        { label: 'Unrealized', value: l.unrealised, unit: 'USD', source: 'transfer.unrealised' },
         { label: 'Tax if sold now', value: l.taxIfSoldNow, unit: 'USD', source: 'transfer.taxIfSoldNow' },
         { label: 'Rate', value: taxRateFor(l.holdingPeriod), unit: '%', source: 'taxRateFor' },
         ...(concentrated && concentration ? [

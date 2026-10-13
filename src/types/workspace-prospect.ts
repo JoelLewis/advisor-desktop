@@ -114,6 +114,8 @@ export type BestInterestRecord = {
   alternatives: BestInterestAlternative[]
   costs: { scheduleName: string; annualFee: number; blendedRate: number }
   concentration?: { symbol: string; name: string; weightOfAssets: number; unrealised: number; taxIfSoldNow: number }
+  /** What she would hold if everything moves in kind, against the model; reaching the model takes sales. */
+  inKindVsModel: string
   rollover: string
 }
 /** What the engine would file for the latest version, shown before approval; the advisor adds the rationale. */
