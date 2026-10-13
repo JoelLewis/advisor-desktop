@@ -19,12 +19,12 @@ export const PELL_ANSWERS: readonly RiskAnswer[] = [
  */
 export const PELL_STATEMENTS: readonly Statement[] = [
   { id: 'stmt-pell-1', custodian: 'Fidelity', accountType: 'taxable_brokerage', asOf: '2026-01-31', cash: 100_782, holdings: [
-    { symbol: 'SPY', name: 'SPDR S&P 500 ETF', quantity: 2_800, costBasis: 1_010_000, acquired: '2016-08-15', assetClass: 'us_equity' },
-    { symbol: 'SYK', name: 'Stryker Corp.', quantity: 1_390, costBasis: 61_000, acquired: '2008-05-12', assetClass: 'us_equity' },
+    { symbol: 'SPY', name: 'SPDR S&P 500 ETF', quantity: 2_800, costBasis: 1_010_000, acquired: '2020-11-30', assetClass: 'us_equity' },
+    { symbol: 'SYK', name: 'Stryker Corp.', quantity: 1_390, costBasis: 61_000, acquired: '2009-08-17', assetClass: 'us_equity' },
   ] },
   { id: 'stmt-pell-2', custodian: 'TIAA', accountType: '403b', asOf: '2026-01-31', cash: 8_400, holdings: [
-    { symbol: 'VTI', name: 'Vanguard Total Stock Market ETF', quantity: 2_000, costBasis: 410_000, acquired: '2015-03-02', assetClass: 'us_equity' },
-    { symbol: 'AGG', name: 'iShares Core US Aggregate Bond ETF', quantity: 3_600, costBasis: 360_000, acquired: '2015-03-02', assetClass: 'fixed_income' },
+    { symbol: 'VTI', name: 'Vanguard Total Stock Market ETF', quantity: 2_000, costBasis: 410_000, acquired: '2021-01-15', assetClass: 'us_equity' },
+    { symbol: 'AGG', name: 'iShares Core US Aggregate Bond ETF', quantity: 3_600, costBasis: 360_000, acquired: '2009-06-15', assetClass: 'fixed_income' },
   ] },
 ]
 

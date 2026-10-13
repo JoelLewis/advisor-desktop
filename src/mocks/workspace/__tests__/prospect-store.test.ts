@@ -68,7 +68,7 @@ describe('her script', () => {
       ['stmt-pell-1', 'Fidelity', 'taxable_brokerage', '2026-01-31'], ['stmt-pell-2', 'TIAA', '403b', '2026-01-31'],
     ])
     expect(PELL_STATEMENTS[0]?.holdings.map((h) => [h.symbol, h.quantity, h.costBasis, h.acquired])).toEqual([
-      ['SPY', 2_800, 1_010_000, '2016-08-15'], ['SYK', 1_390, 61_000, '2008-05-12'],
+      ['SPY', 2_800, 1_010_000, '2020-11-30'], ['SYK', 1_390, 61_000, '2009-08-17'],
     ])
   })
 })
