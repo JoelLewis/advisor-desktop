@@ -23,8 +23,8 @@ export function AgentFindingView({ finding, agent, anchorId, footer }: AgentFind
           <span className="tabular ml-auto text-label text-ink-3">{fmtTimestamp(finding.at)}</span>
         </div>
         <div className="flex flex-wrap gap-1.5">
-          <Tag>{`may ${agent.scope.may.join(' · ')}`}</Tag>
-          <Tag>{`may not ${agent.scope.mayNot.join(' · ')}`}</Tag>
+          <Tag wrap>{`may ${agent.scope.may.join(' · ')}`}</Tag>
+          <Tag wrap>{`may not ${agent.scope.mayNot.join(' · ')}`}</Tag>
         </div>
       </div>
       <p className="flex items-baseline gap-3 text-copy">

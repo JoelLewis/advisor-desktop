@@ -12,7 +12,7 @@ export function RecordSlip({ kind, title, recordId, fingerprint, recordedBy, at,
     <article aria-labelledby={titleId} className="border border-dashed border-ink-2 bg-face p-4">
       <div className="flex items-baseline justify-between gap-3">
         <span className="text-label uppercase text-ink-2">{kind}</span>
-        <span className="tabular text-label text-ink-3"><span className="sr-only">Record ID </span>{recordId}</span>
+        <span className="tabular shrink-0 whitespace-nowrap text-label text-ink-3"><span className="sr-only">Record ID </span>{recordId}</span>
       </div>
       <h3 id={titleId} className="mt-1 text-body font-semibold">{title}</h3>
       {children ? <div className="mt-2 text-body">{children}</div> : null}
