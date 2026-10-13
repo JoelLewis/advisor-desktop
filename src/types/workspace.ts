@@ -4,7 +4,7 @@ import type { BestInterestRecord, DisclosureDocument, OnboardingItem } from './w
 
 export type Role = 'advisor' | 'csa' | 'analyst' | 'compliance' | 'client' | 'prospect'
 export type Person = { id: string; name: string; role: Role }
-export type AgentId = 'drift-monitor' | 'pretrade-check' | 'harvest-scanner' | 'proposal' | 'client-letter' | 'meeting-prep' | 'meeting-notes'
+export type AgentId = 'drift-monitor' | 'pretrade-check' | 'harvest-scanner' | 'proposal' | 'client-letter' | 'meeting-prep' | 'meeting-notes' | 'prospect-profile' | 'transfer-in'
 export type AgentScope = { may: string[]; mayNot: string[] }
 /** What an agent produces: findings in a thread, proposal versions, client-letter drafts, a meeting agenda, or meeting notes. */
 export type AgentOutput = 'findings' | 'proposals' | 'letters' | 'agenda' | 'notes'
@@ -12,7 +12,7 @@ export type AgentProfile = { id: AgentId; name: string; produces: AgentOutput; s
 export type Visibility = 'private' | 'internal' | 'client'
 export type Subject = { type: 'account' | 'household' | 'client' | 'prospect' | 'draft' | 'proposal' | 'prospect_proposal' | 'alert' | 'message' | 'meeting'; id: string }
 export type Thread = { id: string; title: string; visibility: Visibility; ownerId?: string; partyId?: string; memberIds: string[]; agentIds: AgentId[]; subject?: Subject }
-export type FigureUnit = 'USD' | 'pp' | '%' | 'sh' | 'd'
+export type FigureUnit = 'USD' | 'pp' | '%' | 'sh' | 'd' | 'pts'
 export type Figure = { label: string; value: number; unit: FigureUnit; source: string }   // pp and % values are fractions (0.132)
 export type Citation = { source: string; asOf: string }
 export type Attention = 'info' | 'attention'

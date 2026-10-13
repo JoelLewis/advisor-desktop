@@ -33,10 +33,11 @@ describe('people and permissions', () => {
 })
 
 describe('phase 3 agents', () => {
-  it('the desk has seven agents, each producing one kind of output', () => {
+  it('the desk has nine agents, each producing one kind of output', () => {
     expect(AGENTS.map((a) => [a.id, a.produces])).toEqual([
       ['drift-monitor', 'findings'], ['pretrade-check', 'findings'], ['harvest-scanner', 'findings'],
       ['proposal', 'proposals'], ['client-letter', 'letters'], ['meeting-prep', 'agenda'], ['meeting-notes', 'notes'],
+      ['prospect-profile', 'findings'], ['transfer-in', 'findings'],
     ])
   })
   it('the Proposal Agent may not approve or release; the Client Letter Agent may not send', () => {

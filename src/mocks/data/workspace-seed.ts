@@ -16,7 +16,7 @@ export const SEED_THREADS: readonly Thread[] = [
   { id: PELL_THREAD_ID, title: 'Dr. Amanda Pell', visibility: 'client', partyId: PELL_ID, memberIds: [PELL_ID, 'user-001', 'user-002'],
     agentIds: [], subject: { type: 'prospect', id: PELL_ID } },
   { id: PELL_WORK_THREAD_ID, title: 'Pell · prospect work', visibility: 'internal', memberIds: ['user-001', 'user-002', 'user-003'],
-    agentIds: [], subject: { type: 'prospect', id: PELL_ID } },
+    agentIds: ['prospect-profile', 'transfer-in', 'proposal'], subject: { type: 'prospect', id: PELL_ID } },
 ]
 
 /**

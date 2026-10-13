@@ -1,5 +1,5 @@
 export const MINUS = '−'
-export const UNIT = { usd: 'USD', pp: 'pp', pct: '%', shares: 'sh', days: 'd' } as const
+export const UNIT = { usd: 'USD', pp: 'pp', pct: '%', shares: 'sh', days: 'd', points: 'pts' } as const
 
 export class MeasureError extends Error {
   constructor(message: string) {
@@ -64,6 +64,7 @@ export const fmtDrift = (fraction: number) => signed(fraction, 1, 1, 2)
 export const fmtTolerance = (fraction: number) => `±${unsigned(Math.abs(fraction), 1, 1, 2)}`
 export const fmtQuantity = (v: number) => unsigned(v, 0, 3)
 export const fmtDays = (n: number) => unsigned(n, 0, 0)
+export const fmtPoints = (n: number) => unsigned(n, 0, 0)
 export const fmtScore = (fraction: number) => unsigned(fraction, 0, 0, 2)
 
 export function splitFraction(formatted: string): { whole: string; fraction: string } {

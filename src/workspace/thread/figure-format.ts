@@ -1,4 +1,4 @@
-import { UNIT, fmtDays, fmtDrift, fmtMoney, fmtQuantity, fmtTolerance, fmtWeight } from '@/kit/measure'
+import { UNIT, fmtDays, fmtDrift, fmtMoney, fmtPoints, fmtQuantity, fmtTolerance, fmtWeight } from '@/kit/measure'
 import type { Status } from '@/kit/status/status'
 import type { AgentId, Attention, Figure, FigureUnit } from '@/types/workspace'
 
@@ -10,6 +10,7 @@ const BY_UNIT: Readonly<Record<FigureUnit, { format: (v: number) => string; unit
   USD: { format: fmtMoney, unit: UNIT.usd },
   sh: { format: fmtQuantity, unit: UNIT.shares },
   d: { format: fmtDays, unit: UNIT.days },
+  pts: { format: fmtPoints, unit: UNIT.points },
 }
 
 /** Engine fields whose pp value is a tolerance band, read as ± rather than as a signed drift. */
