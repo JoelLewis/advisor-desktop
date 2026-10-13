@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PAGE_TITLE_ID } from '@/kit/page/ids'
 import { Select } from '@/kit/select/Select'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
 import { fmtDate } from '@/kit/measure'
 import { useArchive, useDirectory } from '@/hooks/use-workspace'
+import { FullViewNotFound } from '@/workspace/full-views/FullViewNotFound'
 import { isNotFound } from '@/workspace/is-not-found'
 import { isClientViewer } from '@/workspace/people/directory-people'
 import { useViewer } from '@/workspace/viewer/use-viewer'
@@ -26,7 +27,7 @@ export function ArchivePage() {
   }, [switchedToClient, navigate])
   if (switchedToClient || directory.isPending) return <p role="status" className="text-body text-ink-3">Loading the archive…</p>
   if (directory.isError) return <p role="alert" className="text-body">{directory.error.message}</p>
-  if (viewerIsClient) return <ArchiveNotFound />
+  if (viewerIsClient) return <FullViewNotFound subject="Archive" />
   return <Archive directory={directory.data} />
 }
 
@@ -35,7 +36,7 @@ function Archive({ directory }: { directory: Directory }) {
   const filters = filtersFrom(params)
   const archive = useArchive(filters)
   const set = (key: keyof ArchiveFilters) => (value: string) => setParams(withFilter(params, key, value), { replace: true })
-  if (archive.isError && isNotFound(archive.error)) return <ArchiveNotFound />
+  if (archive.isError && isNotFound(archive.error)) return <FullViewNotFound subject="Archive" />
   const data = archive.data
   const dates = [{ value: '', label: 'Any date' }, ...(data?.dates ?? []).map((d) => ({ value: d, label: fmtDate(d) }))]
   return (
@@ -58,16 +59,6 @@ function Archive({ directory }: { directory: Directory }) {
           <ArchiveTable entries={data.entries} directory={directory} />
         </>
       ) : archive.isPending ? <p role="status" className="text-body text-ink-3">Loading the archive…</p> : null}
-    </div>
-  )
-}
-
-function ArchiveNotFound() {
-  return (
-    <div className="flex flex-col gap-2">
-      <h1 id={PAGE_TITLE_ID} tabIndex={-1} className="text-title">Archive not found</h1>
-      <p className="text-body text-ink-2">It may not exist, or this viewer may not be able to see it.</p>
-      <Link to="/" className="self-start text-body underline underline-offset-4">Go to the workspace</Link>
     </div>
   )
 }

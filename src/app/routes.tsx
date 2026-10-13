@@ -9,6 +9,9 @@ import { useThreadContextAvailable } from '@/workspace/context/use-thread-contex
 import { WorkbenchPage } from '@/workspace/workbench/WorkbenchPage'
 import { WorkbenchThreadColumn } from '@/workspace/workbench/WorkbenchThreadColumn'
 import { useWorkbenchThreadAvailable } from '@/workspace/workbench/use-workbench-thread-available'
+import { MeetingPage } from '@/workspace/meeting/MeetingPage'
+import { MeetingThreadColumn } from '@/workspace/meeting/MeetingThreadColumn'
+import { useMeetingThreadAvailable } from '@/workspace/meeting/use-meeting-thread-available'
 import { ArchivePage } from '@/workspace/archive/ArchivePage'
 import { SupervisionPage } from '@/workspace/supervision/SupervisionPage'
 import type { ShellHandle } from '@/workspace/shell/context-column'
@@ -21,6 +24,10 @@ import { routerFuture } from './router-flags'
 const threadHandle: ShellHandle = { contextColumn: { label: 'Thread context', Content: ContextColumn, useAvailable: useThreadContextAvailable } }
 const workbenchHandle: ShellHandle = {
   contextColumn: { label: 'Live thread', Content: WorkbenchThreadColumn, useAvailable: useWorkbenchThreadAvailable },
+  threadList: 'hidden',
+}
+const meetingHandle: ShellHandle = {
+  contextColumn: { label: 'Live thread', Content: MeetingThreadColumn, useAvailable: useMeetingThreadAvailable },
   threadList: 'hidden',
 }
 const fullWidthHandle: ShellHandle = { threadList: 'hidden' }
@@ -41,6 +48,7 @@ export const routes: RouteObject[] = [
           { path: 'supervision', element: <SupervisionPage />, handle: fullWidthHandle },
           { path: 'supervision/:kind/:id', element: <SupervisionPage />, handle: fullWidthHandle },
           { path: 'proposals/:proposalId', element: <WorkbenchPage />, handle: workbenchHandle },
+          { path: 'meetings/:eventId', element: <MeetingPage />, handle: meetingHandle },
         ],
       },
       { path: 'kit', element: <KitPage /> },

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { PAGE_TITLE_ID } from '@/kit/page/ids'
 import { useDirectory, useRecordComplianceAct, useSupervision } from '@/hooks/use-workspace'
+import { FullViewNotFound } from '@/workspace/full-views/FullViewNotFound'
 import { isNotFound } from '@/workspace/is-not-found'
 import { isClientViewer } from '@/workspace/people/directory-people'
 import { useViewer } from '@/workspace/viewer/use-viewer'
@@ -24,7 +25,7 @@ export function SupervisionPage() {
   }, [switchedToClient, navigate])
   if (switchedToClient || directory.isPending) return <p role="status" className="text-body text-ink-3">Loading supervision…</p>
   if (directory.isError) return <p role="alert" className="text-body">{directory.error.message}</p>
-  if (viewerIsClient) return <SupervisionNotFound />
+  if (viewerIsClient) return <FullViewNotFound subject="Supervision" />
   return <Supervision directory={directory.data} />
 }
 
@@ -37,7 +38,7 @@ function Supervision({ directory }: { directory: Directory }) {
   const record = useRecordComplianceAct()
   const refusedItem = record.isError && record.variables ? itemOfRequest(record.variables) : undefined
   const refusal = refusedItem && refusedItem.kind === kind && refusedItem.id === id ? record.error?.message : undefined
-  if (queue.isError) return isNotFound(queue.error) ? <SupervisionNotFound /> : <p role="alert" className="text-body">{queue.error.message}</p>
+  if (queue.isError) return isNotFound(queue.error) ? <FullViewNotFound subject="Supervision" /> : <p role="alert" className="text-body">{queue.error.message}</p>
   if (queue.isPending) return <p role="status" className="text-body text-ink-3">Loading supervision…</p>
   const found = kind !== undefined && id !== undefined && isItemKind(kind) ? findItem(queue.data, kind, id) : undefined
   const disposes = (directory.permissions[viewerId] ?? []).includes('release_orders')
@@ -62,16 +63,6 @@ function Supervision({ directory }: { directory: Directory }) {
             : <p className="text-body text-ink-3">Choose an item from the queue.</p>}
         </div>
       </div>
-    </div>
-  )
-}
-
-function SupervisionNotFound() {
-  return (
-    <div className="flex flex-col gap-2">
-      <h1 id={PAGE_TITLE_ID} tabIndex={-1} className="text-title">Supervision not found</h1>
-      <p className="text-body text-ink-2">It may not exist, or this viewer may not be able to see it.</p>
-      <Link to="/" className="self-start text-body underline underline-offset-4">Go to the workspace</Link>
     </div>
   )
 }

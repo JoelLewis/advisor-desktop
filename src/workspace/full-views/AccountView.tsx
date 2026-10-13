@@ -9,6 +9,7 @@ import { isClientViewer } from '@/workspace/people/directory-people'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { DriftGauges } from '@/workspace/drift/DriftGauges'
 import { driftMeta } from '@/workspace/drift/drift-meta'
+import { FullViewNotFound } from '@/workspace/full-views/FullViewNotFound'
 import { isNotFound } from '@/workspace/is-not-found'
 import type { Account } from '@/types/account'
 import type { DriftStatus, Position, TaxLot } from '@/types/portfolio'
@@ -34,7 +35,7 @@ function AccountGate({ accountId }: { accountId: string }) {
 
   if (switchedToClient || directory.isPending) return <p role="status" className="text-body text-ink-3">Loading the account…</p>
   if (directory.isError) return <p role="alert" className="text-body">{directory.error.message}</p>
-  if (viewerIsClient) return <AccountNotFound />
+  if (viewerIsClient) return <FullViewNotFound subject="Account" />
   return <AccountPage accountId={accountId} />
 }
 
@@ -47,7 +48,7 @@ function AccountPage({ accountId }: { accountId: string }) {
   const lots = useTaxLots(accountId)
 
   // The account decides whether there is a page at all, before any of its readings can fail.
-  if (account.isError) return isNotFound(account.error) ? <AccountNotFound /> : <p role="alert" className="text-body">{account.error.message}</p>
+  if (account.isError) return isNotFound(account.error) ? <FullViewNotFound subject="Account" /> : <p role="alert" className="text-body">{account.error.message}</p>
   if (account.isPending) return <p role="status" className="text-body text-ink-3">Loading the account…</p>
   const failure = [drift, positions, lots].find((q) => q.isError)
   if (failure?.error) return <p role="alert" className="text-body">{failure.error.message}</p>
@@ -75,16 +76,6 @@ function AccountReadings({ account, drift, positions, lots, from }: AccountReadi
       <Pane title="Tax lots" meta={`${lots.length} lots`}>
         <TaxLotsTable lots={lots} positions={positions} />
       </Pane>
-    </div>
-  )
-}
-
-function AccountNotFound() {
-  return (
-    <div className="flex flex-col gap-2">
-      <h1 id={PAGE_TITLE_ID} tabIndex={-1} className="text-title">Account not found</h1>
-      <p className="text-body text-ink-2">It may not exist, or this viewer may not be able to see it.</p>
-      <Link to="/" className="self-start text-body underline underline-offset-4">Go to the workspace</Link>
     </div>
   )
 }
