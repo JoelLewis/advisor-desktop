@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
 import { useAccount } from '@/hooks/use-accounts'
+import { useProspect } from '@/hooks/use-prospect-work'
 import { useClientView, useHousehold } from '@/hooks/use-meetings'
-import { accountFullViewHref, clientFullViewHref, householdFullViewHref, meetingFullViewHref } from '@/workspace/full-views/full-view-href'
+import { accountFullViewHref, clientFullViewHref, householdFullViewHref, meetingFullViewHref, prospectFullViewHref } from '@/workspace/full-views/full-view-href'
 import type { Subject } from '@/types/workspace'
 import { ContextSection } from './ContextSection'
 
@@ -17,6 +18,7 @@ export function FullViews({ subject, threadId }: { subject: Subject; threadId: s
     case 'account': return <AccountViews accountId={subject.id} threadId={threadId} />
     case 'household': return <HouseholdViews householdId={subject.id} threadId={threadId} />
     case 'client': return <ClientViews clientId={subject.id} threadId={threadId} />
+    case 'prospect': return <ProspectViews prospectId={subject.id} threadId={threadId} />
     default: return null
   }
 }
@@ -63,6 +65,17 @@ function ClientViews({ clientId, threadId }: { clientId: string; threadId: strin
             <FullViewLink to={householdFullViewHref(client.data.householdId, threadId)}>{client.data.householdName}</FullViewLink>
           </div>
         )}
+    </ContextSection>
+  )
+}
+
+function ProspectViews({ prospectId, threadId }: { prospectId: string; threadId: string }) {
+  const prospect = useProspect(prospectId)
+  return (
+    <ContextSection title="Full views">
+      {prospect.isPending ? <p role="status" className="text-body text-ink-3">Loading the prospect…</p>
+        : prospect.isError ? <p role="alert" className="text-body">{prospect.error.message}</p>
+        : <FullViewLink to={prospectFullViewHref(prospectId, threadId)}>{prospect.data.name}</FullViewLink>}
     </ContextSection>
   )
 }

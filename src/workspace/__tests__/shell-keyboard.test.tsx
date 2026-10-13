@@ -61,6 +61,7 @@ describe('keyboard in the shell', () => {
       'Client · Robert Johnson',
       'Client · Patricia Johnson',
       'Meeting · Johnson annual review',
+      'Prospect · Dr. Amanda Pell',
       'Supervision',
       'Archive',
       'Component kit',

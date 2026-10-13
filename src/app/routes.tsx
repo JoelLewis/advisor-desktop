@@ -12,6 +12,7 @@ import { WorkbenchPage } from '@/workspace/workbench/WorkbenchPage'
 import { WorkbenchThreadColumn } from '@/workspace/workbench/WorkbenchThreadColumn'
 import { useWorkbenchThreadAvailable } from '@/workspace/workbench/use-workbench-thread-available'
 import { MeetingPage } from '@/workspace/meeting/MeetingPage'
+import { ProspectPage } from '@/workspace/prospect/ProspectPage'
 import { MeetingThreadColumn } from '@/workspace/meeting/MeetingThreadColumn'
 import { useMeetingThreadAvailable } from '@/workspace/meeting/use-meeting-thread-available'
 import { ArchivePage } from '@/workspace/archive/ArchivePage'
@@ -53,6 +54,7 @@ export const routes: RouteObject[] = [
           { path: 'supervision/:kind/:id', element: <SupervisionPage />, handle: fullWidthHandle },
           { path: 'proposals/:proposalId', element: <WorkbenchPage />, handle: workbenchHandle },
           { path: 'meetings/:eventId', element: <MeetingPage />, handle: meetingHandle },
+          { path: 'prospects/:prospectId', element: <ProspectPage />, handle: fullWidthHandle },
         ],
       },
       { path: 'kit', element: <KitPage /> },
