@@ -1,6 +1,8 @@
 import type { BindingAct } from '@/types/workspace'
 import { createProposal, reviseProposal, saveVersion } from '../proposals'
 import { approveProposal } from '../proposal-acts'
+import { draftLetter } from '../letters'
+import { sendToClient } from '../acts'
 import { releaseOrders } from '../compliance-acts'
 
 export const ADRIAN = 'user-001'
@@ -34,4 +36,12 @@ export function approvedStoryV3(): Approved {
 
 export function release(a: Approved, rationale = RATIONALE): BindingAct {
   return ok(releaseOrders(MARK, a.proposalId, a.approvalActId, a.fingerprint, rationale)).act
+}
+
+/** Robert's letter from the approved version, sent by Adrian. */
+export function sendLetter(a: Approved): { act: BindingAct; messageId: string } {
+  const { draft } = ok(draftLetter(ADRIAN, 'th-robert', a.proposalId))
+  const { act } = ok(sendToClient(ADRIAN, draft.id))
+  if (!act.messageId) throw new Error('A sent letter names the message it delivered')
+  return { act, messageId: act.messageId }
 }

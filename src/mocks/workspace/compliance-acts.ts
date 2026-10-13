@@ -1,11 +1,16 @@
-import type { BindingAct, Message, ViaPresenter } from '@/types/workspace'
+import type { AlertOutcome, BindingAct, CorrespondenceOutcome, Message, ViaPresenter } from '@/types/workspace'
 import type { ApprovalRecord, Proposal, ProposalVersion } from '@/types/workspace-proposal'
-import { can } from '@/mocks/data/people'
-import { advanceClockTo, commitActId, nextAt, nextId, store } from '@/mocks/data/workspace-store'
+import { can, personById } from '@/mocks/data/people'
+import { advanceClockTo, commitActId, nextAt, nextId, nextNumber, store } from '@/mocks/data/workspace-store'
+import { clients } from '@/mocks/data/clients'
+import { SUPERVISION_RECORDS } from '@/mocks/handlers/compliance'
 import { actOnApproval } from '@/mocks/data/proposals-store'
 import { MOCK_NOW_ISO, MOCK_TODAY_ISO, eventTime } from '@/lib/clock'
 import { isDuringNyseSession, nyseSessionUtc } from '@/lib/trading-calendar'
 import { applyFills } from './fills'
+import { ALERT_ACTION, alertById, alertDisposal, alertFingerprint, isOpenAlert } from './alerts'
+import { latestReview, sentMessage } from './correspondence'
+import { canSeeThread } from './visibility'
 import { closeStaging, recordAct, setApprovalStatus, visibleProposal } from './proposal-acts'
 
 export type ComplianceFailure = { ok: false; status: 400 | 403 | 404 | 409; code: string; message: string }
@@ -138,6 +143,60 @@ export function escalate(viewerId: string, proposalId: string, approvalActId: st
     subject: { type: 'proposal', id: proposal.id }, version: approval.version, fingerprint: approval.fingerprint,
     summary: `Escalated the orders staged from v${approval.version} of the ${proposal.title}; they stay held`,
     rationale: rationale.trim(), approvalActId: approval.actId, ...via(options),
+  }
+  recordAct(act)
+  return { ok: true, act }
+}
+
+const ALERT_SUMMARY: Readonly<Record<AlertOutcome, (title: string) => string>> = {
+  approve: (title) => `Approved the alert: ${title}`,
+  reject: (title) => `Rejected the alert: ${title}`,
+  request_changes: (title) => `Requested changes on the alert: ${title}`,
+}
+
+const isClient = (viewerId: string) => personById(viewerId)?.role === 'client'
+
+export function disposeAlert(viewerId: string, alertId: string, outcome: AlertOutcome, fingerprint: string, rationale: string, options: ActOptions = {}): Recorded | ComplianceFailure {
+  const alert = alertById(alertId)
+  if (!alert || isClient(viewerId) || !personById(viewerId)) return refuse(404, 'NO_ALERT', 'Alert not found.')
+  if (!can(viewerId, 'dispose_alert')) return refuse(403, 'NOT_PERMITTED', 'Only compliance can dispose of an alert.')
+  const badRationale = rationaleRefusal(rationale)
+  if (badRationale) return badRationale
+  if (!isOpenAlert(alert)) {
+    const earlier = alertDisposal(alert.id)
+    return refuse(409, 'ALREADY_DISPOSED', earlier ? `${alert.id} was already disposed of (${earlier.id}).` : `${alert.id} is already closed.`)
+  }
+  if (alertFingerprint(alert) !== fingerprint) return refuse(409, 'FINGERPRINT_MISMATCH', 'The alert or its record trail changed since you opened it. Open it again.')
+  const reviewer = personById(viewerId)
+  if (!reviewer) throw new Error(`No person ${viewerId}`)
+  const act: BindingAct = {
+    id: commitActId(), kind: 'dispose_alert', actorId: viewerId, at: nextAt(), subject: { type: 'alert', id: alert.id },
+    fingerprint, summary: ALERT_SUMMARY[outcome](alert.title), rationale: rationale.trim(), outcome, ...via(options),
+  }
+  recordAct(act)
+  store().supervisionRecords.push({
+    id: `sr-${String(SUPERVISION_RECORDS.length + nextNumber('record')).padStart(3, '0')}`, alertId: alert.id,
+    reviewerId: viewerId, reviewer: `${reviewer.name} (CCO)`, action: ALERT_ACTION[outcome], notes: rationale.trim(), timestamp: act.at,
+  })
+  return { ok: true, act }
+}
+
+export function reviewCorrespondence(viewerId: string, messageId: string, outcome: CorrespondenceOutcome, fingerprint: string, rationale: string, options: ActOptions = {}): Recorded | ComplianceFailure {
+  const sent = sentMessage(messageId)
+  if (!sent || isClient(viewerId) || !canSeeThread(viewerId, sent.thread)) return refuse(404, 'NO_MESSAGE', 'Message not found.')
+  if (!can(viewerId, 'review_correspondence')) return refuse(403, 'NOT_PERMITTED', 'Only compliance can review client correspondence.')
+  const badRationale = rationaleRefusal(rationale)
+  if (badRationale) return badRationale
+  const last = latestReview(messageId)
+  if (last?.outcome === 'reviewed') return refuse(409, 'ALREADY_REVIEWED', `This message was already reviewed (${last.id}).`)
+  if (last?.outcome === 'flagged' && outcome === 'flagged') return refuse(409, 'ALREADY_FLAGGED', `This message is already flagged (${last.id}).`)
+  if (sent.act.fingerprint !== fingerprint) return refuse(409, 'FINGERPRINT_MISMATCH', 'This is not the message as it was sent. Open it again.')
+  const client = clients.find((c) => c.id === sent.thread.clientId)
+  if (!client) throw new Error(`Thread ${sent.thread.id} names no client`)
+  const act: BindingAct = {
+    id: commitActId(), kind: 'review_correspondence', actorId: viewerId, at: nextAt(), subject: { type: 'message', id: messageId },
+    fingerprint, summary: outcome === 'reviewed' ? `Reviewed the message sent to ${client.fullName}` : `Flagged the message sent to ${client.fullName} for follow-up`,
+    rationale: rationale.trim(), outcome, ...via(options),
   }
   recordAct(act)
   return { ok: true, act }

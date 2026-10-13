@@ -1,3 +1,4 @@
+import type { SupervisionRecord } from '@/types/compliance'
 import type { BindingAct, Draft, Message, Thread } from '@/types/workspace'
 import type { ApprovalRecord, Proposal, StagedOrder } from '@/types/workspace-proposal'
 import { eventTime } from '@/lib/clock'
@@ -5,7 +6,7 @@ import { briefMessages } from '@/mocks/workspace/brief'
 import { resetLedger } from './portfolio-ledger'
 import { SEED_LAST_SEQUENCE, SEED_MESSAGES, SEED_THREADS } from './workspace-seed'
 
-type Counter = 'msg' | 'draft' | 'act' | 'proposal' | 'staged'
+type Counter = 'msg' | 'draft' | 'act' | 'proposal' | 'staged' | 'record'
 
 export type WorkspaceState = {
   threads: Thread[]
@@ -15,6 +16,7 @@ export type WorkspaceState = {
   proposals: Proposal[]
   approvals: ApprovalRecord[]
   staged: StagedOrder[]
+  supervisionRecords: SupervisionRecord[]
   sequence: number
   counters: Record<Counter, number>
 }
@@ -28,8 +30,9 @@ function seed(): WorkspaceState {
     proposals: [],
     approvals: [],
     staged: [],
+    supervisionRecords: [],
     sequence: SEED_LAST_SEQUENCE,
-    counters: { msg: 0, draft: 0, act: 0, proposal: 0, staged: 0 },
+    counters: { msg: 0, draft: 0, act: 0, proposal: 0, staged: 0, record: 0 },
   }
 }
 

@@ -388,7 +388,7 @@ export const complianceAlerts: ComplianceAlert[] = [
 const CCO_ID = 'cco-001'
 const ccoReviewer = { reviewerId: CCO_ID, reviewer: `${personById(CCO_ID)!.name} (CCO)` }
 
-const supervisionRecords: SupervisionRecord[] = [
+export const SUPERVISION_RECORDS: readonly SupervisionRecord[] = [
   { id: 'sr-001', alertId: 'comp-004', ...ccoReviewer, action: 'Approved', notes: 'All trades within portfolio guidelines. No restricted securities.', timestamp: '2026-02-22T09:35:00Z' },
   { id: 'sr-002', alertId: 'comp-006', ...ccoReviewer, action: 'Approved', notes: 'SMH is a distinct ETF from INTC. No wash sale concern.', timestamp: '2026-02-20T16:10:00Z' },
   { id: 'sr-003', alertId: 'comp-002', ...ccoReviewer, action: 'Under Review', notes: 'Reviewing client IPS for AAPL exception. Position is long-held with significant unrealized gain.', timestamp: '2026-02-23T10:00:00Z' },
@@ -416,7 +416,7 @@ export const complianceHandlers = [
   }),
 
   http.get('/api/compliance/alerts/:alertId/records', ({ params }) => {
-    const records = supervisionRecords.filter((r) => r.alertId === params.alertId)
+    const records = SUPERVISION_RECORDS.filter((r) => r.alertId === params.alertId)
     return HttpResponse.json(records)
   }),
 ]
