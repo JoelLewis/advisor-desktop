@@ -50,3 +50,10 @@ describe('findingStatus', () => {
     expect(findingStatus(finding('Every asset class is inside its tolerance band.', 'info'))).toBe('none')
   })
 })
+
+describe('meeting prep findings', () => {
+  it('need discussion, not a breach code', () => {
+    expect(marksBreach({ agentId: 'meeting-prep', attention: 'attention' })).toBe(false)
+    expect(marksBreach({ agentId: 'drift-monitor', attention: 'attention' })).toBe(true)
+  })
+})
