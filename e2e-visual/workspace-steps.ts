@@ -102,3 +102,53 @@ export async function goTo(page: Page, destination: string) {
   await page.getByRole('combobox', { name: 'Go to' }).fill(destination)
   await page.keyboard.press('Enter')
 }
+
+export const PELL_REPLY_TEXT = 'Thank you for the coffee. Here are my answers to the questionnaire and my two statements.'
+export const PELL_ACCEPTANCE_TEXT = "I've read the proposal and I'd like to go ahead."
+const JUMP_LABEL = { reply: 'Advance to her reply · Thu 26 Feb 09:10 ET', acceptance: 'Advance to her acceptance · Mon 2 Mar 10:00 ET' } as const
+
+/** A disclosure from her thread's timeline (or the onboarding checklist), confirmed as a binding act. */
+export async function deliver(page: Page, short: 'Form CRS' | 'ADV Part 2A' | 'ADV Part 2B' | 'privacy notice') {
+  await context(page).getByRole('button', { name: `Deliver ${short}`, exact: true }).click()
+  await page.getByRole('dialog', { name: `Deliver ${short} to Dr. Amanda Pell?` }).getByRole('button', { name: 'Confirm' }).click()
+  await expect(context(page).getByRole('button', { name: `Deliver ${short}`, exact: true })).toHaveCount(0)
+}
+
+export async function recordTheCoffee(page: Page) {
+  const clock = context(page).getByRole('region', { name: 'Clock' })
+  await clock.getByRole('button', { name: 'Record the coffee' }).click()
+  await page.getByRole('dialog', { name: 'Record the coffee' }).getByRole('button', { name: 'Record', exact: true }).click()
+  await expect(clock).toContainText('Coffee recorded')
+}
+
+export async function advanceTo(page: Page, to: 'reply' | 'acceptance') {
+  await context(page).getByRole('button', { name: JUMP_LABEL[to] }).click()
+  await expect(conversation(page)).toContainText(to === 'reply' ? PELL_REPLY_TEXT : PELL_ACCEPTANCE_TEXT)
+}
+
+export async function askAgentNamed(page: Page, name: string) {
+  await context(page).getByRole('region', { name: 'Ask an agent' }).getByRole('button', { name: `Ask ${name}`, exact: true }).click()
+}
+
+export async function reviseToTwoTaxYears(page: Page) {
+  const proposal = page.getByRole('region', { name: 'Proposal · Pell proposal' })
+  await proposal.getByRole('button', { name: 'Revise' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Revise the Pell proposal' })
+  await dialog.getByLabel('Staged sale of the concentrated stock').selectOption('2')
+  await dialog.getByRole('button', { name: 'Ask for v2' }).click()
+  await expect(proposal.getByRole('table', { name: 'Staged sale option · v2' })).toBeVisible()
+}
+
+export async function approveProspect(page: Page, version: number) {
+  const approval = context(page).getByRole('region', { name: 'Approval · Pell proposal' })
+  await approval.getByRole('checkbox', { name: `I reviewed v${version}: its model, its transfer plan, its fees and the best-interest record.` }).check()
+  await approval.getByRole('button', { name: `Approve v${version}` }).click()
+  await page.getByRole('dialog', { name: `Approve v${version} of the Pell proposal?` }).getByRole('button', { name: 'Confirm' }).click()
+  await expect(approval).toContainText(`v${version} is approved`)
+}
+
+export async function sendToHer(page: Page, version: number) {
+  await context(page).getByRole('region', { name: 'Proposal' }).getByRole('button', { name: `Send v${version} to Dr. Pell` }).click()
+  await page.getByRole('dialog', { name: `Send v${version} to Dr. Pell?` }).getByRole('button', { name: 'Confirm' }).click()
+  await expect(conversation(page)).toContainText('Dear Dr. Pell,')
+}
