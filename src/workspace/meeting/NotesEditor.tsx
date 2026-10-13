@@ -8,6 +8,7 @@ import { authorName } from '@/workspace/proposal/author-name'
 import { NOTE_SECTIONS, type MeetingView, type NoteLine, type NoteSection, type TranscriptSpeaker } from '@/types/workspace-meeting'
 import type { Directory } from '@/types/workspace'
 import { FILED_RECORD_ID, NOTE_SECTION_TITLE } from './note-words'
+import { Unbroken } from '@/kit/unbroken/Unbroken'
 
 type NotesEditorProps = {
   meeting: MeetingView; directory: Directory; editable: boolean
@@ -35,7 +36,7 @@ export function NotesEditor({ meeting, directory, editable, onCite, onDirtyChang
   return (
     <Pane title="Notes" meta={meeting.filed ? 'Filed record' : 'Draft · Meeting Notes'}>
       {meeting.filed ? (
-        <p id={FILED_RECORD_ID} tabIndex={-1} className="tabular text-body font-semibold">{`Filed · ${meeting.filed.actId} · fingerprint ${meeting.filed.fingerprint}`}</p>
+        <p id={FILED_RECORD_ID} tabIndex={-1} className="tabular text-body font-semibold"><Unbroken text={`Filed · ${meeting.filed.actId} · fingerprint ${meeting.filed.fingerprint}`} /></p>
       ) : null}
       {NOTE_SECTIONS.map((section) => (
         <NoteSectionList key={section} section={section} lines={lines.filter((l) => l.section === section)} directory={directory} editable={editable}
@@ -73,7 +74,7 @@ function NoteSectionList({ section, lines, directory, editable, editing, onEdit,
             {editing === line.id
               ? <TextInput label={`Edit ${line.id}`} value={line.text} rows={3} onChange={(text) => onText(line.id, text)} />
               : <p className="text-copy">{line.text}</p>}
-            {line.owner && line.due ? <p className="text-label text-ink-2">{`${authorName(line.owner, directory)} · due ${fmtDate(line.due)}`}</p> : null}
+            {line.owner && line.due ? <p className="text-label text-ink-2"><Unbroken text={`${authorName(line.owner, directory)} · due ${fmtDate(line.due)}`} /></p> : null}
             <div className="flex flex-wrap items-center gap-1">
               <span className="text-label uppercase text-ink-3">Cites</span>
               {line.cites.map((cite) => (

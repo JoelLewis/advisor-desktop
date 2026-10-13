@@ -108,7 +108,7 @@ describe('the meeting full view', () => {
     await waitFor(() => expect(screen.queryByText('Unsaved edits')).toBeNull())
     await user.click(screen.getByRole('button', { name: 'File the record' }))
     await user.dblClick(within(screen.getByRole('dialog', { name: 'File the record of the Johnson annual review?' })).getByRole('button', { name: 'Confirm' }))
-    const filed = await screen.findByText(/^Filed · REC-0001 · fingerprint [0-9A-F]{8}$/)
+    const filed = await screen.findByText((_, el) => el?.tagName === 'P' && /^Filed · REC-0001 · fingerprint [0-9A-F]{8}$/.test(el.textContent ?? ''))
     await waitFor(() => expect(document.activeElement).toBe(filed))
     expect(screen.getByRole('table', { name: 'Follow-up tasks' })).toHaveTextContent('Sarah Mitchell')
     expect(screen.queryByRole('button', { name: 'Edit n-01' })).toBeNull()

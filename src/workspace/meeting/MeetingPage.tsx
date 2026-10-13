@@ -24,6 +24,7 @@ import { TranscriptNotes } from './TranscriptNotes'
 import { agendaFindings } from './agenda-findings'
 import { MEETING_STATE_TAG } from './meeting-words'
 import { FILED_RECORD_ID, SAVE_BEFORE_FILING } from './note-words'
+import { Unbroken } from '@/kit/unbroken/Unbroken'
 
 const LINK_CLASS = 'underline decoration-rule-2 underline-offset-4 hover:decoration-ink'
 
@@ -71,7 +72,7 @@ function MeetingFullView({ meeting, directory }: { meeting: MeetingView; directo
           <h1 id={PAGE_TITLE_ID} tabIndex={-1} className="text-title">{meeting.title}</h1>
           <Tag tone={meeting.state === 'filed' ? 'solid' : 'outline'}>{MEETING_STATE_TAG[meeting.state]}</Tag>
         </div>
-        <p className="tabular text-body text-ink-2">{[fmtDate(meeting.start), fmtEasternRange(meeting.start, meeting.end), ...(meeting.event.location ? [meeting.event.location] : [])].join(' · ')}</p>
+        <p className="tabular text-body text-ink-2"><Unbroken text={[fmtDate(meeting.start), fmtEasternRange(meeting.start, meeting.end), ...(meeting.event.location ? [meeting.event.location] : [])].join(' · ')} /></p>
         <p className="text-body text-ink-2">{`With ${joinWords(meeting.event.attendees.map((a) => a.name))}`}</p>
         <nav aria-label="Full views" className="flex flex-wrap gap-x-4 gap-y-1 text-body">
           <Link to={householdFullViewHref(meeting.householdId, meeting.threadId)} className={LINK_CLASS}>Household</Link>

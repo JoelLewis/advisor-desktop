@@ -4,6 +4,7 @@ import { useDraftRecap, useMeetings } from '@/hooks/use-meetings'
 import { useDrafts } from '@/hooks/use-workspace'
 import type { Thread } from '@/types/workspace'
 import type { MeetingSummary } from '@/types/workspace-meeting'
+import { Unbroken } from '@/kit/unbroken/Unbroken'
 
 type Asked = { draftId: string; title: string; created: boolean }
 
@@ -36,7 +37,7 @@ export function RecapControl({ thread }: { thread: Thread }) {
       {withClient.map((m) => (m.filedActId ? (
         <div key={m.eventId} className="flex flex-col items-start gap-1">
           <Button rank="secondary" disabled={recap.isPending} onClick={() => ask(m)}>Ask Client Letter Agent for the recap</Button>
-          <span className="text-label text-ink-3">{`From the filed record of the ${m.title} (${m.filedActId})`}</span>
+          <span className="text-label text-ink-3"><Unbroken text={`From the filed record of the ${m.title} (${m.filedActId})`} /></span>
         </div>
       ) : (
         <div key={m.eventId} className="flex flex-col items-start gap-1">

@@ -6,6 +6,7 @@ import { useDraftMeetingNotes, useFileMeetingRecord, useHoldMeeting, useRunMeeti
 import { ConfirmRecord } from '@/workspace/context/ConfirmRecord'
 import type { MeetingView } from '@/types/workspace-meeting'
 import { ADVISOR_RUNS_IT } from './meeting-words'
+import { Unbroken } from '@/kit/unbroken/Unbroken'
 
 type MeetingControlsProps = { meeting: MeetingView; canPrepare: boolean; onRecorded: (actId: string) => void; filingBlockedReason?: string }
 
@@ -17,7 +18,7 @@ export function MeetingControls({ meeting, canPrepare, onRecorded, filingBlocked
     case 'held': return <AfterTheMeeting meeting={meeting} onRecorded={onRecorded} filingBlockedReason={filingBlockedReason} />
     case 'filed': {
       if (meeting.filedActId === undefined) throw new Error(`Meeting ${meeting.eventId} is filed but names no filing act`)
-      return <p className="text-body text-ink-2">{`Filed · ${meeting.filedActId}`}</p>
+      return <p className="text-body text-ink-2"><Unbroken text={`Filed · ${meeting.filedActId}`} /></p>
     }
   }
 }

@@ -39,6 +39,7 @@ describe("Robert's recap", () => {
     const panel = await openRobert()
     const user = userEvent.setup()
     expect(panel).toHaveTextContent('From the filed record of the Johnson annual review (REC-0001)')
+    expect(within(panel).getByText('REC-0001')).toHaveClass('whitespace-nowrap')
     await user.dblClick(await within(panel).findByRole('button', { name: RECAP }))
     expect(await within(panel).findByRole('status')).toHaveTextContent('The Client Letter Agent drafted the recap of the Johnson annual review.')
     const draft = await within(panel).findByRole('article', { name: 'Draft · not sent' })

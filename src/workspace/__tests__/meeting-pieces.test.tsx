@@ -13,6 +13,8 @@ import { heldAwayPolicy, ipsLine } from '@/workspace/household/household-words'
 
 const ADRIAN = 'user-001'
 const meeting = () => store().meetings[0]!
+/** Matches the paragraph whose whole text is this, though a record id inside it sits in its own span. */
+const wholeParagraph = (text: string) => (_: string, el: Element | null) => el?.tagName === 'P' && el.textContent === text
 
 /** The controls as the context column mounts them: reading the live meeting, so each write re-renders them. */
 function LiveControls({ canPrepare = true }: { canPrepare?: boolean }) {
@@ -52,7 +54,7 @@ describe('meeting controls', () => {
     await user.click(await screen.findByRole('button', { name: 'File the record' }))
     const dialog = screen.getByRole('dialog', { name: 'File the record of the Johnson annual review?' })
     await user.dblClick(within(dialog).getByRole('button', { name: 'Confirm' }))
-    expect(await screen.findByText('Filed · REC-0001')).toBeInTheDocument()
+    expect(await screen.findByText(wholeParagraph('Filed · REC-0001'))).toBeInTheDocument()
     expect(store().acts.filter((a) => a.kind === 'file_meeting_record')).toHaveLength(1)
   })
 
@@ -70,7 +72,7 @@ describe('meeting controls', () => {
   it('a filed meeting names its act; one with no act id is a broken invariant', async () => {
     const view = await getMeeting(ADRIAN, 'evt-010')
     renderWithProviders(<MeetingControls meeting={{ ...view, state: 'filed', filedActId: 'REC-0001' }} canPrepare onRecorded={() => undefined} />)
-    expect(screen.getByText('Filed · REC-0001')).toBeInTheDocument()
+    expect(screen.getByText(wholeParagraph('Filed · REC-0001'))).toBeInTheDocument()
     // React reports the thrown render to the console and to jsdom's window: keep the output quiet, the throw is the assertion.
     const quiet = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const swallow = (e: ErrorEvent) => e.preventDefault()

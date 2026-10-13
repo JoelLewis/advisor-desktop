@@ -13,6 +13,7 @@ import { ContextSection } from './ContextSection'
 import { LetterControl } from './LetterControl'
 import { RecapControl } from './RecapControl'
 import { draftOrigin } from './draft-origin'
+import { Unbroken } from '@/kit/unbroken/Unbroken'
 
 type DraftsPanelProps = { thread: Thread; directory: Directory; onSent: (actId: string) => void }
 
@@ -96,7 +97,7 @@ function DraftView({ draft, directory, threadId, canEdit, staleReason, sendLabel
       {staleReason ? (
         <p className="flex flex-wrap items-baseline gap-2 text-body">
           <Tag tone="solid">STALE</Tag>
-          <span id={reasonId}>{staleReason}</span>
+          <span id={reasonId}><Unbroken text={staleReason} /></span>
         </p>
       ) : null}
       {editing ? (
