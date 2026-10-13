@@ -11,6 +11,7 @@ import type { Directory, Draft, Thread } from '@/types/workspace'
 import type { ProposalDetail } from '@/types/workspace-proposal'
 import { ContextSection } from './ContextSection'
 import { LetterControl } from './LetterControl'
+import { RecapControl } from './RecapControl'
 import { draftOrigin } from './draft-origin'
 
 type DraftsPanelProps = { thread: Thread; directory: Directory; onSent: (actId: string) => void }
@@ -47,6 +48,7 @@ export function DraftsPanel({ thread, directory, onSent }: DraftsPanelProps) {
   return (
     <ContextSection title={`Drafts for ${clientFirstName}`}>
       {canDraft ? <LetterControl thread={thread} /> : null}
+      {canDraft ? <RecapControl thread={thread} /> : null}
       {drafts.data.map((d) => (
         <DraftView key={d.id} draft={d} directory={directory} threadId={thread.id} canEdit={canDraft}
           staleReason={d.stale ? staleReason(d, proposals.data) : undefined}
@@ -59,6 +61,7 @@ export function DraftsPanel({ thread, directory, onSent }: DraftsPanelProps) {
 
 /** Why a letter's basis is no longer the approval, read from where the approval stands now. */
 function staleReason(draft: Draft, proposals: ProposalDetail[] | undefined): string {
+  if (draft.recordBasis) return `The filed record no longer matches this recap (${draft.recordBasis.actId}). Ask the Client Letter Agent for a new recap.`
   const from = `v${draft.basis?.version ?? ''}`
   const approval = proposals?.find((p) => p.id === draft.basis?.proposalId)?.approval
   const why = approval?.kind === 'released' ? `The orders from ${from} were filled; this letter was written before they were placed.`
