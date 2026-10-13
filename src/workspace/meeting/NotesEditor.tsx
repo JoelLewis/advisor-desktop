@@ -9,6 +9,7 @@ import { NOTE_SECTIONS, type MeetingView, type NoteLine, type NoteSection, type 
 import type { Directory } from '@/types/workspace'
 import { FILED_RECORD_ID, NOTE_SECTION_TITLE } from './note-words'
 import { Unbroken } from '@/kit/unbroken/Unbroken'
+import { firstNameOf } from '@/lib/words'
 
 type NotesEditorProps = {
   meeting: MeetingView; directory: Directory; editable: boolean
@@ -32,6 +33,12 @@ export function NotesEditor({ meeting, directory, editable, onCite, onDirtyChang
     if (!speaker) throw new Error(`Note cites ${cite}, which the transcript does not have`)
     return speakerOf(speaker)
   }
+  const saved = new Map(source.map((l) => [l.id, l]))
+  const clientName = (clientId: string) => {
+    const attendee = meeting.event.attendees.find((a) => a.id === clientId)
+    if (!attendee) throw new Error(`Client wording for ${clientId}, who is not at the meeting`)
+    return firstNameOf(attendee.name)
+  }
   const setText = (id: string, text: string) => setLines((ls) => ls.map((l) => (l.id === id ? { ...l, text } : l)))
   return (
     <Pane title="Notes" meta={meeting.filed ? 'Filed record' : 'Draft · Meeting Notes'}>
@@ -39,7 +46,7 @@ export function NotesEditor({ meeting, directory, editable, onCite, onDirtyChang
         <p id={FILED_RECORD_ID} tabIndex={-1} className="tabular text-body font-semibold"><Unbroken text={`Filed · ${meeting.filed.actId} · fingerprint ${meeting.filed.fingerprint}`} /></p>
       ) : null}
       {NOTE_SECTIONS.map((section) => (
-        <NoteSectionList key={section} section={section} lines={lines.filter((l) => l.section === section)} directory={directory} editable={editable}
+        <NoteSectionList key={section} section={section} lines={lines.filter((l) => l.section === section)} saved={saved} clientName={clientName} directory={directory} editable={editable}
           editing={editing} onEdit={(id) => setEditing((current) => (current === id ? undefined : id))} onText={setText}
           onRemove={(id) => setLines((ls) => ls.filter((l) => l.id !== id))} canRemove={lines.length > 1} onCite={onCite} speakerFor={speakerFor} />
       ))}
@@ -57,12 +64,13 @@ export function NotesEditor({ meeting, directory, editable, onCite, onDirtyChang
 }
 
 type NoteSectionListProps = {
-  section: NoteSection; lines: NoteLine[]; directory: Directory; editable: boolean; editing: string | undefined
+  section: NoteSection; lines: NoteLine[]; saved: ReadonlyMap<string, NoteLine>; clientName: (clientId: string) => string
+  directory: Directory; editable: boolean; editing: string | undefined
   onEdit: (id: string) => void; onText: (id: string, text: string) => void; onRemove: (id: string) => void; canRemove: boolean
   onCite: (lineId: string | undefined) => void; speakerFor: (cite: string) => string
 }
 
-function NoteSectionList({ section, lines, directory, editable, editing, onEdit, onText, onRemove, canRemove, onCite, speakerFor }: NoteSectionListProps) {
+function NoteSectionList({ section, lines, saved, clientName, directory, editable, editing, onEdit, onText, onRemove, canRemove, onCite, speakerFor }: NoteSectionListProps) {
   const titleId = useId()
   if (lines.length === 0) return null
   return (
@@ -74,6 +82,7 @@ function NoteSectionList({ section, lines, directory, editable, editing, onEdit,
             {editing === line.id
               ? <TextInput label={`Edit ${line.id}`} value={line.text} rows={3} onChange={(text) => onText(line.id, text)} />
               : <p className="text-copy">{line.text}</p>}
+            {line.toClient ? <ClientWordingLine line={line} saved={saved.get(line.id)} name={clientName(line.toClient.clientId)} /> : null}
             {line.owner && line.due ? <p className="text-label text-ink-2"><Unbroken text={`${authorName(line.owner, directory)} · due ${fmtDate(line.due)}`} /></p> : null}
             <div className="flex flex-wrap items-center gap-1">
               <span className="text-label uppercase text-ink-3">Cites</span>
@@ -96,4 +105,16 @@ function NoteSectionList({ section, lines, directory, editable, editing, onEdit,
       </ul>
     </section>
   )
+}
+
+/**
+ * The wording a client reads in the recap, beneath the firm's line, so the advisor reviews what is filed.
+ * Once the line's text differs from the saved one, the engine drops the wording on save: say so.
+ */
+function ClientWordingLine({ line, saved, name }: { line: NoteLine; saved: NoteLine | undefined; name: string }) {
+  if (!line.toClient) return null
+  const rewritten = saved !== undefined && saved.text !== line.text.trim()
+  return rewritten
+    ? <p className="text-label text-ink-2">{`${name}'s wording of this line is dropped when it is saved; the recap will read the line as written.`}</p>
+    : <p className="border-l-2 border-rule-2 pl-2 text-body text-ink-2">{`To ${name}: ${line.toClient.text}`}</p>
 }

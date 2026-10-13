@@ -115,6 +115,37 @@ describe('the meeting full view', () => {
     expect(store().acts.filter((a) => a.kind === 'file_meeting_record')).toHaveLength(1)
   })
 
+  it('shows, beneath a line the client reads, the wording filed for that client; an edit to the line says it drops on save', async () => {
+    await heldWithNotes()
+    await openMeeting()
+    const user = userEvent.setup()
+    const decisions = await screen.findByRole('list', { name: 'Decisions' })
+    const n09 = store().meetings[0]!.notesDraft!.find((l) => l.id === 'n-09')!
+    const wording = within(decisions).getByText(`To Robert: ${n09.toClient!.text}`)
+    expect(wording.closest('li')).toHaveTextContent(n09.text)
+    expect(within(decisions).getAllByText(/^To Robert: /)).toHaveLength(2)
+    expect(within(await screen.findByRole('list', { name: 'Client requests' })).getAllByText(/^To Robert: /)).toHaveLength(1)
+    expect(within(screen.getByRole('list', { name: 'Discussion' })).queryByText(/^To Robert: /)).toBeNull()
+
+    await user.click(within(decisions).getByRole('button', { name: 'Edit n-12' }))
+    await user.type(screen.getByRole('textbox', { name: 'Edit n-12' }), ' Soon.')
+    const n12 = screen.getByRole('textbox', { name: 'Edit n-12' }).closest('li')!
+    expect(n12).toHaveTextContent("Robert's wording of this line is dropped when it is saved; the recap will read the line as written.")
+    await user.click(screen.getByRole('button', { name: 'Save notes' }))
+    await waitFor(() => expect(store().meetings[0]!.notesDraft!.find((l) => l.id === 'n-12')!.toClient).toBeUndefined())
+    await waitFor(() => expect(within(screen.getByRole('list', { name: 'Decisions' })).getAllByText(/^To Robert: /)).toHaveLength(1))
+  })
+
+  it('the filed record shows the client wording it holds', async () => {
+    await heldWithNotes()
+    await openMeeting()
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: 'File the record' }))
+    await user.click(within(screen.getByRole('dialog', { name: 'File the record of the Johnson annual review?' })).getByRole('button', { name: 'Confirm' }))
+    await screen.findByText((_, el) => el?.tagName === 'P' && /^Filed · REC-0001 · fingerprint/.test(el.textContent ?? ''))
+    expect(within(screen.getByRole('list', { name: 'Decisions' })).getAllByText(/^To Robert: /)).toHaveLength(2)
+  })
+
   it('follow-ups show their owner and due date', async () => {
     await heldWithNotes()
     await openMeeting()
