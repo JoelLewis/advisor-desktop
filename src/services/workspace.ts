@@ -4,6 +4,9 @@ import type { Archive, ArchiveFilters, ComplianceActRequest, PresenterItem, Supe
 import type { DraftPreview, LegEdit, ProposalConstraint, ProposalDetail } from '@/types/workspace-proposal'
 import type { AgendaItemInput, MeetingSummary, MeetingView, NoteLineInput } from '@/types/workspace-meeting'
 import type { ClientView, HouseholdView } from '@/types/workspace-household'
+import type {
+  DisclosureDocument, PartySteps, ProspectConstraint, ProspectProposalDetail, ProspectStepName, ProspectSummary, ProspectView, StepOutcome,
+} from '@/types/workspace-prospect'
 
 const as = (viewer: string) => ({ 'X-Viewer': viewer })
 
@@ -86,3 +89,32 @@ export const getHousehold = (viewer: string, householdId: string) =>
   get<HouseholdView>(`/workspace/households/${householdId}`, undefined, as(viewer))
 export const getClientView = (viewer: string, clientId: string) =>
   get<ClientView>(`/workspace/clients/${clientId}`, undefined, as(viewer))
+
+export const getProspects = (viewer: string) =>
+  get<ProspectSummary[]>('/workspace/prospects', undefined, as(viewer))
+export const getProspect = (viewer: string, id: string) =>
+  get<ProspectView>(`/workspace/prospects/${id}`, undefined, as(viewer))
+export const getPartySteps = (viewer: string, id: string) =>
+  get<PartySteps>(`/workspace/prospects/${id}/steps`, undefined, as(viewer))
+export const recordCoffee = (viewer: string, id: string, body: string) =>
+  post<Message>(`/workspace/prospects/${id}/coffee`, { body }, as(viewer))
+export const advanceProspect = (viewer: string, id: string, to: 'reply' | 'acceptance') =>
+  post<StepOutcome>(`/workspace/prospects/${id}/advance`, { to }, as(viewer))
+/** One of her own steps, taken as her (View as): her scripted answers, her statements, or acceptance of the version sent to her. */
+export const takeHerStep = (viewer: string, id: string, step: ProspectStepName) =>
+  post<StepOutcome>(`/workspace/prospects/${id}/${step}`, {}, as(viewer))
+/** The presenter shortcut: her step, recorded as her with the shortcut marked. */
+export const actAsProspect = (viewer: string, prospectId: string, step: ProspectStepName) =>
+  post<StepOutcome>('/workspace/presenter/act-as-prospect', { prospectId, step }, as(viewer))
+export const getProspectProposals = (viewer: string, id: string) =>
+  get<ProspectProposalDetail[]>(`/workspace/prospects/${id}/proposals`, undefined, as(viewer))
+export const createProspectProposal = (viewer: string, id: string) =>
+  post<ProspectProposalDetail>(`/workspace/prospects/${id}/proposals`, {}, as(viewer))
+export const reviseProspectProposal = (viewer: string, id: string, proposalId: string, constraints: ProspectConstraint[]) =>
+  post<ProspectProposalDetail>(`/workspace/prospects/${id}/proposals/${proposalId}/revise`, { constraints }, as(viewer))
+export const deliverDisclosure = (viewer: string, prospectId: string, document: DisclosureDocument) =>
+  post<BindingAct>('/workspace/acts', { kind: 'deliver_disclosure', prospectId, document }, as(viewer))
+export const approveProspectProposal = (viewer: string, proposalId: string, version: number, fingerprint: string, rationale: string) =>
+  post<BindingAct>('/workspace/acts', { kind: 'approve_proposal', proposalId, version, fingerprint, rationale }, as(viewer))
+export const sendProspectProposal = (viewer: string, proposalId: string) =>
+  post<BindingAct>('/workspace/acts', { kind: 'send_to_party', proposalId }, as(viewer))

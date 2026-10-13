@@ -1,10 +1,15 @@
 import { http, HttpResponse } from 'msw'
+import { isDisclosureDocument } from '@/types/workspace-prospect'
 import type { AgentId, BindingAct, BindingActKind, Directory, Draft, Message, ThreadDetail } from '@/types/workspace'
 import { AGENTS, PEOPLE, can, permissionsOf } from '../data/people'
 import { nextAt, nextId, store } from '../data/workspace-store'
 import { BRIEF_THREAD_ID } from '../workspace/brief'
 import { briefOrder, remeasureBrief } from '../workspace/brief-remeasure'
 import { sendToParty } from '../workspace/acts'
+import { deliverDisclosure } from '../workspace/disclosures'
+import { approveProspectProposal, sendProspectProposal } from '../workspace/prospect-acts'
+import { prospectProposalById, visibleProspectProposal } from '../workspace/prospect-proposals'
+import { visibleProspect } from '../workspace/prospects'
 import { fileMeetingRecord } from '../workspace/meeting-acts'
 import { carryFinding } from '../workspace/carry'
 import { draftLetter, draftsFor, reviseDraft } from '../workspace/letters'
@@ -15,6 +20,7 @@ import { notFound } from './utils'
 import { badRequest, firmViewer, nonEmptyString, readJson, refusal, unauthorised } from './workspace-http'
 import { workspaceMeetingHandlers } from './workspace-meetings'
 import { workspaceProposalHandlers } from './workspace-proposals'
+import { workspaceProspectHandlers } from './workspace-prospects'
 import { parseComplianceAct, recordComplianceAct, workspaceSupervisionHandlers } from './workspace-supervision'
 
 const fullDirectory = (): Directory => ({ people: [...PEOPLE], agents: [...AGENTS], permissions: Object.fromEntries(PEOPLE.map((p) => [p.id, permissionsOf(p.id)])) })
@@ -120,12 +126,31 @@ export const workspaceHandlers = [
     if (!body || typeof body.kind !== 'string') return badRequest('kind must be a string.')
     switch (body.kind) {
       case 'send_to_party': {
-        if (!nonEmptyString(body.draftId)) return badRequest('draftId must be a string.')
+        if (nonEmptyString(body.proposalId)) {
+          const r = sendProspectProposal(viewer, body.proposalId)
+          return r.ok ? HttpResponse.json(r.act, { status: 201 }) : refusal(r)
+        }
+        if (!nonEmptyString(body.draftId)) return badRequest('draftId or proposalId is required.')
         const r = sendToParty(viewer, body.draftId)
+        return r.ok ? HttpResponse.json(r.act, { status: 201 }) : refusal(r)
+      }
+      case 'deliver_disclosure': {
+        if (!nonEmptyString(body.prospectId)) return badRequest('prospectId is required.')
+        if (!visibleProspect(viewer, body.prospectId)) return notFound()
+        if (!isDisclosureDocument(body.document)) return badRequest('document must be form_crs, adv_2a, adv_2b or privacy_notice.')
+        const r = deliverDisclosure(viewer, body.prospectId, body.document)
         return r.ok ? HttpResponse.json(r.act, { status: 201 }) : refusal(r)
       }
       case 'approve_proposal': {
         if (!nonEmptyString(body.proposalId)) return badRequest('proposalId is required.')
+        if (prospectProposalById(body.proposalId)) {
+          if (!visibleProspectProposal(viewer, body.proposalId)) return notFound()
+          if (typeof body.version !== 'number' || !nonEmptyString(body.fingerprint) || typeof body.rationale !== 'string') {
+            return badRequest('version (a number), fingerprint and rationale are required.')
+          }
+          const r = approveProspectProposal(viewer, body.proposalId, body.version, body.fingerprint, body.rationale)
+          return r.ok ? HttpResponse.json(r.act, { status: 201 }) : refusal(r)
+        }
         if (!visibleProposal(viewer, body.proposalId)) return notFound()
         if (typeof body.version !== 'number' || !nonEmptyString(body.fingerprint)) return badRequest('version (a number) and fingerprint are required.')
         const r = approveProposal(viewer, body.proposalId, body.version, body.fingerprint)
@@ -212,6 +237,7 @@ export const workspaceHandlers = [
   ...workspaceProposalHandlers,
   ...workspaceSupervisionHandlers,
   ...workspaceMeetingHandlers,
+  ...workspaceProspectHandlers,
 
   // Workspace handlers must be registered above this catch-all.
   http.all('/api/workspace/*', () => HttpResponse.json({ code: 'METHOD_NOT_ALLOWED', message: 'Workspace records cannot be edited or deleted.' }, { status: 405 })),
