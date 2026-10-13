@@ -6,6 +6,7 @@ import { proposalById } from '@/mocks/data/proposals-store'
 import { store } from '@/mocks/data/workspace-store'
 import { alertById, alertContext } from './alerts'
 import { sentMessage } from './correspondence'
+import { meetingEvent } from './meetings'
 import { canSeeThread } from './visibility'
 
 export { ARCHIVE_KINDS, isArchiveKind } from '@/types/workspace-supervision'
@@ -26,6 +27,7 @@ function clientOf(act: BindingAct, thread: Thread | undefined): string | undefin
     const alert = alertById(act.subject.id)
     return alert ? alertContext(alert).clientId : undefined
   }
+  if (act.subject?.type === 'meeting') return meetingEvent(act.subject.id)?.clientId
   return thread?.clientId
 }
 

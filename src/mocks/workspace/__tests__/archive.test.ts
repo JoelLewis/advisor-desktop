@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { alertById, alertFingerprint } from '../alerts'
 import { archiveFor } from '../archive'
+import { ARCHIVE_KINDS, isArchiveKind } from '@/types/workspace-supervision'
 import { disposeAlert, reviewCorrespondence } from '../compliance-acts'
 import { MARK, approvedV1, ok, release, sendLetter } from './story-fixture'
 
@@ -41,5 +42,10 @@ describe('the archive', () => {
     session()
     expect(kinds('user-003')).toEqual(['approve_proposal', 'release_orders', 'dispose_alert'])
     expect(archiveFor('cli-001', {})).toBeUndefined()
+  })
+
+  it('lists the meeting record kind among the kinds a filter can name', () => {
+    expect(ARCHIVE_KINDS).toContain('file_meeting_record')
+    expect(isArchiveKind('file_meeting_record')).toBe(true)
   })
 })

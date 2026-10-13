@@ -63,7 +63,8 @@ export type SupervisionQueue = { orders: OrdersItem[]; alerts: AlertItem[]; corr
 
 export type ArchiveKind = BindingActKind | 'sent_message'
 export const ARCHIVE_KINDS: readonly ArchiveKind[] = [
-  'approve_proposal', 'withdraw_approval', 'send_to_client', 'sent_message', 'release_orders', 'return_to_advisor', 'escalate', 'dispose_alert', 'review_correspondence',
+  'approve_proposal', 'withdraw_approval', 'send_to_client', 'sent_message', 'file_meeting_record',
+  'release_orders', 'return_to_advisor', 'escalate', 'dispose_alert', 'review_correspondence',
 ]
 export const isArchiveKind = (value: string): value is ArchiveKind => (ARCHIVE_KINDS as readonly string[]).includes(value)
 export type ArchiveEntry =
