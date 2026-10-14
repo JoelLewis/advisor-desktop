@@ -103,7 +103,7 @@ test('one presenter runs Brief → proposal → revise → workbench → approve
   await expect(intc.getByRole('status')).toHaveText('Taken to Johnson Rebalance Review.')
   await threadLink(page, 'Johnson Rebalance Review').click()
   await expect(heading(page)).toHaveText('Johnson Rebalance Review')
-  await expect(conversation(page).getByRole('article', { name: /^Carried from the Brief: Intel Corp\./ })).toHaveCount(1)
+  await expect(conversation(page).getByRole('article', { name: /^Carried from the Brief: The remaining Intel Corp\. shares/ })).toHaveCount(1)
 
   // 3. The Proposal Agent drafts v1.
   await context(page).getByRole('button', { name: 'Ask Proposal Agent', exact: true }).click()
