@@ -26,8 +26,8 @@ export const AGENTS: readonly AgentProfile[] = [
 ]
 
 const PERMISSIONS: Readonly<Record<Person['role'], readonly Act[]>> = {
-  advisor: ['post_firm', 'draft_for_client', 'send_to_party', 'deliver_disclosure', 'approve_proposal', 'withdraw_approval', 'prepare_meeting', 'file_meeting_record'],
-  csa: ['post_firm', 'draft_for_client'],
+  advisor: ['post_firm', 'draft_for_client', 'send_to_party', 'deliver_disclosure', 'approve_proposal', 'withdraw_approval', 'prepare_meeting', 'file_meeting_record', 'resolve_break'],
+  csa: ['post_firm', 'draft_for_client', 'resolve_break'],
   analyst: ['post_firm'],
   compliance: ['post_firm', 'read_all_firm_threads', 'release_orders', 'return_to_advisor', 'escalate', 'dispose_alert', 'review_correspondence'],
   client: [],

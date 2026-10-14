@@ -8,6 +8,7 @@ export const ACT_KIND_LABEL: Readonly<Record<BindingActKind, string>> = {
   deliver_disclosure: 'Deliver disclosure',
   accept_proposal: 'Accept proposal',
   file_meeting_record: 'File meeting record',
+  resolve_break: 'Resolve break',
   release_orders: 'Release orders',
   return_to_advisor: 'Return to advisor',
   escalate: 'Escalate',

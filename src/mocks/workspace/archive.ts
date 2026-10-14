@@ -6,6 +6,7 @@ import { prospectProposalById } from './prospect-proposals'
 import { alertById, alertContext } from './alerts'
 import { sentMessage } from './correspondence'
 import { meetingEvent } from './meetings'
+import { breakClientId } from '@/mocks/reference/reconciliation'
 import { canSeeThread, isFirmViewer } from './visibility'
 import { partyOf } from './party'
 
@@ -30,6 +31,7 @@ function partyIdOf(act: BindingAct, thread: Thread | undefined): string | undefi
     return alert ? alertContext(alert).clientId : undefined
   }
   if (act.subject?.type === 'meeting') return meetingEvent(act.subject.id)?.clientId
+  if (act.subject?.type === 'recon_break') return breakClientId(act.subject.id)
   return thread?.partyId
 }
 
@@ -58,7 +60,7 @@ export function archiveFor(viewerId: string, filters: ArchiveFilters): Archive |
   if (!isFirmViewer(viewerId)) return undefined
   const readable = (act: BindingAct) => {
     const thread = threadOf(act)
-    return thread ? canSeeThread(viewerId, thread) : act.kind === 'dispose_alert'
+    return thread ? canSeeThread(viewerId, thread) : act.kind === 'dispose_alert' || act.kind === 'resolve_break'
   }
   const all = store().acts.filter(readable).flatMap(entriesOf).sort((a, b) => byCodeUnit(a.at, b.at) || byCodeUnit(a.id, b.id))
   const day = (e: ArchiveEntry) => e.at.slice(0, 10)

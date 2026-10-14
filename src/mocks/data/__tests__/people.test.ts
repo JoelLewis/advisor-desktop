@@ -21,6 +21,7 @@ describe('people and permissions', () => {
     ['user-001', 'prepare_meeting', true], ['user-001', 'file_meeting_record', true],
     ['user-002', 'prepare_meeting', false], ['user-002', 'file_meeting_record', false],
     ['user-003', 'file_meeting_record', false], ['cco-001', 'file_meeting_record', false], ['cli-001', 'prepare_meeting', false],
+    ['user-001', 'resolve_break', true], ['user-002', 'resolve_break', true], ['user-003', 'resolve_break', false], ['cco-001', 'resolve_break', false], ['cli-001', 'resolve_break', false],
   ] as const)('can(%s, %s) is %s', (person, act, expected) => {
     expect(can(person, act)).toBe(expected)
   })

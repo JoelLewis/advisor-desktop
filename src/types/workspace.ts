@@ -1,6 +1,7 @@
 import type { Fill } from './workspace-proposal'
 import type { MeetingTask } from './workspace-meeting'
 import type { BestInterestRecord, DisclosureDocument, OnboardingItem } from './workspace-prospect'
+import type { BreakResolution } from './reference-reconciliation'
 
 export type Role = 'advisor' | 'csa' | 'analyst' | 'compliance' | 'client' | 'prospect'
 export type Person = { id: string; name: string; role: Role }
@@ -56,7 +57,7 @@ export type Message =
   | { kind: 'onboarding_opened'; id: string; threadId: string; at: string; prospectId: string; acceptanceActId: string; items: OnboardingItem[] }
 /** The acts only compliance performs. */
 export type ComplianceActKind = 'release_orders' | 'return_to_advisor' | 'escalate' | 'dispose_alert' | 'review_correspondence'
-export type BindingActKind = 'approve_proposal' | 'withdraw_approval' | 'send_to_party' | 'deliver_disclosure' | 'accept_proposal' | 'file_meeting_record' | ComplianceActKind
+export type BindingActKind = 'approve_proposal' | 'withdraw_approval' | 'send_to_party' | 'deliver_disclosure' | 'accept_proposal' | 'file_meeting_record' | 'resolve_break' | ComplianceActKind
 export type AlertOutcome = 'approve' | 'reject' | 'request_changes'
 export type CorrespondenceOutcome = 'reviewed' | 'flagged'
 export type PresenterPath = 'shortcut' | 'view_as' | 'scripted'
@@ -81,7 +82,7 @@ export type BindingAct = {
   messageId?: string
   /** Why compliance disposed of the item as it did; every compliance act carries one. */
   rationale?: string
-  outcome?: AlertOutcome | CorrespondenceOutcome
+  outcome?: AlertOutcome | CorrespondenceOutcome | BreakResolution
   /** The approval a release, return or escalation acted on. */
   approvalActId?: string
   viaPresenter?: ViaPresenter

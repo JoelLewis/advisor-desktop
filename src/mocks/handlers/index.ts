@@ -8,7 +8,6 @@ import { planningHandlers } from './planning'
 import { documentHandlers } from './documents'
 import { workflowHandlers } from './workflows'
 import { complianceHandlers } from './compliance'
-import { reconciliationHandlers } from './reconciliation'
 import { settingsHandlers } from './settings'
 import { aiHandlers } from './ai'
 import { prospectHandlers } from './prospects'
@@ -36,7 +35,6 @@ export const handlers = [
   ...documentHandlers,
   ...workflowHandlers,
   ...complianceHandlers,
-  ...reconciliationHandlers,
   ...settingsHandlers,
   ...aiHandlers,
   ...prospectHandlers,
