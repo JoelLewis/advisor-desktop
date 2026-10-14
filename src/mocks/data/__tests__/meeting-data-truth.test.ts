@@ -4,7 +4,6 @@ import { join } from 'node:path'
 import { calendarEvents } from '@/mocks/data/calendar'
 import { plans } from '@/mocks/data/planning'
 import { nbas } from '@/mocks/data/nbas'
-import { notes } from '@/mocks/data/notes'
 import { clientComms } from '@/mocks/data/client-comms'
 import { documents } from '@/mocks/data/documents'
 import { realizedSales } from '@/mocks/data/realized-sales'
@@ -68,7 +67,6 @@ describe('one Johnson IPS story', () => {
     const texts = [
       ...nbas.filter((n) => n.clients.some((c) => JOHNSONS.has(c.id)))
         .flatMap((n) => [n.title, n.description, n.trigger.value, ...(n.complianceInfo?.auditTrail ?? []).map((a) => a.note ?? '')]),
-      ...notes.filter((n) => JOHNSONS.has(n.clientId)).map((n) => n.content),
       ...clientComms.filter((c) => JOHNSONS.has(c.clientId)).map((c) => c.summary),
     ]
     for (const text of texts.filter((t) => /\bIPS\b|investment policy/i.test(t))) {

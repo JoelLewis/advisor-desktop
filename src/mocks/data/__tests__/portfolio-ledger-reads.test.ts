@@ -43,7 +43,6 @@ describe('every engine read sees the moved book', () => {
     expect(positions.some((p) => p.symbol === 'INTC')).toBe(false)
     expect(positions.reduce((s, p) => s + p.weight, 0)).toBeCloseTo(1, 9)
     expect(cashBalanceOf(acc002)).toBe(424_654)
-    expect((await json('/custodian/accounts/acc-002/balances')).cashBalance).toBe(424_654)
     expect((await json('/custodian/accounts/acc-002')).cashBalance).toBe(424_654)
     expect(evaluateProposal('acc-002', [])?.projectedCash).toBe(424_654)
   })

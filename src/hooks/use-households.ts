@@ -1,12 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { getHousehold, getHouseholds } from '@/services/crm'
-
-export function useHouseholds() {
-  return useQuery({
-    queryKey: ['households'],
-    queryFn: () => getHouseholds(),
-  })
-}
+import { getHousehold } from '@/services/crm'
 
 export function useHousehold(id: string) {
   return useQuery({

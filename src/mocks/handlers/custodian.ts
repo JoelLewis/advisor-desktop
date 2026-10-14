@@ -527,38 +527,10 @@ export function generateTaxLots(accountId: string, totalValue: number): Custodia
 const withBookCash = (a: Account): Account => ({ ...a, cashBalance: cashBalanceOf(a) })
 
 export const custodianHandlers = [
-  http.get('/api/custodian/accounts', ({ request }) => {
-    const url = new URL(request.url)
-    const clientId = url.searchParams.get('clientId')
-    const householdId = url.searchParams.get('householdId')
-
-    let filtered = [...accounts]
-    if (clientId) filtered = filtered.filter((a) => a.clientId === clientId)
-    if (householdId) filtered = filtered.filter((a) => a.householdId === householdId)
-
-    return HttpResponse.json(filtered.map(withBookCash))
-  }),
-
   http.get('/api/custodian/accounts/:accountId', ({ params }) => {
     const account = accounts.find((a) => a.id === params.accountId)
     if (!account) return notFound()
     return HttpResponse.json(withBookCash(account))
-  }),
-
-  http.get('/api/custodian/accounts/:accountId/balances', ({ params }) => {
-    const account = accounts.find((a) => a.id === params.accountId)
-    if (!account) return notFound()
-    return HttpResponse.json({
-      totalValue: account.totalValue,
-      cashBalance: cashBalanceOf(account),
-      marginBalance: 0,
-    })
-  }),
-
-  http.get('/api/custodian/accounts/:accountId/transactions', ({ params }) => {
-    const account = accounts.find((a) => a.id === params.accountId)
-    if (!account) return notFound()
-    return HttpResponse.json(generateTransactions(account.id, account.totalValue))
   }),
 
   http.get('/api/custodian/accounts/:accountId/tax-lots', ({ params }) => {

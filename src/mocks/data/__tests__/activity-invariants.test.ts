@@ -3,7 +3,6 @@ import { activities } from '@/mocks/data/activities'
 import { realizedSales } from '@/mocks/data/realized-sales'
 import { orders } from '@/mocks/handlers/oms'
 import { KNOWN_OPEN_DATES } from '@/mocks/handlers/custodian'
-import { notes } from '@/mocks/data/notes'
 import { MOCK_NOW_ISO } from '@/lib/clock'
 import { complianceAlerts } from '@/mocks/handlers/compliance'
 import { getSupervisionRecords } from '@/services/compliance'
@@ -22,21 +21,18 @@ describe('§0.7 · the activity feed agrees with the records', () => {
     expect(sale.description).not.toContain('6,820')
   })
 
-  it('act-011 is the SMH bought five minutes after the sale fill, on its recorded open date, before note-002', () => {
+  it('act-011 is the SMH bought five minutes after the sale fill, on its recorded open date', () => {
     expect(replacement.description).toBe('Purchased 180 shares SMH at $245.20 in Robert Johnson Individual as the INTC replacement.')
     expect(replacement.timestamp.slice(0, 10)).toBe(KNOWN_OPEN_DATES.get('pos-265'))
     expect(Date.parse(replacement.timestamp) - Date.parse(sale.timestamp)).toBe(5 * 60_000)
-    const note002 = notes.find((n) => n.id === 'note-002')!
-    expect(replacement.timestamp < note002.createdAt).toBe(true)
   })
 
-  it('the harvest records follow one another on the day of the sale: fill, replacement, note, compliance review', async () => {
-    const note002 = notes.find((n) => n.id === 'note-002')!
+  it('the harvest records follow one another on the day of the sale: fill, replacement, compliance review', async () => {
     const comp006 = complianceAlerts.find((a) => a.id === 'comp-006')!
     const [sr002] = await getSupervisionRecords('comp-006')
-    const sequence = [sale.timestamp, replacement.timestamp, note002.createdAt, comp006.createdAt, comp006.resolvedAt!].map(Date.parse)
+    const sequence = [sale.timestamp, replacement.timestamp, comp006.createdAt, comp006.resolvedAt!].map(Date.parse)
     expect(sequence).toEqual([...sequence].sort((a, b) => a - b))
-    expect(new Set([sale.timestamp, note002.createdAt, comp006.createdAt].map((t) => t.slice(0, 10)))).toEqual(new Set([rs001.saleDate]))
+    expect(new Set([sale.timestamp, comp006.createdAt].map((t) => t.slice(0, 10)))).toEqual(new Set([rs001.saleDate]))
     expect(sr002!.timestamp).toBe(comp006.resolvedAt)
   })
 

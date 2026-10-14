@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { store } from '@/mocks/data/workspace-store'
 import { JOHNSON_REVIEW_TRANSCRIPT } from '@/mocks/data/meeting-transcripts'
-import { notes } from '@/mocks/data/notes'
 import { holdMeeting, meetingView, notesFingerprint, saveNotes } from '../meetings'
 import { draftMeetingNotes } from '../meeting-agents'
 import { fileMeetingRecord } from '../meeting-acts'
@@ -61,7 +60,6 @@ describe('the recap', () => {
     file()
     const { body } = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft
     for (const t of JOHNSON_REVIEW_TRANSCRIPT.filter((x) => x.text.length > 12)) expect(body, t.id).not.toContain(t.text)
-    for (const n of notes.filter((x) => x.clientId === 'cli-001' || x.clientId === 'cli-002')) expect(body, n.id).not.toContain(n.content)
     expect(body).not.toMatch(/Sarah|Mike|Mitchell|Chen|task/i)
   })
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ApiClientError, post } from '@/services/api-client'
+import { ApiClientError } from '@/services/api-client'
 import { previewRebalance } from '@/services/oms'
 import { UnknownModelError } from '@/lib/mandate'
 import { generateRebalanceProposal } from '@/mocks/handlers/oms'
@@ -23,15 +23,6 @@ describe('a model change is previewed, never executed', () => {
 
   it('previewing a custom mandate against a named model is served', async () => {
     await expect(previewRebalance({ accountIds: ['acc-041'], driftThreshold: 0.05, taxAware: true, modelId: 'mod-001' })).resolves.toHaveLength(1)
-  })
-
-  it('executing with a modelId is a 422: "model changes are previewed, not executed"', async () => {
-    const status = await statusOf(post('/oms/rebalance/execute', { accountIds: ['acc-001'], taxAware: true, modelId: 'mod-002' }))
-    expect(status).toBe(422)
-  })
-
-  it('executing without a modelId still submits', async () => {
-    await expect(post('/oms/rebalance/execute', { accountIds: ['acc-001'], taxAware: true })).resolves.toHaveLength(1)
   })
 })
 

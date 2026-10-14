@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { getTaxLots, getTransactions, getOpenWashSaleWindows } from '@/services/custodian'
+import { getTaxLots, getOpenWashSaleWindows } from '@/services/custodian'
 import { getPositions } from '@/services/pms'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { accounts } from '@/mocks/data/accounts'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
-import { boundedTradeQty } from '@/mocks/handlers/custodian'
+import { boundedTradeQty, generateTransactions } from '@/mocks/handlers/custodian'
 import { realizedSales, washSaleWindow, openWashSaleWindows } from '@/mocks/data/realized-sales'
 import {
   estimatedTaxBenefit,
@@ -21,6 +21,9 @@ import {
 } from '@/lib/tax-rules'
 
 const ACCOUNTS = ['acc-001', 'acc-002', 'acc-011', 'acc-020', 'acc-029', 'acc-041', 'acc-042', 'acc-043', 'acc-044']
+
+const transactionsOf = (accountId: string) =>
+  generateTransactions(accountId, accounts.find((a) => a.id === accountId)!.totalValue)
 
 describe('tax lots partition their positions', () => {
   afterEach(() => {
@@ -93,8 +96,8 @@ describe('tax lots partition their positions', () => {
   })
 
   it('D33: transactions are deterministic and priced consistently with the position', async () => {
-    const first = await getTransactions('acc-001')
-    const second = await getTransactions('acc-001')
+    const first = transactionsOf('acc-001')
+    const second = transactionsOf('acc-001')
     expect(second).toEqual(first)
     for (const txn of first.filter((t) => t.type === 'buy' || t.type === 'sell')) {
       expect(txn.price).toBeGreaterThan(0)
@@ -129,7 +132,7 @@ describe('tax lots partition their positions', () => {
   // found (acc-004, 010, 031, 032, 034, 038, 039, 040, 045) are outside it.
   it('D33: no transaction implies a negative running balance for its symbol', async () => {
     for (const account of accounts) {
-      const txns = await getTransactions(account.id)
+      const txns = transactionsOf(account.id)
       const trades = txns
         .filter((t) => t.type === 'buy' || t.type === 'sell')
         .slice()
@@ -324,7 +327,7 @@ describe('every realized sale reconciles with a real sell transaction (C14)', ()
   it.each(realizedSales.map((s) => [s.id, s] as const))(
     '%s: appears in its account\'s transaction stream as a matching sell',
     async (_id, sale) => {
-      const txns = await getTransactions(sale.accountId)
+      const txns = transactionsOf(sale.accountId)
       const match = txns.find((t) => t.id === `txn-${sale.id}`)
       expect(match, `${sale.id} missing from ${sale.accountId}'s transactions`).toBeDefined()
       expect(match!.type).toBe('sell')
@@ -337,7 +340,8 @@ describe('every realized sale reconciles with a real sell transaction (C14)', ()
   )
 
   it('C14: acc-007 sold its entire NVDA position — the running balance opens above zero, is drawn down by exactly the sale, and lands on the 0 shares it holds today', async () => {
-    const [txns, positions] = await Promise.all([getTransactions('acc-007'), getPositions('acc-007')])
+    const txns = transactionsOf('acc-007')
+    const positions = await getPositions('acc-007')
     expect(positions.find((p) => p.symbol === 'NVDA')?.quantity ?? 0).toBe(0)
 
     const nvda = txns
@@ -354,7 +358,8 @@ describe('every realized sale reconciles with a real sell transaction (C14)', ()
   })
 
   it('C14: acc-002 sold part of its INTC position — the running balance lands on the quantity it still holds today', async () => {
-    const [txns, positions] = await Promise.all([getTransactions('acc-002'), getPositions('acc-002')])
+    const txns = transactionsOf('acc-002')
+    const positions = await getPositions('acc-002')
     const heldToday = positions.find((p) => p.symbol === 'INTC')!.quantity
 
     const intc = txns

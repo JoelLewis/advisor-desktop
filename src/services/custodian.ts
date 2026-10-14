@@ -19,22 +19,8 @@ export function getAccount(id: string) {
   return get<Account>(`/custodian/accounts/${id}`)
 }
 
-export function getAccounts(params?: Record<string, string>) {
-  return get<Account[]>('/custodian/accounts', params)
-}
-
-export function getTransactions(accountId: string, params?: Record<string, string>) {
-  return get<Transaction[]>(`/custodian/accounts/${accountId}/transactions`, params)
-}
-
 export function getTaxLots(accountId: string) {
   return get<TaxLot[]>(`/custodian/accounts/${accountId}/tax-lots`)
-}
-
-export function getBalances(accountId: string) {
-  return get<{ totalValue: number; cashBalance: number; marginBalance: number }>(
-    `/custodian/accounts/${accountId}/balances`,
-  )
 }
 
 export function getOpenWashSaleWindows(accountId: string) {

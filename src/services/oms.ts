@@ -1,4 +1,4 @@
-import { get, post } from './api-client'
+import { post } from './api-client'
 import type { TradableAssetClass, TradeSide, TradeOrderType, TimeInForce, BondPriceType, MutualFundAmountType } from '@/types/trading'
 import type { CurrencyCode } from '@/types/currency'
 import type { AssetClass } from '@/types/portfolio'
@@ -214,32 +214,12 @@ export type RebalanceExecution = {
   estimatedCompletion: string
 }
 
-export function submitTrade(request: TradeRequest) {
-  return post<Order>('/oms/orders', request)
-}
-
-export function getOrders(params?: Record<string, string>) {
-  return get<Order[]>('/oms/orders', params)
-}
-
 /**
  * Preview a rebalance without executing it. `submitRebalance` is the same request — one
  * endpoint, one function underneath both names.
  */
 export function previewRebalance(request: { accountIds: string[]; taxAware: boolean; driftThreshold?: number; modelId?: string }) {
   return post<RebalancePreview[]>('/oms/rebalance', request)
-}
-
-export function submitRebalance(request: RebalanceRequest) {
-  return previewRebalance(request)
-}
-
-export function getExecutionStatus(orderId: string) {
-  return get<Order>(`/oms/orders/${orderId}`)
-}
-
-export function executeRebalance(request: { accountIds: string[]; taxAware: boolean }) {
-  return post<RebalanceExecution[]>('/oms/rebalance/execute', request)
 }
 
 // Pre-trade compliance
@@ -265,10 +245,6 @@ export type PreTradeCheckRequest = {
   // C28 · pre-trade-compliance — required, not inferred. A missing notional previously fell back
   // to `quantity * 100`, making concentration limits evadable by trading high-priced securities.
   estimatedValue: number
-}
-
-export function preTradeCheck(request: PreTradeCheckRequest) {
-  return post<PreTradeCheckResult>('/oms/orders/pre-check', request)
 }
 
 // Proposal-level pre-trade compliance — every leg of a multi-leg proposal (a rebalance) applied

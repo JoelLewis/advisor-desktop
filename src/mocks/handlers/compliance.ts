@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw'
-import type { ComplianceAlert, SupervisionRecord, TradeComplianceRequest, TradeComplianceCheck, TradeComplianceResult } from '@/types/compliance'
+import type { ComplianceAlert, SupervisionRecord } from '@/types/compliance'
 import { todayISO } from '@/lib/clock'
 import { securityKind, concentrationLimitFor } from '@/lib/security-master'
 import { accounts } from '../data/accounts'
@@ -271,104 +271,6 @@ export function invalidProposal(trades: unknown): string | undefined {
   return undefined
 }
 
-const STATUS_FOR: Record<ProposalViolation['severity'], TradeComplianceCheck['status']> = {
-  block: 'fail',
-  warning: 'warning',
-}
-
-/**
- * The Rebalance flow's shape over `evaluateProposal`: one row per violation, plus an affirmative
- * pass row for each rule that found nothing. One engine, so the Rebalance step and
- * `preTradeCheckProposal` cannot disagree.
- */
-function checkTradesForAccount(req: TradeComplianceRequest): TradeComplianceResult {
-  const result = evaluateProposal(req.accountId, req.trades)
-  if (!result) {
-    return {
-      accountId: req.accountId,
-      checks: [{ rule: 'Account', category: 'position_limit', status: 'fail', message: `Unknown account ${req.accountId}.` }],
-      overallStatus: 'fail',
-    }
-  }
-  const of = (category: ProposalViolation['category']) => result.violations.filter((v) => v.category === category)
-  const checks: TradeComplianceCheck[] = []
-
-  // ── Rule 1: Restricted securities ──
-  const restricted = of('restricted_securities')
-  for (const v of restricted) {
-    checks.push({
-      rule: `Restricted security: ${v.symbol}`,
-      category: 'restricted_securities',
-      status: 'fail',
-      message: `${v.symbol} is on the firm restricted list. Trade cannot proceed without compliance override.`,
-      details: { symbol: v.symbol },
-    })
-  }
-  if (restricted.length === 0) {
-    checks.push({ rule: 'Restricted securities list', category: 'restricted_securities', status: 'pass', message: 'No proposed trades involve restricted securities.' })
-  }
-
-  // ── Rule 2: Concentration limits (per security kind) — any warning suppresses the affirmative pass ──
-  const concentration = of('concentration_limit')
-  for (const v of concentration) {
-    checks.push({
-      rule: `Concentration limit: ${v.symbol}`,
-      category: 'concentration_limit',
-      status: STATUS_FOR[v.severity],
-      message: v.message,
-      details: { symbol: v.symbol, currentWeight: v.currentWeight, postTradeWeight: v.projectedWeight, limit: v.limitWeight, preExisting: v.preExisting },
-    })
-  }
-  if (concentration.length === 0) {
-    checks.push({ rule: 'Concentration limit (per security kind)', category: 'concentration_limit', status: 'pass', message: 'All post-trade positions within their applicable concentration limits.' })
-  }
-
-  // ── Rule 3: Technology sector ──
-  for (const v of of('sector_limit')) {
-    checks.push({
-      rule: v.constraint,
-      category: 'sector_limit',
-      status: STATUS_FOR[v.severity],
-      message: v.message,
-      details: { currentWeight: v.currentWeight, postTradeWeight: v.projectedWeight, limit: v.limitWeight, preExisting: v.preExisting },
-    })
-  }
-
-  // ── Rule 4: Cash minimum (2% post-trade) ──
-  const cash = of('cash_minimum')[0]
-  checks.push({
-    rule: 'Cash reserve minimum (2%)',
-    category: 'cash_minimum',
-    status: cash ? STATUS_FOR[cash.severity] : 'pass',
-    message: cash
-      ? `Post-trade cash would be ${formatUSD(result.projectedCash)} (${pct(result.projectedCashPct)}), below the ${pct0(CASH_MINIMUM_PCT)} minimum of ${formatUSD(result.minimumCash)}.`
-      : `Post-trade cash balance of ${formatUSD(result.projectedCash)} (${pct(result.projectedCashPct)}) meets the 2% minimum reserve.`,
-    details: { cashBalance: result.projectedCash, minimumCash: result.minimumCash },
-  })
-
-  // ── Rule 5: Wash sale (household-scoped, 61-day window) ──
-  const washSales = of('wash_sale')
-  for (const v of washSales) {
-    checks.push({ rule: `Wash sale window: ${v.symbol}`, category: 'wash_sale', status: 'warning', message: v.message, details: { symbol: v.symbol } })
-  }
-  if (washSales.length === 0) {
-    checks.push({ rule: 'Wash sale window (61-day)', category: 'wash_sale', status: 'pass', message: "No proposed buys conflict with the household's recent loss sales within the 61-day wash sale window." })
-  }
-
-  let overallStatus: TradeComplianceResult['overallStatus'] = 'pass'
-  if (checks.some((c) => c.status === 'fail')) {
-    overallStatus = 'fail'
-  } else if (checks.some((c) => c.status === 'warning')) {
-    overallStatus = 'warning'
-  }
-
-  return { accountId: req.accountId, checks, overallStatus }
-}
-
-function formatUSD(value: number): string {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value)
-}
-
 // D21 — exported so the dashboard metrics derivation (`pms.ts`) reads the same alerts the
 // compliance surfaces do, rather than a second hardcoded count.
 export const complianceAlerts: ComplianceAlert[] = [
@@ -395,12 +297,6 @@ export const SUPERVISION_RECORDS: readonly SupervisionRecord[] = [
 ]
 
 export const complianceHandlers = [
-  http.post('/api/compliance/check-trades', async ({ request }) => {
-    const body = await request.json() as { accounts: TradeComplianceRequest[] }
-    const results = body.accounts.map((acct) => checkTradesForAccount(acct))
-    return HttpResponse.json(results)
-  }),
-
   http.get('/api/compliance/alerts', ({ request }) => {
     const url = new URL(request.url)
     const severity = url.searchParams.get('severity')
@@ -409,10 +305,6 @@ export const complianceHandlers = [
     if (severity) filtered = filtered.filter((a) => a.severity === severity)
     if (status) filtered = filtered.filter((a) => a.reviewStatus === status)
     return HttpResponse.json(filtered)
-  }),
-
-  http.get('/api/compliance/review-queue', () => {
-    return HttpResponse.json(complianceAlerts.filter((a) => a.reviewStatus === 'pending' || a.reviewStatus === 'in_review'))
   }),
 
   http.get('/api/compliance/alerts/:alertId/records', ({ params }) => {

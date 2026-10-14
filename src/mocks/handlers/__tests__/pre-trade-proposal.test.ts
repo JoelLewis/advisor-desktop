@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { preTradeCheck, preTradeCheckProposal, previewRebalance } from '@/services/oms'
+import { preTradeCheckProposal, previewRebalance } from '@/services/oms'
 import type { ProposalTradeLeg } from '@/services/oms'
-import { checkTradeCompliance } from '@/services/compliance'
 
 /**
  * Proposal-level pre-trade compliance. The single-order check (`/api/oms/orders/pre-check`) reads
@@ -23,12 +22,11 @@ async function acc002Legs(): Promise<ProposalTradeLeg[]> {
 }
 
 describe('preTradeCheckProposal · acc-002 tax-aware rebalance', () => {
-  it('the single-order check gets this proposal wrong — the reason the proposal check exists', async () => {
-    // Pinned so the contrast below is real: per-leg, EFA blocks on cash and SPY blocks on the limit.
+  it('the rebalance is an EFA buy funded by an SPY trim — the legs the checks below read', async () => {
     const legs = await acc002Legs()
     const efa = legs.find((l) => l.symbol === 'EFA')!
     const spy = legs.find((l) => l.symbol === 'SPY')!
-    expect((await preTradeCheck({ accountId: 'acc-002', ...efa })).passed).toBe(false)
+    expect(efa.side).toBe('buy')
     expect(spy.side).toBe('sell')
   })
 
@@ -200,40 +198,5 @@ describe('preTradeCheckProposal · request validation', () => {
     await expect(preTradeCheckProposal({
       accountId: 'acc-999', trades: [{ symbol: 'VTI', side: 'buy', quantity: 1, estimatedValue: 100 }],
     })).rejects.toThrow()
-  })
-})
-
-describe('single-order check · a sell that reduces an over-limit position', () => {
-  it('acc-002 SPY trim to 36.1% warns that the limit remains breached; it does not block', async () => {
-    const result = await preTradeCheck({ accountId: 'acc-002', symbol: 'SPY', side: 'sell', quantity: 758, estimatedValue: 394_387 })
-    const concentration = result.violations.find((v) => v.constraint.includes('concentration'))!
-    expect(concentration.severity).toBe('warning')
-    expect(result.passed).toBe(true)
-  })
-
-  it('a buy into the same position still blocks', async () => {
-    const result = await preTradeCheck({ accountId: 'acc-002', symbol: 'SPY', side: 'buy', quantity: 10, estimatedValue: 5_203 })
-    expect(result.passed).toBe(false)
-  })
-})
-
-describe('Rebalance compliance step reads the proposal-level result', () => {
-  it('acc-002 tax-aware proposal no longer fails /api/compliance/check-trades', async () => {
-    const [result] = await checkTradeCompliance([{ accountId: 'acc-002', trades: await acc002Legs() }])
-    expect(result!.overallStatus).toBe('warning')
-    const spy = result!.checks.find((c) => c.details?.symbol === 'SPY')!
-    expect(spy.status).toBe('warning')
-    expect(spy.details!.preExisting).toBe(true)
-  })
-
-  it('agrees with preTradeCheckProposal on every account\'s rebalance — one engine, two shapes', async () => {
-    const ids = ['acc-001', 'acc-002', 'acc-006', 'acc-043', 'acc-044']
-    for (const accountId of ids) {
-      const [preview] = await previewRebalance({ accountIds: [accountId], taxAware: true })
-      const trades = preview!.trades.map((t) => ({ symbol: t.symbol, side: t.side, quantity: t.quantity, estimatedValue: t.estimatedValue }))
-      const proposal = await preTradeCheckProposal({ accountId, trades })
-      const [compliance] = await checkTradeCompliance([{ accountId, trades }])
-      expect(compliance!.overallStatus === 'fail', accountId).toBe(!proposal.passed)
-    }
   })
 })

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { previewRebalance } from '@/services/oms'
-import { getAccounts } from '@/services/custodian'
+import { accounts as accountFixture } from '@/mocks/data/accounts'
 import { deriveBookAUM } from '@/lib/aum'
 import { convertToBase } from '@/lib/currency'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
@@ -105,7 +105,7 @@ describe('§9.3 · model AUM derivation uses deriveBookAUM, not a naive totalVal
     // holds the EUR account. EUR is 0.92 per USD, so converting a native-currency figure to USD
     // divides by less than one — the derived figure must be strictly **above** treating every
     // native amount as if it were already dollars, by exactly the EUR account's conversion.
-    const accounts = (await getAccounts()).filter(isModelManaged)
+    const accounts = accountFixture.filter(isModelManaged)
     const modelAccounts = accounts.filter((a) => a.modelId === 'mod-001')
     expect(modelAccounts.map((a) => a.baseCurrency ?? 'USD')).toContain('EUR')
     const naive = modelAccounts.reduce((sum, a) => sum + a.totalValue, 0)
@@ -116,7 +116,7 @@ describe('§9.3 · model AUM derivation uses deriveBookAUM, not a naive totalVal
   })
 
   it('a USD-only model (mod-006: 529 education accounts) reports the derived figure equal to the naive sum', async () => {
-    const accounts = (await getAccounts()).filter(isModelManaged)
+    const accounts = accountFixture.filter(isModelManaged)
     const modelAccounts = accounts.filter((a) => a.modelId === 'mod-006')
     expect(modelAccounts.length).toBeGreaterThan(0)
     expect(modelAccounts.every((a) => !a.baseCurrency || a.baseCurrency === 'USD')).toBe(true)

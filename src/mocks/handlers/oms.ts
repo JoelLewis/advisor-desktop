@@ -1,15 +1,14 @@
 import { http, HttpResponse } from 'msw'
-import { nextEventTime, nextRecordNumber } from './event-clock'
-import type { Order, RebalancePreview, ProposedTrade, TradeRequest, PreTradeCheckRequest, PreTradeViolation, PreTradeCheckProposalRequest, ProjectedDrift, ResidualDriftReason } from '@/services/oms'
+import type { Order, RebalancePreview, ProposedTrade, PreTradeCheckProposalRequest, ProjectedDrift, ResidualDriftReason } from '@/services/oms'
 import { notFound } from './utils'
-import { RESTRICTED_SECURITIES, CASH_MINIMUM_PCT, TECH_SYMBOLS, SECTOR_LIMIT, evaluateProposal, invalidProposal } from './compliance'
+import { evaluateProposal, invalidProposal } from './compliance'
 import { computeDriftForAccount, computeDriftForHoldings, modelImplementationSecurity, usdQuoteFor, type DriftHolding } from './pms'
 import { accounts } from '../data/accounts'
-import { cashBalanceOf, getPositionsForAccount } from '../data/positions'
+import { getPositionsForAccount } from '../data/positions'
 import { FX_RATES_USD_BASE } from '../data/currencies'
 import { convertCurrency } from '@/lib/currency'
 import type { HarvestSubstitution } from '@/types/workspace-proposal'
-import { securityKind, concentrationLimitFor, isMarketTradable, isSubjectToWashSale, taxCharacterOf, SPOT_CRYPTO_SYMBOLS } from '@/lib/security-master'
+import { isMarketTradable, isSubjectToWashSale, taxCharacterOf, SPOT_CRYPTO_SYMBOLS } from '@/lib/security-master'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { hasWashSaleRisk, isoDaysBefore, type SoldLossLot } from '@/lib/wash-sale'
@@ -1206,182 +1205,6 @@ const notModelManaged = (accountId: string) =>
   HttpResponse.json({ error: `${accountId} is a custom mandate, not model-managed: name a model to preview it against` }, { status: 422 })
 
 export const omsHandlers = [
-  http.get('/api/oms/orders', ({ request }) => {
-    const url = new URL(request.url)
-    const accountId = url.searchParams.get('accountId')
-    const status = url.searchParams.get('status')
-    const assetClass = url.searchParams.get('assetClass')
-
-    let filtered = orders
-    if (accountId) filtered = filtered.filter((o) => o.accountId === accountId)
-    if (status) filtered = filtered.filter((o) => o.status === status)
-    if (assetClass) filtered = filtered.filter((o) => o.assetClass === assetClass)
-
-    return HttpResponse.json(filtered)
-  }),
-
-  http.get('/api/oms/orders/:orderId', ({ params }) => {
-    const order = orders.find((o) => o.id === params.orderId)
-    if (!order) return notFound()
-    return HttpResponse.json(order)
-  }),
-
-  http.post('/api/oms/orders', async ({ request }) => {
-    const body = await request.json() as TradeRequest
-    const newOrder: Order = {
-      id: `ord-${nextRecordNumber()}`,
-      accountId: body.accountId,
-      symbol: body.symbol,
-      side: body.side,
-      quantity: body.quantity,
-      orderType: body.orderType,
-      limitPrice: body.limitPrice,
-      stopPrice: body.stopPrice,
-      status: 'submitted',
-      filledQuantity: 0,
-      submittedAt: nextEventTime(),
-      assetClass: body.assetClass,
-      timeInForce: body.timeInForce,
-      extendedHours: body.extendedHours,
-      underlying: body.underlying,
-      optionType: body.optionType,
-      strikePrice: body.strikePrice,
-      expirationDate: body.expirationDate,
-      contractMultiplier: body.contractMultiplier,
-      amountType: body.amountType,
-      dollarAmount: body.dollarAmount,
-      exchangeTargetSymbol: body.exchangeTargetSymbol,
-      parAmount: body.parAmount,
-      bondPriceType: body.bondPriceType,
-      priceOrYield: body.priceOrYield,
-      fractionalQuantity: body.fractionalQuantity,
-      estimatedValue: body.estimatedValue,
-      commission: body.commission,
-    }
-    orders.push(newOrder)
-    return HttpResponse.json(newOrder, { status: 201 })
-  }),
-
-  // Pre-trade compliance check
-  http.post('/api/oms/orders/pre-check', async ({ request }) => {
-    const body = await request.json() as PreTradeCheckRequest
-    const violations: PreTradeViolation[] = []
-    const sym = body.symbol.toUpperCase()
-
-    // C28 · pre-trade-compliance / order-lifecycle — notional is required and must be a real,
-    // positive amount. Zero and negative values are finite too, and a zero-notional order would
-    // otherwise pass every check with an affirmative "compliant" result.
-    if (typeof body.estimatedValue !== 'number' || !Number.isFinite(body.estimatedValue) || body.estimatedValue <= 0) {
-      return HttpResponse.json(
-        { error: 'estimatedValue (notional) must be a positive number for a pre-trade check' },
-        { status: 400 },
-      )
-    }
-    const estValue = body.estimatedValue
-
-    const account = accounts.find((a) => a.id === body.accountId)
-    if (!account) return notFound()
-    // C27 · pre-trade-compliance — the account's own market value, in the account's own base
-    // currency, not a hardcoded $2,500,000. `accountValueUSD` would mix a USD-converted
-    // denominator against `positions`' native-currency `marketValue`/`cashBalance`, inflating
-    // every weight in the four non-USD accounts by their FX rate (acc-041 HKD by ~7.8x).
-    const accountValue = account.totalValue
-    const positions = getPositionsForAccount(account.id, account.totalValue)
-    const existingPosition = positions.find((p) => p.symbol === sym)
-    const existing = existingPosition?.marketValue ?? 0
-
-    // C23 · diversification — per-kind limit (single-issuer / fund / cash), not a blanket 10%.
-    const kind = securityKind(sym, existingPosition?.assetClass ?? 'us_equity')
-    const limit = concentrationLimitFor(kind)
-    const isBuy = body.side.startsWith('buy') || body.side === 'purchase'
-    const postTradeWeight = (existing + (isBuy ? estValue : -estValue)) / accountValue
-
-    // A sale only moves the weight down, toward the limit. It cannot cause a breach, so it is never
-    // the block — at most a warning that the limit remains breached after it.
-    if (postTradeWeight > limit * 0.8) {
-      const stillOver = !isBuy && postTradeWeight > limit
-      violations.push({
-        constraint: kind === 'single_name' ? 'Single-issuer concentration limit' : 'Pooled-vehicle concentration limit',
-        severity: postTradeWeight > limit && isBuy ? 'block' : 'warning',
-        currentValue: `${(postTradeWeight * 100).toFixed(1)}%`,
-        limit: `${(limit * 100).toFixed(1)}%`,
-        message: stillOver
-          ? `${sym} remains above the ${(limit * 100).toFixed(1)}% IPS limit after this sale, at ${(postTradeWeight * 100).toFixed(1)}% of this account. The sale reduces the breach; it does not cause it.`
-          : `${sym} would be ${(postTradeWeight * 100).toFixed(1)}% of this account against a ${(limit * 100).toFixed(1)}% IPS limit.`,
-      })
-    }
-
-    // Restricted securities check — D29: one list, shared with the pre-trade compliance engine.
-    if (RESTRICTED_SECURITIES.has(sym)) {
-      violations.push({
-        constraint: 'Restricted securities list',
-        severity: 'block',
-        currentValue: sym,
-        limit: 'Not permitted',
-        message: `${sym} is on the firm restricted securities list. Trading is prohibited.`,
-      })
-    }
-
-    // Wash sale check — derived from the actual realized loss sales (Task 14's 61-day window),
-    // not a hand-typed symbol list. A wash sale is triggered by *repurchasing* a security recently
-    // sold at a loss, so this applies to buys, and it is scoped to the account's wash-sale
-    // taxpayer (`openWashSaleWindowsFor`) — the same fact the tax page reads.
-    if (isBuy) {
-      const openWindow = openWashSaleWindowsFor(account, MOCK_TODAY_ISO).find((w) => w.symbol === sym)
-      if (openWindow) {
-        violations.push({
-          constraint: 'Wash sale rule (61-day window)',
-          severity: 'warning',
-          currentValue: `Sold at a loss ${openWindow.saleDate}`,
-          limit: '61-day window',
-          message: `${sym} was sold at a loss by this account's taxpayer (owner or spouse) on ${openWindow.saleDate}. Repurchasing on or before ${openWindow.end} may trigger a wash sale, disallowing the loss.`,
-        })
-      }
-    }
-
-    // Cash reserve check for buys — gated on the actual projected post-trade cash balance, not a
-    // raw notional threshold. A buy that leaves cash comfortably above the floor must not warn
-    // just because it happened to be a large trade.
-    if (isBuy) {
-      const postTradeCash = cashBalanceOf(account) - estValue
-      const postTradeCashPct = (postTradeCash / accountValue) * 100
-      if (postTradeCashPct < CASH_MINIMUM_PCT * 100) {
-        violations.push({
-          constraint: 'Cash reserve minimum (2%)',
-          severity: postTradeCash < 0 ? 'block' : 'warning',
-          currentValue: `${postTradeCashPct.toFixed(1)}%`,
-          limit: `${(CASH_MINIMUM_PCT * 100).toFixed(1)}%`,
-          message: `Post-trade cash balance would be ${postTradeCashPct.toFixed(1)}%, below the ${(CASH_MINIMUM_PCT * 100).toFixed(0)}% minimum reserve requirement.`,
-        })
-      }
-    }
-
-    // Sector concentration for known tech stocks — the account's actual technology exposure,
-    // not a fixed 38.2%, and gated on the projected post-trade weight (same 0.8x-warn / 1.0x-block
-    // ladder as the concentration check above), not a raw notional threshold that fired regardless
-    // of whether the sector limit was anywhere close to being breached.
-    if (TECH_SYMBOLS.includes(sym) && ['buy', 'buy_to_open'].includes(body.side)) {
-      const techWeight = positions
-        .filter((p) => TECH_SYMBOLS.includes(p.symbol))
-        .reduce((sum, p) => sum + p.marketValue, 0) / accountValue
-      const projected = techWeight + estValue / accountValue
-      if (projected > SECTOR_LIMIT * 0.8) {
-        violations.push({
-          constraint: 'Sector concentration (Technology)',
-          severity: projected > SECTOR_LIMIT ? 'block' : 'warning',
-          currentValue: `${(projected * 100).toFixed(1)}%`,
-          limit: `${(SECTOR_LIMIT * 100).toFixed(1)}%`,
-          message: `Technology sector allocation would be ${(projected * 100).toFixed(1)}% after this trade (currently ${(techWeight * 100).toFixed(1)}%), against a ${(SECTOR_LIMIT * 100).toFixed(0)}% limit.`,
-        })
-      }
-    }
-
-    return HttpResponse.json({
-      passed: violations.every((v) => v.severity !== 'block'),
-      violations,
-    })
-  }),
-
   // Proposal-level pre-trade check — all legs applied to one projected portfolio, end state checked,
   // each violation attributed to its legs. See `evaluateProposal` in `compliance.ts`.
   http.post('/api/oms/orders/pre-check-proposal', async ({ request }) => {
@@ -1406,19 +1229,5 @@ export const omsHandlers = [
       proposed.push({ account, ...(body.modelId === undefined ? {} : { modelId: body.modelId }), ...generateRebalanceProposal(accountId, body.taxAware, body.driftThreshold, body.modelId) })
     }
     return HttpResponse.json(buildRebalancePreviews(proposed, body.taxAware, body.driftThreshold, MOCK_TODAY_ISO))
-  }),
-
-  http.post('/api/oms/rebalance/execute', async ({ request }) => {
-    const body = await request.json() as { accountIds: string[]; taxAware: boolean; modelId?: string } // modelId is only read to refuse it
-    if (body.modelId !== undefined) return HttpResponse.json({ error: 'model changes are previewed, not executed' }, { status: 422 })
-    const custom = accounts.find((a) => body.accountIds.includes(a.id) && a.mandate === 'custom')
-    if (custom) return notModelManaged(custom.id)
-    const results = body.accountIds.map((accountId) => ({
-      accountId,
-      status: 'submitted' as const,
-      ordersCreated: generateRebalanceTrades(accountId, body.taxAware).length,
-      estimatedCompletion: '2026-02-25T16:00:00Z',
-    }))
-    return HttpResponse.json(results)
   }),
 ]

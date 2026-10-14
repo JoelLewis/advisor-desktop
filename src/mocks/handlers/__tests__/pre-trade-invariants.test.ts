@@ -1,161 +1,16 @@
 import { describe, it, expect } from 'vitest'
 import { additionalCapitalGainsTax, netCapitalGainsTax } from '@/lib/capital-gains'
 import { taxCharacterOf } from '@/lib/security-master'
-import { preTradeCheck, previewRebalance } from '@/services/oms'
-import { checkTradeCompliance } from '@/services/compliance'
-import { getAccounts, getTaxLots } from '@/services/custodian'
+import { previewRebalance } from '@/services/oms'
+import { getTaxLots } from '@/services/custodian'
+import { accounts as accountFixture } from '@/mocks/data/accounts'
+import { cashBalanceOf } from '@/mocks/data/positions'
 import { getPositions, getDrift } from '@/services/pms'
 import { modelImplementationSecurity } from '@/mocks/handlers/pms'
 import { convertCurrency } from '@/lib/currency'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
 import { LONG_TERM_RATE, SHORT_TERM_RATE, taxRateFor } from '@/lib/tax-rules'
 import { isModelManaged } from '@/lib/mandate'
-
-describe('pre-trade concentration uses the account own value', () => {
-  it('C27: a $600K trade is 5% of the $12M Chen Trust, not 24% — no violation, trade passes', async () => {
-    const result = await preTradeCheck({
-      accountId: 'acc-006', symbol: 'VTI', side: 'buy', quantity: 2_234, estimatedValue: 600_000,
-    })
-    const concentration = result.violations.find((v) => v.constraint.includes('concentration'))
-    // Correctly computed, this trade never crosses the fund warning threshold (28% of $12M), so no
-    // violation is produced at all — the point of this test is the unconditional assertion below,
-    // not the contents of a violation object that correct behaviour never returns.
-    expect(concentration).toBeUndefined()
-    expect(result.passed).toBe(true)
-  })
-
-  it('C27: a $100K trade is 100% of Nancy Taylor $100K account and blocks', async () => {
-    const result = await preTradeCheck({
-      accountId: 'acc-040', symbol: 'NVDA', side: 'buy', quantity: 128, estimatedValue: 100_000,
-    })
-    const concentration = result.violations.find((v) => v.constraint.includes('concentration'))!
-    expect(Number(concentration.currentValue.replace('%', ''))).toBeGreaterThan(90)
-    expect(concentration.severity).toBe('block')
-    expect(result.passed).toBe(false)
-  })
-
-  it('C28: an order without a notional is rejected rather than valued at quantity x 100', async () => {
-    await expect(preTradeCheck({
-      accountId: 'acc-001', symbol: 'NVDA', side: 'buy', quantity: 100, estimatedValue: undefined as unknown as number,
-    })).rejects.toThrow()
-  })
-
-  it('C28 fix round 2: a zero notional is rejected, not treated as a compliant $0 order', async () => {
-    await expect(preTradeCheck({
-      accountId: 'acc-001', symbol: 'NVDA', side: 'buy', quantity: 100, estimatedValue: 0,
-    })).rejects.toThrow()
-  })
-
-  it('C28 fix round 2: a negative notional is rejected', async () => {
-    await expect(preTradeCheck({
-      accountId: 'acc-001', symbol: 'NVDA', side: 'buy', quantity: 100, estimatedValue: -5_000_000,
-    })).rejects.toThrow()
-  })
-
-  it('C23: a fund purchase is measured against the fund limit, not the single-issuer limit', async () => {
-    const result = await preTradeCheck({
-      accountId: 'acc-001', symbol: 'VTI', side: 'buy', quantity: 1_000, estimatedValue: 268_500,
-    })
-    const concentration = result.violations.find((v) => v.constraint.includes('concentration'))
-    expect(concentration).toBeDefined()
-    expect(concentration!.limit).toBe('35.0%')
-  })
-})
-
-describe('fix round 2 · pre-trade concentration is computed in the account\'s own currency', () => {
-  // acc-041 (Chen-Wong HK Equity) is HKD-denominated: totalValue 12,500,000, cashBalance 700,000,
-  // and already holds 2800.HK (Tracker Fund of Hong Kong, a `fund`-kind security) at 1,772,000 —
-  // 14.2% of the account. Mixing a USD-converted denominator (`accountValueUSD`) against the
-  // native-currency `marketValue`/`cashBalance` previously divided by ~7.82 (the HKD/USD rate),
-  // inflating a clean 1%-of-account trade to a reported 118.7% concentration and 43.8% cash
-  // reading (true post-trade cash is 5.6%/4.6%) — hard-blocking every trade in the account.
-  it('a 1%-of-account buy of an already-held fund position produces no violation at all', async () => {
-    const result = await preTradeCheck({
-      accountId: 'acc-041', symbol: '2800.HK', side: 'buy', quantity: 5_644, estimatedValue: 125_000,
-    })
-    expect(result.violations).toEqual([])
-    expect(result.passed).toBe(true)
-  })
-
-  it('still blocks a genuine breach in acc-041, now measured against the account\'s own $12.5M(HKD) value', async () => {
-    const result = await preTradeCheck({
-      accountId: 'acc-041', symbol: '2800.HK', side: 'buy', quantity: 135_440, estimatedValue: 3_000_000,
-    })
-    const concentration = result.violations.find((v) => v.constraint.includes('concentration'))!
-    expect(concentration.severity).toBe('block')
-    // (1,772,000 + 3,000,000) / 12,500,000 = 38.2%
-    expect(Number(concentration.currentValue.replace('%', ''))).toBeCloseTo(38.2, 1)
-  })
-})
-
-describe('fix round 2 · cash and sector gates fire on the projected post-trade figure, not a raw notional threshold', () => {
-  it('does not warn on cash reserve when projected post-trade cash comfortably clears the 2% floor', async () => {
-    // acc-006 cashBalance 1,012,470; a $150K buy leaves ~$862K, ~7.2% of the $12M account —
-    // nowhere near the 2% floor, but the old `estValue > 100_000` heuristic warned anyway.
-    const result = await preTradeCheck({
-      accountId: 'acc-006', symbol: 'AAPL', side: 'buy', quantity: 768, estimatedValue: 150_000,
-    })
-    expect(result.violations.find((v) => v.constraint.includes('Cash reserve'))).toBeUndefined()
-  })
-
-  it('warns on cash reserve only once the projected post-trade cash actually breaches the floor', async () => {
-    const result = await preTradeCheck({
-      accountId: 'acc-006', symbol: 'VTI', side: 'buy', quantity: 3_726, estimatedValue: 1_000_000,
-    })
-    const cash = result.violations.find((v) => v.constraint.includes('Cash reserve'))!
-    expect(cash).toBeDefined()
-    expect(cash.currentValue).not.toBe('2.8%')
-    // (1,012,470 - 1,000,000) / 12,000,000 = 0.1%
-    expect(Number(cash.currentValue.replace('%', ''))).toBeCloseTo(0.1, 1)
-    expect(cash.severity).toBe('warning')
-  })
-
-  it('does not warn on sector concentration when the projected tech weight is nowhere near the 40% limit', async () => {
-    // acc-006 holds no tech names at all (SPY/QQQ/VTI/EFA/VXUS/VWO/AGG/BNDX/LQD/BXPE/QAI/VNQ are
-    // not in TECH_SYMBOLS), so a $150K AAPL buy projects to 1.25% — the old `estValue > 50_000`
-    // heuristic warned regardless, showing "currently 0.0% ... limit 40%".
-    const result = await preTradeCheck({
-      accountId: 'acc-006', symbol: 'AAPL', side: 'buy', quantity: 768, estimatedValue: 150_000,
-    })
-    expect(result.violations.find((v) => v.constraint.includes('Sector concentration'))).toBeUndefined()
-  })
-
-  it('warns on sector concentration only once the projected weight approaches the 40% limit', async () => {
-    // acc-001 already holds 19.2% technology (AAPL 7.6% + MSFT 9.2% + NVDA 2.4%); this $1.2M AAPL
-    // buy projects it to 33.9%.
-    const result = await preTradeCheck({
-      accountId: 'acc-001', symbol: 'AAPL', side: 'buy', quantity: 6_142, estimatedValue: 1_200_000,
-    })
-    const sector = result.violations.find((v) => v.constraint.includes('Sector concentration'))!
-    expect(sector).toBeDefined()
-    expect(sector.currentValue).not.toBe('38.2%')
-    expect(Number(sector.currentValue.replace('%', ''))).toBeCloseTo(33.9, 1)
-    expect(sector.severity).toBe('warning')
-  })
-
-  // Minor fix round 3 — this commit introduced the cash `block` severity (round 1/2 only ever
-  // warned); neither `block` branch had a dedicated test, so mutating either to always return
-  // 'warning' killed nothing.
-  it('cash reserve severity is "block" once the projected post-trade cash would go negative', async () => {
-    // acc-001 cashBalance 660,170; a $1.2M buy leaves -$539,830.
-    const result = await preTradeCheck({
-      accountId: 'acc-001', symbol: 'AAPL', side: 'buy', quantity: 6_142, estimatedValue: 1_200_000,
-    })
-    const cash = result.violations.find((v) => v.constraint.includes('Cash reserve'))!
-    expect(cash).toBeDefined()
-    expect(cash.severity).toBe('block')
-  })
-
-  it('sector concentration severity is "block" once the projected weight exceeds the 40% limit outright', async () => {
-    // acc-001's 19.2% existing tech weight plus a $2M AAPL buy projects to 43.6%.
-    const result = await preTradeCheck({
-      accountId: 'acc-001', symbol: 'AAPL', side: 'buy', quantity: 10_237, estimatedValue: 2_000_000,
-    })
-    const sector = result.violations.find((v) => v.constraint.includes('Sector concentration'))!
-    expect(sector).toBeDefined()
-    expect(sector.severity).toBe('block')
-  })
-})
 
 describe('rebalance tax estimation', () => {
   it('C26: turning tax-awareness off does not make the estimated tax zero', async () => {
@@ -189,7 +44,7 @@ describe('rebalance tax estimation', () => {
   it('C26: the estimate is at most the gross when the YTD results are ≥ 0 in each rate group, and never saves more than the YTD tax', async () => {
     let boundedByGross = 0
     let withYtdGain = 0
-    for (const account of (await getAccounts()).filter(isModelManaged)) {
+    for (const account of accountFixture.filter(isModelManaged)) {
       const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
       const ytd = preview!.ytdRealizedOnReturn
       if (ytd === null) {
@@ -241,7 +96,7 @@ describe('fix round 2 · rebalance is self-financing', () => {
     //   sells VTI 44 + AGG 60 + VNQ 87 = 25,484 (three legs, unit prices 268.50 + 98.50 + 89.20 = 456.20)
     //   buys  EFA 63 + VWO 145 + QAI 108 + GLD 15 = 18,717
     //   net = 6,767, so cash lands 349.10 under its target — the sell side's lot residual and nothing else.
-    const account = (await getAccounts()).find((a) => a.id === 'acc-004')!
+    const account = accountFixture.find((a) => a.id === 'acc-004')!
     const [preview] = await previewRebalance({ accountIds: ['acc-004'], taxAware: true })
     const totalSell = preview!.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
     const totalBuy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
@@ -250,9 +105,9 @@ describe('fix round 2 · rebalance is self-financing', () => {
     expect(totalBuy).toBe(18_717)
     expect(totalSell - totalBuy).toBe(6_767)
     // Nowhere near parking a fifth of the account in cash.
-    expect(totalSell - totalBuy).toBeLessThan(0.05 * account.totalValue - account.cashBalance + 1)
+    expect(totalSell - totalBuy).toBeLessThan(0.05 * account.totalValue - cashBalanceOf(account) + 1)
     // Post-trade cash lands on the 5% target, bounded in **money** against the sell side's lot-sum.
-    const endCash = account.cashBalance - totalBuy + totalSell
+    const endCash = cashBalanceOf(account) - totalBuy + totalSell
     const cashTarget = 0.05 * account.totalValue
     expect(cashTarget - endCash).toBeGreaterThanOrEqual(0)
     expect(cashTarget - endCash).toBeLessThan(456.20)
@@ -278,7 +133,7 @@ describe('fix round 2 · rebalance is self-financing', () => {
  */
 describe('fix round 4 · sells are capped by what buys AND cash-to-target can absorb, not by buys alone', () => {
   async function totals(accountId: string, modelId?: string) {
-    const account = (await getAccounts()).find((a) => a.id === accountId)!
+    const account = accountFixture.find((a) => a.id === accountId)!
     const [preview] = await previewRebalance({ accountIds: [accountId], taxAware: true, ...(modelId ? { modelId } : {}) })
     const trades = preview!.trades
     const totalSell = trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
@@ -298,7 +153,7 @@ describe('fix round 4 · sells are capped by what buys AND cash-to-target can ab
     expect(totalBuy).toBe(36_254)
     expect(totalSell).toBe(39_855)
     expect(totalSell - totalBuy).toBe(3_601)
-    const endCash = account.cashBalance - totalBuy + totalSell
+    const endCash = cashBalanceOf(account) - totalBuy + totalSell
     expect(0.03 * account.totalValue - endCash).toBeGreaterThanOrEqual(0)
     expect(0.03 * account.totalValue - endCash).toBeLessThan(528.90)
   })
@@ -314,7 +169,7 @@ describe('fix round 4 · sells are capped by what buys AND cash-to-target can ab
     expect(totalBuy).toBe(34_559)
     expect(totalSell).toBe(51_949)
     expect(totalSell - totalBuy).toBe(17_390)
-    const endCash = account.cashBalance - totalBuy + totalSell
+    const endCash = cashBalanceOf(account) - totalBuy + totalSell
     expect(0.05 * account.totalValue - endCash).toBeGreaterThanOrEqual(0)
     expect(0.05 * account.totalValue - endCash).toBeLessThan(350.80)
   })
@@ -328,7 +183,7 @@ describe('fix round 4 · sells are capped by what buys AND cash-to-target can ab
     expect(totalBuy).toBe(3_152)
     expect(totalSell).toBe(11_009)
     expect(totalSell).toBeGreaterThan(totalBuy)
-    const endCash = account.cashBalance - totalBuy + totalSell
+    const endCash = cashBalanceOf(account) - totalBuy + totalSell
     expect(0.10 * account.totalValue - endCash).toBeGreaterThanOrEqual(0)
     expect(0.10 * account.totalValue - endCash).toBeLessThan(268.50)
   })
@@ -341,7 +196,7 @@ describe('fix round 4 · sells are capped by what buys AND cash-to-target can ab
     expect(totalBuy).toBe(4_334)
     expect(totalSell).toBe(9_786)
     expect(totalSell).toBeGreaterThan(totalBuy)
-    const endCash = account.cashBalance - totalBuy + totalSell
+    const endCash = cashBalanceOf(account) - totalBuy + totalSell
     expect(0.10 * account.totalValue - endCash).toBeGreaterThanOrEqual(0)
     expect(0.10 * account.totalValue - endCash).toBeLessThan(328.90)
   })
@@ -390,11 +245,11 @@ describe('fix round 4 · sells are capped by what buys AND cash-to-target can ab
     expect(totalBuy).toBe(974_647)
     expect(totalBuy - totalSell).toBe(259_319)
     expect(715_500 - totalSell).toBeLessThan(407.00)
-    const endCash = account.cashBalance - totalBuy + totalSell
+    const endCash = cashBalanceOf(account) - totalBuy + totalSell
     expect(endCash - 0.05 * account.totalValue).toBeGreaterThanOrEqual(0)
     expect(endCash - 0.05 * account.totalValue).toBeLessThan(306.68)
     // The round-4 property, restated: cash falls toward target, it is never pushed up.
-    expect(account.cashBalance - totalBuy + totalSell).toBeLessThan(account.cashBalance)
+    expect(cashBalanceOf(account) - totalBuy + totalSell).toBeLessThan(cashBalanceOf(account))
   })
 
   it('acc-045 (Patel Digital Assets, 9.4% cash against a 3% target) exits its whole digital-asset overweight in loss-first order — never a $384,625 sale of a $188,018 BTC position', async () => {
@@ -426,7 +281,7 @@ describe('fix round 4 · sells are capped by what buys AND cash-to-target can ab
     // against $370,372 raised and drove cash to -0.39%.
     expect(totalBuy).toBe(397_285)
     expect(totalBuy).toBeLessThanOrEqual(totalSell + (39_870 - 12_750))
-    const endCash = account.cashBalance - totalBuy + totalSell
+    const endCash = cashBalanceOf(account) - totalBuy + totalSell
     expect(endCash).toBeGreaterThan(0)
     expect(endCash - 0.03 * account.totalValue).toBeGreaterThanOrEqual(0)
     expect(endCash - 0.03 * account.totalValue).toBeLessThan(744.90)
@@ -455,9 +310,9 @@ describe('fix round 4 · sells are capped by what buys AND cash-to-target can ab
     expect(24_507 - totalSell).toBeLessThan(449.30)
     expect(31_500 - totalBuy).toBeLessThan(384.80)
     // Cash falls from 8.34% toward — and not below — its 5% target.
-    const endCash = account.cashBalance - totalBuy + totalSell
+    const endCash = cashBalanceOf(account) - totalBuy + totalSell
     expect(endCash / account.totalValue).toBeGreaterThanOrEqual(0.05)
-    expect(endCash).toBeLessThan(account.cashBalance)
+    expect(endCash).toBeLessThan(cashBalanceOf(account))
   })
 
   it('across every account, a rebalance never pushes cash above the model cash target — in money, at zero tolerance', async () => {
@@ -479,7 +334,7 @@ describe('fix round 4 · sells are capped by what buys AND cash-to-target can ab
     // integer number of currency units and the bound is a product of two exact fixture figures.
     const violations: string[] = []
     let examined = 0
-    for (const account of (await getAccounts()).filter(isModelManaged)) {
+    for (const account of accountFixture.filter(isModelManaged)) {
       const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
       const totalSell = preview!.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
       const totalBuy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
@@ -487,8 +342,8 @@ describe('fix round 4 · sells are capped by what buys AND cash-to-target can ab
       examined++
       const drift = await getDrift(account.id)
       const cashTarget = drift.assetClassDrifts.find((d) => d.assetClass === 'cash')?.target ?? 0
-      const ceiling = Math.max(cashTarget * account.totalValue, account.cashBalance)
-      const endCash = account.cashBalance - totalBuy + totalSell
+      const ceiling = Math.max(cashTarget * account.totalValue, cashBalanceOf(account))
+      const endCash = cashBalanceOf(account) - totalBuy + totalSell
       if (endCash > ceiling) {
         violations.push(`${account.id}: end ${endCash.toFixed(2)} above ceiling ${ceiling.toFixed(2)} by ${(endCash - ceiling).toFixed(2)}`)
       }
@@ -503,7 +358,7 @@ describe('§9.6 · buys are capped by available cash above target, symmetric to 
   it('acc-043: rebalancing does not drive cash from 13.69% to 5.56% against a 10% target', async () => {
     const [preview] = await previewRebalance({ accountIds: ['acc-043'], taxAware: true })
     const positions = await getPositions('acc-043')
-    const account = (await getAccounts()).find((a) => a.id === 'acc-043')!
+    const account = accountFixture.find((a) => a.id === 'acc-043')!
     const cash = positions.find((p) => p.symbol === 'CASH')!.marketValue
     const sell = preview!.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
     const buy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
@@ -522,7 +377,7 @@ describe('§9.6 · buys are capped by available cash above target, symmetric to 
     // largest account in the book. It reported clean while acc-033 ended $76 above its own
     // starting cash balance, moving *away* from a target it was already overweight against.
     // A weight tolerance is the wrong unit for a money invariant.
-    const accounts = (await getAccounts()).filter(isModelManaged)
+    const accounts = accountFixture.filter(isModelManaged)
     const violations: string[] = []
     let examined = 0
     for (const account of accounts) {
@@ -571,7 +426,7 @@ describe('§9.6 · buys are capped by available cash above target, symmetric to 
     // Sizing the sell cap on the pre-floor `totalBuy` of 4,134 instead sold 50 EFA for 4,115
     // against 4,039 of buys and left the account at $45,937 — $76 *above* where it started, on
     // an overweight of only 0.88 of a point. Both bounds are the executed figure now.
-    const account = (await getAccounts()).find((a) => a.id === 'acc-033')!
+    const account = accountFixture.find((a) => a.id === 'acc-033')!
     const [preview] = await previewRebalance({ accountIds: ['acc-033'], taxAware: true })
     const trades = preview!.trades
     const totalSell = trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
@@ -579,12 +434,12 @@ describe('§9.6 · buys are capped by available cash above target, symmetric to 
     expect(trades.length).toBeGreaterThan(0)
     expect(totalBuy).toBe(4_137)
     expect(totalSell).toBe(4_115)
-    const endCash = account.cashBalance - totalBuy + totalSell
-    expect(endCash).toBeLessThanOrEqual(account.cashBalance)
+    const endCash = cashBalanceOf(account) - totalBuy + totalSell
+    expect(endCash).toBeLessThanOrEqual(cashBalanceOf(account))
     expect(endCash).toBeGreaterThanOrEqual(0.05 * account.totalValue)
     // Vacuity guard on the premise: it really does start overweight, so "cash may only fall" is
     // the live constraint and not a statement about an account moving the other way.
-    expect(account.cashBalance).toBeGreaterThan(0.05 * account.totalValue)
+    expect(cashBalanceOf(account)).toBeGreaterThan(0.05 * account.totalValue)
     // And the sells really are bounded by the *executed* buys, not by the 4,212 notional: one
     // more EFA lot (82.30) would have cleared 4,197, which is what the pre-floor cap allowed.
     expect(totalSell).toBeLessThanOrEqual(totalBuy)
@@ -639,13 +494,13 @@ describe('§9.6 · buys are capped by available cash above target, symmetric to 
     // Task 10 — $136,488 raised, not $135,185: the sell notional is us_equity 0.0104 +
     // fixed_income 0.0221 = 0.0325 x $4,200,000 = $136,500, executed as INTC 1,535 x 28.45 =
     // 43,671 and BND 1,282 x 72.40 = 92,817.
-    const account = (await getAccounts()).find((a) => a.id === 'acc-015')!
+    const account = accountFixture.find((a) => a.id === 'acc-015')!
     const [preview] = await previewRebalance({ accountIds: ['acc-015'], taxAware: true, driftThreshold: 0.001 })
     const totalSell = preview!.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
     const totalBuy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
     const target = (await getDrift('acc-015')).assetClassDrifts.find((d) => d.assetClass === 'cash')!.target
-    const startCashPct = account.cashBalance / account.totalValue
-    const endCashPct = (account.cashBalance - totalBuy + totalSell) / account.totalValue
+    const startCashPct = cashBalanceOf(account) / account.totalValue
+    const endCashPct = (cashBalanceOf(account) - totalBuy + totalSell) / account.totalValue
 
     // The premise: this account really is short of its cash target, or the test proves nothing.
     expect(startCashPct).toBeLessThan(target)
@@ -723,7 +578,7 @@ describe('fix round 3 · self-financing applies to sells only — buys are never
 
 describe('fix round 3 · rebalance sells never exceed the position actually held (long-only, no short sales)', () => {
   it('across every account with a proposal, no sell trade exceeds that position\'s real market value', async () => {
-    const accountList = (await getAccounts()).filter(isModelManaged)
+    const accountList = accountFixture.filter(isModelManaged)
     for (const account of accountList) {
       const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
       const sells = preview!.trades.filter((t) => t.side === 'sell')
@@ -855,7 +710,7 @@ describe('§9.7 round 4 · the tax on a row is the tax on the value that row sta
     const mismatches: string[] = []
     let legsChecked = 0
     let lotSensitiveLegs = 0
-    for (const account of (await getAccounts()).filter(isModelManaged)) {
+    for (const account of accountFixture.filter(isModelManaged)) {
       const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: false })
       // Tax-exempt accounts are zero on every leg by design (`isTaxableAccount`), and a lot walk
       // over their positions would not be; they are covered by their own tests above.
@@ -902,175 +757,6 @@ describe('fix round 2 · rebalance trade direction follows actual vs target, not
     const efa = preview!.trades.find((t) => t.symbol === 'EFA')
     expect(vti?.side).toBe('sell')
     expect(efa?.side).toBe('buy')
-  })
-})
-
-describe('oms.ts pre-trade wash-sale check is derived from realized sales, not a hand-typed symbol list', () => {
-  it('flags INTC in acc-002 (hh-001), which itself realized the INTC loss sale 5 days ago', async () => {
-    const result = await preTradeCheck({
-      accountId: 'acc-002', symbol: 'INTC', side: 'buy', quantity: 100, estimatedValue: 2_845,
-    })
-    const washSale = result.violations.find((v) => v.constraint.includes('Wash sale'))
-    expect(washSale).toBeDefined()
-  })
-
-  it('fix round 2: flags INTC in acc-003 (hh-001 IRA), a sibling account of the one that sold it at a loss', async () => {
-    const result = await preTradeCheck({
-      accountId: 'acc-003', symbol: 'INTC', side: 'buy', quantity: 100, estimatedValue: 2_845,
-    })
-    const washSale = result.violations.find((v) => v.constraint.includes('Wash sale'))
-    expect(washSale).toBeDefined()
-  })
-
-  it('fix round 2: does not flag a sell of INTC in acc-002 — the wash sale is triggered by repurchasing, not by selling', async () => {
-    const result = await preTradeCheck({
-      accountId: 'acc-002', symbol: 'INTC', side: 'sell', quantity: 100, estimatedValue: 2_845,
-    })
-    const washSale = result.violations.find((v) => v.constraint.includes('Wash sale'))
-    expect(washSale).toBeUndefined()
-  })
-
-  it('fix round 2: does not flag NVDA in acc-001 (hh-001) — its loss sale (rs-002) was in acc-007/hh-002, a different household', async () => {
-    const result = await preTradeCheck({
-      accountId: 'acc-001', symbol: 'NVDA', side: 'buy', quantity: 10, estimatedValue: 7_800,
-    })
-    const washSale = result.violations.find((v) => v.constraint.includes('Wash sale'))
-    expect(washSale).toBeUndefined()
-  })
-
-  it('does not flag VTI — the old hand-typed list (VTI, NVDA, AAPL) claimed a VTI wash-sale risk that no loss sale in the fixture supports', async () => {
-    const result = await preTradeCheck({
-      accountId: 'acc-001', symbol: 'VTI', side: 'buy', quantity: 10, estimatedValue: 2_685,
-    })
-    const washSale = result.violations.find((v) => v.constraint.includes('Wash sale'))
-    expect(washSale).toBeUndefined()
-  })
-})
-
-describe('compliance.ts /api/compliance/check-trades concentration uses per-kind limits, not a blanket 10%', () => {
-  it('C11: a $400K VTI buy in the $8.2M Johnson Trust is a warning under its 35% fund limit, not a fail under a blanket single-name limit', async () => {
-    const [result] = await checkTradeCompliance([
-      { accountId: 'acc-001', trades: [{ symbol: 'VTI', side: 'buy', quantity: 1_489, estimatedValue: 400_000 }] },
-    ])
-    const concentrationCheck = result!.checks.find((c) => c.category === 'concentration_limit')!
-    expect(concentrationCheck.status).toBe('warning')
-    expect(result!.overallStatus).toBe('warning')
-    // §9.2, pinning current semantics deliberately (not a defect either way): a warning-severity
-    // breach — a position approaching, not yet over, its limit — still suppresses the affirmative
-    // "All post-trade positions..." pass. Only a fully clean projection gets the affirmative pass.
-    expect(result!.checks.some((c) => c.category === 'concentration_limit' && c.status === 'pass')).toBe(false)
-  })
-
-  it('C11: a $400K single-name buy of the same size in the same account fails the 10% limit outright', async () => {
-    const [result] = await checkTradeCompliance([
-      { accountId: 'acc-001', trades: [{ symbol: 'AAPL', side: 'buy', quantity: 2_047, estimatedValue: 400_000 }] },
-    ])
-    const concentrationCheck = result!.checks.find((c) => c.category === 'concentration_limit')!
-    expect(concentrationCheck.status).toBe('fail')
-  })
-
-  it('C11: existing position weights are derived from positions.ts, not the stale hand-typed map (acc-001 VTI is 27.8%, not 32%)', async () => {
-    const [result] = await checkTradeCompliance([
-      { accountId: 'acc-001', trades: [{ symbol: 'VTI', side: 'buy', quantity: 2_610, estimatedValue: 700_000 }] },
-    ])
-    const concentrationCheck = result!.checks.find((c) => c.category === 'concentration_limit')!
-    expect(concentrationCheck.details?.currentWeight).toBeCloseTo(0.278, 2)
-    expect(concentrationCheck.details?.limit).toBe(0.35)
-  })
-})
-
-describe('compliance.ts /api/compliance/check-trades wash-sale check is household-scoped, not account-scoped', () => {
-  it('C10: a proposed INTC buy in acc-003 (hh-001 IRA) flags the window opened by sibling account acc-002 selling INTC at a loss', async () => {
-    const [result] = await checkTradeCompliance([
-      { accountId: 'acc-003', trades: [{ symbol: 'INTC', side: 'buy', quantity: 100, estimatedValue: 3_000 }] },
-    ])
-    const washSaleCheck = result!.checks.find((c) => c.category === 'wash_sale')!
-    expect(washSaleCheck.status).toBe('warning')
-    expect(washSaleCheck.rule).toContain('INTC')
-  })
-})
-
-describe('§9.2 · compliance reports the whole projected book, not only proposed buys', () => {
-  it('acc-002: a clean AGG buy does not certify SPY, which is already over the fund limit', async () => {
-    const [result] = await checkTradeCompliance([
-      { accountId: 'acc-002', trades: [{ symbol: 'AGG', side: 'buy', quantity: 100, estimatedValue: 10_000 }] },
-    ])
-    const concentration = result!.checks.filter((c) => c.category === 'concentration_limit')
-    // The affirmative all-positions pass must not appear while a real breach exists.
-    expect(concentration.some((c) => c.status === 'pass' && /All post-trade positions/.test(c.message))).toBe(false)
-    // SPY is 44.8% against a 35% fund limit and must be named.
-    const spy = concentration.find((c) => c.details?.symbol === 'SPY')
-    expect(spy, 'SPY breach must be reported').toBeDefined()
-    expect(spy!.details!.preExisting).toBe(true)
-    expect(spy!.details!.postTradeWeight).toBeGreaterThan(0.35)
-  })
-
-  it('a pre-existing breach is reported as pre-existing, not blamed on the trade', async () => {
-    const [result] = await checkTradeCompliance([
-      { accountId: 'acc-002', trades: [{ symbol: 'AGG', side: 'buy', quantity: 100, estimatedValue: 10_000 }] },
-    ])
-    const spy = result!.checks.find((c) => c.details?.symbol === 'SPY')!
-    expect(spy.message).toMatch(/already|pre-existing|not created by this trade/i)
-  })
-
-  it('an account with no breach anywhere still gets a clean affirmative pass', async () => {
-    // The direction that matters: this must not become a check that can never pass. Asserting
-    // only `.every(status === 'pass')` would be vacuously true on an empty array — if the
-    // affirmative pass check were deleted outright and nothing else breaches, `concentration`
-    // would be `[]` and `.every` would still report true. Pin that the array is non-empty and
-    // that the affirmative pass rule specifically is present.
-    const [result] = await checkTradeCompliance([
-      { accountId: 'acc-006', trades: [{ symbol: 'AGG', side: 'buy', quantity: 10, estimatedValue: 1_000 }] },
-    ])
-    const concentration = result!.checks.filter((c) => c.category === 'concentration_limit')
-    expect(concentration.length).toBeGreaterThan(0)
-    expect(concentration.every((c) => c.status === 'pass')).toBe(true)
-    expect(concentration.some((c) => c.rule === 'Concentration limit (per security kind)')).toBe(true)
-  })
-
-  it('a trade that creates a breach is distinguished from one that inherits it', async () => {
-    const [result] = await checkTradeCompliance([
-      { accountId: 'acc-006', trades: [{ symbol: 'NVDA', side: 'buy', quantity: 2_000, estimatedValue: 1_560_000 }] },
-    ])
-    const nvda = result!.checks.find((c) => c.details?.symbol === 'NVDA')!
-    expect(nvda.details!.preExisting).toBe(false)
-  })
-
-  it('a sell that reduces a pre-existing breach below its limit is reported as cured, not still breaching', async () => {
-    // acc-002 SPY: weight 0.448 against the 35% fund limit ($2,018,243.70 of the $4.5M account).
-    // Selling $666,000 (0.148 of the account) projects SPY to exactly 0.300 — below the 35% limit
-    // but still above the 28% warn threshold, so the check must survive as a 'warning', not a
-    // 'fail' and not vanish. A sell-blind projection (one that only applies buys, carrying every
-    // held position's weight forward unchanged) would leave SPY at 0.448 and still report 'fail'
-    // here — that is exactly the mutation this test exists to kill.
-    const [result] = await checkTradeCompliance([
-      { accountId: 'acc-002', trades: [{ symbol: 'SPY', side: 'sell', quantity: 1_280, estimatedValue: 666_000 }] },
-    ])
-    const concentration = result!.checks.filter((c) => c.category === 'concentration_limit')
-    const spy = concentration.find((c) => c.details?.symbol === 'SPY')
-    expect(spy, 'SPY concentration check must be reported').toBeDefined()
-    expect(spy!.status).toBe('warning')
-    expect(spy!.details!.postTradeWeight).toBeCloseTo(0.300, 3)
-    expect(spy!.details!.postTradeWeight).toBeLessThan(0.35)
-  })
-})
-
-describe('fix round 2 · the two compliance endpoints agree on a single severity ladder', () => {
-  it('a VTI buy taking acc-001 to ~40% weight is a fail on both /api/compliance/check-trades and a block on /api/oms/orders/pre-check', async () => {
-    // 40% is above the 35% fund limit on both endpoints — previously "fail" required 1.5x the
-    // limit (52.5%) on the compliance endpoint while the pre-check endpoint blocked at 1.0x (35%),
-    // so the same trade could be a block on one surface and a mere warning on the other.
-    const estimatedValue = 0.40 * 8_200_000 - 2_282_250 // existing VTI marketValue in acc-001
-    const [complianceResult] = await checkTradeCompliance([
-      { accountId: 'acc-001', trades: [{ symbol: 'VTI', side: 'buy', quantity: 1, estimatedValue }] },
-    ])
-    const preCheckResult = await preTradeCheck({ accountId: 'acc-001', symbol: 'VTI', side: 'buy', quantity: 1, estimatedValue })
-
-    const complianceConcentration = complianceResult!.checks.find((c) => c.category === 'concentration_limit')!
-    const preCheckConcentration = preCheckResult.violations.find((v) => v.constraint.includes('concentration'))!
-
-    expect(complianceConcentration.status).toBe('fail')
-    expect(preCheckConcentration.severity).toBe('block')
   })
 })
 
@@ -1188,7 +874,7 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
   it('every buy is either a position the account holds or its model\'s own implementation security', async () => {
     // A buy in a symbol that is neither is a fabricated ticker — the failure mode this whole task
     // risks introducing.
-    const accountList = (await getAccounts()).filter(isModelManaged)
+    const accountList = accountFixture.filter(isModelManaged)
     let buysChecked = 0
     for (const account of accountList) {
       const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
@@ -1246,7 +932,7 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     // Checked **relatively**, deliberately. An absolute threshold of one unit price is $87,450 for
     // BTC and $1.00 for USDC — wide enough to exempt the very asset class most at risk, which is
     // the same tolerance-swallowing failure as allowing a whole share on a share count.
-    const accountList = (await getAccounts()).filter(isModelManaged)
+    const accountList = accountFixture.filter(isModelManaged)
     const mismatches: string[] = []
     let legsChecked = 0
     let worstRelative = 0
@@ -1293,7 +979,7 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
   })
 
   it('no proposed sell exceeds the position held, no trade is a zero-share order, and no preview repeats a symbol', async () => {
-    const accountList = (await getAccounts()).filter(isModelManaged)
+    const accountList = accountFixture.filter(isModelManaged)
     let tradesChecked = 0
     for (const account of accountList) {
       const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })

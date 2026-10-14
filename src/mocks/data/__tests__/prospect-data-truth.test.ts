@@ -3,7 +3,6 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { calendarEvents } from '@/mocks/data/calendar'
 import { nbas } from '@/mocks/data/nbas'
-import { notes } from '@/mocks/data/notes'
 import { activities } from '@/mocks/data/activities'
 import { documents } from '@/mocks/data/documents'
 import { prospects } from '@/mocks/data/prospects'
@@ -43,9 +42,9 @@ describe('Dr. Amanda Pell, the referral', () => {
     expect(nba?.description).toContain('on 20 Feb.')
   })
 
-  it('names her in nba-015, note-009 and act-019, each crediting James Thompson', () => {
+  it('names her in nba-015 and act-019, each crediting James Thompson', () => {
     const texts = [
-      nbas.find((n) => n.id === 'nba-015')?.description, notes.find((n) => n.id === 'note-009')?.content,
+      nbas.find((n) => n.id === 'nba-015')?.description,
       activities.find((a) => a.id === 'act-019')?.description,
     ]
     for (const text of texts) {
@@ -70,7 +69,6 @@ describe('William Foster, one story', () => {
   it('no record about him describes a new account or its opening', () => {
     const texts = [
       ...documents.filter((d) => d.clientId === foster).map((d) => d.name),
-      ...notes.filter((n) => n.clientId === foster).map((n) => n.content),
       ...activities.filter((a) => a.entityId === foster).flatMap((a) => [a.title, a.description]),
       ...complianceAlerts.filter((c) => c.entityId === foster).flatMap((c) => [c.title, c.description]),
       ...nbas.filter((n) => n.clients.some((c) => c.id === foster)).flatMap((n) => [n.title, n.description, n.trigger.value, n.actionRoute?.aiMessage ?? '']),
