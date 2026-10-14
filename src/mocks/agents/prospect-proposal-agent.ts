@@ -35,8 +35,9 @@ export function inKindVsModelLine(c: ProspectVersionContent, voice: 'you' | 'she
   const label = CLIENT_ASSET_CLASS_WORDS[widest.assetClass]
   const concentrated = c.concentration && c.transfer.some((l) => l.symbol === c.concentration?.symbol && l.assetClass === widest.assetClass)
   const including = concentrated && c.concentration ? ` (including ${c.concentration.name})` : ''
-  const [who, whose] = voice === 'you' ? ['you', 'your'] : ['she', 'her']
-  return `Moved in kind, ${who} would hold about ${clientWholePercent(widest.transferred)} in ${label}${including}, against ${clientWholePercent(widest.target)} in the ${c.modelName} model. Reaching the model would take sales, each a tax decision to make with ${whose} CPA.`
+  const holder = voice === 'you' ? 'the account you move to us' : 'the account she moves to us'
+  const whose = voice === 'you' ? 'your' : 'her'
+  return `Moved in kind, about ${clientWholePercent(widest.transferred)} of ${holder} would be in ${label}${including}, against ${clientWholePercent(widest.target)} in the ${c.modelName} model. Reaching the model would take sales, each a tax decision to make with ${whose} CPA.`
 }
 
 /** What she reads when the approved version is sent: the firm's plain language, each figure the version's, formatted for a client. */
@@ -50,12 +51,12 @@ export function clientSummaryOf(record: ProspectRecord, c: ProspectVersionConten
     const head = `- ${l.name} (${l.symbol}): ${fmtQuantity(l.quantity)} shares, ${clientMoney(l.marketValue)}`
     if (c.concentration?.symbol !== l.symbol) return `${head}.`
     const term = l.holdingPeriod === 'long' ? 'long-term' : 'short-term'
-    return `${head}, about ${clientWholePercent(c.concentration.weightOfAssets)} of your assets. Selling it now would realize a ${term} gain of about ${aboutMoney(l.unrealised)}, with an estimated federal tax of about ${aboutMoney(l.taxIfSoldNow)} (estimate; consult your tax professional).`
+    return `${head}, about ${clientWholePercent(c.concentration.weightOfAssets)} of your total assets across both accounts. Selling it now would realize a ${term} gain of about ${aboutMoney(l.unrealised)}, with an estimated federal tax of about ${aboutMoney(l.taxIfSoldNow)} (estimate; consult your tax professional).`
   })
   const staged = c.tranches.length > 0 && c.concentration ? [
     '',
     `One option to decide with your CPA: selling ${c.concentration.name} in ${TRANCHE_WORDS[c.tranches.length === 3 ? 3 : 2]} parts, one in each tax year:`,
-    ...c.tranches.map((t) => `- ${t.taxYear}: ${fmtQuantity(t.shares)} shares, a gain of about ${aboutMoney(t.gain)}, an estimated federal tax of about ${aboutMoney(t.tax)}.`),
+    ...c.tranches.map((t) => `- ${t.taxYear}: ${fmtQuantity(t.shares)} shares, a gain of about ${aboutMoney(t.gain)}, an estimated federal tax of about ${aboutMoney(t.tax)}${t.n > 1 ? " at today's rates" : ''}.`),
     `Figures are at the ${fmtDayMonthYear(c.pricesAsOf)} close; gains in later years depend on the price when sold (estimate; consult your tax professional). Nothing is sold unless you decide to.`,
   ] : []
   return [

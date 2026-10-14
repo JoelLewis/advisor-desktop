@@ -124,7 +124,7 @@ describe('the meeting full view', () => {
     const wording = within(decisions).getByText(`To Robert: ${n09.toClient!.text}`)
     expect(wording.closest('li')).toHaveTextContent(n09.text)
     expect(within(decisions).getAllByText(/^To Robert: /)).toHaveLength(2)
-    expect(within(await screen.findByRole('list', { name: 'Client requests' })).getAllByText(/^To Robert: /)).toHaveLength(1)
+    expect(within(await screen.findByRole('list', { name: 'Client requests' })).getAllByText(/^To Robert: /)).toHaveLength(2)
     expect(within(screen.getByRole('list', { name: 'Discussion' })).queryByText(/^To Robert: /)).toBeNull()
 
     await user.click(within(decisions).getByRole('button', { name: 'Edit n-12' }))

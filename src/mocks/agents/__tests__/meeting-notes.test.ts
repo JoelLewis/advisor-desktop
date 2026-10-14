@@ -64,6 +64,8 @@ describe('Meeting Notes', () => {
     const rollover = toClient.filter((l) => /consolidat|roll ?over|401\(k\).*403\(b\)/i.test(l.text))
     expect(rollover.map((l) => l.id)).toEqual(['n-15'])
     for (const line of rollover) expect(line.text).toContain('asked about; comparison to follow')
+    expect(rollover[0]?.toClient?.text).toBe("A rollover of your Vanguard 401(k) and Patricia's TIAA 403(b) was asked about; comparison to follow.")
+    expect(notes.find((l) => l.id === 'n-15')?.text).toBe("A rollover of Robert's Vanguard 401(k) and Patricia's TIAA 403(b) was asked about; comparison to follow.")
   })
 
   it('every tax item the client will read carries the estimate wording', () => {
@@ -94,7 +96,7 @@ describe('Meeting Notes', () => {
 
   it("words for Robert, in the second person, each line that names him; the meaning and the citations stay the line's", () => {
     const worded = notes.filter((l) => l.toClient)
-    expect(worded.map((l) => [l.id, l.toClient!.clientId])).toEqual([['n-09', 'cli-001'], ['n-12', 'cli-001'], ['n-14', 'cli-001']])
+    expect(worded.map((l) => [l.id, l.toClient!.clientId])).toEqual([['n-09', 'cli-001'], ['n-12', 'cli-001'], ['n-14', 'cli-001'], ['n-15', 'cli-001']])
     for (const line of notes) expect(line.toClient === undefined || line.section === 'decisions' || line.section === 'client_requests', line.id).toBe(true)
     for (const line of toClient.filter((l) => /\bRobert\b/.test(l.text))) expect(line.toClient, line.id).toBeDefined()
     for (const line of worded) {

@@ -70,7 +70,7 @@ function BestInterestView({ record, heading }: { record: BestInterestDraft | Bes
         ))}
       </ul>
       <p className="tabular text-body">{`Costs · ${record.costs.scheduleName} · ${fmtMoney(record.costs.annualFee)} USD a year · blended ${clientRate(record.costs.blendedRate)}`}</p>
-      {record.concentration ? <p className="tabular text-body">{`Concentration · ${record.concentration.name} · ${fmtWeight(record.concentration.weightOfAssets)}% of her assets · tax if sold now ${fmtMoney(record.concentration.taxIfSoldNow)} USD (estimate)`}</p> : null}
+      {record.concentration ? <p className="tabular text-body">{`Concentration · ${record.concentration.name} · ${fmtWeight(record.concentration.weightOfAssets)}% of her total assets across both accounts · tax if sold now ${fmtMoney(record.concentration.taxIfSoldNow)} USD (estimate)`}</p> : null}
       <p className="text-body">{record.rollover}</p>
       {'rationale' in record ? <p className="text-body">{`Why, in the advisor's words: ${record.rationale}`}</p> : null}
     </div>

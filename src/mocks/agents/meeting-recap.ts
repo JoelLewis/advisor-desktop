@@ -1,5 +1,6 @@
 import type { MeetingFiling, NoteLine, NoteSection } from '@/types/workspace-meeting'
 import type { ClientLetter } from './client-letter'
+import { FIRM_NAME } from '@/lib/firm'
 
 /** `addresseeId` is the client the recap is written to: a filed line worded for them is read in that wording. */
 export type RecapInput = { addresseeId: string; greetingName: string; withOthers: boolean; filing: MeetingFiling; signerName: string; windowSentence?: string }
@@ -39,7 +40,7 @@ export function writeMeetingRecap({ addresseeId, greetingName, withOthers, filin
     ...decided,
     ...(asked.length + decided.length === 0 ? ['Nothing was decided or asked of us at this meeting.'] : []),
     'If anything here is not as you remember it, please tell me.',
-    signerName,
+    `${signerName}\n${FIRM_NAME}`,
   ]
   return { body: paragraphs.join('\n\n'), figures: [] }
 }

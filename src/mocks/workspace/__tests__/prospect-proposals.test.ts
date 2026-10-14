@@ -49,7 +49,7 @@ describe('drafting her proposal', () => {
     const summary = created().versions[0]?.clientSummary ?? ''
     expect(summary).toContain('Dear Dr. Pell,')
     expect(summary).toContain('Portfolio: Growth, our model for your answers: about 75% in stocks and 25% in bonds, alternatives, commodities and cash.')
-    expect(summary).toContain('Stryker Corp. (SYK): 1,390 shares, $542,378, about 18% of your assets.')
+    expect(summary).toContain('Stryker Corp. (SYK): 1,390 shares, $542,378, about 18% of your total assets across both accounts.')
     expect(summary).toContain('a long-term gain of about $481,400, with an estimated federal tax of about $114,600 (estimate; consult your tax professional)')
     expect(summary).toContain('Your TIAA 403(b): a rollover was asked about; comparison to follow.')
     expect(summary).toContain("Fees: an estimated $20,850 a year on today's value of $2,100,000 (a blended 0.99%), from our tiered schedule; the fee moves with the account's value.")
@@ -62,8 +62,8 @@ describe('drafting her proposal', () => {
   it('states what she would hold if everything moves in kind against the model, and that reaching it takes sales', () => {
     withHerReply()
     const detail = created()
-    expect(detail.versions[0]?.clientSummary).toContain('Moved in kind, you would hold about 95% in US stocks (including Stryker Corp.), against 55% in the Growth model. Reaching the model would take sales, each a tax decision to make with your CPA.')
-    expect(detail.bestInterestDraft.inKindVsModel).toBe('Moved in kind, she would hold about 95% in US stocks (including Stryker Corp.), against 55% in the Growth model. Reaching the model would take sales, each a tax decision to make with her CPA.')
+    expect(detail.versions[0]?.clientSummary).toContain('Moved in kind, about 95% of the account you move to us would be in US stocks (including Stryker Corp.), against 55% in the Growth model. Reaching the model would take sales, each a tax decision to make with your CPA.')
+    expect(detail.bestInterestDraft.inKindVsModel).toBe('Moved in kind, about 95% of the account she moves to us would be in US stocks (including Stryker Corp.), against 55% in the Growth model. Reaching the model would take sales, each a tax decision to make with her CPA.')
   })
 
   it('a second ask returns the proposal already drafted', () => {
@@ -89,7 +89,7 @@ describe('revising it', () => {
     expect(v2?.clientSummary).toContain([
       'One option to decide with your CPA: selling Stryker Corp. in two parts, one in each tax year:',
       '- 2026: 695 shares, a gain of about $240,700, an estimated federal tax of about $57,300.',
-      '- 2027: 695 shares, a gain of about $240,700, an estimated federal tax of about $57,300.',
+      '- 2027: 695 shares, a gain of about $240,700, an estimated federal tax of about $57,300 at today\'s rates.',
       'Figures are at the 25 Feb 2026 close; gains in later years depend on the price when sold (estimate; consult your tax professional). Nothing is sold unless you decide to.',
     ].join('\n'))
     expect(v2?.fingerprint).not.toBe(r.detail.versions[0]?.fingerprint)

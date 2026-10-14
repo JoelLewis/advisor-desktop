@@ -6,6 +6,7 @@ import { accounts } from '@/mocks/data/accounts'
 import { householdFixtures } from '@/mocks/data/households'
 import { washSaleWindow } from '@/mocks/data/realised-sales'
 import { clients } from '@/mocks/data/clients'
+import { FIRM_NAME } from '@/lib/firm'
 import { personById } from '@/mocks/data/people'
 import { computeDriftForAccount, modelDisplayName } from '@/mocks/handlers/pms'
 import { sameWashSaleTaxpayer, taxReturnFor, washSaleTaxpayer } from '@/mocks/handlers/tax-return'
@@ -128,7 +129,7 @@ export function writeClientLetter(proposal: Proposal, version: ProposalVersion, 
   }
   paragraphs.push(buildClientRateDisclosure(TAX_RATE_BASIS))
   paragraphs.push('The orders are with our compliance team for review before any is placed.')
-  paragraphs.push(signer.name)
+  paragraphs.push(`${signer.name}\n${FIRM_NAME}`)
   return { body: paragraphs.join('\n\n'), figures }
 }
 

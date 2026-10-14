@@ -37,7 +37,7 @@ describe('the recap', () => {
       recordBasis: { eventId: 'evt-010', actId: 'REC-0001', fingerprint: meeting().filed!.fingerprint },
     })
     expect(draft.body.startsWith('Dear Robert,\n\nThank you both for meeting with me today. Here is what we agreed.')).toBe(true)
-    expect(draft.body.endsWith('If anything here is not as you remember it, please tell me.\n\nAdrian Hale')).toBe(true)
+    expect(draft.body.endsWith('If anything here is not as you remember it, please tell me.\n\nAdrian Hale\nLarkfield Advisory')).toBe(true)
   })
 
   it('carries every client request and decision as filed — in the wording filed for Robert where there is one — and nothing else', () => {
@@ -52,6 +52,7 @@ describe('the recap', () => {
     for (const l of lines.filter((x) => x.section === 'discussion' || x.section === 'follow_ups')) expect(body, l.id).not.toContain(l.text)
     expect(body.indexOf('What you asked us:')).toBeLessThan(body.indexOf('What we decided:'))
     expect(body).toContain('asked about; comparison to follow')
+    expect(body).toContain("A rollover of your Vanguard 401(k) and Patricia's TIAA 403(b) was asked about; comparison to follow.")
     expect(body).toContain('estimate; consult your tax professional')
   })
 

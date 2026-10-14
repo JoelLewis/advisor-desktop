@@ -41,7 +41,7 @@ export function ProspectProposalEmbed({ prospectId, proposalId, actions }: Props
       <SleevesTable version={v} />
       <TransferTable version={v} />
       {v.concentration ? (
-        <p className="text-body">{`${v.concentration.name} is ${fmtWeight(v.concentration.weightOfAssets)}% of her assets; it moves in kind, and nothing is sold.`}</p>
+        <p className="text-body">{`${v.concentration.name} is ${fmtWeight(v.concentration.weightOfAssets)}% of her total assets across both accounts; it moves in kind, and nothing is sold.`}</p>
       ) : null}
       {v.tranches.length > 0 ? <TranchesTable version={v} /> : null}
       {v.heldAway.map((h) => (

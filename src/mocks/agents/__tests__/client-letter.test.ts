@@ -53,7 +53,7 @@ describe('the Client Letter Agent', () => {
     expect(letter.body).toContain(buildClientRateDisclosure(TAX_RATE_BASIS))
     expect(letter.body).not.toContain(RATE_DISCLOSURE)
     expect(letter.body).toContain('with our compliance team for review before any is placed')
-    expect(letter.body.endsWith('Adrian Hale')).toBe(true)
+    expect(letter.body.endsWith('Adrian Hale\nLarkfield Advisory')).toBe(true)
     expect(letter.body).not.toMatch(/cleared|household|realis|We have approved/i)
   })
 

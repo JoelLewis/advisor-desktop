@@ -35,7 +35,7 @@ export function runTransferIn({ asOf, subject }: AgentContext): AgentFinding[] {
         { label: 'Tax if sold now', value: l.taxIfSoldNow, unit: 'USD', source: 'transfer.taxIfSoldNow' },
         { label: 'Rate', value: taxRateFor(l.holdingPeriod), unit: '%', source: 'taxRateFor' },
         ...(concentrated && concentration ? [
-          { label: 'Share of her assets', value: concentration.weightOfAssets, unit: '%' as const, source: 'concentration.weightOfAssets' },
+          { label: 'Share of her total assets', value: concentration.weightOfAssets, unit: '%' as const, source: 'concentration.weightOfAssets' },
           { label: 'Single-name limit', value: SINGLE_NAME_LIMIT, unit: '%' as const, source: 'SINGLE_NAME_LIMIT' },
         ] : []),
       ],
