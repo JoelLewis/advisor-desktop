@@ -1,5 +1,9 @@
 import { isRouteErrorResponse, useRouteError } from 'react-router-dom'
+import { Page } from '@/kit/page/Page'
 
+const LINK = 'text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink'
+
+/** A route that threw: say so plainly, offer the way back, and keep the error itself for whoever opens it. */
 export function RouteError() {
   const error = useRouteError()
   const message = isRouteErrorResponse(error)
@@ -8,10 +12,15 @@ export function RouteError() {
       ? error.message
       : 'Unknown error'
   return (
-    <main>
-      <h1>Something went wrong</h1>
-      <p>{message}</p>
-      <a href="/">The workspace</a>
-    </main>
+    <Page title="Something went wrong" eyebrow="Advisor Desktop">
+      <div className="flex flex-col gap-3">
+        <p className="text-body text-ink-2">This page could not be shown. A reload starts the demo over.</p>
+        <a href="/" className={`self-start ${LINK}`}>The workspace</a>
+        <details className="text-body text-ink-3">
+          <summary className="cursor-pointer">What the app reported</summary>
+          <p className="mt-2">{message}</p>
+        </details>
+      </div>
+    </Page>
   )
 }

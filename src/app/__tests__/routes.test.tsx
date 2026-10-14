@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import { routes } from '@/app/routes'
 import { http, HttpResponse } from 'msw'
@@ -7,6 +7,7 @@ import { server } from '@/test/server'
 import { getSupervisionRecords } from '@/services/compliance'
 import { fmtResult, fmtTimestamp } from '@/kit/measure'
 import { previewRebalance } from '@/services/oms'
+import { RouteError } from '@/app/RouteError'
 
 const renderAt = (path: string) => renderRoutes(routes, path)
 
@@ -24,6 +25,25 @@ describe('routes', () => {
     const links = within(main).getAllByRole('link')
     expect(links.map((l) => [l.textContent, l.getAttribute('href')])).toEqual([['The workspace', '/'], ['The Brief', '/t/th-brief']])
     expect(within(main).getByRole('list', { name: 'Starting points' })).toBeInTheDocument()
+  })
+  it('a route that throws shows the kit page with the way back, and the error only inside its details', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const swallow = (event: ErrorEvent) => event.preventDefault()
+    window.addEventListener('error', swallow)
+    const Boom = () => { throw new Error('The engine has no account acc-999') }
+    try {
+      renderRoutes([{ path: '/', errorElement: <RouteError />, element: <Boom /> }], '/')
+      expect(await screen.findByRole('heading', { level: 1, name: 'Something went wrong' })).toBeInTheDocument()
+      const main = screen.getByRole('main')
+      expect(within(main).getByRole('link', { name: 'The workspace' })).toHaveAttribute('href', '/')
+      const details = main.querySelector('details')
+      expect(details).not.toBeNull()
+      expect(details).toHaveTextContent('What the app reported')
+      expect(details).toHaveTextContent('The engine has no account acc-999')
+    } finally {
+      window.removeEventListener('error', swallow)
+      consoleError.mockRestore()
+    }
   })
   it('the kit is not ready while loading', () => {
     const { container } = renderAt('/kit')
@@ -58,7 +78,7 @@ describe('routes', () => {
   })
   it('the tax tape states the year-to-date results its estimate nets against', async () => {
     await renderKitReady()
-    const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-002'], taxAware: true })
     const ytd = preview!.ytdRealizedOnReturn!
     const tape = screen.getByRole('region', { name: 'Tax effect estimate' })
     expect(tape).toHaveTextContent(`year-to-date realized results (short-term ${fmtResult(ytd.shortTerm)}, long-term ${fmtResult(ytd.longTerm)} USD)`)
