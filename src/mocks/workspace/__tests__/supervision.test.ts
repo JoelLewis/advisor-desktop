@@ -14,7 +14,7 @@ describe('the supervision queue', () => {
   it('opens with the open alerts, critical first, and nothing else', () => {
     expect(queue()).toMatchObject({ orders: [], correspondence: [], disposedToday: [] })
     expect(queue().alerts.map((a) => a.id)).toEqual(['comp-001', 'comp-002', 'comp-003', 'comp-005', 'comp-007'])
-    expect(queue().alerts[1]).toMatchObject({ title: 'Single-name concentration — AAPL in Johnson Trust', context: { accountId: 'acc-001', accountName: 'Johnson Family Trust', clientId: 'cli-001', clientName: 'Robert Johnson' } })
+    expect(queue().alerts[1]).toMatchObject({ title: 'Single-name concentration — MSFT in Johnson Trust', context: { accountId: 'acc-001', accountName: 'Johnson Family Trust', clientId: 'cli-001', clientName: 'Robert Johnson' } })
     expect(queue().alerts[1]?.trail.map((r) => r.id)).toEqual(['sr-003'])
   })
 

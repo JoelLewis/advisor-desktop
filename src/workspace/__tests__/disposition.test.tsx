@@ -70,9 +70,9 @@ describe('recording a disposition', () => {
     expect(store().acts.some((a) => a.kind === 'release_orders')).toBe(false)
   })
 
-  it('Mark approves the AAPL alert; the disposition joins its record trail', async () => {
+  it('Mark approves the MSFT alert; the disposition joins its record trail', async () => {
     viewAsOnLoad('cco-001')
-    const name = 'Alert · Single-name concentration — AAPL in Johnson Trust'
+    const name = 'Alert · Single-name concentration — MSFT in Johnson Trust'
     const { item, panel } = await openItem('/supervision/alert/comp-002', name)
     const user = userEvent.setup()
     await user.type(within(panel).getByLabelText('Rationale (required)'), 'Long-held position; the IPS exception is documented.')
@@ -80,7 +80,7 @@ describe('recording a disposition', () => {
     await user.click(within(screen.getByRole('dialog', { name: 'Approve?' })).getByRole('button', { name: 'Confirm' }))
     await waitFor(() => expect(within(item).getByRole('list', { name: 'Record trail' })).toHaveTextContent('Approved'))
     expect(within(item).getByRole('list', { name: 'Reviewer notes' })).toHaveTextContent('sr-004')
-    expect(queue().getByRole('link', { name: /^Dispose alert · Single-name concentration — AAPL in Johnson Trust/ })).toBeInTheDocument()
+    expect(queue().getByRole('link', { name: /^Dispose alert · Single-name concentration — MSFT in Johnson Trust/ })).toBeInTheDocument()
   })
 
   it('a flagged letter stays in the queue, flagged, with only "Mark reviewed" left to choose', async () => {

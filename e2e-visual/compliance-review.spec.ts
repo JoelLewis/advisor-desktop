@@ -160,9 +160,9 @@ test('one presenter closes the supervisory loop; the book moves; Robert sees not
   await page.getByRole('dialog', { name: 'Mark reviewed?' }).getByRole('button', { name: 'Confirm' }).click()
   await expect(queueOf(page)).toContainText('Nothing sent is waiting for review.')
 
-  // 6. The AAPL alert, disposed of onto its record trail.
-  await queueOf(page).getByRole('link', { name: /^Single-name concentration — AAPL in Johnson Trust/ }).click()
-  const alert = page.getByRole('region', { name: 'Alert · Single-name concentration — AAPL in Johnson Trust' })
+  // 6. The MSFT alert, disposed of onto its record trail.
+  await queueOf(page).getByRole('link', { name: /^Single-name concentration — MSFT in Johnson Trust/ }).click()
+  const alert = page.getByRole('region', { name: 'Alert · Single-name concentration — MSFT in Johnson Trust' })
   const dispose = alert.getByRole('region', { name: 'Record a disposition' })
   await dispose.getByLabel('Rationale (required)').fill('Long-held position; the IPS exception is documented and reviewed annually.')
   await dispose.getByRole('button', { name: 'Record disposition' }).click()

@@ -2,8 +2,8 @@ import { isSubjectToWashSale } from './security-master'
 
 /**
  * IRC §1091 disallows a loss when substantially identical securities are acquired within 30 days
- * before or after the sale. "Substantially identical" is approximated as the same symbol: INTC and
- * SMH are distinct, which is the household's own compliance ruling (comp-006).
+ * before or after the sale. "Substantially identical" is approximated as the same symbol: SMH, a
+ * semiconductor ETF, is not substantially identical to INTC, a single stock (comp-006).
  *
  * A directly held coin is not stock or a security, so §1091 never reaches it
  * (`isSubjectToWashSale`): every function here treats its losses as unwashable.

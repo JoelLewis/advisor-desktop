@@ -51,10 +51,10 @@ describe('Supervision', () => {
     expect(item).toHaveTextContent('v2 is newer and unapproved; these orders are from v1.')
   })
 
-  it('opens the AAPL alert with its record trail and account context', async () => {
+  it('opens the MSFT alert with its record trail and account context', async () => {
     viewAsOnLoad('cco-001')
     await open('/supervision/alert/comp-002')
-    const item = await screen.findByRole('region', { name: 'Alert · Single-name concentration — AAPL in Johnson Trust' })
+    const item = await screen.findByRole('region', { name: 'Alert · Single-name concentration — MSFT in Johnson Trust' })
     expect(within(item).getByRole('list', { name: 'Record trail' })).toHaveTextContent('Under Review')
     expect(within(item).getByRole('list', { name: 'Record trail' })).toHaveTextContent('Mark Davis (CCO)')
     expect(within(item).getByRole('list', { name: 'Reviewer notes' })).toHaveTextContent('sr-003')
