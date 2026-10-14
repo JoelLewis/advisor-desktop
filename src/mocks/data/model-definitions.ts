@@ -46,7 +46,7 @@ export type ModelDefinition = {
  * which pins that every non-cash sleeve names a symbol with a real USD price.
  */
 export const MODEL_DEFINITIONS: readonly ModelDefinition[] = [
-  { id: 'mod-001', name: 'Balanced Growth', benchmark: 'Balanced Growth policy benchmark', benchmarkKind: 'model_policy', description: 'Core 60/40 model with growth tilt', assetClasses: [
+  { id: 'mod-001', name: 'Balanced Growth', benchmark: 'Balanced Growth policy benchmark', benchmarkKind: 'model_policy', description: 'Core balanced model with a growth tilt', assetClasses: [
     { assetClass: 'us_equity', targetWeight: 0.40, implementationSymbol: 'VTI' }, { assetClass: 'intl_equity', targetWeight: 0.12, implementationSymbol: 'EFA' },
     { assetClass: 'emerging_markets', targetWeight: 0.03, implementationSymbol: 'VWO' }, { assetClass: 'fixed_income', targetWeight: 0.30, implementationSymbol: 'AGG' },
     { assetClass: 'alternatives', targetWeight: 0.05, implementationSymbol: 'QAI' }, { assetClass: 'real_estate', targetWeight: 0.03, implementationSymbol: 'VNQ' },
@@ -78,7 +78,7 @@ export const MODEL_DEFINITIONS: readonly ModelDefinition[] = [
     { assetClass: 'us_equity', targetWeight: 0.45, implementationSymbol: 'VTI' }, { assetClass: 'intl_equity', targetWeight: 0.10, implementationSymbol: 'VXUS' },
     { assetClass: 'fixed_income', targetWeight: 0.35, implementationSymbol: 'AGG' }, { assetClass: 'cash', targetWeight: 0.10 },
   ]},
-  { id: 'mod-007', name: 'Moderate Balanced', benchmark: 'Moderate Balanced policy benchmark', benchmarkKind: 'model_policy', description: 'Balanced 50/50 equity-bond split', assetClasses: [
+  { id: 'mod-007', name: 'Moderate Balanced', benchmark: 'Moderate Balanced policy benchmark', benchmarkKind: 'model_policy', description: 'Balanced model with a smaller equity share than Balanced Growth', assetClasses: [
     { assetClass: 'us_equity', targetWeight: 0.35, implementationSymbol: 'VTI' }, { assetClass: 'intl_equity', targetWeight: 0.10, implementationSymbol: 'EFA' },
     { assetClass: 'emerging_markets', targetWeight: 0.05, implementationSymbol: 'VWO' }, { assetClass: 'fixed_income', targetWeight: 0.35, implementationSymbol: 'AGG' },
     { assetClass: 'alternatives', targetWeight: 0.05, implementationSymbol: 'QAI' }, { assetClass: 'real_estate', targetWeight: 0.03, implementationSymbol: 'VNQ' },

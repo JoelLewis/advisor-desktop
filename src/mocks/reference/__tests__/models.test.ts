@@ -203,3 +203,6 @@ describe('accounts in transition', () => {
   })
 })
 
+it("a model's description carries no figure: the engine's equity share and weights sit beside it", () => {
+  for (const m of MODEL_DEFINITIONS) expect(m.description, m.id).not.toMatch(/\d/)
+})

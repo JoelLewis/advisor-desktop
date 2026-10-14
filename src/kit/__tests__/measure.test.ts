@@ -137,11 +137,26 @@ describe('prospect-proposal formats', () => {
     expect(clientRate(20_850 / 2_100_000)).toBe('0.99%')
     expect(fmtDayMonthYear('2026-02-25')).toBe('25 Feb 2026')
   })
+  it('abbreviates every month to three letters, September included', () => {
+    expect(fmtDayMonthYear('2025-09-30')).toBe('30 Sep 2025')
+    expect(fmtDayMonthYear('2026-12-01')).toBe('1 Dec 2026')
+  })
 })
 
 describe('fmtEasternDayTime', () => {
   it('states a jump as the control names it', () => {
     expect(fmtEasternDayTime('2026-02-26T14:10:00.000Z')).toBe('Thu 26 Feb 09:10 ET')
     expect(fmtEasternDayTime('2026-03-02T15:00:00.000Z')).toBe('Mon 2 Mar 10:00 ET')
+  })
+  it('names the New York day, three-letter weekday and month', () => {
+    expect(fmtEasternDayTime('2025-09-30T14:00:00.000Z')).toBe('Tue 30 Sep 10:00 ET')
+    expect(fmtEasternDayTime('2026-03-03T03:30:00.000Z')).toBe('Mon 2 Mar 22:30 ET')
+  })
+})
+
+describe('the kit formats dates without a regional locale', () => {
+  it('no formatter in the kit uses en-GB', async () => {
+    const { readFileSync } = await import('node:fs')
+    expect(readFileSync('src/kit/measure.ts', 'utf8')).not.toContain("'en-GB'")
   })
 })

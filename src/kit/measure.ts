@@ -112,11 +112,24 @@ export function fmtEasternTime(iso: string): string {
   return easternClock.format(parseIso(iso))
 }
 
-const easternDay = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'America/New_York' })
+const MONTH_ABBREVIATIONS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const
+const monthAbbreviation = (month: number): string => {
+  const word = MONTH_ABBREVIATIONS[month - 1]
+  if (!word) throw new Error(`No month ${month}`)
+  return word
+}
+
+const easternDayParts = new Intl.DateTimeFormat('en-US', { weekday: 'short', day: 'numeric', month: 'numeric', timeZone: 'America/New_York' })
+const partOf = (parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatPartTypes): string => {
+  const part = parts.find((p) => p.type === type)
+  if (!part) throw new Error(`The New York day has no ${type}`)
+  return part.value
+}
 
 /** A moment on the story's clock as its control names it: "Thu 26 Feb 09:10 ET". */
 export function fmtEasternDayTime(iso: string): string {
-  return `${easternDay.format(parseIso(iso)).replace(',', '')} ${fmtEasternTime(iso)} ET`
+  const parts = easternDayParts.formatToParts(parseIso(iso))
+  return `${partOf(parts, 'weekday')} ${partOf(parts, 'day')} ${monthAbbreviation(Number(partOf(parts, 'month')))} ${fmtEasternTime(iso)} ET`
 }
 
 /** A meeting's window in New York time, with the zone: "14:00–15:15 ET". */
@@ -148,8 +161,8 @@ export function clientRate(fraction: number): string {
   return `${unsigned(fraction, 2, 2, 2)}%`
 }
 
-const dayMonthYear = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
 /** A date as the proposal's price line states it: "25 Feb 2026". */
 export function fmtDayMonthYear(iso: string): string {
-  return dayMonthYear.format(parseIso(iso))
+  const d = parseIso(iso)
+  return `${d.getUTCDate()} ${monthAbbreviation(d.getUTCMonth() + 1)} ${d.getUTCFullYear()}`
 }
