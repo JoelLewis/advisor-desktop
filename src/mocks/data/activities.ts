@@ -7,7 +7,7 @@ import { orders } from '../handlers/oms'
 import { KNOWN_OPEN_DATES } from '../handlers/custodian'
 
 /**
- * §0.7 · the INTC harvest and its SMH replacement, from the records that state them: rs-001 and
+ * The INTC harvest and its SMH replacement, from the records that state them: rs-001 and
  * its fill (ord-004) for the sale, pos-265 and its recorded open date for the purchase. The feed
  * said "Sold 500 shares … Realized loss: $6,820" against a 5,000-share, −$32,750 sale.
  */
@@ -29,14 +29,14 @@ export const activities: ActivityItem[] = [
     id: 'act-001', type: 'rebalance', source: 'pms',
     title: 'Batch rebalance completed — 5 accounts',
     description: 'Executed 23 trades across 5 accounts. Net tax impact: -$4,200 (harvested losses).',
-    // §0.7 · was 13:45Z today, after the frozen now (12:00Z, 7:00 ET) and before the market opened.
+    // Was 13:45Z today, after the frozen now (12:00Z, 7:00 ET) and before the market opened.
     timestamp: '2026-02-24T20:45:00Z', read: false,
   },
   {
     id: 'act-002', type: 'system', source: 'pms',
     title: 'Pre-market — S&P 500 futures up 0.3%',
     description: 'Futures indicate positive open. Key earnings: HD, LOW this week.',
-    // §0.7 · was 13:30Z, after the frozen now; a pre-market note at 6:30 ET precedes it.
+    // Was 13:30Z, after the frozen now; a pre-market note at 6:30 ET precedes it.
     timestamp: '2026-02-25T11:30:00Z', read: true,
   },
   {
@@ -76,12 +76,6 @@ export const activities: ActivityItem[] = [
     timestamp: '2026-02-24T20:15:00Z', read: true,
   },
   {
-    id: 'act-008', type: 'nba', source: 'ai',
-    title: '3 new Next Best Actions generated',
-    description: 'AI identified 3 new opportunities: batch rebalance, tax harvest, birthday reminder.',
-    timestamp: '2026-02-24T13:00:00Z', read: true,
-  },
-  {
     id: 'act-009', type: 'email', source: 'crm',
     title: 'Email sent — Chen quarterly update',
     description: 'Quarterly performance update email sent to Margaret Chen.',
@@ -91,7 +85,7 @@ export const activities: ActivityItem[] = [
   {
     id: 'act-010', type: 'call', source: 'crm',
     title: 'Call logged — Patel new baby discussion',
-    description: 'Raj Patel called to discuss financial planning for new baby. Created life event NBA.',
+    description: 'Raj Patel called to discuss financial planning for the new baby. Created a life-event follow-up.',
     entityType: 'client', entityId: 'cli-011', entityName: 'Raj Patel',
     timestamp: '2026-02-23T15:30:00Z', read: true,
   },
@@ -105,7 +99,7 @@ export const activities: ActivityItem[] = [
   },
   {
     id: 'act-012', type: 'system', source: 'pms',
-    // §0.7 · the count and the bands come from the drift engine.
+    // The count and the bands come from the drift engine.
     title: `Drift alert — ${driftBatchFacts().accountCount} accounts outside their model's band`,
     description: `${driftBatchFacts().accountCount} client accounts are outside their own model's drift band (${driftBatchFacts().bands.join(', ')}).`,
     timestamp: '2026-02-23T13:00:00Z', read: true,
@@ -132,9 +126,9 @@ export const activities: ActivityItem[] = [
     timestamp: '2026-02-21T16:00:00Z', read: true,
   },
   {
-    id: 'act-016', type: 'ai_action', source: 'ai',
-    title: 'AI drafted consolidation proposal — Williams',
-    description: 'Generated Fidelity 401(k) rollover proposal with fee comparison analysis.',
+    id: 'act-016', type: 'call', source: 'crm',
+    title: '401(k) rollover — asked about; comparison to follow',
+    description: 'David Williams asked about rolling over his Fidelity 401(k). Nothing is recommended until the comparison with staying in the plan is done.',
     entityType: 'client', entityId: 'cli-004', entityName: 'David Williams',
     timestamp: '2026-02-21T15:30:00Z', read: true,
   },
@@ -159,9 +153,9 @@ export const activities: ActivityItem[] = [
     timestamp: '2026-02-20T14:30:00Z', read: true,
   },
   {
-    id: 'act-020', type: 'nba', source: 'ai',
-    title: 'NBA dismissed — Taylor CD maturity',
-    description: 'Nancy Taylor CD maturity notification dismissed (already handled).',
+    id: 'act-020', type: 'system', source: 'crm',
+    title: 'Reminder dismissed — Taylor CD maturity',
+    description: 'CD maturity reminder for Nancy Taylor dismissed (already handled).',
     entityType: 'client', entityId: 'cli-018', entityName: 'Nancy Taylor',
     timestamp: '2026-02-20T16:00:00Z', read: true,
   },

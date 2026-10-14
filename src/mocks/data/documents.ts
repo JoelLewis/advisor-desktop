@@ -15,7 +15,7 @@ export const documents: Document[] = [
 
   // ── Williams Household ──
   { id: 'doc-009', name: 'David Williams — IPS', type: 'ips', clientId: 'cli-004', signatureStatus: 'signed', createdAt: '2025-09-20T10:00:00Z', updatedAt: '2025-09-20T10:00:00Z', createdBy: 'Sarah Mitchell', aiGenerated: false },
-  { id: 'doc-010', name: '401(k) Rollover Proposal', type: 'proposal', clientId: 'cli-004', signatureStatus: 'pending', createdAt: '2026-02-21T10:30:00Z', updatedAt: '2026-02-21T10:30:00Z', createdBy: 'AI Assistant', aiGenerated: true },
+  { id: 'doc-010', name: 'Fidelity 401(k) statement — rollover asked about; comparison to follow', type: 'statement', clientId: 'cli-004', signatureStatus: 'not_required', createdAt: '2026-02-21T10:30:00Z', updatedAt: '2026-02-21T10:30:00Z', createdBy: 'Sarah Mitchell', aiGenerated: false },
   { id: 'doc-011', name: '529 Plan Beneficiary Designation', type: 'agreement', clientId: 'cli-004', accountId: 'acc-014', signatureStatus: 'signed', createdAt: '2020-06-01T10:00:00Z', updatedAt: '2020-06-01T10:00:00Z', createdBy: 'Sarah Mitchell', aiGenerated: false },
 
   // ── Martinez Household ──

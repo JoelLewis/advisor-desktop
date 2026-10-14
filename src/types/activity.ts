@@ -5,7 +5,6 @@ type ActivityType =
   | 'call'
   | 'document'
   | 'rebalance'
-  | 'nba'
   | 'ai_action'
   | 'compliance'
   | 'system'
