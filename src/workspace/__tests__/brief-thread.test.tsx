@@ -8,7 +8,7 @@ import { renderRoutes } from '@/test/render'
 import { carryFinding } from '@/services/workspace'
 import { store } from '@/mocks/data/workspace-store'
 
-const INTC_CLAIM = 'Intel Corp. can be sold at a loss today, and nothing bought in the last thirty days would wash the loss.'
+const INTC_CLAIM = 'The remaining Intel Corp. shares can be sold at a loss today, and nothing bought in the last thirty days would wash the loss.'
 
 async function carryIntc() {
   const finding = store().messages.find((m) => m.kind === 'agent_finding' && m.agentId === 'harvest-scanner')!

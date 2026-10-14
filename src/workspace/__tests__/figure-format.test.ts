@@ -40,7 +40,7 @@ describe('findingStatus', () => {
     expect(findingStatus(finding('US Equity is outside its tolerance band.', 'attention'))).toBe('OUT')
   })
   it('a harvest opportunity breaches nothing, so it carries no code: OUT is kept for breaches', () => {
-    const harvest = finding('Intel Corp. can be sold at a loss today, and nothing bought in the last thirty days would wash the loss.', 'attention', 'harvest-scanner')
+    const harvest = finding('The remaining Intel Corp. shares can be sold at a loss today, and nothing bought in the last thirty days would wash the loss.', 'attention', 'harvest-scanner')
     expect(findingStatus(harvest)).toBe('none')
     expect(marksBreach(harvest)).toBe(false)
     expect(marksBreach(finding('US Equity is outside its tolerance band.', 'attention'))).toBe(true)

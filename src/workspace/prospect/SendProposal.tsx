@@ -40,7 +40,7 @@ export function SendProposal({ view, canSend, onRecorded }: Props) {
       {canSend ? <Button className="self-start" onClick={() => { send.reset(); setOpen(true) }}>{`Send v${approval.version} to ${name}`}</Button> : null}
       <ConfirmRecord open={open} onClose={() => setOpen(false)} mutation={send} variables={proposal.id} onRecorded={onRecorded}
         title={`Send v${approval.version} to ${name}?`}
-        description={withAdv2a ? `${DISCLOSURE_TITLES.adv_2a} is delivered with it, in the same record. Firm policy puts it at or before the proposal.` : 'The record names you, the version and the time.'}
+        description={withAdv2a ? `${DISCLOSURE_TITLES.adv_2a} is delivered with it, in the same record. Firm policy puts it with the proposal, unless it was delivered before.` : 'The record names you, the version and the time.'}
         blockedReason={blockedReason} />
     </ContextSection>
   )

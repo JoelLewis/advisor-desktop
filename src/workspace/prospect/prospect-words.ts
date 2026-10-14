@@ -27,7 +27,7 @@ export const DISCLOSURE_SHORT: Readonly<Record<DisclosureDocument, string>> = {
 
 /** When each document is due. Form CRS and ADV 2A timing is the firm's own policy (an adviser's Form CRS trigger is the advisory contract, Rule 204-5), and says so. */
 export const DISCLOSURE_TIMING: Readonly<Record<DisclosureDocument, string>> = {
-  form_crs: 'Firm policy: before or at the first recommendation', adv_2a: 'Firm policy: at or before the proposal (or with it)',
+  form_crs: 'Firm policy: before or at the first recommendation', adv_2a: 'Firm policy: with the proposal, unless delivered before',
   adv_2b: 'At onboarding', privacy_notice: 'At onboarding',
 }
 

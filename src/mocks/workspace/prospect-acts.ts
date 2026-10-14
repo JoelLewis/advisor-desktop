@@ -87,7 +87,7 @@ export function sendProspectProposal(viewerId: string, proposalId: string): Reco
     ...(withAdv2a ? { delivers: ['adv_2a' as const] } : {}),
     summary: `Sent v${v.n} of the ${proposal.title} to ${record.name}${withAdv2a ? `, with ${DISCLOSURE_TITLES.adv_2a}` : ''}`,
   }
-  // ADV 2A at or before the proposal: its line is posted first, at the act's own time.
+  // ADV 2A goes with the proposal unless delivered before: its line is posted first, at the act's own time.
   if (withAdv2a) recordDelivery(record, 'adv_2a', act.id, viewerId, at)
   store().messages.push(text)
   recordAct(act)

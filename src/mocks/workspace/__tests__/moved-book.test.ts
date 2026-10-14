@@ -20,7 +20,7 @@ describe("after the story's v3 fills, every engine read sees the moved book", ()
   it('the Harvest Scanner offers no INTC harvest and shows the recorded sale through 2026-03-27', () => {
     release(approvedStoryV3())
     const findings = runHarvestScanner(ctx)
-    expect(findings.some((f) => f.claim.startsWith('Intel Corp. can be sold at a loss today'))).toBe(false)
+    expect(findings.some((f) => f.claim.startsWith('The remaining Intel Corp. shares can be sold at a loss today'))).toBe(false)
     const recorded = findings.find((f) => f.citations.some((c) => c.source === 'Wash-sale window · rs-006 · INTC loss sale of 2026-02-25, open through 2026-03-27'))
     expect(recorded?.figures).toContainEqual({ label: 'Loss realized · INTC', value: -45_850, unit: 'USD', source: 'realizedSales.realizedGainLoss' })
   })

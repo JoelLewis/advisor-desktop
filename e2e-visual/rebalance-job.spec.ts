@@ -98,7 +98,7 @@ test('one presenter runs Brief → proposal → revise → workbench → approve
   await expect(page.getByRole('region', { name: 'Ranked summary' }).getByRole('listitem').first()).toContainText('US Equity is outside its tolerance band.')
 
   // 2. The INTC finding goes to the team thread.
-  const intc = conversation(page).getByRole('article', { name: /^Harvest Scanner: Intel Corp\. can be sold at a loss today/ })
+  const intc = conversation(page).getByRole('article', { name: /^Harvest Scanner: The remaining Intel Corp\. shares can be sold at a loss today/ })
   await intc.getByRole('button', { name: 'Take to team thread' }).click()
   await expect(intc.getByRole('status')).toHaveText('Taken to Johnson Rebalance Review.')
   await threadLink(page, 'Johnson Rebalance Review').click()

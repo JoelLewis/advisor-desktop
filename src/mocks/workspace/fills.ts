@@ -150,7 +150,7 @@ function realizedSalesOf(account: Account, fill: Fill, taken: readonly Taken[], 
 
 /**
  * Released orders fill at the frozen day's prices and move the account's book. Sells
- * settle first, then buys, each in the version's order. The move is committed whole, or — when any
+ * execute first, then buys, each in the version's order (settlement is T+1). The move is committed whole, or — when any
  * invariant would break (a lot consumed twice, a share count that does not reconcile, a fill outside
  * the NYSE session, cash overdrawn) — not at all. Fill and sale numbers follow those already
  * committed, so a refused move numbers nothing.

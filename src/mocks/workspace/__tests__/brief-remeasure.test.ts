@@ -33,7 +33,7 @@ describe('the Brief re-measures on view once the book has moved', () => {
     const { messages } = await openBrief()
     expect(messages[0]).toMatchObject({ kind: 'brief_summary', id: 'msg-r1-00' })
     expect(messages.every((m) => m.at > MOCK_NOW_ISO)).toBe(true)
-    expect(findings().some((f) => f.claim.startsWith('Intel Corp. can be sold at a loss today'))).toBe(false)
+    expect(findings().some((f) => f.claim.startsWith('The remaining Intel Corp. shares can be sold at a loss today'))).toBe(false)
     expect(findings().some((f) => f.citations.some((c) => c.source === 'Wash-sale window · rs-006 · INTC loss sale of 2026-02-25, open through 2026-03-27'))).toBe(true)
     expect(summary().items[0]?.claim).toBe('US Equity is outside its tolerance band.')
     expect(findings().every((f) => f.runKey.endsWith('|book 1'))).toBe(true)

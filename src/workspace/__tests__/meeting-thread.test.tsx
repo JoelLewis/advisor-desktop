@@ -10,7 +10,7 @@ const ADRIAN = 'user-001'
 const conversation = () => within(screen.getByRole('list', { name: 'Messages' }))
 const inContext = () => within(screen.getByRole('complementary', { name: 'Thread context' }))
 const meetingSection = () => inContext().findByRole('region', { name: 'Meeting' })
-const INTC_CLAIM = 'Intel Corp. can be sold at a loss today, and nothing bought in the last thirty days would wash the loss.'
+const INTC_CLAIM = 'The remaining Intel Corp. shares can be sold at a loss today, and nothing bought in the last thirty days would wash the loss.'
 
 async function openMeetingThread() {
   renderRoutes(routes, '/t/th-johnson-meeting')

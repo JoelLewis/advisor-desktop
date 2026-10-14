@@ -68,6 +68,11 @@ export function runHarvestScanner({ asOf, subject }: AgentContext): AgentFinding
   const today = asOf.slice(0, 10)
   const lotsCite = [{ source: `Tax lots with wash-sale matching · ${account.name}`, asOf }]
   const findings: AgentFinding[] = []
+  const openWindows = openWashSaleWindowsFor(account, today)
+  // A position partly sold at a loss already: its claim says the rest can be sold, so the two findings agree.
+  const partlySold = new Set(openWindows.map((w) => w.symbol))
+  const harvestName = (symbol: string, name: string) =>
+    partlySold.has(symbol) ? `The remaining ${claimNameOf(symbol, name)} shares` : claimNameOf(symbol, name)
 
   if (!isTaxableAccount(account.taxTreatment)) {
     findings.push({ claim: 'Sales in this account are not taxed, so there is no loss to harvest here.', attention: 'info', figures: [], citations: lotsCite })
@@ -88,11 +93,11 @@ export function runHarvestScanner({ asOf, subject }: AgentContext): AgentFinding
       const citations = isSubjectToWashSale(p.symbol)
         ? [...lotsCite, { source: `Wash-sale window · a sale of ${p.symbol} on ${today} restricts buying it back through ${window.end}`, asOf }]
         : lotsCite
-      findings.push({ claim: harvestClaim(claimNameOf(p.symbol, p.name), p.symbol, losses), attention: 'attention', figures, citations })
+      findings.push({ claim: harvestClaim(harvestName(p.symbol, p.name), p.symbol, losses), attention: 'attention', figures, citations })
     }
   }
 
-  for (const w of openWashSaleWindowsFor(account, today)) {
+  for (const w of openWindows) {
     findings.push({
       claim: `${claimNameOf(w.symbol, w.name)} was sold at a loss ${w.saleDate === today ? 'today' : 'recently'}; buying it back in any account of the same taxpayer, IRAs and Roths included, would wash that loss until its window closes.`,
       attention: 'info',

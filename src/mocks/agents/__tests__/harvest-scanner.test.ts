@@ -48,7 +48,7 @@ describe('Harvest Scanner on acc-002', () => {
   const findings = runHarvestScanner(ctx('acc-002'))
 
   it('leads with the 7,000 INTC: the loss allowed now, nothing washed, and the window a sale today opens', () => {
-    expect(findings[0]!.claim).toBe('Intel Corp. can be sold at a loss today, and nothing bought in the last thirty days would wash the loss.')
+    expect(findings[0]!.claim).toBe('The remaining Intel Corp. shares can be sold at a loss today, and nothing bought in the last thirty days would wash the loss.')
     expect(findings[0]!.attention).toBe('attention')
     expect(figure(findings, 'Loss allowed now · INTC')?.value).toBe(-45_850)
     expect(figure(findings, 'Washed · INTC')?.value).toBe(0)
