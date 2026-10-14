@@ -6,6 +6,9 @@ describe('reading path literals', () => {
   it('replaces an interpolation with a stand-in and drops the query', () => {
     expect(pathLiterals('to={`/accounts/${encodeURIComponent(id)}/risk?from=${from}`}')).toEqual([{ path: '/accounts/x/risk', interpolated: true }])
   })
+  it('reads a literal with a nested template inside an interpolation', () => {
+    expect(pathLiterals("`/proposals/${encodeURIComponent(id)}${from ? `?from=${encodeURIComponent(from)}` : ''}`")).toEqual([{ path: '/proposals/x', interpolated: true }])
+  })
   it('reads single- and double-quoted literals', () => {
     expect(pathLiterals(`a('/blotter'); b("/t/th-brief")`)).toEqual([{ path: '/blotter', interpolated: false }, { path: '/t/th-brief', interpolated: false }])
   })
@@ -31,7 +34,7 @@ describe('every in-app link resolves', () => {
 
   it('reads the app: the Desk, the full views and the reference views are among the paths', () => {
     const paths = new Set(found.map((f) => f.path))
-    for (const p of ['/t/x', '/supervision', '/archive', '/blotter', '/accounts/x/attribution', '/models/x', '/households/x', '/prospects/x']) expect(paths).toContain(p)
+    for (const p of ['/t/x', '/supervision', '/archive', '/blotter', '/accounts/x/attribution', '/models/x', '/households/x', '/prospects/x', '/proposals/x', '/meetings/x']) expect(paths).toContain(p)
   })
 
   it.each(found.map((f) => [f.file, f.path] as const))('%s: %s is a route', (_file, path) => {

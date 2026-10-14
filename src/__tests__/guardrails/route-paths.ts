@@ -8,20 +8,41 @@ import { listSourceFiles } from './detectors'
 const LINK_ROOTS: readonly string[] = ['src/app', 'src/workspace', 'src/kit', 'src/hooks', 'src/lib', 'src/mocks']
 /** A quoted or template literal that begins with "/" and a lowercase letter, or is "/" itself. */
 const QUOTED_PATH = /(['"`])(\/(?:[a-z][^'"`\s]*)?)\1/g
-const INTERPOLATION = /\$\{[^}]*\}/g
 /** What an interpolated segment becomes: any value matches a `:param`. */
 const STANDIN = 'x'
+const MARK = '\u0001'
+
+/** Each balanced `${...}`, nested templates included, becomes one mark, so quotes inside an interpolation cannot end a literal. */
+function collapseInterpolations(source: string): string {
+  let out = ''
+  for (let i = 0; i < source.length; i++) {
+    if (source[i] !== '$' || source[i + 1] !== '{') { out += source[i]; continue }
+    let depth = 0
+    i++
+    do {
+      if (source[i] === '{') depth++
+      else if (source[i] === '}') depth--
+      i++
+    } while (depth > 0 && i < source.length)
+    i--
+    out += MARK
+  }
+  return out
+}
 
 const isApiPath = (path: string) => path === '/api' || path.startsWith('/api/')
 
 export type FoundPath = { file: string; path: string; interpolated: boolean }
 
-/** Every path literal in `source`: interpolations replaced by a stand-in, query and hash dropped, API paths left out. */
+/**
+ * Every path literal in `source`: interpolations replaced by a stand-in, query and hash dropped, API paths left out.
+ * Limits: string concatenation (`'/x/' + id`) and `navigate(variable)` are not read; hrefs go through the href helpers.
+ */
 export function pathLiterals(source: string): { path: string; interpolated: boolean }[] {
-  return [...source.matchAll(QUOTED_PATH)].flatMap((m) => {
+  return [...collapseInterpolations(source).matchAll(QUOTED_PATH)].flatMap((m) => {
     const raw = m[2] ?? ''
-    const path = raw.replace(INTERPOLATION, STANDIN).replace(/[?#].*$/, '')
-    return isApiPath(path) ? [] : [{ path, interpolated: raw !== raw.replace(INTERPOLATION, '') }]
+    const path = raw.replace(new RegExp(`${MARK}+`, 'g'), STANDIN).replace(/[?#].*$/, '')
+    return isApiPath(path) ? [] : [{ path, interpolated: raw.includes(MARK) }]
   })
 }
 

@@ -11,7 +11,7 @@ export function RouteError() {
     <main>
       <h1>Something went wrong</h1>
       <p>{message}</p>
-      <a href="/">Go to the workspace</a>
+      <a href="/">The workspace</a>
     </main>
   )
 }
