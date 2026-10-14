@@ -1,185 +1,86 @@
 # Advisor Desktop
 
-AI-native wealth management workstation for financial advisors. Built as a fully functional prototype with 20+ pages, 130+ mock API endpoints, and deep AI integration throughout every workflow.
+[![CI](https://github.com/JoelLewis/advisor-desktop/actions/workflows/ci.yml/badge.svg)](https://github.com/JoelLewis/advisor-desktop/actions/workflows/ci.yml)
 
-![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-Strict-3178C6?logo=typescript&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green)
+A multiplayer workspace for the advisors of Larkfield Advisory, a fictional SEC-registered investment adviser: threads where the advisor, the firm's agents, compliance and the client each see only what is theirs to see, and every binding step is a recorded act. Every figure is derived from one mock book or labeled modeled with its method, and the demo's clock is frozen at Wednesday 25 February 2026.
 
-## Overview
+**Live:** https://advisor.joelelewis.com
 
-Advisor Desktop reimagines the financial advisor workstation with AI as a first-class participant in every workflow. Rather than bolting a chatbot onto a traditional dashboard, AI is woven into portfolio management, client engagement, compliance, and practice operations — suggesting next-best actions, drafting communications, pre-checking trades for compliance, and autonomously executing standing rules.
+![The Brief: a ranked summary, then each agent's finding with its sources](e2e-visual/__baselines__/brief-light.png)
 
-The entire app runs client-side with [MSW](https://mswjs.io/) intercepting all API calls, making it a self-contained, zero-backend demo that's ready to connect to real services.
+## Five minutes, click by click
 
-## Features
+You are Adrian Hale, the advisor. Nobody else acts live: colleagues' history is seeded, agents do the analysis, and **View as** shows what each person can see. Follow the steps in order; the clock only moves forward.
 
-### Dashboard & Navigation
-- Practice-wide metrics bar with click-through navigation
-- Command palette (`Ctrl+K`) with fuzzy search across clients, accounts, households, pages, and actions
-- Collapsible sidebar with keyboard shortcuts (`Alt+1`–`Alt+6`)
-- Notification center with category tabs and unread badges
-- Quick capture (`Ctrl+N`) for tasks and notes from any screen
-- Dark mode with system preference detection
-- Responsive layout: 1024px to 1920px+
+1. **The Brief.** Choose **Brief** in the thread list. The ranked summary leads with what needs attention.
+2. **The Johnson rebalance and harvest.**
+   - On the Harvest Scanner's Intel finding, choose **Take to team thread**, then open **Johnson Rebalance Review**.
+   - In the context column choose **Ask Proposal Agent**: v1 appears in the thread.
+   - On the proposal choose **Revise**, tick **Harvest only: sell only lots at a loss** and choose **Ask Proposal Agent to revise**: v2.
+   - Choose **Workbench**. In **Legs · v2** move to the QAI row and press **x** to exclude it; press **⌘S** (Ctrl+S) to save v3. Choose **Back to the thread**.
+   - In the approval panel tick **I reviewed every leg of v3 and its pre-trade reading.** and choose **Approve v3**. The orders are staged, pending compliance review.
 
-### Client Management
-- Client list with search, filtering, and segmentation
-- Client detail with tabbed views: overview, documents, activity, notes
-- Household aggregation with family tree visualization
-- 5-step client onboarding wizard (info, risk profile, account setup, documents, review)
-- Client report generation with AI-written section content
+   ![A proposal in its thread: legs, tax effect, repurchase restrictions and drift before and after](e2e-visual/__baselines__/proposal-thread-light.png)
+   ![The workbench: legs with their washed losses, the return-level tax estimate, and the wash-sale windows](e2e-visual/__baselines__/workbench-light.png)
 
-### Portfolio Management
-- Portfolio overview with accounts, households, and model views
-- Account detail with positions, performance (TWR), risk metrics, and order history
-- Real-time drift monitoring with rebalance triggers
-- Multi-step rebalance wizard (select accounts, preview trades, compliance check, execute)
-- Brinson performance attribution (allocation, selection, interaction) with D3 waterfall charts
-- Risk analytics: Monte Carlo simulation, sensitivity analysis, stress scenarios
-- Concentration analysis with D3 treemap and HHI calculation
-- Tax lot management with harvest scanner, wash sale calendar, and cost basis method comparison
+3. **Compliance releases, as Mark Davis.** In the same panel choose **Demo · act as Mark Davis**, then **Confirm**. The release is recorded as Mark's act, marked as made through the presenter's shortcut, and the orders fill at the day's prices.
 
-### Trading
-- Multi-asset trade ticket supporting 5 asset classes:
-  - **Equities** — Buy/Sell/Short/Cover, Market/Limit/Stop/Stop-Limit, time-in-force, extended hours
-  - **Options** — Chain browser with Greeks display (IV, delta, theta, gamma, vega)
-  - **Mutual Funds** — Purchase/Redemption/Exchange with NAV info
-  - **Fixed Income** — Par value entry, Price/YTM/YTW toggle, bond detail cards
-  - **Digital Assets** — Fractional quantities, units/dollar toggle, 24h market data
-- Pre-trade compliance checks (concentration, restricted list, wash sale, cash reserve, sector limits)
-- Smart trade prefill from AI suggestions
+   ![The thread after the release: the approval and release records, and the fills](e2e-visual/__baselines__/thread-after-release-light.png)
 
-### AI Integration
-- Contextual AI chat panel with screen-aware briefing cards
-- Suggested prompts that adapt to current page context
-- Action cards with approve/reject/execute workflows
-- 8 parameterized action templates (rebalance, TLH, draft email, schedule meeting, etc.)
-- Trade suggestions rendered inline with one-click execution
-- Unified communications tab showing all client interactions
-- AI-generated content marked with muted violet accent (`#8B7EC8`) throughout
+4. **The blotter and the moved book.** On the fills choose **Open in the blotter**: each order filled, under the release's record. Choose **Back to the thread**, then **Robert Johnson Individual** in the context column: Intel is gone from the holdings. Choose **Back to the thread** and open the **Brief**: the Intel harvest has left the summary.
 
-### AI Autonomy & Automation
-- Standing rules with time-based and event-based triggers
-- Permission matrix with per-action modes (auto-approve, queue for review, notify and hold)
-- Delegation rules for AI agents and team members
-- Custom alert rule builder with natural language sentence construction
+   ![The blotter: every order across accounts, with its status and record](e2e-visual/__baselines__/blotter-light.png)
 
-### Next Best Actions (NBA)
-- AI-prioritized action queue with composite scoring
-- Urgency badges (time-critical, this week, this month, when convenient)
-- Batch actions for grouped opportunities (e.g., rebalance all drifted accounts)
-- Deep linking from NBA to execution (rebalance, tax, risk, compliance pages)
-- Compliance enforcement with dismiss-reason dialogs and supervisor override
-- Effectiveness dashboard with acted-on rate, time-to-action, and dismissed rate
-- Customizable weight presets (Balanced, Revenue, Compliance, Relationship)
+5. **The Johnson annual review.** In the Brief, on the meeting line, choose **Open the meeting thread**. Choose **Run prep**, add an item with **New agenda item** and **Add to agenda**, then **Open the meeting view** and **Hold the meeting**. Choose **Draft notes** (hover a citation to light its transcript line), then **File the record** and **Confirm**. Choose **Back to the thread**, open **Robert Johnson**, choose **Ask Client Letter Agent for the recap** and **Send to Robert**.
 
-### Growth & Revenue
-- Prospect pipeline with Kanban board and list views
-- Pipeline metrics (avg days in stage, win rate, velocity)
-- Revenue dashboard with fee breakdown and segment charts
-- Book of Business with AUM decomposition, client segmentation, and capacity analysis
-- Fee billing workflow with cycle tracking, exception queue, and breakpoint analysis
-- Client proposal generation wizard (5 steps: template, generate, review, compliance, finalize)
+   ![The filed notes beside the transcript, every line citing it](e2e-visual/__baselines__/meeting-after-light.png)
 
-### Engagement
-- Email composition, call logging, and campaign creation
-- Meeting prep workspace with structured notes and AI-generated wrap-up summaries
-- Team messaging sidebar
-- Social media scheduling with approval workflows
+6. **Dr. Amanda Pell, first contact to onboarding.** In the Brief, on the referral, choose **Open her thread**. Choose **Deliver Form CRS**, **Record the coffee**, then **Advance to her reply · Thu 26 Feb 09:10 ET**. In **Pell · prospect work** choose **Ask Prospect Profile**, **Ask Transfer-In** and **Ask Proposal Agent**. Transfer-In weighs moving each holding in kind against selling it, with the gain and a tax estimate; her 403(b) rollover is only asked about, comparison to follow. On the proposal choose **Revise**, set **Staged sale of the concentrated stock** to **Over two tax years** and choose **Ask for v2**; tick the review and choose **Approve v2**. In **Dr. Amanda Pell** choose **Send v2 to Dr. Pell** (Form ADV Part 2A goes with it), then **Advance to her acceptance · Mon 2 Mar 10:00 ET**. Her onboarding checklist opens in **Pell · prospect work**.
 
-### Compliance & Operations
-- Workflow center with task pipeline, delegation tracking, and template library
-- Workflow step editor with drag reordering and step type inference
-- Reconciliation dashboard with 30-day trending, break resolution, and integration health
-- Books-and-records archival with SEC 17a-4 WORM compliance display
-- Diff view for AI-generated vs. advisor-edited content
-- Data quality panel with match rates, open breaks, and integration sync status
+   ![Her thread: Form CRS delivered, her reply, and the proposal sent with Form ADV Part 2A](e2e-visual/__baselines__/pell-thread-light.png)
+   ![The prospect work thread with her onboarding opened](e2e-visual/__baselines__/pell-onboarding-light.png)
 
-### Multi-Currency
-- 33 currencies (20 fiat, 10 crypto, 3 stablecoins) with USD cross-rate conversion
-- FX rate infrastructure with 5-minute stale time
-- International account support (HKD, SGD, EUR, CHF)
-- Currency-aware formatting throughout
+7. **The reference views.** From the Desk pane open **Billing**, **Models**, **Practice** and **Blotter** in turn, choosing **Advisor Desktop** in the header to return after each. Each ends with Methods & sources, and every modeled figure is tagged MODELED. Then open **Reconciliation**, choose **Resolve brk-002**, a resolution and a rationale, then **Confirm**, and choose **Advisor Desktop**. Last, open **Risk**, choose **Take Patel Digital Assets Account to a team thread**, and choose **Advisor Desktop**.
 
-### Settings & Customization
-- AI persona/tone selector with custom style guide
-- NBA weight tuning with live preview
-- Template library editor with variable insertion and live preview
-- Custom alert rules builder
-- Notification preferences
-- Display settings (reporting currency, compact numbers, date format)
+   ![Billing: the tiered schedule, each household's fee, and the modeled billing runs](e2e-visual/__baselines__/billing-light.png)
+   ![Book risk: every account against its client's tolerance](e2e-visual/__baselines__/risk-book-light.png)
+   ![Reconciliation: the book against each custodian, with the open break](e2e-visual/__baselines__/reconciliation-light.png)
 
-### Self-Guided Demo
-- Annotation/demo guide layer with 28 annotations across 12 routes
-- Welcome overlay with feature statistics
+8. **View as Robert.** Set **View as** to Robert Johnson · Client. He sees one thread, his own: his question, the recap and its record, and nothing of the firm's work.
 
-## Tech Stack
+   ![What Robert sees: his question, the recap and its record](e2e-visual/__baselines__/robert-recap-client-light.png)
 
-| Layer | Technology |
-|---|---|
-| Framework | React 18 |
-| Language | TypeScript (strict mode) |
-| Build | Vite 6 |
-| Styling | Tailwind CSS 3.4 + shadcn/ui + Radix primitives |
-| State | Zustand (UI) + TanStack Query (server) |
-| Tables | TanStack Table with virtual scroll |
-| Charts | Recharts + D3 |
-| Routing | React Router v6 with lazy-loaded routes |
-| Mock API | MSW (Mock Service Worker) — 130+ endpoints |
-| Testing | Vitest + Testing Library + Playwright |
-| Icons | Lucide React |
-| Fonts | Inter (UI) + JetBrains Mono (tabular data) |
+An end-to-end test performs these clicks in this order (`e2e-visual/readme-path.spec.ts`), so the path cannot drift from the app.
 
-## Getting Started
+## What it enforces
+
+- **Separation of duties.** The advisor approves a proposal; only compliance releases, returns or escalates its orders; only the advisor and client service resolve a reconciliation break. Every other role is refused. The roles live in one permission table (`src/mocks/data/people.ts`), and each act checks it before it records anything (`src/mocks/workspace/proposal-acts.ts`, `src/mocks/workspace/compliance-acts.ts`, `src/mocks/reference/reconciliation.ts`). The presenter's shortcut records Mark Davis's act and says it was made through the shortcut.
+- **Who can see what.** A thread is private, firm-only or shared with one client or prospect. One predicate decides who is outside the firm (`src/lib/external-party.ts`); an outsider sees only their own thread, and every firm surface answers them "not found" (`src/mocks/workspace/visibility.ts`).
+- **Acts are append-only, with fingerprints.** An approval, a release, a filed meeting record or a delivered disclosure is a recorded act carrying a fingerprint of what it binds. An act on something that changed since it was read is refused (`src/mocks/workspace/proposal-acts.ts`, `src/mocks/workspace/meeting-acts.ts`), and nothing edits or deletes a recorded act: the workspace API answers any such attempt 405 (`src/mocks/handlers/workspace.ts`).
+- **Wash sales scoped to the taxpayer.** IRC §1091 is applied lot by lot to the taxpayer, looking thirty days back and forward: the owner and spouse, their IRAs and Roths included, while an irrevocable trust is its own taxpayer. A loss washed by a purchase in an IRA or Roth is disallowed for good, not deferred; coins held directly are outside the rule (`src/lib/wash-sale.ts`, `src/mocks/handlers/tax-return.ts`). Every tax figure is an estimate at top federal rates, and the app says to consult your tax professional.
+- **Disclosure timing as firm policy.** Form CRS comes before or with the first recommendation, so a proposal cannot be sent until it is delivered. Form ADV Part 2A goes with the proposal if it has not gone before. Both rules are labeled firm policy (`src/mocks/workspace/prospect-acts.ts`, `src/workspace/prospect/prospect-words.ts`).
+- **Agents' claims carry no digits.** An agent's sentence names things in words; every figure travels as a figure with its source and is formatted by the kit, so no number is typed twice (`src/mocks/agents/__tests__/agents.test.ts`).
+- **Modeled or derived, and labeled.** Each reference view ends with Methods & sources. A figure from a model (volatility, factor exposure, a quarter-end value) is tagged MODELED with its method; everything else is derived from the book.
+
+## How it is built
+
+- **React 18, TypeScript (strict), Vite 6, Tailwind v4** with the instrument palette as theme tokens, **TanStack Query** for server state, **React Router**.
+- **MSW is the server.** Every `/api` request is answered in the browser by a service worker. The engine behind it lives in `src/mocks`: the book, the session portfolio ledger every read goes through, the event clock that stamps each record, the agents and the acts. The UI reads the engine only through the API, a rule a guard test enforces.
+- **The kit** (`src/kit`): buttons, tables, dialogs, readings, record slips and formatters, with guardrail tests for palette, contrast, headings, the mocks boundary, routes and API routes (`src/__tests__/guardrails`).
+- **Tests:** Vitest and Testing Library for the engine and the UI; Playwright for exact visual baselines and the end-to-end stories (`e2e-visual`). CI runs lint, type-check, the unit suite and the build on every push.
+
+## Run it
 
 ```bash
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-
-# Run tests
-npm test
-
-# Type check
-npm run type-check
-
-# Production build
-npm run build
-
-# Preview production build
-npm run preview
+pnpm install
+pnpm dev                       # http://localhost:5173
+pnpm vitest run                # the unit suite
+VISUAL_PORT=5195 pnpm visual   # visual baselines and stories, on their own dev server
 ```
 
-## Project Structure
+## Plainly
 
-```
-src/
-  components/
-    layout/         # AppShell, Sidebar, TopBar, Breadcrumbs, StatusBar
-    ui/             # shadcn/ui components
-  features/         # Feature-based modules (21 domains)
-  hooks/            # Shared React hooks
-  lib/              # Utilities (currency, formatting)
-  mocks/
-    data/           # Mock datasets
-    handlers/       # MSW request handlers (30 files)
-  services/         # Thin fetch wrappers
-  store/            # Zustand stores
-  types/            # Domain type definitions
-```
-
-## Design System
-
-- 12 CSS custom properties for consistent theming (light + dark mode)
-- Muted violet accent (`#8B7EC8`) marks all AI-generated content
-- Responsive breakpoints: 1920+ (3-col), 1440-1919 (2-col), 1024-1439 (collapsed nav)
-- `prefers-reduced-motion` respected for all animations
-- Skeleton loading states for every data-fetching component
+This is a demonstration. Larkfield Advisory, its people and its clients are invented; every account and figure is mock data; and the date is frozen at 25 February 2026. Nothing here is investment, tax or legal advice.
 
 ## License
 
