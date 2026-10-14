@@ -7,6 +7,7 @@ import type { ClientView, HouseholdView } from '@/types/workspace-household'
 import type {
   DisclosureDocument, PartySteps, ProspectConstraint, ProspectProposalDetail, ProspectStepName, ProspectSummary, ProspectView, StepOutcome,
 } from '@/types/workspace-prospect'
+import type { StoryProgress } from '@/types/workspace-story'
 
 const as = (viewer: string) => ({ 'X-Viewer': viewer })
 
@@ -118,3 +119,6 @@ export const approveProspectProposal = (viewer: string, proposalId: string, vers
   post<BindingAct>('/workspace/acts', { kind: 'approve_proposal', proposalId, version, fingerprint, rationale }, as(viewer))
 export const sendProspectProposal = (viewer: string, proposalId: string) =>
   post<BindingAct>('/workspace/acts', { kind: 'send_to_party', proposalId }, as(viewer))
+
+export const getStoryProgress = (viewer: string) =>
+  get<StoryProgress>('/workspace/story', undefined, as(viewer))

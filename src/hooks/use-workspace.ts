@@ -223,3 +223,9 @@ export function useActAsCco() {
   const invalidate = useInvalidateEverything()
   return useMutation({ mutationFn: (item: PresenterItem) => api.actAsCco(viewerId, item), onSettled: invalidate })
 }
+
+/** The README path's progress, for the home page. Firm viewers only: an outsider's home lists no firm steps. */
+export function useStoryProgress(enabled: boolean) {
+  const { viewerId } = useViewer()
+  return useQuery({ queryKey: ['workspace', viewerId, 'story'], queryFn: () => api.getStoryProgress(viewerId), enabled })
+}

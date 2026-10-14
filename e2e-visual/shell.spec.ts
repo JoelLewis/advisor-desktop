@@ -1,6 +1,7 @@
 import { expectNoAxeViolations } from './axe'
 import { test, expect, type Locator, type Page } from '@playwright/test'
 import { SCREENSHOT, clippedLabels, pageOverflowX } from './layout-checks'
+import { approve, askProposalAgent } from './workspace-steps'
 
 type Theme = 'light' | 'dark'
 type Scene = { name: string; hasContext: boolean; open: (page: Page) => Promise<void> }
@@ -50,9 +51,19 @@ const home = (theme: Theme) => async (page: Page) => {
   await settle(page)
 }
 
+const homeMidStory = async (page: Page) => {
+  await askProposalAgent(page, 'light')
+  await approve(page, 1)
+  // An in-app link, not a reload: a reload resets the session.
+  await page.getByRole('banner').getByRole('link', { name: 'Advisor Desktop' }).click()
+  await expect(page.getByRole('list', { name: 'The five-minute path' }).getByRole('listitem').nth(2)).toContainText('NEXT')
+  await settle(page)
+}
+
 const SCENES: Scene[] = [
   { name: 'home-light', hasContext: false, open: home('light') },
   { name: 'home-dark', hasContext: false, open: home('dark') },
+  { name: 'home-mid-story-light', hasContext: false, open: homeMidStory },
   { name: 'adrian-johnson-finding-light', hasContext: true, open: adrianAsksDriftMonitor('light') },
   { name: 'adrian-johnson-finding-dark', hasContext: true, open: adrianAsksDriftMonitor('dark') },
   { name: 'robert-thread-light', hasContext: true, open: robertOnHisThread('light') },

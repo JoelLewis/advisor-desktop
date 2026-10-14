@@ -51,14 +51,14 @@ describe('workspace shell', () => {
     expect(within(threadNav()).getByRole('link', { name: 'Johnson Rebalance Review' })).toHaveAttribute('href', '/t/th-johnson-review')
     expect(container.querySelectorAll('h1')).toHaveLength(1)
     expect(screen.getByRole('heading', { level: 1, name: 'Workspace' })).toHaveAttribute('tabindex', '-1')
-    expect(screen.getByRole('main')).toHaveTextContent('Choose a thread, or start with the Brief.')
+    expect(screen.getByRole('main')).toHaveTextContent(/^Workspace.*One advisor's day at Larkfield Advisory/)
   })
 
-  it('home says the firm and its people are fictional and the date is frozen, and links the Brief', async () => {
+  it('home says the firm and its people are fictional and the date is frozen, and links the Brief in the path', async () => {
     await renderHome()
     const main = screen.getByRole('main')
     expect(main).toHaveTextContent('Larkfield Advisory and everyone in it are fictional, the date is frozen at 25 Feb 2026, and nothing here is investment, tax or legal advice.')
-    expect(within(main).getByRole('link', { name: 'the Brief' })).toHaveAttribute('href', '/t/th-brief')
+    expect(within(main).getByRole('link', { name: 'Open the Brief' })).toHaveAttribute('href', '/t/th-brief')
   })
 
   it('lays out the frame: banner, thread nav, main, and no context column on home', async () => {

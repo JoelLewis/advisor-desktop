@@ -9,6 +9,7 @@ import { BRIEF_THREAD_ID } from '../workspace/brief'
 import { briefOrder, remeasureBrief } from '../workspace/brief-remeasure'
 import { briefToday } from '../workspace/brief-today'
 import { sendToParty } from '../workspace/acts'
+import { storyProgress } from '../workspace/story-progress'
 import { deliverDisclosure } from '../workspace/disclosures'
 import { approveProspectProposal, sendProspectProposal } from '../workspace/prospect-acts'
 import { prospectProposalById, visibleProspectProposal } from '../workspace/prospect-proposals'
@@ -42,6 +43,11 @@ const PARTY_VISIBLE_ACTS: ReadonlySet<BindingActKind> = new Set<BindingActKind>(
 const isAgentId = (value: string): value is AgentId => AGENTS.some((a) => a.id === value)
 
 export const workspaceHandlers = [
+  http.get('/api/workspace/story', ({ request }) => {
+    const viewer = firmViewer(request)
+    return viewer.ok ? HttpResponse.json(storyProgress()) : viewer.response
+  }),
+
   http.get('/api/workspace/people', ({ request }) => {
     const viewer = viewerFrom(request)
     if (!viewer) return unauthorized()
