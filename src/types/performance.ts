@@ -16,7 +16,7 @@ type BenchmarkComparison = {
   /**
    * C6 · performance-reporting — plain active (excess) return, portfolio − benchmark. This was
    * named `alpha`, which means the risk-adjusted excess return over CAPM, not this figure.
-   * Tracking error is one annualised statistic and now lives on `RiskMetrics`, not per period.
+   * Tracking error is one annualized statistic and now lives on `RiskMetrics`, not per period.
    */
   activeReturn: Percentage;
 };
@@ -44,7 +44,7 @@ type AttributionResult = {
  */
 type AttributionResponse = {
   model: 'Brinson-Fachler';
-  /** Single period, arithmetic. Sub-period geometric linking (Carino et al.) is not modelled. */
+  /** Single period, arithmetic. Sub-period geometric linking (Carino et al.) is not modeled. */
   linking: 'single-period arithmetic';
   period: string;
   benchmark: string;

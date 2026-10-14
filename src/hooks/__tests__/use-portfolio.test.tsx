@@ -154,7 +154,7 @@ describe('useRiskMetrics', () => {
 })
 
 describe('useSensitivity', () => {
-  it('fetches sensitivity analysis with a modelled return distribution', async () => {
+  it('fetches sensitivity analysis with a modeled return distribution', async () => {
     const { result } = renderHook(() => useSensitivity('acc-001'), { wrapper: createWrapper() })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(result.current.data!.interestRate.length).toBeGreaterThan(0)

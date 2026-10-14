@@ -7,9 +7,9 @@ type RiskMetrics = {
   sharpe: number;
   /** (R₁ᵧ − risk-free) ÷ downside deviation. */
   sortino: number;
-  /** Modelled trailing-3-year peak-to-trough decline. */
+  /** Modeled trailing-3-year peak-to-trough decline. */
   maxDrawdown: Percentage;
-  /** Annualised standard deviation of returns. */
+  /** Annualized standard deviation of returns. */
   standardDeviation: Percentage;
   downsideDeviation: Percentage;
   riskFreeRate: Percentage;
@@ -25,7 +25,7 @@ type RiskMetrics = {
    * volatility assumptions (`assetClassBeta`), and is the same number whichever model the account is assigned.
    */
   benchmark: string;
-  /** One annualised active-risk statistic, not a per-horizon value. */
+  /** One annualized active-risk statistic, not a per-horizon value. */
   trackingError: Percentage;
   asOf: string;
 };

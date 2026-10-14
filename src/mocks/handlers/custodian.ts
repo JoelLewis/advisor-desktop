@@ -180,7 +180,7 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
   // self-consistent — the position existed before the window, the fixture sale(s) draw it down by
   // exactly the sold amount, and the running balance lands on today's real holding: 0 for
   // acc-007/acc-022 (sold out entirely) or the current quantity for acc-002/acc-015/acc-011 (sold
-  // only part). Modelled as a real 'buy' transaction dated before the earliest of this symbol's
+  // only part). Modeled as a real 'buy' transaction dated before the earliest of this symbol's
   // sales, so the existing per-symbol running-balance check (D33) — which recomputes balances from
   // the transaction stream alone, starting at zero — verifies the same invariant it already
   // verifies for every other symbol, rather than needing a carve-out.

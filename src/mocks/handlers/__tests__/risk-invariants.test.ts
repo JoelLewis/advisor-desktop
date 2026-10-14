@@ -176,7 +176,7 @@ describe('the performance series the risk numbers are quoted against', () => {
   })
 })
 
-describe('the modelled return distribution', () => {
+describe('the modeled return distribution', () => {
   it('never shows a projected account value below zero', async () => {
     for (const id of ['acc-001', 'acc-020', 'acc-045']) {
       const { monteCarlo } = await getSensitivity(id)

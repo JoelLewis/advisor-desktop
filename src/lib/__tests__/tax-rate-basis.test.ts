@@ -50,6 +50,6 @@ describe('the client letter states the same basis in US spelling', () => {
     const client = buildClientRateDisclosure(TAX_RATE_BASIS)
     expect(client).toContain('40.8% on short-term gains and 23.8% on long-term gains (31.8% on collectibles')
     expect(client).not.toMatch(/modell|realis/)
-    expect(RATE_DISCLOSURE).toContain('State tax is not modelled.')
+    expect(RATE_DISCLOSURE).toContain('State tax is not modeled.')
   })
 })

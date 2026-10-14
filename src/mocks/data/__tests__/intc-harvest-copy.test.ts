@@ -82,8 +82,8 @@ describe("§0.7 · nba-002 states each client's position on their own return", (
     expect(nba.description).not.toContain('not the benefit')
   })
 
-  it('discloses that losses carried in from earlier years are not modelled', () => {
-    expect(nba.description).toContain('Losses carried in from earlier years are not modelled')
+  it('discloses that losses carried in from earlier years are not modeled', () => {
+    expect(nba.description).toContain('Losses carried in from earlier years are not modeled')
   })
 
   it("the impact note says most of the value is the loss carried forward, and the arithmetic bears it out", () => {

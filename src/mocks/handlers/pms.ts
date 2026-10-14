@@ -7,14 +7,14 @@ import type {
 } from '@/types/performance'
 import type { CurrencyCode } from '@/types/currency'
 import type { Account, ModelManagedAccount } from '@/types/account'
-import { isModelManaged, modelIdFor } from '@/lib/mandate'
+import { UnknownModelError, isModelManaged, modelIdFor } from '@/lib/mandate'
 import { convertToBase } from '@/lib/currency'
 import { accountValueUSD, deriveBookAUM, herfindahlIndex, effectiveN } from '@/lib/aum'
 import { securityKind, concentrationLimitFor } from '@/lib/security-master'
 import {
   RISK_FREE_RATE, assetClassWeights, portfolioBeta, portfolioVolatility,
   assetClassReturn1Y, trackingError, parametricVaR, sharpe, sortino,
-  downsideDeviation, modelledMaxDrawdown,
+  downsideDeviation, modeledMaxDrawdown,
 } from '@/lib/risk-model'
 import { MOCK_NOW_ISO, MOCK_TODAY_ISO, startOfToday } from '@/lib/clock'
 import { FX_RATES_USD_BASE } from '../data/currencies'
@@ -157,7 +157,7 @@ export function performanceSeriesFor(account: Account, basis: 'today' | 'fixture
  */
 function requireModel(modelId: string): ModelDefinition {
   const model = findModel(modelId)
-  if (!model) throw new Error(`no model ${modelId}`)
+  if (!model) throw new UnknownModelError(modelId)
   return model
 }
 
@@ -243,8 +243,8 @@ function accountUSD(account: typeof accounts[0]): number {
 }
 
 /**
- * Deterministic per-asset-class manager selection edge, annualised: the amount by which the
- * account's holdings inside a class are modelled to beat that class's index.
+ * Deterministic per-asset-class manager selection edge, annualized: the amount by which the
+ * account's holdings inside a class are modeled to beat that class's index.
  *
  * It is the only source of selection and interaction effect in the attribution, which makes it
  * part of the portfolio's return, not a decoration on top of it. There is no separate expression
@@ -380,7 +380,7 @@ type Attribution = {
  * C1 · performance-attribution — the period is compounded from the annual class returns rather
  * than multiplied by an arbitrary scale factor, and compounding happens per asset class so that
  * Σ wb·Rb,i is the benchmark return for the period by construction. Sub-period geometric linking
- * (Carino, Menchero, GRAP) is **not** modelled; the response labels the model single-period
+ * (Carino, Menchero, GRAP) is **not** modeled; the response labels the model single-period
  * arithmetic rather than implying a rigour it does not have.
  */
 export function attributionFor(account: Account, years: number, positions?: readonly Position[]): Attribution {
@@ -816,7 +816,7 @@ export const pmsHandlers = [
       beta: p.beta,
       sharpe: roundTo(sharpe(p.ret, p.vol), 2),
       sortino: roundTo(sortino(p.ret, dd), 2),
-      maxDrawdown: roundTo(modelledMaxDrawdown(p.vol), 3),
+      maxDrawdown: roundTo(modeledMaxDrawdown(p.vol), 3),
       standardDeviation: p.vol,
       downsideDeviation: dd,
       riskFreeRate: RISK_FREE_RATE,

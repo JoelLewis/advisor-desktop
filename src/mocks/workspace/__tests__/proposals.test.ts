@@ -31,6 +31,12 @@ const withProposalAgent = (threadId: string) => {
 describe('asking the Proposal Agent', () => {
   beforeEach(() => resetWorkspaceStore())
 
+  it.each(['acc-041', 'acc-042', 'acc-045'])('refuses a custom mandate (%s) with a named 422 instead of throwing', (accountId) => {
+    const s = store()
+    s.threads = s.threads.map((t): Thread => (t.id === 'th-johnson-review' ? { ...t, subject: { type: 'account', id: accountId } } : t))
+    expect(createProposal('user-001', 'th-johnson-review', accountId)).toMatchObject({ ok: false, status: 422, code: 'NOT_MODEL_MANAGED' })
+  })
+
   it('drafts v1 in the team thread as an embed; asking again returns the same proposal', () => {
     const detail = create()
     expect(detail).toMatchObject({ id: 'prop-0001', title: 'Johnson rebalance', accountId: 'acc-002', clientId: 'cli-001', threadId: 'th-johnson-review' })

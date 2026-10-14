@@ -183,3 +183,23 @@ describe('models in the book', () => {
     expect(modelQuote('mod-999')).toBeUndefined()
   })
 })
+
+describe('accounts in transition', () => {
+  it('the Model page rows carry the transition from the account record, only for accounts that have one', () => {
+    const rows = (modelId: string) => modelDetail('user-001', modelId)?.accounts ?? []
+    const mueller = rows('mod-001').find((a) => a.accountId === 'acc-043')
+    expect(mueller).toMatchObject({ withinBand: false, transition: { kind: 'in_kind_transfer', since: '2026-01-14' } })
+    expect(rows('mod-003').find((a) => a.accountId === 'acc-044')).toMatchObject({ withinBand: false, transition: { kind: 'in_kind_transfer', since: '2026-02-04' } })
+    const withTransition = [...rows('mod-001'), ...rows('mod-003')].filter((a) => a.transition).map((a) => a.accountId)
+    expect(withTransition).toEqual(['acc-043', 'acc-044'])
+  })
+
+  it('governance Methods says accounts transferred in kind are staged and shown outside band', () => {
+    const note = modelDetail('user-001', 'mod-001')?.methods.find((n) => n.label === 'Transfers in kind')
+    expect(note).toMatchObject({ modeled: false })
+    expect(note?.text).toContain('transferred in kind')
+    expect(note?.text).toContain('tax-aware stages')
+    expect(note?.text).toContain('outside band')
+  })
+})
+

@@ -55,9 +55,9 @@ export type MonteCarloResult = {
   /** How the distribution was produced. It is a closed form, not a simulation run. */
   method: string
   horizon: string
-  /** Annualised expected return the curve is centred on. */
+  /** Annualized expected return the curve is centred on. */
   expectedReturn: number
-  /** Annualised standard deviation the curve is scaled by. */
+  /** Annualized standard deviation the curve is scaled by. */
   volatility: number
   /** Account value in USD the percentiles are applied to. */
   baseValue: number

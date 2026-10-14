@@ -70,7 +70,9 @@ function Model({ view }: { view: ModelDetail }) {
             { id: 'client', header: 'Client', cell: (a) => a.clientName },
             { id: 'value', header: 'Value', unit: UNIT.usd, align: 'right', cell: (a) => <Num text={fmtMoney(a.value)} />, sortValue: (a) => a.value },
             { id: 'drift', header: 'Largest drift', unit: UNIT.pp, align: 'right', cell: (a) => <Num text={fmtWeight(a.maxAbsDrift)} /> },
-            { id: 'band', header: 'Band', cell: (a) => (a.withinBand ? <Tag>WITHIN BAND</Tag> : <Tag tone="solid">OUTSIDE BAND</Tag>) },
+            { id: 'band', header: 'Band', cell: (a) => (a.withinBand ? <Tag>WITHIN BAND</Tag>
+              : <StackedCell primary={<Tag tone="solid">OUTSIDE BAND</Tag>}
+                  secondary={a.transition ? <span title={a.transition.note}>in transition since {fmtDate(a.transition.since)}</span> : undefined} />) },
           ]} />
       </Pane>
     </ReferencePage>

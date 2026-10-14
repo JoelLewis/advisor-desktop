@@ -1,5 +1,6 @@
 import type { Message, Thread } from '@/types/workspace'
 import type { DraftPreview, LegEdit, Proposal, ProposalConstraint, ProposalDetail, ProposalVersion } from '@/types/workspace-proposal'
+import { isModelManaged } from '@/lib/mandate'
 import { accounts } from '@/mocks/data/accounts'
 import { can } from '@/mocks/data/people'
 import { nextAt, nextId, store } from '@/mocks/data/workspace-store'
@@ -9,7 +10,7 @@ import { buildVersion, editSummary, normaliseEdits } from './proposal-engine'
 import { visibleProposal } from './proposal-acts'
 import { canSeeThread, isFirmViewer } from './visibility'
 
-export type ProposalFailure = { ok: false; status: 400 | 403 | 404 | 409; code: string; message: string }
+export type ProposalFailure = { ok: false; status: 400 | 403 | 404 | 409 | 422; code: string; message: string }
 const refuse = (status: ProposalFailure['status'], code: string, message: string): ProposalFailure => ({ ok: false, status, code, message })
 
 const NOT_FOUND = refuse(404, 'NO_PROPOSAL', 'Proposal not found.')
@@ -55,6 +56,7 @@ export function createProposal(viewerId: string, threadId: string, accountId: st
   if (existing) return { ok: true, detail: detailOf(existing), created: false }
   const account = accounts.find((a) => a.id === accountId)
   if (!account) return refuse(404, 'NO_ACCOUNT', 'Account not found.')
+  if (!isModelManaged(account)) return refuse(422, 'NOT_MODEL_MANAGED', `${account.name} is a custom mandate and follows no firm model, so there is no rebalance to propose.`)
   const constraints = agentConstraints([])
   const built = buildVersion(accountId, constraints, [])
   if (!built.ok) return refuse(400, built.code, built.message)

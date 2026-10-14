@@ -108,6 +108,7 @@ const METHODS: readonly MethodNote[] = [
   { label: 'History', modeled: false, text: "The firm's record of Investment Committee decisions: each version proposed by the analyst and approved by the committee, with the weights it set. A pending version takes effect only once approved. Read-only here." },
   { label: 'Assigned value', modeled: false, text: "Accounts on each model and their value today, from the book; an account held in another currency is converted at today's exchange rate." },
   { label: 'Custom mandates', modeled: false, text: "An account held at the client's own instruction (a single market or a single asset class) follows no firm model. It is listed separately, carries no drift band and is left out of model drift; it is still measured on risk against the client's tolerance, and against the benchmark its mandate names." },
+  { label: 'Transfers in kind', modeled: false, text: 'Accounts transferred in kind are moved onto the model in tax-aware stages, so as not to realize their gains at once; they are shown outside band until they arrive.' },
   { label: 'Volatility', modeled: true, text: `Modeled, not realized: the standard deviation of the target weights from the firm's asset-class volatility assumptions and its ${correlationAssumptionsText()}.` },
 ]
 
@@ -145,7 +146,7 @@ export function modelDetail(viewerId: string, modelId: string): ModelDetail | un
     }),
     accounts: accounts.filter(isModelManaged).filter((a) => a.modelId === modelId).map((a) => {
       const drift = computeDriftForAccount(a)
-      return { accountId: a.id, accountName: a.name, clientName: clientNameOf(a), value: accountValueUSD(a, FX_RATES_USD_BASE), maxAbsDrift: drift.maxAbsDrift, withinBand: !drift.needsRebalance }
+      return { accountId: a.id, accountName: a.name, clientName: clientNameOf(a), value: accountValueUSD(a, FX_RATES_USD_BASE), maxAbsDrift: drift.maxAbsDrift, withinBand: !drift.needsRebalance, ...(a.transition ? { transition: a.transition } : {}) }
     }),
     methods: [...METHODS],
   }

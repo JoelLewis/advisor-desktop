@@ -19,7 +19,8 @@ import { repurchaseRestrictionsFor } from './repurchase-restrictions'
 import { settleBatchWashSales, type LegSale } from './batch-wash-sales'
 import { taxRateFor } from '@/lib/tax-rules'
 import type { Account } from '@/types/account'
-import { modelIdFor } from '@/lib/mandate'
+import { UnknownModelError, modelIdFor } from '@/lib/mandate'
+import { MODEL_DEFINITIONS } from '@/mocks/data/model-definitions'
 import type { LotTake } from '@/types/workspace-proposal'
 import type { AssetClass, Position } from '@/types/portfolio'
 import type { CurrencyCode } from '@/types/currency'
@@ -1199,6 +1200,8 @@ export function buildRebalancePreviews(
 }
 
 /** A rebalance of a custom mandate with no model named: there is no model to rebalance it to. */
+const unknownModel = (modelId: string) =>
+  HttpResponse.json({ error: `${new UnknownModelError(modelId).message}: name one of the firm's models` }, { status: 422 })
 const notModelManaged = (accountId: string) =>
   HttpResponse.json({ error: `${accountId} is a custom mandate, not model-managed: name a model to preview it against` }, { status: 422 })
 
@@ -1392,6 +1395,7 @@ export const omsHandlers = [
 
   http.post('/api/oms/rebalance', async ({ request }) => {
     const body = await request.json() as { accountIds: string[]; driftThreshold?: number; taxAware: boolean; modelId?: string }
+    if (body.modelId !== undefined && !MODEL_DEFINITIONS.some((m) => m.id === body.modelId)) return unknownModel(body.modelId)
     const proposed: PreviewEntry[] = []
     for (const accountId of body.accountIds) {
       const account = accounts.find((a) => a.id === accountId)
@@ -1405,13 +1409,14 @@ export const omsHandlers = [
   }),
 
   http.post('/api/oms/rebalance/execute', async ({ request }) => {
-    const body = await request.json() as { accountIds: string[]; taxAware: boolean; modelId?: string }
-    const custom = body.modelId === undefined ? accounts.find((a) => body.accountIds.includes(a.id) && a.mandate === 'custom') : undefined
+    const body = await request.json() as { accountIds: string[]; taxAware: boolean; modelId?: string } // modelId is only read to refuse it
+    if (body.modelId !== undefined) return HttpResponse.json({ error: 'model changes are previewed, not executed' }, { status: 422 })
+    const custom = accounts.find((a) => body.accountIds.includes(a.id) && a.mandate === 'custom')
     if (custom) return notModelManaged(custom.id)
     const results = body.accountIds.map((accountId) => ({
       accountId,
       status: 'submitted' as const,
-      ordersCreated: generateRebalanceTrades(accountId, body.taxAware, undefined, body.modelId).length,
+      ordersCreated: generateRebalanceTrades(accountId, body.taxAware).length,
       estimatedCompletion: '2026-02-25T16:00:00Z',
     }))
     return HttpResponse.json(results)

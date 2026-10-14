@@ -1,6 +1,7 @@
 import type { AssetClass } from './portfolio'
 import type { RiskProfile } from '@/lib/risk-profile'
 import type { MethodNote } from './reference'
+import type { AccountTransition } from './account'
 
 export type BenchmarkComponent = { assetClass: AssetClass; index: string; weight: number }
 /** `mandate` is a custom mandate's own benchmark, named in its account record; it follows no firm model. */
@@ -20,7 +21,7 @@ export type ModelSummary = {
   assignedAccounts: number; totalValue: number; driftTolerance: number; rebalanceFrequency: string; volatility: number
 }
 export type ModelVersionView = ModelVersionRecord & { proposedByName: string }
-export type ModelAccountRow = { accountId: string; accountName: string; clientName: string; value: number; maxAbsDrift: number; withinBand: boolean }
+export type ModelAccountRow = { accountId: string; accountName: string; clientName: string; value: number; maxAbsDrift: number; withinBand: boolean; transition?: AccountTransition }
 export type ModelDetail = ModelSummary & {
   asOf: string
   targets: (ModelTarget & { implementationSymbol?: string; index: string })[]

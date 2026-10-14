@@ -3,7 +3,7 @@ import { fixedIncomeSymbols } from '@/mocks/data/trading'
 
 /**
  * C21 — yield-to-worst is the lower of yield-to-maturity and yield-to-call across a bond's call
- * schedule, and equals YTM only for a genuinely non-callable bond. No call schedule is modelled
+ * schedule, and equals YTM only for a genuinely non-callable bond. No call schedule is modeled
  * in these fixtures, so `yieldToWorst` is omitted entirely rather than restated as a copy of
  * `yieldToMaturity` — that restatement was exactly the defect this fixed (every instrument,
  * including three long-dated callable municipals, previously quoted YTW === YTM).

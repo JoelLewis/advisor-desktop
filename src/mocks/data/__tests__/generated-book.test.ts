@@ -4,6 +4,8 @@ import { allPositions, seedPositionsForAccount } from '@/mocks/data/positions'
 import { MODEL_BANDS, MODEL_DEFINITIONS } from '@/mocks/data/model-definitions'
 import { computeDriftForAccount, riskProfileFor } from '@/mocks/handlers/pms'
 import { isModelManaged } from '@/lib/mandate'
+import { isTradingDay } from '@/lib/trading-calendar'
+import { MOCK_TODAY_ISO } from '@/lib/clock'
 
 /**
  * Phase 7a · C1 — the generated book. 30 accounts without explicit rows used to hold one 58/35/5/2 mix
@@ -23,9 +25,10 @@ const SEED_OUTSIDE_BAND: ReadonlyMap<string, string> = new Map([
   ['acc-006', 'Chen trust: the Ultra-HNW batch rebalance narrative'],
   ['acc-035', "Garcia: equity far above Conservative Income for a 75-year-old (nba-006)"],
   ['acc-046', 'Thompson inherited IRA: cash held back for the required distributions'],
-  ['acc-043', 'Mueller EUR: a European portfolio transferred in kind, moving onto Balanced Growth in tax-aware stages'],
-  ['acc-044', 'Mueller CHF: a Swiss portfolio transferred in kind, moving onto Conservative Income in tax-aware stages'],
 ])
+
+/** The accounts whose data says they are in transition; their reason is read from the record, not from here. */
+const IN_TRANSITION = accounts.filter(isModelManaged).filter((a) => a.transition !== undefined).map((a) => a.id)
 
 describe('the generated book', () => {
   it('covers the thirty accounts without explicit rows', () => {
@@ -72,6 +75,28 @@ describe('the book as a whole', () => {
 
   it('every model-following account sits inside its band at the seed, but for those a story or a transfer moved', () => {
     const outside = accounts.filter(isModelManaged).filter((a) => computeDriftForAccount(a).needsRebalance).map((a) => a.id).sort()
-    expect(outside).toEqual([...SEED_OUTSIDE_BAND.keys()].sort())
+    expect(outside).toEqual([...SEED_OUTSIDE_BAND.keys(), ...IN_TRANSITION].sort())
+  })
+
+  it('the Mueller accounts are outside band because their data says they are in transition, not because a test says so', () => {
+    expect(IN_TRANSITION).toEqual(['acc-043', 'acc-044'])
+    for (const account of accounts.filter(isModelManaged).filter((a) => a.transition)) {
+      const { transition } = account
+      expect(transition?.kind, account.id).toBe('in_kind_transfer')
+      expect(transition?.note.length, account.id).toBeGreaterThan(20)
+      expect(computeDriftForAccount(account).needsRebalance, account.id).toBe(true)
+    }
+  })
+
+  it('a staged transition has no recent full rebalance: every date on it is a trading day, on or after the transfer and not after today', () => {
+    for (const account of accounts.filter(isModelManaged).filter((a) => a.transition)) {
+      const since = account.transition!.since
+      expect(isTradingDay(since), `${account.id} transfer`).toBe(true)
+      expect(since <= MOCK_TODAY_ISO, account.id).toBe(true)
+      expect(account.lastRebalance, account.id).not.toBeNull()
+      expect(isTradingDay(account.lastRebalance!), `${account.id} last step`).toBe(true)
+      expect(account.lastRebalance! >= since, account.id).toBe(true)
+      expect(account.lastRebalance! <= MOCK_TODAY_ISO, account.id).toBe(true)
+    }
   })
 })

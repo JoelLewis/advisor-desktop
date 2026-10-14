@@ -102,7 +102,7 @@ export type RebalancePreview = {
    * - above `grossTaxOnGains` when its gains use up a loss that was sheltering a gain of another
    *   group (including a collectibles gain sheltered by an ordinary long-term loss).
    * Capital-gains tax only: the §1211(b) ordinary-income offset and §1212 carryforwards are not
-   * modelled.
+   * modeled.
    */
   estimatedTaxImpact: number
   /** Year-to-date realized results on this account's return; `null` when it is on none (an IRA, a Roth). */

@@ -244,7 +244,7 @@ function intcHarvestDescription(): string {
     `${perAccount.join(' ')} ` +
     `Figures are capital-gains tax at top federal rates against each return's sales realized so far this year; ` +
     `gains realized later in ${MOCK_TODAY_ISO.slice(0, 4)} would use loss shown as carried forward. ` +
-    'Losses carried in from earlier years are not modelled, nor is state tax.'
+    'Losses carried in from earlier years are not modeled, nor is state tax.'
 }
 
 export const nbas: NBA[] = [

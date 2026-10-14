@@ -89,7 +89,7 @@ const bondFixtures: BondFixture[] = [
  * C21 · fixed-income-municipal — `yieldToWorst` was identical to `yieldToMaturity` on every
  * instrument including three long-dated callable municipals (CA-GO-32, NY-GO-30, TX-REV-33), and
  * YTW is the entire reason the field exists: it should be the lower of YTM and yield-to-call
- * across the issue's call schedule. No call schedule is modelled in these fixtures, so the field
+ * across the issue's call schedule. No call schedule is modeled in these fixtures, so the field
  * is omitted rather than quoted as a duplicate of YTM.
  */
 export const fixedIncomeSymbols: SymbolSearchResult[] = bondFixtures.map((bond) => {

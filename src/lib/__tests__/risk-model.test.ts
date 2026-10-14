@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   ASSET_CLASS_RISK, CORRELATION_GROUP, RISK_FREE_RATE, Z_95,
   assetClassCorrelation, assetClassWeights, portfolioBeta, portfolioVolatility, portfolioReturn1Y,
-  trackingError, parametricVaR, sharpe, sortino, downsideDeviation, modelledMaxDrawdown, assetClassBeta,
+  trackingError, parametricVaR, sharpe, sortino, downsideDeviation, modeledMaxDrawdown, assetClassBeta,
 } from '@/lib/risk-model'
 
 // A 60/40-ish book: acc-001's actual asset-class mix.
@@ -134,9 +134,9 @@ describe('sharpe and sortino', () => {
       .toBeGreaterThan(sharpe(0.0985, 0.1007))
   })
 
-  it('modelled max drawdown is negative and scales with volatility', () => {
-    expect(modelledMaxDrawdown(0.118)).toBeCloseTo(-0.1416, 4)
-    expect(modelledMaxDrawdown(0.636)).toBeLessThan(modelledMaxDrawdown(0.061))
+  it('modeled max drawdown is negative and scales with volatility', () => {
+    expect(modeledMaxDrawdown(0.118)).toBeCloseTo(-0.1416, 4)
+    expect(modeledMaxDrawdown(0.636)).toBeLessThan(modeledMaxDrawdown(0.061))
   })
 })
 
@@ -146,7 +146,7 @@ describe('trackingError', () => {
     expect(trackingError(w, w)).toBeCloseTo(0, 12)
   })
 
-  it('C6: is one annualised statistic, and it grows with active weight', () => {
+  it('C6: is one annualized statistic, and it grows with active weight', () => {
     const bench = assetClassWeights([{ assetClass: 'us_equity', weight: 0.6 }, { assetClass: 'fixed_income', weight: 0.4 }])
     const near = assetClassWeights([{ assetClass: 'us_equity', weight: 0.65 }, { assetClass: 'fixed_income', weight: 0.35 }])
     const far = assetClassWeights([{ assetClass: 'us_equity', weight: 0.95 }, { assetClass: 'fixed_income', weight: 0.05 }])

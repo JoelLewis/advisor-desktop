@@ -9,9 +9,9 @@ const wholeDollars = (amount: number) => `$${Math.round(Math.abs(amount)).toLoca
 
 /** What nba-002's figures are, stated beside every one of them. */
 const HARVEST_ESTIMATE_BASIS =
-  "against this return's realized results so far this year, at top federal rates; capital-gains tax only, and state tax is not modelled"
+  "against this return's realized results so far this year, at top federal rates; capital-gains tax only, and state tax is not modeled"
 const HARVEST_ESTIMATE_BASIS_FOR_CLIENT =
-  "These figures are federal capital-gains tax at top rates, against your return's realized results so far this year; state tax is not modelled. They are estimates, not tax advice."
+  "These figures are federal capital-gains tax at top rates, against your return's realized results so far this year; state tax is not modeled. They are estimates, not tax advice."
 
 /**
  * C1 (final review) · a client email for a multi-client NBA once interpolated `nba.description`,

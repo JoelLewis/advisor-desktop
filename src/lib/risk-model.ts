@@ -6,7 +6,7 @@
  * one. VaR must scale with portfolio value and carry a horizon, a confidence level and a method.
  * C4 · performance-metrics — the reported Sharpe of 1.34 implied a ~19.8% return against the same
  * API's 12.4%; SR = (Rp − Rf)/σp computed from the same series gives 0.71.
- * C6 · performance-metrics / performance-reporting — tracking error is one annualised statistic,
+ * C6 · performance-metrics / performance-reporting — tracking error is one annualized statistic,
  * not a different number per horizon, and R_p − R_b is *active return*, not Jensen's alpha.
  *
  * Assumptions are constants here so they can be rendered as disclosure text next to the numbers.
@@ -14,7 +14,7 @@
 import type { AssetClass } from '@/types/portfolio'
 
 export type AssetClassRisk = {
-  /** Annualised standard deviation of returns. */
+  /** Annualized standard deviation of returns. */
   vol: number
   /** The class's one-year return: a modeled assumption, not a realized figure. */
   return1Y: number
@@ -43,7 +43,7 @@ export const RISK_FREE_RATE = 0.04 as const
 export const Z_95 = 1.645 as const
 /** Downside deviation as a fraction of total volatility, under a symmetric-return assumption. */
 const DOWNSIDE_FRACTION = 0.70
-/** Modelled trailing-3-year maximum drawdown as a multiple of annualised volatility. */
+/** Modeled trailing-3-year maximum drawdown as a multiple of annualized volatility. */
 const MAX_DRAWDOWN_MULTIPLE = 1.2
 
 /** A class with no assumption is a broken invariant, never a default: the same throw as the correlation lookup. */
@@ -173,7 +173,7 @@ export function portfolioVolatility(weights: ReadonlyMap<string, number>): numbe
   return Math.sqrt(Math.max(variance([...weights.entries()]), 0))
 }
 
-/** Annualised active risk against a benchmark's asset-class weights. */
+/** Annualized active risk against a benchmark's asset-class weights. */
 export function trackingError(
   portfolio: ReadonlyMap<string, number>,
   benchmark: ReadonlyMap<string, number>,
@@ -219,6 +219,6 @@ export function sortino(return1Y: number, dd: number): number {
   return dd === 0 ? 0 : (return1Y - RISK_FREE_RATE) / dd
 }
 
-export function modelledMaxDrawdown(vol: number): number {
+export function modeledMaxDrawdown(vol: number): number {
   return -MAX_DRAWDOWN_MULTIPLE * vol
 }

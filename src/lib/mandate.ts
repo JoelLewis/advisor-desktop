@@ -10,6 +10,14 @@ export class NotModelManagedError extends Error {
   }
 }
 
+/** A model id that names no firm model: a broken invariant for an internal reader, a refusal for a request. */
+export class UnknownModelError extends Error {
+  constructor(readonly modelId: string) {
+    super(`no model ${modelId}`)
+    this.name = 'UnknownModelError'
+  }
+}
+
 /** The model an account is measured against: the override when one is named, else its own; a custom mandate must name one. */
 export function modelIdFor(account: Account, override?: string): string {
   if (override !== undefined) return override

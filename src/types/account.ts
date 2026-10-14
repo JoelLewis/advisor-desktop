@@ -59,7 +59,18 @@ type AccountBase = {
 };
 
 /** Follows one of the firm's models: measured for drift against it and rebalanced to it. */
-type ModelMandate = { mandate: 'model'; modelId: string };
+type ModelMandate = { mandate: 'model'; modelId: string; transition?: AccountTransition };
+
+/**
+ * A model-managed account that has not yet arrived on its model: assets transferred in kind are moved onto
+ * the model in tax-aware stages, so the account is shown outside its band until they have. Firm-only.
+ */
+type AccountTransition = {
+  kind: 'in_kind_transfer';
+  /** The trading day the assets arrived. */
+  since: string;
+  note: string;
+};
 
 /**
  * Not model-managed: the client's own instructions for the account (a single market, a single asset
@@ -82,6 +93,7 @@ export type {
   AccountStatus,
   TaxTreatment,
   CostBasisMethod,
+  AccountTransition,
   UMASleeve,
   Account,
   ModelManagedAccount,

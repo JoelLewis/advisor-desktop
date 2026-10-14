@@ -77,7 +77,7 @@ export function buildRateDisclosure(shortTermRate: number, longTermRate: number,
     `Estimated at top federal marginal rates including the ${formatRatePercent(NIIT_RATE)} net ` +
     `investment income tax — ${formatRatePercent(shortTermRate)} short-term, ` +
     `${formatRatePercent(longTermRate)} long-term (${formatRatePercent(collectibleLongTermRate)} on ` +
-    'collectibles, including physically backed precious-metal ETFs). State tax is not modelled. ' +
+    'collectibles, including physically backed precious-metal ETFs). State tax is not modeled. ' +
     'Estimates only, not tax advice.'
   )
 }

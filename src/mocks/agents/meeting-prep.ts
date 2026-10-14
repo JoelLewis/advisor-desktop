@@ -160,7 +160,7 @@ function openItems(household: HouseholdFixture): PrepFinding | undefined {
   }
 }
 
-/** Each traditional IRA owner's first required distribution: the years before it are when Roth conversions can be modelled. */
+/** Each traditional IRA owner's first required distribution: the years before it are when Roth conversions can be modeled. */
 function rmd(household: HouseholdFixture, own: readonly Account[], asOf: string): PrepFinding | undefined {
   const iras = own.filter((a) => a.type === 'traditional_ira')
   if (iras.length === 0) return undefined
@@ -168,7 +168,7 @@ function rmd(household: HouseholdFixture, own: readonly Account[], asOf: string)
     .flatMap(({ account, member }) => (member ? [{ account, member }] : []))
   if (owners.length === 0) return undefined
   return {
-    claim: `Required distributions from ${joinWords(owners.map(({ member }) => `${firstNameOf(member.name)}'s traditional IRA`))} begin in the year the citation states; the years before then are when Roth conversions can be modelled, as an estimate for the clients' tax professional to confirm.`,
+    claim: `Required distributions from ${joinWords(owners.map(({ member }) => `${firstNameOf(member.name)}'s traditional IRA`))} begin in the year the citation states; the years before then are when Roth conversions can be modeled, as an estimate for the clients' tax professional to confirm.`,
     attention: 'info',
     figures: owners.map(({ account }) => ({ label: account.name, value: valueOf(account), unit: 'USD' as const, source: 'positions.marketValue' })),
     citations: owners.map(({ member }) => ({

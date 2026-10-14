@@ -98,7 +98,7 @@ export type RealizedByCharacter = { shortTerm: number; longTerm: number; collect
  *   It is never below `−netCapitalGainsTax(prior)` — trades cannot save more than the year owes.
  *
  * Capital-gains tax only: the §1211(b) offset of net capital loss against ordinary income and any
- * §1212 carryforward from prior years are not modelled (`CAPITAL_LOSS_SCOPE_NOTE`).
+ * §1212 carryforward from prior years are not modeled (`CAPITAL_LOSS_SCOPE_NOTE`).
  */
 export function additionalCapitalGainsTax(
   prior: RealizedByCharacter,

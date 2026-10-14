@@ -22,9 +22,9 @@ describe('performance & benchmark invariants', () => {
     expect(periods).toContain('inception')
   })
 
-  // C6 · performance-reporting — tracking error is one annualised statistic reported on the risk
+  // C6 · performance-reporting — tracking error is one annualized statistic reported on the risk
   // metrics, not a different number per horizon on every benchmark row.
-  it('tracking error is a single annualised figure on the risk metrics', async () => {
+  it('tracking error is a single annualized figure on the risk metrics', async () => {
     const comparisons = await getBenchmarkComparison('acc-001')
     for (const comp of comparisons) {
       expect(comp).not.toHaveProperty('trackingError')

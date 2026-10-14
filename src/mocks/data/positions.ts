@@ -2,6 +2,7 @@ import type { Position, PositionSeed } from '@/types/portfolio'
 import type { Account } from '@/types/account'
 import { bookOf } from './portfolio-ledger'
 import { accounts } from './accounts'
+import { NotModelManagedError, UnknownModelError } from '@/lib/mandate'
 import { MODEL_BANDS, MODEL_DEFINITIONS } from './model-definitions'
 
 // ─── acc-001: Johnson Family Trust ($8.2M, mod-001 Balanced Growth) ──────────
@@ -337,10 +338,10 @@ const tiltCap = (target: number, band: number) => Math.min(0.03, band * 0.6, tar
 function generatedPositions(accountId: string, totalValue: number): PositionSeed[] {
   const account = accounts.find((a) => a.id === accountId)
   if (!account) throw new Error(`No account ${accountId} to generate positions for`)
-  if (account.mandate !== 'model') throw new Error(`${accountId} is a custom mandate and needs explicit positions`)
+  if (account.mandate !== 'model') throw new NotModelManagedError(accountId)
   const model = MODEL_DEFINITIONS.find((m) => m.id === account.modelId)
   const band = MODEL_BANDS[account.modelId]?.driftTolerance
-  if (!model || band === undefined) throw new Error(`${accountId} names model ${account.modelId}, which has no definition or band`)
+  if (!model || band === undefined) throw new UnknownModelError(account.modelId)
   const cashTarget = model.assetClasses.find((a) => a.assetClass === 'cash')?.targetWeight ?? 0
   const sleeves = model.assetClasses.filter((a) => a.assetClass !== 'cash' && a.targetWeight > 0)
   const rand = seededUniform(accountId)
