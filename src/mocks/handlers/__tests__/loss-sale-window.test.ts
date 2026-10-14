@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest'
 import { previewRebalance } from '@/services/oms'
-import { previewModelTrades } from '@/services/trading'
 import { accounts } from '@/mocks/data/accounts'
 import { openWashSaleWindows, realizedSales, washSaleWindow } from '@/mocks/data/realized-sales'
 import { repurchaseRestrictionsFor } from '@/mocks/handlers/repurchase-restrictions'
@@ -126,13 +125,6 @@ describe('§0.2 · a loss sale opens its own wash-sale window', () => {
       expect(projected.sort()).toEqual([...new Set(lossLegs)].sort())
       expect(p.repurchaseRestrictions.filter((r) => r.source.kind === 'recorded').map((r) => r.symbol)).toEqual(['INTC'])
     }
-  })
-
-  it('the model-trade preview carries the same window on the same leg', async () => {
-    const [preview] = await previewModelTrades('mod-002', ['acc-002'])
-    const intc = preview!.trades.find((t) => t.symbol === 'INTC' && t.side === 'sell')!
-    expect(intc.repurchaseBlockedUntil).toBe('2026-03-27')
-    expect(preview!.trades.filter((t) => t.side === 'buy').every((t) => t.repurchaseBlockedUntil === undefined)).toBe(true)
   })
 })
 

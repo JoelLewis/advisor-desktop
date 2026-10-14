@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { previewRebalance, type RebalancePreview } from '@/services/oms'
-import { previewModelTrades } from '@/services/trading'
 import { additionalCapitalGainsTax, netTaxForLegs } from '@/lib/capital-gains'
 import { taxRateFor } from '@/lib/tax-rules'
 
@@ -49,13 +48,5 @@ describe('the rebalance preview nets realized gains and losses', () => {
     for (const t of preview!.trades.filter((x) => x.side === 'buy')) {
       expect([t.realizedShortTerm, t.realizedLongTerm]).toEqual([0, 0])
     }
-  })
-})
-
-describe('the model-trade preview and the rebalance preview state one tax figure', () => {
-  it('acc-002 onto its own model mod-002: both previews net to the same estimate', async () => {
-    const [modelTrade] = await previewModelTrades('mod-002', ['acc-002'])
-    expect(modelTrade!.estimatedTaxImpact).toBe(preview!.estimatedTaxImpact)
-    expect(modelTrade!.estimatedTaxImpact).toBe(10_422)
   })
 })

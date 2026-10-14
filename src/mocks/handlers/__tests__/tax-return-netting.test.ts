@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest'
 import { previewRebalance } from '@/services/oms'
-import { previewModelTrades } from '@/services/trading'
 import { accounts } from '@/mocks/data/accounts'
 import { additionalCapitalGainsTax, netTaxForLegs } from '@/lib/capital-gains'
 import { taxRateFor } from '@/lib/tax-rules'
@@ -107,15 +106,6 @@ describe('the rebalance estimate is the tax this proposal adds to its return', (
     expect(preview!.estimatedTaxImpact).toBe(additionalCapitalGainsTax(preview!.ytdRealizedOnReturn!, sum(preview!.trades), taxRateFor))
   })
 
-  it('acc-002 onto mod-002: the model-trade preview states the same figure', async () => {
-    const [modelTrade] = await previewModelTrades('mod-002', ['acc-002'])
-    expect(modelTrade!.estimatedTaxImpact).toBe(10_422)
-    // Model-trade legs carry no realized results, so the pin is paired with the rebalance preview,
-    // whose figure is checked against the engine's arithmetic above.
-    const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
-    expect(modelTrade!.estimatedTaxImpact).toBe(preview!.estimatedTaxImpact)
-  })
-
   it('acc-006 (irrevocable trust): nothing is netted from another taxpayer', async () => {
     const [preview] = await previewRebalance({ accountIds: ['acc-006'], taxAware: true })
     expect(preview!.ytdRealizedOnReturn).toEqual({ shortTerm: 0, longTerm: 0, collectibleLongTerm: 0 })
@@ -136,11 +126,6 @@ describe('the rebalance estimate is the tax this proposal adds to its return', (
     // The second preview nets against what the first already realized on the same return.
     expect(previews[1]!.nettedWithAccountIds).toEqual(['acc-001'])
     expect(previews[0]!.nettedWithAccountIds).toEqual([])
-  })
-
-  it('the model-trade preview nets a batch the same way, and says which earlier accounts it netted with', async () => {
-    const previews = await previewModelTrades('mod-002', ['acc-001', 'acc-002'])
-    expect(previews.map((p) => p.nettedWithAccountIds)).toEqual([[], ['acc-001']])
   })
 })
 

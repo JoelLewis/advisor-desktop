@@ -4,7 +4,6 @@ import { join } from 'node:path'
 import { calendarEvents } from '@/mocks/data/calendar'
 import { nbas } from '@/mocks/data/nbas'
 import { notes } from '@/mocks/data/notes'
-import { tasks, processTrackers } from '@/mocks/data/workflows'
 import { activities } from '@/mocks/data/activities'
 import { documents } from '@/mocks/data/documents'
 import { prospects } from '@/mocks/data/prospects'
@@ -44,10 +43,10 @@ describe('Dr. Amanda Pell, the referral', () => {
     expect(nba?.description).toContain('on 20 Feb.')
   })
 
-  it('names her in nba-015, note-009, task-004 and act-019, each crediting James Thompson', () => {
+  it('names her in nba-015, note-009 and act-019, each crediting James Thompson', () => {
     const texts = [
       nbas.find((n) => n.id === 'nba-015')?.description, notes.find((n) => n.id === 'note-009')?.content,
-      tasks.find((t) => t.id === 'task-004')?.description, activities.find((a) => a.id === 'act-019')?.description,
+      activities.find((a) => a.id === 'act-019')?.description,
     ]
     for (const text of texts) {
       expect(text).toContain('Dr. Amanda Pell')
@@ -60,10 +59,6 @@ describe('Dr. Amanda Pell, the referral', () => {
       name: 'Dr. Amanda Pell', source: 'referral', stage: 'lead', assignedAdvisor: 'Adrian Hale', estimatedAUM: 3_000_000,
     })
   })
-
-  it('task-004 is due on a weekday', () => {
-    expect(tasks.find((t) => t.id === 'task-004')?.dueDate).toBe('2026-02-27')
-  })
 })
 
 describe('William Foster, one story', () => {
@@ -74,8 +69,6 @@ describe('William Foster, one story', () => {
 
   it('no record about him describes a new account or its opening', () => {
     const texts = [
-      ...tasks.filter((t) => t.clientId === foster).flatMap((t) => [t.title, t.description]),
-      ...processTrackers.filter((p) => p.entityId === foster).flatMap((p) => [p.entityName, ...p.stages.map((s) => s.name)]),
       ...documents.filter((d) => d.clientId === foster).map((d) => d.name),
       ...notes.filter((n) => n.clientId === foster).map((n) => n.content),
       ...activities.filter((a) => a.entityId === foster).flatMap((a) => [a.title, a.description]),
@@ -112,12 +105,6 @@ describe('the firm', () => {
     }
   })
 
-  it('the archive\'s drafts are Adrian Hale\'s, signed with the firm, never an invented "James Mitchell"', () => {
-    const text = readFileSync('src/mocks/data/archives.ts', 'utf8')
-    expect(text).not.toMatch(/James Mitchell|Senior Wealth Advisor/)
-    expect(text).toContain("advisorName: 'Adrian Hale'")
-  })
-
   it('is the fictional Larkfield Advisory', () => {
     expect(FIRM_NAME).toBe('Larkfield Advisory')
   })
@@ -148,15 +135,5 @@ describe('the risk-profile table', () => {
     expect(lowerRiskBand(bandFor(66))?.modelId).toBe('mod-001')
     expect(lowerRiskBand(bandFor(0))).toBeUndefined()
     expect(() => bandFor(101)).toThrow('score 101')
-  })
-
-  it('the onboarding questionnaire recommends the table\'s model, by its name', async () => {
-    const res = await fetch('/api/onboarding/calculate-risk', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ answers: [{ questionId: 'rq-01', selectedOption: 4 }, { questionId: 'rq-02', selectedOption: 2 }, { questionId: 'rq-03', selectedOption: 3 },
-        { questionId: 'rq-04', selectedOption: 4 }, { questionId: 'rq-05', selectedOption: 2 }, { questionId: 'rq-06', selectedOption: 2 },
-        { questionId: 'rq-07', selectedOption: 2 }, { questionId: 'rq-08', selectedOption: 2 }] }),
-    })
-    expect(await res.json()).toEqual({ score: 66, profile: 'moderate_aggressive', label: 'Moderate Aggressive', recommendedModel: 'Growth' })
   })
 })

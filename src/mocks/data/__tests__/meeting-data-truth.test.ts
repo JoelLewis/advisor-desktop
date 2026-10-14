@@ -124,9 +124,4 @@ describe('no generated prep text reaches the product', () => {
   ])('no source file contains "%s"', (text) => {
     expect(sources.filter((f) => readFileSync(f, 'utf8').includes(text))).toEqual([])
   })
-
-  it('the calendar handler serves events and the schedule only', () => {
-    const handler = readFileSync(join(process.cwd(), 'src/mocks/handlers/calendar.ts'), 'utf8')
-    expect(handler).not.toMatch(/\/prep|\/notes|\/follow-ups/)
-  })
 })

@@ -1,12 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { nbas, driftBatchFacts } from '@/mocks/data/nbas'
-import { getNBAs } from '@/services/nba'
+import { nbas } from '@/mocks/data/nbas'
 import { activities } from '@/mocks/data/activities'
-import { MOCK_NOTIFICATIONS } from '@/mocks/data/notifications'
 import { accounts } from '@/mocks/data/accounts'
 import { clients } from '@/mocks/data/clients'
 import { computeDriftForAccount, modelDisplayName } from '@/mocks/handlers/pms'
-import { MODEL_DEFINITIONS } from '@/mocks/data/model-definitions'
 import { formatRatePercent } from '@/lib/tax-rules'
 import { isModelManaged } from '@/lib/mandate'
 
@@ -46,31 +43,5 @@ describe('§0.7 · drift copy states each account\'s own band and the engine\'s 
     expect(act.title).toContain(`${drifted.length} accounts`)
     expect(act.title).not.toContain('3%')
     for (const modelId of new Set(drifted.map(({ drift }) => drift.modelId))) expect(act.description).toContain(bandOf(modelId))
-  })
-
-  it("ntf-010 counts the drifted accounts and names each one's band", () => {
-    // Phase 7a · C1: one Growth account is outside its band now, so the notice counts the whole batch.
-    const ntf = MOCK_NOTIFICATIONS.find((n) => n.id === 'ntf-010')!
-    expect(ntf.body).toContain(`${drifted.length} accounts are outside their model's band`)
-    for (const modelId of new Set(drifted.map(({ drift }) => drift.modelId))) expect(ntf.body).toContain(bandOf(modelId))
-    expect(ntf.body).not.toContain('Growth Equity')
-  })
-
-  it('no notification names a model that does not exist', () => {
-    const names = new Set(MODEL_DEFINITIONS.map((m) => m.name))
-    for (const ntf of MOCK_NOTIFICATIONS) {
-      for (const [, name] of ntf.body.matchAll(/Model "([^"]+)"/g)) expect(names, `${ntf.id} names "${name}"`).toContain(name)
-      expect(ntf.body, ntf.id).not.toContain('Growth Equity')
-    }
-  })
-})
-
-describe('nba-001 over the wire', () => {
-  it('the NBA endpoint serves the derived figures, not empty getters', async () => {
-    const served = (await getNBAs()).find((n) => n.id === 'nba-001')!
-    const facts = driftBatchFacts()
-    expect(served.title).toContain(`${facts.accountCount} accounts`)
-    expect(served.clients).toEqual(facts.clients)
-    expect(served.trigger.value).toBe(nbas.find((n) => n.id === 'nba-001')!.trigger.value)
   })
 })

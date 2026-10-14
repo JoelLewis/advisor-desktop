@@ -24,8 +24,5 @@ export default defineConfig({
     // the 5s test timeout. On an idle machine this costs a few seconds of wall time; under that
     // contention it is the difference between green and 1–5 timeouts.
     maxWorkers: '50%',
-    coverage: {
-      exclude: ['src/mocks/**', 'src/types/**', 'src/test/**'],
-    },
   },
 })

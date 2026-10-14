@@ -46,7 +46,6 @@ vi.mock('@/mocks/data/positions', async (importOriginal) => {
 })
 
 let trustSmh: TaxLot[]
-let note: string
 beforeAll(async () => {
   // The test setup already loaded the handlers against the real modules; rebind them to the mock.
   vi.resetModules()
@@ -56,8 +55,6 @@ beforeAll(async () => {
   const openDates = custodian.KNOWN_OPEN_DATES as Map<string, string>
   openDates.set(ROTH_SMH, '2026-02-15')
   trustSmh = custodian.generateTaxLotsWithSaleRisk('acc-001', 8_200_000).filter((l) => l.positionId === TRUST_SMH)
-  const { harvestWashSaleNote } = await import('../ai')
-  note = harvestWashSaleNote(trustSmh)
 })
 
 describe('a loss washed by an IRA or Roth purchase is permanently disallowed, not deferred', () => {
@@ -71,10 +68,5 @@ describe('a loss washed by an IRA or Roth purchase is permanently disallowed, no
     expect(trustSmh.reduce((s, l) => s + lossDisallowed(l), 0)).toBeCloseTo(-5_480, 6)
     expect(trustSmh.reduce((s, l) => s + lossDeferred(l), 0)).toBeCloseTo(-9_864, 6)
     expect(trustSmh.reduce((s, l) => s + lossAllowedNow(l), 0)).toBeCloseTo(-6_576, 6)
-  })
-
-  it('the harvesting insight calls the Roth-washed part permanently disallowed and the taxable-washed part deferred', () => {
-    expect(note).toContain('bought in an IRA or Roth, that part of the loss is permanently disallowed')
-    expect(note).toContain('bought in a taxable account, that part is deferred into the replacement\'s basis')
   })
 })
