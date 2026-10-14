@@ -43,7 +43,15 @@ async function accountFullView(page: Page) {
   await settle(page)
 }
 
+const home = (theme: Theme) => async (page: Page) => {
+  await visit(page, '/', theme)
+  await expect(page.getByRole('navigation', { name: 'Threads' }).getByRole('link', { name: 'Brief', exact: true })).toBeVisible()
+  await settle(page)
+}
+
 const SCENES: Scene[] = [
+  { name: 'home-light', hasContext: false, open: home('light') },
+  { name: 'home-dark', hasContext: false, open: home('dark') },
   { name: 'adrian-johnson-finding-light', hasContext: true, open: adrianAsksDriftMonitor('light') },
   { name: 'adrian-johnson-finding-dark', hasContext: true, open: adrianAsksDriftMonitor('dark') },
   { name: 'robert-thread-light', hasContext: true, open: robertOnHisThread('light') },
@@ -150,4 +158,14 @@ test('the success path on the real app: ask, full view and back, draft, send, an
   await threadLink('Johnson Rebalance Review').click()
   await expect(heading).toHaveText('Johnson Rebalance Review')
   await expect(conversation.getByRole('article', { name: /^Drift Monitor: / }).first()).toBeVisible()
+})
+
+test.describe('a browser that blocks service workers', () => {
+  test.use({ serviceWorkers: 'block' })
+
+  test('gets a page that says the demo needs one, never a blank page', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('The demo could not start', { timeout: 15_000 })
+    await expect(page.getByRole('main')).toContainText('This demo runs its server in your browser as a service worker')
+  })
 })
