@@ -1,7 +1,9 @@
 import { http, HttpResponse } from 'msw'
+import { isBreakResolution } from '@/types/reference-reconciliation'
 import { isDisclosureDocument } from '@/types/workspace-prospect'
 import type { AgentId, BindingActKind, Directory, Draft, Message, ThreadDetail } from '@/types/workspace'
 import { AGENTS, PEOPLE, can, permissionsOf } from '../data/people'
+import { resolveBreak } from '../reference/reconciliation'
 import { nextAt, nextId, store } from '../data/workspace-store'
 import { BRIEF_THREAD_ID } from '../workspace/brief'
 import { briefOrder, remeasureBrief } from '../workspace/brief-remeasure'
@@ -21,6 +23,7 @@ import { badRequest, firmViewer, nonEmptyString, readJson, refusal, unauthorised
 import { workspaceMeetingHandlers } from './workspace-meetings'
 import { workspaceProposalHandlers } from './workspace-proposals'
 import { workspaceProspectHandlers } from './workspace-prospects'
+import { workspaceReferenceHandlers } from './workspace-reference'
 import { parseComplianceAct, recordComplianceAct, workspaceSupervisionHandlers } from './workspace-supervision'
 
 const fullDirectory = (): Directory => ({ people: [...PEOPLE], agents: [...AGENTS], permissions: Object.fromEntries(PEOPLE.map((p) => [p.id, permissionsOf(p.id)])) })
@@ -174,6 +177,13 @@ export const workspaceHandlers = [
         const r = recordComplianceAct(viewer, parsed.request)
         return r.ok ? HttpResponse.json(r.act, { status: 201 }) : refusal(r)
       }
+      case 'resolve_break': {
+        if (!nonEmptyString(body.breakId) || !nonEmptyString(body.fingerprint) || !isBreakResolution(body.resolution) || typeof body.rationale !== 'string') {
+          return badRequest('breakId, fingerprint, a resolution (book_corrected, custodian_corrected or timing_difference) and a rationale are required.')
+        }
+        const r = resolveBreak(viewer, { breakId: body.breakId, fingerprint: body.fingerprint, resolution: body.resolution, rationale: body.rationale })
+        return r.ok ? HttpResponse.json(r.act, { status: 201 }) : refusal(r)
+      }
       default:
         return HttpResponse.json({ code: 'UNKNOWN_ACT', message: 'That is not a recorded act.' }, { status: 400 })
     }
@@ -236,6 +246,7 @@ export const workspaceHandlers = [
   ...workspaceSupervisionHandlers,
   ...workspaceMeetingHandlers,
   ...workspaceProspectHandlers,
+  ...workspaceReferenceHandlers,
 
   // Workspace handlers must be registered above this catch-all.
   http.all('/api/workspace/*', () => HttpResponse.json({ code: 'METHOD_NOT_ALLOWED', message: 'Workspace records cannot be edited or deleted.' }, { status: 405 })),
