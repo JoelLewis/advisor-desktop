@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from 'react'
+import { cn } from '@/lib/utils'
 import { Button } from '@/kit/button/Button'
 import { Pane } from '@/kit/layout/Pane'
 import { TextInput } from '@/kit/text-input/TextInput'
@@ -78,7 +79,7 @@ function NoteSectionList({ section, lines, saved, clientName, directory, editabl
       <h3 id={titleId} className="text-label uppercase text-ink-3">{NOTE_SECTION_TITLE[section]}</h3>
       <ul aria-label={NOTE_SECTION_TITLE[section]} className="flex flex-col">
         {lines.map((line) => (
-          <li key={line.id} className="flex min-w-0 flex-col gap-1.5 border-b border-rule py-2 last:border-b-0">
+          <li key={line.id} className="group flex min-w-0 flex-col gap-1.5 border-b border-rule py-2 last:border-b-0">
             {editing === line.id
               ? <TextInput label={`Edit ${line.id}`} value={line.text} rows={3} onChange={(text) => onText(line.id, text)} />
               : <p className="text-copy">{line.text}</p>}
@@ -94,7 +95,7 @@ function NoteSectionList({ section, lines, saved, clientName, directory, editabl
                 </Button>
               ))}
               {editable ? (
-                <span className="ml-auto flex gap-1">
+                <span className={cn('ml-auto flex gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100', editing === line.id && 'opacity-100')}>
                   <Button rank="quiet" aria-label={`${editing === line.id ? 'Done editing' : 'Edit'} ${line.id}`} onClick={() => onEdit(line.id)}>{editing === line.id ? 'Done' : 'Edit'}</Button>
                   <Button rank="quiet" aria-label={`Remove ${line.id}`} disabled={!canRemove} onClick={() => onRemove(line.id)}>Remove</Button>
                 </span>

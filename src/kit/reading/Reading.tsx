@@ -24,7 +24,7 @@ export function Reading({ label, value, unit, size = 'body', limit, status }: Re
   const negative = isNegative(value)
   return (
     <div className="inline-flex flex-col gap-1">
-      {label ? <span className="text-label uppercase text-ink-3">{label}</span> : null}
+      {label ? <span className="text-label tracking-normal text-ink-3">{label}</span> : null}
       <span className="inline-flex items-baseline gap-2">
         <span data-negative={String(negative)} className={cn('tabular text-ink', SIZE[size], negative && 'font-semibold')}>
           {value}

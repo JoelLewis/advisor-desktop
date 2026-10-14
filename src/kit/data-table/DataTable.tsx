@@ -118,10 +118,10 @@ export function DataTable<T>({
                       key={header.id}
                       scope="col"
                       aria-sort={header.column.getCanSort() ? (sort === 'asc' ? 'ascending' : sort === 'desc' ? 'descending' : 'none') : undefined}
-                      className={cn('whitespace-nowrap px-2 py-2 text-label uppercase text-ink-2', col?.align === 'right' ? 'text-right' : 'text-left')}
+                      className={cn('whitespace-nowrap px-2 py-2 text-table font-semibold text-ink-2', col?.align === 'right' ? 'text-right' : 'text-left')}
                     >
                       {header.column.getCanSort() ? (
-                        <button type="button" className="uppercase" onClick={header.column.getToggleSortingHandler()}>
+                        <button type="button" onClick={header.column.getToggleSortingHandler()}>
                           {label}
                         </button>
                       ) : label}

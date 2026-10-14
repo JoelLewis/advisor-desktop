@@ -1,7 +1,7 @@
 import { useId } from 'react'
 import { Gauge } from '@/kit/gauge/Gauge'
 import { sharedGaugeDomain } from '@/kit/gauge/gauge-math'
-import { ASSET_CLASS_PROSE_LABELS } from '@/lib/labels'
+import { ASSET_CLASS_LABELS } from '@/lib/labels'
 import { RESIDUAL_WORDS } from '@/workspace/proposal/residual-words'
 import type { ProjectedDrift } from '@/services/oms'
 import type { DriftStatus } from '@/types/portfolio'
@@ -16,13 +16,13 @@ export function DriftComparison({ driftBefore, projected }: { driftBefore: Drift
     <div className="flex min-w-0 flex-col gap-6 overflow-x-auto">
       <section aria-labelledby={beforeId} className="flex flex-col gap-2">
         <h3 id={beforeId} className="text-label uppercase text-ink-2">Drift before</h3>
-        {before.map((d) => <Gauge key={d.assetClass} label={ASSET_CLASS_PROSE_LABELS[d.assetClass]} drift={d.drift} band={driftBefore.driftTolerance} domain={domain} />)}
+        {before.map((d) => <Gauge key={d.assetClass} label={ASSET_CLASS_LABELS[d.assetClass]} drift={d.drift} band={driftBefore.driftTolerance} domain={domain} />)}
       </section>
       <section aria-labelledby={afterId} className="flex flex-col gap-2">
         <h3 id={afterId} className="text-label uppercase text-ink-2">Drift after</h3>
         {projected.assetClassDrifts.map((d) => (
           <div key={d.assetClass} className="flex flex-col gap-0.5">
-            <Gauge label={ASSET_CLASS_PROSE_LABELS[d.assetClass]} drift={d.drift} band={projected.driftTolerance} domain={domain} />
+            <Gauge label={ASSET_CLASS_LABELS[d.assetClass]} drift={d.drift} band={projected.driftTolerance} domain={domain} />
             {d.residualReason ? <p className="pl-43 text-label text-ink-3">{RESIDUAL_WORDS[d.residualReason]}</p> : null}
           </div>
         ))}

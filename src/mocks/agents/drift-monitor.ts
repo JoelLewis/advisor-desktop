@@ -6,14 +6,10 @@ import { computeDriftForAccount } from '@/mocks/handlers/pms'
 import { ASSET_CLASS_LABELS } from '@/lib/labels'
 import { isMarketTradable } from '@/lib/security-master'
 import { openWashSaleWindows } from '@/mocks/data/realized-sales'
-import type { Position } from '@/types/portfolio'
+import type { AssetClass, Position } from '@/types/portfolio'
 import { claimNameOf } from './claim-name'
 
-const label = (key: string): string => {
-  const name = ASSET_CLASS_LABELS[key]
-  if (!name) throw new Error(`Drift Monitor: no display name for asset class "${key}"`)
-  return name
-}
+const label = (key: AssetClass): string => ASSET_CLASS_LABELS[key]
 
 export function runDriftMonitor({ asOf, subject }: AgentContext): TopicFinding[] {
   if (subject.type !== 'account') return []

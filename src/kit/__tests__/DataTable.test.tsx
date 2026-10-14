@@ -26,6 +26,12 @@ function renderTable(extra: Partial<Parameters<typeof DataTable<Row>>[0]> = {}) 
 }
 
 describe('DataTable', () => {
+  it('sets column headers in sentence case, at table size', () => {
+    renderTable()
+    const header = screen.getByRole('columnheader', { name: /^Symbol/ })
+    expect(header.className).not.toContain('uppercase')
+    expect(within(header).getByRole('button').className).not.toContain('uppercase')
+  })
   it('states its count and puts units in the header', () => {
     renderTable({ total: 3 })
     expect(screen.getByText('3 of 3 positions')).toBeInTheDocument()

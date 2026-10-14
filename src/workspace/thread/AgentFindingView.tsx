@@ -18,7 +18,7 @@ export function AgentFindingView({ finding, agent, anchorId, footer }: AgentFind
       <div className="flex flex-col gap-1.5">
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <span className="text-body font-semibold">{agent.name}</span>
-          <span className="text-label uppercase text-ink-3">Agent</span>
+          <span className="text-label text-ink-3">Agent</span>
           <span className="tabular ml-auto text-label text-ink-3">{fmtEasternStamp(finding.at)}</span>
         </div>
       </div>

@@ -17,11 +17,11 @@ export function RecordSlip({ kind, title, recordId, fingerprint, recordedBy, at,
       <h3 id={titleId} className="mt-1 text-body font-semibold">{title}</h3>
       {children ? <div className="mt-2 text-body">{children}</div> : null}
       <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 border-t border-rule pt-2 text-label">
-        <dt className="uppercase text-ink-3">Recorded by</dt><dd className="normal-case">{`${recordedBy.name}, ${recordedBy.role}`}</dd>
-        <dt className="uppercase text-ink-3">At</dt><dd className="tabular normal-case">{fmtEasternStamp(at)}</dd>
-        <dt className="uppercase text-ink-3">UTC</dt><dd className="tabular normal-case">{fmtUtcStamp(at)}</dd>
-        <dt className="uppercase text-ink-3">Archive</dt><dd className="normal-case">{archive}</dd>
-        {fingerprint ? (<><dt className="uppercase text-ink-3">Fingerprint</dt><dd className="tabular normal-case">{fingerprint}</dd></>) : null}
+        <dt className="tracking-normal text-ink-3">Recorded by</dt><dd className="normal-case">{`${recordedBy.name}, ${recordedBy.role}`}</dd>
+        <dt className="tracking-normal text-ink-3">At</dt><dd className="tabular normal-case">{fmtEasternStamp(at)}</dd>
+        <dt className="tracking-normal text-ink-3">UTC</dt><dd className="tabular normal-case">{fmtUtcStamp(at)}</dd>
+        <dt className="tracking-normal text-ink-3">Archive</dt><dd className="normal-case">{archive}</dd>
+        {fingerprint ? (<><dt className="tracking-normal text-ink-3">Fingerprint</dt><dd className="tabular normal-case">{fingerprint}</dd></>) : null}
       </dl>
     </article>
   )

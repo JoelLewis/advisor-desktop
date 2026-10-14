@@ -142,7 +142,7 @@ function ByAgent({ name, at, children }: { name: string; at: string; children: R
     <div className="flex min-w-0 flex-col gap-2">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="text-body font-semibold">{name}</span>
-        <span className="text-label uppercase text-ink-3">Agent</span>
+        <span className="text-label text-ink-3">Agent</span>
         <span className="tabular ml-auto text-label text-ink-3">{fmtEasternStamp(at)}</span>
       </div>
       {children}
@@ -155,7 +155,7 @@ function Authored({ author, at, children }: { author: Person; at: string; childr
     <div className="flex min-w-0 flex-col gap-2">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="text-body font-semibold">{author.name}</span>
-        <span className="text-label uppercase text-ink-3">{ROLE_LABEL[author.role]}</span>
+        <span className="text-label text-ink-3">{ROLE_LABEL[author.role]}</span>
         <span className="tabular ml-auto text-label text-ink-3">{fmtEasternStamp(at)}</span>
       </div>
       {children}

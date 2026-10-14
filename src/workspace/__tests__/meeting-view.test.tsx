@@ -115,6 +115,18 @@ describe('the meeting full view', () => {
     expect(store().acts.filter((a) => a.kind === 'file_meeting_record')).toHaveLength(1)
   })
 
+  it("keeps a note line's Edit and Remove reachable by keyboard while showing them only on hover or focus", async () => {
+    await heldWithNotes()
+    await openMeeting()
+    const line = within(await screen.findByRole('list', { name: 'Decisions' })).getAllByRole('listitem')[0]!
+    const edit = within(line).getByRole('button', { name: /^Edit n-/ })
+    const actions = edit.parentElement!
+    expect(line.className).toContain('group')
+    expect(actions.className).toContain('opacity-0')
+    expect(actions.className).toContain('group-focus-within:opacity-100')
+    expect(edit).not.toHaveAttribute('tabindex', '-1')
+  })
+
   it('shows, beneath a line the client reads, the wording filed for that client; an edit to the line says it drops on save', async () => {
     await heldWithNotes()
     await openMeeting()

@@ -69,7 +69,7 @@ describe('the proposal in the team thread', () => {
     const drift = await within(embed).findByRole('table', { name: 'Drift before and after' })
     const bands = (name: RegExp) => [...within(drift).getByRole('row', { name }).querySelectorAll('[data-status]')].map((s) => s.getAttribute('data-status'))
     expect(bands(/^US Equity/)).toEqual(['OUT', 'IN'])
-    expect(bands(/^Emerging Mkts/)).toEqual(['AT LIMIT', 'IN'])
+    expect(bands(/^Emerging Markets/)).toEqual(['AT LIMIT', 'IN'])
     expect(bands(/^Private Equity/)).toEqual(['IN', 'IN'])
   })
 

@@ -1,10 +1,11 @@
 import type { AccountType } from '@/types/account'
 import type { AssetClass } from '@/types/portfolio'
 
-export const ASSET_CLASS_LABELS: Record<string, string> = {
+/** Asset classes spelled out, one form everywhere: columns, gauges and prose. */
+export const ASSET_CLASS_LABELS: Readonly<Record<AssetClass, string>> = {
   us_equity: 'US Equity',
-  intl_equity: 'Intl Equity',
-  emerging_markets: 'Emerging Mkts',
+  intl_equity: 'International Equity',
+  emerging_markets: 'Emerging Markets',
   fixed_income: 'Fixed Income',
   alternatives: 'Alternatives',
   real_estate: 'Real Estate',
@@ -19,20 +20,6 @@ export const CLIENT_ASSET_CLASS_WORDS: Readonly<Record<AssetClass, string>> = {
   us_equity: 'US stocks', intl_equity: 'international stocks', emerging_markets: 'emerging-market stocks', fixed_income: 'bonds',
   alternatives: 'alternative strategies', real_estate: 'real estate', commodities: 'commodities', cash: 'cash',
   digital_assets: 'digital-asset funds', private_equity: 'private equity',
-}
-
-/** Full names for asset classes in running prose, where the column abbreviations would read oddly. */
-export const ASSET_CLASS_PROSE_LABELS: Readonly<Record<AssetClass, string>> = {
-  us_equity: 'US Equity',
-  intl_equity: 'International Equity',
-  emerging_markets: 'Emerging Markets',
-  fixed_income: 'Fixed Income',
-  alternatives: 'Alternatives',
-  real_estate: 'Real Estate',
-  commodities: 'Commodities',
-  cash: 'Cash',
-  digital_assets: 'Digital Assets',
-  private_equity: 'Private Equity',
 }
 
 export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {

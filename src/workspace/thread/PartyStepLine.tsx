@@ -12,7 +12,7 @@ export function PartyStepLine({ message, directory }: { message: Step; directory
     <article aria-label={`${author.name} · ${message.summary}`} className="flex min-w-0 flex-col gap-1.5">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="text-body font-semibold">{author.name}</span>
-        <span className="text-label uppercase text-ink-3">{ROLE_LABEL[author.role]}</span>
+        <span className="text-label text-ink-3">{ROLE_LABEL[author.role]}</span>
         <span className="tabular ml-auto text-label text-ink-3">{fmtEasternStamp(message.at)}</span>
       </div>
       <p className="text-copy">{message.summary}</p>

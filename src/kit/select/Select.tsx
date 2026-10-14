@@ -19,7 +19,7 @@ export function Select({ label, value, options, onChange, layout = 'inline', err
   const stacked = layout === 'stacked'
   return (
     <span className={cn(stacked ? 'flex min-w-0 flex-col items-start gap-1.5' : 'inline-flex items-center gap-2')}>
-      <label htmlFor={id} className="text-label uppercase text-ink-3">{label}</label>
+      <label htmlFor={id} className="text-label tracking-normal text-ink-3">{label}</label>
       <span className="relative inline-flex">
         <select id={id} value={value} onChange={(e) => onChange(e.target.value)}
           aria-invalid={error ? true : undefined} aria-describedby={error ? errorId : undefined}

@@ -5,7 +5,7 @@ import { computeDriftForAccount, modelDisplayName } from '@/mocks/handlers/pms'
 import { requireModelManaged } from '@/lib/mandate'
 import { buildVersion, normalizeConstraints } from '@/mocks/workspace/proposal-engine'
 import { sameWashSaleTaxpayer } from '@/mocks/handlers/tax-return'
-import { ASSET_CLASS_PROSE_LABELS } from '@/lib/labels'
+import { ASSET_CLASS_LABELS } from '@/lib/labels'
 import { isSubjectToWashSale } from '@/lib/security-master'
 import { harvestOpportunities } from './harvest-scanner'
 import { claimNameOf } from './claim-name'
@@ -16,7 +16,7 @@ const NO_SELF_WASH = 'buys nothing that would wash a loss the taxpayer has taken
 
 const hasDigit = (text: string) => /\d/.test(text)
 
-const PROSE_LABELS: ReadonlyMap<string, string> = new Map(Object.entries(ASSET_CLASS_PROSE_LABELS))
+const PROSE_LABELS: ReadonlyMap<string, string> = new Map(Object.entries(ASSET_CLASS_LABELS))
 
 const prose = (assetClass: string): string => {
   const name = PROSE_LABELS.get(assetClass)

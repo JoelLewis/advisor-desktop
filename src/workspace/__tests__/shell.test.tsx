@@ -32,6 +32,18 @@ const spokenText = (el: Element) => [...el.childNodes]
 const threadLinks = () => within(threadNav()).getAllByRole('link').map(spokenText)
 
 describe('workspace shell', () => {
+  it('puts one visibility legend above the threads; each row is a bare mark with its visibility as a description', async () => {
+    await renderHome()
+    const legend = within(threadNav()).getByRole('list', { name: 'Visibility' })
+    expect(within(legend).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Only you', 'Firm only', 'Shared with the client or prospect'])
+    const review = within(threadNav()).getByRole('link', { name: 'Johnson Rebalance Review' })
+    expect(review).toHaveAccessibleDescription("Visibility: Firm only · client can't see")
+    expect(within(threadNav()).getByRole('link', { name: 'Pell · prospect work' })).toHaveAccessibleDescription("Visibility: Firm only · prospect can't see")
+    const spoken = within(threadNav()).queryAllByText(/client can't see/)
+    expect(spoken.length).toBeGreaterThan(0)
+    for (const note of spoken) expect(note).toHaveClass('sr-only')
+  })
+
   it('as Adrian lists six threads under the three headings, with one h1', async () => {
     const { container } = await renderHome()
     await waitFor(() => expect(groupHeadings()).toEqual(['Desk', 'Reference', 'Private', 'Internal', 'Clients and prospects', 'Agents on this desk']))

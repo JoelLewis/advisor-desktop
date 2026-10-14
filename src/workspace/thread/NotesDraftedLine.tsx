@@ -12,7 +12,7 @@ export function NotesDraftedLine({ message, directory }: { message: Drafted; dir
     <article aria-label={`Notes drafted · ${agent.name}`} className="flex min-w-0 flex-col gap-1.5">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="text-body font-semibold">{agent.name}</span>
-        <span className="text-label uppercase text-ink-3">Agent</span>
+        <span className="text-label text-ink-3">Agent</span>
         <span className="tabular ml-auto text-label text-ink-3">{fmtEasternStamp(message.at)}</span>
       </div>
       <p className="text-copy">Drafted the notes from the transcript; every line cites the lines it records.</p>

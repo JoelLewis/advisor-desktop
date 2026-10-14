@@ -26,8 +26,8 @@ function BookRisk({ view }: { view: BookRiskView }) {
     <ReferencePage title="Risk" from={params.get('from')} methods={view.methods}
       lead={<p className="text-body text-ink-2">{`Every account against its client's tolerance · modeled, not realized · as of ${fmtEasternStamp(view.asOf)}`}</p>}>
       <div className="flex flex-wrap gap-x-10 gap-y-4">
-        <Reading label="Accounts above tolerance" value={fmtQuantity(view.aboveTolerance)} size="readout-md" limit={`of ${fmtQuantity(view.rows.length)} accounts`} />
-        <Reading label="Accounts below tolerance" value={fmtQuantity(view.belowTolerance)} size="readout-md" limit={`of ${fmtQuantity(view.rows.length)} accounts`} />
+        <Reading label="Accounts above tolerance" value={fmtQuantity(view.aboveTolerance)} size="readout-sm" limit={`of ${fmtQuantity(view.rows.length)} accounts`} />
+        <Reading label="Accounts below tolerance" value={fmtQuantity(view.belowTolerance)} size="readout-sm" limit={`of ${fmtQuantity(view.rows.length)} accounts`} />
       </div>
       <Pane title="Accounts">
         <DataTable caption="Accounts against tolerance" rows={view.rows} getRowId={(r) => r.accountId} noun={{ singular: 'account', plural: 'accounts' }}

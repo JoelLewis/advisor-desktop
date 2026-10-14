@@ -1,7 +1,10 @@
+import { useId } from 'react'
 import { NavLink } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Pane } from '@/kit/layout/Pane'
-import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
+import { VisibilityMark } from '@/kit/visibility/VisibilityMark'
+import { visibilityWords } from '@/kit/visibility/visibility'
+import { VisibilityLegend } from '@/workspace/shell/VisibilityLegend'
 import { useDirectory, useThreads } from '@/hooks/use-workspace'
 import { isExternalViewerIn } from '@/workspace/people/directory-people'
 import { threadParty } from '@/workspace/people/thread-party'
@@ -28,10 +31,15 @@ export function ThreadList() {
   return (
     <div className="flex flex-col gap-8">
       <DeskLinks />
-      {GROUPS.map(({ visibility, title }) => {
-        const group = threads.data.filter((t) => t.visibility === visibility)
-        return group.length > 0 ? <ThreadGroup key={visibility} title={external && visibility === 'client' ? EXTERNAL_GROUP_TITLE : title} threads={group} /> : null
-      })}
+      <div className="flex flex-col gap-3">
+        {external ? null : <VisibilityLegend />}
+        <div className="flex flex-col gap-8">
+          {GROUPS.map(({ visibility, title }) => {
+            const group = threads.data.filter((t) => t.visibility === visibility)
+            return group.length > 0 ? <ThreadGroup key={visibility} title={external && visibility === 'client' ? EXTERNAL_GROUP_TITLE : title} threads={group} /> : null
+          })}
+        </div>
+      </div>
       <DeskAgents threads={threads.data} />
     </div>
   )
@@ -41,23 +49,29 @@ function ThreadGroup({ title, threads }: { title: string; threads: Thread[] }) {
   return (
     <Pane title={title}>
       <ul className="flex flex-col">
-        {threads.map((t) => (
-          <li key={t.id}>
-            <NavLink to={`/t/${t.id}`} className={({ isActive }) => cn(
-              'flex flex-col gap-1.5 border-l-2 py-2 pl-3 pr-2 hover:bg-face',
-              isActive ? 'border-ink bg-face' : 'border-transparent',
-            )}>
-              {({ isActive }) => (
-                <>
-                  <div aria-hidden="true"><VisibilityBand visibility={t.visibility} scale="message" party={threadParty(t)} /></div>
-                  <span className={cn('text-body', isActive && 'font-semibold')}>{t.title}</span>
-                </>
-              )}
-            </NavLink>
-          </li>
-        ))}
+        {threads.map((t) => <ThreadRow key={t.id} thread={t} />)}
       </ul>
     </Pane>
+  )
+}
+
+function ThreadRow({ thread: t }: { thread: Thread }) {
+  const noteId = useId()
+  return (
+    <li>
+      <NavLink to={`/t/${t.id}`} aria-describedby={noteId} className={({ isActive }) => cn(
+        'flex flex-col gap-1.5 border-l-2 py-2 pl-3 pr-2 hover:bg-face',
+        isActive ? 'border-ink bg-face' : 'border-transparent',
+      )}>
+        {({ isActive }) => (
+          <>
+            <VisibilityMark visibility={t.visibility} />
+            <span className={cn('text-body', isActive && 'font-semibold')}>{t.title}</span>
+          </>
+        )}
+      </NavLink>
+      <span id={noteId} className="sr-only">{`Visibility: ${visibilityWords(t.visibility, threadParty(t))}`}</span>
+    </li>
   )
 }
 

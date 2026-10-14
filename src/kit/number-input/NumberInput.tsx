@@ -17,7 +17,7 @@ export function NumberInput({ label, value, onChange, unit, error, disabled, onC
   const errorId = useId()
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
-      <label htmlFor={id} className="text-label uppercase text-ink-3">
+      <label htmlFor={id} className="text-label tracking-normal text-ink-3">
         {label}{unit ? <> <span className="normal-case">{unit}</span></> : null}
       </label>
       <input id={id} type="text" inputMode="decimal" autoComplete="off" value={value} disabled={disabled}

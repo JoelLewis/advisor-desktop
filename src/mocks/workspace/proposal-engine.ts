@@ -15,7 +15,7 @@ import {
 import { harvestOpportunities } from '@/mocks/agents/harvest-scanner'
 import { sameWashSaleTaxpayer } from '@/mocks/handlers/tax-return'
 import { claimNameOf } from '@/mocks/agents/claim-name'
-import { ASSET_CLASS_LABELS, ASSET_CLASS_PROSE_LABELS } from '@/lib/labels'
+import { ASSET_CLASS_LABELS } from '@/lib/labels'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { fingerprint } from '@/lib/fingerprint'
 
@@ -184,7 +184,7 @@ function unexcludable(account: Account, constraints: readonly ProposalConstraint
   const held = new Set(getPositionsForAccount(account.id, account.totalValue).filter((p) => p.marketValue > 0).map((p) => p.assetClass))
   for (const c of constraints) {
     if (c.kind !== 'exclude_asset_class') continue
-    const name = ASSET_CLASS_PROSE_LABELS[c.assetClass]
+    const name = ASSET_CLASS_LABELS[c.assetClass]
     if (c.assetClass === 'cash') return fail('NOT_EXCLUDABLE', 'Cash cannot be left untouched: every sale settles into it and every buy is paid from it.')
     if (!held.has(c.assetClass)) return fail('NOT_EXCLUDABLE', `The account holds no ${name} to leave untouched.`)
   }

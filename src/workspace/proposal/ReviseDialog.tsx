@@ -7,7 +7,7 @@ import { Select } from '@/kit/select/Select'
 import { usePositions } from '@/hooks/use-portfolio'
 import { useReviseProposal } from '@/hooks/use-workspace'
 import { ApiClientError } from '@/services/api-client'
-import { ASSET_CLASS_PROSE_LABELS } from '@/lib/labels'
+import { ASSET_CLASS_LABELS } from '@/lib/labels'
 import type { AssetClass, Position } from '@/types/portfolio'
 import type { ProposalDetail } from '@/types/workspace-proposal'
 import { constraintsFromForm, formFromConstraints, type ConstraintForm, type FormProblem } from './constraint-form'
@@ -18,7 +18,7 @@ type ReviseDialogProps = { open: boolean; onOpenChange: (open: boolean) => void;
 /** The engine leaves untouched only a class the account holds, and never cash: every sale settles into it. */
 const excludableClasses = (positions: readonly Position[]): AssetClass[] =>
   [...new Set(positions.filter((p) => p.marketValue > 0 && p.assetClass !== 'cash').map((p) => p.assetClass))]
-    .sort((a, b) => ASSET_CLASS_PROSE_LABELS[a].localeCompare(ASSET_CLASS_PROSE_LABELS[b]))
+    .sort((a, b) => ASSET_CLASS_LABELS[a].localeCompare(ASSET_CLASS_LABELS[b]))
 
 const refusalCode = (error: Error | null) => (error instanceof ApiClientError ? error.code : undefined)
 
@@ -69,7 +69,7 @@ export function ReviseDialog({ open, onOpenChange, detail }: ReviseDialogProps) 
           : positions.isError ? <p role="alert" className="text-body">{positions.error.message}</p>
           : (
             <Select label="Leave untouched" layout="stacked" value={form.exclude} error={problemOn('exclude')} onChange={(v) => edit({ exclude: v })}
-              options={[{ value: '', label: 'Nothing' }, ...excludableClasses(positions.data).map((c) => ({ value: c, label: ASSET_CLASS_PROSE_LABELS[c] }))]} />
+              options={[{ value: '', label: 'Nothing' }, ...excludableClasses(positions.data).map((c) => ({ value: c, label: ASSET_CLASS_LABELS[c] }))]} />
           )}
         <p className="border-t border-rule pt-3 text-body text-ink-2">Always on: no buy that would wash a loss the taxpayer has taken or this proposal takes.</p>
         {code === 'NO_CHANGE' ? <p role="status" className="text-body text-ink-2">That changes nothing in the proposal.</p> : null}
