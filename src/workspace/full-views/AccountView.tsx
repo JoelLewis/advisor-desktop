@@ -4,6 +4,8 @@ import { Pane } from '@/kit/layout/Pane'
 import { PAGE_TITLE_ID } from '@/kit/page/ids'
 import { useAccount, useTaxLots } from '@/hooks/use-accounts'
 import { useDrift, usePositions } from '@/hooks/use-portfolio'
+import { useReferenceModels } from '@/hooks/use-reference'
+import { accountAttributionHref, accountRiskHref, modelHref } from '@/workspace/full-views/reference-href'
 import { useDirectory } from '@/hooks/use-workspace'
 import { isExternalViewerIn } from '@/workspace/people/directory-people'
 import { useViewer } from '@/workspace/viewer/use-viewer'
@@ -14,6 +16,8 @@ import { isNotFound } from '@/workspace/is-not-found'
 import type { Account } from '@/types/account'
 import type { DriftStatus, Position, TaxLot } from '@/types/portfolio'
 import { HoldingsTable, TaxLotsTable } from './account-columns'
+
+const LINK = 'self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink'
 
 export function AccountView() {
   const { accountId } = useParams()
@@ -66,6 +70,7 @@ function AccountReadings({ account, drift, positions, lots, from }: AccountReadi
       <header className="flex flex-col gap-2">
         {from ? <Link to={`/t/${encodeURIComponent(from)}`} className="self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink">Back to the thread</Link> : null}
         <h1 id={PAGE_TITLE_ID} tabIndex={-1} className="text-title">{account.name}</h1>
+        <ReferenceLinks account={account} from={from} />
       </header>
       <Pane title="Drift against model" meta={driftMeta(drift)}>
         <DriftGauges drift={drift} />
@@ -77,5 +82,19 @@ function AccountReadings({ account, drift, positions, lots, from }: AccountReadi
         <TaxLotsTable lots={lots} positions={positions} />
       </Pane>
     </div>
+  )
+}
+
+/** The account's reference views: its risk, its attribution and its model, each remembering the thread. */
+function ReferenceLinks({ account, from }: { account: Account; from: string | null }) {
+  const models = useReferenceModels()
+  const model = models.data?.models.find((m) => m.id === account.modelId)
+  const back = from ?? undefined
+  return (
+    <nav aria-label="Reference" className="flex flex-wrap gap-x-6 gap-y-1">
+      <Link to={accountRiskHref(account.id, back)} className={LINK}>Risk</Link>
+      <Link to={accountAttributionHref(account.id, back)} className={LINK}>Attribution</Link>
+      <Link to={modelHref(account.modelId, back)} className={LINK}>{model ? `Model · ${model.name}` : 'Model'}</Link>
+    </nav>
   )
 }

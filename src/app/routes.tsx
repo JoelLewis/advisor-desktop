@@ -18,6 +18,8 @@ import { useMeetingThreadAvailable } from '@/workspace/meeting/use-meeting-threa
 import { ArchivePage } from '@/workspace/archive/ArchivePage'
 import { BillingPage } from '@/workspace/reference/BillingPage'
 import { ReconciliationPage } from '@/workspace/reference/ReconciliationPage'
+import { BookRiskPage } from '@/workspace/reference/BookRiskPage'
+import { AccountRiskPage } from '@/workspace/reference/AccountRiskPage'
 import { PracticePage } from '@/workspace/reference/PracticePage'
 import { SupervisionPage } from '@/workspace/supervision/SupervisionPage'
 import type { ShellHandle } from '@/workspace/shell/context-column'
@@ -54,6 +56,8 @@ export const routes: RouteObject[] = [
           { path: 'clients/:clientId', element: <ClientView />, handle: fullWidthHandle },
           { path: 'archive', element: <ArchivePage /> },
           { path: 'billing', element: <BillingPage />, handle: fullWidthHandle },
+          { path: 'risk', element: <BookRiskPage />, handle: fullWidthHandle },
+          { path: 'accounts/:accountId/risk', element: <AccountRiskPage />, handle: fullWidthHandle },
           { path: 'practice', element: <PracticePage />, handle: fullWidthHandle },
           { path: 'reconciliation', element: <ReconciliationPage />, handle: fullWidthHandle },
           { path: 'supervision', element: <SupervisionPage />, handle: fullWidthHandle },
