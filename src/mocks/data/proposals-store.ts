@@ -52,7 +52,7 @@ export function approvalState(proposal: Proposal): ApprovalState {
     : { kind: 'unapproved', latestVersion: latest }
 }
 
-export function stagedFor(proposalId: string): StagedOrder[] {
+function stagedFor(proposalId: string): StagedOrder[] {
   return store().staged.filter((o) => o.proposalId === proposalId)
 }
 

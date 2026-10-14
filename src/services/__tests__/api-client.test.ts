@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { server } from '@/test/server'
-import { get, post, put, del, ApiClientError } from '../api-client'
+import { get, post, put, ApiClientError } from '../api-client'
 
 describe('api-client', () => {
   describe('get', () => {
@@ -88,19 +88,6 @@ describe('api-client', () => {
         value: 42,
       })
       expect(result).toEqual({ updated: true, value: 42 })
-    })
-  })
-
-  describe('del', () => {
-    it('uses DELETE method', async () => {
-      server.use(
-        http.delete('/api/remove/456', () => {
-          return HttpResponse.json({ deleted: true })
-        }),
-      )
-
-      const result = await del<{ deleted: boolean }>('/remove/456')
-      expect(result).toEqual({ deleted: true })
     })
   })
 

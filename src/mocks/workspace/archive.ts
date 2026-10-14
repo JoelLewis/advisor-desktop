@@ -10,7 +10,7 @@ import { breakClientId } from '@/mocks/reference/reconciliation'
 import { canSeeThread, isFirmViewer } from './visibility'
 import { partyOf } from './party'
 
-export { ARCHIVE_KINDS, isArchiveKind } from '@/types/workspace-supervision'
+export { isArchiveKind } from '@/types/workspace-supervision'
 
 /** Code-unit order, the same on every machine. */
 const byCodeUnit = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)

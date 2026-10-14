@@ -5,7 +5,7 @@ import { FIRM_NAME } from '@/lib/firm'
 /** `addresseeId` is the client the recap is written to: a filed line worded for them is read in that wording. */
 export type RecapInput = { addresseeId: string; greetingName: string; withOthers: boolean; filing: MeetingFiling; signerName: string; windowSentence?: string }
 
-export const RECAP_HEADINGS = { client_requests: 'What you asked us', decisions: 'What we decided' } as const
+const RECAP_HEADINGS = { client_requests: 'What you asked us', decisions: 'What we decided' } as const
 
 /** A filed line as the addressee reads it: the wording filed for them, else the line as filed. */
 const asRead = (line: NoteLine, addresseeId: string) => (line.toClient?.clientId === addresseeId ? line.toClient.text : line.text)

@@ -17,7 +17,7 @@ export type HouseholdBilling = {
   nextTier?: { at: number; rate: number }
   openExceptionIds: string[]
 }
-export type BillingRunRow = { householdId: string; householdName: string; method: BillingMethod; covers: string; valuation: number; fee: number }
+type BillingRunRow = { householdId: string; householdName: string; method: BillingMethod; covers: string; valuation: number; fee: number }
 export type BillingRun = BillingRunDate & { households: BillingRunRow[]; total: number; exceptionIds: string[] }
 export type BillingException = BillingExceptionRecord & { householdName: string }
 export type BillingView = {

@@ -2,9 +2,10 @@ import { describe, it, expect } from 'vitest'
 import { accounts } from '@/mocks/data/accounts'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
 import { deriveBookAUM } from '@/lib/aum'
-import { assetWeightedEffectiveFee, bps } from '@/lib/fees'
 import { billingView } from '@/mocks/reference/billing'
 import { practiceView } from '@/mocks/reference/practice'
+
+const bps = (rate: number) => rate * 10_000
 
 const billing = () => {
   const v = billingView('user-001')
@@ -20,7 +21,8 @@ describe('one fee number across every surface', () => {
 
   it('the effective fee is Σ fees ÷ Σ value, not the mean of household rates', () => {
     const rows = billing().households.map((h) => ({ aum: h.value, annualFee: h.annualFee }))
-    expect(assetWeightedEffectiveFee(rows)).toBeCloseTo(bps(billing().totals.effectiveRate), 9)
+    const weighted = rows.reduce((s, r) => s + r.annualFee, 0) / rows.reduce((s, r) => s + r.aum, 0)
+    expect(bps(weighted)).toBeCloseTo(bps(billing().totals.effectiveRate), 9)
     const unweighted = billing().households.reduce((s, h) => s + h.effectiveRate, 0) / rows.length
     expect(Math.abs(bps(unweighted) - bps(billing().totals.effectiveRate))).toBeGreaterThan(10)
   })

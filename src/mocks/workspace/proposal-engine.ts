@@ -20,7 +20,7 @@ import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { fingerprint } from '@/lib/fingerprint'
 
 /** Proposals are generated tax-aware against the drift surface's own threshold. */
-export const PROPOSAL_DRIFT_THRESHOLD = 0.005
+const PROPOSAL_DRIFT_THRESHOLD = 0.005
 
 export type EngineFailure = { ok: false; code: string; message: string }
 const fail = (code: string, message: string): EngineFailure => ({ ok: false, code, message })
@@ -109,7 +109,7 @@ export function normaliseEdits(edits: readonly LegEdit[]): LegEdit[] {
   return [...edits].sort((a, b) => byCodeUnit(a.symbol, b.symbol) || EDIT_ORDER[a.kind] - EDIT_ORDER[b.kind])
 }
 
-export function generationConstraintsOf(constraints: readonly ProposalConstraint[]): GenerationConstraints {
+function generationConstraintsOf(constraints: readonly ProposalConstraint[]): GenerationConstraints {
   const caps = constraints.flatMap((c) => (c.kind === 'cap_realized_gains' ? [c.usd] : []))
   return {
     harvestOnly: constraints.some((c) => c.kind === 'harvest_only'),
@@ -161,7 +161,7 @@ export function applyEdits(accountId: string, base: RebalanceProposal, edits: re
   return { ok: true, proposal: { legs, sales, heldBack }, excludedLegs }
 }
 
-export function taxSummaryOf(preview: RebalancePreview): ProposalTaxSummary {
+function taxSummaryOf(preview: RebalancePreview): ProposalTaxSummary {
   const sum = (f: (t: ProposedTrade) => number) => preview.trades.reduce((s, t) => s + f(t), 0)
   return {
     sold: sum((t) => (t.side === 'sell' ? t.estimatedValue : 0)),

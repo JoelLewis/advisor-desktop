@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
-  ASSET_CLASS_RISK, CORRELATION_GROUP, RISK_FREE_RATE, Z_95,
-  assetClassCorrelation, assetClassWeights, portfolioBeta, portfolioVolatility, portfolioReturn1Y,
-  trackingError, parametricVaR, sharpe, sortino, downsideDeviation, modeledMaxDrawdown, assetClassBeta,
+  ASSET_CLASS_RISK, CORRELATION_GROUP, Z_95,
+  assetClassCorrelation, assetClassWeights, portfolioBeta, portfolioVolatility,
+  trackingError, parametricVaR, assetClassBeta, assetClassReturn1Y,
 } from '@/lib/risk-model'
 
 // A 60/40-ish book: acc-001's actual asset-class mix.
@@ -76,7 +76,7 @@ describe('portfolio statistics', () => {
   })
 
   it('trailing 1Y return is the weighted average of asset-class returns', () => {
-    expect(portfolioReturn1Y(w)).toBeCloseTo(0.0985, 4)
+    expect([...w].reduce((sum, [ac, x]) => sum + x * assetClassReturn1Y(ac), 0)).toBeCloseTo(0.0985, 4)
   })
 })
 
@@ -119,24 +119,6 @@ describe('the round-then-VaR sequence (rounding order is load-bearing)', () => {
     const correctVaR = parametricVaR(value, roundedVol)
     const wrongVaR = parametricVaR(value, rawVol)
     expect(Math.abs(wrongVaR - correctVaR)).toBeGreaterThan(10)
-  })
-})
-
-describe('sharpe and sortino', () => {
-  it('C4: the app reported 1.34 against its own 12.4% return and 11.8% sigma; the identity gives 0.71', () => {
-    expect(sharpe(0.124, 0.118)).toBeCloseTo(0.7119, 4)
-    expect(RISK_FREE_RATE).toBe(0.04)
-  })
-
-  it('sortino exceeds sharpe because downside deviation is below total volatility', () => {
-    expect(downsideDeviation(0.1007)).toBeCloseTo(0.07049, 5)
-    expect(sortino(0.0985, downsideDeviation(0.1007)))
-      .toBeGreaterThan(sharpe(0.0985, 0.1007))
-  })
-
-  it('modeled max drawdown is negative and scales with volatility', () => {
-    expect(modeledMaxDrawdown(0.118)).toBeCloseTo(-0.1416, 4)
-    expect(modeledMaxDrawdown(0.636)).toBeLessThan(modeledMaxDrawdown(0.061))
   })
 })
 

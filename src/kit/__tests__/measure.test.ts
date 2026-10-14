@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  MINUS, MeasureError, normaliseMinus, isNegative, fmtMoney, fmtResult, fmtPrice, fmtWeight, fmtReturn, fmtDrift,
+  MINUS, MeasureError, isNegative, fmtMoney, fmtResult, fmtPrice, fmtWeight, fmtReturn, fmtDrift,
   fmtTolerance, fmtQuantity, splitFraction, fmtDays, fmtScore, fmtDate, fmtTimestamp, clientMoney,
   clientPercent, clientWholePercent, clientDate, fmtEasternTime, fmtEasternDayTime, fmtEasternRange, clientRate, fmtDayMonthYear,
 } from '@/kit/measure'
@@ -51,9 +51,7 @@ describe('measure', () => {
     expect(clientWholePercent(0.75)).toBe('75%')
     expect(clientDate('2026-03-27')).toBe('March 27, 2026')
   })
-  it('normalises engine hyphen-minus and detects negatives', () => {
-    expect(normaliseMinus('cash would be -1.5%')).toBe(`cash would be ${MINUS}1.5%`)
-    expect(normaliseMinus('2026-03-23')).toBe('2026-03-23')
+  it('detects negatives', () => {
     expect(isNegative(`${MINUS}45,850`)).toBe(true)
     expect(isNegative('+69,411')).toBe(false)
   })
@@ -102,12 +100,6 @@ describe('measure', () => {
     )
     it('fmtWeight shows a negative weight rather than hiding it', () => {
       expect(fmtWeight(-0.015)).toBe(`${MINUS}1.5`)
-    })
-  })
-
-  describe('normaliseMinus leaves non-negative hyphens alone', () => {
-    it.each(['3-5', 'acc-002', '2026-03-23'])('%s is unchanged', (s) => {
-      expect(normaliseMinus(s)).toBe(s)
     })
   })
 

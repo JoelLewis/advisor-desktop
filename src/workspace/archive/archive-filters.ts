@@ -2,7 +2,7 @@ import type { SelectOption } from '@/kit/select/Select'
 import { ARCHIVE_KINDS, isArchiveKind, type ArchiveFilters, type ArchiveKind } from '@/types/workspace-supervision'
 import { ACT_KIND_LABEL } from '@/workspace/thread/act-kind-label'
 
-export const ARCHIVE_KIND_LABEL: Readonly<Record<ArchiveKind, string>> = { ...ACT_KIND_LABEL, sent_message: 'Sent message' }
+const ARCHIVE_KIND_LABEL: Readonly<Record<ArchiveKind, string>> = { ...ACT_KIND_LABEL, sent_message: 'Sent message' }
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/
 

@@ -14,7 +14,7 @@ import type { BenchmarkKind } from '@/types/portfolio'
  * that each named symbol resolves to a real, positive, USD-denominated price in `positions.ts`
  * rather than a plausible-looking ticker with no quote behind it.
  */
-export type AssetClassAllocation = { assetClass: string; targetWeight: number; implementationSymbol?: string }
+type AssetClassAllocation = { assetClass: string; targetWeight: number; implementationSymbol?: string }
 
 export type ModelDefinition = {
   id: string

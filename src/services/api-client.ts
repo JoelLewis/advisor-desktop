@@ -54,7 +54,3 @@ export function put<T>(path: string, body: unknown, headers?: Record<string, str
     body: JSON.stringify(body),
   }).then(handleResponse<T>)
 }
-
-export function del<T>(path: string): Promise<T> {
-  return fetch(`${BASE_URL}${path}`, { method: 'DELETE' }).then(handleResponse<T>)
-}

@@ -5,7 +5,7 @@ export const BLOTTER_STATUSES = ['working', 'pending_compliance', 'filled', 'can
 export type BlotterStatus = (typeof BLOTTER_STATUSES)[number]
 export const isBlotterStatus = (value: unknown): value is BlotterStatus => typeof value === 'string' && (BLOTTER_STATUSES as readonly string[]).includes(value)
 
-export type BlotterSource = { kind: 'ticket' } | { kind: 'proposal'; proposalId: string; title: string; version: number; threadId: string }
+type BlotterSource = { kind: 'ticket' } | { kind: 'proposal'; proposalId: string; title: string; version: number; threadId: string }
 export type BlotterRow = {
   id: string; accountId: string; accountName: string; symbol: string; side: 'buy' | 'sell'
   /** Shares, option contracts, or a bond's par amount in USD, as `quantityUnit` says. */

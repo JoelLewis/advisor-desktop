@@ -233,7 +233,7 @@ function weightsFor(account: Account, positions: readonly Position[] = getPositi
  * mandate names. `benchmarkId` seeds the benchmark line (one index, one series); `modelId` is null for
  * a custom mandate, which follows no model.
  */
-export function benchmarkOf(account: Account): { modelId: string | null; benchmarkId: string; benchmarkName: string; benchWeights: Map<string, number> } {
+function benchmarkOf(account: Account): { modelId: string | null; benchmarkId: string; benchmarkName: string; benchWeights: Map<string, number> } {
   if (account.mandate === 'custom') {
     return { modelId: null, benchmarkId: account.id, benchmarkName: account.benchmark.name, benchWeights: new Map(account.benchmark.weights.map((w) => [w.assetClass, w.weight])) }
   }
@@ -254,7 +254,7 @@ export function benchmarkOf(account: Account): { modelId: string | null; benchma
 export function riskProfileFor(account: Account, positions?: readonly Position[]) {
   const { weights, benchWeights, modelId, benchmarkId, benchmarkName } = weightsFor(account, positions)
   // The account's own one-year return and its benchmark's, taken from the single derivation rather
-  // than re-expressed here. `portfolioReturn1Y(weights) + Σ wᵢ·edgeᵢ` is algebraically the same
+  // than re-expressed here. `the weighted one-year return + Σ wᵢ·edgeᵢ` is algebraically the same
   // quantity, but it rounds at a different point and so disagreed with the benchmark table by one
   // unit in the fourth decimal on 12 of the 47 accounts — visible as 10.09% on the performance tab
   // against 10.08% on risk analytics for the same account on the same date.

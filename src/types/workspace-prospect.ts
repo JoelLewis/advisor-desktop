@@ -6,7 +6,7 @@ export type ProspectStage = 'contact' | 'discovery' | 'proposal' | 'accepted' | 
 
 /** One line of a statement she shared: held away, never an engine position. */
 export type Holding = { symbol: string; name: string; quantity: number; costBasis: number; acquired: string; assetClass: AssetClass }
-export type StatementAccountType = 'taxable_brokerage' | '403b'
+type StatementAccountType = 'taxable_brokerage' | '403b'
 export type Statement = { id: string; custodian: string; accountType: StatementAccountType; holdings: Holding[]; cash: number; asOf: string }
 
 export type DisclosureDocument = 'form_crs' | 'adv_2a' | 'adv_2b' | 'privacy_notice'
@@ -24,21 +24,21 @@ export const AT_ONBOARDING: ReadonlySet<DisclosureDocument> = new Set<Disclosure
 /** Append-only: each delivery names the act that recorded it. */
 export type DisclosureDelivery = { document: DisclosureDocument; actId: string; at: string; deliveredBy: string }
 
-export type Questionnaire = { answers: RiskAnswer[]; receivedAt: string }
-export type PartyStepKind = 'questionnaire' | 'statements' | 'acceptance'
+type Questionnaire = { answers: RiskAnswer[]; receivedAt: string }
+type PartyStepKind = 'questionnaire' | 'statements' | 'acceptance'
 /** A step of hers, with the firm-only record of how the one presenter performed it. */
-export type PartyStep = { kind: PartyStepKind; at: string; messageId: string; actId?: string; viaPresenter: ViaPresenter }
-export type ProspectTask = { id: string; text: string; ownerId: string; due: string; createdAt: string; fromActId: string }
+type PartyStep = { kind: PartyStepKind; at: string; messageId: string; actId?: string; viaPresenter: ViaPresenter }
+type ProspectTask = { id: string; text: string; ownerId: string; due: string; createdAt: string; fromActId: string }
 
-export type OnboardingItemId = 'account_application' | 'cip' | 'ofac' | 'trusted_contact' | 'source_of_funds' | 'advisory_agreement' | 'adv_2b' | 'privacy_notice' | 'acat'
+type OnboardingItemId = 'account_application' | 'cip' | 'ofac' | 'trusted_contact' | 'source_of_funds' | 'advisory_agreement' | 'adv_2b' | 'privacy_notice' | 'acat'
 export type OnboardingItemStatus = 'open' | 'awaiting_signature' | 'delivered' | 'not_started'
 export type OnboardingItem = { id: OnboardingItemId; label: string; status: OnboardingItemStatus; ownerId: string; due?: string }
 export type OnboardingChecklist = { openedAt: string; acceptanceActId: string; items: OnboardingItem[] }
 
-export type StageChange = { stage: ProspectStage; at: string }
-export type Coffee = { at: string; messageId: string; authorId: string }
-export type SentProposal = { proposalId: string; version: number; actId: string; messageId: string; at: string }
-export type Acceptance = { proposalId: string; version: number; actId: string; at: string }
+type StageChange = { stage: ProspectStage; at: string }
+type Coffee = { at: string; messageId: string; authorId: string }
+type SentProposal = { proposalId: string; version: number; actId: string; messageId: string; at: string }
+type Acceptance = { proposalId: string; version: number; actId: string; at: string }
 
 /** The session's record of a prospect: reset with the workspace store. */
 export type ProspectRecord = {
@@ -124,7 +124,7 @@ export type BestInterestRecord = {
 }
 /** What the engine would file for the latest version, shown before approval; the advisor adds the rationale. */
 export type BestInterestDraft = Omit<BestInterestRecord, 'rationale'>
-export type ProspectApproval = { version: number; fingerprint: string; actId: string; approverId: string; at: string }
+type ProspectApproval = { version: number; fingerprint: string; actId: string; approverId: string; at: string }
 export type ProspectProposal = { id: string; prospectId: string; title: string; threadId: string; versions: ProspectProposalVersion[]; approval?: ProspectApproval }
 export type ProspectProposalDetail = ProspectProposal & { sent?: SentProposal; accepted?: Acceptance; bestInterestDraft: BestInterestDraft }
 /** What one of her steps (or a clock jump) returns: her steps as they now stand, and the act it recorded, if any. */

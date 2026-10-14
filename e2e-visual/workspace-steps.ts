@@ -103,7 +103,7 @@ export async function goTo(page: Page, destination: string) {
   await page.keyboard.press('Enter')
 }
 
-export const PELL_REPLY_TEXT = 'Thank you for the coffee. Here are my answers to the questionnaire and my two statements.'
+const PELL_REPLY_TEXT = 'Thank you for the coffee. Here are my answers to the questionnaire and my two statements.'
 export const PELL_ACCEPTANCE_TEXT = "I've read the proposal and I'd like to go ahead."
 const JUMP_LABEL = { reply: 'Advance to her reply · Thu 26 Feb 09:10 ET', acceptance: 'Advance to her acceptance · Mon 2 Mar 10:00 ET' } as const
 

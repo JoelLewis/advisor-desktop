@@ -1,4 +1,4 @@
-export type ActivityType =
+type ActivityType =
   | 'trade'
   | 'meeting'
   | 'email'
@@ -10,7 +10,7 @@ export type ActivityType =
   | 'compliance'
   | 'system'
 
-export type ActivitySource = 'pms' | 'crm' | 'oms' | 'compliance' | 'ai' | 'manual'
+type ActivitySource = 'pms' | 'crm' | 'oms' | 'compliance' | 'ai' | 'manual'
 
 export type ActivityItem = {
   id: string

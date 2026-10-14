@@ -1,4 +1,4 @@
-import type { RiskQuestion, AccountRequirement } from '@/types/onboarding'
+import type { RiskQuestion } from '@/types/onboarding'
 
 export const riskQuestions: RiskQuestion[] = [
   {
@@ -77,58 +77,5 @@ export const riskQuestions: RiskQuestion[] = [
       { label: 'I accept moderate fluctuations for better long-term returns', score: 55 },
       { label: 'I am comfortable with significant fluctuations for maximum growth', score: 85 },
     ],
-  },
-]
-
-export const accountRequirements: AccountRequirement[] = [
-  {
-    accountType: 'individual', label: 'Individual Brokerage',
-    additionalFields: [],
-    requiredDocuments: ['Advisory Agreement', 'ADV Part 2 Brochure', 'W-9', 'Form CRS', 'Privacy Notice'],
-  },
-  {
-    accountType: 'joint', label: 'Joint Account',
-    additionalFields: [
-      { name: 'jointOwnerName', label: 'Joint Owner Full Name', type: 'text', required: true },
-      { name: 'jointOwnerSSN', label: 'Joint Owner SSN (last 4)', type: 'text', required: true },
-      { name: 'jointOwnerDOB', label: 'Joint Owner Date of Birth', type: 'date', required: true },
-    ],
-    requiredDocuments: ['Advisory Agreement', 'ADV Part 2 Brochure', 'W-9', 'Form CRS', 'Privacy Notice', 'Joint Account Agreement'],
-  },
-  {
-    accountType: 'trust', label: 'Trust Account',
-    additionalFields: [
-      { name: 'trustName', label: 'Trust Name', type: 'text', required: true },
-      { name: 'trustEIN', label: 'Trust EIN', type: 'text', required: true },
-      { name: 'trustDate', label: 'Trust Formation Date', type: 'date', required: true },
-      { name: 'trusteeNames', label: 'Trustee Name(s)', type: 'text', required: true },
-    ],
-    requiredDocuments: ['Advisory Agreement', 'ADV Part 2 Brochure', 'W-9', 'Form CRS', 'Privacy Notice', 'Trust Certification', 'Trust Document (first & last pages)'],
-  },
-  {
-    accountType: 'traditional_ira', label: 'Traditional IRA',
-    additionalFields: [
-      { name: 'beneficiaryName', label: 'Primary Beneficiary', type: 'text', required: true },
-      { name: 'beneficiaryRelation', label: 'Beneficiary Relationship', type: 'select', required: true, options: ['Spouse', 'Child', 'Other Family', 'Trust', 'Estate'] },
-    ],
-    requiredDocuments: ['Advisory Agreement', 'ADV Part 2 Brochure', 'W-9', 'Form CRS', 'Privacy Notice', 'IRA Application', 'Beneficiary Designation Form'],
-  },
-  {
-    accountType: 'roth_ira', label: 'Roth IRA',
-    additionalFields: [
-      { name: 'beneficiaryName', label: 'Primary Beneficiary', type: 'text', required: true },
-      { name: 'beneficiaryRelation', label: 'Beneficiary Relationship', type: 'select', required: true, options: ['Spouse', 'Child', 'Other Family', 'Trust', 'Estate'] },
-    ],
-    requiredDocuments: ['Advisory Agreement', 'ADV Part 2 Brochure', 'W-9', 'Form CRS', 'Privacy Notice', 'Roth IRA Application', 'Beneficiary Designation Form'],
-  },
-  {
-    accountType: 'entity', label: 'Entity (LLC/Corp)',
-    additionalFields: [
-      { name: 'entityName', label: 'Entity Legal Name', type: 'text', required: true },
-      { name: 'entityEIN', label: 'Entity EIN', type: 'text', required: true },
-      { name: 'entityType', label: 'Entity Type', type: 'select', required: true, options: ['LLC', 'S-Corp', 'C-Corp', 'Partnership', 'Sole Proprietorship'] },
-      { name: 'authorizedSigner', label: 'Authorized Signer', type: 'text', required: true },
-    ],
-    requiredDocuments: ['Advisory Agreement', 'ADV Part 2 Brochure', 'W-9', 'Form CRS', 'Privacy Notice', 'Entity Resolution', 'Articles of Incorporation/Organization', 'Operating Agreement'],
   },
 ]

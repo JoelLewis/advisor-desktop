@@ -10,9 +10,3 @@ export function visibilityWords(visibility: Visibility, party: Party = 'client')
     case 'client': return `${party.toUpperCase()} CAN SEE`
   }
 }
-
-export const VISIBILITY_WORDS: Readonly<Record<Visibility, string>> = {
-  private: visibilityWords('private'),
-  internal: visibilityWords('internal'),
-  client: visibilityWords('client'),
-}

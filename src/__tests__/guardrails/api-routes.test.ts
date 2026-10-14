@@ -77,7 +77,7 @@ describe('the services and the handlers agree', () => {
 
 const UI_ROOTS = ['src/workspace', 'src/app', 'src/kit', 'src/hooks']
 /** A request function (not `ApiClientError`) taken from the API client: only services make requests. */
-const REQUEST_IMPORT = /import\s*\{[^}]*\b(get|post|put|del)\b[^}]*\}\s*from\s*['"]@\/services\/api-client['"]/
+const REQUEST_IMPORT = /import\s*\{[^}]*\b(get|post|put)\b[^}]*\}\s*from\s*['"]@\/services\/api-client['"]/
 
 describe('only services make requests', () => {
   it.each(UI_ROOTS.flatMap(listSourceFiles))('%s imports no request function from the API client', (file) => {

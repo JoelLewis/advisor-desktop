@@ -68,7 +68,7 @@ export const calendarEvents: CalendarEvent[] = [
     startTime: '2026-02-27T14:00:00-05:00', endTime: '2026-02-27T15:00:00-05:00',
     location: 'Zoom', notes: 'AAPL concentration, wash sale window, ESG interest', prepCompleted: false, attendees: ['cli-003', 'user-001'],
   },
-  // Mon Mar 2 — Michael Martinez's birthday is 7 December (nba-009), so this is a check-in, not a birthday call.
+  // Mon Mar 2 — Michael Martinez's birthday is 7 December (a December birthday), so this is a check-in, not a birthday call.
   {
     id: 'evt-011', title: 'Check-in Call — Michael Martinez',
     clientId: 'cli-006', clientName: 'Michael Martinez', householdId: 'hh-004', meetingType: 'ad_hoc',

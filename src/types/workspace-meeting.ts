@@ -56,7 +56,7 @@ export type Meeting = {
   tasks: MeetingTask[]
 }
 
-export type Attendee = { id: string; name: string }
+type Attendee = { id: string; name: string }
 /** The calendar event, in UTC, with its attendees named. */
 export type MeetingEvent = { id: string; title: string; start: string; end: string; location?: string; attendees: Attendee[]; householdId: string; clientId: string }
 

@@ -20,13 +20,13 @@ export type HouseholdAccount = HouseholdAccountBase & (
   | { mandate: 'custom'; mandateSummary: string }
 )
 /** An account the firm does not manage: its value as last reported, outside the firm's view. */
-export type HeldAwayHolding = { id: string; ownerName: string; institution: string; accountType: string; value: number; reportedOn: string }
+type HeldAwayHolding = { id: string; ownerName: string; institution: string; accountType: string; value: number; reportedOn: string }
 /** `funded` is current funding over the target, a fraction. */
-export type PlanGoal = { id: string; name: string; probability: number; funded: number; status: GoalStatus }
-export type TaxpayerWindow = { saleId: string; accountName: string; symbol: string; name: string; saleDate: string; through: string; loss: number }
+type PlanGoal = { id: string; name: string; probability: number; funded: number; status: GoalStatus }
+type TaxpayerWindow = { saleId: string; accountName: string; symbol: string; name: string; saleDate: string; through: string; loss: number }
 export type IpsOnFile = { documentId: string; name: string; signatureStatus: SignatureStatus; signedOn?: string }
-export type HouseholdOpenItem = { id: string; text: string; source: string }
-export type HouseholdMember = { clientId: string; name: string; relationship: HouseholdRelationship; dateOfBirth: string }
+type HouseholdOpenItem = { id: string; text: string; source: string }
+type HouseholdMember = { clientId: string; name: string; relationship: HouseholdRelationship; dateOfBirth: string }
 
 export type HouseholdSummary = {
   id: string; name: string
@@ -46,9 +46,9 @@ export type HouseholdSummary = {
   asOf: string
 }
 
-export type DocumentRow = { id: string; name: string; type: DocumentType; clientName: string; signatureStatus: SignatureStatus; updatedOn: string }
+type DocumentRow = { id: string; name: string; type: DocumentType; clientName: string; signatureStatus: SignatureStatus; updatedOn: string }
 export type CommunicationRow = { id: string; clientName: string; channel: CommChannel; direction: CommDirection; subject: string; summary: string; at: string }
-export type ActivityRow = { id: string; title: string; description: string; at: string }
+type ActivityRow = { id: string; title: string; description: string; at: string }
 /** A meeting on the household's calendar: one the workspace runs carries its state and thread; any other is a calendar entry. */
 export type MeetingRef = { eventId: string; title: string; start: string; end: string; state: MeetingState | 'calendar'; threadId?: string }
 

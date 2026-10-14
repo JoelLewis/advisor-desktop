@@ -22,7 +22,7 @@ function block(css: string, selector: string): string {
   throw new Error(`unterminated block for ${selector}`)
 }
 
-export function parsePalette(body: string): Palette {
+function parsePalette(body: string): Palette {
   const palette: Palette = new Map()
   for (const m of body.matchAll(/--ws-([a-z0-9-]+):\s*oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\)/g)) {
     palette.set(m[1]!, { l: Number(m[2]), c: Number(m[3]), h: Number(m[4]) })

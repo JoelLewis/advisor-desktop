@@ -39,12 +39,7 @@ export const ASSET_CLASS_RISK: Readonly<Record<AssetClass, AssetClassRisk>> = {
   private_equity:   { vol: 0.230, return1Y: 0.112 },
 }
 
-export const RISK_FREE_RATE = 0.04 as const
 export const Z_95 = 1.645 as const
-/** Downside deviation as a fraction of total volatility, under a symmetric-return assumption. */
-const DOWNSIDE_FRACTION = 0.70
-/** Modeled trailing-3-year maximum drawdown as a multiple of annualized volatility. */
-const MAX_DRAWDOWN_MULTIPLE = 1.2
 
 /** A class with no assumption is a broken invariant, never a default: the same throw as the correlation lookup. */
 function risk(assetClass: string): AssetClassRisk {
@@ -132,7 +127,7 @@ export function assetClassWeights(
 }
 
 /** The reference market the betas are measured against. */
-export const BETA_REFERENCE = 'us_equity' satisfies AssetClass
+const BETA_REFERENCE = 'us_equity' satisfies AssetClass
 
 /** βᵢ = ρ(i, US equity) · σᵢ / σ_US equity: read from the correlation and volatility assumptions, never set beside them. */
 export function assetClassBeta(assetClass: string): number {
@@ -145,15 +140,9 @@ export function portfolioBeta(weights: ReadonlyMap<string, number>): number {
   return beta
 }
 
-export function portfolioReturn1Y(weights: ReadonlyMap<string, number>): number {
-  let r = 0
-  for (const [ac, w] of weights) r += w * risk(ac).return1Y
-  return r
-}
-
 /**
- * One asset class's modeled one-year index return, through the same lookup `portfolioReturn1Y` uses,
- * so Σ wᵢ·assetClassReturn1Y(i) equals `portfolioReturn1Y`; an unmapped class throws on both.
+ * One asset class's modeled one-year index return. The weighted return of a portfolio is
+ * Σ wᵢ·assetClassReturn1Y(i); an unmapped class throws.
  */
 export function assetClassReturn1Y(assetClass: string): number {
   return risk(assetClass).return1Y
@@ -205,20 +194,4 @@ export function parametricVaR(
   z: number = Z_95,
 ): number {
   return value * z * annualVol * Math.sqrt(horizonMonths / 12)
-}
-
-export function sharpe(return1Y: number, vol: number): number {
-  return vol === 0 ? 0 : (return1Y - RISK_FREE_RATE) / vol
-}
-
-export function downsideDeviation(vol: number): number {
-  return vol * DOWNSIDE_FRACTION
-}
-
-export function sortino(return1Y: number, dd: number): number {
-  return dd === 0 ? 0 : (return1Y - RISK_FREE_RATE) / dd
-}
-
-export function modeledMaxDrawdown(vol: number): number {
-  return -MAX_DRAWDOWN_MULTIPLE * vol
 }

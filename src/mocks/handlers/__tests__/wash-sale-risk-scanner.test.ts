@@ -1,5 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
-import { lossAllowedNow, lossDeferred, lossDisallowed, washesOnSale } from '@/lib/tax-rules'
+import { lossAllowedNow, lossDeferred, lossDisallowed } from '@/lib/tax-rules'
+
+const washesOnSale = (lot: { saleWash: { deferredShares: number; disallowedShares: number } }) =>
+  lot.saleWash.deferredShares + lot.saleWash.disallowedShares > 0
 
 /**
  * Sell-side §1091 for each lot the harvest scanner lists. No fixture has a loss lot whose sale

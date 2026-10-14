@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { calendarEvents } from '@/mocks/data/calendar'
-import { nbas } from '@/mocks/data/nbas'
 import { activities } from '@/mocks/data/activities'
 import { documents } from '@/mocks/data/documents'
 import { prospects } from '@/mocks/data/prospects'
@@ -36,21 +35,10 @@ describe('Dr. Amanda Pell, the referral', () => {
     })
   })
 
-  it('nba-015 counts only her transferable account\'s fee, dates the introduction 20 Feb and labels the Form CRS timing firm policy', () => {
-    const nba = nbas.find((n) => n.id === 'nba-015')
-    expect(nba).toMatchObject({ estimatedImpact: 20_850, suggestedAction: 'Firm policy: deliver Form CRS before the coffee. Send James a thank-you note' })
-    expect(nba?.description).toContain('on 20 Feb.')
-  })
-
-  it('names her in nba-015 and act-019, each crediting James Thompson', () => {
-    const texts = [
-      nbas.find((n) => n.id === 'nba-015')?.description,
-      activities.find((a) => a.id === 'act-019')?.description,
-    ]
-    for (const text of texts) {
-      expect(text).toContain('Dr. Amanda Pell')
-      expect(text).toMatch(/James/)
-    }
+  it('names her in act-019, crediting James Thompson', () => {
+    const text = activities.find((a) => a.id === 'act-019')?.description
+    expect(text).toContain('Dr. Amanda Pell')
+    expect(text).toMatch(/James/)
   })
 
   it('is prospect prsp-011 in the CRM: a referral from cli-008, assigned to Adrian Hale', () => {
@@ -71,9 +59,8 @@ describe('William Foster, one story', () => {
       ...documents.filter((d) => d.clientId === foster).map((d) => d.name),
       ...activities.filter((a) => a.entityId === foster).flatMap((a) => [a.title, a.description]),
       ...complianceAlerts.filter((c) => c.entityId === foster).flatMap((c) => [c.title, c.description]),
-      ...nbas.filter((n) => n.clients.some((c) => c.id === foster)).flatMap((n) => [n.title, n.description, n.trigger.value, n.actionRoute?.aiMessage ?? '']),
     ]
-    expect(texts.length).toBeGreaterThan(8)
+    expect(texts.length).toBeGreaterThan(4)
     for (const text of texts) expect(text).not.toMatch(/account opening|new (individual )?brokerage|opened Feb|initial deposit|account application|Account Activated|Custodian Setup/i)
   })
 })

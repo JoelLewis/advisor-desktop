@@ -1,5 +1,5 @@
 import type { ActivityItem } from '@/types/activity'
-import { driftBatchFacts } from './nbas'
+import { driftBatchFacts } from './drift-facts'
 import { accounts } from './accounts'
 import { getPositionsForAccount } from './positions'
 import { realizedSales } from './realized-sales'
@@ -105,7 +105,7 @@ export const activities: ActivityItem[] = [
   },
   {
     id: 'act-012', type: 'system', source: 'pms',
-    // §0.7 · the count and the bands come from the drift engine, as nba-001's do.
+    // §0.7 · the count and the bands come from the drift engine.
     title: `Drift alert — ${driftBatchFacts().accountCount} accounts outside their model's band`,
     description: `${driftBatchFacts().accountCount} client accounts are outside their own model's drift band (${driftBatchFacts().bands.join(', ')}).`,
     timestamp: '2026-02-23T13:00:00Z', read: true,

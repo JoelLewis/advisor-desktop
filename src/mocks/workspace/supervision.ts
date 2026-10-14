@@ -13,11 +13,11 @@ import { visibleProposal } from './proposal-acts'
 import { canSeeThread, isFirmViewer } from './visibility'
 import { partyOfThread } from './party'
 
-export const COMPLIANCE_ACT_KINDS: ReadonlySet<BindingActKind> = new Set(['release_orders', 'return_to_advisor', 'escalate', 'dispose_alert', 'review_correspondence'])
+const COMPLIANCE_ACT_KINDS: ReadonlySet<BindingActKind> = new Set(['release_orders', 'return_to_advisor', 'escalate', 'dispose_alert', 'review_correspondence'])
 
 const SEVERITY_ORDER: Readonly<Record<AlertSeverity, number>> = { critical: 0, warning: 1, info: 2 }
 
-export function ordersItem(proposal: Proposal, approval: ApprovalRecord): OrdersItem {
+function ordersItem(proposal: Proposal, approval: ApprovalRecord): OrdersItem {
   const version = proposal.versions.find((v) => v.n === approval.version)
   const account = accounts.find((a) => a.id === proposal.accountId)
   if (!version || !account) throw new Error(`Approval ${approval.actId} names a missing version or account`)
@@ -33,7 +33,7 @@ export function ordersItem(proposal: Proposal, approval: ApprovalRecord): Orders
   }
 }
 
-export function alertItem(alert: ComplianceAlert): AlertItem {
+function alertItem(alert: ComplianceAlert): AlertItem {
   const outcome = alertDisposal(alert.id)?.outcome
   return {
     kind: 'alert', id: alert.id, title: alert.title, alert, trail: recordTrailFor(alert.id), context: alertContext(alert),
@@ -42,7 +42,7 @@ export function alertItem(alert: ComplianceAlert): AlertItem {
   }
 }
 
-export function correspondenceItem(sent: SentMessage): CorrespondenceItem {
+function correspondenceItem(sent: SentMessage): CorrespondenceItem {
   const party = partyOfThread(sent.thread)
   return {
     kind: 'correspondence', id: sent.message.id, title: `Message to ${party.name}`, threadId: sent.thread.id,

@@ -9,7 +9,7 @@ export const ATTRIBUTION_PERIODS = [
 export type AttributionPeriod = (typeof ATTRIBUTION_PERIODS)[number]['id']
 export const isAttributionPeriod = (value: unknown): value is AttributionPeriod => ATTRIBUTION_PERIODS.some((p) => p.id === value)
 
-export type AttributionRow = {
+type AttributionRow = {
   assetClass: AssetClass; portfolioWeight: number; benchmarkWeight: number; portfolioReturn: number; benchmarkReturn: number
   allocation: number; selection: number; interaction: number; total: number
 }

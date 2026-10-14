@@ -2,7 +2,7 @@ import type { ProspectRecord, ProspectStage, ProspectSummary } from '@/types/wor
 import { store } from '@/mocks/data/workspace-store'
 import { canSeeThread, isFirmViewer } from './visibility'
 
-export const PROSPECT_STAGES: readonly ProspectStage[] = ['contact', 'discovery', 'proposal', 'accepted', 'onboarding']
+const PROSPECT_STAGES: readonly ProspectStage[] = ['contact', 'discovery', 'proposal', 'accepted', 'onboarding']
 
 export const prospectOf = (id: string): ProspectRecord | undefined => store().prospects.find((p) => p.id === id)
 

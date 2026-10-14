@@ -40,7 +40,7 @@ describe('workspace seed', () => {
   it('the Brief\'s referral line dates the introduction 20 Feb and labels the Form CRS timing firm policy', () => {
     resetWorkspaceStore()
     expect(store().messages.find((m) => m.id === 'msg-s08')).toMatchObject({
-      kind: 'next_action', nbaId: 'nba-015',
+      kind: 'next_action',
       detail: 'James Thompson introduced her on 20 Feb. Coffee with Adrian Hale today at 15:30 ET; firm policy: deliver Form CRS before it.',
     })
   })

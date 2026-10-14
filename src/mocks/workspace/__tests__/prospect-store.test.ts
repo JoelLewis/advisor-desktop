@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest'
 import { resetWorkspaceStore, store } from '@/mocks/data/workspace-store'
-import { nbas } from '@/mocks/data/nbas'
 import { SEED_LAST_SEQUENCE, SEED_MESSAGES } from '@/mocks/data/workspace-seed'
 import { PELL_ANSWERS, PELL_STATEMENTS } from '@/mocks/data/prospect-script'
 import { riskQuestions } from '@/mocks/data/onboarding'
@@ -22,14 +21,10 @@ describe('the prospect record', () => {
     expect(store().threads.find((t) => t.id === 'th-pell-work')).toMatchObject({ title: 'Pell · prospect work', visibility: 'internal', memberIds: ['user-001', 'user-002', 'user-003'] })
   })
 
-  it('seeds her first message in her thread and the next-best action in the Brief, in seed order', () => {
+  it('seeds her first message in her thread and the next action in the Brief, in seed order', () => {
     expect(SEED_MESSAGES.find((m) => m.id === 'msg-s07')).toMatchObject({ kind: 'text', threadId: 'th-pell', authorId: 'prsp-011' })
-    expect(SEED_MESSAGES.find((m) => m.id === 'msg-s08')).toMatchObject({ kind: 'next_action', threadId: 'th-brief', nbaId: 'nba-015', title: 'Referral: Dr. Amanda Pell', targetThreadId: 'th-pell' })
+    expect(SEED_MESSAGES.find((m) => m.id === 'msg-s08')).toMatchObject({ kind: 'next_action', threadId: 'th-brief', title: 'Referral: Dr. Amanda Pell', targetThreadId: 'th-pell' })
     expect(SEED_LAST_SEQUENCE).toBe(8)
-  })
-
-  it('nba-015 opens her thread', () => {
-    expect(nbas.find((n) => n.id === 'nba-015')?.actionRoute).toEqual({ path: '/t/th-pell' })
   })
 
   it('a firm viewer who can see her internal thread may read her; she, Robert and nobody may not', () => {

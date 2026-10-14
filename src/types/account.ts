@@ -90,12 +90,8 @@ type Account = ModelManagedAccount | CustomMandateAccount;
 
 export type {
   AccountType,
-  AccountStatus,
   TaxTreatment,
-  CostBasisMethod,
   AccountTransition,
-  UMASleeve,
   Account,
   ModelManagedAccount,
-  CustomMandateAccount,
 };

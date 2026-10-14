@@ -16,7 +16,7 @@ type Recorded = { ok: true; act: BindingAct }
 const refuse = (status: ProspectActFailure['status'], code: string, message: string): ProspectActFailure => ({ ok: false, status, code, message })
 const NO_PROPOSAL = refuse(404, 'NO_PROPOSAL', 'Proposal not found.')
 
-export const RATIONALE_MAX = 2000
+const RATIONALE_MAX = 2000
 const ROLLOVER_FOLLOW_UP_DAYS = 5
 
 function sentRefusal(proposal: ProspectProposal): ProspectActFailure | undefined {

@@ -18,7 +18,7 @@ type Household = (typeof households)[number]
 
 export const annualFeeOn = (value: number): number => feeOn(value).fee
 
-export function billingMethodOf(householdId: string): BillingMethod {
+function billingMethodOf(householdId: string): BillingMethod {
   const terms = FEE_TERMS.find((t) => t.householdId === householdId)
   if (!terms) throw new Error(`Household ${householdId} has no fee terms`)
   return terms.method

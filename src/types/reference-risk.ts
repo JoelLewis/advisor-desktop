@@ -20,8 +20,8 @@ export type RiskPosture = {
   /** The order the book is read in, highest first: above, then below, each by |beyond|; within by headroom; glide paths last. */
   sortKey: number
 }
-export type StressRow = { id: string; name: string; description: string; impact: number; impactValue: number }
-export type ConcentrationRow = { symbol: string; name: string; weight: number; limit: number; kind: string; breached: boolean }
+type StressRow = { id: string; name: string; description: string; impact: number; impactValue: number }
+type ConcentrationRow = { symbol: string; name: string; weight: number; limit: number; kind: string; breached: boolean }
 export type AccountRiskView = {
   asOf: string; accountId: string; accountName: string; clientName: string
   /** The model's id, or null for a custom mandate. */
@@ -39,5 +39,5 @@ export type AccountRiskView = {
   stress: StressRow[]
   methods: MethodNote[]
 }
-export type BookRiskRow = { accountId: string; accountName: string; householdName: string; clientName: string; mandateName: string; value: number; volatility: number; var95: number; posture: RiskPosture }
+type BookRiskRow = { accountId: string; accountName: string; householdName: string; clientName: string; mandateName: string; value: number; volatility: number; var95: number; posture: RiskPosture }
 export type BookRiskView = { asOf: string; rows: BookRiskRow[]; aboveTolerance: number; belowTolerance: number; methods: MethodNote[] }

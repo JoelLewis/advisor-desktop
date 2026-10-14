@@ -1,7 +1,7 @@
 import type { BindingAct } from '@/types/workspace'
 import type { SupervisionItem, SupervisionItemKind, SupervisionQueue } from '@/types/workspace-supervision'
 
-export const ITEM_KINDS: readonly SupervisionItemKind[] = ['orders', 'alert', 'correspondence']
+const ITEM_KINDS: readonly SupervisionItemKind[] = ['orders', 'alert', 'correspondence']
 export const isItemKind = (value: string): value is SupervisionItemKind => (ITEM_KINDS as readonly string[]).includes(value)
 export const supervisionHref = (kind: SupervisionItemKind, id: string) => `/supervision/${kind}/${encodeURIComponent(id)}`
 export const ITEM_HEADING: Readonly<Record<SupervisionItemKind, string>> = { orders: 'Orders', alert: 'Alert', correspondence: 'Correspondence' }

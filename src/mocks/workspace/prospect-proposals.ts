@@ -36,7 +36,7 @@ export function visibleProspectProposal(viewerId: string, proposalId: string): P
   return proposal && visibleProspect(viewerId, proposal.prospectId) ? proposal : undefined
 }
 
-export function prospectProposalDetail(proposal: ProspectProposal): ProspectProposalDetail {
+function prospectProposalDetail(proposal: ProspectProposal): ProspectProposalDetail {
   const record = requireProspect(proposal.prospectId)
   return {
     ...proposal,

@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils'
 import { fmtTimestamp } from '@/kit/measure'
 
-export type TrailState = 'DONE' | 'PENDING' | 'NOT STARTED'
+type TrailState = 'DONE' | 'PENDING' | 'NOT STARTED'
 type TrailStep = { label: string; actor?: string; state: TrailState; at?: string }
 
 const STATE: Record<TrailState, string> = {

@@ -18,13 +18,6 @@ export type AUMAccount = {
   baseCurrency?: CurrencyCode
 }
 
-export type SegmentAUM = {
-  segment: string
-  householdCount: number
-  aum: number
-  pctOfAUM: number
-}
-
 export function accountValueUSD(account: AUMAccount, rates: FXRateMap): number {
   if (!account.baseCurrency || account.baseCurrency === 'USD') return account.totalValue
   return convertToBase(account.totalValue, account.baseCurrency, rates)
@@ -52,27 +45,6 @@ export function deriveClientAUM(
 
 export function deriveBookAUM(accounts: readonly AUMAccount[], rates: FXRateMap): number {
   return sumAccountsUSD(accounts, rates)
-}
-
-export function deriveSegmentAUM(
-  households: readonly { id: string; segment: string }[],
-  accounts: readonly AUMAccount[],
-  rates: FXRateMap,
-): SegmentAUM[] {
-  const book = deriveBookAUM(accounts, rates)
-  const grouped = new Map<string, { householdCount: number; aum: number }>()
-  for (const hh of households) {
-    const entry = grouped.get(hh.segment) ?? { householdCount: 0, aum: 0 }
-    entry.householdCount += 1
-    entry.aum += deriveHouseholdAUM(hh.id, accounts, rates)
-    grouped.set(hh.segment, entry)
-  }
-  return [...grouped.entries()].map(([segment, d]) => ({
-    segment,
-    householdCount: d.householdCount,
-    aum: d.aum,
-    pctOfAUM: book === 0 ? 0 : d.aum / book,
-  }))
 }
 
 /**

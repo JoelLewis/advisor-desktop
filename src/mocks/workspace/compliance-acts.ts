@@ -18,7 +18,7 @@ export type Recorded = { ok: true; act: BindingAct }
 /** How the act was performed: through the presenter shortcut, it carries the firm-only marker. */
 export type ActOptions = { viaPresenter?: ViaPresenter }
 
-export const RATIONALE_MAX = 2000
+const RATIONALE_MAX = 2000
 
 const refuse = (status: ComplianceFailure['status'], code: string, message: string): ComplianceFailure => ({ ok: false, status, code, message })
 const via = (options: ActOptions) => (options.viaPresenter ? { viaPresenter: options.viaPresenter } : {})

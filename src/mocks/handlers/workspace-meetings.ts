@@ -21,7 +21,7 @@ function parseSource(value: unknown): AgendaSource | undefined {
 }
 
 /** An agenda body, checked for shape; the engine decides everything else. */
-export function parseAgendaItems(value: unknown): { ok: true; items: AgendaItemInput[] } | { ok: false; message: string } {
+function parseAgendaItems(value: unknown): { ok: true; items: AgendaItemInput[] } | { ok: false; message: string } {
   if (!Array.isArray(value)) return { ok: false, message: 'items must be a list.' }
   const items: AgendaItemInput[] = []
   for (const raw of value) {
@@ -51,7 +51,7 @@ function parseClientWording(value: unknown): { ok: true; value?: ClientWording }
 }
 
 /** A notes body, checked for shape; the engine checks the citations, the owners and the due dates. */
-export function parseNoteLines(value: unknown): { ok: true; lines: NoteLineInput[] } | { ok: false; message: string } {
+function parseNoteLines(value: unknown): { ok: true; lines: NoteLineInput[] } | { ok: false; message: string } {
   if (!Array.isArray(value)) return { ok: false, message: 'lines must be a list.' }
   const lines: NoteLineInput[] = []
   for (const raw of value) {

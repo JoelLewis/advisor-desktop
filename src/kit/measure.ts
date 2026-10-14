@@ -47,10 +47,6 @@ function signed(v: number, min: number, max: number, places = 0): string {
   return sign(v, numberFormat(min, max).format(shift(Math.abs(v), places)), true)
 }
 
-export function normaliseMinus(s: string): string {
-  return s.replace(/(^|[\s(])-(?=\d)/g, `$1${MINUS}`)
-}
-
 export function isNegative(formatted: string): boolean {
   return formatted.startsWith(MINUS)
 }

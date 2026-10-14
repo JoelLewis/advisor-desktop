@@ -19,7 +19,7 @@ import type { ProposalTradeLeg, ProposalViolation, ProposalLegResult, PreTradeCh
  * restrictions. BBBY is also gone: it was delisted in 2023, so no adviser's live restricted list
  * would still carry it.
  */
-export const RESTRICTED_SECURITIES = new Set([
+const RESTRICTED_SECURITIES = new Set([
   'META', 'GOOG', 'GOOGL', // Access person holds a reportable position
   'COIN',                  // Material non-public information — engagement in progress
   'GME', 'AMC',            // Firm-wide restriction — heightened volatility designation
@@ -29,11 +29,11 @@ export const RESTRICTED_SECURITIES = new Set([
 // C23 · diversification — per-kind limits (single-issuer / fund / cash), imported from the one
 // place they are defined (`security-master.ts`), not a blanket 10% restated here.
 // Exported so `oms.ts`'s pre-check handler reads the same 2% floor, rather than a second literal.
-export const CASH_MINIMUM_PCT = 0.02       // 2% cash minimum
+const CASH_MINIMUM_PCT = 0.02       // 2% cash minimum
 
 /** Pooled/individual tech names used by the sector-concentration check. Shared with `oms.ts`'s single-order check. */
-export const TECH_SYMBOLS = ['AAPL', 'MSFT', 'NVDA', 'GOOGL', 'META', 'AMZN', 'TSLA']
-export const SECTOR_LIMIT = 0.40
+const TECH_SYMBOLS = ['AAPL', 'MSFT', 'NVDA', 'GOOGL', 'META', 'AMZN', 'TSLA']
+const SECTOR_LIMIT = 0.40
 /** Every weight rule warns at 80% of its limit and can block above the limit itself. */
 const WARN_AT = 0.8
 

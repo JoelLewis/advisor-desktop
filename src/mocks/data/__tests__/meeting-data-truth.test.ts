@@ -3,7 +3,6 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { calendarEvents } from '@/mocks/data/calendar'
 import { plans } from '@/mocks/data/planning'
-import { nbas } from '@/mocks/data/nbas'
 import { clientComms } from '@/mocks/data/client-comms'
 import { documents } from '@/mocks/data/documents'
 import { realizedSales } from '@/mocks/data/realized-sales'
@@ -65,20 +64,12 @@ describe('one Johnson IPS story', () => {
 
   it('nothing about the Johnsons calls the IPS review overdue or dates it to any other day', () => {
     const texts = [
-      ...nbas.filter((n) => n.clients.some((c) => JOHNSONS.has(c.id)))
-        .flatMap((n) => [n.title, n.description, n.trigger.value, ...(n.complianceInfo?.auditTrail ?? []).map((a) => a.note ?? '')]),
       ...clientComms.filter((c) => JOHNSONS.has(c.clientId)).map((c) => c.summary),
     ]
     for (const text of texts.filter((t) => /\bIPS\b|investment policy/i.test(t))) {
       expect(text).not.toMatch(/overdue/i)
       for (const date of text.match(/\d{4}-\d{2}-\d{2}/g) ?? []) expect(['2025-11-15', '2026-02-25'], text).toContain(date)
     }
-  })
-
-  it('nba-012 states the signed IPS and attributes the annual cadence to firm policy', () => {
-    const nba = nbas.find((n) => n.id === 'nba-012')
-    expect(nba?.title).toBe('Annual review today — Johnson Household')
-    expect(nba?.description).toBe('The Johnson Family Trust IPS was signed on 2025-11-15. Firm policy requires an annual IPS review; it is on the agenda for the annual review on 2026-02-25.')
   })
 })
 

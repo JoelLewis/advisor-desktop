@@ -1,5 +1,5 @@
 import { post } from './api-client'
-import type { TradableAssetClass, TradeSide, TradeOrderType, TimeInForce, BondPriceType, MutualFundAmountType } from '@/types/trading'
+import type { TradableAssetClass, TimeInForce, BondPriceType, MutualFundAmountType } from '@/types/trading'
 import type { CurrencyCode } from '@/types/currency'
 import type { AssetClass } from '@/types/portfolio'
 import type { WashedLoss } from '@/lib/wash-sale'
@@ -40,45 +40,6 @@ export type Order = {
   // Computed
   estimatedValue?: number
   commission?: number
-}
-
-export type TradeRequest = {
-  accountId: string
-  symbol: string
-  side: TradeSide | string
-  quantity: number
-  orderType: TradeOrderType | string
-  limitPrice?: number
-  stopPrice?: number
-  assetClass?: TradableAssetClass
-  timeInForce?: TimeInForce
-  extendedHours?: boolean
-  // Option fields
-  underlying?: string
-  optionType?: 'call' | 'put'
-  strikePrice?: number
-  expirationDate?: string
-  contractMultiplier?: number
-  // Mutual fund fields
-  amountType?: MutualFundAmountType
-  dollarAmount?: number
-  exchangeTargetSymbol?: string
-  // Fixed income fields
-  parAmount?: number
-  bondPriceType?: BondPriceType
-  priceOrYield?: number
-  // Digital asset
-  fractionalQuantity?: boolean
-  estimatedValue?: number
-  commission?: number
-}
-
-export type RebalanceRequest = {
-  accountIds: string[]
-  driftThreshold: number
-  taxAware: boolean
-  /** Preview against this model rather than each account's own; a custom mandate has no own model and needs one. */
-  modelId?: string
 }
 
 export type RebalancePreview = {
@@ -151,7 +112,7 @@ export type ResidualDriftReason =
   | 'not_market_tradable' | 'cash_capped' | 'replacement_hold' | 'below_lot_size'
   | 'excluded_by_constraint' | 'harvest_only' | 'gains_capped' | 'wash_sale_avoided'
 
-export type ProjectedAssetClassDrift = {
+type ProjectedAssetClassDrift = {
   assetClass: AssetClass
   target: number
   actual: number
@@ -207,13 +168,6 @@ export type ProposedTrade = {
   currency: CurrencyCode
 }
 
-export type RebalanceExecution = {
-  accountId: string
-  status: 'submitted' | 'completed' | 'failed'
-  ordersCreated: number
-  estimatedCompletion: string
-}
-
 /**
  * Preview a rebalance without executing it. `submitRebalance` is the same request — one
  * endpoint, one function underneath both names.
@@ -224,27 +178,12 @@ export function previewRebalance(request: { accountIds: string[]; taxAware: bool
 
 // Pre-trade compliance
 
-export type PreTradeViolation = {
+type PreTradeViolation = {
   constraint: string
   severity: 'block' | 'warning'
   currentValue: string
   limit: string
   message: string
-}
-
-export type PreTradeCheckResult = {
-  passed: boolean
-  violations: PreTradeViolation[]
-}
-
-export type PreTradeCheckRequest = {
-  accountId: string
-  symbol: string
-  side: string
-  quantity: number
-  // C28 · pre-trade-compliance — required, not inferred. A missing notional previously fell back
-  // to `quantity * 100`, making concentration limits evadable by trading high-priced securities.
-  estimatedValue: number
 }
 
 // Proposal-level pre-trade compliance — every leg of a multi-leg proposal (a rebalance) applied
@@ -266,7 +205,7 @@ export type PreTradeCheckProposalRequest = {
   trades: ProposalTradeLeg[]
 }
 
-export type ProposalConstraint =
+type ProposalConstraint =
   | 'restricted_securities'
   | 'concentration_limit'
   | 'sector_limit'

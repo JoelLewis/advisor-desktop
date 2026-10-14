@@ -110,7 +110,7 @@ export function replaceMeeting(meeting: Meeting): void {
   s.meetings = s.meetings.map((m) => (m.eventId === meeting.eventId ? meeting : m))
 }
 
-export const currentAgenda = (meeting: Meeting): AgendaVersion | undefined => meeting.agenda[meeting.agenda.length - 1]
+const currentAgenda = (meeting: Meeting): AgendaVersion | undefined => meeting.agenda[meeting.agenda.length - 1]
 
 /** Appends an agenda version and posts its line in the meeting thread. */
 export function appendAgenda(meeting: Meeting, items: AgendaItem[], author: VersionAuthor, changeSummary: string): Meeting {
@@ -192,7 +192,7 @@ export function holdMeeting(viewerId: string, eventId: string): MeetingResult {
   return { ok: true, meeting: held }
 }
 
-export const NOTE_TEXT_MAX = 2000
+const NOTE_TEXT_MAX = 2000
 
 /** The meeting's calendar date where it happens (Eastern), from its event. */
 export function meetingDay(meeting: Meeting): string {

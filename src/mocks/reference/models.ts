@@ -75,7 +75,7 @@ export function accountBenchmark(account: Account): ModelBenchmark {
   return { name: account.benchmark.name, kind: 'mandate', components: account.benchmark.weights.map((w) => ({ assetClass: w.assetClass, index: indexAmong(classes, w.assetClass), weight: w.weight })) }
 }
 
-export const CUSTOM_MANDATE_NAME = 'Custom mandate'
+const CUSTOM_MANDATE_NAME = 'Custom mandate'
 /** The model's name, or "Custom mandate" for an account that follows none. */
 export const mandateNameOf = (account: Account): string => (account.mandate === 'model' ? definition(account.modelId).name : CUSTOM_MANDATE_NAME)
 

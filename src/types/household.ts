@@ -10,11 +10,6 @@ type HouseholdMember = {
   dateOfBirth: string;
 };
 
-type FamilyTreeNode = {
-  member: HouseholdMember;
-  children: FamilyTreeNode[];
-};
-
 type Household = {
   id: string;
   name: string;
@@ -41,8 +36,6 @@ type HouseholdFixture = Omit<Household, 'totalAUM' | 'managedAUM'>;
 
 export type {
   HouseholdRelationship,
-  HouseholdMember,
-  FamilyTreeNode,
   Household,
   HouseholdFixture,
 };

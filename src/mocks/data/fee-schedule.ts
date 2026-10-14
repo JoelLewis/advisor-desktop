@@ -17,7 +17,7 @@ const PUBLISHED_TIERS: readonly ProposalFeeTier[] = [
  * `blendedTieredFee` takes `{ upTo, rate }`; the published tiers carry `{ minAUM, maxAUM, rate, label }`.
  * `upTo` is exactly `maxAUM`: the tiers are contiguous from 0, so `minAUM` and `label` carry nothing the fee needs.
  */
-export function toFeeTiers(tiers: readonly ProposalFeeTier[]): FeeTier[] {
+function toFeeTiers(tiers: readonly ProposalFeeTier[]): FeeTier[] {
   return tiers.map((t) => ({ upTo: t.maxAUM, rate: t.rate }))
 }
 

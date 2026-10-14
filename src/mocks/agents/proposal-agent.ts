@@ -67,7 +67,7 @@ export function proposalTitle(accountId: string): string {
  * where the class has one (`harvestSubstitutions`); a flagged buy that remains has none, so the agent
  * says what it forecloses.
  */
-export function foreclosedHarvestCaveat(accountId: string, built: DraftPreview): string {
+function foreclosedHarvestCaveat(accountId: string, built: DraftPreview): string {
   const account = accounts.find((a) => a.id === accountId)
   if (!account) throw new Error(`Proposal Agent: unknown account ${accountId}`)
   const flagged = new Set(sameWashSaleTaxpayer(account).flatMap(harvestOpportunities).map((o) => o.position.symbol))
@@ -89,7 +89,7 @@ export function foreclosedHarvestCaveat(accountId: string, built: DraftPreview):
 const SUBSTITUTE_HEDGE = ' Whether funds that track similar indices are substantially identical is unsettled, so confirm the substitute before relying on the harvest.'
 
 /** What the agent did instead of foreclosing a flagged harvest, in words with no digits. */
-export function harvestSubstitutionSentence(built: DraftPreview): string {
+function harvestSubstitutionSentence(built: DraftPreview): string {
   if (built.harvestSubstitutions.length === 0) return ''
   return built.harvestSubstitutions.map((s) => {
     const foreclosed = claimNameOf(s.foreclosed.symbol, s.foreclosed.name)

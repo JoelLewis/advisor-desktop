@@ -7,7 +7,7 @@ import { SINGLE_NAME_LIMIT, securityKind } from '@/lib/security-master'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 
 /** The engine's day: her holdings are valued at the 25 Feb close and their holding periods read on it, whatever the session clock says. */
-export const PRICES_AS_OF = MOCK_TODAY_ISO
+const PRICES_AS_OF = MOCK_TODAY_ISO
 export const cents = (v: number) => Math.round(v * 100) / 100
 
 export function closeOf(symbol: string): Close {

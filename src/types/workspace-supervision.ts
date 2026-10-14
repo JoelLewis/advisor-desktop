@@ -60,7 +60,7 @@ export type CorrespondenceItem = {
 
 export type SupervisionItem = OrdersItem | AlertItem | CorrespondenceItem
 export type SupervisionItemKind = SupervisionItem['kind']
-export type DisposedItem = { item: SupervisionItem; act: BindingAct }
+type DisposedItem = { item: SupervisionItem; act: BindingAct }
 export type SupervisionQueue = { orders: OrdersItem[]; alerts: AlertItem[]; correspondence: CorrespondenceItem[]; disposedToday: DisposedItem[] }
 
 export type ArchiveKind = BindingActKind | 'sent_message'
@@ -77,9 +77,9 @@ export type ArchiveFilters = { partyId?: string; kind?: ArchiveKind; from?: stri
 export type Archive = { entries: ArchiveEntry[]; parties: { id: string; name: string }[]; dates: string[] }
 
 type Disposition = { fingerprint: string; rationale: string }
-export type OrdersActRequest = Disposition & { kind: 'release_orders' | 'return_to_advisor' | 'escalate'; proposalId: string; approvalActId: string }
-export type AlertActRequest = Disposition & { kind: 'dispose_alert'; alertId: string; outcome: AlertOutcome }
-export type CorrespondenceActRequest = Disposition & { kind: 'review_correspondence'; messageId: string; outcome: CorrespondenceOutcome }
+type OrdersActRequest = Disposition & { kind: 'release_orders' | 'return_to_advisor' | 'escalate'; proposalId: string; approvalActId: string }
+type AlertActRequest = Disposition & { kind: 'dispose_alert'; alertId: string; outcome: AlertOutcome }
+type CorrespondenceActRequest = Disposition & { kind: 'review_correspondence'; messageId: string; outcome: CorrespondenceOutcome }
 export type ComplianceActRequest = OrdersActRequest | AlertActRequest | CorrespondenceActRequest
 
 /** An item the presenter shortcut disposes of with Mark's default disposition. */

@@ -79,7 +79,7 @@ export type Proposal = { id: string; title: string; accountId: string; clientId:
  */
 export type ApprovalRecord = { proposalId: string; version: number; fingerprint: string; actId: string; approverId: string; at: string; status: 'active' | 'withdrawn' | 'superseded' | 'returned' | 'released' }
 
-export type StagedOrderStatus = 'pending_compliance' | 'withdrawn' | 'returned' | 'filled'
+type StagedOrderStatus = 'pending_compliance' | 'withdrawn' | 'returned' | 'filled'
 
 /** An order staged from an approved version. Compliance releases it (filled) or returns it; the approver may withdraw it. */
 export type StagedOrder = {

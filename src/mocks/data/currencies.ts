@@ -56,5 +56,3 @@ export const FX_RATES_USD_BASE = {
   USDC: 1.0,
   DAI: 1.0,
 } satisfies Record<string, number>
-
-export const FX_RATE_TIMESTAMP = '2026-02-25T16:00:00Z' as const

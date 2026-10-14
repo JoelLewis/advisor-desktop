@@ -74,34 +74,6 @@ export const SINGLE_NAME_LIMIT = 0.10 as const
 export const FUND_LIMIT = 0.35 as const
 export const CASH_LIMIT = 0.15 as const
 
-/**
- * The weight at or below which a holding is not worth a row in the concentration table.
- *
- * Task 10 review — this comparison used to sit on a hand-typed three-decimal weight, so a holding
- * at exactly 2% arrived as the literal `0.02`. It now sits on `marketValue / totalValue`, and
- * `(totalValue * 0.02) / totalValue !== 0.02` for **645 of 16,166 sampled account totals (3.99%)** —
- * e.g. $102,462 yields `0.020000000000000004`, which a bare `> 0.02` admits. Thirty accounts in the
- * book already hold a generated CASH line at exactly 2%; all thirty land on the exact side today,
- * but the next account with an unlucky total would push its cash into the table for no reason a
- * reader could see.
- *
- * The epsilon restores the pre-derivation behaviour — exactly 2% is *below* the bar — and makes it
- * hold regardless of how the division lands. It is a display threshold, not a money bound, so a
- * float-scale tolerance is the right shape here.
- *
- * Excluding cash by asset class instead was considered and rejected: `acc-042` (20.7%),
- * `acc-044` (22.3%) and `acc-046` (18.8%) hold genuinely breaching CASH lines against cash's own
- * 15% IPS limit, and this table's Limit and Status columns exist to show exactly that. No breach is
- * ever hidden by the 2% bar either way — the smallest limit any kind carries is 10%, and the
- * smallest breach in the book is 10.16%.
- */
-const MATERIAL_WEIGHT = 0.02
-const MATERIAL_WEIGHT_EPSILON = 1e-9
-
-export function isMaterialWeight(weight: number): boolean {
-  return weight > MATERIAL_WEIGHT + MATERIAL_WEIGHT_EPSILON
-}
-
 export function securityKind(symbol: string, assetClass: string): SecurityKind {
   if (assetClass === 'cash' || symbol === 'CASH') return 'cash'
   if (FUND_SYMBOLS.has(symbol)) return 'fund'

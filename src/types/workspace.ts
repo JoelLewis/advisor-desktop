@@ -7,9 +7,9 @@ import type { ReferenceView } from './reference'
 export type Role = 'advisor' | 'csa' | 'analyst' | 'compliance' | 'client' | 'prospect'
 export type Person = { id: string; name: string; role: Role }
 export type AgentId = 'drift-monitor' | 'pretrade-check' | 'harvest-scanner' | 'proposal' | 'client-letter' | 'meeting-prep' | 'meeting-notes' | 'prospect-profile' | 'transfer-in'
-export type AgentScope = { may: string[]; mayNot: string[] }
+type AgentScope = { may: string[]; mayNot: string[] }
 /** What an agent produces: findings in a thread, proposal versions, client-letter drafts, a meeting agenda, or meeting notes. */
-export type AgentOutput = 'findings' | 'proposals' | 'letters' | 'agenda' | 'notes'
+type AgentOutput = 'findings' | 'proposals' | 'letters' | 'agenda' | 'notes'
 export type AgentProfile = { id: AgentId; name: string; produces: AgentOutput; scope: AgentScope }
 export type Visibility = 'private' | 'internal' | 'client'
 export type Subject = { type: 'account' | 'household' | 'client' | 'prospect' | 'draft' | 'proposal' | 'prospect_proposal' | 'alert' | 'message' | 'meeting' | 'model' | 'recon_break'; id: string }
@@ -20,8 +20,8 @@ export type Figure = { label: string; value: number; unit: FigureUnit; source: s
 export type Citation = { source: string; asOf: string }
 export type Attention = 'info' | 'attention'
 export type VersionAuthor = { kind: 'agent'; agentId: AgentId } | { kind: 'person'; personId: string }
-export type CarriedFinding = { agentId: AgentId; at: string; claim: string; figures: Figure[]; citations: Citation[]; attention: Attention }
-export type BriefItem = { findingId: string; agentId: AgentId; claim: string; attention: Attention }
+type CarriedFinding = { agentId: AgentId; at: string; claim: string; figures: Figure[]; citations: Citation[]; attention: Attention }
+type BriefItem = { findingId: string; agentId: AgentId; claim: string; attention: Attention }
 export type EmbedKind = 'drift' | 'rebalance_preview'
 export type Message =
   | { kind: 'text'; id: string; threadId: string; authorId: string; at: string; body: string }
@@ -45,7 +45,7 @@ export type Message =
   /** The follow-up tasks the filing created, as they were created. */
   | { kind: 'meeting_tasks'; id: string; threadId: string; at: string; eventId: string; filedActId: string; tasks: MeetingTask[] }
   /** The Brief's line for a next-best action, linking to the thread where it is worked. */
-  | { kind: 'next_action'; id: string; threadId: string; at: string; nbaId: string; title: string; detail: string; targetThreadId: string; linkLabel: string }
+  | { kind: 'next_action'; id: string; threadId: string; at: string; title: string; detail: string; targetThreadId: string; linkLabel: string }
   /** A disclosure delivered to a prospect, in her thread. */
   | { kind: 'disclosure_delivered'; id: string; threadId: string; at: string; prospectId: string; document: DisclosureDocument; actId: string }
   /** A step she took: her questionnaire answered, her statements shared. */

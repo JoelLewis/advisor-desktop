@@ -25,7 +25,7 @@ type Performed = { ok: true; act?: BindingAct } | StepFailure
 const refuse = (status: StepFailure['status'], code: string, message: string): StepFailure => ({ ok: false, status, code, message })
 const NO_PROSPECT = refuse(404, 'NO_PROSPECT', 'Prospect not found.')
 const COFFEE_FIRST = refuse(409, 'COFFEE_FIRST', 'Record the coffee first; her reply follows it.')
-export const COFFEE_NOTE_MAX = 2000
+const COFFEE_NOTE_MAX = 2000
 
 /** The next event is recorded at `iso`, or later if the session clock has already passed it. The clock never runs backwards. */
 const jumpTo = (iso: string) => advanceClockTo(minuteOf(iso) - 1)
@@ -206,7 +206,7 @@ export function advanceProspect(viewerId: string, prospectId: string, to: 'reply
   return done(record, r)
 }
 
-export function partyStepsOf(record: ProspectRecord): PartySteps {
+function partyStepsOf(record: ProspectRecord): PartySteps {
   const replyStep = (isDone: boolean): StepState => (isDone ? 'done' : record.coffee ? 'open' : 'unavailable')
   return {
     questionnaire: replyStep(record.questionnaire !== undefined), statements: replyStep(record.statements.length > 0),

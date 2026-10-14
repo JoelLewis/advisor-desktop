@@ -71,19 +71,6 @@ type Position = {
  */
 type PositionSeed = Omit<Position, 'weight'>;
 
-type HoldingGroup = {
-  assetClass: AssetClass;
-  targetWeight: Percentage;
-  actualWeight: Percentage;
-  drift: Percentage;
-  positions: Position[];
-};
-
-type AssetClassTarget = {
-  assetClass: AssetClass;
-  targetWeight: Percentage;
-};
-
 /**
  * What `benchmark` actually is. Every model here computes its "benchmark" return from its own
  * target weights (`Σ wb·Rb,i` in the attribution) — there is no real external index return series
@@ -92,15 +79,6 @@ type AssetClassTarget = {
  * confused for each other.
  */
 type BenchmarkKind = 'model_policy' | 'external_index';
-
-type ModelAssignment = {
-  id: string;
-  name: string;
-  benchmark: string;
-  benchmarkKind: BenchmarkKind;
-  description: string;
-  assetClasses: AssetClassTarget[];
-};
 
 type AssetClassDrift = {
   assetClass: AssetClass;
@@ -130,34 +108,11 @@ type DriftStatus = {
   needsRebalance: boolean;
 };
 
-type SecurityKind = 'single_name' | 'fund' | 'cash';
-
-type ConcentrationMetric = {
-  positionId: string;
-  symbol: string;
-  name: string;
-  assetClass: AssetClass;
-  marketValue: Currency;
-  weight: Percentage;
-  kind: SecurityKind;
-  limit: Percentage;
-  limitBasis: string;
-  breached: boolean;
-};
-
 export type {
   AssetClass,
-  HoldingPeriod,
   TaxLot,
-  SaleWash,
   Position,
   PositionSeed,
-  HoldingGroup,
-  AssetClassTarget,
   BenchmarkKind,
-  ModelAssignment,
-  AssetClassDrift,
   DriftStatus,
-  SecurityKind,
-  ConcentrationMetric,
 };

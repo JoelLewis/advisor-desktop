@@ -5,7 +5,7 @@ import { nextAt, nextId, nextNumber, pad, store } from '@/mocks/data/workspace-s
 import { isFirmViewer } from '@/mocks/workspace/visibility'
 import { rowQuote } from './quotes'
 
-export type ReferenceRowMessage = Extract<Message, { kind: 'reference_row' }>
+type ReferenceRowMessage = Extract<Message, { kind: 'reference_row' }>
 export type TakeFailure = { ok: false; status: 403 | 404; code: string; message: string }
 export type Taken = { ok: true; created: boolean; thread: Thread; message: ReferenceRowMessage }
 

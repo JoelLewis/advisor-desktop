@@ -67,12 +67,6 @@ type ClientFixture = Omit<Client, 'totalAUM'>;
 
 export type {
   ClientSegment,
-  ReviewFrequency,
-  ClientTier,
-  Address,
-  ContactInfo,
-  RiskTolerance,
-  RiskProfile,
   Client,
   ClientFixture,
 };

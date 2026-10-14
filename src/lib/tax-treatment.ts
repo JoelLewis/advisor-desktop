@@ -21,14 +21,3 @@ export type { TaxTreatment }
 export function isTaxableAccount(treatment: TaxTreatment): boolean {
   return treatment === 'taxable' || treatment === 'trust_taxable'
 }
-
-/**
- * Returns the disclosure copy for a tax-advantaged account, or `null` when the account is one a
- * deductible loss can actually be realized in. Callers gate harvesting surfaces on this returning
- * non-null rather than re-deriving the same taxable/not-taxable split a second way.
- */
-export function harvestingDisclosureFor(treatment: TaxTreatment): string | null {
-  if (isTaxableAccount(treatment)) return null
-  const label = treatment === 'tax_deferred' ? 'tax-deferred' : 'tax-free'
-  return `Tax-loss harvesting is not applicable in a ${label} account: losses realized here are not deductible on the owner's current return, so no tax benefit arises.`
-}

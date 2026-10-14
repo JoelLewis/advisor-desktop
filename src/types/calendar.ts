@@ -1,12 +1,10 @@
-export type MeetingType =
+type MeetingType =
   | 'annual_review'
   | 'quarterly_review'
   | 'planning'
   | 'prospect'
   | 'internal'
   | 'ad_hoc'
-
-export type ScheduleView = 'day' | 'week' | 'agenda'
 
 export type CalendarEvent = {
   id: string

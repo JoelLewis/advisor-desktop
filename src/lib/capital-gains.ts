@@ -1,4 +1,4 @@
-export type HoldingCharacter = 'short' | 'long'
+type HoldingCharacter = 'short' | 'long'
 
 /**
  * §0.6 · what kind of asset a gain is on. A collectible (§408(m): art, coins, any metal) is taxed
