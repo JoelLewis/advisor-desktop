@@ -36,7 +36,8 @@ export type FoundPath = { file: string; path: string; interpolated: boolean }
 
 /**
  * Every path literal in `source`: interpolations replaced by a stand-in, query and hash dropped, API paths left out.
- * Limits: string concatenation (`'/x/' + id`) and `navigate(variable)` are not read; hrefs go through the href helpers.
+ * Limits: string concatenation (`'/x/' + id`) and `navigate(variable)` are not read, and a path written inside an
+ * interpolation (`${a ? '/x' : '/y'}`) is collapsed with it and not read either; hrefs go through the href helpers.
  */
 export function pathLiterals(source: string): { path: string; interpolated: boolean }[] {
   return [...collapseInterpolations(source).matchAll(QUOTED_PATH)].flatMap((m) => {

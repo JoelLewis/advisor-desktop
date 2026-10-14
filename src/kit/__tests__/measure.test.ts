@@ -160,3 +160,22 @@ describe('the kit formats dates without a regional locale', () => {
     expect(readFileSync('src/kit/measure.ts', 'utf8')).not.toContain("'en-GB'")
   })
 })
+
+describe("no source formats or dates in the host's locale or time zone", () => {
+  /** A locale-less `toLocale…String()`, an `Intl` formatter given no locale, or a local-time date getter or setter. */
+  const HOST_DEPENDENT = /\.toLocale(?:Date|Time)?String\(\s*\)|new Intl\.\w+\(\s*(?:undefined\b|\))|\.(?:get|set)(?:FullYear|Month|Date|Day|Hours|Minutes)\(/g
+  it('every file under src, the engine included, names its locale and reads dates in UTC', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { listSourceFiles } = await import('@/__tests__/guardrails/detectors')
+    const files = listSourceFiles('src')
+    expect(files.length).toBeGreaterThan(200)
+    const found = files.flatMap((f) => [...readFileSync(f, 'utf8').matchAll(HOST_DEPENDENT)].map((m) => `${f}: ${m[0]}`))
+    expect(found).toEqual([])
+  })
+  it('the pattern catches what it names', () => {
+    for (const bad of ['n.toLocaleString()', 'd.toLocaleDateString( )', 'new Intl.NumberFormat()', 'new Intl.DateTimeFormat(undefined, {})', 'd.setDate(1)', 'd.getMonth()']) {
+      expect(bad.match(HOST_DEPENDENT), bad).not.toBeNull()
+    }
+    for (const good of ["n.toLocaleString('en-US')", "new Intl.NumberFormat('en-US')", 'd.setUTCDate(1)', 'd.getUTCMonth()']) expect(good.match(HOST_DEPENDENT), good).toBeNull()
+  })
+})

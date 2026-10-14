@@ -75,8 +75,8 @@ export function findBreakpointLiterals(src: string): string[] {
   return [...src.matchAll(BREAKPOINT_LITERAL)].map((m) => m[0])
 }
 
-/** A module path into the mock engine: `@/mocks`, `@/mocks/…`, or a relative `../mocks/…`. */
-const MOCKS_PATH = String.raw`(?:@\/mocks|(?:\.\.\/)+mocks)(?:\/[^'"]*)?`
+/** A module path into the mock engine: `@/mocks`, `@/mocks/…`, or a relative `./mocks/…` or `../mocks/…`. */
+const MOCKS_PATH = String.raw`(?:@\/mocks|(?:\.\.?\/)+mocks)(?:\/[^'"]*)?`
 const MOCKS_FORMS: readonly { form: string; pattern: RegExp }[] = [
   { form: 'value import', pattern: new RegExp(String.raw`^import\s+(?!type\b)[^'"]*?from\s+['"](${MOCKS_PATH})['"]`, 'gm') },
   { form: 'side-effect import', pattern: new RegExp(String.raw`^import\s+['"](${MOCKS_PATH})['"]`, 'gm') },

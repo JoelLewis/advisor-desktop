@@ -68,6 +68,12 @@ describe('findMocksImports', () => {
     expect(findMocksImports("const m = await import('@/mocks/browser')", none)).toEqual(['dynamic import: @/mocks/browser'])
     expect(findMocksImports("import { x } from '@/mocks'", none)).toEqual(['value import: @/mocks'])
   })
+  it('finds a path relative to the entry: ./mocks, as main.tsx would write it', () => {
+    expect(findMocksImports("import { worker } from './mocks/browser'", none)).toEqual(['value import: ./mocks/browser'])
+    expect(findMocksImports("const m = await import('./mocks/browser')", none)).toEqual(['dynamic import: ./mocks/browser'])
+    expect(findMocksImports("import { a } from './../mocks/data/accounts'", none)).toEqual(['value import: ./../mocks/data/accounts'])
+    expect(findMocksImports("import { a } from './mockups/x'", none)).toEqual([])
+  })
   it('allows type-only imports and the dynamic imports it is told to', () => {
     expect(findMocksImports("import type { Account } from '@/mocks/data/accounts'\nexport type { X } from '@/mocks/x'", none)).toEqual([])
     expect(findMocksImports("await import('@/mocks/browser')", { allowDynamic: ['@/mocks/browser'] })).toEqual([])

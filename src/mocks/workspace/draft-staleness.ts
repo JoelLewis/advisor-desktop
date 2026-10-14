@@ -21,13 +21,8 @@ export function latestIntelWindowEnd(clientId: string): string | undefined {
   return openIntelWindows(clientId).map((w) => w.end).sort().pop()
 }
 
-const clientOfDraft = (draft: Draft): string | undefined => {
-  const clientId = store().threads.find((t) => t.id === draft.clientThreadId)?.partyId
-  return clientId
-}
-
 const requireClientOfDraft = (draft: Draft): string => {
-  const clientId = clientOfDraft(draft)
+  const clientId = store().threads.find((t) => t.id === draft.clientThreadId)?.partyId
   if (clientId === undefined) throw new Error(`Recap ${draft.id} is in a thread with no client`)
   return clientId
 }
@@ -42,10 +37,8 @@ const filingMoved = (draft: Draft): boolean => {
 /** The Intel window the recap states no longer matches the engine's, though the filing is unchanged. */
 const windowMoved = (draft: Draft): boolean => {
   const basis = draft.recordBasis
-  const clientId = clientOfDraft(draft)
   if (!basis) return false
-  if (clientId === undefined) throw new Error(`Recap ${draft.id} is in a thread with no client`)
-  return basis.windowEnd !== latestIntelWindowEnd(clientId)
+  return basis.windowEnd !== latestIntelWindowEnd(requireClientOfDraft(draft))
 }
 
 /** A recap is current only while the meeting's filing is exactly the one it was written from and its Intel window is still the engine's. */

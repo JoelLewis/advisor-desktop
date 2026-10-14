@@ -55,12 +55,14 @@ describe('William Foster, one story', () => {
   })
 
   it('no record about him describes a new account or its opening', () => {
-    const texts = [
-      ...documents.filter((d) => d.clientId === foster).map((d) => d.name),
-      ...activities.filter((a) => a.entityId === foster).flatMap((a) => [a.title, a.description]),
-      ...complianceAlerts.filter((c) => c.entityId === foster).flatMap((c) => [c.title, c.description]),
-    ]
-    expect(texts.length).toBeGreaterThan(4)
+    const sources = {
+      documents: documents.filter((d) => d.clientId === foster).map((d) => d.name),
+      activities: activities.filter((a) => a.entityId === foster).flatMap((a) => [a.title, a.description]),
+      alerts: complianceAlerts.filter((c) => c.entityId === foster).flatMap((c) => [c.title, c.description]),
+    }
+    // Every source is read: an empty one would let a renamed field pass this test by reading nothing.
+    for (const [source, found] of Object.entries(sources)) expect(found.length, source).toBeGreaterThanOrEqual(1)
+    const texts = Object.values(sources).flat()
     for (const text of texts) expect(text).not.toMatch(/account opening|new (individual )?brokerage|opened Feb|initial deposit|account application|Account Activated|Custodian Setup/i)
   })
 })

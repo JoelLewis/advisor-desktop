@@ -29,8 +29,17 @@ describe('the fills message', () => {
   })
 
   it('refuses a fills message with no fill rather than rendering a blank unit', () => {
-    vi.spyOn(console, 'error').mockImplementation(() => undefined)
-    const message = { kind: 'fills', id: 'msg-x', threadId: 'th-johnson-review', at: '2026-02-25T15:00:00Z', proposalId: 'prop-001', title: 'Johnson rebalance', version: 1, releaseActId: 'REC-0001', fills: [] } as unknown as FillsMessage
-    expect(() => render(<MemoryRouter><FillsView message={message} /></MemoryRouter>)).toThrow('Fills message msg-x carries no fill')
+    // React reports the throw to the console and rethrows it through a window error event; jsdom prints that
+    // event unless it is handled. Both are the expected refusal, so neither reaches the test output.
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const swallow = (event: ErrorEvent) => event.preventDefault()
+    window.addEventListener('error', swallow)
+    try {
+      const message = { kind: 'fills', id: 'msg-x', threadId: 'th-johnson-review', at: '2026-02-25T15:00:00Z', proposalId: 'prop-001', title: 'Johnson rebalance', version: 1, releaseActId: 'REC-0001', fills: [] } as unknown as FillsMessage
+      expect(() => render(<MemoryRouter><FillsView message={message} /></MemoryRouter>)).toThrow('Fills message msg-x carries no fill')
+    } finally {
+      window.removeEventListener('error', swallow)
+      consoleError.mockRestore()
+    }
   })
 })

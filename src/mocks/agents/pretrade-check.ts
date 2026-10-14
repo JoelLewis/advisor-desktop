@@ -31,11 +31,11 @@ function symbolOf(v: ProposalViolation): string {
 
 function describe(v: ProposalViolation, names: Names): { who: string; label: string; phrase: string } {
   switch (v.category) {
-    case 'restricted_securities': return { who: securityName(names, symbolOf(v)), label: symbolOf(v), phrase: 'is on the restricted list' }
-    case 'concentration_limit': return { who: securityName(names, symbolOf(v)), label: symbolOf(v) === 'CASH' ? 'Cash' : symbolOf(v), phrase: weightPhrase(v, 'concentration') }
+    case 'restricted_securities': { const symbol = symbolOf(v); return { who: securityName(names, symbol), label: symbol, phrase: 'is on the restricted list' } }
+    case 'concentration_limit': { const symbol = symbolOf(v); return { who: securityName(names, symbol), label: symbol === 'CASH' ? 'Cash' : symbol, phrase: weightPhrase(v, 'concentration') } }
     case 'sector_limit': { const sector = sectorOf(v); return { who: sector, label: sector, phrase: weightPhrase(v, 'sector') } }
     case 'cash_minimum': return { who: 'Cash', label: 'Cash', phrase: 'would fall below the minimum reserve' }
-    case 'wash_sale': return { who: securityName(names, symbolOf(v)), label: symbolOf(v), phrase: 'may trigger a wash sale' }
+    case 'wash_sale': { const symbol = symbolOf(v); return { who: securityName(names, symbol), label: symbol, phrase: 'may trigger a wash sale' } }
   }
 }
 

@@ -223,7 +223,7 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
       date: new Date(`${sale.saleDate}T00:00:00Z`).toISOString(),
       type: 'sell',
       symbol: sale.symbol,
-      description: `Sold ${sale.quantity.toLocaleString()} shares ${sale.symbol}`,
+      description: `Sold ${sale.quantity.toLocaleString('en-US')} shares ${sale.symbol}`,
       amount: sale.proceeds,
       quantity: sale.quantity,
       price: sale.proceeds / sale.quantity,
@@ -241,7 +241,7 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
       date: new Date(`${openedOn}T00:00:00Z`).toISOString(),
       type: 'buy',
       symbol: pos.symbol,
-      description: `Bought ${pos.quantity.toLocaleString()} shares ${pos.symbol}`,
+      description: `Bought ${pos.quantity.toLocaleString('en-US')} shares ${pos.symbol}`,
       amount: -pos.costBasis,
       quantity: pos.quantity,
       price: pos.costBasis / pos.quantity,
@@ -258,7 +258,7 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
   for (let i = 0; i < 20; i++) {
     const daysAgo = Math.floor(rand() * 60)
     const date = new Date(baseDate)
-    date.setDate(date.getDate() - daysAgo)
+    date.setUTCDate(date.getUTCDate() - daysAgo)
     const dateStr = date.toISOString()
 
     const typeRoll = rand()
@@ -341,7 +341,7 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
   for (const fill of ledgerFills().filter((f) => f.accountId === accountId)) {
     txns.push({
       id: `txn-${fill.id}`, accountId, date: fill.at, type: fill.side, symbol: fill.symbol,
-      description: `${fill.side === 'buy' ? 'Bought' : 'Sold'} ${fill.quantity.toLocaleString()} shares ${fill.symbol}`,
+      description: `${fill.side === 'buy' ? 'Bought' : 'Sold'} ${fill.quantity.toLocaleString('en-US')} shares ${fill.symbol}`,
       amount: fill.side === 'buy' ? -fill.value : fill.value, quantity: fill.quantity, price: fill.price,
     })
   }
