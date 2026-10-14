@@ -108,6 +108,21 @@ describe('account risk', () => {
       ['Volatility and beta', true], ['Value at risk', true], ['Factor exposures', true], ['Concentration', false], ['Stress tests', true], ['Risk score and tolerance', false],
     ])
   })
+
+  it('states the correlation assumptions and the score scale from the engine, not as fixed prose', () => {
+    const text = (label: string) => risk('acc-002').methods.find((n) => n.label === label)?.text ?? ''
+    expect(text('Volatility and beta')).toContain('US, international and emerging-market equity 0.85 with one another')
+    expect(text('Volatility and beta')).toContain('equity with fixed income 0.30')
+    expect(text('Volatility and beta')).not.toContain('0.35')
+    const scale = text('Risk score and tolerance')
+    for (const [band, name, modelId] of [['Conservative', 'Conservative Income', 'mod-003'], ['Aggressive', 'Aggressive Growth', 'mod-004']] as const) {
+      const vol = modelVolatility(modelId)
+      expect(scale).toContain(`${band}, ${name}, σ ${(vol * 100).toFixed(1)}% at ${riskScoreOf(vol)}`)
+    }
+    // Growth (12.47%) to Aggressive Growth (13.19%): 22 points across 0.72 pp, the steepest step.
+    expect(scale).toContain('The steepest step, from Growth to Aggressive Growth, spans 22 points across 0.72 percentage point of σ')
+    expect(scale).not.toMatch(/66 to 88|0\.1 percentage point/)
+  })
 })
 
 describe('book risk', () => {
@@ -118,6 +133,20 @@ describe('book risk', () => {
     expect(gaps).toEqual([...gaps].sort((a, b) => b - a))
     expect(book?.rows[0]?.accountId).toBe('acc-045')
     expect(book?.aboveTolerance).toBe(book?.rows.filter((r) => r.posture.status === 'above').length)
+  })
+
+  // Phase 7a Task 5b, under the grouped correlations: the digital-asset account, then Robert
+  // Johnson's concentrated individual account, then the conservative clients held on moderate
+  // models; the conservative IRAs of clients who tolerate more sit at the foot.
+  it('puts the grouped-correlation book in order: concentrated and crypto accounts first, conservative IRAs last', () => {
+    const book = bookRiskView('user-001')
+    expect(book?.rows.slice(0, 4).map((r) => [r.accountId, r.posture.score, r.posture.status])).toEqual([
+      ['acc-045', 100, 'above'], ['acc-002', 89, 'above'], ['acc-039', 50, 'above'], ['acc-040', 50, 'above'],
+    ])
+    expect(book?.rows.slice(-3).map((r) => [r.accountId, r.posture.score, r.posture.status])).toEqual([
+      ['acc-003', 12, 'below'], ['acc-046', 13, 'below'], ['acc-020', 12, 'below'],
+    ])
+    expect(book?.aboveTolerance).toBe(10)
   })
 })
 

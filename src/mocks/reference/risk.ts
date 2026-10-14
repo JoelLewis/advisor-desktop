@@ -6,10 +6,11 @@ import { clients } from '@/mocks/data/clients'
 import { households } from '@/mocks/data/households'
 import { MODEL_DEFINITIONS, concentrationFor, riskProfileFor, stressScenariosFor } from '@/mocks/handlers/pms'
 import { isFirmViewer } from '@/mocks/workspace/visibility'
-import { parametricVaR } from '@/lib/risk-model'
+import { correlationAssumptionsText, parametricVaR } from '@/lib/risk-model'
 import { RISK_PROFILE_TABLE, bandFor, type RiskProfile } from '@/lib/risk-profile'
 import { MOCK_NOW_ISO } from '@/lib/clock'
 import { factorRows } from './factors'
+import { modelVolatility } from './models'
 import { riskScoreOf } from './risk-score'
 
 export { riskScoreOf }
@@ -41,13 +42,28 @@ const modelName = (modelId: string) => {
   return model.name
 }
 
-const METHODS: readonly MethodNote[] = [
-  { label: 'Volatility and beta', modeled: true, text: "Modeled, not realized: σ from the firm's asset-class volatility assumptions with a 0.35 correlation between classes; beta from each class's assumed sensitivity to the global equity market. Weights are today's holdings." },
+const pct = (vol: number, digits: number) => (vol * 100).toFixed(digits)
+
+/** Each band's model, its σ and the score it anchors, and the steepest step (most points per unit of σ) between adjacent bands' models — all read from the engine. */
+function scaleText(): string {
+  const anchors = RISK_PROFILE_TABLE.map((b) => ({ label: b.label, name: modelName(b.modelId), vol: modelVolatility(b.modelId), score: riskScoreOf(modelVolatility(b.modelId)) }))
+  const steps = anchors.slice(1).map((hi, i) => {
+    const lo = anchors[i]
+    if (!lo) throw new Error('A risk-band step has no lower band')
+    return { lo, hi, dVol: hi.vol - lo.vol, dScore: hi.score - lo.score }
+  })
+  const steepest = steps.reduce((a, b) => (b.dScore / b.dVol > a.dScore / a.dVol ? b : a))
+  const list = anchors.map((a) => `${a.label}, ${a.name}, σ ${pct(a.vol, 1)}% at ${a.score}`).join('; ')
+  return `The scale's anchors are each band's model: ${list}. The steepest step, from ${steepest.lo.name} to ${steepest.hi.name}, spans ${steepest.dScore} points across ${pct(steepest.dVol, 2)} percentage point of σ, so a small change in holdings there can move the score several points.`
+}
+
+const methods = (): MethodNote[] => [
+  { label: 'Volatility and beta', modeled: true, text: `Modeled, not realized: σ from the firm's asset-class volatility assumptions and its ${correlationAssumptionsText()}. Beta is each class's assumed sensitivity to the global equity market. Weights are today's holdings.` },
   { label: 'Value at risk', modeled: true, text: 'Parametric and normal, one month, 95%: value × 1.645 × σ × √(1/12). A modeled loss the account would not exceed in nineteen months of twenty, not a realized one.' },
   { label: 'Factor exposures', modeled: true, text: "Each asset class carries a loading on each factor, a model assumption rather than an estimate from returns; the market loading is the class's beta. An account's exposure is its weights times the loadings; its benchmark's is the model's targets times the loadings." },
   { label: 'Concentration', modeled: false, text: 'The Herfindahl-Hirschman index of position weights (0 to 10,000) and its effective number of positions; limits are the IPS limits for a single issuer, a pooled vehicle and cash.' },
   { label: 'Stress tests', modeled: true, text: "Each scenario's asset-class returns replayed on today's holdings." },
-  { label: 'Risk score and tolerance', modeled: false, text: "The account's σ placed on the questionnaire's 0 to 100 scale through the model each band of the firm's risk-profile table names; tolerance is the client's questionnaire score and its band. Above or below means the two fall in different bands. The step from the Moderate Aggressive model to the Aggressive one spans a narrow range of σ (66 to 88 points across about 0.1 percentage point of volatility), so a small change in holdings can move the score a long way." },
+  { label: 'Risk score and tolerance', modeled: false, text: `The account's σ placed on the questionnaire's 0 to 100 scale through the model each band of the firm's risk-profile table names; tolerance is the client's questionnaire score and its band. Above or below means the two fall in different bands. ${scaleText()}` },
 ]
 
 function accountRisk(account: Account): AccountRiskView {
@@ -67,7 +83,7 @@ function accountRisk(account: Account): AccountRiskView {
       top: concentration.positions.slice(0, 5).map((c) => ({ symbol: c.symbol, name: c.name, weight: c.weight, limit: c.limit, kind: c.kind, breached: c.breached })),
     },
     stress: stressScenariosFor(account).map((s) => ({ id: s.id, name: s.name, description: s.description, impact: s.portfolioImpact, impactValue: s.portfolioImpact * p.value })),
-    methods: [...METHODS],
+    methods: methods(),
   }
 }
 
@@ -87,7 +103,7 @@ export function bookRiskView(viewerId: string): BookRiskView | undefined {
       value: p.value, volatility: p.vol, var95: Math.round(parametricVaR(p.value, p.vol)), posture: postureOf(a, p.vol),
     }
   }).sort((a, b) => b.posture.gap - a.posture.gap || a.accountId.localeCompare(b.accountId))
-  return { asOf: MOCK_NOW_ISO, rows, aboveTolerance: rows.filter((r) => r.posture.status === 'above').length, methods: [...METHODS] }
+  return { asOf: MOCK_NOW_ISO, rows, aboveTolerance: rows.filter((r) => r.posture.status === 'above').length, methods: methods() }
 }
 
 const STATUS_WORDS: Readonly<Record<ToleranceStatus, string>> = { above: 'above', within: 'within', below: 'below' }

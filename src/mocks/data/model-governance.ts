@@ -94,11 +94,12 @@ export const MODEL_VERSIONS: readonly ModelVersionRecord[] = [
 
 /**
  * Each model's risk profile; the firm's risk-profile table names five of them for its bands. The rest are
- * labelled by the band their modeled volatility scores in (Phase 7a: mod-005 was Moderate Aggressive, but scores Moderate).
+ * labelled by the band their modeled volatility scores in (Phase 7a: mod-005 was Moderate Aggressive, but scores Moderate;
+ * under the grouped correlations mod-006, 55% equity with no real assets, scores Moderate Conservative, below mod-007).
  */
 export const MODEL_RISK_PROFILES: Readonly<Record<string, RiskProfile>> = {
   'mod-001': 'moderate', 'mod-002': 'moderate_aggressive', 'mod-003': 'conservative', 'mod-004': 'aggressive',
-  'mod-005': 'moderate', 'mod-006': 'moderate', 'mod-007': 'moderate_conservative',
+  'mod-005': 'moderate', 'mod-006': 'moderate_conservative', 'mod-007': 'moderate_conservative',
 }
 
 /** The education model's benchmark is its glide path at the current stage (R8). */

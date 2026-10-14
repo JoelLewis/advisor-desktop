@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
-  ASSET_CLASS_RISK, RISK_FREE_RATE, Z_95,
-  assetClassWeights, portfolioBeta, portfolioVolatility, portfolioReturn1Y,
+  ASSET_CLASS_RISK, CORRELATION_GROUP, RISK_FREE_RATE, Z_95,
+  assetClassCorrelation, assetClassWeights, portfolioBeta, portfolioVolatility, portfolioReturn1Y,
   trackingError, parametricVaR, sharpe, sortino, downsideDeviation, modelledMaxDrawdown,
 } from '@/lib/risk-model'
 
@@ -60,7 +60,7 @@ describe('portfolio statistics', () => {
 
   it('volatility accounts for imperfect correlation, so it is below the weighted average of vols', () => {
     const weightedAvgVol = [...w.entries()].reduce((s, [ac, x]) => s + x * ASSET_CLASS_RISK[ac]!.vol, 0)
-    expect(portfolioVolatility(w)).toBeCloseTo(0.0935, 4)
+    expect(portfolioVolatility(w)).toBeCloseTo(0.1007, 4)
     expect(portfolioVolatility(w)).toBeLessThan(weightedAvgVol)
   })
 
@@ -76,9 +76,9 @@ describe('portfolio statistics', () => {
 
 describe('parametricVaR', () => {
   it('C5: scales with portfolio value — a $100K IRA and a $12M trust cannot share a VaR', () => {
-    const vol = 0.0935
-    expect(parametricVaR(100_000, vol)).toBeCloseTo(4_440, 0)
-    expect(parametricVaR(12_000_000, vol)).toBeCloseTo(532_805, 0)
+    const vol = 0.1007
+    expect(parametricVaR(100_000, vol)).toBeCloseTo(4_782, 0)
+    expect(parametricVaR(12_000_000, vol)).toBeCloseTo(573_834, 0)
     expect(parametricVaR(12_000_000, vol) / parametricVaR(100_000, vol)).toBeCloseTo(120, 6)
   })
 
@@ -103,8 +103,8 @@ describe('the round-then-VaR sequence (rounding order is load-bearing)', () => {
   const roundedVol = Math.round(rawVol * 10_000) / 10_000
 
   it('rounding sigma to 4dp before calling parametricVaR reproduces the correct, disclosed VaR', () => {
-    expect(roundedVol).toBeCloseTo(0.0904, 4)
-    expect(parametricVaR(value, roundedVol)).toBeCloseTo(515_140, 0)
+    expect(roundedVol).toBeCloseTo(0.1047, 4)
+    expect(parametricVaR(value, roundedVol)).toBeCloseTo(596_627, 0)
   })
 
   it('skipping the round is not a cosmetic omission — it moves VaR by tens of dollars, ' +
@@ -122,9 +122,9 @@ describe('sharpe and sortino', () => {
   })
 
   it('sortino exceeds sharpe because downside deviation is below total volatility', () => {
-    expect(downsideDeviation(0.0935)).toBeCloseTo(0.06545, 5)
-    expect(sortino(0.0985, downsideDeviation(0.0935)))
-      .toBeGreaterThan(sharpe(0.0985, 0.0935))
+    expect(downsideDeviation(0.1007)).toBeCloseTo(0.07049, 5)
+    expect(sortino(0.0985, downsideDeviation(0.1007)))
+      .toBeGreaterThan(sharpe(0.0985, 0.1007))
   })
 
   it('modelled max drawdown is negative and scales with volatility', () => {
@@ -144,5 +144,56 @@ describe('trackingError', () => {
     const near = assetClassWeights([{ assetClass: 'us_equity', weight: 0.65 }, { assetClass: 'fixed_income', weight: 0.35 }])
     const far = assetClassWeights([{ assetClass: 'us_equity', weight: 0.95 }, { assetClass: 'fixed_income', weight: 0.05 }])
     expect(trackingError(far, bench)).toBeGreaterThan(trackingError(near, bench))
+  })
+})
+
+describe('the correlation assumptions', () => {
+  const classes = Object.keys(CORRELATION_GROUP)
+  const matrix = classes.map((a) => classes.map((b) => assetClassCorrelation(a, b)))
+
+  it('cover every asset class the risk assumptions do, and no other', () => {
+    expect([...classes].sort()).toEqual(Object.keys(ASSET_CLASS_RISK).sort())
+  })
+
+  it('define every pair: symmetric, 1 on the diagonal, each entry a correlation', () => {
+    classes.forEach((a, i) => classes.forEach((b, j) => {
+      const rho = matrix[i]![j]!
+      expect(rho, `${a}/${b}`).toBe(matrix[j]![i])
+      expect(Math.abs(rho), `${a}/${b}`).toBeLessThanOrEqual(1)
+      if (i === j) expect(rho, a).toBe(1)
+      else expect(rho, `${a}/${b}`).toBeLessThan(1)
+    }))
+  })
+
+  it('form a positive semidefinite matrix (a Cholesky factorization exists)', () => {
+    const n = matrix.length
+    const lower: number[][] = matrix.map(() => new Array<number>(n).fill(0))
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j <= i; j++) {
+        let s = matrix[i]![j]!
+        for (let k = 0; k < j; k++) s -= lower[i]![k]! * lower[j]![k]!
+        if (i === j) {
+          expect(s, `pivot ${classes[i]}`).toBeGreaterThan(-1e-12)
+          lower[i]![i] = Math.sqrt(Math.max(s, 0))
+        } else {
+          lower[i]![j] = lower[j]![j]! === 0 ? 0 : s / lower[j]![j]!
+        }
+      }
+    }
+  })
+
+  it('are grouped: equity closely together, real assets moderately, bonds and cash loosely', () => {
+    expect(assetClassCorrelation('us_equity', 'intl_equity')).toBe(0.85)
+    expect(assetClassCorrelation('intl_equity', 'emerging_markets')).toBe(0.85)
+    expect(assetClassCorrelation('us_equity', 'fixed_income')).toBe(0.3)
+    expect(assetClassCorrelation('fixed_income', 'cash')).toBe(0.1)
+    expect(assetClassCorrelation('real_estate', 'commodities')).toBe(0.6)
+    expect(assetClassCorrelation('private_equity', 'alternatives')).toBe(0.6)
+    expect(assetClassCorrelation('emerging_markets', 'real_estate')).toBe(0.5)
+    expect(assetClassCorrelation('digital_assets', 'us_equity')).toBe(0.4)
+  })
+
+  it('name an unknown asset class rather than guess its correlation', () => {
+    expect(() => assetClassCorrelation('us_equity', 'collectibles')).toThrow(/collectibles/)
   })
 })

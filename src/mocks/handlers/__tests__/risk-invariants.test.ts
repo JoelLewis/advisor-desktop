@@ -10,8 +10,11 @@ describe('risk metrics are per account', () => {
   it('C5: VaR scales with the account — Taylor $100K vs Chen Trust $12M', async () => {
     const taylor = await getRiskMetrics('acc-040')
     const chen = await getRiskMetrics('acc-006')
-    expect(taylor.var95).toBe(4_435)
-    expect(chen.var95).toBe(515_140)
+    // Phase 7a Task 5b — the grouped correlations (equity 0.85 with equity, not a flat 0.35) raise
+    // σ: acc-040 0.0934 -> 0.1019, acc-006 0.0904 -> 0.1047, so VaR = value x 1.645 x σ x √(1/12)
+    // moves 4,435 -> 4,839 and 515,140 -> 596,627.
+    expect(taylor.var95).toBe(4_839)
+    expect(chen.var95).toBe(596_627)
     expect(chen.var95 / taylor.var95).toBeGreaterThan(100)
   })
 
@@ -20,8 +23,9 @@ describe('risk metrics are per account', () => {
     expect(risk.var95Horizon).toBe('1 month')
     expect(risk.var95Confidence).toBe(0.95)
     expect(risk.var95Method).toBe('parametric')
-    expect(risk.var95Percent).toBeCloseTo(0.0444, 4)
-    expect(risk.var95).toBe(364_083)
+    // 1.645 x 0.1008 x √(1/12) = 0.0479 of value (0.0444 at the flat-0.35 σ of 0.0935).
+    expect(risk.var95Percent).toBeCloseTo(0.0479, 4)
+    expect(risk.var95).toBe(392_509)
   })
 
   it('C5: VaR never exceeds the account value', async () => {
@@ -48,16 +52,20 @@ describe('risk metrics are per account', () => {
     // rises from 0.10210209 to 0.10214623 — 0.44 bp of a percentage point — which carries the
     // reported 1Y return across the 0.10215 four-decimal boundary from 0.1021 to 0.1022. Then
     // (0.1022 - 0.04) / 0.0935 = 0.665241 -> 0.67. Sigma is unmoved: 0.09353998 -> 0.0935.
+    // Phase 7a Task 5b: the grouped correlations move σ 0.0935 -> 0.1008, so
+    // (0.1022 - 0.04) / 0.1008 = 0.617 -> 0.62. Beta is unmoved (it is linear in the weights).
     // The invariant above is the assertion that matters; this pins the value.
-    expect(risk.sharpe).toBe(0.67)
-    expect(risk.standardDeviation).toBe(0.0935)
+    expect(risk.sharpe).toBe(0.62)
+    expect(risk.standardDeviation).toBe(0.1008)
     expect(risk.beta).toBe(0.64)
   })
 
   it('risk differs between a bond-heavy IRA and a crypto account', async () => {
     const thompsonIRA = await getRiskMetrics('acc-020')
     const crypto = await getRiskMetrics('acc-045')
-    expect(thompsonIRA.standardDeviation).toBe(0.061)
+    // 0.0625 under the grouped correlations (0.061 at a flat 0.35): its equity sleeves now move
+    // together at 0.85.
+    expect(thompsonIRA.standardDeviation).toBe(0.0625)
     // 0.5892, not the 0.589 frozen here before Task 10 (itself 0.636 before Task 18, when
     // acc-045's positions summed to $393,630 against a $425,000 balance and `assetClassWeights`
     // normalised the gap away, modelling the account as 97.8% digital assets).
@@ -68,7 +76,9 @@ describe('risk metrics are per account', () => {
     //       + 2 x 0.906188235 x 0.093811765 x 0.65 x 0.005 x 0.35
     //       = 0.34694735 + 0.00000022 + 0.00019342 = 0.34714099,  sqrt = 0.58918669 -> 0.5892
     // The same arithmetic on the stored weights gives 0.34692519, sqrt 0.58900351 -> 0.589.
-    expect(crypto.standardDeviation).toBe(0.5892)
+    // Phase 7a Task 5b: cash is uncorrelated with digital assets (rho 0, not 0.35), so the cross
+    // term drops: var = 0.34694735 + 0.00000022 = 0.34694757, sqrt 0.58902255 -> 0.5890.
+    expect(crypto.standardDeviation).toBe(0.589)
     expect(crypto.beta).toBeGreaterThan(thompsonIRA.beta * 3)
   })
 
@@ -81,9 +91,11 @@ describe('risk metrics are per account', () => {
       expect(row).not.toHaveProperty('trackingError')
     }
     expect(risk.benchmark).toBe('Balanced Growth policy benchmark')
-    // 0.0127, not 0.0126 — the same Task 10 weight shift behind the Sharpe above; TE is computed
-    // from the account's own weights against the model's target weights.
-    expect(risk.trackingError).toBeCloseTo(0.0127, 4)
+    // TE is computed from the account's own weights against the model's target weights. 0.0069
+    // under Phase 7a Task 5b's grouped correlations (0.0127 at a flat 0.35): acc-001's active
+    // weights are mostly an overweight in one equity class against underweights in the others,
+    // and equity classes that move together at 0.85 largely offset one another.
+    expect(risk.trackingError).toBeCloseTo(0.0069, 4)
   })
 })
 
@@ -189,10 +201,11 @@ describe('the modelled return distribution', () => {
     // 0.906188235, cash 39,870 / 425,000 = 0.093811765), where the stored three-decimal weights
     // renormalised to 0.9059059 / 0.0940941 and gave 0.589/0.3868. mu = 0.906188235 x 0.422 +
     // 0.093811765 x 0.048 = 0.38241143 + 0.00450296 = 0.38691440 -> 0.3869.
-    expect(monteCarlo.volatility).toBe(0.5892)
+    // Phase 7a Task 5b: σ 0.5890, cash now uncorrelated with digital assets (see above).
+    expect(monteCarlo.volatility).toBe(0.589)
     const p1 = monteCarlo.percentiles.find((p) => p.percentile === 1)!
-    // 1 + 0.3869 - 0.5892 * 2.3263 = 0.0162 of a $425,000 base: a 98.4% loss, positive by a hair.
-    expect(p1.value / monteCarlo.baseValue).toBeCloseTo(0.0162, 4)
+    // 1 + 0.3869 - 0.5890 * 2.3263 = 0.0167 of a $425,000 base: a 98.3% loss, positive by a hair.
+    expect(p1.value / monteCarlo.baseValue).toBeCloseTo(0.0167, 4)
     expect(monteCarlo.percentiles.find((p) => p.percentile === 5)!.value).toBeGreaterThan(p1.value)
   })
 
@@ -219,12 +232,12 @@ describe('the modelled return distribution', () => {
     const { monteCarlo } = await getSensitivity('acc-045')
     const buckets = monteCarlo.histogram.map((b) => b.returnBucket)
     expect(buckets[0]).toBe(-1)
-    // 0.3869 + 3 x 0.5892 = 0.3869 + 1.7676 = 2.1545
-    expect(buckets[buckets.length - 1]).toBeCloseTo(0.3869 + 3 * 0.5892, 3)
+    // 0.3869 + 3 x 0.5890 = 0.3869 + 1.7670 = 2.1539
+    expect(buckets[buckets.length - 1]).toBeCloseTo(0.3869 + 3 * 0.589, 3)
     // A lower-sigma account is unaffected — the clamp only bites where the domain runs past -100%.
     const calm = await getSensitivity('acc-001')
-    // 0.1022 - 3 x 0.0935 = 0.1022 - 0.2805 = -0.1783
-    expect(calm.monteCarlo.histogram[0]!.returnBucket).toBeCloseTo(0.1022 - 3 * 0.0935, 4)
+    // 0.1022 - 3 x 0.1008 = 0.1022 - 0.3024 = -0.2002
+    expect(calm.monteCarlo.histogram[0]!.returnBucket).toBeCloseTo(0.1022 - 3 * 0.1008, 4)
   })
 })
 
@@ -235,7 +248,7 @@ describe('monte carlo', () => {
     // SELECTION_EDGE in pms.ts). The curve's mu is the account's own one-year return; Task 10
     // derives the weights it is built from, moving Sw.rp from 0.10210209 to 0.10214623.
     expect(monteCarlo.expectedReturn).toBeCloseTo(0.1022, 4)
-    expect(monteCarlo.volatility).toBeCloseTo(0.0935, 4)
+    expect(monteCarlo.volatility).toBeCloseTo(0.1008, 4)
     // p5 = exp of (mu + z5*sigma) applied to the account value; recover sigma from p5 and p95
     const p5 = monteCarlo.percentiles.find((p) => p.percentile === 5)!.value
     const p95 = monteCarlo.percentiles.find((p) => p.percentile === 95)!.value

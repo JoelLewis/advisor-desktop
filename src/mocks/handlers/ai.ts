@@ -11,6 +11,7 @@ import type { CustomPromptCategory } from '@/types/settings'
 import type { TaxLot } from '@/types/portfolio'
 import { formatAUM, computeTotalAUM } from './utils'
 import { now, MOCK_NOW_ISO, MOCK_TODAY_ISO } from '@/lib/clock'
+import { bandFor } from '@/lib/risk-profile'
 import { computeMetrics, computeDriftForAccount } from './pms'
 import { generateTaxLotsWithSaleRisk } from './custodian'
 import { openWashSaleWindows } from '../data/realised-sales'
@@ -362,7 +363,7 @@ export const aiHandlers = [
           [
             { label: 'Total AUM', value: formatAUM(client.totalAUM) },
             { label: 'Segment', value: client.segment.charAt(0).toUpperCase() + client.segment.slice(1) },
-            { label: 'Risk Profile', value: client.riskProfile.tolerance },
+            { label: 'Risk Profile', value: bandFor(client.riskProfile.score).label },
             { label: 'Accounts', value: String(clientAccounts.length) },
             { label: 'Household', value: hh?.name ?? 'N/A' },
           ],

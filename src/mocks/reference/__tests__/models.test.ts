@@ -137,6 +137,11 @@ describe('risk profiles are the bands the models score in', () => {
     }
   })
 
+  it("separates the bands: each band's model is at least half a percentage point of σ riskier than the band below's", () => {
+    const vols = RISK_PROFILE_TABLE.map((b) => modelVolatility(b.modelId))
+    vols.slice(1).forEach((vol, i) => expect(vol - vols[i]!, RISK_PROFILE_TABLE[i + 1]!.modelId).toBeGreaterThanOrEqual(0.005))
+  })
+
   it('names mod-005 by the band its volatility scores, Moderate', () => {
     expect(MODEL_RISK_PROFILES['mod-005']).toBe('moderate')
   })

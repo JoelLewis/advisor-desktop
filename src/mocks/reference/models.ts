@@ -9,7 +9,7 @@ import { GLIDE_PATH_MODELS, MODEL_RISK_PROFILES, MODEL_VERSIONS } from '@/mocks/
 import { MODEL_BANDS, MODEL_DEFINITIONS, computeDriftForAccount } from '@/mocks/handlers/pms'
 import { isFirmViewer } from '@/mocks/workspace/visibility'
 import { accountValueUSD, deriveBookAUM } from '@/lib/aum'
-import { portfolioVolatility } from '@/lib/risk-model'
+import { correlationAssumptionsText, portfolioVolatility } from '@/lib/risk-model'
 import { RISK_PROFILE_TABLE } from '@/lib/risk-profile'
 import { MOCK_NOW_ISO } from '@/lib/clock'
 
@@ -87,7 +87,7 @@ const METHODS: readonly MethodNote[] = [
   { label: 'Benchmarks', modeled: false, text: "Each model's policy benchmark holds every sleeve at the model's target weight, each sleeve measured by the index named for it. The education model's benchmark is its glide path at the current stage." },
   { label: 'History', modeled: false, text: "The firm's record of Investment Committee decisions: each version proposed by the analyst and approved by the committee, with the weights it set. A pending version takes effect only once approved. Read-only here." },
   { label: 'Assigned value', modeled: false, text: "Accounts on each model and their value today, from the book; an account held in another currency is converted at today's exchange rate." },
-  { label: 'Volatility', modeled: true, text: "Modeled, not realized: the standard deviation of the target weights from the firm's asset-class volatility assumptions, with a 0.35 correlation between classes." },
+  { label: 'Volatility', modeled: true, text: `Modeled, not realized: the standard deviation of the target weights from the firm's asset-class volatility assumptions and its ${correlationAssumptionsText()}.` },
 ]
 
 export function modelsView(viewerId: string): ModelsView | undefined {

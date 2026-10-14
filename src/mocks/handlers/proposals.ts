@@ -6,23 +6,40 @@ import { accounts } from '../data/accounts'
 import { households } from '../data/households'
 import type { ProposalDraft, ProposalSection, ProposalSectionType, ProposalClientData } from '@/types/proposal'
 import { notFound } from './utils'
+import type { AssetClass } from '@/types/portfolio'
 import { now as clockNow } from '@/lib/clock'
+import { bandFor, type ProfileBand, type RiskProfile } from '@/lib/risk-profile'
+import { MODEL_DEFINITIONS } from './pms'
 
 const proposalStore = new Map<string, ProposalDraft>()
 
-function deriveInvestmentObjective(tolerance: string): string {
-  switch (tolerance) {
-    case 'conservative':
-      return 'Capital Preservation'
-    case 'moderate':
-      return 'Balanced Growth'
-    case 'growth':
-      return 'Capital Appreciation'
-    case 'aggressive':
-      return 'Maximum Growth'
-    default:
-      return 'Balanced Growth'
+const OBJECTIVE_BY_PROFILE: Readonly<Record<RiskProfile, string>> = {
+  conservative: 'Capital Preservation',
+  moderate_conservative: 'Income with Moderate Growth',
+  moderate: 'Balanced Growth',
+  moderate_aggressive: 'Capital Appreciation',
+  aggressive: 'Maximum Growth',
+}
+
+const DISPLAY_CLASS: Readonly<Record<AssetClass, string>> = {
+  us_equity: 'US Equity', intl_equity: 'International Equity', emerging_markets: 'International Equity',
+  fixed_income: 'Fixed Income', cash: 'Cash',
+  alternatives: 'Alternatives', real_estate: 'Alternatives', commodities: 'Alternatives', private_equity: 'Alternatives', digital_assets: 'Alternatives',
+}
+
+const isAssetClass = (value: string): value is AssetClass => Object.prototype.hasOwnProperty.call(DISPLAY_CLASS, value)
+
+/** The targets of the firm model the client's band names, in percent, grouped into the proposal's five classes. */
+function bandModelAllocation(band: ProfileBand): { assetClass: string; weight: number }[] {
+  const model = MODEL_DEFINITIONS.find((m) => m.id === band.modelId)
+  if (!model) throw new Error(`The ${band.label} band names no firm model ${band.modelId}`)
+  const grouped = new Map<string, number>()
+  for (const { assetClass, targetWeight } of model.assetClasses) {
+    if (!isAssetClass(assetClass)) throw new Error(`${model.id} targets an unknown asset class ${assetClass}`)
+    const label = DISPLAY_CLASS[assetClass]
+    grouped.set(label, (grouped.get(label) ?? 0) + targetWeight)
   }
+  return [...grouped].map(([assetClass, weight]) => ({ assetClass, weight: Math.round(weight * 10_000) / 100 }))
 }
 
 function deriveTimeHorizon(dateOfBirth: string): string {
@@ -32,51 +49,6 @@ function deriveTimeHorizon(dateOfBirth: string): string {
   if (age < 55) return '10+ years'
   if (age <= 65) return '5-10 years'
   return '3-5 years'
-}
-
-function getAllocationForRiskProfile(tolerance: string): { assetClass: string; weight: number }[] {
-  switch (tolerance) {
-    case 'conservative':
-      return [
-        { assetClass: 'US Equity', weight: 20 },
-        { assetClass: 'International Equity', weight: 10 },
-        { assetClass: 'Fixed Income', weight: 45 },
-        { assetClass: 'Alternatives', weight: 10 },
-        { assetClass: 'Cash', weight: 15 },
-      ]
-    case 'moderate':
-      return [
-        { assetClass: 'US Equity', weight: 35 },
-        { assetClass: 'International Equity', weight: 15 },
-        { assetClass: 'Fixed Income', weight: 30 },
-        { assetClass: 'Alternatives', weight: 10 },
-        { assetClass: 'Cash', weight: 10 },
-      ]
-    case 'growth':
-      return [
-        { assetClass: 'US Equity', weight: 45 },
-        { assetClass: 'International Equity', weight: 20 },
-        { assetClass: 'Fixed Income', weight: 20 },
-        { assetClass: 'Alternatives', weight: 10 },
-        { assetClass: 'Cash', weight: 5 },
-      ]
-    case 'aggressive':
-      return [
-        { assetClass: 'US Equity', weight: 50 },
-        { assetClass: 'International Equity', weight: 25 },
-        { assetClass: 'Fixed Income', weight: 10 },
-        { assetClass: 'Alternatives', weight: 10 },
-        { assetClass: 'Cash', weight: 5 },
-      ]
-    default:
-      return [
-        { assetClass: 'US Equity', weight: 35 },
-        { assetClass: 'International Equity', weight: 15 },
-        { assetClass: 'Fixed Income', weight: 30 },
-        { assetClass: 'Alternatives', weight: 10 },
-        { assetClass: 'Cash', weight: 10 },
-      ]
-  }
 }
 
 export const proposalHandlers = [
@@ -102,6 +74,7 @@ export const proposalHandlers = [
 
     const household = households.find((h) => h.id === client.householdId)
     const clientAccounts = accounts.filter((a) => a.clientId === client.id)
+    const band = bandFor(client.riskProfile.score)
 
     const clientData: ProposalClientData = {
       clientId: client.id,
@@ -110,10 +83,10 @@ export const proposalHandlers = [
       phone: client.phone,
       householdAUM: household?.totalAUM ?? clientAccounts.reduce((sum, a) => sum + a.totalValue, 0),
       riskScore: client.riskProfile.score,
-      riskTolerance: client.riskProfile.tolerance,
-      investmentObjective: deriveInvestmentObjective(client.riskProfile.tolerance),
+      riskTolerance: band.label,
+      investmentObjective: OBJECTIVE_BY_PROFILE[band.profile],
       timeHorizon: deriveTimeHorizon(client.dateOfBirth),
-      currentAllocation: getAllocationForRiskProfile(client.riskProfile.tolerance),
+      currentAllocation: bandModelAllocation(band),
     }
 
     const now = nextEventTime()
