@@ -18,11 +18,11 @@ async function statusOf(request: Promise<unknown>): Promise<number> {
 
 describe('a model change is previewed, never executed', () => {
   it('previewing against an unknown model is a 422, not a server error', async () => {
-    expect(await statusOf(previewRebalance({ accountIds: ['acc-001'], driftThreshold: 0.05, taxAware: true, modelId: 'mod-999' }))).toBe(422)
+    expect(await statusOf(previewRebalance('user-001', { accountIds: ['acc-001'], driftThreshold: 0.05, taxAware: true, modelId: 'mod-999' }))).toBe(422)
   })
 
   it('previewing a custom mandate against a named model is served', async () => {
-    await expect(previewRebalance({ accountIds: ['acc-041'], driftThreshold: 0.05, taxAware: true, modelId: 'mod-001' })).resolves.toHaveLength(1)
+    await expect(previewRebalance('user-001', { accountIds: ['acc-041'], driftThreshold: 0.05, taxAware: true, modelId: 'mod-001' })).resolves.toHaveLength(1)
   })
 })
 

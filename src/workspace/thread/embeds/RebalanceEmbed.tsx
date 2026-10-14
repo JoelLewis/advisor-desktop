@@ -9,6 +9,7 @@ import { fmtMoney, fmtQuantity } from '@/kit/measure'
 import { useAccount } from '@/hooks/use-accounts'
 import { accountFullViewHref } from '@/workspace/full-views/full-view-href'
 import { preTradeCheckProposal, previewRebalance, type ProposalLegResult, type ProposedTrade } from '@/services/oms'
+import { useViewer } from '@/workspace/viewer/use-viewer'
 import { accountIdOf, type EmbedProps } from './embed-props'
 
 const SEVERITY_STATUS: Readonly<Record<ProposalLegResult['severity'], Status>> = { block: 'BLOCK', warning: 'WARN', pass: 'CLEAR' }
@@ -16,11 +17,11 @@ const SIDE: Readonly<Record<ProposedTrade['side'], string>> = { buy: 'Buy', sell
 
 type Leg = ProposedTrade & { index: number; status: Status }
 
-async function loadCheckedPreview(accountId: string) {
-  const previews = await previewRebalance({ accountIds: [accountId], taxAware: true })
+async function loadCheckedPreview(viewer: string, accountId: string) {
+  const previews = await previewRebalance(viewer, { accountIds: [accountId], taxAware: true })
   const preview = previews.find((p) => p.accountId === accountId)
   if (!preview) throw new Error(`The engine returned no rebalance preview for ${accountId}`)
-  const check = await preTradeCheckProposal({
+  const check = await preTradeCheckProposal(viewer, {
     accountId,
     trades: preview.trades.map(({ symbol, side, quantity, estimatedValue }) => ({ symbol, side, quantity, estimatedValue })),
   })
@@ -36,8 +37,9 @@ export function RebalanceEmbed({ subject, threadId }: EmbedProps) {
   const accountId = accountIdOf(subject, 'rebalance preview')
   const titleId = useId()
   const account = useAccount(accountId)
-  // The preview is the same for every viewer; it sits under ['workspace'] so workspace writes refresh it too.
-  const checked = useQuery({ queryKey: ['workspace', 'rebalance-embed', accountId], queryFn: () => loadCheckedPreview(accountId) })
+  const { viewerId } = useViewer()
+  // Under ['workspace'] so workspace writes refresh it too; keyed on the viewer, whom the engine checks.
+  const checked = useQuery({ queryKey: ['workspace', 'rebalance-embed', viewerId, accountId], queryFn: () => loadCheckedPreview(viewerId, accountId) })
   if (checked.isPending || account.isPending) return <p role="status" className="text-body text-ink-3">Loading the rebalance preview…</p>
   if (checked.isError) return <p role="alert" className="text-body">{checked.error.message}</p>
   if (account.isError) return <p role="alert" className="text-body">{account.error.message}</p>

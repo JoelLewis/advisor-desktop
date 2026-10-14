@@ -60,14 +60,27 @@ const FIRM_RECORDS: readonly string[] = [
   '/compliance/alerts', '/compliance/alerts/comp-002/records',
 ]
 
+/** The OMS previews and checks read the same book. */
+const FIRM_CHECKS: readonly (readonly [string, unknown])[] = [
+  ['/oms/rebalance', { accountIds: ['acc-002'], taxAware: true }],
+  ['/oms/orders/pre-check-proposal', { accountId: 'acc-002', trades: [{ symbol: 'VTI', side: 'buy', quantity: 1, estimatedValue: 268 }] }],
+]
+
 async function read(path: string, viewer: string | undefined) {
   const res = await fetch(`/api${path}`, { headers: viewer ? { 'X-Viewer': viewer } : {} })
+  return { status: res.status, body: await res.json().catch(() => null) }
+}
+
+async function check(path: string, body: unknown, viewer: string | undefined) {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(viewer ? { 'X-Viewer': viewer } : {}) }
+  const res = await fetch(`/api${path}`, { method: 'POST', headers, body: JSON.stringify(body) })
   return { status: res.status, body: await res.json().catch(() => null) }
 }
 
 describe("the firm's records over HTTP", () => {
   it.each(['cli-001', 'prsp-011'])("%s gets a bare 404 from every read of the firm's records (Robert's own household and account included)", async (viewer) => {
     for (const path of FIRM_RECORDS) expect(await read(path, viewer), path).toEqual({ status: 404, body: null })
+    for (const [path, body] of FIRM_CHECKS) expect(await check(path, body, viewer), path).toEqual({ status: 404, body: null })
   })
 
   it('a request that names no known viewer gets 401', async () => {
@@ -75,9 +88,11 @@ describe("the firm's records over HTTP", () => {
       expect((await read(path, undefined)).status, path).toBe(401)
       expect((await read(path, 'nobody')).status, path).toBe(401)
     }
+    for (const [path, body] of FIRM_CHECKS) expect((await check(path, body, undefined)).status, path).toBe(401)
   })
 
   it.each(['user-001', 'user-002', 'user-003', 'cco-001'])('%s, inside the firm, reads every one of them', async (viewer) => {
     for (const path of FIRM_RECORDS) expect((await read(path, viewer)).status, path).toBe(200)
+    for (const [path, body] of FIRM_CHECKS) expect((await check(path, body, viewer)).status, path).toBe(200)
   })
 })

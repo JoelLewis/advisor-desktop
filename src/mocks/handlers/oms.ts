@@ -23,6 +23,7 @@ import { MODEL_DEFINITIONS } from '@/mocks/data/model-definitions'
 import type { LotTake } from '@/types/workspace-proposal'
 import type { AssetClass, Position } from '@/types/portfolio'
 import type { CurrencyCode } from '@/types/currency'
+import { refuseExternal } from './workspace-http'
 
 // Exported so `ai.ts`'s trading-desk chat response reads the same pending-order counts this
 // handler serves, rather than a second, independently hand-typed "3 open orders" figure.
@@ -1208,6 +1209,8 @@ export const omsHandlers = [
   // Proposal-level pre-trade check — all legs applied to one projected portfolio, end state checked,
   // each violation attributed to its legs. See `evaluateProposal` in `compliance.ts`.
   http.post('/api/oms/orders/pre-check-proposal', async ({ request }) => {
+    const refused = refuseExternal(request)
+    if (refused) return refused
     const body = await request.json() as PreTradeCheckProposalRequest
     const invalid = invalidProposal(body.trades)
     if (invalid) return HttpResponse.json({ error: invalid }, { status: 400 })
@@ -1217,6 +1220,8 @@ export const omsHandlers = [
   }),
 
   http.post('/api/oms/rebalance', async ({ request }) => {
+    const refused = refuseExternal(request)
+    if (refused) return refused
     const body = await request.json() as { accountIds: string[]; driftThreshold?: number; taxAware: boolean; modelId?: string }
     if (body.modelId !== undefined && !MODEL_DEFINITIONS.some((m) => m.id === body.modelId)) return unknownModel(body.modelId)
     const proposed: PreviewEntry[] = []

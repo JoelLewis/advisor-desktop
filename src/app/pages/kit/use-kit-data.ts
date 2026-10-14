@@ -36,7 +36,7 @@ async function loadApproval(accountId: string) {
 async function loadKitData() {
   const [account, positions, drift, lots, windows, previews, approval, agentFinding] = await Promise.all([
     getAccount(ADVISOR_ID, ACCOUNT_ID), getPositions(ADVISOR_ID, ACCOUNT_ID), getDrift(ADVISOR_ID, ACCOUNT_ID), getTaxLots(ADVISOR_ID, ACCOUNT_ID),
-    getOpenWashSaleWindows(ADVISOR_ID, ACCOUNT_ID), previewRebalance({ accountIds: [ACCOUNT_ID], taxAware: true }), loadApproval(ACCOUNT_ID), loadDriftFinding(),
+    getOpenWashSaleWindows(ADVISOR_ID, ACCOUNT_ID), previewRebalance(ADVISOR_ID, { accountIds: [ACCOUNT_ID], taxAware: true }), loadApproval(ACCOUNT_ID), loadDriftFinding(),
   ])
   const preview = previews.find((p) => p.accountId === ACCOUNT_ID)
   if (!preview) throw new Error(`No rebalance preview returned for ${account.name}`)

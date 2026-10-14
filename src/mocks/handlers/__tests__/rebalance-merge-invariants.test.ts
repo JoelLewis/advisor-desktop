@@ -20,7 +20,7 @@ import { isModelManaged } from '@/lib/mandate'
 describe('rebalance consumes signed drift correctly (Task 21 x Task 22 merge boundary)', () => {
   it('an account underweight a class it already holds proposes a BUY, not only sells', async () => {
     // acc-001 is overweight us_equity (VTI) and underweight intl_equity (EFA), and holds both.
-    const [preview] = await previewRebalance({ accountIds: ['acc-001'], taxAware: true })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-001'], taxAware: true })
     expect(preview).toBeDefined()
     const sides = new Set(preview!.trades.map((t) => t.side))
     expect(sides.has('buy'), 'acc-001 must propose at least one buy').toBe(true)
@@ -33,7 +33,7 @@ describe('rebalance consumes signed drift correctly (Task 21 x Task 22 merge bou
     let totalBuy = 0
     let totalSell = 0
     for (const account of accounts) {
-      const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
+      const [preview] = await previewRebalance('user-001', { accountIds: [account.id], taxAware: true })
       for (const trade of preview?.trades ?? []) {
         if (trade.side === 'buy') totalBuy += trade.estimatedValue
         else totalSell += trade.estimatedValue
@@ -48,7 +48,7 @@ describe('rebalance consumes signed drift correctly (Task 21 x Task 22 merge bou
     const mismatches: string[] = []
     let tradesChecked = 0
     for (const account of accounts) {
-      const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
+      const [preview] = await previewRebalance('user-001', { accountIds: [account.id], taxAware: true })
       if (!preview?.trades.length) continue
       const drift = await getDrift('user-001', account.id)
       const positions = await getPositions('user-001', account.id)

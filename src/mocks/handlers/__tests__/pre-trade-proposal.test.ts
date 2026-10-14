@@ -17,7 +17,7 @@ import type { ProposalTradeLeg } from '@/services/oms'
  * SPY 2,018,243.70 − 394,387 = 1,623,856.70 → 36.1% against the 35% fund limit (was 44.8%).
  */
 async function acc002Legs(): Promise<ProposalTradeLeg[]> {
-  const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
+  const [preview] = await previewRebalance('user-001', { accountIds: ['acc-002'], taxAware: true })
   return preview!.trades.map((t) => ({ symbol: t.symbol, side: t.side, quantity: t.quantity, estimatedValue: t.estimatedValue }))
 }
 
@@ -31,14 +31,14 @@ describe('preTradeCheckProposal · acc-002 tax-aware rebalance', () => {
   })
 
   it('passes: no leg is blocked', async () => {
-    const result = await preTradeCheckProposal({ accountId: 'acc-002', trades: await acc002Legs() })
+    const result = await preTradeCheckProposal('user-001', { accountId: 'acc-002', trades: await acc002Legs() })
     expect(result.violations.filter((v) => v.severity === 'block')).toEqual([])
     expect(result.passed).toBe(true)
     expect(result.legs.every((l) => l.severity !== 'block')).toBe(true)
   })
 
   it('funds the EFA buy from the proposal\'s own sale proceeds — end cash is 3.0%, above the 2% floor', async () => {
-    const result = await preTradeCheckProposal({ accountId: 'acc-002', trades: await acc002Legs() })
+    const result = await preTradeCheckProposal('user-001', { accountId: 'acc-002', trades: await acc002Legs() })
     expect(result.projectedCash).toBe(135_137)
     expect(result.projectedCashPct).toBeCloseTo(0.0300, 4)
     expect(result.violations.find((v) => v.category === 'cash_minimum')).toBeUndefined()
@@ -48,7 +48,7 @@ describe('preTradeCheckProposal · acc-002 tax-aware rebalance', () => {
 
   it('treats the SPY trim as reducing a pre-existing breach: a warning that the limit remains breached, not a block', async () => {
     const legs = await acc002Legs()
-    const result = await preTradeCheckProposal({ accountId: 'acc-002', trades: legs })
+    const result = await preTradeCheckProposal('user-001', { accountId: 'acc-002', trades: legs })
     const spy = result.violations.find((v) => v.category === 'concentration_limit' && v.symbol === 'SPY')!
     expect(spy).toBeDefined()
     expect(spy.severity).toBe('warning')
@@ -65,7 +65,7 @@ describe('preTradeCheckProposal · acc-002 tax-aware rebalance', () => {
   it('sells settle before buys whatever order the legs arrive in', async () => {
     const legs = await acc002Legs()
     const buysFirst = [...legs.filter((l) => l.side === 'buy'), ...legs.filter((l) => l.side === 'sell')]
-    const result = await preTradeCheckProposal({ accountId: 'acc-002', trades: buysFirst })
+    const result = await preTradeCheckProposal('user-001', { accountId: 'acc-002', trades: buysFirst })
     expect(result.passed).toBe(true)
     expect(result.projectedCash).toBe(135_137)
   })
@@ -78,7 +78,7 @@ describe('preTradeCheckProposal · per-leg attribution', () => {
       { symbol: 'AGG', side: 'buy', quantity: 10, estimatedValue: 1_000 },
       { symbol: 'SPY', side: 'buy', quantity: 10, estimatedValue: 5_203 },
     ]
-    const result = await preTradeCheckProposal({ accountId: 'acc-002', trades })
+    const result = await preTradeCheckProposal('user-001', { accountId: 'acc-002', trades })
     const spy = result.violations.find((v) => v.symbol === 'SPY')!
     expect(spy.severity).toBe('block')
     expect(spy.legs).toEqual([1])
@@ -88,7 +88,7 @@ describe('preTradeCheckProposal · per-leg attribution', () => {
 
   it('a buy that creates a breach blocks and is not marked pre-existing', async () => {
     // acc-006 ($12M) holds no NVDA; $1.56M is 13% against the 10% single-name limit.
-    const result = await preTradeCheckProposal({
+    const result = await preTradeCheckProposal('user-001', {
       accountId: 'acc-006', trades: [{ symbol: 'NVDA', side: 'buy', quantity: 2_000, estimatedValue: 1_560_000 }],
     })
     const nvda = result.violations.find((v) => v.symbol === 'NVDA')!
@@ -98,7 +98,7 @@ describe('preTradeCheckProposal · per-leg attribution', () => {
   })
 
   it('a pre-existing breach the proposal does not touch is reported, with no leg blamed', async () => {
-    const result = await preTradeCheckProposal({
+    const result = await preTradeCheckProposal('user-001', {
       accountId: 'acc-002', trades: [{ symbol: 'AGG', side: 'buy', quantity: 10, estimatedValue: 1_000 }],
     })
     const spy = result.violations.find((v) => v.symbol === 'SPY')!
@@ -111,7 +111,7 @@ describe('preTradeCheckProposal · per-leg attribution', () => {
   it('a cash shortfall is blamed on the buys, from the first leg that crosses the floor', async () => {
     // acc-001 cash 660,170 on $8.2M; floor 164,000. AGG 400,000 leaves 260,170 (3.2%, clear);
     // EFA 300,000 then leaves −39,830 → below zero → block, and only EFA crosses.
-    const result = await preTradeCheckProposal({
+    const result = await preTradeCheckProposal('user-001', {
       accountId: 'acc-001', trades: [
         { symbol: 'AGG', side: 'buy', quantity: 4_000, estimatedValue: 400_000 },
         { symbol: 'EFA', side: 'buy', quantity: 3_600, estimatedValue: 300_000 },
@@ -125,7 +125,7 @@ describe('preTradeCheckProposal · per-leg attribution', () => {
   })
 
   it('a sale that funds the same buys clears the cash floor', async () => {
-    const result = await preTradeCheckProposal({
+    const result = await preTradeCheckProposal('user-001', {
       accountId: 'acc-001', trades: [
         { symbol: 'AGG', side: 'buy', quantity: 4_000, estimatedValue: 400_000 },
         { symbol: 'EFA', side: 'buy', quantity: 3_600, estimatedValue: 300_000 },
@@ -137,7 +137,7 @@ describe('preTradeCheckProposal · per-leg attribution', () => {
   })
 
   it('a restricted security blocks its own leg', async () => {
-    const result = await preTradeCheckProposal({
+    const result = await preTradeCheckProposal('user-001', {
       accountId: 'acc-006', trades: [
         { symbol: 'AGG', side: 'buy', quantity: 10, estimatedValue: 1_000 },
         { symbol: 'META', side: 'buy', quantity: 10, estimatedValue: 7_000 },
@@ -150,7 +150,7 @@ describe('preTradeCheckProposal · per-leg attribution', () => {
 
   it('a buy inside an open wash-sale window warns on that leg', async () => {
     // acc-002 realized the INTC loss five days ago (hh-001).
-    const result = await preTradeCheckProposal({
+    const result = await preTradeCheckProposal('user-001', {
       accountId: 'acc-002', trades: [{ symbol: 'INTC', side: 'buy', quantity: 100, estimatedValue: 2_845 }],
     })
     const wash = result.violations.find((v) => v.category === 'wash_sale')!
@@ -160,7 +160,7 @@ describe('preTradeCheckProposal · per-leg attribution', () => {
 
   it('sector concentration is measured on the end state and blamed on the tech buys', async () => {
     // acc-001 holds 19.2% technology; $2M of AAPL projects to 43.6% against 40%.
-    const result = await preTradeCheckProposal({
+    const result = await preTradeCheckProposal('user-001', {
       accountId: 'acc-001', trades: [
         { symbol: 'AGG', side: 'sell', quantity: 1_000, estimatedValue: 100_000 },
         { symbol: 'AAPL', side: 'buy', quantity: 10_237, estimatedValue: 2_000_000 },
@@ -175,7 +175,7 @@ describe('preTradeCheckProposal · per-leg attribution', () => {
   it('selling tech out of a sector breach is not blocked by that breach', async () => {
     // Same buy, then a $500K MSFT trim inside the same proposal brings tech to 37.5%: below the
     // limit, inside the 32% warning band. The VTI sale funds the rest.
-    const result = await preTradeCheckProposal({
+    const result = await preTradeCheckProposal('user-001', {
       accountId: 'acc-001', trades: [
         { symbol: 'AAPL', side: 'buy', quantity: 10_237, estimatedValue: 2_000_000 },
         { symbol: 'MSFT', side: 'sell', quantity: 1_000, estimatedValue: 500_000 },
@@ -189,13 +189,13 @@ describe('preTradeCheckProposal · per-leg attribution', () => {
 
 describe('preTradeCheckProposal · request validation', () => {
   it('rejects a leg without a positive notional', async () => {
-    await expect(preTradeCheckProposal({
+    await expect(preTradeCheckProposal('user-001', {
       accountId: 'acc-001', trades: [{ symbol: 'VTI', side: 'buy', quantity: 1, estimatedValue: 0 }],
     })).rejects.toThrow()
   })
 
   it('rejects an unknown account', async () => {
-    await expect(preTradeCheckProposal({
+    await expect(preTradeCheckProposal('user-001', {
       accountId: 'acc-999', trades: [{ symbol: 'VTI', side: 'buy', quantity: 1, estimatedValue: 100 }],
     })).rejects.toThrow()
   })

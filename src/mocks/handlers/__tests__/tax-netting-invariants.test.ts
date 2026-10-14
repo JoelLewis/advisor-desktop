@@ -6,7 +6,7 @@ import { taxRateFor } from '@/lib/tax-rules'
 // The MSW server is started for every test file by src/test/setup.ts.
 let preview: RebalancePreview | undefined
 beforeAll(async () => {
-  const previews = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
+  const previews = await previewRebalance('user-001', { accountIds: ['acc-002'], taxAware: true })
   preview = previews[0]
 })
 

@@ -9,9 +9,9 @@ import { accountIdOf } from '@/workspace/thread/embeds/embed-props'
 const STATUS = { block: 'BLOCK', warning: 'WARN', pass: 'CLEAR' } as const
 
 it("lists the preview's legs with each leg's pre-trade status, and the gross traded total", async () => {
-  const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
+  const [preview] = await previewRebalance('user-001', { accountIds: ['acc-002'], taxAware: true })
   if (!preview) throw new Error('no preview for acc-002')
-  const check = await preTradeCheckProposal({
+  const check = await preTradeCheckProposal('user-001', {
     accountId: 'acc-002',
     trades: preview.trades.map(({ symbol, side, quantity, estimatedValue }) => ({ symbol, side, quantity, estimatedValue })),
   })

@@ -99,7 +99,7 @@ describe('year-to-date realized results on a return', () => {
 
 describe('the rebalance estimate is the tax this proposal adds to its return', () => {
   it('acc-002: the proposal\'s +76,538 LT nets against rs-001\'s −32,750 → 43,788 x 23.8% = 10,422', async () => {
-    const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-002'], taxAware: true })
     expect(preview!.estimatedTaxImpact).toBe(10_422)
     expect(preview!.ytdRealizedOnReturn).toEqual({ shortTerm: 0, longTerm: -32_750, collectibleLongTerm: 0 })
     expect(sum(preview!.trades)).toEqual({ shortTerm: 0, longTerm: 76_538, collectibleLongTerm: 0 })
@@ -107,19 +107,19 @@ describe('the rebalance estimate is the tax this proposal adds to its return', (
   })
 
   it('acc-006 (irrevocable trust): nothing is netted from another taxpayer', async () => {
-    const [preview] = await previewRebalance({ accountIds: ['acc-006'], taxAware: true })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-006'], taxAware: true })
     expect(preview!.ytdRealizedOnReturn).toEqual({ shortTerm: 0, longTerm: 0, collectibleLongTerm: 0 })
     expect(preview!.estimatedTaxImpact).toBe(netTaxForLegs(preview!.trades, taxRateFor).net)
   })
 
   it('a tax-deferred account nets nothing and owes nothing', async () => {
-    const [preview] = await previewRebalance({ accountIds: ['acc-003'], taxAware: true })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-003'], taxAware: true })
     expect(preview!.ytdRealizedOnReturn).toBeNull()
     expect(preview!.estimatedTaxImpact).toBe(0)
   })
 
   it('acc-001 + acc-002 in one batch: the YTD loss is netted once, so the figures sum to the return\'s added tax', async () => {
-    const previews = await previewRebalance({ accountIds: ['acc-001', 'acc-002'], taxAware: true })
+    const previews = await previewRebalance('user-001', { accountIds: ['acc-001', 'acc-002'], taxAware: true })
     const both = sum(previews.flatMap((p) => p.trades))
     const expected = additionalCapitalGainsTax({ shortTerm: 0, longTerm: -32_750 }, both, taxRateFor)
     expect(previews.reduce((s, p) => s + p.estimatedTaxImpact, 0)).toBe(expected)

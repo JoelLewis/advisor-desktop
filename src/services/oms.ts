@@ -4,6 +4,9 @@ import type { CurrencyCode } from '@/types/currency'
 import type { AssetClass } from '@/types/portfolio'
 import type { WashedLoss } from '@/lib/wash-sale'
 
+/** Previews and checks read the firm's book: each request names its viewer, and an outsider is told they do not exist. */
+const as = (viewer: string) => ({ 'X-Viewer': viewer })
+
 export type Order = {
   id: string
   accountId: string
@@ -172,8 +175,8 @@ export type ProposedTrade = {
  * Preview a rebalance without executing it. `submitRebalance` is the same request — one
  * endpoint, one function underneath both names.
  */
-export function previewRebalance(request: { accountIds: string[]; taxAware: boolean; driftThreshold?: number; modelId?: string }) {
-  return post<RebalancePreview[]>('/oms/rebalance', request)
+export function previewRebalance(viewer: string, request: { accountIds: string[]; taxAware: boolean; driftThreshold?: number; modelId?: string }) {
+  return post<RebalancePreview[]>('/oms/rebalance', request, as(viewer))
 }
 
 // Pre-trade compliance
@@ -245,6 +248,6 @@ export type PreTradeCheckProposalResult = {
   minimumCash: number
 }
 
-export function preTradeCheckProposal(request: PreTradeCheckProposalRequest) {
-  return post<PreTradeCheckProposalResult>('/oms/orders/pre-check-proposal', request)
+export function preTradeCheckProposal(viewer: string, request: PreTradeCheckProposalRequest) {
+  return post<PreTradeCheckProposalResult>('/oms/orders/pre-check-proposal', request, as(viewer))
 }

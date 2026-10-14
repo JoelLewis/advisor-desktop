@@ -9,7 +9,7 @@ import { MOCK_TODAY_ISO } from '@/lib/clock'
 describe('buildRebalancePreviews', () => {
   it('serves exactly what the rebalance endpoint serves, batch netting included', async () => {
     const ids = ['acc-001', 'acc-002', 'acc-003', 'acc-005']
-    const served = await previewRebalance({ accountIds: ids, taxAware: true })
+    const served = await previewRebalance('user-001', { accountIds: ids, taxAware: true })
     const built = buildRebalancePreviews(
       ids.map((id) => ({ account: accounts.find((a) => a.id === id)!, ...generateRebalanceProposal(id, true) })),
       true, undefined, MOCK_TODAY_ISO,

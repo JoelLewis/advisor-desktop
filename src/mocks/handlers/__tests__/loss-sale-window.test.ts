@@ -26,7 +26,7 @@ const recognizedNet = (t: TaxedLeg) => {
 
 describe('§0.2 · a loss sale opens its own wash-sale window', () => {
   it("acc-002's tax-aware INTC sale today blocks repurchase through 2026-03-27", async () => {
-    const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-002'], taxAware: true })
     const intc = preview!.trades.find((t) => t.symbol === 'INTC' && t.side === 'sell')!
     expect(intc.realizedShortTerm + intc.realizedLongTerm).toBeLessThan(0)
     expect(intc.repurchaseBlockedUntil).toBe('2026-03-27')
@@ -34,7 +34,7 @@ describe('§0.2 · a loss sale opens its own wash-sale window', () => {
   })
 
   it('every sell of a security that still recognizes a net loss carries the window end; no buy and no coin ever does', async () => {
-    const previews = await previewRebalance({ accountIds: accounts.filter(isModelManaged).map((a) => a.id), taxAware: true })
+    const previews = await previewRebalance('user-001', { accountIds: accounts.filter(isModelManaged).map((a) => a.id), taxAware: true })
     let windows = 0
     for (const p of previews) {
       for (const t of p.trades) {
@@ -54,7 +54,7 @@ describe('§0.2 · a loss sale opens its own wash-sale window', () => {
   })
 
   it("acc-045's DOT and SOL loss sales (coins held directly) open no window and no restriction", async () => {
-    const [preview] = await previewRebalance({ accountIds: ['acc-045'], taxAware: true, modelId: 'mod-002' })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-045'], taxAware: true, modelId: 'mod-002' })
     for (const symbol of ['DOT', 'SOL']) {
       const leg = preview!.trades.find((t) => t.symbol === symbol && t.side === 'sell')!
       expect(leg.realizedShortTerm + leg.realizedLongTerm, symbol).toBeLessThan(0)
@@ -66,7 +66,7 @@ describe('§0.2 · a loss sale opens its own wash-sale window', () => {
   })
 
   it("the restriction list keeps rs-001's recorded window (to 2026-03-22) separate from the projected one", async () => {
-    const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-002'], taxAware: true })
     const intc = preview!.repurchaseRestrictions.filter((r) => r.symbol === 'INTC')
     const rs001 = realizedSales.find((s) => s.id === 'rs-001')!
     expect(intc).toEqual([
@@ -107,7 +107,7 @@ describe('§0.2 · a loss sale opens its own wash-sale window', () => {
 
   it('a loss inside an IRA or Roth opens no window: nothing deductible is realized there', async () => {
     const sheltered = accounts.filter((a) => !isTaxableAccount(a.taxTreatment))
-    const previews = await previewRebalance({ accountIds: sheltered.map((a) => a.id), taxAware: true })
+    const previews = await previewRebalance('user-001', { accountIds: sheltered.map((a) => a.id), taxAware: true })
     for (const p of previews) {
       expect(p.taxable).toBe(false)
       for (const t of p.trades) expect(t.repurchaseBlockedUntil, `${p.accountId} ${t.symbol}`).toBeUndefined()
@@ -115,7 +115,7 @@ describe('§0.2 · a loss sale opens its own wash-sale window', () => {
   })
 
   it("one batch for two hh-001 accounts lists each account's projected windows once, beside the recorded one", async () => {
-    const previews = await previewRebalance({ accountIds: ['acc-002', 'acc-005'], taxAware: true })
+    const previews = await previewRebalance('user-001', { accountIds: ['acc-002', 'acc-005'], taxAware: true })
     const lossLegs = previews.flatMap((p) => p.trades.filter((t) => t.repurchaseBlockedUntil).map((t) => `${p.accountId}:${t.symbol}`))
     // Phase 7a · C1: Patricia's account (acc-005) now holds its own model's lineup and sells no loss,
     // so the batch's one loss leg is Robert's INTC — and acc-005's preview must still list it.
@@ -166,7 +166,7 @@ describe('§0.2 · a buy proposed in the same batch washes a loss sold by the sa
     // Phase 7a · C1: the Johnson pair no longer has this shape (Patricia's account follows its own model
     // and buys AGG rather than selling it). The Patels do: Priya's Growth account buys AGG while Raj's
     // sells his AGG at a loss, on one joint return.
-    const previews = await previewRebalance({ accountIds: ['acc-028', 'acc-026'], taxAware: true })
+    const previews = await previewRebalance('user-001', { accountIds: ['acc-028', 'acc-026'], taxAware: true })
     const [p028, p026] = previews
     const buy = p028!.trades.find((t) => t.symbol === 'AGG' && t.side === 'buy')!
     const sell = p026!.trades.find((t) => t.symbol === 'AGG' && t.side === 'sell')!
@@ -203,7 +203,7 @@ describe('§0.2 · a buy proposed in the same batch washes a loss sold by the sa
   })
 
   it('the generator proposes the same trades either way: settlement only adds §1091 facts', async () => {
-    const previews = await previewRebalance({ accountIds: ['acc-002', 'acc-005'], taxAware: true })
+    const previews = await previewRebalance('user-001', { accountIds: ['acc-002', 'acc-005'], taxAware: true })
     for (const p of previews) {
       const own = generateRebalanceProposal(p.accountId, true).legs
       expect(p.trades.map((t) => [t.side, t.symbol, t.quantity, t.estimatedValue])).toEqual(own.map((t) => [t.side, t.symbol, t.quantity, t.estimatedValue]))
@@ -212,8 +212,8 @@ describe('§0.2 · a buy proposed in the same batch washes a loss sold by the sa
 
   it('a buy in another taxpayer\'s account washes nothing', async () => {
     // acc-006 is an irrevocable trust inside hh-002; acc-007 sells AGG at a loss.
-    const [alone] = await previewRebalance({ accountIds: ['acc-007'], taxAware: true })
-    const [withTrust] = await previewRebalance({ accountIds: ['acc-007', 'acc-006'], taxAware: true })
+    const [alone] = await previewRebalance('user-001', { accountIds: ['acc-007'], taxAware: true })
+    const [withTrust] = await previewRebalance('user-001', { accountIds: ['acc-007', 'acc-006'], taxAware: true })
     const agg = (p: typeof alone) => p!.trades.find((t) => t.symbol === 'AGG' && t.side === 'sell')
     expect(agg(withTrust)?.washedLoss).toEqual(agg(alone)?.washedLoss)
   })

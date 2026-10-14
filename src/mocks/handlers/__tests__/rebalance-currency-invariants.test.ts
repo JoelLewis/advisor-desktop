@@ -15,7 +15,7 @@ import { isModelManaged } from '@/lib/mandate'
  */
 describe('§9.3 · rebalance previews carry their account currency', () => {
   it('acc-043 (EUR): proposed trades are tagged EUR, not USD', async () => {
-    const [preview] = await previewRebalance({ accountIds: ['acc-043'], taxAware: true })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-043'], taxAware: true })
     expect(preview).toBeDefined()
     expect(preview!.currency).toBe('EUR')
     // Vacuity guard (Global Constraint 10) — assert there is something to check BEFORE asserting
@@ -25,7 +25,7 @@ describe('§9.3 · rebalance previews carry their account currency', () => {
   })
 
   it('acc-001 (USD) is still USD — the tag is read from the account, not hardcoded to the exotic case', async () => {
-    const [preview] = await previewRebalance({ accountIds: ['acc-001'], taxAware: true })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-001'], taxAware: true })
     expect(preview).toBeDefined()
     expect(preview!.currency).toBe('USD')
     expect(preview!.trades.length).toBeGreaterThan(0)
@@ -38,7 +38,7 @@ describe('§9.3 · rebalance previews carry their account currency', () => {
     for (const [id, currency] of Object.entries(expected)) {
       // acc-041 and acc-042 are custom mandates: previewed onto Growth, as a migration onto a model would be.
       const onto = id === 'acc-041' || id === 'acc-042' ? { modelId: 'mod-002' } : {}
-      const [preview] = await previewRebalance({ accountIds: [id], taxAware: true, ...onto })
+      const [preview] = await previewRebalance('user-001', { accountIds: [id], taxAware: true, ...onto })
       expect(preview, id).toBeDefined()
       expect(preview!.currency, id).toBe(currency)
       // §9.7 · all four now propose trades. acc-041 and acc-044 used to propose none — both are
@@ -60,13 +60,13 @@ describe('§9.3 · rebalance previews carry their account currency', () => {
     // threshold for every asset class — the point here is that the *tag* does not depend on
     // `trades` being non-empty, since `currencyForAccount` is resolved independently of the
     // trade-generation branch.
-    const [preview] = await previewRebalance({ accountIds: ['acc-004'], taxAware: true, driftThreshold: 0.5 })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-004'], taxAware: true, driftThreshold: 0.5 })
     expect(preview).toBeDefined()
     expect(preview!.currency).toBe('USD')
   })
 
   it('a mixed-currency batch total converts before summing', async () => {
-    const previews = await previewRebalance({ accountIds: ['acc-001', 'acc-043'], taxAware: true })
+    const previews = await previewRebalance('user-001', { accountIds: ['acc-001', 'acc-043'], taxAware: true })
     const naive = previews.reduce((s, p) => s + p.trades.reduce((t, x) => t + x.estimatedValue, 0), 0)
     const converted = previews.reduce(
       (s, p) => s + p.trades.reduce((t, x) => t + convertToBase(x.estimatedValue, p.currency, FX_RATES_USD_BASE), 0),
@@ -86,7 +86,7 @@ describe('§9.3 · rebalance previews carry their account currency', () => {
     // (convert each preview's own-currency `estimatedTaxImpact` before summing) is not
     // interchangeable with the naive one, using an account whose tax-unaware sells realize a
     // nonzero impact.
-    const previews = await previewRebalance({ accountIds: ['acc-002', 'acc-043'], taxAware: false })
+    const previews = await previewRebalance('user-001', { accountIds: ['acc-002', 'acc-043'], taxAware: false })
     const naiveTotal = previews.reduce((sum, p) => sum + p.estimatedTaxImpact, 0)
     const convertedTotal = previews.reduce(
       (sum, p) => sum + convertToBase(p.estimatedTaxImpact, p.currency, FX_RATES_USD_BASE),

@@ -50,7 +50,7 @@ describe('§0.6 · projected drift after the proposed trades', () => {
   })
 
   it('the rebalance preview serves the same projection the engine computes', async () => {
-    const previews = await previewRebalance({ accountIds: accounts.filter(isModelManaged).map((a) => a.id), taxAware: true })
+    const previews = await previewRebalance('user-001', { accountIds: accounts.filter(isModelManaged).map((a) => a.id), taxAware: true })
     for (const preview of previews) {
       // Through JSON, as the handler serves it (a -0 drift arrives as 0).
       const engine = projectDrift(preview.accountId, generateRebalanceTrades(preview.accountId, true), true)
@@ -59,7 +59,7 @@ describe('§0.6 · projected drift after the proposed trades', () => {
   })
 
   it('(b) acc-002: the trades lower max drift, and private equity stays, unsellable', async () => {
-    const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-002'], taxAware: true })
     const current = computeDriftForAccount(requireModelManaged(accounts.find((a) => a.id === 'acc-002')!))
     expect(preview!.projectedDrift.maxAbsDrift).toBeLessThan(current.maxAbsDrift)
     const pe = preview!.projectedDrift.assetClassDrifts.find((d) => d.assetClass === 'private_equity')!

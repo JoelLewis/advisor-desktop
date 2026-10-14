@@ -47,11 +47,11 @@ beforeAll(async () => {
   const [positions, previews, alone] = await Promise.all([
     Promise.all(ids.map(async (id) => [id, await getPositions('user-001', id)] as const)),
     Promise.all(MODEL_DEFINITIONS.map(async (m) => {
-      const batch = await previewRebalance({ accountIds: ids, taxAware: true, modelId: m.id })
+      const batch = await previewRebalance('user-001', { accountIds: ids, taxAware: true, modelId: m.id })
       return [m.id, new Map(batch.map((p) => [p.accountId, p]))] as const
     })),
     Promise.all(accounts.map(async (a) => {
-      const [preview] = await previewRebalance({ accountIds: [a.id], taxAware: true, modelId: OWN_MODEL(a) })
+      const [preview] = await previewRebalance('user-001', { accountIds: [a.id], taxAware: true, modelId: OWN_MODEL(a) })
       if (!preview) throw new Error(`no preview for ${a.id} alone`)
       return [a.id, preview] as const
     })),
@@ -86,8 +86,8 @@ function cashTargetWeight(modelId: string): number {
 
 describe('the proposed trades are the account\'s own', () => {
   it('two accounts on the same model do not receive identical trade lists', async () => {
-    const [a] = await previewRebalance({ accountIds: ['acc-001'], taxAware: true, modelId: 'mod-002' })
-    const [b] = await previewRebalance({ accountIds: ['acc-006'], taxAware: true, modelId: 'mod-002' })
+    const [a] = await previewRebalance('user-001', { accountIds: ['acc-001'], taxAware: true, modelId: 'mod-002' })
+    const [b] = await previewRebalance('user-001', { accountIds: ['acc-006'], taxAware: true, modelId: 'mod-002' })
     expect(a!.trades.length).toBeGreaterThan(0)
     expect(b!.trades.length).toBeGreaterThan(0)
     expect(JSON.stringify(a!.trades)).not.toBe(JSON.stringify(b!.trades))
@@ -194,14 +194,14 @@ describe('the proposed trades are the account\'s own', () => {
 
 describe('§9.3 · the preview and its trades carry the account\'s own currency', () => {
   it('acc-041 (HKD): the preview and every trade on it are tagged HKD', async () => {
-    const [preview] = await previewRebalance({ accountIds: ['acc-041'], taxAware: true, modelId: 'mod-002' })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-041'], taxAware: true, modelId: 'mod-002' })
     expect(preview!.currency).toBe('HKD')
     expect(preview!.trades.length).toBeGreaterThan(0)
     expect(preview!.trades.every((t) => t.currency === 'HKD')).toBe(true)
   })
 
   it('acc-001 (USD) is still USD — the tag is read from the account, not hardcoded to the exotic case', async () => {
-    const [preview] = await previewRebalance({ accountIds: ['acc-001'], taxAware: true, modelId: 'mod-002' })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-001'], taxAware: true, modelId: 'mod-002' })
     expect(preview!.currency).toBe('USD')
     expect(preview!.trades.length).toBeGreaterThan(0)
     expect(preview!.trades.every((t) => t.currency === 'USD')).toBe(true)
@@ -213,7 +213,7 @@ describe('§9.3 · the preview and its trades carry the account\'s own currency'
     let sawATrade = false
     for (const [id, currency] of Object.entries(expected)) {
       const account = accounts.find((a) => a.id === id)!
-      const [preview] = await previewRebalance({ accountIds: [id], taxAware: true, modelId: OWN_MODEL(account) })
+      const [preview] = await previewRebalance('user-001', { accountIds: [id], taxAware: true, modelId: OWN_MODEL(account) })
       expect(preview!.currency, id).toBe(currency)
       expect(preview!.trades.length, `${id} must propose trades`).toBeGreaterThan(0)
       sawATrade = true
@@ -225,7 +225,7 @@ describe('§9.3 · the preview and its trades carry the account\'s own currency'
   it('a preview with no trades still states its currency', async () => {
     // acc-003 is 0.31 of a point adrift of its own model — below the engine's threshold, so it
     // proposes nothing, and the tag must not depend on the trade list being non-empty.
-    const [preview] = await previewRebalance({ accountIds: ['acc-003'], taxAware: true, modelId: 'mod-003' })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-003'], taxAware: true, modelId: 'mod-003' })
     expect(preview!.trades).toHaveLength(0)
     expect(preview!.currency).toBe('USD')
     expect(preview!.estimatedTaxImpact).toBe(0)

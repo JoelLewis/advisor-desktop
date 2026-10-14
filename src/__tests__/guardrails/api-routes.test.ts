@@ -72,9 +72,9 @@ describe('the services and the handlers agree', () => {
   it('every request a service makes has a handler for its method and path', () => {
     expect(requests.filter((r) => !routes.some((route) => serves(route, r))).map((r) => `${r.via}: ${r.method} ${r.url}`)).toEqual([])
   })
-  it("every read of the firm's records (custodian, CRM, PMS, compliance) names its viewer, so the handler can refuse an outsider", () => {
-    const firmRecords = requests.filter((r) => /^\/api\/(custodian|crm|pms|compliance)\//.test(r.url))
-    expect(firmRecords.length).toBeGreaterThanOrEqual(9)
+  it("every request to the firm's records (custodian, CRM, PMS, compliance, OMS) names its viewer, so the handler can refuse an outsider", () => {
+    const firmRecords = requests.filter((r) => /^\/api\/(custodian|crm|pms|compliance|oms)\//.test(r.url))
+    expect(firmRecords.length).toBeGreaterThanOrEqual(11)
     expect(firmRecords.filter((r) => r.viewer !== 'x').map((r) => `${r.via}: ${r.method} ${r.url}`)).toEqual([])
   })
   it('every handler route is requested by some service', () => {

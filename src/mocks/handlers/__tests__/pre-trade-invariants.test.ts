@@ -14,14 +14,14 @@ import { isModelManaged } from '@/lib/mandate'
 
 describe('rebalance tax estimation', () => {
   it('C26: turning tax-awareness off does not make the estimated tax zero', async () => {
-    const aware = await previewRebalance({ accountIds: ['acc-001'], taxAware: true })
-    const unaware = await previewRebalance({ accountIds: ['acc-001'], taxAware: false })
+    const aware = await previewRebalance('user-001', { accountIds: ['acc-001'], taxAware: true })
+    const unaware = await previewRebalance('user-001', { accountIds: ['acc-001'], taxAware: false })
     expect(unaware[0]!.estimatedTaxImpact).toBeGreaterThan(0)
     expect(unaware[0]!.estimatedTaxImpact).toBeGreaterThanOrEqual(aware[0]!.estimatedTaxImpact)
   })
 
   it('C26: the gross tax equals the sum of its trade-level tax impacts, and the YTD loss on the return lowers the estimate', async () => {
-    const [preview] = await previewRebalance({ accountIds: ['acc-001'], taxAware: true })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-001'], taxAware: true })
     expect(preview!.grossTaxOnGains)
       .toBeCloseTo(preview!.trades.reduce((s, t) => s + t.taxImpact, 0), 0)
     // acc-001 (Robert Johnson's revocable trust) is on hh-001's joint return, which already
@@ -45,7 +45,7 @@ describe('rebalance tax estimation', () => {
     let boundedByGross = 0
     let withYtdGain = 0
     for (const account of accountFixture.filter(isModelManaged)) {
-      const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
+      const [preview] = await previewRebalance('user-001', { accountIds: [account.id], taxAware: true })
       const ytd = preview!.ytdRealizedOnReturn
       if (ytd === null) {
         expect(preview!.estimatedTaxImpact, account.id).toBe(0)
@@ -70,14 +70,14 @@ describe('rebalance tax estimation', () => {
 
 describe('fix round 2 · rebalance tax respects account tax treatment', () => {
   it('a Roth IRA (tax_free) rebalance never shows a capital-gains tax impact, even though it sells at a gain', async () => {
-    const [preview] = await previewRebalance({ accountIds: ['acc-004'], taxAware: true })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-004'], taxAware: true })
     expect(preview!.trades.some((t) => t.side === 'sell')).toBe(true)
     expect(preview!.trades.every((t) => t.taxImpact === 0)).toBe(true)
     expect(preview!.estimatedTaxImpact).toBe(0)
   })
 
   it('a traditional IRA (tax_deferred) rebalance never shows a capital-gains tax impact either', async () => {
-    const [preview] = await previewRebalance({ accountIds: ['acc-008'], taxAware: true })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-008'], taxAware: true })
     expect(preview!.trades.some((t) => t.side === 'sell')).toBe(true)
     expect(preview!.trades.every((t) => t.taxImpact === 0)).toBe(true)
     expect(preview!.estimatedTaxImpact).toBe(0)
@@ -97,7 +97,7 @@ describe('fix round 2 · rebalance is self-financing', () => {
     //   buys  EFA 63 + VWO 145 + QAI 108 + GLD 15 = 18,717
     //   net = 6,767, so cash lands 349.10 under its target — the sell side's lot residual and nothing else.
     const account = accountFixture.find((a) => a.id === 'acc-004')!
-    const [preview] = await previewRebalance({ accountIds: ['acc-004'], taxAware: true })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-004'], taxAware: true })
     const totalSell = preview!.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
     const totalBuy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
 
@@ -134,7 +134,7 @@ describe('fix round 2 · rebalance is self-financing', () => {
 describe('fix round 4 · sells are capped by what buys AND cash-to-target can absorb, not by buys alone', () => {
   async function totals(accountId: string, modelId?: string) {
     const account = accountFixture.find((a) => a.id === accountId)!
-    const [preview] = await previewRebalance({ accountIds: [accountId], taxAware: true, ...(modelId ? { modelId } : {}) })
+    const [preview] = await previewRebalance('user-001', { accountIds: [accountId], taxAware: true, ...(modelId ? { modelId } : {}) })
     const trades = preview!.trades
     const totalSell = trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
     const totalBuy = trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
@@ -335,7 +335,7 @@ describe('fix round 4 · sells are capped by what buys AND cash-to-target can ab
     const violations: string[] = []
     let examined = 0
     for (const account of accountFixture.filter(isModelManaged)) {
-      const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
+      const [preview] = await previewRebalance('user-001', { accountIds: [account.id], taxAware: true })
       const totalSell = preview!.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
       const totalBuy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
       if (totalSell === 0) continue
@@ -356,7 +356,7 @@ describe('fix round 4 · sells are capped by what buys AND cash-to-target can ab
 
 describe('§9.6 · buys are capped by available cash above target, symmetric to the sell cap', () => {
   it('acc-043: rebalancing does not drive cash from 13.69% to 5.56% against a 10% target', async () => {
-    const [preview] = await previewRebalance({ accountIds: ['acc-043'], taxAware: true })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-043'], taxAware: true })
     const positions = await getPositions('user-001', 'acc-043')
     const account = accountFixture.find((a) => a.id === 'acc-043')!
     const cash = positions.find((p) => p.symbol === 'CASH')!.marketValue
@@ -381,7 +381,7 @@ describe('§9.6 · buys are capped by available cash above target, symmetric to 
     const violations: string[] = []
     let examined = 0
     for (const account of accounts) {
-      const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
+      const [preview] = await previewRebalance('user-001', { accountIds: [account.id], taxAware: true })
       if (!preview?.trades.length) continue
       examined++
       const positions = await getPositions('user-001', account.id)
@@ -427,7 +427,7 @@ describe('§9.6 · buys are capped by available cash above target, symmetric to 
     // against 4,039 of buys and left the account at $45,937 — $76 *above* where it started, on
     // an overweight of only 0.88 of a point. Both bounds are the executed figure now.
     const account = accountFixture.find((a) => a.id === 'acc-033')!
-    const [preview] = await previewRebalance({ accountIds: ['acc-033'], taxAware: true })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-033'], taxAware: true })
     const trades = preview!.trades
     const totalSell = trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
     const totalBuy = trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
@@ -468,7 +468,7 @@ describe('§9.6 · buys are capped by available cash above target, symmetric to 
     // are sized from are now derived: intl_equity 575,900 / 4,200,000 = 0.137167 against a 0.15
     // target, alternatives 158,400 / 4,200,000 = 0.037714 against 0.05. The $113,820 total is
     // unchanged; only its distribution across the three sleeves is.
-    const [preview] = await previewRebalance({ accountIds: ['acc-015'], taxAware: true, driftThreshold: 0.001 })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-015'], taxAware: true, driftThreshold: 0.001 })
     const totalBuy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
     expect(totalBuy).toBe(113_758)
     expect(113_820 - totalBuy).toBeLessThan(162.30)
@@ -495,7 +495,7 @@ describe('§9.6 · buys are capped by available cash above target, symmetric to 
     // fixed_income 0.0221 = 0.0325 x $4,200,000 = $136,500, executed as INTC 1,535 x 28.45 =
     // 43,671 and BND 1,282 x 72.40 = 92,817.
     const account = accountFixture.find((a) => a.id === 'acc-015')!
-    const [preview] = await previewRebalance({ accountIds: ['acc-015'], taxAware: true, driftThreshold: 0.001 })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-015'], taxAware: true, driftThreshold: 0.001 })
     const totalSell = preview!.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
     const totalBuy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
     const target = (await getDrift('user-001', 'acc-015')).assetClassDrifts.find((d) => d.assetClass === 'cash')!.target
@@ -533,7 +533,7 @@ describe('fix round 3 · self-financing applies to sells only — buys are never
     // exceed the market value of the position behind it. The old `totalBuy > 0 &&` guard would
     // have proposed HK$9,912,500 of 0700.HK against a HK$4,560,000 position — 2.2x, a short sale
     // in a long-only demo.
-    const [preview] = await previewRebalance({ accountIds: ['acc-041'], taxAware: true, modelId: 'mod-002' })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-041'], taxAware: true, modelId: 'mod-002' })
     const positions = await getPositions('user-001', 'acc-041')
     const sells = preview!.trades.filter((t) => t.side === 'sell')
     expect(preview!.trades.length).toBeGreaterThan(0)
@@ -566,7 +566,7 @@ describe('fix round 3 · self-financing applies to sells only — buys are never
     // Sleeve drifts: us_equity 4,116,680 / 12,000,000 = 0.343057 (-0.0069 vs 0.35 = 82,800);
     // intl_equity 1,706,750 / 12,000,000 = 0.142229 (-0.0078 vs 0.15 = 93,600); alternatives
     // 1,056,000 / 12,000,000 = 0.088 (-0.062 vs 0.15 = 744,000).
-    const [preview] = await previewRebalance({ accountIds: ['acc-006'], taxAware: true })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-006'], taxAware: true })
     const totalSell = preview!.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
     const totalBuy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
     expect(totalSell).toBe(0)
@@ -580,7 +580,7 @@ describe('fix round 3 · rebalance sells never exceed the position actually held
   it('across every account with a proposal, no sell trade exceeds that position\'s real market value', async () => {
     const accountList = accountFixture.filter(isModelManaged)
     for (const account of accountList) {
-      const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
+      const [preview] = await previewRebalance('user-001', { accountIds: [account.id], taxAware: true })
       const sells = preview!.trades.filter((t) => t.side === 'sell')
       if (sells.length === 0) continue
       const positions = await getPositions('user-001', account.id)
@@ -613,7 +613,7 @@ describe('fix round 3 · rebalance tax uses each lot\'s own holding-period rate,
   it('acc-037: VTI has only short-term lots, so its sell tax must exceed what a flat 23.8% long-term rate would produce', async () => {
     // Phase 7a · C1: acc-040 now follows Conservative Income and holds no GLD; acc-037's VTI (three lots,
     // all bought within the year, at a gain) is the book's case of a sale taxed wholly short-term.
-    const [preview] = await previewRebalance({ accountIds: ['acc-037'], taxAware: false })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-037'], taxAware: false })
     const vti = preview!.trades.find((t) => t.symbol === 'VTI' && t.side === 'sell')
     expect(vti).toBeDefined()
     expect(vti!.taxImpact).toBeGreaterThan(0)
@@ -639,7 +639,7 @@ describe('fix round 3 · rebalance tax uses each lot\'s own holding-period rate,
   })
 
   it('acc-001: VTI\'s sale is covered entirely by its long-term lot, so its sell tax must be below what a flat 37% short-term rate would produce', async () => {
-    const [preview] = await previewRebalance({ accountIds: ['acc-001'], taxAware: false })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-001'], taxAware: false })
     const vti = preview!.trades.find((t) => t.symbol === 'VTI' && t.side === 'sell')
     expect(vti).toBeDefined()
     expect(vti!.taxImpact).toBeGreaterThan(0)
@@ -692,7 +692,7 @@ describe('§9.7 round 4 · the tax on a row is the tax on the value that row sta
   }
 
   it('acc-045 BTC: 2 units at $174,900, taxed on $174,900 — not on the notional the lot was floored from', async () => {
-    const [preview] = await previewRebalance({ accountIds: ['acc-045'], taxAware: false, modelId: 'mod-002' })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-045'], taxAware: false, modelId: 'mod-002' })
     const btc = preview!.trades.find((t) => t.symbol === 'BTC' && t.side === 'sell')!
     const position = (await getPositions('user-001', 'acc-045')).find((p) => p.symbol === 'BTC')!
     const lots = (await getTaxLots('user-001', 'acc-045')).filter((l) => l.positionId === position.id)
@@ -711,7 +711,7 @@ describe('§9.7 round 4 · the tax on a row is the tax on the value that row sta
     let legsChecked = 0
     let lotSensitiveLegs = 0
     for (const account of accountFixture.filter(isModelManaged)) {
-      const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: false })
+      const [preview] = await previewRebalance('user-001', { accountIds: [account.id], taxAware: false })
       // Tax-exempt accounts are zero on every leg by design (`isTaxableAccount`), and a lot walk
       // over their positions would not be; they are covered by their own tests above.
       // Gated on the gross figure: netting can offset an account's gains entirely (net estimate 0)
@@ -744,15 +744,15 @@ describe('§9.7 round 4 · the tax on a row is the tax on the value that row sta
 
 describe('fix round 2 · rebalance drift threshold is respected', () => {
   it('a loose driftThreshold produces fewer trades than a tight one, for the same account', async () => {
-    const loose = await previewRebalance({ accountIds: ['acc-001'], taxAware: true, driftThreshold: 0.10 })
-    const tight = await previewRebalance({ accountIds: ['acc-001'], taxAware: true, driftThreshold: 0.001 })
+    const loose = await previewRebalance('user-001', { accountIds: ['acc-001'], taxAware: true, driftThreshold: 0.10 })
+    const tight = await previewRebalance('user-001', { accountIds: ['acc-001'], taxAware: true, driftThreshold: 0.001 })
     expect(loose[0]!.trades.length).toBeLessThan(tight[0]!.trades.length)
   })
 })
 
 describe('fix round 2 · rebalance trade direction follows actual vs target, not the (always-positive) drift magnitude', () => {
   it('acc-001: VTI (overweight us_equity) sells, EFA (underweight intl_equity) buys', async () => {
-    const [preview] = await previewRebalance({ accountIds: ['acc-001'], taxAware: true })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-001'], taxAware: true })
     const vti = preview!.trades.find((t) => t.symbol === 'VTI')
     const efa = preview!.trades.find((t) => t.symbol === 'EFA')
     expect(vti?.side).toBe('sell')
@@ -772,7 +772,7 @@ describe('fix round 2 · rebalance trade direction follows actual vs target, not
  */
 describe('§9.7 · rebalancing reaches classes the account does not yet hold', () => {
   it('acc-041: 94.4% international equity against a 15% target proposes real trades, including buys', async () => {
-    const [preview] = await previewRebalance({ accountIds: ['acc-041'], taxAware: true, modelId: 'mod-002' })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-041'], taxAware: true, modelId: 'mod-002' })
     expect(preview!.trades.length).toBeGreaterThan(0)
     expect(preview!.trades.some((t) => t.side === 'buy')).toBe(true)
     // The direction that matters: the buys are in classes acc-041 holds NOTHING of. A test that
@@ -788,7 +788,7 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     // The currency trap. Notionals derive from `account.totalValue`, which is native currency
     // (HK$12,500,000), while VTI is quoted at US$268.50. Dividing an HKD notional by a USD price
     // gives a share count 7.82x too large that means nothing in either currency.
-    const [preview] = await previewRebalance({ accountIds: ['acc-041'], taxAware: true, modelId: 'mod-002' })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-041'], taxAware: true, modelId: 'mod-002' })
     const vti = preview!.trades.find((t) => t.symbol === 'VTI')
     expect(vti, 'acc-041 must buy the mod-002 us_equity sleeve').toBeDefined()
     expect(vti!.currency).toBe('HKD')
@@ -816,7 +816,7 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     // days later at zero gain would undo the harvest, and TLH practice is to hold the replacement
     // past the 31st day. A position whose every lot is that recent is not a tax-aware sell
     // candidate, so the sequence is INTC in full ($199,150), then SPY for the rest.
-    const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-002'], taxAware: true })
     const usEquitySells = preview!.trades.filter((t) => t.side === 'sell' && ['SPY', 'QQQ', 'INTC', 'SMH'].includes(t.symbol))
     // Vacuity guard — an empty list would mean the sleeve produced no sell at all and every
     // assertion below would be testing nothing.
@@ -842,8 +842,8 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
   it('tax-aware off does not silently produce the same selection', async () => {
     // The direction that matters: if both toggle states pick identically, the toggle does nothing
     // and the previous test proves nothing about tax-awareness.
-    const [aware] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
-    const [unaware] = await previewRebalance({ accountIds: ['acc-002'], taxAware: false })
+    const [aware] = await previewRebalance('user-001', { accountIds: ['acc-002'], taxAware: true })
+    const [unaware] = await previewRebalance('user-001', { accountIds: ['acc-002'], taxAware: false })
     expect(JSON.stringify(aware!.trades)).not.toBe(JSON.stringify(unaware!.trades))
     // Named, not just different. Tax-unaware keeps the fixture's declaration order — SPY, QQQ,
     // INTC — so SPY alone absorbs the whole $549,900 trim and the loss lot is never reached.
@@ -865,8 +865,8 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     // re-ranking its sleeves by embedded gain would be an arbitrary preference wearing a
     // tax-awareness label. Its two toggle states must therefore be identical — and the toggle
     // must still bite on the taxable account above, or this is asserting that the toggle is dead.
-    const [aware] = await previewRebalance({ accountIds: ['acc-047'], taxAware: true })
-    const [unaware] = await previewRebalance({ accountIds: ['acc-047'], taxAware: false })
+    const [aware] = await previewRebalance('user-001', { accountIds: ['acc-047'], taxAware: true })
+    const [unaware] = await previewRebalance('user-001', { accountIds: ['acc-047'], taxAware: false })
     expect(aware!.trades.length).toBeGreaterThan(0)
     expect(JSON.stringify(aware!.trades)).toBe(JSON.stringify(unaware!.trades))
   })
@@ -877,7 +877,7 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     const accountList = accountFixture.filter(isModelManaged)
     let buysChecked = 0
     for (const account of accountList) {
-      const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
+      const [preview] = await previewRebalance('user-001', { accountIds: [account.id], taxAware: true })
       if (!preview?.trades.length) continue
       const positions = await getPositions('user-001', account.id)
       const held = new Set(positions.map((p) => p.symbol))
@@ -907,7 +907,7 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     // Vacuity guard: this account must really hold fractional units, or the test proves nothing.
     expect(fractional.map((p) => p.symbol)).toEqual(expect.arrayContaining(['BTC', 'ETH', 'USDC']))
 
-    const [preview] = await previewRebalance({ accountIds: ['acc-045'], taxAware: true, modelId: 'mod-002' })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-045'], taxAware: true, modelId: 'mod-002' })
     const sells = preview!.trades.filter((t) => t.side === 'sell')
     expect(sells.length).toBeGreaterThan(0)
     for (const sell of sells) {
@@ -937,7 +937,7 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     let legsChecked = 0
     let worstRelative = 0
     for (const account of accountList) {
-      const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
+      const [preview] = await previewRebalance('user-001', { accountIds: [account.id], taxAware: true })
       if (!preview?.trades.length) continue
       const positions = await getPositions('user-001', account.id)
       const drift = await getDrift('user-001', account.id)
@@ -982,7 +982,7 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     const accountList = accountFixture.filter(isModelManaged)
     let tradesChecked = 0
     for (const account of accountList) {
-      const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
+      const [preview] = await previewRebalance('user-001', { accountIds: [account.id], taxAware: true })
       const positions = await getPositions('user-001', account.id)
       const seen = new Set<string>()
       for (const trade of preview?.trades ?? []) {
@@ -1024,7 +1024,7 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
  */
 describe('§0.6 · a long-term GLD gain is collectibles gain', () => {
   it('acc-001: the GLD leg is taxed at 31.8%, the VTI leg beside it at 23.8%', async () => {
-    const [preview] = await previewRebalance({ accountIds: ['acc-001'], taxAware: true })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-001'], taxAware: true })
     const gld = preview!.trades.find((t) => t.symbol === 'GLD' && t.side === 'sell')!
     const vti = preview!.trades.find((t) => t.symbol === 'VTI' && t.side === 'sell')!
     // Both legs are wholly long-term gain, so each leg's tax is that gain at one rate.
@@ -1040,7 +1040,7 @@ describe('§0.6 · a long-term GLD gain is collectibles gain', () => {
   })
 
   it('acc-001: the estimate nets the year-to-date loss against the 23.8% gain, leaving the 28% gain whole', async () => {
-    const [preview] = await previewRebalance({ accountIds: ['acc-001'], taxAware: true })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-001'], taxAware: true })
     // LT 109,639 (VTI) + 5,179 (VNQ) + 21,324 (GLD) − 32,750 (rs-001) = 103,392, of which GLD 21,324:
     // 82,068 × 0.238 + 21,324 × 0.318 = 19,532.18 + 6,781.03 = 26,313.21 → 26,313
     // (at a flat 23.8%: 103,392 × 0.238 = 24,607.30 → 24,607).
