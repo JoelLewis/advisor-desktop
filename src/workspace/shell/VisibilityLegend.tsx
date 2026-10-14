@@ -19,3 +19,16 @@ export function VisibilityLegend() {
     </ul>
   )
 }
+
+const EXTERNAL_WORDS = { client: 'Shared with you and your advisor', prospect: 'Shared with you and the firm' } as const
+
+/** An outsider's one mark, explained for them: their conversation is shared with the firm. */
+export function ExternalVisibilityLegend({ party }: { party: keyof typeof EXTERNAL_WORDS }) {
+  return (
+    <ul aria-label="Visibility" className="border-b border-rule pb-3">
+      <li className="grid grid-cols-[2rem_1fr] items-center gap-2 text-label text-ink-3">
+        <VisibilityMark visibility="client" /><span>{EXTERNAL_WORDS[party]}</span>
+      </li>
+    </ul>
+  )
+}

@@ -89,6 +89,15 @@ describe('workspace shell', () => {
     expect(select).toHaveValue('user-001')
   })
 
+  it('shows a client a one-line legend for the one mark they see, with the visibility as a description', async () => {
+    await renderHome()
+    await viewAs('Robert Johnson · Client')
+    await waitFor(() => expect(threadLinks()).toEqual(['Robert Johnson']))
+    const legend = within(threadNav()).getByRole('list', { name: 'Visibility' })
+    expect(within(legend).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Shared with you and your advisor'])
+    expect(within(threadNav()).getByRole('link', { name: 'Robert Johnson' })).toHaveAccessibleDescription('Visibility: CLIENT CAN SEE')
+  })
+
   it('viewing as Robert leaves only his thread and no agents', async () => {
     await renderHome()
     await viewAs('Robert Johnson · Client')

@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import { Pane } from '@/kit/layout/Pane'
 import { VisibilityMark } from '@/kit/visibility/VisibilityMark'
 import { visibilityWords } from '@/kit/visibility/visibility'
-import { VisibilityLegend } from '@/workspace/shell/VisibilityLegend'
+import { ExternalVisibilityLegend, VisibilityLegend } from '@/workspace/shell/VisibilityLegend'
 import { useDirectory, useThreads } from '@/hooks/use-workspace'
 import { isExternalViewerIn } from '@/workspace/people/directory-people'
 import { threadParty } from '@/workspace/people/thread-party'
@@ -32,7 +32,7 @@ export function ThreadList() {
     <div className="flex flex-col gap-8">
       <DeskLinks />
       <div className="flex flex-col gap-3">
-        {external ? null : <VisibilityLegend />}
+        {external ? <ExternalVisibilityLegend party={threads.data[0] ? threadParty(threads.data[0]) : 'client'} /> : <VisibilityLegend />}
         <div className="flex flex-col gap-8">
           {GROUPS.map(({ visibility, title }) => {
             const group = threads.data.filter((t) => t.visibility === visibility)

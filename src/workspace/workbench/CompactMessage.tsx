@@ -39,7 +39,7 @@ function Line({ who, at, children }: { who: string; at: string; children: ReactN
   return (
     <div className="flex min-w-0 flex-col gap-1">
       <div className="flex items-baseline gap-2 text-label">
-        <span className="font-semibold uppercase text-ink-2">{who}</span>
+        <span className="font-semibold text-ink-2">{who}</span>
         <span className="tabular ml-auto text-ink-3">{fmtEasternStamp(at)}</span>
       </div>
       <p className="whitespace-pre-line text-body">{children}</p>

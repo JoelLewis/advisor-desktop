@@ -25,7 +25,7 @@ export function TranscriptNotes({ meeting, directory, editable, onDirtyChange }:
               className={cn('flex min-w-0 flex-col gap-0.5 border-l-2 py-2 pl-3', highlighted === line.id ? 'border-ink bg-face' : 'border-transparent')}>
               <span className="flex items-baseline gap-2 text-label">
                 <span className="tabular text-ink-3">{line.id}</span>
-                <span className="font-semibold uppercase text-ink-2">{speakerOf(line.speaker)}</span>
+                <span className="font-semibold text-ink-2">{speakerOf(line.speaker)}</span>
               </span>
               <span className="text-copy">{line.text}</span>
             </li>

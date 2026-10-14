@@ -15,7 +15,7 @@ export function ReferenceRowView({ message, directory }: { message: ReferenceRow
   return (
     <article aria-label={`From ${view}: ${message.claim}`} className="flex min-w-0 flex-col gap-3">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="text-label uppercase text-ink-3">
+        <span className="text-label text-ink-3">
           {'From '}
           <Link to={referenceRowHref(message.view, message.rowId, message.threadId, message.subject)} className="underline decoration-rule-2 underline-offset-4 hover:decoration-ink">{view}</Link>
           {` · taken by ${personIn(directory, message.takenBy).name}`}
