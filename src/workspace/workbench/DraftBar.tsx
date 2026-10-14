@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+import { useAnnounce } from '@/kit/announcer/use-announce'
 import { Button } from '@/kit/button/Button'
 import type { DraftVersion } from './use-draft-version'
 
@@ -13,6 +15,11 @@ type DraftBarProps = {
 }
 
 export function DraftBar({ draft, latestVersion, saveEnabled, onBeforeSave, onSave }: DraftBarProps) {
+  const announce = useAnnounce()
+  const { savedVersion } = draft
+  useEffect(() => {
+    if (savedVersion !== undefined) announce(`Saved as v${savedVersion} · posted to the thread.`)
+  }, [savedVersion, announce])
   return (
     <div role="group" aria-label="Draft version" className="flex flex-wrap items-center gap-x-4 gap-y-2 border border-ink p-3">
       <span className="text-label uppercase text-ink">{draft.dirty ? 'Draft · not saved' : `Showing v${latestVersion}`}</span>

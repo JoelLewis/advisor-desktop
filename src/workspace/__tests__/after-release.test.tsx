@@ -5,6 +5,8 @@ import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
 import { approveProposal, createProposal, recordComplianceAct } from '@/services/workspace'
 import { store } from '@/mocks/data/workspace-store'
+import { approvedStoryV3 } from '@/mocks/workspace/__tests__/story-fixture'
+import type { Message } from '@/types/workspace'
 
 const ADRIAN = 'user-001'
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
@@ -57,6 +59,18 @@ describe('the team thread after compliance releases', () => {
     expect(slip).toHaveTextContent('Demo · recorded through the presenter shortcut by Adrian Hale')
     await waitFor(() => expect(document.activeElement).toBe(document.getElementById('act-REC-0002')))
     expect(store().acts.filter((a) => a.kind === 'release_orders')).toHaveLength(1)
+  })
+
+  it('announces the release and its fills', async () => {
+    approvedStoryV3()
+    renderRoutes(routes, '/t/th-johnson-review')
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: 'Demo · act as Mark Davis' }))
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirm' }))
+    const fills = () => store().messages.find((m) => m.kind === 'fills')
+    await waitFor(() => expect(fills()).toBeDefined())
+    const count = fills()!.kind === 'fills' ? (fills() as Extract<Message, { kind: 'fills' }>).fills.length : 0
+    await waitFor(() => expect(document.querySelector('[data-part="announcer"]')).toHaveTextContent(`Released by Mark Davis; ${count} orders filled`))
   })
 
   it('Mark and Sarah see no shortcut', async () => {

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { useAnnounce } from '@/kit/announcer/use-announce'
 import { Button } from '@/kit/button/Button'
 import { Dialog } from '@/kit/dialog/Dialog'
 import { fmtEasternTime } from '@/kit/measure'
@@ -24,6 +25,7 @@ export function MeetingControls({ meeting, canPrepare, onRecorded, filingBlocked
 }
 
 function BeforeTheMeeting({ meeting }: { meeting: MeetingView }) {
+  const announce = useAnnounce()
   const prep = useRunMeetingPrep(meeting.eventId)
   const hold = useHoldMeeting(meeting.eventId)
   const [report, setReport] = useState<string>()
@@ -37,7 +39,11 @@ function BeforeTheMeeting({ meeting }: { meeting: MeetingView }) {
     const before = meeting.agenda.length
     setReport(undefined)
     prep.mutate(undefined, {
-      onSuccess: (view) => setReport(view.agenda.length > before ? 'Meeting Prep posted its findings and agenda v1.' : 'Meeting Prep has reported; the agenda is unchanged.'),
+      onSuccess: (view) => {
+        const said = view.agenda.length > before ? 'Meeting Prep posted its findings and agenda v1.' : 'Meeting Prep has reported; the agenda is unchanged.'
+        setReport(said)
+        announce(said)
+      },
       onSettled: () => { prepping.current = false },
     })
   }
@@ -69,6 +75,7 @@ function BeforeTheMeeting({ meeting }: { meeting: MeetingView }) {
 }
 
 function AfterTheMeeting({ meeting, onRecorded, filingBlockedReason }: { meeting: MeetingView; onRecorded: (actId: string) => void; filingBlockedReason?: string }) {
+  const announce = useAnnounce()
   const draft = useDraftMeetingNotes(meeting.eventId)
   const file = useFileMeetingRecord(meeting.eventId)
   const [report, setReport] = useState<string>()
@@ -78,7 +85,11 @@ function AfterTheMeeting({ meeting, onRecorded, filingBlockedReason }: { meeting
     if (drafting.current) return
     drafting.current = true
     draft.mutate(undefined, {
-      onSuccess: () => setReport('Meeting Notes drafted the notes; edit them beside the transcript in the meeting view.'),
+      onSuccess: () => {
+        const said = 'Meeting Notes drafted the notes; edit them beside the transcript in the meeting view.'
+        setReport(said)
+        announce(said)
+      },
       onSettled: () => { drafting.current = false },
     })
   }

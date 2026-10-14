@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { useAnnounce } from '@/kit/announcer/use-announce'
 import { Button } from '@/kit/button/Button'
 import { TextInput } from '@/kit/text-input/TextInput'
 import { useCreateDraft, usePostMessage } from '@/hooks/use-workspace'
@@ -43,12 +44,13 @@ type ComposerFormProps = {
 }
 
 function ComposerForm({ label, action, pending, error, placeholder, savedNote, submit }: ComposerFormProps) {
+  const announce = useAnnounce()
   const [body, setBody] = useState('')
   const [saved, setSaved] = useState(false)
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
     if (body.trim() === '') return
-    submit(body, () => { setBody(''); setSaved(true) })
+    submit(body, () => { setBody(''); setSaved(true); announce(savedNote ?? 'Posted.') })
   }
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3 border-t border-ink pt-4">

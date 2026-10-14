@@ -1,4 +1,5 @@
 import { useId, useRef, useState } from 'react'
+import { useAnnounce } from '@/kit/announcer/use-announce'
 import { Button } from '@/kit/button/Button'
 import { useDraftLetter, useDrafts, useProposals } from '@/hooks/use-workspace'
 import type { Draft, Thread } from '@/types/workspace'
@@ -9,6 +10,7 @@ type Asked = { draftId: string; version: number; title: string; created: boolean
 
 /** Asks the Client Letter Agent for a letter from this client's approved proposal. */
 export function LetterControl({ thread }: { thread: Thread }) {
+  const announce = useAnnounce()
   const reasonId = useId()
   const proposals = useProposals()
   const letter = useDraftLetter(thread.id)
@@ -34,15 +36,17 @@ export function LetterControl({ thread }: { thread: Thread }) {
     const held = new Set((drafts.data ?? []).map((d) => d.id))
     setAsked(undefined)
     letter.mutate(proposalId, {
-      onSuccess: (draft: Draft) => setAsked(draft.basis ? { draftId: draft.id, version: draft.basis.version, title, created: !held.has(draft.id) } : undefined),
+      onSuccess: (draft: Draft) => {
+        const next = draft.basis ? { draftId: draft.id, version: draft.basis.version, title, created: !held.has(draft.id) } : undefined
+        setAsked(next)
+        if (next) announce(letterReport(next))
+      },
       onSettled: () => { asking.current = false },
     })
   }
   // The report stands only while the draft it names is still held: it clears once that draft is sent or replaced.
   const reported = asked && drafts.data?.some((d) => d.id === asked.draftId) ? asked : undefined
-  const report = !reported ? undefined
-    : reported.created ? `The Client Letter Agent drafted a letter from v${reported.version} of the ${reported.title}.`
-    : `The Client Letter Agent's letter from v${reported.version} of the ${reported.title} is already in the drafts.`
+  const report = reported ? letterReport(reported) : undefined
   return (
     <div className="flex flex-col items-start gap-2">
       {approved.map(({ p, version }) => (
@@ -58,6 +62,10 @@ export function LetterControl({ thread }: { thread: Thread }) {
     </div>
   )
 }
+
+const letterReport = (asked: Asked) => asked.created
+  ? `The Client Letter Agent drafted a letter from v${asked.version} of the ${asked.title}.`
+  : `The Client Letter Agent's letter from v${asked.version} of the ${asked.title} is already in the drafts.`
 
 /**
  * Why there is nothing to write from. A letter explains an approved version before its orders are placed:

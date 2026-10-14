@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAnnounce } from '@/kit/announcer/use-announce'
 import { Button } from '@/kit/button/Button'
 import { cn } from '@/lib/utils'
 import { useTakeToTeamThread } from '@/hooks/use-reference'
@@ -10,6 +11,7 @@ import type { ReferenceView, TakeResult } from '@/types/reference'
  * `inline` sets it as a quiet line under a table row's name, so the action costs the table no column.
  */
 export function TakeToTeamThread({ view, rowId, rowLabel, inline = false }: { view: ReferenceView; rowId: string; rowLabel: string; inline?: boolean }) {
+  const announce = useAnnounce()
   const take = useTakeToTeamThread()
   const [taken, setTaken] = useState<TakeResult>()
   if (taken) {
@@ -22,7 +24,7 @@ export function TakeToTeamThread({ view, rowId, rowLabel, inline = false }: { vi
   return (
     <span className="inline-flex flex-wrap items-baseline gap-2">
       <Button rank={inline ? 'quiet' : 'secondary'} className={inline ? 'whitespace-normal text-left text-table-dense font-normal text-ink-3 not-disabled:hover:text-ink' : undefined} aria-label={`Take ${rowLabel} to a team thread`} disabled={take.isPending}
-        onClick={() => take.mutate({ view, rowId }, { onSuccess: setTaken })}>
+        onClick={() => take.mutate({ view, rowId }, { onSuccess: (result) => { setTaken(result); announce(`Taken to ${result.threadTitle}.`) } })}>
         Take to team thread
       </Button>
       {take.isError ? <span role="alert" className="text-body">{take.error.message}</span> : null}

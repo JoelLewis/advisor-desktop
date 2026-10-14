@@ -1,4 +1,5 @@
 import { useId, useRef, useState } from 'react'
+import { useAnnounce } from '@/kit/announcer/use-announce'
 import { Button } from '@/kit/button/Button'
 import { useDraftRecap, useMeetings } from '@/hooks/use-meetings'
 import { useDrafts } from '@/hooks/use-workspace'
@@ -8,8 +9,13 @@ import { Unbroken } from '@/kit/unbroken/Unbroken'
 
 type Asked = { draftId: string; title: string; created: boolean }
 
+const recapReport = (asked: Asked) => asked.created
+  ? `The Client Letter Agent drafted the recap of the ${asked.title}.`
+  : `The Client Letter Agent's recap of the ${asked.title} is already in the drafts.`
+
 /** Asks the Client Letter Agent for the recap of a meeting with this thread's client, once its record is filed. */
 export function RecapControl({ thread }: { thread: Thread }) {
+  const announce = useAnnounce()
   const meetings = useMeetings()
   const recap = useDraftRecap(thread.id)
   const drafts = useDrafts(thread.id, true)
@@ -26,7 +32,11 @@ export function RecapControl({ thread }: { thread: Thread }) {
     asking.current = true
     const held = new Set((drafts.data ?? []).map((d) => d.id))
     recap.mutate(meeting.eventId, {
-      onSuccess: (draft) => setAsked((prev) => ({ draftId: draft.id, title: meeting.title, created: prev?.draftId === draft.id ? prev.created : !held.has(draft.id) })),
+      onSuccess: (draft) => {
+        const next = { draftId: draft.id, title: meeting.title, created: asked?.draftId === draft.id ? asked.created : !held.has(draft.id) }
+        setAsked(next)
+        announce(recapReport(next))
+      },
       onSettled: () => { asking.current = false },
     })
   }
@@ -47,9 +57,7 @@ export function RecapControl({ thread }: { thread: Thread }) {
       )))}
       {recap.isError ? <p role="alert" className="text-body">{recap.error.message}</p> : null}
       {reported ? (
-        <p role="status" className="text-body text-ink-2">{reported.created
-          ? `The Client Letter Agent drafted the recap of the ${reported.title}.`
-          : `The Client Letter Agent's recap of the ${reported.title} is already in the drafts.`}</p>
+        <p role="status" className="text-body text-ink-2">{recapReport(reported)}</p>
       ) : null}
     </div>
   )

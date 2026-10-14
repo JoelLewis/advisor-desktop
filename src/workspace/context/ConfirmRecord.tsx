@@ -1,8 +1,9 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { useAnnounce } from '@/kit/announcer/use-announce'
 import { Button } from '@/kit/button/Button'
 import { Dialog } from '@/kit/dialog/Dialog'
 
-type RecordedAct = { id: string }
+type RecordedAct = { id: string; summary: string }
 type ActMutation<Variables> = {
   mutate: (variables: Variables, callbacks: { onSuccess: (act: RecordedAct) => void; onError: (error: Error) => void; onSettled: () => void }) => void
   reset: () => void
@@ -34,6 +35,7 @@ type ConfirmRecordProps<Variables> = {
  * focus handed to the new record slip (not back to the opener) once the act is recorded.
  */
 export function ConfirmRecord<Variables>({ open, onClose, title, description, mutation, variables, onRecorded, children, blockedReason, refusalShownByPage = false }: ConfirmRecordProps<Variables>) {
+  const announce = useAnnounce()
   const [slipTakesFocus, setSlipTakesFocus] = useState(false)
   // A ref, not render state, so a second click in the same frame cannot record a second act.
   const busy = useRef(false)
@@ -49,7 +51,7 @@ export function ConfirmRecord<Variables>({ open, onClose, title, description, mu
     if (busy.current) return
     busy.current = true
     mutation.mutate(variables, {
-      onSuccess: (act) => { setSlipTakesFocus(true); onClose(); onRecorded(act.id) },
+      onSuccess: (act) => { setSlipTakesFocus(true); announce(`${act.summary} · ${act.id}`); onClose(); onRecorded(act.id) },
       onError: () => { if (refusalShownByPage) onClose() },
       onSettled: () => { busy.current = false },
     })

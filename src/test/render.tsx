@@ -3,6 +3,7 @@ import { type ReactElement, type ReactNode } from 'react'
 import { render, type RenderOptions } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, RouterProvider, createMemoryRouter, type RouteObject } from 'react-router-dom'
+import { AnnouncerProvider } from '@/kit/announcer/AnnouncerProvider'
 import { ViewerProvider } from '@/workspace/viewer/ViewerProvider'
 import { providerFuture, routerFuture } from '@/app/router-flags'
 
@@ -29,9 +30,11 @@ function Providers({ children, queryClient, initialEntries = ['/'] }: ProvidersP
   return (
     <QueryClientProvider client={client}>
       <ViewerProvider>
-        <MemoryRouter initialEntries={initialEntries} future={memoryRouterFuture}>
-          {children}
-        </MemoryRouter>
+        <AnnouncerProvider>
+          <MemoryRouter initialEntries={initialEntries} future={memoryRouterFuture}>
+            {children}
+          </MemoryRouter>
+        </AnnouncerProvider>
       </ViewerProvider>
     </QueryClientProvider>
   )

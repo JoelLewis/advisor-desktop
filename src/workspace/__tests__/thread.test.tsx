@@ -145,7 +145,7 @@ describe('thread view', () => {
     const user = userEvent.setup()
     await user.type(box, 'Sarah will be in touch this week.')
     await user.click(screen.getByRole('button', { name: 'Save draft' }))
-    expect(await screen.findByRole('status')).toHaveTextContent('Draft saved — not sent.')
+    expect(await within(composerBox().closest('form')!).findByRole('status')).toHaveTextContent('Draft saved — not sent.')
     expect(composerBox()).toHaveValue('')
     expect(within(conversation()).getAllByRole('listitem')).toHaveLength(1)
     expect(conversation()).not.toHaveTextContent('Sarah will be in touch this week.')

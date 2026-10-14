@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useAnnounce } from '@/kit/announcer/use-announce'
 import { Button } from '@/kit/button/Button'
 import { useRunAgent, useThread } from '@/hooks/use-workspace'
 import type { AgentProfile, Thread } from '@/types/workspace'
@@ -11,6 +12,7 @@ import { ProposalAgentControl } from './ProposalAgentControl'
  * in the thread may also ask the drafting agents, whose proposals arrive the same way.
  */
 export function AskAgents({ thread, agents, canPost }: { thread: Thread; agents: AgentProfile[]; canPost: boolean }) {
+  const announce = useAnnounce()
   const run = useRunAgent(thread.id)
   const detail = useThread(thread.id)
   const [report, setReport] = useState<string>()
@@ -23,9 +25,13 @@ export function AskAgents({ thread, agents, canPost }: { thread: Thread; agents:
     const before = new Set(detail.data?.messages.map((m) => m.id))
     setReport(undefined)
     run.mutate(agent.id, {
-      onSuccess: (findings) => setReport(findings.length > 0 && findings.every((f) => before.has(f.id))
-        ? `${agent.name} has already reported for this as-of.`
-        : `${agent.name} reported in the thread.`),
+      onSuccess: (findings) => {
+        const said = findings.length > 0 && findings.every((f) => before.has(f.id))
+          ? `${agent.name} has already reported for this as-of.`
+          : `${agent.name} reported in the thread.`
+        setReport(said)
+        announce(said)
+      },
     })
   }
 

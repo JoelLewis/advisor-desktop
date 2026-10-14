@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from 'react'
 import { cn } from '@/lib/utils'
+import { useAnnounce } from '@/kit/announcer/use-announce'
 import { Button } from '@/kit/button/Button'
 import { Pane } from '@/kit/layout/Pane'
 import { TextInput } from '@/kit/text-input/TextInput'
@@ -24,6 +25,7 @@ export function NotesEditor({ meeting, directory, editable, onCite, onDirtyChang
   const source = meeting.filed?.lines ?? meeting.notesDraft
   const [lines, setLines] = useState<NoteLine[]>(source ?? [])
   const [editing, setEditing] = useState<string>()
+  const announce = useAnnounce()
   const save = useSaveMeetingNotes(meeting.eventId)
   const dirty = source !== undefined && comparable(lines) !== comparable(source)
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange])
@@ -55,7 +57,7 @@ export function NotesEditor({ meeting, directory, editable, onCite, onDirtyChang
         <div className="flex flex-wrap items-center gap-3">
           <Button rank="secondary" disabled={!dirty || save.isPending}
             onClick={() => save.mutate(lines.map(({ id, section, text, cites, owner, due }) => ({ id, section, text, cites, ...(owner ? { owner } : {}), ...(due ? { due } : {}) })),
-              { onSuccess: () => setEditing(undefined) })}>Save notes</Button>
+              { onSuccess: () => { setEditing(undefined); announce('Notes saved.') } })}>Save notes</Button>
           {dirty ? <span className="text-label text-ink-3">Unsaved edits</span> : null}
         </div>
       ) : null}

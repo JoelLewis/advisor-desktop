@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type FocusEvent, type KeyboardEvent } from 'react'
+import { useAnnounce } from '@/kit/announcer/use-announce'
 import { Button } from '@/kit/button/Button'
 import { useAccount } from '@/hooks/use-accounts'
 import { useCarryFinding, useThreads } from '@/hooks/use-workspace'
@@ -11,6 +12,7 @@ const MOVES = new Map<string, Move>([['ArrowDown', 1], ['ArrowUp', -1], ['Home',
 
 /** "Take to ▾": the brief's owner sends a finding to the team thread about its subject, or to its household's meeting thread. */
 export function CarryControl({ thread, findingId }: { thread: Thread; findingId: string }) {
+  const announce = useAnnounce()
   const { viewerId } = useViewer()
   const threads = useThreads()
   const carry = useCarryFinding(thread.id)
@@ -83,7 +85,7 @@ export function CarryControl({ thread, findingId }: { thread: Thread; findingId:
           {targets.map((target) => (
             <li key={target.id} role="none">
               <Button role="menuitem" rank="quiet" disabled={carry.isPending}
-                onClick={() => carry.mutate({ messageId: findingId, toThreadId: target.id }, { onSuccess: () => { setTaken(target.title); close() } })}>
+                onClick={() => carry.mutate({ messageId: findingId, toThreadId: target.id }, { onSuccess: () => { setTaken(target.title); announce(`Taken to ${target.title}.`); close() } })}>
                 {target.title}
               </Button>
             </li>

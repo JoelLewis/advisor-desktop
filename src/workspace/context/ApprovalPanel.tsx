@@ -1,11 +1,14 @@
-import { useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAnnounce } from '@/kit/announcer/use-announce'
 import { Button } from '@/kit/button/Button'
 import { Checkbox } from '@/kit/checkbox/Checkbox'
 import { Dialog } from '@/kit/dialog/Dialog'
 import { StatusCode } from '@/kit/status/StatusCode'
+import { fmtQuantity } from '@/kit/measure'
 import { Tag } from '@/kit/tag/Tag'
-import { useApproveProposal, useProposals, useWithdrawApproval } from '@/hooks/use-workspace'
+import { useActs, useApproveProposal, useProposals, useWithdrawApproval } from '@/hooks/use-workspace'
+import { personIn } from '@/workspace/people/directory-people'
 import { PRESENTER_ID } from '@/lib/presenter'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { ApprovalNote } from '@/workspace/proposal/ApprovalNote'
@@ -23,7 +26,7 @@ import { supervisionHref } from '@/workspace/supervision/supervision-items'
 
 type OnRecorded = (actId: string) => void
 type ApprovalPanelProps = { thread: Thread; directory: Directory; onRecorded: OnRecorded }
-type RecordCallbacks = { onSuccess: (act: { id: string }) => void; onSettled: () => void }
+type RecordCallbacks = { onSuccess: (act: { id: string; summary: string }) => void; onSettled: () => void }
 
 export function ApprovalPanel({ thread, directory, onRecorded }: ApprovalPanelProps) {
   const proposals = useProposals(thread.id)
@@ -35,6 +38,8 @@ export function ApprovalPanel({ thread, directory, onRecorded }: ApprovalPanelPr
 
 function ProposalApproval({ detail, directory, onRecorded }: { detail: ProposalDetail; directory: Directory; onRecorded: OnRecorded }) {
   const { viewerId } = useViewer()
+  const announce = useAnnounce()
+  useAnnounceRelease(detail, directory)
   const approve = useApproveProposal()
   const withdraw = useWithdrawApproval()
   // The attestation names one version; a newer version arriving un-ticks it rather than carrying the review over.
@@ -67,7 +72,7 @@ function ProposalApproval({ detail, directory, onRecorded }: { detail: ProposalD
     if (busy.current) return
     busy.current = true
     send({
-      onSuccess: (act) => { setAttestedVersion(undefined); afterRecorded?.(); onRecorded(act.id) },
+      onSuccess: (act) => { setAttestedVersion(undefined); announce(`${act.summary} · ${act.id}`); afterRecorded?.(); onRecorded(act.id) },
       onSettled: () => { busy.current = false },
     })
   }
@@ -126,6 +131,24 @@ function ProposalApproval({ detail, directory, onRecorded }: { detail: ProposalD
       </Dialog>
     </ContextSection>
   )
+}
+
+/** Says the release and its fills when a release is seen in this session; one already released on load is not news. */
+function useAnnounceRelease(detail: ProposalDetail, directory: Directory) {
+  const announce = useAnnounce()
+  const acts = useActs(detail.threadId)
+  const kind = detail.approval.kind
+  const releaseActId = detail.approval.kind === 'released' ? detail.approval.releaseActId : undefined
+  const previousKind = useRef(kind)
+  const awaitingReleaseAct = useRef(false)
+  const releaseAct = acts.data?.find((a) => a.id === releaseActId)
+  useEffect(() => {
+    if (previousKind.current === 'approved' && kind === 'released') awaitingReleaseAct.current = true
+    previousKind.current = kind
+    if (!awaitingReleaseAct.current || !releaseAct) return
+    awaitingReleaseAct.current = false
+    announce(`Released by ${personIn(directory, releaseAct.actorId).name}; ${fmtQuantity(detail.fills.length)} orders filled`)
+  }, [kind, releaseAct, announce, directory, detail.fills.length])
 }
 
 const readingLines = (version: ProposalVersion) => version.pretrade.violations

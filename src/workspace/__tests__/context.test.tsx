@@ -132,6 +132,12 @@ describe('thread context column', () => {
     expect(await within(section('Ask an agent')).findByText('Drift Monitor has already reported for this as-of.')).toBeInTheDocument()
   })
 
+  it('announces an agent run in the app announcer', async () => {
+    renderRoutes(routes, '/t/th-johnson-review')
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Ask Drift Monitor' }))
+    await waitFor(() => expect(document.querySelector('[data-part="announcer"]')).toHaveTextContent('Drift Monitor reported in the thread.'))
+  })
+
   it('lists the members, compliance supervision and the agents with their scopes', async () => {
     await openThread('/t/th-johnson-review', 'Johnson Rebalance Review')
     const seenBy = within(section('Who can see'))

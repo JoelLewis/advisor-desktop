@@ -70,11 +70,12 @@ describe('the client letter', () => {
     await viewAs('Robert Johnson · Client')
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'Message' })).toBeInTheDocument())
     expect(conversation()).toHaveTextContent('Dear Robert,')
-    expect(document.body).not.toHaveTextContent('Client Letter Agent')
-    expect(document.body).not.toHaveTextContent('Draft · not sent')
-    expect(document.body).not.toHaveTextContent('Johnson Rebalance Review')
-    expect(document.body).not.toHaveTextContent(fingerprint)
-    expect(document.body).not.toHaveTextContent(/edited by|unedited|from v1/)
+    const page = document.body
+    expect(page).not.toHaveTextContent('Client Letter Agent')
+    expect(page).not.toHaveTextContent('Draft · not sent')
+    expect(page).not.toHaveTextContent('Johnson Rebalance Review')
+    expect(page).not.toHaveTextContent(fingerprint)
+    expect(page).not.toHaveTextContent(/edited by|unedited|from v1/)
   })
 
   it("records an unedited agent letter as the agent's draft", async () => {

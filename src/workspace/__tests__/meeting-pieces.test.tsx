@@ -25,8 +25,10 @@ function LiveAgenda() {
   const view = useMeeting('evt-010')
   if (!view.data) return <p role="status">Loading the meeting…</p>
   const findings = agendaFindings(store().messages.filter((m) => m.threadId === 'th-johnson-meeting'))
-  return <AgendaEditor meeting={view.data} findings={findings} editable />
+  return <div data-testid="agenda-editor"><AgendaEditor meeting={view.data} findings={findings} editable /></div>
 }
+/** The editor's own status line, not the app announcer that repeats it. */
+const editorStatus = () => within(screen.getByTestId('agenda-editor')).getByRole('status')
 
 describe('meeting controls', () => {
   afterEach(() => sessionStorage.clear())
@@ -132,13 +134,13 @@ describe('the agenda editor', () => {
     const v2 = await screen.findByRole('list', { name: 'Agenda · v2' })
     expect(within(v2).getByRole('button', { name: `Move “${v1[2]!.title}” up` })).toHaveFocus()
     const summary = (n: number) => store().messages.flatMap((m) => (m.kind === 'agenda_version' && m.version === n ? [m.changeSummary] : []))[0]
-    expect(screen.getByRole('status')).toHaveTextContent(`Agenda v2: ${summary(2)}`)
+    expect(editorStatus()).toHaveTextContent(`Agenda v2: ${summary(2)}`)
 
     await user.keyboard('{Enter}')
     const v3 = await screen.findByRole('list', { name: 'Agenda · v3' })
     // At the top, Move up is off: focus goes to the same item's Move down.
     expect(within(v3).getByRole('button', { name: `Move “${v1[2]!.title}” down` })).toHaveFocus()
-    expect(screen.getByRole('status')).toHaveTextContent(`Agenda v3: ${summary(3)}`)
+    expect(editorStatus()).toHaveTextContent(`Agenda v3: ${summary(3)}`)
 
     await user.click(within(v3).getByRole('button', { name: `Drop “${v1[2]!.title}”` }))
     const v4 = await screen.findByRole('list', { name: 'Agenda · v4' })
@@ -150,12 +152,12 @@ describe('the agenda editor', () => {
     const v1 = meeting().agenda[0]!.items
     renderWithProviders(<LiveAgenda />)
     const list = await screen.findByRole('list', { name: 'Agenda · v1' })
-    const status = screen.getByRole('status')
+    const status = editorStatus()
     expect(status).toBeEmptyDOMElement()
     await userEvent.setup().click(within(list).getByRole('button', { name: `Move “${v1[1]!.title}” up` }))
     await screen.findByRole('list', { name: 'Agenda · v2' })
     // The same element, now filled: a live region announces a change, not its own arrival.
-    expect(screen.getByRole('status')).toBe(status)
+    expect(editorStatus()).toBe(status)
     expect(status).toHaveTextContent(/^Agenda v2: /)
   })
 

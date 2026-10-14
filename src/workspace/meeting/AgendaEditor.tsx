@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import { useAnnounce } from '@/kit/announcer/use-announce'
 import { Button } from '@/kit/button/Button'
 import { TextInput } from '@/kit/text-input/TextInput'
 import { useReviseAgenda } from '@/hooks/use-meetings'
@@ -15,6 +16,7 @@ const controlKey = (itemId: string, control: AgendaControl) => `${itemId}:${cont
 /** The current agenda. Editable, each change — a move, a drop, an addition — is sent as the whole new agenda and becomes a new version. */
 export function AgendaEditor({ meeting, findings, editable }: AgendaEditorProps) {
   const current = meeting.agenda[meeting.agenda.length - 1]
+  const announce = useAnnounce()
   const revise = useReviseAgenda(meeting.eventId)
   const [title, setTitle] = useState('')
   const [announced, setAnnounced] = useState(false)
@@ -39,8 +41,10 @@ export function AgendaEditor({ meeting, findings, editable }: AgendaEditorProps)
     if (busy.current) return
     busy.current = true
     revise.mutate(next, {
-      onSuccess: () => {
+      onSuccess: (view) => {
         setAnnounced(true)
+        const revised = view.agenda[view.agenda.length - 1]
+        if (revised) announce(`Agenda v${revised.n}: ${revised.changeSummary}`)
         if (focus) setFocusRequest({ ...focus, fromVersion: current?.n ?? 0 })
         onDone?.()
       },
