@@ -90,7 +90,7 @@ test("the README's five-minute path, end to end", async ({ page }) => {
   await threadLink(page, 'Pell · prospect work').click()
   await expect(context(page).getByRole('table', { name: 'Onboarding checklist' })).toBeVisible()
 
-  // 7. The reference views, from the Desk pane; each returns through the header's Advisor Desktop link.
+  // 7. The reference views, under Reference in the thread list; each returns through the header's Advisor Desktop link.
   for (const view of ['Billing', 'Models', 'Practice', 'Blotter'] as const) {
     await deskLink(page, view).click()
     await expect(heading(page)).toHaveText(view)
