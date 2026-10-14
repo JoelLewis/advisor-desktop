@@ -113,3 +113,26 @@ describe('Meeting Notes', () => {
     expect(() => draftNotesFromTranscript('evt-002', '2026-02-25')).toThrow(/no transcript/)
   })
 })
+
+describe('every follow-up is due when the meeting said', () => {
+  /** How the meeting on Wed 25 Feb 2026 names each due date (NYSE trading days after it). */
+  const SAID: Readonly<Record<string, RegExp>> = {
+    '2026-02-26': /\btomorrow\b/,
+    '2026-02-27': /\bby this Friday\b/,
+    '2026-03-02': /\bby Monday\b/,
+    '2026-03-04': /\bby next Wednesday\b/,
+    '2026-03-06': /\bby Friday next week\b/,
+    '2026-03-13': /\bby Friday, March thirteenth\b/,
+  }
+  const followUps = notes.filter((l) => l.section === 'follow_ups')
+
+  it('has the seven follow-ups', () => expect(followUps.map((l) => l.id)).toEqual(['n-17', 'n-18', 'n-19', 'n-20', 'n-21', 'n-22', 'n-23']))
+
+  it.each(followUps.map((l) => [l.id, l] as const))('%s: a line it cites names its due date', (_id, line) => {
+    const due = line.due
+    if (due === undefined) throw new Error(`${line.id} has no due date`)
+    const words = SAID[due]
+    if (!words) throw new Error(`${line.id} is due ${due}, a date the meeting never names`)
+    expect(line.cites.some((id) => words.test(transcript.get(id)?.text ?? ''))).toBe(true)
+  })
+})

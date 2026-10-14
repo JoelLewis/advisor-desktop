@@ -26,7 +26,7 @@ export type TaskOwner = VersionAuthor
 export type ClientWording = { clientId: string; text: string }
 /**
  * One line of the notes. `cites` names the transcript lines it records (at least one). A follow-up
- * also carries its owner — as stated in the meeting, cited — and its due date, an NYSE trading day.
+ * also carries its owner and its due date (an NYSE trading day), both as the meeting stated them in a line it cites.
  * A decision or client request may carry its wording for the client it names (`toClient`).
  */
 export type NoteLine = { id: string; section: NoteSection; text: string; cites: string[]; owner?: TaskOwner; due?: string; toClient?: ClientWording }
