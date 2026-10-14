@@ -11,6 +11,7 @@ import { assetClassLabel } from '@/workspace/asset-class-label'
 import { isAttributionPeriod, type AttributionPeriod, type AttributionView } from '@/types/reference-attribution'
 import { ReferenceGate } from './ReferenceGate'
 import { ReferencePage } from './ReferencePage'
+import { StackedCell } from './StackedCell'
 import { TakeToTeamThread } from './TakeToTeamThread'
 
 /** Half the last displayed place of fmtEffect (0.01 pp = 0.0001 as a fraction). */
@@ -60,7 +61,12 @@ function Attribution({ view }: { view: AttributionView }) {
             },
           }}
           columns={[
-            { id: 'class', header: 'Asset class', cell: (r) => assetClassLabel(r.assetClass) },
+            {
+              id: 'class', header: 'Asset class', wrap: true, cell: (r) => (
+                <StackedCell primary={assetClassLabel(r.assetClass)}
+                  action={<TakeToTeamThread inline view="attribution" rowId={`${view.accountId}:${view.period}:${r.assetClass}`} rowLabel={assetClassLabel(r.assetClass)} />} />
+              ),
+            },
             { id: 'wp', header: 'Weight', unit: UNIT.pct, align: 'right', cell: (r) => <Num text={fmtWeight(r.portfolioWeight)} /> },
             { id: 'wb', header: 'Benchmark', unit: UNIT.pct, align: 'right', cell: (r) => <Num text={fmtWeight(r.benchmarkWeight)} /> },
             { id: 'rp', header: 'Return', unit: UNIT.pct, align: 'right', cell: (r) => <Num text={fmtReturn(r.portfolioReturn)} /> },
@@ -69,7 +75,6 @@ function Attribution({ view }: { view: AttributionView }) {
             { id: 'selection', header: 'Selection', unit: UNIT.pp, align: 'right', cell: (r) => <Num text={fmtEffect(r.selection)} /> },
             { id: 'interaction', header: 'Interaction', unit: UNIT.pp, align: 'right', cell: (r) => <Num text={fmtEffect(r.interaction)} /> },
             { id: 'total', header: 'Total', unit: UNIT.pp, align: 'right', cell: (r) => <Num text={fmtEffect(r.total)} />, sortValue: (r) => r.total },
-            { id: 'take', header: 'Thread', cell: (r) => <TakeToTeamThread view="attribution" rowId={`${view.accountId}:${view.period}:${r.assetClass}`} rowLabel={assetClassLabel(r.assetClass)} /> },
           ]} />
       </Pane>
       <Pane title="Benchmark line" meta={`${view.series.length} months · modeled, not realized`}>

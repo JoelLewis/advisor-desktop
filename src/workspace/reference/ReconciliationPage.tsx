@@ -13,6 +13,7 @@ import { RESOLUTION_WORDS, type ReconBreakView, type ReconciliationView } from '
 import { ReferenceGate } from './ReferenceGate'
 import { ReferencePage } from './ReferencePage'
 import { ResolveBreak } from './ResolveBreak'
+import { StackedCell } from './StackedCell'
 import { TakeToTeamThread } from './TakeToTeamThread'
 import { INTEGRATION_STATUS_TAG, MATCH_KIND_WORDS, SEVERITY_WORDS } from './reference-words'
 
@@ -47,17 +48,9 @@ function Reconciliation({ view }: { view: ReconciliationView }) {
           mutedRow={(b) => b.status === 'resolved'}
           columns={[
             { id: 'id', header: 'Break', cell: (b) => b.id },
-            { id: 'account', header: 'Account', wrap: true, cell: (b) => b.accountName },
-            { id: 'custodian', header: 'Custodian', cell: (b) => b.custodian },
-            { id: 'field', header: 'Field', cell: (b) => (b.symbol ? `${b.fieldLabel} · ${b.symbol}` : b.fieldLabel) },
-            { id: 'book', header: 'Book', align: 'right', cell: (b) => figure(b, b.book) },
-            { id: 'theirs', header: 'Custodian says', align: 'right', cell: (b) => figure(b, b.custodianValue) },
-            { id: 'difference', header: 'Difference', align: 'right', cell: (b) => <Num text={fmtResult(b.difference)} /> },
-            { id: 'severity', header: 'Severity', cell: (b) => SEVERITY_WORDS[b.severity] },
-            { id: 'detected', header: 'Detected', cell: (b) => fmtTimestamp(b.detectedAt), sortValue: (b) => b.detectedAt },
             {
               id: 'status', header: 'Status', wrap: true, cell: (b) => (
-                <span className="flex flex-col gap-1">
+                <span className="flex flex-col items-start gap-1">
                   <Tag tone={b.status === 'open' ? 'solid' : 'outline'}>{b.status === 'open' ? 'OPEN' : 'RESOLVED'}</Tag>
                   {b.resolution ? <span className="text-label text-ink-2">{`${RESOLUTION_WORDS[b.resolution.resolution]} · ${b.resolution.actorName} · ${b.resolution.actId}`}</span>
                     : b.resolvedAt ? <span className="text-label text-ink-3">{`Before this session · ${fmtTimestamp(b.resolvedAt)}`}</span> : null}
@@ -65,13 +58,19 @@ function Reconciliation({ view }: { view: ReconciliationView }) {
               ),
             },
             {
-              id: 'actions', header: 'Actions', cell: (b) => (
-                <span className="flex flex-wrap gap-2">
-                  {b.status === 'open' && canResolve ? <ResolveBreak brk={b} onRecorded={setRecorded} /> : null}
-                  <TakeToTeamThread view="reconciliation" rowId={b.id} rowLabel={b.id} />
-                </span>
+              id: 'account', header: 'Account · custodian', wrap: true, cell: (b) => (
+                <StackedCell primary={b.accountName} secondary={b.custodian} action={<TakeToTeamThread inline view="reconciliation" rowId={b.id} rowLabel={b.id} />} />
               ),
             },
+            {
+              id: 'field', header: 'Field · detected', wrap: true, sortValue: (b) => b.detectedAt,
+              cell: (b) => <StackedCell primary={b.symbol ? `${b.fieldLabel} · ${b.symbol}` : b.fieldLabel} secondary={fmtTimestamp(b.detectedAt)} />,
+            },
+            { id: 'book', header: 'Book', align: 'right', cell: (b) => figure(b, b.book) },
+            { id: 'theirs', header: 'Custodian says', align: 'right', cell: (b) => figure(b, b.custodianValue) },
+            { id: 'difference', header: 'Difference', align: 'right', cell: (b) => <Num text={fmtResult(b.difference)} /> },
+            { id: 'severity', header: 'Severity', cell: (b) => SEVERITY_WORDS[b.severity] },
+            ...(canResolve ? [{ id: 'resolve', header: 'Resolve', cell: (b: ReconBreakView) => (b.status === 'open' ? <ResolveBreak brk={b} onRecorded={setRecorded} /> : null) }] : []),
           ]} />
       </Pane>
       <Pane title="Integrations">

@@ -10,6 +10,7 @@ import { useBilling } from '@/hooks/use-reference'
 import type { BillingView, HouseholdBilling } from '@/types/reference-billing'
 import { ReferenceGate } from './ReferenceGate'
 import { ReferencePage } from './ReferencePage'
+import { StackedCell } from './StackedCell'
 import { TakeToTeamThread } from './TakeToTeamThread'
 import { BILLING_METHOD_WORDS, SEGMENT_WORDS, wordFor } from './reference-words'
 
@@ -54,7 +55,7 @@ function Billing({ view }: { view: BillingView }) {
             cells: { value: usd(view.totals.value), annual: usd(view.totals.annualFee), quarterly: usd(view.totals.quarterlyFee) },
           }}
           columns={[
-            { id: 'name', header: 'Household', cell: (h) => h.householdName },
+            { id: 'name', header: 'Household', wrap: true, cell: (h) => <StackedCell primary={h.householdName} action={<TakeToTeamThread inline view="billing" rowId={h.householdId} rowLabel={h.householdName} />} /> },
             { id: 'segment', header: 'Segment', cell: (h) => wordFor(SEGMENT_WORDS, h.segment) },
             { id: 'method', header: 'Billing', cell: (h) => BILLING_METHOD_WORDS[h.method] },
             { id: 'value', header: 'Value', unit: UNIT.usd, align: 'right', cell: (h) => usd(h.value), sortValue: (h) => h.value },
@@ -62,7 +63,6 @@ function Billing({ view }: { view: BillingView }) {
             { id: 'rate', header: 'Effective', unit: UNIT.pct, align: 'right', cell: (h) => <Num text={fmtRate(h.effectiveRate)} />, sortValue: (h) => h.effectiveRate },
             { id: 'quarterly', header: 'A quarter', unit: UNIT.usd, align: 'right', cell: (h) => usd(h.quarterlyFee) },
             { id: 'exceptions', header: 'Exceptions', cell: (h) => (h.openExceptionIds.length > 0 ? <Tag>{h.openExceptionIds.join(' · ')}</Tag> : null) },
-            { id: 'take', header: 'Thread', cell: (h) => <TakeToTeamThread view="billing" rowId={h.householdId} rowLabel={h.householdName} /> },
           ]} />
       </Pane>
       {household ? <TierBreakdown households={view.households} household={household} onPick={set('household')} /> : null}

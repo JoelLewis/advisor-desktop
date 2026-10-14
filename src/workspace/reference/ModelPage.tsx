@@ -11,6 +11,7 @@ import { accountFullViewHref } from '@/workspace/full-views/full-view-href'
 import type { ModelDetail } from '@/types/reference-models'
 import { ReferenceGate } from './ReferenceGate'
 import { ReferencePage } from './ReferencePage'
+import { StackedCell } from './StackedCell'
 import { TakeToTeamThread } from './TakeToTeamThread'
 import { FREQUENCY_WORDS, versionWords, wordFor } from './reference-words'
 
@@ -55,13 +56,12 @@ function Model({ view }: { view: ModelDetail }) {
       <Pane title="Version history" meta="Investment Committee record">
         <DataTable caption="Version history" rows={[...view.versions].reverse()} getRowId={(v) => `v${v.version}`} noun={{ singular: 'version', plural: 'versions' }}
           columns={[
-            { id: 'version', header: 'Version', cell: (v) => `v${v.version}` },
+            { id: 'version', header: 'Version', wrap: true, cell: (v) => <StackedCell primary={`v${v.version}`} action={<TakeToTeamThread inline view="models" rowId={`${view.id}:v${v.version}`} rowLabel={`${view.name} v${v.version}`} />} /> },
             { id: 'status', header: 'Status', cell: (v) => <Tag tone={v.status === 'approved' ? 'outline' : 'solid'}>{v.status === 'approved' ? 'APPROVED' : 'PENDING APPROVAL'}</Tag> },
             { id: 'proposed', header: 'Proposed by', cell: (v) => v.proposedByName },
             { id: 'approved', header: 'Approved', cell: (v) => (v.approvedBy && v.approvedOn ? `${v.approvedBy}, ${v.approvedOn}` : 'Not yet') },
             { id: 'effective', header: 'Effective', cell: (v) => v.effectiveDate },
             { id: 'changes', header: 'Changes', wrap: true, cell: (v) => v.changes.map((c) => c.description).join('; ') },
-            { id: 'take', header: 'Thread', cell: (v) => <TakeToTeamThread view="models" rowId={`${view.id}:v${v.version}`} rowLabel={`${view.name} v${v.version}`} /> },
           ]} />
       </Pane>
       <Pane title="Accounts on this model">

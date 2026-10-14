@@ -1,23 +1,27 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/kit/button/Button'
+import { cn } from '@/lib/utils'
 import { useTakeToTeamThread } from '@/hooks/use-reference'
 import type { ReferenceView, TakeResult } from '@/types/reference'
 
-/** "Take to team thread": the row becomes a quoted card in the team thread about its subject, opened if there is none. */
-export function TakeToTeamThread({ view, rowId, rowLabel }: { view: ReferenceView; rowId: string; rowLabel: string }) {
+/**
+ * "Take to team thread": the row becomes a quoted card in the team thread about its subject, opened if there is none.
+ * `inline` sets it as a quiet line under a table row's name, so the action costs the table no column.
+ */
+export function TakeToTeamThread({ view, rowId, rowLabel, inline = false }: { view: ReferenceView; rowId: string; rowLabel: string; inline?: boolean }) {
   const take = useTakeToTeamThread()
   const [taken, setTaken] = useState<TakeResult>()
   if (taken) {
     return (
-      <Link to={`/t/${encodeURIComponent(taken.threadId)}`} className="text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink">
+      <Link to={`/t/${encodeURIComponent(taken.threadId)}`} className={cn(inline ? 'text-table-dense text-ink-3 hover:text-ink' : 'text-body', 'underline decoration-rule-2 underline-offset-4 hover:decoration-ink')}>
         {`In ${taken.threadTitle}`}
       </Link>
     )
   }
   return (
     <span className="inline-flex flex-wrap items-baseline gap-2">
-      <Button rank="secondary" aria-label={`Take ${rowLabel} to a team thread`} disabled={take.isPending}
+      <Button rank={inline ? 'quiet' : 'secondary'} className={inline ? 'whitespace-normal text-left text-table-dense font-normal text-ink-3 not-disabled:hover:text-ink' : undefined} aria-label={`Take ${rowLabel} to a team thread`} disabled={take.isPending}
         onClick={() => take.mutate({ view, rowId }, { onSuccess: setTaken })}>
         Take to team thread
       </Button>

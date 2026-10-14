@@ -11,6 +11,7 @@ import { SIDE_WORDS } from '@/workspace/proposal/leg-status'
 import { BLOTTER_STATUSES, isBlotterStatus, type BlotterFilters, type BlotterView } from '@/types/reference-blotter'
 import { ReferenceGate } from './ReferenceGate'
 import { ReferencePage } from './ReferencePage'
+import { StackedCell } from './StackedCell'
 import { TakeToTeamThread } from './TakeToTeamThread'
 import { BLOTTER_STATUS_TAG, BLOTTER_STATUS_WORDS } from './reference-words'
 
@@ -58,23 +59,24 @@ function Blotter({ view }: { view: BlotterView }) {
         <DataTable caption="Orders" rows={view.rows} getRowId={(r) => r.id} noun={{ singular: 'order', plural: 'orders' }} density="dense"
           columns={[
             { id: 'id', header: 'Order', cell: (r) => r.id },
-            { id: 'submitted', header: 'Submitted', cell: (r) => fmtTimestamp(r.submittedAt), sortValue: (r) => r.submittedAt },
-            { id: 'account', header: 'Account', wrap: true, cell: (r) => r.accountName },
+            { id: 'status', header: 'Status', cell: (r) => <Tag tone={r.status === 'filled' ? 'solid' : 'outline'}>{BLOTTER_STATUS_TAG[r.status]}</Tag> },
+            { id: 'account', header: 'Account', wrap: true, cell: (r) => <StackedCell primary={r.accountName} action={<TakeToTeamThread inline view="blotter" rowId={r.id} rowLabel={r.id} />} /> },
+            {
+              id: 'submitted', header: 'Submitted · filled', wrap: true, sortValue: (r) => r.submittedAt,
+              cell: (r) => <StackedCell primary={fmtTimestamp(r.submittedAt)} secondary={r.filledAt ? `Filled ${fmtTimestamp(r.filledAt)}` : undefined} />,
+            },
             { id: 'side', header: 'Side', cell: (r) => SIDE_WORDS[r.side] },
             { id: 'symbol', header: 'Symbol', cell: (r) => r.symbol },
             { id: 'qty', header: 'Qty', align: 'right', cell: (r) => <Num text={fmtQuantity(r.quantity)} /> },
-            { id: 'price', header: 'Price', align: 'right', cell: (r) => (r.price === undefined ? null : <span className="whitespace-nowrap"><Num text={fmtPrice(r.price)} />{r.priceKind === 'limit' ? ' limit' : ''}</span>) },
+            { id: 'price', header: 'Price', align: 'right', cell: (r) => (r.price === undefined ? null : <span className="whitespace-nowrap"><Num text={fmtPrice(r.price)} />{` ${r.currency}`}{r.priceKind === 'limit' ? ' limit' : ''}</span>) },
             { id: 'value', header: 'Value', align: 'right', cell: (r) => (r.value === undefined ? null : <Num text={fmtMoney(r.value)} />) },
-            { id: 'currency', header: 'Ccy', cell: (r) => r.currency },
-            { id: 'status', header: 'Status', cell: (r) => <Tag tone={r.status === 'filled' ? 'solid' : 'outline'}>{BLOTTER_STATUS_TAG[r.status]}</Tag> },
             {
-              id: 'source', header: 'Source', wrap: true, cell: (r) => (r.source.kind === 'ticket' ? 'Ticket' : (
-                <Link to={`/t/${encodeURIComponent(r.source.threadId)}`} className="underline decoration-rule-2 underline-offset-4 hover:decoration-ink">{`${r.source.title} v${r.source.version}`}</Link>
-              )),
+              id: 'source', header: 'Source · REC', wrap: true, cell: (r) => (
+                <StackedCell primary={r.source.kind === 'ticket' ? 'Ticket' : (
+                  <Link to={`/t/${encodeURIComponent(r.source.threadId)}`} className="underline decoration-rule-2 underline-offset-4 hover:decoration-ink">{`${r.source.title} v${r.source.version}`}</Link>
+                )} secondary={r.recId} />
+              ),
             },
-            { id: 'rec', header: 'REC', cell: (r) => r.recId ?? '' },
-            { id: 'filled', header: 'Filled', cell: (r) => (r.filledAt ? fmtTimestamp(r.filledAt) : '') },
-            { id: 'take', header: 'Thread', cell: (r) => <TakeToTeamThread view="blotter" rowId={r.id} rowLabel={r.id} /> },
           ]} />
       </Pane>
     </ReferencePage>

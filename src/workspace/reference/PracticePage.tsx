@@ -9,6 +9,7 @@ import { usePractice } from '@/hooks/use-reference'
 import type { PracticeView } from '@/types/reference-practice'
 import { ReferenceGate } from './ReferenceGate'
 import { ReferencePage } from './ReferencePage'
+import { StackedCell } from './StackedCell'
 import { TakeToTeamThread } from './TakeToTeamThread'
 import { SEGMENT_WORDS, wordFor } from './reference-words'
 
@@ -39,14 +40,13 @@ function Practice({ view }: { view: PracticeView }) {
       <Pane title="Households">
         <DataTable caption="Households by value" rows={view.households} getRowId={(h) => h.householdId} noun={{ singular: 'household', plural: 'households' }}
           columns={[
-            { id: 'name', header: 'Household', cell: (h) => h.name },
+            { id: 'name', header: 'Household', wrap: true, cell: (h) => <StackedCell primary={h.name} action={<TakeToTeamThread inline view="practice" rowId={h.householdId} rowLabel={h.name} />} /> },
             { id: 'segment', header: 'Segment', cell: (h) => wordFor(SEGMENT_WORDS, h.segment) },
             { id: 'since', header: 'Client since', cell: (h) => fmtDate(h.since), sortValue: (h) => h.since },
             { id: 'value', header: 'Value', unit: UNIT.usd, align: 'right', cell: (h) => usd(h.value), sortValue: (h) => h.value },
             { id: 'fee', header: 'Annual fee', unit: UNIT.usd, align: 'right', cell: (h) => usd(h.annualFee), sortValue: (h) => h.annualFee },
             { id: 'rate', header: 'Effective', unit: UNIT.bps, align: 'right', cell: (h) => <Num text={fmtBasisPoints(h.effectiveRate)} /> },
             { id: 'share', header: 'Of revenue', unit: UNIT.pct, align: 'right', cell: (h) => <Num text={fmtWeight(h.shareOfRevenue)} />, proportion: (h) => h.shareOfRevenue },
-            { id: 'take', header: 'Thread', cell: (h) => <TakeToTeamThread view="practice" rowId={h.householdId} rowLabel={h.name} /> },
           ]} />
       </Pane>
       <Pane title="By segment">
