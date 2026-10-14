@@ -1,4 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#0F172A"/>
-  <text x="16" y="22" text-anchor="middle" font-family="'Instrument Sans',system-ui,sans-serif" font-weight="600" font-size="15" fill="white">AD</text>
+  <rect width="32" height="32" rx="6" fill="#15171a"/>
+  <path d="M7 9h18v2H7zM7 15h18v2H7zM7 21h11v2H7z" fill="#fafafb"/>
+  <path d="M21 20h4v4h-4z" fill="#dc4500"/>
 </svg>
