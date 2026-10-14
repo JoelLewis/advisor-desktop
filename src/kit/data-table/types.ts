@@ -21,6 +21,7 @@ export type Column<T> = {
  */
 export type RowKey<T> = { key: string; run: (row: T) => void }
 
-export type TiesTo = { label: string; expected: number; actual: number }
+/** `tolerance` is in the figures' own scale; it defaults to 1 for dollar tables. */
+export type TiesTo = { label: string; expected: number; actual: number; tolerance?: number }
 
 export type Totals = { label: string; tiesTo?: TiesTo; cells: Partial<Record<string, ReactNode>> }

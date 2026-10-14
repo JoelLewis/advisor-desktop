@@ -8,10 +8,10 @@ import type { Column, Density, RowKey, Totals, TiesTo } from './types'
 
 const ROW_HEIGHT: Record<Density, string> = { dense: 'h-6 text-table-dense stretch-dense', regular: 'h-7 text-table stretch-table', narrative: 'h-[34px] text-table stretch-table' }
 
-const TIE_TOLERANCE = 1
+const DEFAULT_TIE_TOLERANCE = 1
 
 function assertTies(tiesTo: TiesTo | undefined): void {
-  if (tiesTo && Math.abs(tiesTo.expected - tiesTo.actual) > TIE_TOLERANCE) {
+  if (tiesTo && Math.abs(tiesTo.expected - tiesTo.actual) > (tiesTo.tolerance ?? DEFAULT_TIE_TOLERANCE)) {
     throw new MeasureError(`Totals do not tie to ${tiesTo.label}: off by ${Math.abs(tiesTo.expected - tiesTo.actual)}`)
   }
 }

@@ -24,6 +24,13 @@ describe('the Attribution view', () => {
     expect(screen.getByRole('region', { name: 'Methods & sources' })).toHaveTextContent('ReturnsMODELED')
   })
 
+  it('ties the effects to the active return in every period', async () => {
+    for (const period of ['mtd', 'qtd', 'ytd', '1y', '3y', '5y'] as const) {
+      const engine = await getReferenceAttribution('user-001', 'acc-002', period)
+      expect(Math.abs(engine.rows.reduce((sum, r) => sum + r.total, 0) - engine.activeReturn)).toBeLessThanOrEqual(0.00005)
+    }
+  })
+
   it('changes period over the same derivation', async () => {
     renderRoutes(routes, '/accounts/acc-002/attribution')
     await screen.findByRole('heading', { level: 1, name: 'Attribution · Robert Johnson Individual' })

@@ -13,6 +13,9 @@ import { ReferenceGate } from './ReferenceGate'
 import { ReferencePage } from './ReferencePage'
 import { TakeToTeamThread } from './TakeToTeamThread'
 
+/** Half the last displayed place of fmtEffect (0.01 pp = 0.0001 as a fraction). */
+const EFFECT_TIE_TOLERANCE = 0.00005
+
 export function AttributionPage() {
   const { accountId } = useParams()
   const [params] = useSearchParams()
@@ -50,7 +53,7 @@ function Attribution({ view }: { view: AttributionView }) {
         <DataTable caption={`Attribution · ${periodLabel}`} rows={view.rows} getRowId={(r) => r.assetClass} noun={{ singular: 'asset class', plural: 'asset classes' }}
           totals={{
             label: 'Total',
-            tiesTo: { label: 'the active return', expected: view.activeReturn, actual: view.rows.reduce((sum, r) => sum + r.total, 0) },
+            tiesTo: { label: 'the active return', expected: view.activeReturn, actual: view.rows.reduce((sum, r) => sum + r.total, 0), tolerance: EFFECT_TIE_TOLERANCE },
             cells: {
               allocation: <Num text={fmtEffect(view.totals.allocation)} />, selection: <Num text={fmtEffect(view.totals.selection)} />,
               interaction: <Num text={fmtEffect(view.totals.interaction)} />, total: <Num text={fmtEffect(view.totals.total)} />,

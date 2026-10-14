@@ -72,6 +72,16 @@ describe('DataTable', () => {
     spy.mockRestore()
     window.removeEventListener('error', swallow)
   })
+  it('ties fractions to a tolerance of their own scale', () => {
+    const swallow = (event: ErrorEvent) => event.preventDefault()
+    window.addEventListener('error', swallow)
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const tie = (actual: number) => ({ totals: { label: 'Total', tiesTo: { label: 'the active return', expected: 0.0123, actual, tolerance: 0.00005 }, cells: {} } })
+    expect(() => renderTable(tie(0.0123 + 0.00004))).not.toThrow()
+    expect(() => renderTable(tie(0.0123 + 0.0001))).toThrow(MeasureError)
+    spy.mockRestore()
+    window.removeEventListener('error', swallow)
+  })
   it('sets a loss heavier than a gain', () => {
     render(<p><Num text={fmtResult(-1_200)} /><Num text={fmtResult(1_200)} /></p>)
     expect(screen.getByText(`${MINUS}1,200`)).toHaveClass('font-semibold')
