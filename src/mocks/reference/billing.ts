@@ -15,7 +15,6 @@ import { MOCK_NOW_ISO } from '@/lib/clock'
 
 type Household = (typeof households)[number]
 
-export { FIRM_FEE_SCHEDULE }
 
 export const annualFeeOn = (value: number): number => feeOn(value).fee
 

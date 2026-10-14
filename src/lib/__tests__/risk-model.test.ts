@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   ASSET_CLASS_RISK, CORRELATION_GROUP, RISK_FREE_RATE, Z_95,
   assetClassCorrelation, assetClassWeights, portfolioBeta, portfolioVolatility, portfolioReturn1Y,
-  trackingError, parametricVaR, sharpe, sortino, downsideDeviation, modelledMaxDrawdown,
+  trackingError, parametricVaR, sharpe, sortino, downsideDeviation, modelledMaxDrawdown, assetClassBeta,
 } from '@/lib/risk-model'
 
 // A 60/40-ish book: acc-001's actual asset-class mix.
@@ -54,13 +54,19 @@ describe('assetClassWeights', () => {
 describe('portfolio statistics', () => {
   const w = assetClassWeights(ACC_001)
 
-  it('beta is the weighted average of asset-class betas', () => {
-    expect(portfolioBeta(w)).toBeCloseTo(0.64, 2)
+  it('beta is the weighted average of asset-class betas, each derived from ρ and σ', () => {
+    // Phase 7a final: βᵢ = ρ(i, US equity) σᵢ / σ_US, so gold (0.05) and real estate (0.565) no
+    // longer carry hand-set 0.35 and 0.80; acc-001's mix reads 0.61, not 0.64.
+    expect(portfolioBeta(w)).toBeCloseTo(0.61, 2)
+    expect(portfolioBeta(w)).toBeCloseTo([...w].reduce((s, [ac, x]) => s + x * assetClassCorrelation(ac, 'us_equity') * ASSET_CLASS_RISK[ac as keyof typeof ASSET_CLASS_RISK].vol / ASSET_CLASS_RISK.us_equity.vol, 0), 12)
+    expect(assetClassBeta('us_equity')).toBe(1)
+    expect(assetClassBeta('private_equity')).toBeCloseTo(0.75 * 0.23 / 0.155, 12)
   })
 
   it('volatility accounts for imperfect correlation, so it is below the weighted average of vols', () => {
-    const weightedAvgVol = [...w.entries()].reduce((s, [ac, x]) => s + x * ASSET_CLASS_RISK[ac]!.vol, 0)
-    expect(portfolioVolatility(w)).toBeCloseTo(0.1007, 4)
+    const weightedAvgVol = [...w.entries()].reduce((s, [ac, x]) => s + x * ASSET_CLASS_RISK[ac as keyof typeof ASSET_CLASS_RISK].vol, 0)
+    // 0.0976 under Phase 7a final's correlations (0.1007 with gold at 0.5 to equity).
+    expect(portfolioVolatility(w)).toBeCloseTo(0.0976, 4)
     expect(portfolioVolatility(w)).toBeLessThan(weightedAvgVol)
   })
 
@@ -103,8 +109,9 @@ describe('the round-then-VaR sequence (rounding order is load-bearing)', () => {
   const roundedVol = Math.round(rawVol * 10_000) / 10_000
 
   it('rounding sigma to 4dp before calling parametricVaR reproduces the correct, disclosed VaR', () => {
-    expect(roundedVol).toBeCloseTo(0.1047, 4)
-    expect(parametricVaR(value, roundedVol)).toBeCloseTo(596_627, 0)
+    // Phase 7a final: private equity 0.75 with public equity (was 0.5) lifts σ 0.1047 -> 0.1069.
+    expect(roundedVol).toBeCloseTo(0.1069, 4)
+    expect(parametricVaR(value, roundedVol)).toBeCloseTo(609_164, 0)
   })
 
   it('skipping the round is not a cosmetic omission — it moves VaR by tens of dollars, ' +
@@ -187,8 +194,13 @@ describe('the correlation assumptions', () => {
     expect(assetClassCorrelation('intl_equity', 'emerging_markets')).toBe(0.85)
     expect(assetClassCorrelation('us_equity', 'fixed_income')).toBe(0.3)
     expect(assetClassCorrelation('fixed_income', 'cash')).toBe(0.1)
-    expect(assetClassCorrelation('real_estate', 'commodities')).toBe(0.6)
+    expect(assetClassCorrelation('real_estate', 'alternatives')).toBe(0.6)
     expect(assetClassCorrelation('private_equity', 'alternatives')).toBe(0.6)
+    // Phase 7a final: gold (the commodities sleeve holds GLD) barely moves with equity; private
+    // equity is equity, marked less often.
+    expect(assetClassCorrelation('commodities', 'us_equity')).toBe(0.05)
+    expect(assetClassCorrelation('real_estate', 'commodities')).toBe(0.2)
+    expect(assetClassCorrelation('private_equity', 'us_equity')).toBe(0.75)
     expect(assetClassCorrelation('emerging_markets', 'real_estate')).toBe(0.5)
     expect(assetClassCorrelation('digital_assets', 'us_equity')).toBe(0.4)
   })

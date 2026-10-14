@@ -1,18 +1,9 @@
-import type { ProposalTemplate, ProposalSectionType, ProposalFeeTier } from '@/types/proposal'
+import type { ProposalTemplate, ProposalSectionType } from '@/types/proposal'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { ADVISOR_EMAIL, FIRM_CITY, FIRM_NAME } from '@/lib/firm'
-import { blendedTieredFee, type FeeTier } from '@/lib/fees'
+import { FIRM_FEE_SCHEDULE, feeOn } from './fee-schedule'
 import { formatCurrency } from '@/lib/utils'
 import { commissionSchedule } from '@/lib/commission'
-
-/**
- * C33 · `blendedTieredFee` (Task 7) takes `{ upTo, rate }`; `proposalTemplates[].feeTiers` fixture
- * data uses `{ minAUM, maxAUM, rate, label }`. `upTo` is exactly `maxAUM` — the tiers are
- * contiguous from 0, so `minAUM`/`label` carry no information `blendedTieredFee` needs.
- */
-export function toFeeTiers(tiers: readonly ProposalFeeTier[]): FeeTier[] {
-  return tiers.map((t) => ({ upTo: t.maxAUM, rate: t.rate }))
-}
 
 const ILLUSTRATIVE_AUM_FALLBACK = 5_000_000
 
@@ -31,12 +22,6 @@ export const proposalTemplates: ProposalTemplate[] = [
       { assetClass: 'Real Assets', targetWeight: 0.05, currentWeight: 0.04, rationale: 'Real asset allocation provides inflation hedging through REITs and commodities exposure.' },
       { assetClass: 'Cash', targetWeight: 0.05, currentWeight: 0.03, rationale: 'Cash buffer maintained for liquidity needs and tactical rebalancing opportunities.' },
     ],
-    feeTiers: [
-      { minAUM: 0, maxAUM: 2_000_000, rate: 0.0100, label: '$0 – $2M' },
-      { minAUM: 2_000_000, maxAUM: 5_000_000, rate: 0.0085, label: '$2M – $5M' },
-      { minAUM: 5_000_000, maxAUM: 10_000_000, rate: 0.0070, label: '$5M – $10M' },
-      { minAUM: 10_000_000, maxAUM: null, rate: 0.0050, label: '$10M+' },
-    ],
   },
   {
     id: 'tpl-002',
@@ -50,11 +35,6 @@ export const proposalTemplates: ProposalTemplate[] = [
       { assetClass: 'Fixed Income', targetWeight: 0.40, currentWeight: 0.30, rationale: 'Significant increase in fixed income generates reliable income streams and reduces drawdown risk during the distribution phase.' },
       { assetClass: 'Real Assets', targetWeight: 0.10, currentWeight: 0.05, rationale: 'Doubling real asset exposure through REITs and TIPS provides inflation protection critical for maintaining purchasing power in retirement.' },
       { assetClass: 'Cash', targetWeight: 0.15, currentWeight: 0.20, rationale: 'Slight reduction in cash while maintaining a 2-year distribution reserve to avoid forced selling during market downturns.' },
-    ],
-    feeTiers: [
-      { minAUM: 0, maxAUM: 1_000_000, rate: 0.0100, label: '$0 – $1M' },
-      { minAUM: 1_000_000, maxAUM: 3_000_000, rate: 0.0080, label: '$1M – $3M' },
-      { minAUM: 3_000_000, maxAUM: null, rate: 0.0065, label: '$3M+' },
     ],
   },
   {
@@ -70,11 +50,6 @@ export const proposalTemplates: ProposalTemplate[] = [
       { assetClass: 'Alternatives', targetWeight: 0.10, currentWeight: 0.10, rationale: 'Maintaining alternatives allocation through hedge fund and private equity allocations adds return potential and portfolio diversification.' },
       { assetClass: 'Fixed Income', targetWeight: 0.05, currentWeight: 0.20, rationale: 'Significant reduction in fixed income is appropriate given the long horizon; minimal bond exposure serves as a rebalancing buffer rather than an income source.' },
       { assetClass: 'Cash', targetWeight: 0.05, currentWeight: 0.05, rationale: 'Minimal cash position maintained for tactical rebalancing and emergency liquidity needs.' },
-    ],
-    feeTiers: [
-      { minAUM: 0, maxAUM: 1_000_000, rate: 0.0095, label: '$0 – $1M' },
-      { minAUM: 1_000_000, maxAUM: 5_000_000, rate: 0.0075, label: '$1M – $5M' },
-      { minAUM: 5_000_000, maxAUM: null, rate: 0.0060, label: '$5M+' },
     ],
   },
 ]
@@ -213,7 +188,8 @@ export function generateSectionContent(
     }
 
     case 'fee_schedule': {
-      const tiers = template?.feeTiers ?? []
+      // Phase 7a · I4: every template prices on the firm's one published schedule, the one the ADV discloses.
+      const tiers = FIRM_FEE_SCHEDULE.published
       const tierRows = tiers.map((t) => {
         const max = t.maxAUM !== null ? `$${(t.maxAUM / 1_000_000).toFixed(0)}M` : '—'
         const min = `$${(t.minAUM / 1_000_000).toFixed(0)}M`
@@ -221,10 +197,9 @@ export function generateSectionContent(
       })
 
       // C33 · the fee illustration previously hardcoded "$40,250 (0.805% blended rate)" for a
-      // $5,000,000 portfolio on every template, understating tpl-001's own tier table ($45,500 /
-      // 0.91%) by $5,250/yr. Derive it from the template's actual tiers and the client's own AUM.
+      // $5,000,000 portfolio on every template. Derive it from the published tiers and the client's own AUM.
       const basis = householdAUM ?? ILLUSTRATIVE_AUM_FALLBACK
-      const { fee, blendedRate } = blendedTieredFee(basis, toFeeTiers(tiers))
+      const { fee, blendedRate } = feeOn(basis)
 
       return [
         '## Fee Schedule',

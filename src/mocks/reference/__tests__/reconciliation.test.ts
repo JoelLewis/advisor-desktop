@@ -8,6 +8,7 @@ import { archiveFor } from '@/mocks/workspace/archive'
 import { eventTime, MOCK_TODAY_ISO } from '@/lib/clock'
 import { SEED_LAST_SEQUENCE } from '@/mocks/data/workspace-seed'
 import { reconciliationQuote, reconciliationView, resolveBreak } from '../reconciliation'
+import { isTradingDay } from '@/lib/trading-calendar'
 
 const ADRIAN = 'user-001'
 const SARAH = 'user-002'
@@ -61,25 +62,32 @@ describe('match rates', () => {
   it('count checked records against open breaks of their kind', () => {
     const rates = view().summary.rates
     const positions = accounts.reduce((s, a) => s + getPositionsForAccount(a.id, a.totalValue).filter((p) => p.symbol !== 'CASH').length, 0)
-    const transactions = accounts.reduce((s, a) => s + generateTransactions(a.id, a.totalValue).length, 0)
+    // Phase 7a final: a market-value break counts against one account's valuation and a transaction-count
+    // break against one account's stream, not against every position or every transaction.
     expect(rates).toEqual([
       { kind: 'positions', checked: positions, open: 0, rate: 1 },
+      { kind: 'valuations', checked: accounts.length, open: 0, rate: 1 },
       { kind: 'cash', checked: accounts.length, open: 1, rate: (accounts.length - 1) / accounts.length },
-      { kind: 'transactions', checked: transactions, open: 0, rate: 1 },
+      { kind: 'transactions', checked: accounts.length, open: 0, rate: 1 },
     ])
   })
 })
 
-describe('the 30-day trend', () => {
-  it("is end-of-day history for 29 days and today's count as it stands", () => {
+describe('the trend', () => {
+  it("is end-of-day history for the 29 trading days before today and today's count as it stands", () => {
     const trend = view().trend
     expect(trend).toHaveLength(30)
-    expect(trend[0]?.date).toBe('2026-01-27')
+    // Weekends and NYSE holidays (16 February, Washington's Birthday; 19 January, Martin Luther King Jr. Day) are left out.
+    expect(trend.every((p) => isTradingDay(p.date))).toBe(true)
+    expect(trend.map((p) => p.date)).not.toContain('2026-02-16')
+    expect(trend[0]?.date).toBe('2026-01-13')
     expect(trend[29]?.date).toBe(MOCK_TODAY_ISO)
     expect(trend[29]?.openBreaks).toBe(view().summary.openBreaks)
     const on = (date: string) => trend.find((p) => p.date === date)?.openBreaks
     expect([on('2026-01-27'), on('2026-02-03'), on('2026-02-04'), on('2026-02-10'), on('2026-02-11'), on('2026-02-24')]).toEqual([0, 1, 0, 1, 0, 0])
-    expect(trend.find((p) => p.date === '2026-02-03')?.positions).toBeLessThan(1)
+    // brk-102 (3 February) is a market-value break: it dents the valuations rate, not the positions rate.
+    expect(trend.find((p) => p.date === '2026-02-03')?.valuations).toBeLessThan(1)
+    expect(trend.find((p) => p.date === '2026-02-03')?.positions).toBe(1)
   })
 })
 

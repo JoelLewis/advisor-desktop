@@ -40,19 +40,27 @@ function Attribution({ view }: { view: AttributionView }) {
     setParams(next, { replace: true })
   }
   const periodLabel = view.periods.find((p) => p.id === view.period)?.label ?? view.period
+  const span = view.multiYear ? `${periodLabel}, cumulative` : periodLabel
+  const cumulative = view.multiYear ? ', cumulative' : ''
   const last = view.series[view.series.length - 1]
   return (
     <ReferencePage title={`Attribution · ${view.accountName}`} from={params.get('from')} methods={view.methods}
       lead={<p className="text-body text-ink-2">{`${view.mandateName} · against the ${view.benchmark.name} · gross of fees · as of ${fmtTimestamp(view.asOf)}`}</p>}>
       <Select label="Period" value={view.period} onChange={setPeriod} options={view.periods.map((p) => ({ value: p.id, label: p.label }))} />
       <div className="flex flex-wrap gap-x-10 gap-y-4">
-        <Reading label="Portfolio return" value={fmtReturn(view.portfolioReturn)} unit={UNIT.pct} size="readout-md" />
-        <Reading label="Benchmark return" value={fmtReturn(view.benchmarkReturn)} unit={UNIT.pct} size="readout-md" />
-        <Reading label="Active return" value={fmtReturn(view.activeReturn)} unit={UNIT.pct} size="readout-md" />
+        <Reading label={`Portfolio return${cumulative}`} value={fmtReturn(view.portfolioReturn)} unit={UNIT.pct} size="readout-md" />
+        <Reading label={`Benchmark return${cumulative}`} value={fmtReturn(view.benchmarkReturn)} unit={UNIT.pct} size="readout-md" />
+        <Reading label={`Active return${cumulative}`} value={fmtReturn(view.activeReturn)} unit={UNIT.pct} size="readout-md" />
+        {view.multiYear ? (
+          <>
+            <Reading label="Portfolio, annualized" value={fmtReturn(view.multiYear.annualized.portfolio)} unit={UNIT.pct} size="readout-md" />
+            <Reading label="Benchmark, annualized" value={fmtReturn(view.multiYear.annualized.benchmark)} unit={UNIT.pct} size="readout-md" />
+          </>
+        ) : null}
       </div>
       <p className="text-body text-ink-2">Brinson-Fachler · single period, arithmetic, no linking · returns modeled, not realized</p>
-      <Pane title="Effects by asset class" meta={periodLabel}>
-        <DataTable caption={`Attribution · ${periodLabel}`} rows={view.rows} getRowId={(r) => r.assetClass} noun={{ singular: 'asset class', plural: 'asset classes' }}
+      <Pane title="Effects by asset class" meta={span}>
+        <DataTable caption={`Attribution · ${span}`} rows={view.rows} getRowId={(r) => r.assetClass} noun={{ singular: 'asset class', plural: 'asset classes' }}
           totals={{
             label: 'Total',
             tiesTo: { label: 'the active return', expected: view.activeReturn, actual: view.rows.reduce((sum, r) => sum + r.total, 0), tolerance: EFFECT_TIE_TOLERANCE },

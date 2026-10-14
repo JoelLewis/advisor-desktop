@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { generateSectionContent, proposalTemplates } from '@/mocks/data/proposals'
+import { FIRM_FEE_SCHEDULE } from '@/mocks/data/fee-schedule'
 import { createProposal, generateSection } from '@/services/proposals'
 import { blendedTieredFee } from '@/lib/fees'
 import { formatCurrency } from '@/lib/utils'
@@ -58,9 +59,7 @@ describe('C33 wiring: the handler actually threads the client\'s AUM through', (
     expect(householdAUM).toBeGreaterThan(0)
     expect(householdAUM).not.toBe(5_000_000)
 
-    const template = proposalTemplates.find((t) => t.id === 'tpl-001')!
-    const tiers = template.feeTiers.map((t) => ({ upTo: t.maxAUM, rate: t.rate }))
-    const { fee, blendedRate } = blendedTieredFee(householdAUM, tiers)
+    const { fee, blendedRate } = blendedTieredFee(householdAUM, FIRM_FEE_SCHEDULE.tiers)
 
     const feeSection = draft.sections.find((s) => s.type === 'fee_schedule')!
     expect(feeSection.content).toContain(formatCurrency(householdAUM))
@@ -72,4 +71,13 @@ describe('C33 wiring: the handler actually threads the client\'s AUM through', (
     const regenerated = await generateSection(draft.id, 'fee_schedule')
     expect(regenerated.content).toContain(formatCurrency(fee))
   }, 10_000)
+})
+
+describe('Phase 7a · I4: every template quotes the one schedule the ADV discloses', () => {
+  it.each(proposalTemplates.map((t) => t.id))('%s: the fee table is the firm schedule, and no other rate', (id) => {
+    const content = generateSectionContent('fee_schedule', 'Test Client', id, 5_000_000)
+    for (const t of FIRM_FEE_SCHEDULE.published) expect(content, id).toContain(`| ${(t.rate * 100).toFixed(2)}% |`)
+    for (const legacy of ['0.80%', '0.65%', '0.95%', '0.75%', '0.60%']) expect(content, id).not.toContain(`| ${legacy} |`)
+    expect(content, id).toContain('$45,500')
+  })
 })

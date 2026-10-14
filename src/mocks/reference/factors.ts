@@ -1,5 +1,5 @@
 import type { FactorId, FactorRow } from '@/types/reference-risk'
-import { ASSET_CLASS_RISK } from '@/lib/risk-model'
+import { assetClassBeta } from '@/lib/risk-model'
 
 export const FACTORS: readonly { id: FactorId; label: string }[] = [
   { id: 'market', label: 'Market (equity beta)' }, { id: 'size', label: 'Size' }, { id: 'value', label: 'Value' }, { id: 'momentum', label: 'Momentum' },
@@ -8,7 +8,8 @@ export const FACTORS: readonly { id: FactorId; label: string }[] = [
 
 /**
  * Model assumptions (R11), not loadings estimated from returns: how much of each style factor one unit of
- * an asset class carries. The market loading is not here; it is the class's beta in `ASSET_CLASS_RISK`.
+ * an asset class carries. The market loading is not here; it is the class's beta, derived from the correlation
+ * and volatility assumptions (`assetClassBeta`).
  */
 const STYLE_LOADINGS: Readonly<Record<string, Readonly<Record<Exclude<FactorId, 'market'>, number>>>> = {
   us_equity:        { size: 0.05, value: -0.05, momentum: 0.10, quality: 0.15, rates: -0.05, credit: 0.00 },
@@ -24,10 +25,9 @@ const STYLE_LOADINGS: Readonly<Record<string, Readonly<Record<Exclude<FactorId, 
 }
 
 export function loadingOf(assetClass: string, factor: FactorId): number {
-  const beta = ASSET_CLASS_RISK[assetClass]?.beta
   const style = STYLE_LOADINGS[assetClass]
-  if (beta === undefined || !style) throw new Error(`No factor loadings for asset class ${assetClass}`)
-  return factor === 'market' ? beta : style[factor]
+  if (!style) throw new Error(`No factor loadings for asset class ${assetClass}`)
+  return factor === 'market' ? assetClassBeta(assetClass) : style[factor]
 }
 
 const exposure = (weights: ReadonlyMap<string, number>, factor: FactorId) => [...weights].reduce((s, [ac, w]) => s + w * loadingOf(ac, factor), 0)

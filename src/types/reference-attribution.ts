@@ -20,7 +20,10 @@ export type AttributionView = {
   /** The model's name, or "Custom mandate". */
   mandateName: string; benchmark: ModelBenchmark
   period: AttributionPeriod; periods: { id: AttributionPeriod; label: string }[]
+  /** For the period: cumulative over it when the period is longer than a year. */
   portfolioReturn: number; benchmarkReturn: number; activeReturn: number
+  /** A period longer than a year is cumulative, with its annualized equivalents: (1 + R)^(1/years) − 1. */
+  multiYear: { years: number; annualized: { portfolio: number; benchmark: number } } | null
   rows: AttributionRow[]; totals: { allocation: number; selection: number; interaction: number; total: number }
   series: { date: string; portfolio: number; benchmark: number }[]
   methods: MethodNote[]

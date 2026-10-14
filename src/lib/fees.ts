@@ -20,10 +20,6 @@ export function rateFromBps(basisPoints: number): number {
   return basisPoints / 10_000
 }
 
-export function householdAnnualFee(aum: number, annualRate: number): number {
-  return aum * annualRate
-}
-
 /** Σ annualFee ÷ Σ aum, expressed in basis points (1% = 100 bps). */
 export function assetWeightedEffectiveFee(fees: readonly HouseholdFeeInput[]): number {
   const totalAUM = fees.reduce((sum, f) => sum + f.aum, 0)

@@ -5,7 +5,7 @@ import { Num } from '@/kit/data-table/Num'
 import { Pane } from '@/kit/layout/Pane'
 import { Reading } from '@/kit/reading/Reading'
 import { Tag } from '@/kit/tag/Tag'
-import { UNIT, fmtMoney, fmtQuantity, fmtResult, fmtTimestamp, fmtWeight } from '@/kit/measure'
+import { UNIT, fmtDate, fmtMoney, fmtQuantity, fmtResult, fmtTimestamp, fmtWeight } from '@/kit/measure'
 import { useDirectory } from '@/hooks/use-workspace'
 import { useReconciliation } from '@/hooks/use-reference'
 import { useViewer } from '@/workspace/viewer/use-viewer'
@@ -22,7 +22,8 @@ export function ReconciliationPage() {
   return <ReferenceGate query={recon} subject="Reconciliation">{(view) => <Reconciliation view={view} />}</ReferenceGate>
 }
 
-const figure = (b: ReconBreakView, v: number) => <Num text={b.unit === 'USD' ? fmtMoney(v) : fmtQuantity(v)} />
+const figureText = (b: ReconBreakView, v: number) => (b.unit === 'USD' ? fmtMoney(v) : b.unit === 'sh' ? `${fmtQuantity(v)} ${UNIT.shares}` : fmtQuantity(v))
+const figure = (b: ReconBreakView, v: number) => <Num text={figureText(b, v)} />
 
 function Reconciliation({ view }: { view: ReconciliationView }) {
   const [params] = useSearchParams()
@@ -41,7 +42,7 @@ function Reconciliation({ view }: { view: ReconciliationView }) {
             limit={`${fmtQuantity(r.checked)} checked · ${fmtQuantity(r.open)} open`} />
         ))}
       </div>
-      {!canResolve ? <p className="text-body text-ink-2">Resolving a break is for the advisor and client service; you can read the breaks and take one to a team thread.</p> : null}
+      {directory.data && !canResolve ? <p className="text-body text-ink-2">Resolving a break is for the advisor and client service; you can read the breaks and take one to a team thread.</p> : null}
       {recorded ? <p role="status" className="text-body">{`Resolved · ${recorded}`}</p> : null}
       <Pane title="Breaks">
         <DataTable caption="Breaks" rows={view.breaks} getRowId={(b) => b.id} noun={{ singular: 'break', plural: 'breaks' }}
@@ -66,7 +67,10 @@ function Reconciliation({ view }: { view: ReconciliationView }) {
               id: 'field', header: 'Field · detected', wrap: true, sortValue: (b) => b.detectedAt,
               cell: (b) => <StackedCell primary={b.symbol ? `${b.fieldLabel} · ${b.symbol}` : b.fieldLabel} secondary={fmtTimestamp(b.detectedAt)} />,
             },
-            { id: 'book', header: 'Book', align: 'right', cell: (b) => figure(b, b.book) },
+            {
+              id: 'book', header: 'Book', align: 'right',
+              cell: (b) => (b.status === 'open' ? figure(b, b.book) : <span className="flex flex-col items-end gap-0.5">{figure(b, b.book)}<span className="text-table-dense text-ink-3">Book today</span></span>),
+            },
             { id: 'theirs', header: 'Custodian says', align: 'right', cell: (b) => figure(b, b.custodianValue) },
             { id: 'difference', header: 'Difference', align: 'right', cell: (b) => <Num text={fmtResult(b.difference)} /> },
             { id: 'severity', header: 'Severity', cell: (b) => SEVERITY_WORDS[b.severity] },
@@ -93,14 +97,15 @@ function Reconciliation({ view }: { view: ReconciliationView }) {
           ))}
         </ol>
       </Pane>
-      <Pane title="30-day trend" meta="End of day; today as it stands">
-        <DataTable caption="30-day trend" rows={[...view.trend].reverse()} getRowId={(p) => p.date} noun={{ singular: 'day', plural: 'days' }} density="dense"
+      <Pane title={`Trend · last ${fmtQuantity(view.trend.length)} trading days`} meta="End of day; today as it stands">
+        <DataTable caption={`Trend · last ${fmtQuantity(view.trend.length)} trading days`} rows={[...view.trend].reverse()} getRowId={(p) => p.date} noun={{ singular: 'trading day', plural: 'trading days' }} density="dense"
           columns={[
-            { id: 'date', header: 'Day', cell: (p) => p.date },
+            { id: 'date', header: 'Trading day', cell: (p) => fmtDate(p.date) },
             { id: 'open', header: 'Open breaks', align: 'right', cell: (p) => <Num text={fmtQuantity(p.openBreaks)} /> },
             { id: 'positions', header: 'Positions', unit: UNIT.pct, align: 'right', cell: (p) => <Num text={fmtWeight(p.positions)} /> },
+            { id: 'valuations', header: 'Valuations', unit: UNIT.pct, align: 'right', cell: (p) => <Num text={fmtWeight(p.valuations)} /> },
             { id: 'cash', header: 'Cash', unit: UNIT.pct, align: 'right', cell: (p) => <Num text={fmtWeight(p.cash)} /> },
-            { id: 'transactions', header: 'Transactions', unit: UNIT.pct, align: 'right', cell: (p) => <Num text={fmtWeight(p.transactions)} /> },
+            { id: 'transactions', header: 'Transaction streams', unit: UNIT.pct, align: 'right', cell: (p) => <Num text={fmtWeight(p.transactions)} /> },
           ]} />
       </Pane>
     </ReferencePage>

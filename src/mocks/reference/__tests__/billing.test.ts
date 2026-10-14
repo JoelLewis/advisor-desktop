@@ -10,7 +10,8 @@ import { accountValueUSD, deriveBookAUM, deriveHouseholdAUM } from '@/lib/aum'
 import { blendedTieredFee, tierSlices } from '@/lib/fees'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { isTradingDay } from '@/lib/trading-calendar'
-import { FIRM_FEE_SCHEDULE, annualFeeOn, billingQuote, billingView, modeledAccountValueAt } from '../billing'
+import { annualFeeOn, billingQuote, billingView, modeledAccountValueAt } from '../billing'
+import { FIRM_FEE_SCHEDULE } from '@/mocks/data/fee-schedule'
 
 function view() {
   const v = billingView('user-001')

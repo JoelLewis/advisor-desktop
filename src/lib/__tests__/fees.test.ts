@@ -1,16 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { householdAnnualFee, assetWeightedEffectiveFee, bps, rateFromBps, blendedTieredFee } from '@/lib/fees'
+import { assetWeightedEffectiveFee, bps, rateFromBps, blendedTieredFee } from '@/lib/fees'
 
 describe('bps', () => {
   it('0.0085 is 85 basis points, not 0.85', () => {
     expect(bps(0.0085)).toBe(85)
     expect(rateFromBps(85)).toBeCloseTo(0.0085, 10)
-  })
-})
-
-describe('householdAnnualFee', () => {
-  it('Chen-Wong: 30,308,017.71195 at 65 bps is 197,002.115', () => {
-    expect(householdAnnualFee(30_308_017.71195, 0.0065)).toBeCloseTo(197_002.1151, 4)
   })
 })
 

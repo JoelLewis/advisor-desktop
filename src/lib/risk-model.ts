@@ -14,28 +14,30 @@
 import type { AssetClass } from '@/types/portfolio'
 
 export type AssetClassRisk = {
-  /** Sensitivity to the global equity market. */
-  beta: number
   /** Annualised standard deviation of returns. */
   vol: number
-  /** Trailing one-year realised total return. */
+  /** The class's one-year return: a modeled assumption, not a realized figure. */
   return1Y: number
 }
 
-export const ASSET_CLASS_RISK: Record<string, AssetClassRisk> = {
-  us_equity:        { beta: 1.00, vol: 0.155, return1Y: 0.145 },
-  intl_equity:      { beta: 0.88, vol: 0.170, return1Y: 0.098 },
-  emerging_markets: { beta: 1.15, vol: 0.220, return1Y: 0.082 },
-  fixed_income:     { beta: 0.15, vol: 0.055, return1Y: 0.042 },
-  alternatives:     { beta: 0.45, vol: 0.090, return1Y: 0.061 },
-  real_estate:      { beta: 0.80, vol: 0.175, return1Y: 0.071 },
-  commodities:      { beta: 0.35, vol: 0.180, return1Y: 0.088 },
-  cash:             { beta: 0.00, vol: 0.005, return1Y: 0.048 },
-  digital_assets:   { beta: 1.60, vol: 0.650, return1Y: 0.412 },
-  private_equity:   { beta: 1.20, vol: 0.230, return1Y: 0.112 },
+/**
+ * Phase 7a · beta is no longer hand-set beside σ: it is derived from these volatilities and the
+ * correlation table below (`assetClassBeta`), so the factor table and σ agree about how equity-like
+ * a sleeve is. Hand-set, real estate read 0.80 and private equity 1.20 while their correlations
+ * implied 0.56 and 0.74.
+ */
+export const ASSET_CLASS_RISK: Readonly<Record<AssetClass, AssetClassRisk>> = {
+  us_equity:        { vol: 0.155, return1Y: 0.145 },
+  intl_equity:      { vol: 0.170, return1Y: 0.098 },
+  emerging_markets: { vol: 0.220, return1Y: 0.082 },
+  fixed_income:     { vol: 0.055, return1Y: 0.042 },
+  alternatives:     { vol: 0.090, return1Y: 0.061 },
+  real_estate:      { vol: 0.175, return1Y: 0.071 },
+  commodities:      { vol: 0.180, return1Y: 0.088 },
+  cash:             { vol: 0.005, return1Y: 0.048 },
+  digital_assets:   { vol: 0.650, return1Y: 0.412 },
+  private_equity:   { vol: 0.230, return1Y: 0.112 },
 }
-
-const FALLBACK: AssetClassRisk = { beta: 1.00, vol: 0.150, return1Y: 0.080 }
 
 export const RISK_FREE_RATE = 0.04 as const
 export const Z_95 = 1.645 as const
@@ -44,11 +46,13 @@ const DOWNSIDE_FRACTION = 0.70
 /** Modelled trailing-3-year maximum drawdown as a multiple of annualised volatility. */
 const MAX_DRAWDOWN_MULTIPLE = 1.2
 
+/** A class with no assumption is a broken invariant, never a default: the same throw as the correlation lookup. */
 function risk(assetClass: string): AssetClassRisk {
-  return ASSET_CLASS_RISK[assetClass] ?? FALLBACK
+  if (!isAssetClass(assetClass)) throw new Error(`No volatility or return assumption covers asset class ${assetClass}`)
+  return ASSET_CLASS_RISK[assetClass]
 }
 
-const CORRELATION_GROUPS = ['equity', 'fixed_income', 'cash', 'real_assets', 'digital_assets'] as const
+const CORRELATION_GROUPS = ['equity', 'fixed_income', 'cash', 'real_assets', 'gold', 'private_equity', 'digital_assets'] as const
 type CorrelationGroup = (typeof CORRELATION_GROUPS)[number]
 
 /** Which correlation group each asset class belongs to. Typed over the whole union, so a new class must be placed. */
@@ -56,7 +60,7 @@ export const CORRELATION_GROUP: Readonly<Record<AssetClass, CorrelationGroup>> =
   us_equity: 'equity', intl_equity: 'equity', emerging_markets: 'equity',
   fixed_income: 'fixed_income',
   cash: 'cash',
-  alternatives: 'real_assets', real_estate: 'real_assets', commodities: 'real_assets', private_equity: 'real_assets',
+  alternatives: 'real_assets', real_estate: 'real_assets', commodities: 'gold', private_equity: 'private_equity',
   digital_assets: 'digital_assets',
 }
 
@@ -65,19 +69,23 @@ export const CORRELATION_GROUP: Readonly<Record<AssetClass, CorrelationGroup>> =
  * Long-run, rounded figures of the kind a firm's capital-market assumptions publish, not estimates
  * from this book's returns:
  * - US, international and emerging-market equity move closely together: 0.85.
- * - Alternatives, real estate, commodities and private equity: 0.6 with one another, 0.5 with equity.
+ * - Alternatives and real estate: 0.6 with one another, 0.5 with equity.
+ * - Gold (the commodities sleeve holds GLD): its own group, 0.05 with equity, 0.2 with fixed income and real assets.
+ * - Private equity: its own group, 0.75 with public equity (it is equity, marked less often), 0.6 with real assets.
  * - Equity and fixed income: 0.3. Fixed income and cash: 0.1. Fixed income and the real-asset group: 0.2.
- * - Digital assets: 0.4 with equity, 0.3 with the real-asset group, 0.1 with fixed income.
+ * - Digital assets: 0.4 with equity, 0.3 with real assets and private equity, 0.1 with fixed income and gold.
  * - Cash is uncorrelated with every risky group.
  * Within a single-class group the entry is the class with itself, 1. The full matrix is symmetric
  * with 1 on the diagonal and positive definite (`risk-model.test.ts` factors it).
  */
 const GROUP_CORRELATION: Readonly<Record<CorrelationGroup, Readonly<Record<CorrelationGroup, number>>>> = {
-  equity:         { equity: 0.85, fixed_income: 0.3, cash: 0,   real_assets: 0.5, digital_assets: 0.4 },
-  fixed_income:   { equity: 0.3,  fixed_income: 1,   cash: 0.1, real_assets: 0.2, digital_assets: 0.1 },
-  cash:           { equity: 0,    fixed_income: 0.1, cash: 1,   real_assets: 0,   digital_assets: 0 },
-  real_assets:    { equity: 0.5,  fixed_income: 0.2, cash: 0,   real_assets: 0.6, digital_assets: 0.3 },
-  digital_assets: { equity: 0.4,  fixed_income: 0.1, cash: 0,   real_assets: 0.3, digital_assets: 1 },
+  equity:         { equity: 0.85, fixed_income: 0.3, cash: 0,   real_assets: 0.5, gold: 0.05, private_equity: 0.75, digital_assets: 0.4 },
+  fixed_income:   { equity: 0.3,  fixed_income: 1,   cash: 0.1, real_assets: 0.2, gold: 0.2,  private_equity: 0.2,  digital_assets: 0.1 },
+  cash:           { equity: 0,    fixed_income: 0.1, cash: 1,   real_assets: 0,   gold: 0,    private_equity: 0,    digital_assets: 0 },
+  real_assets:    { equity: 0.5,  fixed_income: 0.2, cash: 0,   real_assets: 0.6, gold: 0.2,  private_equity: 0.6,  digital_assets: 0.3 },
+  gold:           { equity: 0.05, fixed_income: 0.2, cash: 0,   real_assets: 0.2, gold: 1,    private_equity: 0.05, digital_assets: 0.1 },
+  private_equity: { equity: 0.75, fixed_income: 0.2, cash: 0,   real_assets: 0.6, gold: 0.05, private_equity: 1,    digital_assets: 0.3 },
+  digital_assets: { equity: 0.4,  fixed_income: 0.1, cash: 0,   real_assets: 0.3, gold: 0.1,  private_equity: 0.3,  digital_assets: 1 },
 }
 
 const isAssetClass = (value: string): value is AssetClass => Object.prototype.hasOwnProperty.call(CORRELATION_GROUP, value)
@@ -94,12 +102,12 @@ export function assetClassCorrelation(a: string, b: string): number {
 }
 
 const GROUP_WORDS: Readonly<Record<CorrelationGroup, string>> = {
-  equity: 'equity', fixed_income: 'fixed income', cash: 'cash', real_assets: 'alternatives and real assets', digital_assets: 'digital assets',
+  equity: 'equity', fixed_income: 'fixed income', cash: 'cash', real_assets: 'alternatives and real estate', gold: 'gold', private_equity: 'private equity', digital_assets: 'digital assets',
 }
 
 const MEMBER_WORDS: Readonly<Record<CorrelationGroup, string>> = {
   equity: 'US, international and emerging-market equity', fixed_income: 'fixed income', cash: 'cash',
-  real_assets: 'alternatives, real estate, commodities and private equity', digital_assets: 'digital assets',
+  real_assets: 'alternatives and real estate', gold: 'gold', private_equity: 'private equity', digital_assets: 'digital assets',
 }
 
 /** The correlation assumptions as one disclosure sentence, read from the table above. */
@@ -123,9 +131,17 @@ export function assetClassWeights(
   return weights
 }
 
+/** The reference market the betas are measured against. */
+export const BETA_REFERENCE = 'us_equity' satisfies AssetClass
+
+/** βᵢ = ρ(i, US equity) · σᵢ / σ_US equity: read from the correlation and volatility assumptions, never set beside them. */
+export function assetClassBeta(assetClass: string): number {
+  return assetClassCorrelation(assetClass, BETA_REFERENCE) * risk(assetClass).vol / risk(BETA_REFERENCE).vol
+}
+
 export function portfolioBeta(weights: ReadonlyMap<string, number>): number {
   let beta = 0
-  for (const [ac, w] of weights) beta += w * risk(ac).beta
+  for (const [ac, w] of weights) beta += w * assetClassBeta(ac)
   return beta
 }
 
@@ -136,10 +152,8 @@ export function portfolioReturn1Y(weights: ReadonlyMap<string, number>): number 
 }
 
 /**
- * One asset class's trailing one-year index return, with the same fallback `portfolioReturn1Y`
- * applies. Attribution needs the per-class figure rather than the weighted total, and reading
- * `ASSET_CLASS_RISK` directly there would silently use a different fallback for an unmapped class,
- * so Σ wᵢ·assetClassReturn1Y(i) would stop equalling `portfolioReturn1Y`.
+ * One asset class's modeled one-year index return, through the same lookup `portfolioReturn1Y` uses,
+ * so Σ wᵢ·assetClassReturn1Y(i) equals `portfolioReturn1Y`; an unmapped class throws on both.
  */
 export function assetClassReturn1Y(assetClass: string): number {
   return risk(assetClass).return1Y

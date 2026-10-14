@@ -25,6 +25,25 @@ describe('the attribution read model', () => {
     }
   })
 
+  it('states a period longer than a year as cumulative, with annualized portfolio and benchmark returns', () => {
+    for (const [id, years] of [['3y', 3], ['5y', 5]] as const) {
+      const v = view('acc-002', id)
+      expect(v.multiYear?.years, id).toBe(years)
+      expect(v.multiYear?.annualized.portfolio, id).toBeCloseTo((1 + v.portfolioReturn) ** (1 / years) - 1, 4)
+      expect(v.multiYear?.annualized.benchmark, id).toBeCloseTo((1 + v.benchmarkReturn) ** (1 / years) - 1, 4)
+      expect(v.multiYear!.annualized.portfolio, id).toBeLessThan(v.portfolioReturn)
+    }
+    for (const id of ['mtd', 'qtd', 'ytd', '1y'] as const) expect(view('acc-002', id).multiYear, id).toBeNull()
+    expect(view().methods.find((m) => m.label === 'Returns')?.text).toContain("today's holdings, applied to the whole period: a holdings-based approximation, not the account's path")
+  })
+
+  it('measures a custom mandate against the benchmark its mandate names', () => {
+    const v = view('acc-041', '1y')
+    expect(v).toMatchObject({ modelId: null, mandateName: 'Custom mandate' })
+    expect(v.benchmark).toMatchObject({ name: 'Hong Kong equity mandate benchmark', kind: 'mandate' })
+    expect(v.rows.reduce((s, r) => s + r.benchmarkWeight, 0)).toBeCloseTo(1, 9)
+  })
+
   it("carries both weight sets, each summing to one, and the benchmark's components", () => {
     const v = view()
     expect(v.rows.reduce((s, r) => s + r.portfolioWeight, 0)).toBeCloseTo(1, 9)

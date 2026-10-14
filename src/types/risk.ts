@@ -21,8 +21,8 @@ type RiskMetrics = {
   var95Method: 'parametric' | 'historical' | 'monte_carlo';
   /**
    * Name of the benchmark that **tracking error** is measured against. Beta is not
-   * benchmark-relative: it is sensitivity to the global equity market, summed from
-   * `ASSET_CLASS_RISK`, and is the same number whichever model the account is assigned.
+   * benchmark-relative: it is sensitivity to US equity, derived per class from the correlation and
+   * volatility assumptions (`assetClassBeta`), and is the same number whichever model the account is assigned.
    */
   benchmark: string;
   /** One annualised active-risk statistic, not a per-horizon value. */

@@ -35,7 +35,8 @@ describe('the Attribution view', () => {
     renderRoutes(routes, '/accounts/acc-002/attribution')
     await screen.findByRole('heading', { level: 1, name: 'Attribution · Robert Johnson Individual' })
     await userEvent.setup().selectOptions(screen.getByRole('combobox', { name: 'Period' }), 'Three years')
-    expect(await screen.findByRole('table', { name: 'Attribution · Three years' })).toBeInTheDocument()
+    expect(await screen.findByRole('table', { name: 'Attribution · Three years, cumulative' })).toBeInTheDocument()
+    expect(screen.getByText('Portfolio, annualized')).toBeInTheDocument()
   })
 
   it('takes an asset-class row to the account team thread', async () => {

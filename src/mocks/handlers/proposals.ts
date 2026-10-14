@@ -10,6 +10,7 @@ import type { AssetClass } from '@/types/portfolio'
 import { now as clockNow } from '@/lib/clock'
 import { bandFor, type ProfileBand, type RiskProfile } from '@/lib/risk-profile'
 import { MODEL_DEFINITIONS } from '@/mocks/data/model-definitions'
+import { FIRM_FEE_SCHEDULE } from '../data/fee-schedule'
 
 const proposalStore = new Map<string, ProposalDraft>()
 
@@ -115,7 +116,7 @@ export const proposalHandlers = [
       status: 'review',
       sections,
       allocation: template.defaultAllocation,
-      feeTiers: template.feeTiers,
+      feeTiers: [...FIRM_FEE_SCHEDULE.published],
       complianceChecks: [],
       createdAt: now,
       updatedAt: now,

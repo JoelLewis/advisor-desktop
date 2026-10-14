@@ -4,10 +4,11 @@ import { clients } from '@/mocks/data/clients'
 import { riskProfileFor } from '@/mocks/handlers/pms'
 import { approvedV1, release } from '@/mocks/workspace/__tests__/story-fixture'
 import { getConcentration, getFactorExposures, getRiskMetrics, getStressScenarios } from '@/services/pms'
-import { ASSET_CLASS_RISK, portfolioBeta } from '@/lib/risk-model'
+import { ASSET_CLASS_RISK, assetClassBeta, portfolioBeta } from '@/lib/risk-model'
 import { modelVolatility } from '../models'
 import { FACTORS, factorRows, loadingOf } from '../factors'
-import { accountRiskView, bookRiskView, riskQuote, riskScoreOf } from '../risk'
+import { accountRiskView, bookRiskView, riskQuote } from '../risk'
+import { riskScoreOf } from '../risk-score'
 
 const ASSET_CLASSES = Object.keys(ASSET_CLASS_RISK)
 const risk = (accountId: string) => {
@@ -22,7 +23,7 @@ describe('factor exposures', () => {
     expect(FACTORS.map((f) => f.id)).toEqual(['market', 'size', 'value', 'momentum', 'quality', 'rates', 'credit'])
     for (const ac of ASSET_CLASSES) {
       for (const f of FACTORS) expect(Number.isFinite(loadingOf(ac, f.id)), `${ac} ${f.id}`).toBe(true)
-      expect(loadingOf(ac, 'market'), ac).toBe(ASSET_CLASS_RISK[ac]?.beta)
+      expect(loadingOf(ac, 'market'), ac).toBe(assetClassBeta(ac))
     }
     expect(() => loadingOf('collectibles', 'size')).toThrow('collectibles')
   })
@@ -70,8 +71,9 @@ describe('the risk score against the client tolerance', () => {
   it('reads the tolerance from the client questionnaire and compares bands', () => {
     const crypto = risk('acc-045')
     const raj = clients.find((c) => c.id === 'cli-011')
-    expect(crypto.posture).toMatchObject({ score: 100, band: 'Aggressive', status: 'above', gap: 100 - (raj?.riskProfile.score ?? 0) })
-    expect(crypto.posture.tolerance).toMatchObject({ clientId: 'cli-011', clientName: raj?.fullName, band: 'Moderate', assessedOn: raj?.riskProfile.lastAssessed })
+    // Raj scores 55, the Moderate band (41–55): the account is 45 points past its ceiling, not 45 past "55".
+    expect(crypto.posture).toMatchObject({ score: 100, band: 'Aggressive', status: 'above', beyond: 45 })
+    expect(crypto.posture.tolerance).toMatchObject({ clientId: 'cli-011', clientName: raj?.fullName, band: 'Moderate', floor: 41, ceiling: 55, assessedOn: raj?.riskProfile.lastAssessed })
     expect(risk('acc-020').posture.status).toBe('below')
   })
 })
@@ -105,8 +107,10 @@ describe('account risk', () => {
 
   it('states its methods, the modeled ones tagged', () => {
     expect(risk('acc-002').methods.map((n) => [n.label, n.modeled])).toEqual([
-      ['Volatility and beta', true], ['Value at risk', true], ['Factor exposures', true], ['Concentration', false], ['Stress tests', true], ['Risk score and tolerance', false],
+      ['Volatility and beta', true], ['Value at risk', true], ['Tracking error', true], ['Factor exposures', true], ['Concentration', false], ['Stress tests', true],
+      ['Risk score and tolerance', true], ['Screening, not suitability', false], ['Glide paths', false],
     ])
+    expect(risk('acc-002').methods.find((n) => n.label === 'Tracking error')?.text).toContain('Modeled, not realized: ex-ante')
   })
 
   it('states the correlation assumptions and the score scale from the engine, not as fixed prose', () => {
@@ -119,37 +123,88 @@ describe('account risk', () => {
       const vol = modelVolatility(modelId)
       expect(scale).toContain(`${band}, ${name}, σ ${(vol * 100).toFixed(1)}% at ${riskScoreOf(vol)}`)
     }
-    // Growth (12.47%) to Aggressive Growth (13.19%): 22 points across 0.72 pp, the steepest step.
-    expect(scale).toContain('The steepest step, from Growth to Aggressive Growth, spans 22 points across 0.72 percentage point of σ')
-    expect(scale).not.toMatch(/66 to 88|0\.1 percentage point/)
+    // Phase 7a final: with gold in its own group, Moderate Balanced (9.27%) to Balanced Growth (9.80%) is
+    // the steepest step: 15 points across 0.53 percentage point of σ (it was Growth to Aggressive Growth).
+    expect(scale).toContain('The steepest step, from Moderate Balanced to Balanced Growth, spans 15 points across 0.53 percentage points of σ')
+    expect(scale).not.toMatch(/66 to 88|0\.1 percentage point|0\.53 percentage point of/)
   })
 })
 
 describe('book risk', () => {
-  it('lists every account, largest gap above its client tolerance first', () => {
-    const book = bookRiskView('user-001')
-    expect(book?.rows).toHaveLength(accounts.length)
-    const gaps = book?.rows.map((r) => r.posture.gap) ?? []
-    expect(gaps).toEqual([...gaps].sort((a, b) => b - a))
-    expect(book?.rows[0]?.accountId).toBe('acc-045')
-    expect(book?.aboveTolerance).toBe(book?.rows.filter((r) => r.posture.status === 'above').length)
+  const book = () => {
+    const v = bookRiskView('user-001')
+    if (!v) throw new Error('no book risk')
+    return v
+  }
+  const order = ['above', 'below', 'within', 'glide_path']
+
+  it('lists every account, statuses never interleaved: above, then below, then within, glide paths last', () => {
+    const rows = book().rows
+    expect(rows).toHaveLength(accounts.length)
+    const ranks = rows.map((r) => order.indexOf(r.posture.status))
+    expect(ranks).toEqual([...ranks].sort((a, b) => a - b))
+    expect(book().aboveTolerance).toBe(rows.filter((r) => r.posture.status === 'above').length)
+    expect(book().belowTolerance).toBe(rows.filter((r) => r.posture.status === 'below').length)
   })
 
-  // Phase 7a Task 5b, under the grouped correlations: the digital-asset account, then Robert
-  // Johnson's concentrated individual account, then the conservative clients held on moderate
-  // models; the conservative IRAs of clients who tolerate more sit at the foot.
-  it('puts the grouped-correlation book in order: concentrated and crypto accounts first, conservative IRAs last', () => {
-    const book = bookRiskView('user-001')
-    expect(book?.rows.slice(0, 4).map((r) => [r.accountId, r.posture.score, r.posture.status])).toEqual([
-      // Phase 7a · C1: the generated accounts hold their own model's lineup, so the conservative clients
-      // held on the generic mix (acc-039, acc-040 at 50) leave the top; James Thompson's Roth on
-      // Aggressive Growth and Linda Garcia's equity-heavy IRA take their places.
-      ['acc-045', 100, 'above'], ['acc-002', 89, 'above'], ['acc-021', 89, 'above'], ['acc-035', 53, 'above'],
+  it('orders above and below by how far outside the band, within by how close to the ceiling', () => {
+    const rows = book().rows
+    for (const status of ['above', 'below'] as const) {
+      const beyond = rows.filter((r) => r.posture.status === status).map((r) => Math.abs(r.posture.beyond))
+      expect(beyond.length, status).toBeGreaterThan(0)
+      expect(beyond, status).toEqual([...beyond].sort((a, b) => b - a))
+    }
+    const headroom = rows.filter((r) => r.posture.status === 'within').map((r) => r.posture.headroom)
+    expect(headroom).toEqual([...headroom].sort((a, b) => b - a))
+    for (const r of rows.filter((x) => x.posture.status === 'within')) expect(r.posture.beyond, r.accountId).toBe(0)
+  })
+
+  it('the status is the sign of beyond, which is measured against the band, not the point', () => {
+    for (const r of book().rows) {
+      const { score, tolerance, beyond, status } = r.posture
+      if (status === 'glide_path') continue
+      expect(beyond, r.accountId).toBe(score > tolerance.ceiling ? score - tolerance.ceiling : score < tolerance.floor ? score - tolerance.floor : 0)
+      expect(status, r.accountId).toBe(beyond > 0 ? 'above' : beyond < 0 ? 'below' : 'within')
+    }
+  })
+
+  it('reads David Williams inside his band although his score is ten past his questionnaire; every above row sorts before him', () => {
+    const rows = book().rows
+    const williams = rows.find((r) => r.accountId === 'acc-011')!
+    // Questionnaire 60, band 56–75, score 70: within, five points under the ceiling.
+    expect(williams.posture).toMatchObject({ status: 'within', beyond: 0, headroom: -5 })
+    expect(williams.posture.score - williams.posture.tolerance.score).toBe(10)
+    const at = rows.indexOf(williams)
+    expect(rows.slice(at).some((r) => r.posture.status === 'above')).toBe(false)
+    // Susan Anderson's Roth, on her own band's model now, is within too.
+    expect(rows.find((r) => r.accountId === 'acc-025')?.posture.status).toBe('within')
+  })
+
+  it('takes the 529s out of the tolerance comparison: glide path, listed last', () => {
+    const rows = book().rows
+    const glide = rows.filter((r) => r.posture.status === 'glide_path').map((r) => r.accountId)
+    expect(glide).toEqual(['acc-014', 'acc-029', 'acc-032'])
+    expect(rows.slice(-3).map((r) => r.accountId)).toEqual(glide)
+    expect(riskQuote('acc-014')?.claim).toContain('follows a glide path')
+  })
+
+  it('the table key is the engine order', () => {
+    const keys = book().rows.map((r) => r.posture.sortKey)
+    expect(keys).toEqual([...keys].sort((a, b) => b - a))
+  })
+
+  // Phase 7a final: the honest book (C1) under the band-relative status (I1): the digital-asset
+  // account, Robert Johnson's concentrated account and James Thompson's Roth on Aggressive Growth
+  // lead; the conservative IRAs of clients who tolerate more lead the below group.
+  it('puts the book in order: crypto and concentrated accounts first, conservative IRAs first among the below', () => {
+    const rows = book().rows
+    expect(rows.slice(0, 3).map((r) => [r.accountId, r.posture.score, r.posture.status, r.posture.beyond])).toEqual([
+      ['acc-045', 100, 'above', 45], ['acc-002', 89, 'above', 34], ['acc-021', 89, 'above', 14],
     ])
-    expect(book?.rows.slice(-3).map((r) => [r.accountId, r.posture.score, r.posture.status])).toEqual([
-      ['acc-003', 12, 'below'], ['acc-046', 13, 'below'], ['acc-020', 12, 'below'],
+    expect(rows.filter((r) => r.posture.status === 'below').slice(0, 3).map((r) => [r.accountId, r.posture.beyond])).toEqual([
+      ['acc-020', -44], ['acc-046', -43], ['acc-003', -29],
     ])
-    expect(book?.aboveTolerance).toBe(11)
+    expect([book().aboveTolerance, book().belowTolerance]).toEqual([8, 10])
   })
 })
 

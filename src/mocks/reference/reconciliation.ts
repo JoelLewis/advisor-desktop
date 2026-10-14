@@ -17,6 +17,7 @@ import { recordAct } from '@/mocks/workspace/proposal-acts'
 import { isFirmViewer } from '@/mocks/workspace/visibility'
 import { fingerprint } from '@/lib/fingerprint'
 import { MOCK_NOW_ISO, MOCK_TODAY_ISO } from '@/lib/clock'
+import { isTradingDay } from '@/lib/trading-calendar'
 
 export type ResolveFailure = { ok: false; status: 400 | 403 | 404 | 409; code: string; message: string }
 const refuse = (status: ResolveFailure['status'], code: string, message: string): ResolveFailure => ({ ok: false, status, code, message })
@@ -24,11 +25,12 @@ const refuse = (status: ResolveFailure['status'], code: string, message: string)
 const FIELD: Readonly<Record<BreakField, { label: string; unit: BreakUnit; kind: MatchKind }>> = {
   cash_balance: { label: 'Cash balance', unit: 'USD', kind: 'cash' },
   position_quantity: { label: 'Position quantity', unit: 'sh', kind: 'positions' },
-  market_value: { label: 'Market value', unit: 'USD', kind: 'positions' },
+  market_value: { label: 'Market value', unit: 'USD', kind: 'valuations' },
   transaction_count: { label: 'Transaction count', unit: 'count', kind: 'transactions' },
 }
-const MATCH_KINDS: readonly MatchKind[] = ['positions', 'cash', 'transactions']
+const MATCH_KINDS: readonly MatchKind[] = ['positions', 'valuations', 'cash', 'transactions']
 const DAY_MS = 86_400_000
+const TREND_DAYS = 30
 
 function accountOf(id: string): Account {
   const account = accounts.find((a) => a.id === id)
@@ -80,11 +82,18 @@ function breakView(b: ReconBreakRecord): ReconBreakView {
 
 const isOpenAt = (b: ReconBreakView, instant: string) => b.detectedAt <= instant && (b.resolvedAt === undefined || b.resolvedAt > instant)
 
+/**
+ * Phase 7a · a break is counted against the record it is about: a quantity break against one position, a
+ * market-value break against one account's valuation, a cash break against one balance, and a
+ * transaction-count break against one account's transaction stream. Counting a valuation break
+ * against every position (or a stream break against every transaction) diluted the rates.
+ */
 function checkedRecords(): Readonly<Record<MatchKind, number>> {
   return {
     positions: accounts.reduce((s, a) => s + getPositionsForAccount(a.id, a.totalValue).filter((p) => p.symbol !== 'CASH').length, 0),
+    valuations: accounts.length,
     cash: accounts.length,
-    transactions: accounts.reduce((s, a) => s + generateTransactions(a.id, a.totalValue).length, 0),
+    transactions: accounts.length,
   }
 }
 
@@ -101,14 +110,22 @@ const rateOf = (rates: readonly MatchRate[], kind: MatchKind) => {
   return found.rate
 }
 
-/** End-of-day open breaks for the 29 days before today, then today as it stands now. */
+/** Today and the trading days before it, oldest first: nightly files do not arrive on weekends or NYSE holidays. */
+function trendDays(): string[] {
+  const days: string[] = []
+  for (let t = Date.parse(`${MOCK_TODAY_ISO}T00:00:00Z`); days.length < TREND_DAYS; t -= DAY_MS) {
+    const day = new Date(t).toISOString().slice(0, 10)
+    if (isTradingDay(day)) days.unshift(day)
+  }
+  return days
+}
+
+/** End-of-day open breaks for each of the trading days before today, then today as it stands now. */
 function trendOf(views: readonly ReconBreakView[], checked: Readonly<Record<MatchKind, number>>): ReconTrendPoint[] {
-  const today = Date.parse(`${MOCK_TODAY_ISO}T00:00:00Z`)
-  return Array.from({ length: 30 }, (_, i) => {
-    const date = new Date(today - (29 - i) * DAY_MS).toISOString().slice(0, 10)
-    const open = i === 29 ? views.filter((b) => b.status === 'open') : views.filter((b) => isOpenAt(b, `${date}T23:59:59.999Z`))
+  return trendDays().map((date) => {
+    const open = date === MOCK_TODAY_ISO ? views.filter((b) => b.status === 'open') : views.filter((b) => isOpenAt(b, `${date}T23:59:59.999Z`))
     const rates = ratesFor(open, checked)
-    return { date, openBreaks: open.length, positions: rateOf(rates, 'positions'), cash: rateOf(rates, 'cash'), transactions: rateOf(rates, 'transactions') }
+    return { date, openBreaks: open.length, positions: rateOf(rates, 'positions'), valuations: rateOf(rates, 'valuations'), cash: rateOf(rates, 'cash'), transactions: rateOf(rates, 'transactions') }
   })
 }
 
@@ -125,9 +142,9 @@ function integrationsOf(views: readonly ReconBreakView[]): IntegrationView[] {
 }
 
 const METHODS: readonly MethodNote[] = [
-  { label: 'Book and custodian', modeled: false, text: "A break records how far the custodian's figure sits from the book's. The book's side is read off the book: the cash position, the position's quantity, the positions' market value, or the count of the account's transaction stream." },
-  { label: 'Match rates', modeled: false, text: "Checked records are every non-cash position in the book, one cash balance per account, and every account's transactions. A rate is the share of checked records with no open break." },
-  { label: 'Trend', modeled: false, text: "End-of-day open breaks for each of the 29 days before today, from each break's detection and resolution times, then today's count as it stands now." },
+  { label: 'Book and custodian', modeled: false, text: "A break records how far the custodian's figure sits from the book's. The book's side is read off the book as it stands today: the cash position, the position's quantity, the positions' market value, or the count of the account's transaction stream. A resolved break therefore shows the book today, not the book when it was detected." },
+  { label: 'Match rates', modeled: false, text: "Each break counts against the record it is about: a quantity break against one of the book's non-cash positions, a market-value break against one account's valuation, a cash break against one account's balance, a transaction-count break against one account's transaction stream. A rate is the share of those records with no open break." },
+  { label: 'Trend', modeled: false, text: `End-of-day open breaks for each of the ${TREND_DAYS - 1} trading days before today, from each break's detection and resolution times, then today's count as it stands now. Weekends and NYSE holidays are left out: no nightly file arrives on them.` },
   { label: 'Integrations', modeled: false, text: "Each feed's status and last sync come from its log. A feed outside the US syncs on its own market's close." },
   { label: 'Resolving', modeled: false, text: 'Resolving a break is a binding act by the advisor or client service, recorded in the Archive with its rationale. Nothing edits or deletes it.' },
 ]
@@ -187,7 +204,7 @@ export function reconciliationQuote(breakId: string): RowQuote | undefined {
       ? `${b.accountName}: the book's ${field} differs from ${b.custodian}'s.`
       : `${b.accountName}: the book's ${field} differed from ${b.custodian}'s; the break is resolved.`,
     figures: [
-      { label: 'Book', value: b.book, unit: b.unit, source: 'reconciliation.breaks.book' },
+      { label: b.status === 'open' ? 'Book' : 'Book today', value: b.book, unit: b.unit, source: 'reconciliation.breaks.book' },
       { label: b.custodian, value: b.custodianValue, unit: b.unit, source: 'reconciliation.breaks.custodianValue' },
       { label: 'Difference', value: b.difference, unit: b.unit, source: 'reconciliation.breaks.difference' },
     ],

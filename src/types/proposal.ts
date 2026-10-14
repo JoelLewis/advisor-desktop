@@ -53,7 +53,6 @@ type ProposalTemplate = {
   suitableFor: string;
   sections: ProposalSectionType[];
   defaultAllocation: AllocationRecommendation[];
-  feeTiers: ProposalFeeTier[];
 };
 
 type ProposalClientData = {

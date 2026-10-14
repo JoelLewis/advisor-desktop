@@ -10,7 +10,8 @@ export const RESOLUTION_WORDS: Readonly<Record<BreakResolution, string>> = {
 }
 
 export type BreakUnit = 'USD' | 'sh' | 'count'
-export type MatchKind = 'positions' | 'cash' | 'transactions'
+/** What a break is counted against: a position, an account's valuation, its cash balance, or its transaction stream. */
+export type MatchKind = 'positions' | 'valuations' | 'cash' | 'transactions'
 export type IntegrationStatus = 'synced' | 'pending' | 'failed'
 
 /** A break as recorded: the custodian's figure minus the book's. The book's side is read off the book. */
@@ -31,7 +32,7 @@ export type ReconBreakView = {
 }
 export type MatchRate = { kind: MatchKind; checked: number; open: number; rate: number }
 export type IntegrationView = { name: string; kind: 'custodian' | 'planning'; status: IntegrationStatus; lastSync?: string; openBreaks: number; log: IntegrationLogEntry[] }
-export type ReconTrendPoint = { date: string; openBreaks: number; positions: number; cash: number; transactions: number }
+export type ReconTrendPoint = { date: string; openBreaks: number; positions: number; valuations: number; cash: number; transactions: number }
 export type ReconciliationView = {
   asOf: string
   summary: { openBreaks: number; resolvedToday: number; rates: MatchRate[] }

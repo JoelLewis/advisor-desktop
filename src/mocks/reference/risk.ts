@@ -8,15 +8,12 @@ import { concentrationFor, riskProfileFor, stressScenariosFor } from '@/mocks/ha
 import { MODEL_DEFINITIONS } from '@/mocks/data/model-definitions'
 import { isFirmViewer } from '@/mocks/workspace/visibility'
 import { correlationAssumptionsText, parametricVaR } from '@/lib/risk-model'
-import { RISK_PROFILE_TABLE, bandFor, type RiskProfile } from '@/lib/risk-profile'
+import { RISK_PROFILE_TABLE, bandFor } from '@/lib/risk-profile'
 import { MOCK_NOW_ISO } from '@/lib/clock'
+import { GLIDE_PATH_MODELS } from '@/mocks/data/model-governance'
 import { factorRows } from './factors'
 import { mandateNameOf, modelVolatility } from './models'
 import { riskScoreOf } from './risk-score'
-
-export { riskScoreOf }
-
-const rank = (profile: RiskProfile) => RISK_PROFILE_TABLE.findIndex((b) => b.profile === profile)
 
 function clientOf(account: Account) {
   const client = clients.find((c) => c.id === account.clientId)
@@ -24,16 +21,30 @@ function clientOf(account: Account) {
   return client
 }
 
+const followsGlidePath = (account: Account) => account.mandate === 'model' && GLIDE_PATH_MODELS.has(account.modelId)
+
+/** Status rank in the book's reading order: above, then below, then within, then glide paths. */
+const STATUS_RANK: Readonly<Record<ToleranceStatus, number>> = { above: 3, below: 2, within: 1, glide_path: 0 }
+
+/**
+ * Phase 7a · I1 — tolerance is a band, not a point: a questionnaire score of 60 accepts the Moderate
+ * Aggressive band (56–75), not "exactly 60". `beyond` is how far the account's score sits outside that
+ * band; its sign is the status, and because the bands partition 0–100 in whole points this is the same
+ * status a band-rank comparison gives. One key orders the book and the table's header click alike.
+ */
 function postureOf(account: Account, vol: number): RiskPosture {
   const client = clientOf(account)
   const score = riskScoreOf(vol)
   const own = bandFor(score)
   const tolerance = bandFor(client.riskProfile.score)
-  const step = rank(own.profile) - rank(tolerance.profile)
-  const status: ToleranceStatus = step > 0 ? 'above' : step < 0 ? 'below' : 'within'
+  const glide = followsGlidePath(account)
+  const beyond = glide ? 0 : score > tolerance.ceiling ? score - tolerance.ceiling : score < tolerance.floor ? score - tolerance.floor : 0
+  const status: ToleranceStatus = glide ? 'glide_path' : beyond > 0 ? 'above' : beyond < 0 ? 'below' : 'within'
+  const headroom = score - tolerance.ceiling
+  const within = status === 'within' ? 100 + headroom : 0
   return {
-    score, band: own.label, status, gap: score - client.riskProfile.score,
-    tolerance: { clientId: client.id, clientName: client.fullName, score: client.riskProfile.score, band: tolerance.label, assessedOn: client.riskProfile.lastAssessed },
+    score, band: own.label, status, beyond, headroom, sortKey: STATUS_RANK[status] * 1000 + Math.abs(beyond) + within,
+    tolerance: { clientId: client.id, clientName: client.fullName, score: client.riskProfile.score, band: tolerance.label, floor: tolerance.floor, ceiling: tolerance.ceiling, assessedOn: client.riskProfile.lastAssessed },
   }
 }
 
@@ -55,16 +66,20 @@ function scaleText(): string {
   })
   const steepest = steps.reduce((a, b) => (b.dScore / b.dVol > a.dScore / a.dVol ? b : a))
   const list = anchors.map((a) => `${a.label}, ${a.name}, σ ${pct(a.vol, 1)}% at ${a.score}`).join('; ')
-  return `The scale's anchors are each band's model: ${list}. The steepest step, from ${steepest.lo.name} to ${steepest.hi.name}, spans ${steepest.dScore} points across ${pct(steepest.dVol, 2)} percentage point of σ, so a small change in holdings there can move the score several points.`
+  const points = pct(steepest.dVol, 2)
+  return `The scale's anchors are each band's model: ${list}. The steepest step, from ${steepest.lo.name} to ${steepest.hi.name}, spans ${steepest.dScore} points across ${points} ${points === '1.00' ? 'percentage point' : 'percentage points'} of σ, so a small change in holdings there can move the score several points.`
 }
 
 const methods = (): MethodNote[] => [
-  { label: 'Volatility and beta', modeled: true, text: `Modeled, not realized: σ from the firm's asset-class volatility assumptions and its ${correlationAssumptionsText()}. Beta is each class's assumed sensitivity to the global equity market. Weights are today's holdings.` },
+  { label: 'Volatility and beta', modeled: true, text: `Modeled, not realized: σ from the firm's asset-class volatility assumptions and its ${correlationAssumptionsText()}. Beta is measured against US equity and derived from the same assumptions, not set beside them: each class's correlation with US equity times its σ over US equity's σ. Weights are today's holdings.` },
   { label: 'Value at risk', modeled: true, text: 'Parametric and normal, one month, 95%: value × 1.645 × σ × √(1/12). A modeled loss the account would not exceed in nineteen months of twenty, not a realized one.' },
+  { label: 'Tracking error', modeled: true, text: "Modeled, not realized: ex-ante, the standard deviation of the account's weights minus its benchmark's (the model's targets, or a custom mandate's own benchmark), through the same volatility and correlation assumptions." },
   { label: 'Factor exposures', modeled: true, text: "Each asset class carries a loading on each factor, a model assumption rather than an estimate from returns; the market loading is the class's beta. An account's exposure is its weights times the loadings; its benchmark's is the model's targets times the loadings." },
   { label: 'Concentration', modeled: false, text: 'The Herfindahl-Hirschman index of position weights (0 to 10,000) and its effective number of positions; limits are the IPS limits for a single issuer, a pooled vehicle and cash.' },
   { label: 'Stress tests', modeled: true, text: "Each scenario's asset-class returns replayed on today's holdings." },
-  { label: 'Risk score and tolerance', modeled: false, text: `The account's σ placed on the questionnaire's 0 to 100 scale through the model each band of the firm's risk-profile table names; tolerance is the client's questionnaire score and its band. Above or below means the two fall in different bands. ${scaleText()}` },
+  { label: 'Risk score and tolerance', modeled: true, text: `Modeled, not realized: the account's σ placed on the questionnaire's 0 to 100 scale through the model each band of the firm's risk-profile table names. Tolerance is the band the client's questionnaire score falls in, not the score itself: an account is above or below when its score falls outside that band, by the points shown, and the book is read above first, then below, each by how far outside; accounts within are ordered by how close they sit to the top of the band. ${scaleText()}` },
+  { label: 'Screening, not suitability', modeled: false, text: "Each account is measured on its own. Tolerance applies to the client's whole relationship, and asset location can rightly hold an IRA more conservatively and a taxable account more aggressively, so an account's status is a signal to review, not a suitability finding." },
+  { label: 'Glide paths', modeled: false, text: "A 529 on the education model follows its beneficiary's time horizon, not the owner's questionnaire, so it carries the status glide path and no comparison with the owner's tolerance; it is listed last." },
 ]
 
 function accountRisk(account: Account): AccountRiskView {
@@ -103,11 +118,15 @@ export function bookRiskView(viewerId: string): BookRiskView | undefined {
       accountId: a.id, accountName: a.name, householdName: household.name, clientName: clientOf(a).fullName, mandateName: mandateNameOf(a),
       value: p.value, volatility: p.vol, var95: Math.round(parametricVaR(p.value, p.vol)), posture: postureOf(a, p.vol),
     }
-  }).sort((a, b) => b.posture.gap - a.posture.gap || a.accountId.localeCompare(b.accountId))
-  return { asOf: MOCK_NOW_ISO, rows, aboveTolerance: rows.filter((r) => r.posture.status === 'above').length, methods: methods() }
+  }).sort((a, b) => b.posture.sortKey - a.posture.sortKey || a.accountId.localeCompare(b.accountId))
+  const count = (status: ToleranceStatus) => rows.filter((r) => r.posture.status === status).length
+  return { asOf: MOCK_NOW_ISO, rows, aboveTolerance: count('above'), belowTolerance: count('below'), methods: methods() }
 }
 
-const STATUS_WORDS: Readonly<Record<ToleranceStatus, string>> = { above: 'above', within: 'within', below: 'below' }
+const STATUS_WORDS: Readonly<Record<Exclude<ToleranceStatus, 'glide_path'>, string>> = { above: 'above', within: 'within', below: 'below' }
+const quoteClaim = (accountName: string, posture: RiskPosture) => posture.status === 'glide_path'
+  ? `${accountName} follows a glide path to its beneficiary's horizon and is not measured against ${posture.tolerance.clientName}'s questionnaire.`
+  : `${accountName} sits ${STATUS_WORDS[posture.status]} ${posture.tolerance.clientName}'s risk tolerance.`
 
 export function riskQuote(accountId: string): RowQuote | undefined {
   const account = accounts.find((a) => a.id === accountId)
@@ -115,7 +134,7 @@ export function riskQuote(accountId: string): RowQuote | undefined {
   const v = accountRisk(account)
   return {
     view: 'risk', rowId: account.id, subject: { type: 'account', id: account.id }, threadTitle: `Risk · ${account.name}`,
-    claim: `${account.name} sits ${STATUS_WORDS[v.posture.status]} ${v.posture.tolerance.clientName}'s risk tolerance.`,
+    claim: quoteClaim(account.name, v.posture),
     figures: [
       { label: 'Risk score', value: v.posture.score, unit: 'pts', source: 'risk.posture.score' },
       { label: 'Tolerance score', value: v.posture.tolerance.score, unit: 'pts', source: 'clients.riskProfile.score' },
