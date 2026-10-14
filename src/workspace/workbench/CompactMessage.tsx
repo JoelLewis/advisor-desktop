@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { fmtEasternRange, fmtEasternTime, fmtTimestamp } from '@/kit/measure'
+import { REFERENCE_VIEW_TITLE } from '@/workspace/full-views/reference-href'
 import { personIn } from '@/workspace/people/directory-people'
 import { authorName } from '@/workspace/proposal/author-name'
 import { DISCLOSURE_TITLES } from '@/types/workspace-prospect'
@@ -17,6 +18,7 @@ export function CompactMessage({ message, directory }: { message: Message; direc
     case 'proposal_version': return <Line who={authorName(message.author, directory)} at={message.at}>{`v${message.version} · ${message.changeSummary}`}</Line>
     case 'act': return <Line who="Record" at={message.at}>{`Binding act recorded · ${message.actId}`}</Line>
     case 'carried': return <Line who={personIn(directory, message.carriedBy).name} at={message.at}>{`From the Brief: ${message.finding.claim}`}</Line>
+    case 'reference_row': return <Line who={personIn(directory, message.takenBy).name} at={message.at}>{`From ${REFERENCE_VIEW_TITLE[message.view]}: ${message.claim}`}</Line>
     case 'brief_summary': return <Line who="Brief" at={message.at}>Ranked summary.</Line>
     case 'fills': return <Line who="Execution" at={message.at}>{`${message.fills.length} ${message.fills.length === 1 ? 'order' : 'orders'} filled from v${message.version}.`}</Line>
     case 'meeting_notice': return <Line who="Brief" at={message.at}>{`Meeting at ${fmtEasternTime(message.start)} ET · ${message.title}`}</Line>

@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw'
+import { isReferenceView, type TakeResult } from '@/types/reference'
 import { isAttributionPeriod } from '@/types/reference-attribution'
 import { isBlotterStatus, type BlotterFilters } from '@/types/reference-blotter'
 import { attributionView } from '../reference/attribution'
@@ -9,7 +10,8 @@ import { practiceView } from '../reference/practice'
 import { reconciliationView } from '../reference/reconciliation'
 import { accountRiskView, bookRiskView } from '../reference/risk'
 import { notFound } from './utils'
-import { firmViewer } from './workspace-http'
+import { takeToTeamThread } from '../reference/take'
+import { badRequest, firmViewer, nonEmptyString, readJson, refusal } from './workspace-http'
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/
 const served = <T extends Record<string, unknown>>(view: T | undefined) => (view === undefined ? notFound() : HttpResponse.json(view))
@@ -66,5 +68,15 @@ export const workspaceReferenceHandlers = [
     if (!viewer.ok) return viewer.response
     const parsed = blotterFilters(new URL(request.url))
     return parsed.ok ? served(blotterView(viewer.viewerId, parsed.filters)) : badFilter(parsed.message)
+  }),
+  http.post('/api/workspace/reference/take', async ({ request }) => {
+    const viewer = firmViewer(request)
+    if (!viewer.ok) return viewer.response
+    const body = await readJson(request)
+    if (!body || !isReferenceView(body.view) || !nonEmptyString(body.rowId)) return badRequest('view (a reference view) and rowId are required.')
+    const r = takeToTeamThread(viewer.viewerId, body.view, body.rowId)
+    if (!r.ok) return refusal(r)
+    const result: TakeResult = { threadId: r.thread.id, threadTitle: r.thread.title, messageId: r.message.id, created: r.created }
+    return HttpResponse.json(result, { status: r.created ? 201 : 200 })
   }),
 ]

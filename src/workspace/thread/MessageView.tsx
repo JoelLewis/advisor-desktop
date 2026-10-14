@@ -28,6 +28,7 @@ import { PartyStepLine } from './PartyStepLine'
 import { ProspectNoteView } from './ProspectNoteView'
 import { ProspectProposalVersionLine } from './ProspectProposalVersionLine'
 import { CarryControl } from './CarryControl'
+import { ReferenceRowView } from './ReferenceRowView'
 import { canPostIn } from './can-post'
 import { ProposalVersionLine } from './ProposalVersionLine'
 import { ProposalEmbed } from './embeds/ProposalEmbed'
@@ -65,6 +66,8 @@ export function MessageView({ message, thread, directory }: { message: Message; 
       return <ProposalVersionLine message={message} directory={directory} />
     case 'carried':
       return <CarriedFindingView message={message} directory={directory} />
+    case 'reference_row':
+      return <ReferenceRowView message={message} directory={directory} />
     case 'brief_summary':
       return <BriefSummaryView summary={message} directory={directory} />
     case 'fills':

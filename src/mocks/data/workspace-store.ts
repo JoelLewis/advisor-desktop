@@ -9,7 +9,7 @@ import { bookVersion, resetLedger } from './portfolio-ledger'
 import { SEED_PROSPECTS } from './prospect-seed'
 import { SEED_LAST_SEQUENCE, SEED_MEETINGS, SEED_MESSAGES, SEED_THREADS } from './workspace-seed'
 
-type Counter = 'msg' | 'draft' | 'act' | 'proposal' | 'staged' | 'record' | 'agenda' | 'task' | 'note' | 'pproposal' | 'ptask'
+type Counter = 'msg' | 'draft' | 'act' | 'proposal' | 'staged' | 'record' | 'agenda' | 'task' | 'note' | 'pproposal' | 'ptask' | 'thread'
 
 export type WorkspaceState = {
   threads: Thread[]
@@ -46,7 +46,7 @@ function seed(): WorkspaceState {
     prospectProposals: [],
     briefBook: bookVersion(),
     sequence: SEED_LAST_SEQUENCE,
-    counters: { msg: 0, draft: 0, act: 0, proposal: 0, staged: 0, record: 0, agenda: 0, task: 0, note: 0, pproposal: 0, ptask: 0 },
+    counters: { msg: 0, draft: 0, act: 0, proposal: 0, staged: 0, record: 0, agenda: 0, task: 0, note: 0, pproposal: 0, ptask: 0, thread: 0 },
   }
 }
 

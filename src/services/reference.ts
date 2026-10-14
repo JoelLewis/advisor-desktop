@@ -1,5 +1,6 @@
 import { get, post } from './api-client'
 import type { BindingAct } from '@/types/workspace'
+import type { ReferenceView, TakeResult } from '@/types/reference'
 import type { BillingView } from '@/types/reference-billing'
 import type { PracticeView } from '@/types/reference-practice'
 import type { ReconciliationView, ResolveBreakRequest } from '@/types/reference-reconciliation'
@@ -24,3 +25,5 @@ export const getBlotter = (viewer: string, filters: BlotterFilters) =>
   get<BlotterView>(at('/blotter'), Object.fromEntries(Object.entries(filters).filter((e): e is [string, string] => typeof e[1] === 'string')), as(viewer))
 export const resolveBreak = (viewer: string, request: ResolveBreakRequest) =>
   post<BindingAct>('/workspace/acts', { kind: 'resolve_break', ...request }, as(viewer))
+export const takeToTeamThread = (viewer: string, view: ReferenceView, rowId: string) =>
+  post<TakeResult>('/workspace/reference/take', { view, rowId }, as(viewer))

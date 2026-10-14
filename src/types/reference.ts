@@ -14,3 +14,6 @@ export type MethodNote = { label: string; text: string; modeled: boolean }
  * in it, and its figures with their sources. The engine computes it from the view and the row id alone.
  */
 export type RowQuote = { view: ReferenceView; rowId: string; subject: Subject; threadTitle: string; claim: string; figures: Figure[]; citations: Citation[] }
+
+/** Where a take landed: the thread (found or opened) and the card, new or already there. */
+export type TakeResult = { threadId: string; threadTitle: string; messageId: string; created: boolean }

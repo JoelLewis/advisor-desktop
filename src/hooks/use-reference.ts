@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query'
 import * as api from '@/services/reference'
 import { useViewer } from '@/workspace/viewer/use-viewer'
+import type { ReferenceView } from '@/types/reference'
 import type { AttributionPeriod } from '@/types/reference-attribution'
 import type { BlotterFilters } from '@/types/reference-blotter'
 import type { ResolveBreakRequest } from '@/types/reference-reconciliation'
@@ -62,4 +63,10 @@ export function useResolveBreak() {
   const { viewerId } = useViewer()
   const invalidate = useInvalidateWorkspace()
   return useMutation({ mutationFn: (request: ResolveBreakRequest) => api.resolveBreak(viewerId, request), onSettled: invalidate })
+}
+
+export function useTakeToTeamThread() {
+  const { viewerId } = useViewer()
+  const invalidate = useInvalidateWorkspace()
+  return useMutation({ mutationFn: ({ view, rowId }: { view: ReferenceView; rowId: string }) => api.takeToTeamThread(viewerId, view, rowId), onSettled: invalidate })
 }

@@ -2,6 +2,7 @@ import type { Fill } from './workspace-proposal'
 import type { MeetingTask } from './workspace-meeting'
 import type { BestInterestRecord, DisclosureDocument, OnboardingItem } from './workspace-prospect'
 import type { BreakResolution } from './reference-reconciliation'
+import type { ReferenceView } from './reference'
 
 export type Role = 'advisor' | 'csa' | 'analyst' | 'compliance' | 'client' | 'prospect'
 export type Person = { id: string; name: string; role: Role }
@@ -55,6 +56,8 @@ export type Message =
   | { kind: 'prospect_proposal_version'; id: string; threadId: string; at: string; proposalId: string; version: number; author: VersionAuthor; changeSummary: string }
   /** Her acceptance opened onboarding: the checklist as it was opened. */
   | { kind: 'onboarding_opened'; id: string; threadId: string; at: string; prospectId: string; acceptanceActId: string; items: OnboardingItem[] }
+  /** A row of a reference view quoted into a team thread: its claim, its figures with their sources, recomputed by the engine when taken. */
+  | { kind: 'reference_row'; id: string; threadId: string; at: string; takenBy: string; view: ReferenceView; rowId: string; subject: Subject; claim: string; figures: Figure[]; citations: Citation[] }
 /** The acts only compliance performs. */
 export type ComplianceActKind = 'release_orders' | 'return_to_advisor' | 'escalate' | 'dispose_alert' | 'review_correspondence'
 export type BindingActKind = 'approve_proposal' | 'withdraw_approval' | 'send_to_party' | 'deliver_disclosure' | 'accept_proposal' | 'file_meeting_record' | 'resolve_break' | ComplianceActKind
