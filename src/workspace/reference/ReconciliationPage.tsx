@@ -43,7 +43,7 @@ function Reconciliation({ view }: { view: ReconciliationView }) {
         ))}
       </div>
       {directory.data && !canResolve ? <p className="text-body text-ink-2">Resolving a break is for the advisor and client service; you can read the breaks and take one to a team thread.</p> : null}
-      {recorded ? <p role="status" className="text-body">{`Resolved · ${recorded}`}</p> : null}
+      {recorded ? <p className="text-body">{`Resolved · ${recorded}`}</p> : null}
       <Pane title="Breaks">
         <DataTable caption="Breaks" rows={view.breaks} getRowId={(b) => b.id} noun={{ singular: 'break', plural: 'breaks' }}
           mutedRow={(b) => b.status === 'resolved'}
