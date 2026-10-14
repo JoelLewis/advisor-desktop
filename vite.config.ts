@@ -6,6 +6,12 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  build: {
+    // Two chunks pass Vite's 500 kB default, by design: the app (~700 kB, ~210 kB gzip), and the MSW worker
+    // with the engine (~630 kB, ~195 kB gzip), which is the demo's whole server running in the browser and
+    // already loads on its own. The limit sits just above them, so a chunk that grows past it still warns.
+    chunkSizeWarningLimit: 750,
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
