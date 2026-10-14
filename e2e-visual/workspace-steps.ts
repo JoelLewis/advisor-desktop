@@ -168,3 +168,10 @@ export async function takeToTeamThread(page: Page, rowLabel: string) {
   await page.getByRole('button', { name: `Take ${rowLabel} to a team thread`, exact: true }).click()
   await expect(page.getByRole('link', { name: /^In / }).first()).toBeVisible()
 }
+
+/** A finding taken to a thread through its "Take to" menu. */
+export async function takeFindingTo(finding: Locator, threadTitle: string) {
+  await finding.getByRole('button', { name: 'Take to', exact: true }).click()
+  await finding.getByRole('list', { name: 'Take to' }).getByRole('button', { name: threadTitle, exact: true }).click()
+  await expect(finding.getByRole('status')).toHaveText(`Taken to ${threadTitle}.`)
+}

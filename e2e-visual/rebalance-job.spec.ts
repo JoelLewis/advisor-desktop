@@ -3,7 +3,7 @@ import { test, expect, type Locator, type Page } from '@playwright/test'
 import { SCREENSHOT, clippedLabels, pageOverflowX } from './layout-checks'
 import {
   approvalOf, approve, askForLetter, askProposalAgent, context, conversation, embedOf, heading, letterDraft, sendLetter,
-  settle, threadLink, visit, type Theme,
+  settle, takeFindingTo, threadLink, visit, type Theme,
 } from './workspace-steps'
 
 type Layout = 'three-panes' | 'workbench'
@@ -101,8 +101,7 @@ test('one presenter runs Brief → proposal → revise → workbench → approve
 
   // 2. The INTC finding goes to the team thread.
   const intc = conversation(page).getByRole('article', { name: /^Harvest Scanner: The remaining Intel Corp\. shares can be sold at a loss today/ })
-  await intc.getByRole('button', { name: 'Take to team thread' }).click()
-  await expect(intc.getByRole('status')).toHaveText('Taken to Johnson Rebalance Review.')
+  await takeFindingTo(intc, 'Johnson Rebalance Review')
   await threadLink(page, 'Johnson Rebalance Review').click()
   await expect(heading(page)).toHaveText('Johnson Rebalance Review')
   await expect(conversation(page).getByRole('article', { name: /^Carried from the Brief: The remaining Intel Corp\. shares/ })).toHaveCount(1)

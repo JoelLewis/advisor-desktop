@@ -3,7 +3,6 @@ import { fmtEasternStamp } from '@/kit/measure'
 import { Reading } from '@/kit/reading/Reading'
 import { SourceChips } from '@/kit/source-chips/SourceChips'
 import { StatusCode } from '@/kit/status/StatusCode'
-import { Tag } from '@/kit/tag/Tag'
 import type { AgentProfile, Message } from '@/types/workspace'
 import { findingStatus, formatFigure } from './figure-format'
 
@@ -21,10 +20,6 @@ export function AgentFindingView({ finding, agent, anchorId, footer }: AgentFind
           <span className="text-body font-semibold">{agent.name}</span>
           <span className="text-label uppercase text-ink-3">Agent</span>
           <span className="tabular ml-auto text-label text-ink-3">{fmtEasternStamp(finding.at)}</span>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          <Tag wrap>{`may ${agent.scope.may.join(' · ')}`}</Tag>
-          <Tag wrap>{`may not ${agent.scope.mayNot.join(' · ')}`}</Tag>
         </div>
       </div>
       <p className="flex items-baseline gap-3 text-copy">

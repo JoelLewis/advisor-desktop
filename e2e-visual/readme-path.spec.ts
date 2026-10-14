@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import {
   PELL_ACCEPTANCE_TEXT, advanceTo, approve, approveProspect, askAgentNamed, askForRecap, context, conversation, deliver, deskLink,
   draftNotes, embedOf, fileRecord, heading, holdTheMeeting, letterDraft, meetingPanel, recordTheCoffee, releaseByShortcut,
-  resolveBreakNamed, reviseToTwoTaxYears, runPrep, sendToHer, takeToTeamThread, threadLink, viewAs, visit,
+  resolveBreakNamed, reviseToTwoTaxYears, runPrep, sendToHer, takeFindingTo, takeToTeamThread, threadLink, viewAs, visit,
 } from './workspace-steps'
 
 /** The README's guided path, click for click and in its order, from a fresh session as Adrian Hale. */
@@ -20,7 +20,7 @@ test("the README's five-minute path, end to end", async ({ page }) => {
 
   // 2. The Johnson rebalance and harvest: the finding to the team thread, v1, v2 "harvest only", v3 in the workbench, approved.
   const intc = conversation(page).getByRole('article', { name: /^Harvest Scanner: The remaining Intel Corp\. shares can be sold at a loss today/ })
-  await intc.getByRole('button', { name: 'Take to team thread' }).click()
+  await takeFindingTo(intc, 'Johnson Rebalance Review')
   await threadLink(page, 'Johnson Rebalance Review').click()
   await context(page).getByRole('button', { name: 'Ask Proposal Agent', exact: true }).click()
   const embed = embedOf(page)

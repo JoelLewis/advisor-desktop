@@ -2,12 +2,19 @@ import { it, expect } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import { SourceChips } from '@/kit/source-chips/SourceChips'
 
-it('lists what a finding relies on, with as-of time and confidence', () => {
+it('lists what a finding relies on; a single as-of shared by every source is said once, beside the label', () => {
   render(<SourceChips sources={[{ label: 'Drift calculation', detail: 'acc-002 vs Growth', asOf: '2026-02-25T12:00:00Z', confidence: 0.92 }]} />)
   expect(screen.getByText('Relies on')).toBeInTheDocument()
-  expect(screen.getByText('Drift calculation')).toBeInTheDocument()
   expect(screen.getByText('as of 25 Feb 07:00 ET')).toBeInTheDocument()
+  expect(screen.getByRole('listitem')).not.toHaveTextContent('as of')
   expect(screen.getByText('confidence 92')).toBeInTheDocument()
+})
+
+it('puts the as-of on each chip only where the sources differ', () => {
+  render(<SourceChips sources={[{ label: 'Lots', asOf: '2026-02-25T12:00:00Z' }, { label: 'Held away', asOf: '2025-12-01T05:00:00Z' }, { label: 'Policy' }]} />)
+  const items = within(screen.getByRole('list', { name: 'Relies on' })).getAllByRole('listitem')
+  expect(items.map((i) => i.textContent)).toEqual(['Lotsas of 25 Feb 07:00 ET', 'Held awayas of 1 Dec 00:00 ET', 'Policy'])
+  expect(document.querySelector('[data-part="shared-as-of"]')).toBeNull()
 })
 
 it('is a labeled list with one item per source, including bare sources', () => {
@@ -28,7 +35,7 @@ it('draws separators in CSS before each part, clipped at the start of a line, ne
   const item = screen.getByRole('listitem')
   expect(item).not.toHaveTextContent('·')
   const parts = [...item.querySelectorAll('[data-part="chip-part"]')]
-  expect(parts.map((p) => p.textContent)).toEqual(['Rebalance preview', 'Robert Johnson Individual', 'as of 25 Feb 07:00 ET'])
+  expect(parts.map((p) => p.textContent)).toEqual(['Rebalance preview', 'Robert Johnson Individual'])
   for (const part of parts) expect(part.className).toContain("before:content-['·'_/_'']")
   const row = parts[0]!.parentElement!
   expect(row.className).toContain('-ml-4')

@@ -103,8 +103,7 @@ describe('thread view', () => {
     const finding = await within(conversation()).findByRole('article', { name: `Drift Monitor: ${label} is outside its tolerance band.` })
     const f = within(finding)
     expect(f.getByText('Drift Monitor')).toBeInTheDocument()
-    expect(f.getByText('may measure and flag')).toBeInTheDocument()
-    expect(f.getByText('may not stage or release trades · post in a client thread')).toBeInTheDocument()
+    expect(f.queryByText(/^may /i)).toBeNull()
     expect(finding.querySelector('[data-status="OUT"]')).not.toBeNull()
     const reading = f.getByText(`Largest drift · ${label}`).parentElement as HTMLElement
     expect(within(reading).getByText(fmtDrift(worst.drift))).toBeInTheDocument()
