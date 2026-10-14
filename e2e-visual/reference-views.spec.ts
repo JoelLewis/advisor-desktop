@@ -1,3 +1,4 @@
+import { expectNoAxeViolations } from './axe'
 import { test, expect, type Page } from '@playwright/test'
 import { SCREENSHOT, clippedLabels, pageOverflowX } from './layout-checks'
 import {
@@ -34,6 +35,7 @@ for (const scene of SCENES) {
       await page.setViewportSize({ width: 1440, height: 900 })
       await scene.open(page)
       await expect(page).toHaveScreenshot(`${scene.name}.png`, SCREENSHOT)
+      await expectNoAxeViolations(page)
     })
 
     for (const width of [1024, 1440]) {

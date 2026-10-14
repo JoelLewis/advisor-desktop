@@ -1,3 +1,4 @@
+import { expectNoAxeViolations } from './axe'
 import { test, expect, type Page } from '@playwright/test'
 import { SCREENSHOT, clippedLabels, pageOverflowX } from './layout-checks'
 
@@ -14,6 +15,7 @@ for (const theme of ['light', 'dark'] as const) {
   test(`kit baseline · ${theme}`, async ({ page }) => {
     await openKit(page, theme, 1440)
     await expect(page).toHaveScreenshot(`kit-${theme}.png`, SCREENSHOT)
+    await expectNoAxeViolations(page)
   })
 }
 

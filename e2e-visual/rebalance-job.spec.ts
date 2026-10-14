@@ -1,3 +1,4 @@
+import { expectNoAxeViolations } from './axe'
 import { test, expect, type Locator, type Page } from '@playwright/test'
 import { SCREENSHOT, clippedLabels, pageOverflowX } from './layout-checks'
 import {
@@ -58,6 +59,7 @@ for (const scene of SCENES) {
       await page.setViewportSize({ width: 1440, height: 900 })
       await scene.open(page)
       await expect(page).toHaveScreenshot(`${scene.name}.png`, SCREENSHOT)
+      await expectNoAxeViolations(page)
     })
 
     // One fresh page per width: a scene changes what its viewer can do (Robert cannot ask an agent), so it opens once per page.

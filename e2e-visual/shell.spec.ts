@@ -1,3 +1,4 @@
+import { expectNoAxeViolations } from './axe'
 import { test, expect, type Locator, type Page } from '@playwright/test'
 import { SCREENSHOT, clippedLabels, pageOverflowX } from './layout-checks'
 
@@ -72,6 +73,7 @@ for (const scene of SCENES) {
       await page.setViewportSize({ width: 1440, height: 900 })
       await scene.open(page)
       await expect(page).toHaveScreenshot(`${scene.name}.png`, SCREENSHOT)
+      await expectNoAxeViolations(page)
     })
 
     test('no page-level horizontal scroll and no clipped labels at 1024px', async ({ page }) => {
@@ -167,5 +169,6 @@ test.describe('a browser that blocks service workers', () => {
     await page.goto('/')
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('The demo could not start', { timeout: 15_000 })
     await expect(page.getByRole('main')).toContainText('This demo runs its server in your browser as a service worker')
+    await expectNoAxeViolations(page)
   })
 })
