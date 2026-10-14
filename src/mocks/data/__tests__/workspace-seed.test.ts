@@ -3,7 +3,6 @@ import { store, resetWorkspaceStore, commitActId, nextAt, sessionNow } from '../
 import { MEETING_THREAD_ID, SEED_LAST_SEQUENCE, SEED_MEETINGS, SEED_MESSAGES } from '../workspace-seed'
 import { MOCK_NOW_ISO, eventTime } from '@/lib/clock'
 import { accounts } from '../accounts'
-import { calendarEvents } from '../calendar'
 import { computeDriftForAccount } from '@/mocks/handlers/pms'
 import { requireModelManaged } from '@/lib/mandate'
 
@@ -26,22 +25,6 @@ describe('workspace seed', () => {
     expect(store().threads.find((t) => t.id === MEETING_THREAD_ID)).toEqual({
       id: 'th-johnson-meeting', title: 'Johnson annual review', visibility: 'internal', memberIds: ['user-001', 'user-002', 'user-003'],
       agentIds: ['meeting-prep', 'meeting-notes'], subject: { type: 'household', id: 'hh-001' },
-    })
-  })
-  it('the Brief carries the meeting line, timed from the calendar, linking to the meeting thread', () => {
-    resetWorkspaceStore()
-    const notice = store().messages.find((m) => m.kind === 'meeting_notice')
-    const event = calendarEvents.find((e) => e.id === 'evt-010')!
-    expect(notice).toEqual({
-      kind: 'meeting_notice', id: 'msg-s05', threadId: 'th-brief', at: eventTime(5), eventId: 'evt-010', meetingThreadId: 'th-johnson-meeting',
-      title: 'Johnson annual review', start: new Date(event.startTime).toISOString(), end: new Date(event.endTime).toISOString(),
-    })
-  })
-  it('the Brief\'s referral line dates the introduction 20 Feb and labels the Form CRS timing firm policy', () => {
-    resetWorkspaceStore()
-    expect(store().messages.find((m) => m.id === 'msg-s08')).toMatchObject({
-      kind: 'next_action',
-      detail: 'James Thompson introduced her on 20 Feb. Coffee with Adrian Hale today at 15:30 ET; firm policy: deliver Form CRS before it.',
     })
   })
   it('seeds the Johnson annual review as scheduled, with no agenda, notes or tasks', () => {
@@ -75,9 +58,9 @@ describe('workspace seed', () => {
     expect(store().acts).toEqual([])
     expect(commitActId()).toBe('REC-0001')
   })
-  it('seed messages take the first event-clock sequences, in order, after the calculation as-of', () => {
-    expect(SEED_MESSAGES.map((m) => m.at)).toEqual(SEED_MESSAGES.map((_, i) => eventTime(i + 1)))
-    expect(SEED_LAST_SEQUENCE).toBe(SEED_MESSAGES.length)
+  it('seed messages take the reserved event-clock sequences, in order, after the calculation as-of', () => {
+    expect(SEED_MESSAGES.map((m) => m.at)).toEqual([1, 2, 3, 4, 6, 7].map(eventTime))
+    expect(SEED_LAST_SEQUENCE).toBe(8)
     const embeddedDriftAsOf = computeDriftForAccount(requireModelManaged(accounts.find((a) => a.id === 'acc-002')!)).lastCalculated
     for (const m of SEED_MESSAGES) {
       expect(Date.parse(m.at)).toBeGreaterThan(Date.parse(MOCK_NOW_ISO))

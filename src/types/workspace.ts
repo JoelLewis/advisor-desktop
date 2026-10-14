@@ -1,5 +1,5 @@
 import type { Fill } from './workspace-proposal'
-import type { MeetingTask } from './workspace-meeting'
+import type { MeetingState, MeetingTask } from './workspace-meeting'
 import type { BestInterestRecord, DisclosureDocument, OnboardingItem } from './workspace-prospect'
 import type { BreakResolution } from './reference-reconciliation'
 import type { ReferenceView } from './reference'
@@ -26,6 +26,13 @@ export type BriefGroup = 'decide' | 'context'
 export type BriefReading = { findingId: string; line: string; figure?: Figure }
 /** A line of the Brief's summary: one finding, or the findings about one security under its name (`title`). */
 export type BriefItem = { key: string; agentId: AgentId; attention: Attention; title?: string; readings: BriefReading[] }
+export type TodayLine =
+  /** Approved orders staged and waiting for compliance; `at` is the approval. */
+  | { kind: 'release'; at: string; accountName: string; version: number; threadId: string }
+  | { kind: 'meeting'; start: string; end: string; title: string; state: MeetingState; threadId: string }
+  /** A prospect's first meeting, until it is recorded. Form CRS is due before it (firm policy). */
+  | { kind: 'coffee'; start: string; prospectName: string; formCrs: 'due' | 'delivered'; threadId: string }
+  | { kind: 'reconciliation'; openBreaks: number }
 export type EmbedKind = 'drift' | 'rebalance_preview'
 export type Message =
   | { kind: 'text'; id: string; threadId: string; authorId: string; at: string; body: string }
@@ -36,10 +43,10 @@ export type Message =
   | { kind: 'proposal_version'; id: string; threadId: string; at: string; proposalId: string; version: number; author: VersionAuthor; changeSummary: string }
   | { kind: 'carried'; id: string; threadId: string; at: string; carriedBy: string; fromThreadId: string; findingId: string; finding: CarriedFinding }
   | { kind: 'brief_summary'; id: string; threadId: string; at: string; decide: BriefItem[]; context: BriefItem[] }
+  /** The Brief's Today, composed by the engine on every read of the Brief; never stored. */
+  | { kind: 'brief_today'; id: string; threadId: string; at: string; lines: TodayLine[] }
   /** The execution report for released orders, posted in the proposal's team thread after its fills. */
   | { kind: 'fills'; id: string; threadId: string; at: string; proposalId: string; title: string; version: number; releaseActId: string; fills: Fill[] }
-  /** The Brief's line for a meeting today. */
-  | { kind: 'meeting_notice'; id: string; threadId: string; at: string; eventId: string; meetingThreadId: string; title: string; start: string; end: string }
   /** A new agenda version in the meeting thread. */
   | { kind: 'agenda_version'; id: string; threadId: string; at: string; eventId: string; version: number; author: VersionAuthor; changeSummary: string }
   /** The meeting happened: its window, in UTC, and the transcript arrived. */
@@ -48,8 +55,6 @@ export type Message =
   | { kind: 'notes_drafted'; id: string; threadId: string; at: string; eventId: string; agentId: AgentId }
   /** The follow-up tasks the filing created, as they were created. */
   | { kind: 'meeting_tasks'; id: string; threadId: string; at: string; eventId: string; filedActId: string; tasks: MeetingTask[] }
-  /** The Brief's line for a next-best action, linking to the thread where it is worked. */
-  | { kind: 'next_action'; id: string; threadId: string; at: string; title: string; detail: string; targetThreadId: string; linkLabel: string }
   /** A disclosure delivered to a prospect, in her thread. */
   | { kind: 'disclosure_delivered'; id: string; threadId: string; at: string; prospectId: string; document: DisclosureDocument; actId: string }
   /** A step she took: her questionnaire answered, her statements shared. */
@@ -61,8 +66,6 @@ export type Message =
   | { kind: 'prospect_proposal_version'; id: string; threadId: string; at: string; proposalId: string; version: number; author: VersionAuthor; changeSummary: string }
   /** Her acceptance opened onboarding: the checklist as it was opened. */
   | { kind: 'onboarding_opened'; id: string; threadId: string; at: string; prospectId: string; acceptanceActId: string; items: OnboardingItem[] }
-  /** The Brief's line for reconciliation; its counts are read live from the reconciliation view. */
-  | { kind: 'reconciliation_notice'; id: string; threadId: string; at: string }
   /** A row of a reference view quoted into a team thread: its claim, its figures with their sources, recomputed by the engine when taken. */
   | { kind: 'reference_row'; id: string; threadId: string; at: string; takenBy: string; view: ReferenceView; rowId: string; subject: Subject; claim: string; figures: Figure[]; citations: Citation[] }
 /** The acts only compliance performs. */

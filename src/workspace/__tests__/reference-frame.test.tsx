@@ -62,19 +62,21 @@ describe('the command line', () => {
 })
 
 describe("the Brief's reconciliation line", () => {
-  it('reads the open breaks and the cash match rate live, and links to the view', async () => {
+  it("is Today's row for the open break, and links to the view", async () => {
     renderRoutes(routes, '/t/th-brief')
-    const line = await screen.findByRole('article', { name: 'Reference · Reconciliation' })
-    await waitFor(() => expect(line).toHaveTextContent('1 open break · cash matched 97.9%'))
+    const today = await screen.findByRole('region', { name: 'Today' })
+    const line = within(today).getAllByRole('listitem').find((li) => li.textContent?.includes('Reconciliation · 1 open break'))
+    if (!line) throw new Error("Today has a reconciliation row")
     expect(within(line).getByRole('link', { name: 'Open reconciliation' })).toHaveAttribute('href', '/reconciliation?from=th-brief')
   })
 
-  it('reads none once the break is resolved', async () => {
+  it('leaves Today once the break is resolved', async () => {
     const brk = (await getReconciliation('user-001')).breaks.find((b) => b.id === 'brk-002')
     if (!brk) throw new Error('brk-002 is listed')
     await resolveBreak('user-001', { breakId: brk.id, fingerprint: brk.fingerprint, resolution: 'timing_difference', rationale: 'Posted late.' })
     renderRoutes(routes, '/t/th-brief')
-    const line = await screen.findByRole('article', { name: 'Reference · Reconciliation' })
-    await waitFor(() => expect(line).toHaveTextContent('0 open breaks · cash matched 100.0%'))
+    const today = await screen.findByRole('region', { name: 'Today' })
+    expect(within(today).getAllByRole('listitem')).not.toHaveLength(0)
+    expect(today).not.toHaveTextContent('Reconciliation')
   })
 })

@@ -84,9 +84,9 @@ test('one presenter: the release on the blotter, the moved book in risk and attr
   await goTo(page, 'Attribution · Robert Johnson Individual')
   await expect(page.getByRole('table', { name: 'Attribution · Year to date' })).toBeVisible()
 
-  // 5. The Brief's reconciliation line → the view → resolve brk-002 as a binding act.
+  // 5. The Brief's Today reconciliation line → the view → resolve brk-002 as a binding act.
   await visit(page, '/t/th-brief', 'light')
-  const line = page.getByRole('article', { name: 'Reference · Reconciliation' })
+  const line = page.getByRole('region', { name: 'Today' }).getByRole('listitem').filter({ hasText: 'Reconciliation' })
   await expect(line).toContainText('1 open break')
   await line.getByRole('link', { name: 'Open reconciliation' }).click()
   await expect(heading(page)).toHaveText('Reconciliation')

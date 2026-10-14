@@ -21,9 +21,8 @@ describe('the prospect record', () => {
     expect(store().threads.find((t) => t.id === 'th-pell-work')).toMatchObject({ title: 'Pell · prospect work', visibility: 'internal', memberIds: ['user-001', 'user-002', 'user-003'] })
   })
 
-  it('seeds her first message in her thread and the next action in the Brief, in seed order', () => {
+  it('seeds her first message in her thread', () => {
     expect(SEED_MESSAGES.find((m) => m.id === 'msg-s07')).toMatchObject({ kind: 'text', threadId: 'th-pell', authorId: 'prsp-011' })
-    expect(SEED_MESSAGES.find((m) => m.id === 'msg-s08')).toMatchObject({ kind: 'next_action', threadId: 'th-brief', title: 'Referral: Dr. Amanda Pell', targetThreadId: 'th-pell' })
     expect(SEED_LAST_SEQUENCE).toBe(8)
   })
 

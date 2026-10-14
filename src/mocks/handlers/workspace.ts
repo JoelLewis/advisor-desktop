@@ -7,6 +7,7 @@ import { resolveBreak } from '../reference/reconciliation'
 import { nextAt, nextId, store } from '../data/workspace-store'
 import { BRIEF_THREAD_ID } from '../workspace/brief'
 import { briefOrder, remeasureBrief } from '../workspace/brief-remeasure'
+import { briefToday } from '../workspace/brief-today'
 import { sendToParty } from '../workspace/acts'
 import { deliverDisclosure } from '../workspace/disclosures'
 import { approveProspectProposal, sendProspectProposal } from '../workspace/prospect-acts'
@@ -60,7 +61,9 @@ export const workspaceHandlers = [
     if (!thread || !canSeeThread(viewer, thread)) return notFound()
     if (thread.id === BRIEF_THREAD_ID) remeasureBrief()
     const inThread = store().messages.filter((m) => m.threadId === thread.id)
-    const messages = thread.id === BRIEF_THREAD_ID ? briefOrder(inThread) : inThread.sort((a, b) => a.at.localeCompare(b.at))
+    const messages = thread.id === BRIEF_THREAD_ID
+      ? [briefToday(viewer), ...briefOrder(inThread)]
+      : inThread.sort((a, b) => a.at.localeCompare(b.at))
     const detail: ThreadDetail = { thread, messages }
     return HttpResponse.json(detail)
   }),

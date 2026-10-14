@@ -21,13 +21,11 @@ const MEETING: Message[] = [
 ]
 
 describe('meeting messages', () => {
-  it("the Brief's meeting line says when, and opens the meeting thread", async () => {
+  it("the Brief's Today says when the meeting is, and opens the meeting thread", async () => {
     renderRoutes(routes, '/t/th-brief')
-    await screen.findByRole('list', { name: 'Messages' })
-    const notice = await conversation().findByRole('article', { name: 'Meeting · Johnson annual review' })
-    expect(notice).toHaveTextContent('Meeting at 14:00 ET')
-    expect(notice).toHaveTextContent('Johnson annual review · 14:00–15:15 ET')
-    expect(within(notice).getByRole('link', { name: /Open the meeting thread/ })).toHaveAttribute('href', '/t/th-johnson-meeting')
+    const link = within(await screen.findByRole('region', { name: 'Today' })).getByRole('link', { name: 'Open the meeting thread' })
+    expect(link.closest('li')).toHaveTextContent('14:00–15:15 ETJohnson annual review · scheduled')
+    expect(link).toHaveAttribute('href', '/t/th-johnson-meeting')
   })
 
   it('the meeting thread shows agenda versions, the held line, the notes line and the tasks', async () => {
@@ -53,17 +51,15 @@ describe('meeting messages', () => {
 
   it('the live thread has one line for each new kind', async () => {
     const directory = await getDirectory('user-001')
-    const notice = store().messages.find((m) => m.kind === 'meeting_notice')!
-    const lines = [notice, ...MEETING].map((m) => {
+    const lines = MEETING.map((m) => {
       const { container, unmount } = render(<CompactMessage message={m} directory={directory} />)
       const text = container.textContent ?? ''
       unmount()
       return text
     })
-    expect(lines[0]).toContain('Meeting at 14:00 ET · Johnson annual review')
-    expect(lines[1]).toContain('Agenda v1 · Proposed an agenda ordered by what needs attention first.')
-    expect(lines[2]).toContain('Meeting held · 14:00–15:15 ET · transcript received')
-    expect(lines[3]).toContain('Drafted the notes from the transcript.')
-    expect(lines[4]).toContain('1 follow-up task from REC-0001.')
+    expect(lines[0]).toContain('Agenda v1 · Proposed an agenda ordered by what needs attention first.')
+    expect(lines[1]).toContain('Meeting held · 14:00–15:15 ET · transcript received')
+    expect(lines[2]).toContain('Drafted the notes from the transcript.')
+    expect(lines[3]).toContain('1 follow-up task from REC-0001.')
   })
 })

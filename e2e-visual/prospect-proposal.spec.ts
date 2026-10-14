@@ -109,10 +109,9 @@ test('one presenter takes Dr. Pell from first contact to an onboarding opened; s
   test.setTimeout(300_000)
   await page.setViewportSize({ width: 1440, height: 900 })
 
-  // 1. The Brief's next-best action opens her thread.
+  // 1. The Brief's Today opens her thread.
   await visit(page, '/t/th-brief', 'light')
-  const action = conversation(page).getByRole('article', { name: 'Next best action · Referral: Dr. Amanda Pell' })
-  await action.getByRole('link', { name: /Open her thread/ }).click()
+  await page.getByRole('region', { name: 'Today' }).getByRole('link', { name: 'Open her thread' }).click()
   await expect(heading(page)).toHaveText('Dr. Amanda Pell')
   await expect(page.getByRole('note', { name: 'Visibility: PROSPECT CAN SEE' })).toBeVisible()
 

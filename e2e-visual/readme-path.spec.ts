@@ -54,7 +54,7 @@ test("the README's five-minute path, end to end", async ({ page }) => {
   await expect(page.getByRole('region', { name: 'Needs a decision' })).not.toContainText('Intel Corp.')
 
   // 5. The Johnson annual review: prep, hold, notes, file, recap.
-  await conversation(page).getByRole('article', { name: 'Meeting · Johnson annual review' }).getByRole('link', { name: /Open the meeting thread/ }).click()
+  await page.getByRole('region', { name: 'Today' }).getByRole('link', { name: 'Open the meeting thread' }).click()
   await expect(heading(page)).toHaveText('Johnson annual review')
   await runPrep(page)
   await meetingPanel(page).getByRole('textbox', { name: 'New agenda item' }).fill('ESG alternatives for the trust')
@@ -72,7 +72,7 @@ test("the README's five-minute path, end to end", async ({ page }) => {
 
   // 6. Dr. Pell, from first contact to an onboarding opened.
   await threadLink(page, 'Brief').click()
-  await conversation(page).getByRole('article', { name: 'Next best action · Referral: Dr. Amanda Pell' }).getByRole('link', { name: /Open her thread/ }).click()
+  await page.getByRole('region', { name: 'Today' }).getByRole('link', { name: 'Open her thread' }).click()
   await expect(heading(page)).toHaveText('Dr. Amanda Pell')
   await deliver(page, 'Form CRS')
   await recordTheCoffee(page)

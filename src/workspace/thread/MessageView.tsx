@@ -16,19 +16,17 @@ import { AgentFindingView } from './AgentFindingView'
 import { FillsView } from './FillsView'
 import { AgendaVersionLine } from './AgendaVersionLine'
 import { MeetingHeldLine } from './MeetingHeldLine'
-import { MeetingNoticeView } from './MeetingNoticeView'
 import { MeetingTasksView } from './MeetingTasksView'
 import { NotesDraftedLine } from './NotesDraftedLine'
 import { BriefSummaryView } from './BriefSummaryView'
+import { BriefTodayView } from './BriefTodayView'
 import { CarriedFindingView } from './CarriedFindingView'
 import { DisclosureLine } from './DisclosureLine'
-import { NextActionView } from './NextActionView'
 import { OnboardingOpenedView } from './OnboardingOpenedView'
 import { PartyStepLine } from './PartyStepLine'
 import { ProspectNoteView } from './ProspectNoteView'
 import { ProspectProposalVersionLine } from './ProspectProposalVersionLine'
 import { CarryControl } from './CarryControl'
-import { ReconciliationNoticeView } from './ReconciliationNoticeView'
 import { ReferenceRowView } from './ReferenceRowView'
 import { canPostIn } from './can-post'
 import { ProposalVersionLine } from './ProposalVersionLine'
@@ -69,14 +67,12 @@ export function MessageView({ message, thread, directory }: { message: Message; 
       return <CarriedFindingView message={message} directory={directory} />
     case 'reference_row':
       return <ReferenceRowView message={message} directory={directory} />
-    case 'reconciliation_notice':
-      return <ReconciliationNoticeView notice={message} />
+    case 'brief_today':
+      return <BriefTodayView today={message} />
     case 'brief_summary':
       return <BriefSummaryView summary={message} directory={directory} />
     case 'fills':
       return <FillsView message={message} />
-    case 'meeting_notice':
-      return <MeetingNoticeView notice={message} />
     case 'agenda_version':
       return <AgendaVersionLine message={message} directory={directory} />
     case 'meeting_held':
@@ -85,8 +81,6 @@ export function MessageView({ message, thread, directory }: { message: Message; 
       return <NotesDraftedLine message={message} directory={directory} />
     case 'meeting_tasks':
       return <MeetingTasksView message={message} directory={directory} />
-    case 'next_action':
-      return <NextActionView action={message} />
     case 'disclosure_delivered':
       return <DisclosureLine message={message} />
     case 'party_step':

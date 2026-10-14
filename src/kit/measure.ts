@@ -158,6 +158,12 @@ export function fmtEasternRange(start: string, end: string): string {
   return `${fmtEasternTime(start)}–${fmtEasternTime(end)} ET`
 }
 
+/** A window on the story's clock: "14:00–15:15 ET" on the compared New York day, "25 Feb 14:00–15:15 ET" on any other. */
+export function fmtEasternWindow(start: string, end: string, sameDayAs?: string): string {
+  const from = fmtEasternStamp(start, sameDayAs).replace(/ ET$/, '')
+  return `${from}–${fmtEasternTime(end)} ET`
+}
+
 export function clientMoney(v: number): string {
   assertFinite(v)
   return sign(v, `$${numberFormat(0, 0).format(Math.abs(v))}`, false)

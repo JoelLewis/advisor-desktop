@@ -28,12 +28,12 @@ const WORK: Message[] = [
 describe('prospect messages', () => {
   afterEach(() => sessionStorage.clear())
 
-  it("the Brief's next-best action opens her thread, whose band names the prospect", async () => {
+  it("the Brief's Today opens her thread, whose band names the prospect", async () => {
     const user = userEvent.setup()
     const { router } = renderRoutes(routes, '/t/th-brief')
-    const action = await screen.findByRole('article', { name: 'Next best action · Referral: Dr. Amanda Pell' })
-    expect(action).toHaveTextContent('Coffee with Adrian Hale today at 15:30 ET')
-    await user.click(within(action).getByRole('link', { name: /Open her thread/ }))
+    const link = within(await screen.findByRole('region', { name: 'Today' })).getByRole('link', { name: 'Open her thread' })
+    expect(link.closest('li')).toHaveTextContent('15:30 ETCoffee with Dr. Amanda Pell · Form CRS due before it (firm policy)')
+    await user.click(link)
     await waitFor(() => expect(router.state.location.pathname).toBe('/t/th-pell'))
     expect(await screen.findByRole('note', { name: 'Visibility: PROSPECT CAN SEE' })).toHaveTextContent('Dr. Amanda Pell')
     expect(conversation().getByText('James Thompson suggested I get in touch. Looking forward to coffee this afternoon.')).toBeInTheDocument()

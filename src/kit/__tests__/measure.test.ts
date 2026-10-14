@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   MINUS, MeasureError, isNegative, fmtMoney, fmtResult, fmtPrice, fmtWeight, fmtReturn, fmtDrift,
   fmtTolerance, fmtQuantity, splitFraction, fmtDays, fmtScore, fmtDate, fmtEasternStamp, fmtUtcStamp, clientMoney,
-  clientPercent, clientWholePercent, clientDate, fmtEasternTime, fmtEasternDayTime, fmtEasternRange, clientRate, fmtDayMonthYear,
+  clientPercent, clientWholePercent, clientDate, fmtEasternTime, fmtEasternDayTime, fmtEasternRange, fmtEasternWindow, clientRate, fmtDayMonthYear,
 } from '@/kit/measure'
 
 describe('measure', () => {
@@ -207,5 +207,12 @@ describe("no source formats or dates in the host's locale or time zone", () => {
       expect(bad.match(HOST_DEPENDENT), bad).not.toBeNull()
     }
     for (const good of ["n.toLocaleString('en-US')", "new Intl.NumberFormat('en-US')", 'd.setUTCDate(1)', 'd.getUTCMonth()']) expect(good.match(HOST_DEPENDENT), good).toBeNull()
+  })
+})
+
+describe('fmtEasternWindow', () => {
+  it('drops the date on the compared day, states it otherwise', () => {
+    expect(fmtEasternWindow('2026-02-25T19:00:00.000Z', '2026-02-25T20:15:00.000Z', '2026-02-25T12:00:00Z')).toBe('14:00–15:15 ET')
+    expect(fmtEasternWindow('2026-02-25T19:00:00.000Z', '2026-02-25T20:15:00.000Z', '2026-02-26T14:10:00Z')).toBe('25 Feb 14:00–15:15 ET')
   })
 })

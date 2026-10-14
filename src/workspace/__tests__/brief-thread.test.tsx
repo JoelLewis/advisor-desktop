@@ -6,7 +6,8 @@ import { server } from '@/test/server'
 import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
 import { carryFinding } from '@/services/workspace'
-import { store } from '@/mocks/data/workspace-store'
+import { advanceClockTo, store } from '@/mocks/data/workspace-store'
+import { minuteOf } from '@/lib/clock'
 
 const INTC_CLAIM = 'The remaining Intel Corp. shares can be sold at a loss today, and nothing bought in the last thirty days would wash the loss.'
 
@@ -98,5 +99,27 @@ describe('the Brief', () => {
     expect(within(intc).queryByRole('button', { name: 'Take to Johnson annual review' })).toBeNull()
     release()
     expect(await within(intc).findByRole('button', { name: 'Take to Johnson annual review' })).toBeInTheDocument()
+  })
+
+  it('leads with Today: the meeting and the coffee at their Eastern times, the open break, each with its action', async () => {
+    renderRoutes(routes, '/t/th-brief')
+    const today = await screen.findByRole('region', { name: 'Today' })
+    const rows = within(today).getAllByRole('listitem')
+    expect(rows.map((r) => r.textContent)).toEqual([
+      '14:00–15:15 ETJohnson annual review · scheduledOpen the meeting thread',
+      '15:30 ETCoffee with Dr. Amanda Pell · Form CRS due before it (firm policy)Open her thread',
+      'Reconciliation · 1 open breakOpen reconciliation',
+    ])
+    expect(within(rows[0]!).getByRole('link', { name: 'Open the meeting thread' })).toHaveAttribute('href', '/t/th-johnson-meeting')
+    expect(within(rows[1]!).getByRole('link', { name: 'Open her thread' })).toHaveAttribute('href', '/t/th-pell')
+    const order = [today, screen.getByRole('region', { name: 'Needs a decision' })]
+    expect(order[0]!.compareDocumentPosition(order[1]!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('dates a line that is not on the session\'s day', async () => {
+    advanceClockTo(minuteOf('2026-02-26T14:10:00Z'))
+    renderRoutes(routes, '/t/th-brief')
+    const today = await screen.findByRole('region', { name: 'Today' })
+    expect(today).toHaveTextContent('25 Feb 14:00–15:15 ET')
   })
 })

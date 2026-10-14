@@ -21,14 +21,13 @@ async function openMeetingThread() {
 describe('the meeting thread', () => {
   afterEach(() => sessionStorage.clear())
 
-  it("the Brief's line opens the meeting thread; a Brief finding can be carried into it", async () => {
+  it("the Brief's Today opens the meeting thread; a Brief finding can be carried into it", async () => {
     const { router } = renderRoutes(routes, '/t/th-brief')
     const user = userEvent.setup()
     const intc = await screen.findByRole('article', { name: `Harvest Scanner: ${INTC_CLAIM}` })
     await user.click(await within(intc).findByRole('button', { name: 'Take to Johnson annual review' }))
     expect(await within(intc).findByRole('status')).toHaveTextContent('Taken to Johnson annual review.')
-    const notice = conversation().getByRole('article', { name: 'Meeting · Johnson annual review' })
-    await user.click(within(notice).getByRole('link', { name: /Open the meeting thread/ }))
+    await user.click(within(await screen.findByRole('region', { name: 'Today' })).getByRole('link', { name: 'Open the meeting thread' }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/t/th-johnson-meeting'))
     expect(await conversation().findByRole('article', { name: `Carried from the Brief: ${INTC_CLAIM}` })).toBeInTheDocument()
   })

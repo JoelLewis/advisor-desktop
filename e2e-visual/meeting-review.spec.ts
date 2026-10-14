@@ -181,11 +181,11 @@ test('one presenter runs the Johnson annual review end to end; Robert sees only 
   await approve(page, 1)
   await releaseByShortcut(page)
 
-  // 2. The Brief's line for the meeting, to the meeting thread.
+  // 2. The Brief's Today line for the meeting, to the meeting thread.
   await threadLink(page, 'Brief').click()
-  const notice = conversation(page).getByRole('article', { name: 'Meeting · Johnson annual review' })
-  await expect(notice).toContainText('Meeting at 14:00 ET')
-  await notice.getByRole('link', { name: /Open the meeting thread/ }).click()
+  const today = page.getByRole('region', { name: 'Today' })
+  await expect(today.getByRole('listitem').filter({ hasText: 'Johnson annual review' })).toContainText('14:00–15:15 ET')
+  await today.getByRole('link', { name: 'Open the meeting thread' }).click()
   await expect(heading(page)).toHaveText('Johnson annual review')
 
   // 3. Prep: findings in the thread, agenda v1; Adrian adds an item (v2).

@@ -24,9 +24,8 @@ const isMeasured = (m: Message) => m.kind === 'brief_summary' || m.kind === 'age
 const byTime = (a: Message, b: Message) => a.at.localeCompare(b.at)
 
 /**
- * The Brief reads as it does in the morning whenever it was measured: the summary and its
- * findings first, then the day's lines (the meeting notice) in time order. A re-measure stamps the
- * measured messages later than the seeded lines, so time order alone would lift those lines above them.
+ * The Brief reads as measured: its summary and findings first, then anything posted in it, in time order.
+ * Today is composed on read and leads it (the thread handler).
  */
 export function briefOrder(messages: readonly Message[]): Message[] {
   return [...messages.filter(isMeasured).sort(byTime), ...messages.filter((m) => !isMeasured(m)).sort(byTime)]

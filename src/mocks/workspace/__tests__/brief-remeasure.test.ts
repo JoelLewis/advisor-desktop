@@ -7,18 +7,18 @@ import { remeasureBrief } from '../brief-remeasure'
 import { approvedStoryV3, approvedV1, release } from './story-fixture'
 
 type Finding = Extract<Message, { kind: 'agent_finding' }>
-const brief = () => store().messages.filter((m) => m.threadId === BRIEF_THREAD_ID && m.kind !== 'meeting_notice')
+const brief = () => store().messages.filter((m) => m.threadId === BRIEF_THREAD_ID)
 const findings = () => brief().filter((m): m is Finding => m.kind === 'agent_finding')
 const summary = () => {
   const s = brief().find((m) => m.kind === 'brief_summary')
   if (s?.kind !== 'brief_summary') throw new Error('The Brief has a summary')
   return s
 }
-/** The Brief's measured messages; the meeting line is seeded, not measured, so it is left out. */
+/** The Brief's measured messages; Today is composed on read, not measured, so it is left out. */
 async function openBrief() {
   const res = await fetch(`/api/workspace/threads/${BRIEF_THREAD_ID}`, { headers: { 'X-Viewer': 'user-001' } })
   const { messages } = (await res.json()) as { messages: Message[] }
-  return { messages: messages.filter((m) => m.kind !== 'meeting_notice' && m.kind !== 'next_action' && m.kind !== 'reconciliation_notice') }
+  return { messages: messages.filter((m) => m.kind !== 'brief_today') }
 }
 
 describe('the Brief re-measures on view once the book has moved', () => {
@@ -68,20 +68,14 @@ describe('the Brief re-measures on view once the book has moved', () => {
     ])
   })
 
-  it("the meeting line survives a re-measure, unchanged, and still reads below the ranked summary and its findings", async () => {
-    const morningLines = store().messages.filter((m) => m.kind === 'meeting_notice' || m.kind === 'next_action')
+  it('Today leads the Brief before and after a re-measure', async () => {
     const kinds = async () => {
       const res = await fetch(`/api/workspace/threads/${BRIEF_THREAD_ID}`, { headers: { 'X-Viewer': 'user-001' } })
-      return ((await res.json()) as { messages: Message[] }).messages
+      return ((await res.json()) as { messages: Message[] }).messages.map((m) => m.kind)
     }
-    const morning = await kinds()
-    expect(morning[0]?.kind).toBe('brief_summary')
-    expect(morning.slice(-2).map((m) => m.kind)).toEqual(['meeting_notice', 'next_action'])
+    expect((await kinds()).slice(0, 2)).toEqual(['brief_today', 'brief_summary'])
     release(approvedV1())
-    const remeasured = await kinds()
-    expect(remeasured[0]).toMatchObject({ kind: 'brief_summary', id: 'msg-r1-00' })
-    expect(remeasured.slice(-2)).toEqual(morningLines)
-    expect(remeasured.filter((m) => m.kind === 'meeting_notice')).toHaveLength(1)
+    expect((await kinds()).slice(0, 2)).toEqual(['brief_today', 'brief_summary'])
   })
 
   it('a reset brings back the morning', async () => {
