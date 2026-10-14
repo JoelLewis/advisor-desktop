@@ -57,3 +57,17 @@ export function blendedTieredFee(
   }
   return { fee, blendedRate: aum === 0 ? 0 : fee / aum }
 }
+
+export type FeeTierSlice = { from: number; upTo: number | null; rate: number; slice: number; fee: number }
+
+/** The schedule tier by tier: each tier's rate on the slice of `aum` inside it. Σ fee is `blendedTieredFee(aum, tiers).fee`. */
+export function tierSlices(aum: number, tiers: readonly FeeTier[]): FeeTierSlice[] {
+  let floor = 0
+  return tiers.map((tier) => {
+    const ceiling = tier.upTo ?? Number.POSITIVE_INFINITY
+    const slice = Math.max(0, Math.min(aum, ceiling) - floor)
+    const row: FeeTierSlice = { from: floor, upTo: tier.upTo, rate: tier.rate, slice, fee: slice * tier.rate }
+    floor = ceiling
+    return row
+  })
+}

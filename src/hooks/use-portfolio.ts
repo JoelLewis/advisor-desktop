@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { getPositions, getHoldingGroups, getDrift, getDriftSummary, getPerformance, getBenchmarkComparison, getAttribution, getModels } from '@/services/pms'
 import { getHouseholdPositions, getHouseholdDrift, getHouseholdAllocation, getClientAllocation } from '@/services/pms'
-import { getRiskMetrics, getFactorExposures, getStressScenarios, getSensitivity, getConcentration, getModelGovernance, getBookOfBusiness } from '@/services/pms'
+import { getRiskMetrics, getFactorExposures, getStressScenarios, getSensitivity, getConcentration, getModelGovernance } from '@/services/pms'
 
 export function usePositions(accountId: string) {
   return useQuery({
@@ -159,13 +159,5 @@ export function useModelGovernance() {
     queryKey: ['models', 'governance'],
     queryFn: () => getModelGovernance(),
     staleTime: 30_000,
-  })
-}
-
-export function useBookOfBusiness() {
-  return useQuery({
-    queryKey: ['book-of-business'],
-    queryFn: () => getBookOfBusiness(),
-    staleTime: 60_000,
   })
 }

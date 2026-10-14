@@ -1,39 +1,31 @@
 import { describe, it, expect } from 'vitest'
-import { getBookOfBusiness } from '@/services/pms'
-import { householdFees } from '@/mocks/data/billing'
 import { accounts } from '@/mocks/data/accounts'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
 import { deriveBookAUM } from '@/lib/aum'
-import { assetWeightedEffectiveFee } from '@/lib/fees'
+import { assetWeightedEffectiveFee, bps } from '@/lib/fees'
+import { billingView } from '@/mocks/reference/billing'
+import { practiceView } from '@/mocks/reference/practice'
+
+const billing = () => {
+  const v = billingView('user-001')
+  if (!v) throw new Error('Adrian reads billing')
+  return v
+}
 
 describe('one fee number across every surface', () => {
-  it('Book of Business reports 76.4 bps, in basis points', async () => {
-    const book = await getBookOfBusiness()
-    expect(book.effectiveFeeBps).toBe(76.4)
+  it('practice and billing report the same effective fee, 74.4 bps', () => {
+    expect(Math.round(bps(billing().totals.effectiveRate) * 10) / 10).toBe(74.4)
+    expect(practiceView('user-001')?.revenue.effectiveRate).toBeCloseTo(billing().totals.effectiveRate, 12)
   })
 
-  it('effectiveFeeBps === annualRevenue ÷ totalAUM', async () => {
-    const book = await getBookOfBusiness()
-    expect((book.annualRevenue / book.totalAUM) * 10_000).toBeCloseTo(book.effectiveFeeBps, 1)
+  it('the effective fee is Σ fees ÷ Σ value, not the mean of household rates', () => {
+    const rows = billing().households.map((h) => ({ aum: h.value, annualFee: h.annualFee }))
+    expect(assetWeightedEffectiveFee(rows)).toBeCloseTo(bps(billing().totals.effectiveRate), 9)
+    const unweighted = billing().households.reduce((s, h) => s + h.effectiveRate, 0) / rows.length
+    expect(Math.abs(bps(unweighted) - bps(billing().totals.effectiveRate))).toBeGreaterThan(10)
   })
 
-  it('annualRevenue === Σ household annual fees', async () => {
-    const book = await getBookOfBusiness()
-    expect(book.annualRevenue)
-      .toBe(Math.round(householdFees.reduce((s, f) => s + f.quarterlyAmount * 4, 0)))
-    expect(book.annualRevenue).toBe(697_466)
-  })
-
-  it('the billing surface reports the same asset-weighted rate, not the unweighted mean', async () => {
-    const rows = householdFees.map((f) => ({ aum: f.aumBasis, annualFee: f.quarterlyAmount * 4 }))
-    const weighted = assetWeightedEffectiveFee(rows)
-    const unweighted = householdFees.reduce((s, f) => s + f.annualRate, 0) / householdFees.length * 10_000
-    expect(weighted).toBeCloseTo(76.3753, 3)
-    expect(unweighted).toBeCloseTo(88.0769, 3)
-  })
-
-  it('Σ aumBasis === book AUM — nobody is billed on a stale basis', () => {
-    expect(householdFees.reduce((s, f) => s + f.aumBasis, 0))
-      .toBeCloseTo(deriveBookAUM(accounts, FX_RATES_USD_BASE), 4)
+  it('Σ billed value === book value: nobody is billed on a stale basis', () => {
+    expect(billing().totals.value).toBeCloseTo(deriveBookAUM(accounts, FX_RATES_USD_BASE), 4)
   })
 })

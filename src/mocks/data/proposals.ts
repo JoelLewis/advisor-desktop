@@ -231,9 +231,7 @@ export function generateSectionContent(
         '',
         '### Advisory Fee Structure',
         '',
-        // Aligned with billing.ts, where 11 of 13 household fee schedules bill in advance —
-        // this section previously said "in arrears" here and "in advance" three lines below.
-        'Our fees are calculated as a percentage of assets under management (AUM) and are billed quarterly in advance based on the average daily account balance:',
+        'Our fees are calculated as a percentage of assets under management (AUM) and are billed quarterly in advance (in arrears where the agreement says so), on the value at the prior quarter end:',
         '',
         '| AUM From | AUM To | Annual Rate |',
         '|---|---|---|',
@@ -243,7 +241,7 @@ export function generateSectionContent(
         '',
         `Based on a portfolio value of ${formatCurrency(basis)}, the estimated annual advisory fee is ` +
         `${formatCurrency(fee)}, a blended rate of ${(blendedRate * 100).toFixed(3)}%. Fees are billed ` +
-        'quarterly in advance on the average daily balance and are subject to the schedule above.',
+        'quarterly in advance (in arrears where the agreement says so), on the value at the prior quarter end, and are subject to the schedule above.',
         '',
         '### Fee Comparison',
         '',

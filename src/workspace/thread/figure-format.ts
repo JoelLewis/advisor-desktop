@@ -11,6 +11,7 @@ const BY_UNIT: Readonly<Record<FigureUnit, { format: (v: number) => string; unit
   sh: { format: fmtQuantity, unit: UNIT.shares },
   d: { format: fmtDays, unit: UNIT.days },
   pts: { format: fmtPoints, unit: UNIT.points },
+  count: { format: fmtQuantity, unit: '' },
 }
 
 /** Engine fields whose pp value is a tolerance band, read as ± rather than as a signed drift. */

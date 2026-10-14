@@ -481,13 +481,11 @@ export const nbas: NBA[] = [
   // ── Growth ──
   {
     id: 'nba-014', title: 'Held-away 401(k) review — Williams $1.2M',
-    // Compliance §5.4 · fiduciary-standards / fee-disclosure / conflicts-of-interest —
-    // this previously read "Consolidating could save ~$4,800/year in fees". The Williams household
-    // is billed at 85 bps, so rolling $1.2M into an advisor-managed IRA ADDS roughly $10,200/year
-    // against a plan cost of about $5,400 — a net increase of ~$4,800, not a saving. Rollover
-    // recommendations are the exact fact pattern the Advisers Act fiduciary duty (and DOL PTE
-    // 2020-02 for an ERISA plan) targets, and "you will save money" is the specific claim that gets cited.
-    description: "David Williams holds $1.2M in a 401(k) at a former employer (Fidelity). Estimated plan cost is 0.45% ($5,400 a year); our schedule for this household is 0.85% ($10,200 a year), so a rollover would raise annual cost by about $4,800. Weigh that against consolidated tax management, household-level rebalancing and planning. Present both options, including leaving the assets in the plan.",
+    // Compliance §5.4 · fiduciary-standards / fee-disclosure — a rollover adds cost here, never a saving.
+    // Phase 7a · R1: the household bills on the firm's tiered schedule, so the $1.2M is priced at the
+    // household's marginal tier: $4,995,000 today, so all but $5,000 of it falls in the 0.70% tier
+    // ($8,407.50 a year) against a plan cost of $5,400 — about $3,000 more.
+    description: "David Williams holds $1.2M in a 401(k) at a former employer (Fidelity). Estimated plan cost is 0.45% ($5,400 a year). On our schedule almost all of it would fall in the household's 0.70% tier, above $5,000,000: about $8,400 a year, so a rollover would raise annual cost by about $3,000. Weigh that against consolidated tax management, household-level rebalancing and planning. Present both options, including leaving the assets in the plan.",
     category: 'growth', priority: 'medium',
     scoring: { urgency: 35, impact: 75, efficiency: 45, relationship: 65, confidence: 70, composite: 55 },
     clients: [{ id: 'cli-004', name: 'David Williams' }],

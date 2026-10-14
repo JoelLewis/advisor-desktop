@@ -2,12 +2,9 @@ import { describe, it, expect } from 'vitest'
 import { accounts } from '@/mocks/data/accounts'
 import { households } from '@/mocks/data/households'
 import { clients } from '@/mocks/data/clients'
-import { householdFees, billingCycles } from '@/mocks/data/billing'
-import { feeSchedules, revenueBySegment, revenueMetrics, revenueTrend } from '@/mocks/data/revenue'
-import { bookAnalytics } from '@/mocks/data/practice'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
 import { getPositionsForAccount } from '@/mocks/data/positions'
-import { deriveBookAUM, deriveClientAUM, deriveHouseholdAUM, deriveSegmentAUM } from '@/lib/aum'
+import { deriveBookAUM, deriveClientAUM, deriveHouseholdAUM } from '@/lib/aum'
 
 /**
  * THE GATE — Phase 1 ("Numbers you can trust") definition of done.
@@ -172,71 +169,6 @@ describe('GATE — every roll-up equals the sum of its parts', () => {
     })
   })
 
-  describe('practice analytics', () => {
-    it('bookAnalytics.aumBySegment === derived segment AUM', () => {
-      const derived = deriveSegmentAUM(households, accounts, RATES)
-      for (const row of bookAnalytics.aumBySegment) {
-        const match = derived.find((d) => d.segment === row.segment)
-        expect(match, `segment "${row.segment}" (from bookAnalytics.aumBySegment) has no matching entry in deriveSegmentAUM(households, accounts, RATES) output`).toBeDefined()
-        const delta = row.aum - match!.aum
-        expect(
-          row.aum,
-          `bookAnalytics.aumBySegment["${row.segment}"].aum = ${row.aum.toLocaleString('en-US')}, ` +
-            `but derived segment AUM = ${match!.aum.toLocaleString('en-US')} — a delta of ` +
-            `${delta.toLocaleString('en-US')} USD.`,
-        ).toBeCloseTo(match!.aum, 4)
-        expect(
-          row.count,
-          `bookAnalytics.aumBySegment["${row.segment}"].count = ${row.count}, but ` +
-            `${match!.householdCount} households actually carry segment "${row.segment}".`,
-        ).toBe(match!.householdCount)
-      }
-      const summed = bookAnalytics.aumBySegment.reduce((s, r) => s + r.aum, 0)
-      const book = deriveBookAUM(accounts, RATES)
-      expect(
-        summed,
-        `Σ bookAnalytics.aumBySegment[].aum = ${summed.toLocaleString('en-US')}, but ` +
-          `deriveBookAUM(accounts) = ${book.toLocaleString('en-US')} — a delta of ` +
-          `${(summed - book).toLocaleString('en-US')} USD.`,
-      ).toBeCloseTo(book, 4)
-    })
-
-    it('bookAnalytics.aumByAccountType sums to the book total', () => {
-      const summedAUM = bookAnalytics.aumByAccountType.reduce((s, r) => s + r.aum, 0)
-      const book = deriveBookAUM(accounts, RATES)
-      expect(
-        summedAUM,
-        `Σ bookAnalytics.aumByAccountType[].aum = ${summedAUM.toLocaleString('en-US')}, but ` +
-          `deriveBookAUM(accounts) = ${book.toLocaleString('en-US')} — a delta of ` +
-          `${(summedAUM - book).toLocaleString('en-US')} USD.`,
-      ).toBeCloseTo(book, 4)
-      const summedCount = bookAnalytics.aumByAccountType.reduce((s, r) => s + r.count, 0)
-      expect(
-        summedCount,
-        `Σ bookAnalytics.aumByAccountType[].count = ${summedCount}, but there are ` +
-          `${accounts.length} accounts in the accounts fixture.`,
-      ).toBe(accounts.length)
-    })
-
-    it('the AUM waterfall reconciles to the book total', async () => {
-      const { getBookOfBusiness } = await import('@/services/pms')
-      const book = await getBookOfBusiness()
-      const deltas = book.aumWaterfall.filter((b) => b.kind === 'delta')
-      const start = book.aumWaterfall.find((b) => b.label === 'Starting AUM')!
-      const end = book.aumWaterfall.find((b) => b.label === 'Current AUM')!
-      expect(start.value + deltas.reduce((s, d) => s + d.value, 0)).toBe(end.value)
-      expect(end.value).toBe(Math.round(deriveBookAUM(accounts, RATES)))
-      expect(book.totalAUM).toBe(91_320_824)
-      expect(book.concentrationHHI).toBe(1828)
-      expect(book.concentrationEffectiveN).toBe(5.5)
-      expect(book.retentionRate).toBe(92.3)
-      expect(book.organicGrowthRate).toBe(1.6)
-      expect(book.segments.find((s) => s.segment === 'platinum')).toMatchObject({
-        householdCount: 3, aum: 58_558_018,
-      })
-    })
-  })
-
   describe('positions', () => {
     it.each(accounts.map((a) => [a.id, a.name, a] as const))(
       '%s (%s): Σ position marketValue === account totalValue',
@@ -299,142 +231,5 @@ describe('GATE — every roll-up equals the sum of its parts', () => {
         ).toBeCloseTo(account.totalValue, 0)
       },
     )
-  })
-
-  describe('fees and revenue', () => {
-    it.each(householdFees.map((f) => [f.householdId, f] as const))(
-      '%s: aumBasis === derived household AUM',
-      (householdId, fee) => {
-        const derived = deriveHouseholdAUM(householdId, accounts, RATES)
-        const delta = fee.aumBasis - derived
-        expect(
-          fee.aumBasis,
-          `${householdId} (${fee.householdName}): householdFees.aumBasis = ` +
-            `${fee.aumBasis.toLocaleString('en-US')}, but deriveHouseholdAUM(${householdId}) = ` +
-            `${derived.toLocaleString('en-US')} — a delta of ${delta.toLocaleString('en-US')} USD. ` +
-            `Fees are being billed against a stated AUM that disagrees with the household's ` +
-            `actual accounts.`,
-        ).toBeCloseTo(derived, 4)
-      },
-    )
-
-    it.each(householdFees.map((f) => [f.householdId, f] as const))(
-      '%s: quarterlyAmount === aumBasis × annualRate ÷ 4',
-      (_id, fee) => {
-        const expected = (fee.aumBasis * fee.annualRate) / 4
-        const delta = fee.quarterlyAmount - expected
-        expect(
-          fee.quarterlyAmount,
-          `${fee.householdId} (${fee.householdName}): quarterlyAmount = ` +
-            `${fee.quarterlyAmount.toLocaleString('en-US')}, but aumBasis (` +
-            `${fee.aumBasis.toLocaleString('en-US')}) × annualRate (${fee.annualRate}) ÷ 4 = ` +
-            `${expected.toLocaleString('en-US')} — a delta of ${delta.toLocaleString('en-US')} USD.`,
-        ).toBeCloseTo(expected, 4)
-      },
-    )
-
-    it('there is one fee schedule per household', () => {
-      const feeHouseholdIds = householdFees.map((f) => f.householdId).sort()
-      const householdIds = households.map((h) => h.id).sort()
-      expect(
-        feeHouseholdIds,
-        `householdFees covers [${feeHouseholdIds.join(', ')}] but households fixture has ` +
-          `[${householdIds.join(', ')}].`,
-      ).toEqual(householdIds)
-
-      const scheduleHouseholdIds = feeSchedules.map((f) => f.householdId).sort()
-      expect(
-        scheduleHouseholdIds,
-        `feeSchedules covers [${scheduleHouseholdIds.join(', ')}] but households fixture has ` +
-          `[${householdIds.join(', ')}].`,
-      ).toEqual(householdIds)
-    })
-
-    it('feeSchedules annualRevenue === householdFees quarterlyAmount × 4', () => {
-      for (const schedule of feeSchedules) {
-        const fee = householdFees.find((f) => f.householdId === schedule.householdId)!
-        const expected = fee.quarterlyAmount * 4
-        const delta = schedule.annualRevenue - expected
-        expect(
-          schedule.annualRevenue,
-          `${schedule.householdId} (${schedule.householdName}): feeSchedules.annualRevenue = ` +
-            `${schedule.annualRevenue.toLocaleString('en-US')}, but householdFees.quarterlyAmount ` +
-            `(${fee.quarterlyAmount.toLocaleString('en-US')}) × 4 = ${expected.toLocaleString('en-US')} ` +
-            `— a delta of ${delta.toLocaleString('en-US')} USD.`,
-        ).toBeCloseTo(expected, 4)
-      }
-    })
-
-    it('the current billing cycle totalBilled === Σ household quarterly fees', () => {
-      const current = billingCycles.find((c) => c.period === 'Q1 2026')!
-      const summed = householdFees.reduce((s, f) => s + f.quarterlyAmount, 0)
-      const delta = current.totalBilled - summed
-      expect(
-        current.totalBilled,
-        `billingCycles["Q1 2026"].totalBilled = ${current.totalBilled.toLocaleString('en-US')}, ` +
-          `but Σ householdFees.quarterlyAmount = ${summed.toLocaleString('en-US')} — a delta of ` +
-          `${delta.toLocaleString('en-US')} USD.`,
-      ).toBeCloseTo(summed, 4)
-      expect(
-        current.householdsCount,
-        `billingCycles["Q1 2026"].householdsCount = ${current.householdsCount}, but there are ` +
-          `${households.length} households.`,
-      ).toBe(households.length)
-    })
-
-    it('revenueBySegment === advisory fees grouped by household segment', () => {
-      const segmentOf = new Map(households.map((h) => [h.id, h.segment]))
-      const expected = new Map<string, { revenue: number; clientCount: number }>()
-      for (const fee of householdFees) {
-        const seg = segmentOf.get(fee.householdId)!
-        const e = expected.get(seg) ?? { revenue: 0, clientCount: 0 }
-        e.revenue += fee.quarterlyAmount * 4
-        e.clientCount += 1
-        expected.set(seg, e)
-      }
-      for (const row of revenueBySegment) {
-        const exp = expected.get(row.segment)!
-        const delta = row.revenue - exp.revenue
-        expect(
-          row.revenue,
-          `revenueBySegment["${row.segment}"].revenue = ${row.revenue.toLocaleString('en-US')}, ` +
-            `but Σ (quarterlyAmount × 4) for households in "${row.segment}" = ` +
-            `${exp.revenue.toLocaleString('en-US')} — a delta of ${delta.toLocaleString('en-US')} USD.`,
-        ).toBeCloseTo(exp.revenue, 4)
-        expect(
-          row.clientCount,
-          `revenueBySegment["${row.segment}"].clientCount = ${row.clientCount}, but ` +
-            `${exp.clientCount} households actually carry segment "${row.segment}".`,
-        ).toBe(exp.clientCount)
-      }
-    })
-
-    it('totalRecurringRevenue === Σ advisory fees + planning revenue', () => {
-      const advisory = householdFees.reduce((s, f) => s + f.quarterlyAmount * 4, 0)
-      expect(
-        revenueMetrics.totalRecurringRevenue,
-        `revenueMetrics.totalRecurringRevenue (${revenueMetrics.totalRecurringRevenue.toLocaleString('en-US')}) ` +
-          `should exceed Σ advisory fees alone (${advisory.toLocaleString('en-US')}) since it also ` +
-          `includes planning revenue.`,
-      ).toBeGreaterThan(advisory)
-      const expectedAvg = Math.round(revenueMetrics.totalRecurringRevenue / households.length)
-      expect(
-        revenueMetrics.avgRevenuePerHousehold,
-        `revenueMetrics.avgRevenuePerHousehold = ${revenueMetrics.avgRevenuePerHousehold}, but ` +
-          `totalRecurringRevenue (${revenueMetrics.totalRecurringRevenue.toLocaleString('en-US')}) ÷ ` +
-          `${households.length} households = ${expectedAvg}.`,
-      ).toBe(expectedAvg)
-    })
-
-    it('the revenue trend has no zero-revenue month and no actual beyond the clock', () => {
-      for (const point of revenueTrend) {
-        expect(point.revenue === undefined || point.revenue > 0).toBe(true)
-        if (point.revenue !== undefined) expect(point.period <= '2026-01').toBe(true)
-        if (point.period >= '2026-02') expect(point.revenue).toBeUndefined()
-      }
-      expect(revenueTrend.filter((p) => p.revenue !== undefined)).toHaveLength(12)
-      expect(revenueTrend[revenueTrend.length - 1]!.projected).toBe(69_563)
-      expect(revenueTrend.find((p) => p.period === '2026-01')!.revenue).toBe(68_535)
-    })
   })
 })

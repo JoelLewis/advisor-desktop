@@ -38,9 +38,9 @@ describe('C33: proposal fee illustration is derived, not a hardcoded $5M/$40,250
   // "### Annual Cost Estimate"); the first pass fixed an "in arrears"/"in advance" contradiction
   // between them, but nothing guarded it — reverting either line back to "arrears" passed every
   // other test. Guard both occurrences and the absence of "arrears" anywhere in the section.
-  it('states "billed quarterly in advance" consistently, with no residual "arrears" contradiction', () => {
+  it('states "billed quarterly in advance" consistently; "arrears" appears only as the agreement-specific exception', () => {
     const content = generateSectionContent('fee_schedule', 'Test Client', 'tpl-001', 5_000_000)
-    expect(content.toLowerCase()).not.toContain('arrears')
+    expect(content.toLowerCase().split('in arrears where the agreement says so').join('')).not.toContain('arrears')
     const adviceMatches = content.match(/quarterly in advance/gi) ?? []
     expect(adviceMatches.length).toBeGreaterThanOrEqual(2)
   })

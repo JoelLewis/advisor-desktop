@@ -4,11 +4,11 @@ import type {
 } from '@/types/workspace-prospect'
 import { can } from '@/mocks/data/people'
 import { nextAt, nextId, nextNumber, pad, store } from '@/mocks/data/workspace-store'
-import { proposalTemplates, toFeeTiers } from '@/mocks/data/proposals'
+import { proposalTemplates } from '@/mocks/data/proposals'
+import { FIRM_FEE_SCHEDULE_ID, feeOn } from '@/mocks/data/fee-schedule'
 import {
   clientSummaryOf, prospectChangeSummary, prospectDraftSummary, prospectProposalTitle, type ProspectVersionContent,
 } from '@/mocks/agents/prospect-proposal-agent'
-import { blendedTieredFee } from '@/lib/fees'
 import { fingerprint } from '@/lib/fingerprint'
 import { TAX_ESTIMATE_NOTE, taxRateFor } from '@/lib/tax-rules'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
@@ -23,8 +23,6 @@ export type ProspectProposalFailure = { ok: false; status: 400 | 403 | 404 | 409
 export type BuiltProspectVersion = ProspectVersionContent & { clientSummary: string; fingerprint: string }
 const refuse = (status: ProspectProposalFailure['status'], code: string, message: string): ProspectProposalFailure => ({ ok: false, status, code, message })
 const NO_PROPOSAL = refuse(404, 'NO_PROPOSAL', 'Proposal not found.')
-
-export const FIRM_FEE_SCHEDULE_ID = 'tpl-001'
 
 export const prospectProposalById = (id: string): ProspectProposal | undefined => store().prospectProposals.find((p) => p.id === id)
 
@@ -52,7 +50,7 @@ export function prospectProposalDetail(proposal: ProspectProposal): ProspectProp
 function feesOn(base: number): FeeEstimate {
   const schedule = proposalTemplates.find((t) => t.id === FIRM_FEE_SCHEDULE_ID)
   if (!schedule) throw new Error(`The firm's fee schedule ${FIRM_FEE_SCHEDULE_ID} is missing`)
-  const { fee, blendedRate } = blendedTieredFee(base, toFeeTiers(schedule.feeTiers))
+  const { fee, blendedRate } = feeOn(base)
   return { scheduleName: schedule.name, base, annual: cents(fee), blendedRate, tiers: schedule.feeTiers.map((t) => ({ label: t.label, rate: t.rate })) }
 }
 

@@ -6,23 +6,20 @@ import type {
   BenchmarkComparison, PerformanceSeries, AttributionResult, AttributionResponse,
 } from '@/types/performance'
 import type { CurrencyCode } from '@/types/currency'
+import type { Account } from '@/types/account'
 import { convertToBase } from '@/lib/currency'
-import { accountValueUSD, deriveBookAUM, deriveHouseholdAUM, deriveSegmentAUM, herfindahlIndex, effectiveN } from '@/lib/aum'
+import { accountValueUSD, deriveBookAUM, herfindahlIndex, effectiveN } from '@/lib/aum'
 import { securityKind, concentrationLimitFor } from '@/lib/security-master'
 import {
   RISK_FREE_RATE, assetClassWeights, portfolioBeta, portfolioVolatility,
   assetClassReturn1Y, trackingError, parametricVaR, sharpe, sortino,
   downsideDeviation, modelledMaxDrawdown,
 } from '@/lib/risk-model'
-import { assetWeightedEffectiveFee, householdAnnualFee } from '@/lib/fees'
-import { computeWaterfallDomain, type WaterfallBar } from '@/lib/waterfall'
 import { MOCK_NOW_ISO, MOCK_TODAY_ISO, startOfToday } from '@/lib/clock'
 import { FX_RATES_USD_BASE } from '../data/currencies'
-import { getPositionsForAccount } from '../data/positions'
+import { getPositionsForAccount, seedPositionsForAccount } from '../data/positions'
 import { ledgerFills } from '../data/portfolio-ledger'
 import { accounts } from '../data/accounts'
-import { households } from '../data/households'
-import { householdFees } from '../data/billing'
 import { nbas } from '../data/nbas'
 import { complianceAlerts } from './compliance'
 import { calendarEvents } from '../data/calendar'
@@ -129,6 +126,18 @@ function generatePerformanceSeries(months: number, p: SeriesParams): Performance
     })
   }
   return series
+}
+
+/**
+ * An account's modeled monthly series. `today` draws it from today's holdings (what the attribution page
+ * shows); `fixtures` from the holdings as the fixtures state them, so a release today cannot rewrite the
+ * past that billing values quarter ends from.
+ */
+export function performanceSeriesFor(account: Account, basis: 'today' | 'fixtures' = 'today'): PerformanceSeries[] {
+  const p = riskProfileFor(account, basis === 'fixtures' ? seedPositionsForAccount(account.id, account.totalValue) : undefined)
+  return generatePerformanceSeries(24, {
+    accountId: account.id, modelId: p.modelId, annualReturn: p.ret, annualVol: p.vol, benchReturn: p.benchReturn, benchVol: p.benchVol,
+  })
 }
 
 /**
@@ -370,10 +379,10 @@ const SELECTION_EDGE: Record<string, number> = {
  * returns: `riskProfileFor` now *sources* its returns from the attribution, and the two would
  * otherwise call each other.
  */
-function weightsFor(account: typeof accounts[0]) {
+function weightsFor(account: Account, positions: readonly Position[] = getPositionsForAccount(account.id, account.totalValue)) {
   const model = MODELS.find((m) => m.id === account.modelId) ?? getModelByIndex(0)
   return {
-    weights: assetClassWeights(getPositionsForAccount(account.id, account.totalValue)),
+    weights: assetClassWeights(positions),
     benchWeights: new Map(model.assetClasses.map((a) => [a.assetClass, a.targetWeight])),
     modelId: model.id,
     benchmarkName: model.benchmark,
@@ -390,14 +399,14 @@ function weightsFor(account: typeof accounts[0]) {
  * module stays at full precision and its callers round. σ is rounded to 4dp *before* it reaches
  * `parametricVaR`; feeding the raw value instead shifts VaR by tens of dollars on a large account.
  */
-function riskProfileFor(account: typeof accounts[0]) {
-  const { weights, benchWeights, modelId, benchmarkName } = weightsFor(account)
+export function riskProfileFor(account: Account, positions?: readonly Position[]) {
+  const { weights, benchWeights, modelId, benchmarkName } = weightsFor(account, positions)
   // The account's own one-year return and its benchmark's, taken from the single derivation rather
   // than re-expressed here. `portfolioReturn1Y(weights) + Σ wᵢ·edgeᵢ` is algebraically the same
   // quantity, but it rounds at a different point and so disagreed with the benchmark table by one
   // unit in the fourth decimal on 12 of the 47 accounts — visible as 10.09% on the performance tab
   // against 10.08% on risk analytics for the same account on the same date.
-  const oneYear = periodReturnsFor(account, 1)
+  const oneYear = periodReturnsFor(account, 1, positions)
   return {
     weights,
     benchWeights,
@@ -420,7 +429,7 @@ function riskProfileFor(account: typeof accounts[0]) {
  * Period lengths in years. The sub-annual ones are measured from the frozen clock rather than
  * hard-coded, so QTD and YTD agree in Q1 instead of the quarter reading longer than the year.
  */
-function periodYears(): Record<string, number> {
+export function periodYears(): Record<string, number> {
   const anchor = startOfToday()
   const y = anchor.getUTCFullYear()
   const m = anchor.getUTCMonth()
@@ -479,8 +488,8 @@ type Attribution = {
  * (Carino, Menchero, GRAP) is **not** modelled; the response labels the model single-period
  * arithmetic rather than implying a rigour it does not have.
  */
-function attributionFor(account: typeof accounts[0], years: number): Attribution {
-  const p = weightsFor(account)
+export function attributionFor(account: Account, years: number, positions?: readonly Position[]): Attribution {
+  const p = weightsFor(account, positions)
   const compound = (annual: number) => (1 + annual) ** years - 1
 
   const legs = [...new Set([...p.weights.keys(), ...p.benchWeights.keys()])].map((assetClass) => {
@@ -537,8 +546,8 @@ function attributionFor(account: typeof accounts[0], years: number): Attribution
  * `Rp − Rb` would stop equalling the active return on those same 12 accounts. One derivation, one
  * rounding, and the row adds up as printed.
  */
-function periodReturnsFor(account: typeof accounts[0], years: number) {
-  const a = attributionFor(account, years)
+export function periodReturnsFor(account: Account, years: number, positions?: readonly Position[]) {
+  const a = attributionFor(account, years, positions)
   const benchmarkReturn = roundTo(a.benchmarkReturn, 4)
   // C6 · performance-reporting — active (excess) return, not Jensen's alpha. It is the
   // attribution's own total rounded once: rounding Rp and Rb separately and subtracting differs
@@ -785,15 +794,7 @@ export const pmsHandlers = [
   http.get('/api/pms/accounts/:accountId/performance', ({ params }) => {
     const account = findAccount(params.accountId)
     if (!account) return notFound()
-    const p = riskProfileFor(account)
-    return HttpResponse.json(generatePerformanceSeries(24, {
-      accountId: account.id,
-      modelId: p.modelId,
-      annualReturn: p.ret,
-      annualVol: p.vol,
-      benchReturn: p.benchReturn,
-      benchVol: p.benchVol,
-    }))
+    return HttpResponse.json(performanceSeriesFor(account))
   }),
 
   http.get('/api/pms/accounts/:accountId/benchmark', ({ params }) => {
@@ -1276,90 +1277,5 @@ export const pmsHandlers = [
     const model = MODELS.find((m) => m.id === params.modelId)
     if (!model) return notFound()
     return HttpResponse.json(model)
-  }),
-
-  // ── Book of Business ──
-  http.get('/api/pms/book-of-business', () => {
-    const totalAUM = deriveBookAUM(accounts, FX_RATES_USD_BASE)
-    const clientCount = new Set(accounts.map((a) => a.clientId)).size
-
-    // C29 · fee-billing — the effective fee is asset-weighted (Σ fees ÷ Σ AUM), reported in basis
-    // points. It was previously the constant 0.85 rendered as "0.85 bps" — a 100× unit error — and
-    // disagreed with Billing's 88 bps (an unweighted mean of 13 rates).
-    const fees = householdFees.map((f) => ({
-      aum: deriveHouseholdAUM(f.householdId, accounts, FX_RATES_USD_BASE),
-      annualFee: householdAnnualFee(
-        deriveHouseholdAUM(f.householdId, accounts, FX_RATES_USD_BASE), f.annualRate,
-      ),
-    }))
-    const annualRevenue = fees.reduce((s, f) => s + f.annualFee, 0)
-    const effectiveFeeBps = assetWeightedEffectiveFee(fees)
-
-    const segments = deriveSegmentAUM(households, accounts, FX_RATES_USD_BASE).map((s) => ({
-      segment: s.segment,
-      householdCount: s.householdCount,
-      aum: Math.round(s.aum),
-      pctOfAUM: roundTo(s.pctOfAUM, 4),
-    }))
-
-    // AUM waterfall — trailing 12 months. Deltas are the leaf figures; both anchors are derived
-    // so the bars reconcile exactly to the book total.
-    const marketAppreciation = Math.round(totalAUM * 0.065)
-    const newAssets = Math.round(totalAUM * 0.032)
-    const withdrawals = -Math.round(totalAUM * 0.012)
-    const attrition = -Math.round(totalAUM * 0.005)
-    const startingAUM = Math.round(totalAUM) - marketAppreciation - newAssets - withdrawals - attrition
-    const aumWaterfall: WaterfallBar[] = [
-      { label: 'Starting AUM', value: startingAUM, kind: 'anchor' },
-      { label: 'Market appreciation', value: marketAppreciation, kind: 'delta' },
-      { label: 'New assets', value: newAssets, kind: 'delta' },
-      { label: 'Withdrawals', value: withdrawals, kind: 'delta' },
-      { label: 'Attrition', value: attrition, kind: 'delta' },
-      { label: 'Current AUM', value: Math.round(totalAUM), kind: 'anchor' },
-    ]
-
-    // C29 · advisor-dashboards — organic growth is net of withdrawals and attrition. The 3.2%
-    // previously shown was the gross new-asset line straight off the waterfall.
-    const organicGrowthRate = roundTo(
-      ((newAssets + withdrawals + attrition) / startingAUM) * 100, 1,
-    )
-
-    // C22 · diversification — one HHI scale (0–10,000), named for what it measures (AUM, not
-    // revenue), reported with its effective-N companion. At 13 households the floor is 769.
-    const shares = households.map((hh) => deriveHouseholdAUM(hh.id, accounts, FX_RATES_USD_BASE) / totalAUM)
-    const concentrationHHI = Math.round(herfindahlIndex(shares))
-    const concentrationEffectiveN = roundTo(effectiveN(herfindahlIndex(shares)), 1)
-
-    // D30 · advisor-dashboards — losing 1 of 13 households is 92.3% retention, not 98.5%.
-    const attritionCount = 1
-    // D31 · advisor-dashboards — 120 clients on a $4.3M-average book implies a $520M practice.
-    const targetClients = 75
-    const avgMeetingsPerClient = 2.4
-    const meetingsPerWeek = 12
-
-    return HttpResponse.json({
-      totalAUM: Math.round(totalAUM),
-      householdCount: households.length,
-      clientCount,
-      annualRevenue: Math.round(annualRevenue),
-      effectiveFeeBps: roundTo(effectiveFeeBps, 1),
-      organicGrowthRate,
-      retentionRate: roundTo(((households.length - attritionCount) / households.length) * 100, 1),
-      attritionCount,
-      concentrationHHI,
-      concentrationEffectiveN,
-      segments,
-      aumWaterfall,
-      aumWaterfallDomain: computeWaterfallDomain(aumWaterfall),
-      asOf: MOCK_NOW_ISO,
-      capacity: {
-        currentClients: clientCount,
-        targetClients,
-        utilizationPct: roundTo((clientCount / targetClients) * 100, 1),
-        avgMeetingsPerClient,
-        meetingsPerWeek,
-        meetingCapacityPct: roundTo((clientCount * avgMeetingsPerClient) / (meetingsPerWeek * 50) * 100, 1),
-      },
-    })
   }),
 ]

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { compositeScore, harvestImpactScore, harvestPriority, intcHarvestFacts, nbas } from '@/mocks/data/nbas'
 import { accounts } from '@/mocks/data/accounts'
 import { households } from '@/mocks/data/households'
-import { householdFees } from '@/mocks/data/billing'
+import { annualFeeOn, billingView } from '@/mocks/reference/billing'
 import { getPositionsForAccount } from '@/mocks/data/positions'
 import { lossAllowedNow, washesOnSale } from '@/lib/tax-rules'
 import { estimateTaxOnReturns } from '@/mocks/handlers/tax-return'
@@ -242,17 +242,19 @@ describe('rollover framing: Advisers Act fiduciary duty; DOL PTE 2020-02 for an 
     expect(rollover.description.toLowerCase()).not.toContain('could save')
   })
 
-  it("quotes the household's actual advisory rate", () => {
-    const williams = householdFees.find((f) => f.householdId === 'hh-003')!
-    expect(williams.annualRate).toBe(0.0085)
-    expect(rollover.description).toContain('0.85%')
+  it("quotes the household's marginal cost on the firm's schedule", () => {
+    const williams = billingView('user-001')?.households.find((h) => h.householdId === 'hh-003')
+    if (!williams) throw new Error('Williams is billed')
+    const added = annualFeeOn(williams.value + 1_200_000) - annualFeeOn(williams.value)
+    expect(Math.round(added / 100) * 100).toBe(8_400)
+    expect(rollover.description).toContain('0.70%')
   })
 
   it('shows both sides of the cost comparison and the added annual cost', () => {
     expect(rollover.description).toContain('0.45%')
-    expect(rollover.description).toContain('$10,200')
+    expect(rollover.description).toContain('$8,400')
     expect(rollover.description).toContain('$5,400')
-    expect(rollover.description).toContain('$4,800')
+    expect(rollover.description).toContain('$3,000')
   })
 
   // Review round 1, Important #2 (the twelfth cannot-fail test) · every assertion above pins
@@ -271,9 +273,9 @@ describe('rollover framing: Advisers Act fiduciary duty; DOL PTE 2020-02 for an 
     expect(scheduleIdx, 'should name "our schedule"').toBeGreaterThan(-1)
     expect(planIdx, 'should name "plan cost"').toBeGreaterThan(-1)
 
-    const scheduleWindow = rollover.description.slice(scheduleIdx, scheduleIdx + WINDOW)
-    expect(scheduleWindow).toContain('0.85%')
-    expect(scheduleWindow).toContain('$10,200')
+    const scheduleWindow = rollover.description.slice(scheduleIdx, scheduleIdx + 140)
+    expect(scheduleWindow).toContain('0.70%')
+    expect(scheduleWindow).toContain('$8,400')
 
     const planWindow = rollover.description.slice(planIdx, planIdx + WINDOW)
     expect(planWindow).toContain('0.45%')
