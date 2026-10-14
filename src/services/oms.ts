@@ -77,6 +77,8 @@ export type RebalanceRequest = {
   accountIds: string[]
   driftThreshold: number
   taxAware: boolean
+  /** Preview against this model rather than each account's own; a custom mandate has no own model and needs one. */
+  modelId?: string
 }
 
 export type RebalancePreview = {
@@ -224,7 +226,7 @@ export function getOrders(params?: Record<string, string>) {
  * Preview a rebalance without executing it. `submitRebalance` is the same request — one
  * endpoint, one function underneath both names.
  */
-export function previewRebalance(request: { accountIds: string[]; taxAware: boolean; driftThreshold?: number }) {
+export function previewRebalance(request: { accountIds: string[]; taxAware: boolean; driftThreshold?: number; modelId?: string }) {
   return post<RebalancePreview[]>('/oms/rebalance', request)
 }
 

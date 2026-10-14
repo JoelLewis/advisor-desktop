@@ -33,9 +33,9 @@ function BookRisk({ view }: { view: BookRiskView }) {
           mutedRow={(r) => r.posture.status === 'within'}
           columns={[
             {
-              id: 'account', header: 'Account', wrap: true, cell: (r) => (
+              id: 'account', header: 'Account · client · model', wrap: true, cell: (r) => (
                 <StackedCell primary={<Link to={accountRiskHref(r.accountId, from)} className="underline decoration-rule-2 underline-offset-4 hover:decoration-ink">{r.accountName}</Link>}
-                  secondary={`${r.posture.tolerance.clientName} · ${r.modelName}`} action={<TakeToTeamThread inline view="risk" rowId={r.accountId} rowLabel={r.accountName} />} />
+                  secondary={`${r.posture.tolerance.clientName} · ${r.mandateName}`} action={<TakeToTeamThread inline view="risk" rowId={r.accountId} rowLabel={r.accountName} />} />
               ),
             },
             { id: 'status', header: 'Against tolerance', cell: (r) => <Tag tone={r.posture.status === 'above' ? 'solid' : 'outline'}>{TOLERANCE_TAG[r.posture.status]}</Tag>, sortValue: (r) => r.posture.gap },

@@ -2,6 +2,7 @@ import type { DraftPreview, LegEdit, ProposalConstraint } from '@/types/workspac
 import { accounts } from '@/mocks/data/accounts'
 import { clients } from '@/mocks/data/clients'
 import { computeDriftForAccount, modelDisplayName } from '@/mocks/handlers/pms'
+import { requireModelManaged } from '@/lib/mandate'
 import { buildVersion, normaliseConstraints } from '@/mocks/workspace/proposal-engine'
 import { sameWashSaleTaxpayer } from '@/mocks/handlers/tax-return'
 import { ASSET_CLASS_PROSE_LABELS } from '@/lib/labels'
@@ -103,7 +104,7 @@ export function harvestSubstitutionSentence(built: DraftPreview): string {
 export function draftSummary(accountId: string, built: DraftPreview): string {
   const account = accounts.find((a) => a.id === accountId)
   if (!account) throw new Error(`Proposal Agent: unknown account ${accountId}`)
-  const model = modelDisplayName(computeDriftForAccount(account).modelId)
+  const model = modelDisplayName(computeDriftForAccount(requireModelManaged(account)).modelId)
   const toward = hasDigit(model) ? 'its model' : `the ${model} model`
   switch (account.taxTreatment) {
     case 'taxable':

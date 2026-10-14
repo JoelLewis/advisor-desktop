@@ -3,6 +3,7 @@ import { previewRebalance } from '@/services/oms'
 import { getPositions, getDrift } from '@/services/pms'
 import { modelImplementationSecurity } from '@/mocks/handlers/pms'
 import { getAccounts } from '@/services/custodian'
+import { isModelManaged } from '@/lib/mandate'
 
 /**
  * Merge integration · Task 21 x Task 22 — these two tasks were built on parallel branches and each
@@ -28,7 +29,7 @@ describe('rebalance consumes signed drift correctly (Task 21 x Task 22 merge bou
 
   it('across the whole book, buys are not a rounding error against sells', async () => {
     // Under the unsigned-drift bug this ratio was 0.00 — every buy in the book disappeared.
-    const accounts = await getAccounts()
+    const accounts = (await getAccounts()).filter(isModelManaged)
     let totalBuy = 0
     let totalSell = 0
     for (const account of accounts) {
@@ -43,7 +44,7 @@ describe('rebalance consumes signed drift correctly (Task 21 x Task 22 merge bou
   })
 
   it('every proposed trade sizes to the magnitude of its own drift, in the direction of its sign', async () => {
-    const accounts = await getAccounts()
+    const accounts = (await getAccounts()).filter(isModelManaged)
     const mismatches: string[] = []
     let tradesChecked = 0
     for (const account of accounts) {

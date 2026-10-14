@@ -36,6 +36,11 @@ function clientName(clientId: string): string {
 
 /** An account against its model: drift from the drift engine, and for an out-of-band class, the structural reason it cannot be sold back in. */
 function accountRow(account: Account): HouseholdAccount {
+  const base = {
+    accountId: account.id, name: account.name, ownerId: account.clientId, ownerName: clientName(account.clientId), typeLabel: ACCOUNT_TYPE_LABELS[account.type],
+    value: getPositionsForAccount(account.id, account.totalValue).reduce((s, p) => s + p.marketValue, 0),
+  }
+  if (account.mandate === 'custom') return { ...base, mandate: 'custom', mandateSummary: account.mandateSummary }
   const drift = computeDriftForAccount(account)
   const residuals = new Map(projectDrift(account.id, [], true, drift.driftTolerance).assetClassDrifts.map((d) => [d.assetClass, d.residualReason]))
   const outside: OutOfBand[] = drift.assetClassDrifts.filter((d) => Math.abs(d.drift) > drift.driftTolerance).map((d) => {
@@ -43,8 +48,7 @@ function accountRow(account: Account): HouseholdAccount {
     return { assetClass: d.assetClass, drift: d.drift, ...(isStructural(reason) ? { residual: reason } : {}) }
   })
   return {
-    accountId: account.id, name: account.name, ownerId: account.clientId, ownerName: clientName(account.clientId), typeLabel: ACCOUNT_TYPE_LABELS[account.type],
-    value: getPositionsForAccount(account.id, account.totalValue).reduce((s, p) => s + p.marketValue, 0),
+    ...base, mandate: 'model',
     modelName: modelDisplayName(drift.modelId), driftTolerance: drift.driftTolerance, maxAbsDrift: drift.maxAbsDrift, withinBand: !drift.needsRebalance, outside,
   }
 }

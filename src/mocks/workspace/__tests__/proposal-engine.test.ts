@@ -6,6 +6,7 @@ import { MOCK_TODAY_ISO } from '@/lib/clock'
 import type { DraftPreview, LegEdit, ProposalConstraint } from '@/types/workspace-proposal'
 import { applyEdits, buildVersion, editSummary, normaliseConstraints, parseConstraints, parseEdits } from '../proposal-engine'
 import { buildRebalancePreviews, generateRebalanceProposal } from '@/mocks/handlers/oms'
+import { isModelManaged } from '@/lib/mandate'
 
 
 const AGENT: ProposalConstraint[] = [{ kind: 'avoid_self_wash' }]
@@ -197,13 +198,13 @@ describe('editSummary', () => {
 })
 
 describe('every account', () => {
-  it.each(accounts.map((a) => a.id))('%s: the agent version builds, and no two legs share a symbol', (id) => {
+  it.each(accounts.filter(isModelManaged).map((a) => a.id))('%s: the agent version builds, and no two legs share a symbol', (id) => {
     const r = buildVersion(id, AGENT, [])
     if (!r.ok) throw new Error(r.message)
     const symbols = r.built.preview.trades.map((t) => t.symbol)
     expect(new Set(symbols).size).toBe(symbols.length)
   })
-  it.each(accounts.map((a) => a.id))('%s: each sell leg\'s lot takes sum to its quantity and, by character, to its realised results', (id) => {
+  it.each(accounts.filter(isModelManaged).map((a) => a.id))('%s: each sell leg\'s lot takes sum to its quantity and, by character, to its realised results', (id) => {
     const r = buildVersion(id, AGENT, [])
     if (!r.ok) throw new Error(r.message)
     expectTakesTie(r.built)

@@ -5,6 +5,7 @@ import { getPositionsForAccount } from '@/mocks/data/positions'
 import { computeDriftForAccount } from '@/mocks/handlers/pms'
 import { MOCK_NOW_ISO } from '@/lib/clock'
 import { approvedV1, release } from '@/mocks/workspace/__tests__/story-fixture'
+import { isModelManaged } from '@/lib/mandate'
 
 const PLAN_NAMES = /401\(k\)|403\(b\)/g
 const johnsonAccounts = accounts.filter((a) => a.householdId === 'hh-001')
@@ -40,7 +41,7 @@ describe('Meeting Prep', () => {
   })
 
   it('reads drift for every Johnson account from the drift engine', () => {
-    const outside = johnsonAccounts.filter((a) => computeDriftForAccount(a).needsRebalance)
+    const outside = johnsonAccounts.filter(isModelManaged).filter((a) => computeDriftForAccount(a).needsRebalance)
     const drift = findings.find((f) => f.citations.some((c) => c.source.startsWith('Drift calculation')))!
     expect(drift.citations.map((c) => c.source)).toEqual(johnsonAccounts.map((a) => `Drift calculation · ${a.name}`))
     expect(drift.attention).toBe(outside.length > 0 ? 'attention' : 'info')

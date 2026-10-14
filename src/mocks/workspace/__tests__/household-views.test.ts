@@ -6,6 +6,7 @@ import { MOCK_NOW_ISO } from '@/lib/clock'
 import { clientView, householdView } from '../household-views'
 import { holdMeeting } from '../meetings'
 import { approvedV1, ok, release } from './story-fixture'
+import { requireModelManaged } from '@/lib/mandate'
 
 const ADRIAN = 'user-001'
 const johnson = () => {
@@ -31,9 +32,10 @@ describe('the household view', () => {
     const rows = johnson().accounts
     expect(rows.map((r) => r.accountId)).toEqual(['acc-001', 'acc-002', 'acc-003', 'acc-004', 'acc-005'])
     for (const row of rows) {
-      const account = accounts.find((a) => a.id === row.accountId)!
+      const account = requireModelManaged(accounts.find((a) => a.id === row.accountId)!)
       const drift = computeDriftForAccount(account)
       expect(row.value, row.accountId).toBe(valueOf(row.accountId))
+      if (row.mandate !== 'model') throw new Error(`${row.accountId} should be model-managed`)
       expect(row.modelName).toBe(modelDisplayName(drift.modelId))
       expect(row.withinBand).toBe(!drift.needsRebalance)
       expect(row.maxAbsDrift).toBe(drift.maxAbsDrift)

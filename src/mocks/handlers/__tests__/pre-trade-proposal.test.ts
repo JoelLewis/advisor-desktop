@@ -227,7 +227,7 @@ describe('Rebalance compliance step reads the proposal-level result', () => {
   })
 
   it('agrees with preTradeCheckProposal on every account\'s rebalance — one engine, two shapes', async () => {
-    const ids = ['acc-001', 'acc-002', 'acc-006', 'acc-041', 'acc-044']
+    const ids = ['acc-001', 'acc-002', 'acc-006', 'acc-043', 'acc-044']
     for (const accountId of ids) {
       const [preview] = await previewRebalance({ accountIds: [accountId], taxAware: true })
       const trades = preview!.trades.map((t) => ({ symbol: t.symbol, side: t.side, quantity: t.quantity, estimatedValue: t.estimatedValue }))

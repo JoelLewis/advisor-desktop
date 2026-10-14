@@ -5,7 +5,7 @@ import { accounts } from '@/mocks/data/accounts'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
 import { personById } from '@/mocks/data/people'
 import { MODEL_RISK_PROFILES, MODEL_VERSIONS } from '@/mocks/data/model-governance'
-import { MODEL_DEFINITIONS } from '@/mocks/handlers/pms'
+import { MODEL_DEFINITIONS } from '@/mocks/data/model-definitions'
 import { deriveBookAUM } from '@/lib/aum'
 import { RISK_PROFILE_TABLE, bandFor } from '@/lib/risk-profile'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
@@ -13,6 +13,7 @@ import { isTradingDay } from '@/lib/trading-calendar'
 import { isExternalRole } from '@/lib/external-party'
 import { equityShareOf, modelBenchmark, modelDetail, modelQuote, modelVolatility, modelsView } from '../models'
 import { riskScoreOf } from '../risk-score'
+import { isModelManaged } from '@/lib/mandate'
 
 const targetsOf = (modelId: string) => new Map((MODEL_DEFINITIONS.find((m) => m.id === modelId)?.assetClasses ?? []).map((a) => [a.assetClass, a.targetWeight]))
 const versionsOf = (modelId: string) => MODEL_VERSIONS.filter((v) => v.modelId === modelId).sort((a, b) => a.version - b.version)
@@ -150,9 +151,9 @@ describe('risk profiles are the bands the models score in', () => {
 describe('models in the book', () => {
   it('assigned accounts and value reconcile to the accounts that carry each model, in USD', () => {
     const models = modelsView('user-001')?.models ?? []
-    expect(models.reduce((s, m) => s + m.assignedAccounts, 0)).toBe(accounts.filter((a) => a.modelId).length)
+    expect(models.reduce((s, m) => s + m.assignedAccounts, 0)).toBe(accounts.filter(isModelManaged).length)
     for (const m of models) {
-      const own = accounts.filter((a) => a.modelId === m.id)
+      const own = accounts.filter(isModelManaged).filter((a) => a.modelId === m.id)
       expect(m.assignedAccounts, m.id).toBe(own.length)
       expect(m.totalValue, m.id).toBeCloseTo(deriveBookAUM(own, FX_RATES_USD_BASE), 4)
     }
@@ -163,7 +164,7 @@ describe('models in the book', () => {
     expect(detail?.targets.find((t) => t.assetClass === 'alternatives')).toMatchObject({ targetWeight: 0.15, implementationSymbol: 'QAI', index: 'HFRX Global Hedge Fund' })
     expect(detail?.versions.map((v) => [v.version, v.status, v.proposedByName])).toEqual([[1, 'approved', 'Mike Chen'], [2, 'approved', 'Mike Chen'], [3, 'pending_approval', 'Mike Chen']])
     expect(detail?.pendingVersion).toEqual({ version: 3, effectiveDate: '2026-04-01' })
-    expect(detail?.accounts.map((a) => a.accountId)).toEqual(accounts.filter((a) => a.modelId === 'mod-005').map((a) => a.id))
+    expect(detail?.accounts.map((a) => a.accountId)).toEqual(accounts.filter(isModelManaged).filter((a) => a.modelId === 'mod-005').map((a) => a.id))
     expect(modelDetail('user-001', 'mod-999')).toBeUndefined()
   })
 

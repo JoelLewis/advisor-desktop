@@ -11,6 +11,7 @@ import { computeDriftForAccount } from '@/mocks/handlers/pms'
 import { generateTaxLots } from '@/mocks/handlers/custodian'
 import { assetClassLabel } from '@/workspace/asset-class-label'
 import { AccountView } from '@/workspace/full-views/AccountView'
+import { requireModelManaged } from '@/lib/mandate'
 
 const routes = [{ path: '/accounts/:accountId', element: <AccountView /> }, { path: '*', element: <p>elsewhere</p> }]
 const account = accounts.find((a) => a.id === 'acc-002')
@@ -19,7 +20,7 @@ if (!account) throw new Error('acc-002 missing from the engine data')
 it('shows the account name, a gauge per asset class, every position and every tax lot', async () => {
   renderRoutes(routes, '/accounts/acc-002')
   expect(await screen.findByRole('heading', { level: 1, name: account.name })).toBeInTheDocument()
-  const drift = computeDriftForAccount(account)
+  const drift = computeDriftForAccount(requireModelManaged(account))
   const positions = getPositionsForAccount(account.id, account.totalValue)
   const lots = generateTaxLots(account.id, account.totalValue)
   const gauges = within(screen.getByRole('heading', { name: 'Drift against model' }).closest('section') as HTMLElement).getAllByRole('img')

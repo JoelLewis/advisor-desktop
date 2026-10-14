@@ -11,6 +11,7 @@ import { computeDriftForAccount } from '@/mocks/handlers/pms'
 import { evaluateProposal } from '@/mocks/handlers/compliance'
 import { runKeyOf } from '@/mocks/workspace/run-key'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
+import { requireModelManaged } from '@/lib/mandate'
 
 const acc002 = accounts.find((a) => a.id === 'acc-002')!
 const SALE: RealisedSale = {
@@ -65,7 +66,7 @@ describe('every engine read sees the moved book', () => {
   })
 
   it('drift is measured on the new holdings', () => {
-    const usEquity = () => computeDriftForAccount(acc002).assetClassDrifts.find((d) => d.assetClass === 'us_equity')!.actual
+    const usEquity = () => computeDriftForAccount(requireModelManaged(acc002)).assetClassDrifts.find((d) => d.assetClass === 'us_equity')!.actual
     const before = usEquity()
     sellIntcByHand()
     expect(before - usEquity()).toBeCloseTo(199_150 / acc002.totalValue, 4)

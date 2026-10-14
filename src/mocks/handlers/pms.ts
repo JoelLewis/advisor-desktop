@@ -1,12 +1,13 @@
 import { http, HttpResponse } from 'msw'
 import type { MetricsSummary, AllocationSlice } from '@/services/pms'
-import type { AssetClass, DriftStatus, BenchmarkKind, Position } from '@/types/portfolio'
+import type { AssetClass, DriftStatus, Position } from '@/types/portfolio'
 import type { RiskMetrics, FactorExposure, StressScenario } from '@/types/risk'
 import type {
   BenchmarkComparison, PerformanceSeries, AttributionResult, AttributionResponse,
 } from '@/types/performance'
 import type { CurrencyCode } from '@/types/currency'
-import type { Account } from '@/types/account'
+import type { Account, ModelManagedAccount } from '@/types/account'
+import { isModelManaged, modelIdFor } from '@/lib/mandate'
 import { convertToBase } from '@/lib/currency'
 import { accountValueUSD, deriveBookAUM, herfindahlIndex, effectiveN } from '@/lib/aum'
 import { securityKind, concentrationLimitFor } from '@/lib/security-master'
@@ -25,6 +26,7 @@ import { complianceAlerts } from './compliance'
 import { calendarEvents } from '../data/calendar'
 import { notFound, roundTo } from './utils'
 import { factorRows } from '../reference/factors'
+import { MODEL_BANDS, MODEL_DEFINITIONS, type ModelDefinition } from '../data/model-definitions'
 
 /** Convert an account's value from its base currency to USD using static FX rates */
 function toUSD(value: number, baseCurrency?: CurrencyCode): number {
@@ -84,7 +86,8 @@ function seededNormal(rand: () => number): number {
 
 type SeriesParams = {
   accountId: string
-  modelId: string
+  /** The model's id, or a custom mandate's account id: every account on one benchmark sees one line. */
+  benchmarkId: string
   annualReturn: number
   annualVol: number
   benchReturn: number
@@ -106,7 +109,7 @@ type SeriesParams = {
  */
 function generatePerformanceSeries(months: number, p: SeriesParams): PerformanceSeries[] {
   const rand = createSeededRandom(hashSeed(p.accountId))
-  const benchRand = createSeededRandom(hashSeed(p.modelId))
+  const benchRand = createSeededRandom(hashSeed(p.benchmarkId))
   const series: PerformanceSeries[] = []
   const muM = p.annualReturn / 12
   const sigmaM = p.annualVol / Math.sqrt(12)
@@ -137,96 +140,10 @@ function generatePerformanceSeries(months: number, p: SeriesParams): Performance
 export function performanceSeriesFor(account: Account, basis: 'today' | 'fixtures' = 'today'): PerformanceSeries[] {
   const p = riskProfileFor(account, basis === 'fixtures' ? seedPositionsForAccount(account.id, account.totalValue) : undefined)
   return generatePerformanceSeries(24, {
-    accountId: account.id, modelId: p.modelId, annualReturn: p.ret, annualVol: p.vol, benchReturn: p.benchReturn, benchVol: p.benchVol,
+    accountId: account.id, benchmarkId: p.benchmarkId, annualReturn: p.ret, annualVol: p.vol, benchReturn: p.benchReturn, benchVol: p.benchVol,
   })
 }
 
-/**
- * §9.7 · rebalancing — `implementationSymbol` is the security a model actually buys to fill this
- * sleeve. Without it the rebalance engine could only ever trade what an account already held, so
- * an underweight class the account holds *nothing* in was unreachable: acc-041 sat at 94.4%
- * international equity against a 15% target and proposed no trades at all, because every class it
- * needed to buy (us_equity, emerging_markets, fixed_income, alternatives, commodities) was one it
- * held zero of.
- *
- * `cash` deliberately carries none — cash is the residual an account settles into, not something
- * the engine buys, and `oms.ts` filters the `CASH` pseudo-position out of every candidate list.
- * Every other sleeve must name one; `model-implementation-invariants.test.ts` pins that, and pins
- * that each named symbol resolves to a real, positive, USD-denominated price in `positions.ts`
- * rather than a plausible-looking ticker with no quote behind it.
- */
-type AssetClassAllocation = { assetClass: string; targetWeight: number; implementationSymbol?: string }
-
-type ModelDefinition = {
-  id: string
-  name: string
-  benchmark: string
-  benchmarkKind: BenchmarkKind
-  description: string
-  assetClasses: AssetClassAllocation[]
-}
-
-/**
- * §9.4 · `benchmark` is not a real external index return series for any model — `weightsFor` below
- * always derives the "benchmark" return from the model's own `assetClasses` target weights
- * (`benchWeights`), never from a fetched index. `benchmark` is therefore the model's own policy
- * blend, named as such (`benchmarkKind: 'model_policy'`), not a bare index name implying an
- * external return series. mod-001, mod-002 and mod-007 previously named a single equity index (or
- * an equity/bond pair) for blends that also carry international equity, emerging markets,
- * alternatives, real estate, commodities and cash — publishing e.g. an "S&P 500" return of ~11.11%
- * against a 14.5% US-equity-only proxy return. The fix is naming, not the arithmetic (Task 12
- * verified the Brinson-Fachler math reconciles): describe the blend instead of borrowing an index's
- * identity for it.
- *
- * Phase 7a · R8 — each label is now the model's policy benchmark: every sleeve at its target weight, measured by the index named for it in src/mocks/reference/models.ts.
- */
-const MODELS: ModelDefinition[] = [
-  { id: 'mod-001', name: 'Balanced Growth', benchmark: 'Balanced Growth policy benchmark', benchmarkKind: 'model_policy', description: 'Core 60/40 model with growth tilt', assetClasses: [
-    { assetClass: 'us_equity', targetWeight: 0.40, implementationSymbol: 'VTI' }, { assetClass: 'intl_equity', targetWeight: 0.12, implementationSymbol: 'EFA' },
-    { assetClass: 'emerging_markets', targetWeight: 0.03, implementationSymbol: 'VWO' }, { assetClass: 'fixed_income', targetWeight: 0.30, implementationSymbol: 'AGG' },
-    { assetClass: 'alternatives', targetWeight: 0.05, implementationSymbol: 'QAI' }, { assetClass: 'real_estate', targetWeight: 0.03, implementationSymbol: 'VNQ' },
-    { assetClass: 'commodities', targetWeight: 0.02, implementationSymbol: 'GLD' }, { assetClass: 'cash', targetWeight: 0.05 },
-  ]},
-  { id: 'mod-002', name: 'Growth', benchmark: 'Growth policy benchmark', benchmarkKind: 'model_policy', description: 'Equity-focused growth model', assetClasses: [
-    { assetClass: 'us_equity', targetWeight: 0.55, implementationSymbol: 'VTI' }, { assetClass: 'intl_equity', targetWeight: 0.15, implementationSymbol: 'EFA' },
-    { assetClass: 'emerging_markets', targetWeight: 0.05, implementationSymbol: 'VWO' }, { assetClass: 'fixed_income', targetWeight: 0.15, implementationSymbol: 'AGG' },
-    { assetClass: 'alternatives', targetWeight: 0.05, implementationSymbol: 'QAI' }, { assetClass: 'commodities', targetWeight: 0.02, implementationSymbol: 'GLD' },
-    { assetClass: 'cash', targetWeight: 0.03 },
-  ]},
-  { id: 'mod-003', name: 'Conservative Income', benchmark: 'Conservative Income policy benchmark', benchmarkKind: 'model_policy', description: 'Income-focused with capital preservation', assetClasses: [
-    { assetClass: 'us_equity', targetWeight: 0.20, implementationSymbol: 'VTI' }, { assetClass: 'intl_equity', targetWeight: 0.05, implementationSymbol: 'VXUS' },
-    { assetClass: 'fixed_income', targetWeight: 0.55, implementationSymbol: 'AGG' }, { assetClass: 'alternatives', targetWeight: 0.05, implementationSymbol: 'QAI' },
-    { assetClass: 'real_estate', targetWeight: 0.05, implementationSymbol: 'VNQ' }, { assetClass: 'cash', targetWeight: 0.10 },
-  ]},
-  { id: 'mod-004', name: 'Aggressive Growth', benchmark: 'Aggressive Growth policy benchmark', benchmarkKind: 'model_policy', description: 'High-growth equity allocation', assetClasses: [
-    { assetClass: 'us_equity', targetWeight: 0.50, implementationSymbol: 'VTI' }, { assetClass: 'intl_equity', targetWeight: 0.20, implementationSymbol: 'EFA' },
-    { assetClass: 'emerging_markets', targetWeight: 0.10, implementationSymbol: 'VWO' }, { assetClass: 'fixed_income', targetWeight: 0.10, implementationSymbol: 'AGG' },
-    { assetClass: 'alternatives', targetWeight: 0.05, implementationSymbol: 'QAI' }, { assetClass: 'cash', targetWeight: 0.05 },
-  ]},
-  { id: 'mod-005', name: 'Ultra-HNW Multi-Strategy', benchmark: 'Ultra-HNW Multi-Strategy policy benchmark', benchmarkKind: 'model_policy', description: 'Multi-strategy for large accounts', assetClasses: [
-    { assetClass: 'us_equity', targetWeight: 0.35, implementationSymbol: 'VTI' }, { assetClass: 'intl_equity', targetWeight: 0.15, implementationSymbol: 'EFA' },
-    { assetClass: 'emerging_markets', targetWeight: 0.05, implementationSymbol: 'VWO' }, { assetClass: 'fixed_income', targetWeight: 0.20, implementationSymbol: 'AGG' },
-    { assetClass: 'alternatives', targetWeight: 0.15, implementationSymbol: 'QAI' }, { assetClass: 'real_estate', targetWeight: 0.05, implementationSymbol: 'VNQ' },
-    { assetClass: 'cash', targetWeight: 0.05 },
-  ]},
-  { id: 'mod-006', name: 'Education 529', benchmark: 'Education 529 glide-path benchmark', benchmarkKind: 'model_policy', description: 'Age-based education savings glide path', assetClasses: [
-    { assetClass: 'us_equity', targetWeight: 0.45, implementationSymbol: 'VTI' }, { assetClass: 'intl_equity', targetWeight: 0.10, implementationSymbol: 'VXUS' },
-    { assetClass: 'fixed_income', targetWeight: 0.35, implementationSymbol: 'AGG' }, { assetClass: 'cash', targetWeight: 0.10 },
-  ]},
-  { id: 'mod-007', name: 'Moderate Balanced', benchmark: 'Moderate Balanced policy benchmark', benchmarkKind: 'model_policy', description: 'Balanced 50/50 equity-bond split', assetClasses: [
-    { assetClass: 'us_equity', targetWeight: 0.35, implementationSymbol: 'VTI' }, { assetClass: 'intl_equity', targetWeight: 0.10, implementationSymbol: 'EFA' },
-    { assetClass: 'emerging_markets', targetWeight: 0.05, implementationSymbol: 'VWO' }, { assetClass: 'fixed_income', targetWeight: 0.35, implementationSymbol: 'AGG' },
-    { assetClass: 'alternatives', targetWeight: 0.05, implementationSymbol: 'QAI' }, { assetClass: 'real_estate', targetWeight: 0.03, implementationSymbol: 'VNQ' },
-    { assetClass: 'commodities', targetWeight: 0.02, implementationSymbol: 'GLD' }, { assetClass: 'cash', targetWeight: 0.05 },
-  ]},
-]
-
-/**
- * Exported for `model-implementation-invariants.test.ts`, which pins the two properties the
- * rebalance engine depends on and neither the type system nor a grep can enforce: every non-cash
- * sleeve names a symbol, and every symbol named resolves to a real USD price below.
- */
-export const MODEL_DEFINITIONS: readonly ModelDefinition[] = MODELS
 
 /**
  * The sleeve vehicles repeat across models because the firm runs one lineup — the same broad-market
@@ -238,21 +155,20 @@ export const MODEL_DEFINITIONS: readonly ModelDefinition[] = MODELS
  * inside the international allocation, which is what a 5%/10% international target in an
  * income or education model is meant to hold.
  */
-function resolveModel(modelId: string): ModelDefinition {
-  return MODELS.find((m) => m.id === modelId) ?? getModelByIndex(0)
+function requireModel(modelId: string): ModelDefinition {
+  const model = findModel(modelId)
+  if (!model) throw new Error(`no model ${modelId}`)
+  return model
 }
 
 /**
- * The same lookup **without** the fallback, for the one caller where guessing is not a display
- * degradation but a trade instruction. `resolveModel`'s `?? getModelByIndex(0)` is pre-existing and
- * defensible for `getModelTargets` — an unrecognised model there renders a
- * plausible target set rather than an empty page. Extending it to **security selection** is not the
- * same thing: an account on an unknown model would be told to buy mod-001's lineup, a Growth
- * equity lineup, with no signal that the model behind it was never found. It returns `undefined`
- * instead, and the engine proposes nothing for that sleeve.
+ * The lookup without a throw, for security selection: an unknown model there proposes nothing for the
+ * sleeve. Every other reader goes through `requireModel`, which throws — Phase 7a removed the old
+ * `?? getModelByIndex(0)` fallback, which silently measured an account on an unknown model (or on
+ * none) against Balanced Growth.
  */
 function findModel(modelId: string): ModelDefinition | undefined {
-  return MODELS.find((m) => m.id === modelId)
+  return MODEL_DEFINITIONS.find((m) => m.id === modelId)
 }
 
 /**
@@ -298,27 +214,18 @@ export function usdQuoteFor(symbol: string): { name: string; price: number; asse
 }
 
 /**
- * §0.4 · a model's display name ("mod-002" → "Growth"), from `MODELS` — the one place a model is
+ * §0.4 · a model's display name ("mod-002" → "Growth"), from `MODEL_DEFINITIONS` — the one place a model is
  * named. Throws on an unknown id: a name that silently fell back to another model's would label
  * one policy with another's name.
  */
 export function modelDisplayName(modelId: string): string {
-  const model = findModel(modelId)
-  if (!model) throw new Error(`no model ${modelId}`)
-  return model.name
-}
-
-function getModelByIndex(index: number): ModelDefinition {
-  const model = MODELS[index]
-  if (!model) throw new Error(`Model at index ${index} not found`)
-  return model
+  return requireModel(modelId).name
 }
 
 function getModelTargets(modelId: string): Record<string, number> {
-  // Same `MODELS` lookup the implementation-security resolver uses, so a sleeve's target weight
-  // and the security that fills it can never be read off two different models. The two differ
-  // only in what they do when the model is not found — see `findModel`.
-  const model = resolveModel(modelId)
+  // Same `MODEL_DEFINITIONS` lookup the implementation-security resolver uses, so a sleeve's target weight
+  // and the security that fills it can never be read off two different models.
+  const model = requireModel(modelId)
   const targets: Record<string, number> = {}
   for (const ac of model.assetClasses) {
     targets[ac.assetClass] = ac.targetWeight
@@ -358,13 +265,20 @@ const SELECTION_EDGE: Record<string, number> = {
  * otherwise call each other.
  */
 function weightsFor(account: Account, positions: readonly Position[] = getPositionsForAccount(account.id, account.totalValue)) {
-  const model = MODELS.find((m) => m.id === account.modelId) ?? getModelByIndex(0)
-  return {
-    weights: assetClassWeights(positions),
-    benchWeights: new Map(model.assetClasses.map((a) => [a.assetClass, a.targetWeight])),
-    modelId: model.id,
-    benchmarkName: model.benchmark,
+  return { weights: assetClassWeights(positions), ...benchmarkOf(account) }
+}
+
+/**
+ * What an account is measured against: its model's targets, or for a custom mandate the benchmark the
+ * mandate names. `benchmarkId` seeds the benchmark line (one index, one series); `modelId` is null for
+ * a custom mandate, which follows no model.
+ */
+export function benchmarkOf(account: Account): { modelId: string | null; benchmarkId: string; benchmarkName: string; benchWeights: Map<string, number> } {
+  if (account.mandate === 'custom') {
+    return { modelId: null, benchmarkId: account.id, benchmarkName: account.benchmark.name, benchWeights: new Map(account.benchmark.weights.map((w) => [w.assetClass, w.weight])) }
   }
+  const model = requireModel(account.modelId)
+  return { modelId: model.id, benchmarkId: model.id, benchmarkName: model.benchmark, benchWeights: new Map(model.assetClasses.map((a) => [a.assetClass, a.targetWeight])) }
 }
 
 /**
@@ -378,7 +292,7 @@ function weightsFor(account: Account, positions: readonly Position[] = getPositi
  * `parametricVaR`; feeding the raw value instead shifts VaR by tens of dollars on a large account.
  */
 export function riskProfileFor(account: Account, positions?: readonly Position[]) {
-  const { weights, benchWeights, modelId, benchmarkName } = weightsFor(account, positions)
+  const { weights, benchWeights, modelId, benchmarkId, benchmarkName } = weightsFor(account, positions)
   // The account's own one-year return and its benchmark's, taken from the single derivation rather
   // than re-expressed here. `portfolioReturn1Y(weights) + Σ wᵢ·edgeᵢ` is algebraically the same
   // quantity, but it rounds at a different point and so disagreed with the benchmark table by one
@@ -389,6 +303,7 @@ export function riskProfileFor(account: Account, positions?: readonly Position[]
     weights,
     benchWeights,
     modelId,
+    benchmarkId,
     benchmarkName,
     value: accountUSD(account),
     beta: roundTo(portfolioBeta(weights), 2),
@@ -540,20 +455,6 @@ export function periodReturnsFor(account: Account, years: number, positions?: re
   }
 }
 
-/** C24 · rebalancing — these were defined per model and displayed on Model Governance, but the
- *  rebalance engine never read them; a 7%-band model was treated identically to a 3%-band one.
- *  Shared by `computeDriftForAccount` and the models view, so the band shown to a model
- *  administrator is the same band the rebalance engine evaluates against. */
-type RebalanceFrequency = 'monthly' | 'quarterly' | 'semi_annual' | 'annual' | 'threshold_only'
-export const MODEL_BANDS: Readonly<Record<string, { driftTolerance: number; rebalanceFrequency: RebalanceFrequency }>> = {
-  'mod-001': { driftTolerance: 0.05, rebalanceFrequency: 'quarterly' },
-  'mod-002': { driftTolerance: 0.05, rebalanceFrequency: 'quarterly' },
-  'mod-003': { driftTolerance: 0.03, rebalanceFrequency: 'quarterly' },
-  'mod-004': { driftTolerance: 0.07, rebalanceFrequency: 'threshold_only' },
-  'mod-005': { driftTolerance: 0.05, rebalanceFrequency: 'monthly' },
-  'mod-006': { driftTolerance: 0.05, rebalanceFrequency: 'semi_annual' },
-  'mod-007': { driftTolerance: 0.05, rebalanceFrequency: 'quarterly' },
-}
 
 // Exported so `oms.ts`'s rebalance trade generator reads the same drift the drift surface does,
 // rather than a second computation.
@@ -566,8 +467,10 @@ export const MODEL_BANDS: Readonly<Record<string, { driftTolerance: number; reba
 // the drift surface publishes, so a migration preview and the drift page cannot disagree about
 // what drift means. An unknown model id throws rather than falling back to mod-001 — a silently
 // substituted model here would be a trade instruction against a policy nobody chose.
-export function computeDriftForAccount(account: typeof accounts[0], modelIdOverride?: string): DriftStatus {
-  const drift = computeDriftForHoldings(account, getPositionsForAccount(account.id, account.totalValue), modelIdOverride)
+export function computeDriftForAccount(account: ModelManagedAccount, modelIdOverride?: string): DriftStatus
+export function computeDriftForAccount(account: Account, modelIdOverride: string): DriftStatus
+export function computeDriftForAccount(account: Account, modelIdOverride?: string): DriftStatus {
+  const drift = computeDriftForHoldings(account, getPositionsForAccount(account.id, account.totalValue), modelIdFor(account, modelIdOverride))
   return { ...drift, lastCalculated: holdingsAsOf(account.id) }
 }
 
@@ -584,8 +487,10 @@ export type DriftHolding = Pick<Position, 'assetClass' | 'weight'>
  * the account's positions today; the rebalance preview runs it on the same positions with the
  * proposed trades applied, so current and projected drift are one function, not two.
  */
-export function computeDriftForHoldings(account: typeof accounts[0], positions: readonly DriftHolding[], modelIdOverride?: string): DriftStatus {
-  const modelId = modelIdOverride ?? account.modelId ?? 'mod-001'
+export function computeDriftForHoldings(account: ModelManagedAccount, positions: readonly DriftHolding[], modelIdOverride?: string): DriftStatus
+export function computeDriftForHoldings(account: Account, positions: readonly DriftHolding[], modelIdOverride: string): DriftStatus
+export function computeDriftForHoldings(account: Account, positions: readonly DriftHolding[], modelIdOverride?: string): DriftStatus {
+  const modelId = modelIdFor(account, modelIdOverride)
   const targets = getModelTargets(modelId)
   const band = MODEL_BANDS[modelId]
   if (!band) throw new Error(`no drift band defined for model ${modelId}`)
@@ -804,7 +709,7 @@ export const pmsHandlers = [
   }),
 
   http.get('/api/pms/drift/summary', () => {
-    return HttpResponse.json(accounts.map((a) => computeDriftForAccount(a)))
+    return HttpResponse.json(accounts.filter(isModelManaged).map((a) => computeDriftForAccount(a)))
   }),
 
   http.get('/api/pms/accounts/:accountId/positions', ({ params }) => {
@@ -817,7 +722,7 @@ export const pmsHandlers = [
     const account = findAccount(params.accountId)
     if (!account) return notFound()
     const positions = getPositionsForAccount(account.id, account.totalValue)
-    const targets = getModelTargets(account.modelId ?? 'mod-001')
+    const targets = Object.fromEntries(benchmarkOf(account).benchWeights)
 
     const groups = new Map<string, { targetWeight: number; actualWeight: number; positions: typeof positions }>()
     for (const pos of positions) {
@@ -848,6 +753,8 @@ export const pmsHandlers = [
   http.get('/api/pms/accounts/:accountId/drift', ({ params }) => {
     const account = findAccount(params.accountId)
     if (!account) return notFound()
+    // A custom mandate follows no model, so it has no drift to report.
+    if (!isModelManaged(account)) return notFound()
     return HttpResponse.json(computeDriftForAccount(account))
   }),
 
@@ -1031,7 +938,7 @@ export const pmsHandlers = [
   }),
 
   http.get('/api/pms/models', () => {
-    return HttpResponse.json(MODELS)
+    return HttpResponse.json(MODEL_DEFINITIONS)
   }),
 
   http.get('/api/pms/households/:householdId/positions', ({ params }) => {
@@ -1043,7 +950,7 @@ export const pmsHandlers = [
   http.get('/api/pms/households/:householdId/drift', ({ params }) => {
     const hhAccounts = accounts.filter((a) => a.householdId === params.householdId)
     if (hhAccounts.length === 0) return notFound()
-    return HttpResponse.json(hhAccounts.map((a) => computeDriftForAccount(a)))
+    return HttpResponse.json(hhAccounts.filter(isModelManaged).map((a) => computeDriftForAccount(a)))
   }),
 
   http.get('/api/pms/households/:householdId/allocation', ({ params }) => {
@@ -1059,7 +966,7 @@ export const pmsHandlers = [
   }),
 
   http.get('/api/pms/models/:modelId', ({ params }) => {
-    const model = MODELS.find((m) => m.id === params.modelId)
+    const model = MODEL_DEFINITIONS.find((m) => m.id === params.modelId)
     if (!model) return notFound()
     return HttpResponse.json(model)
   }),

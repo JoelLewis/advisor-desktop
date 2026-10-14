@@ -12,8 +12,9 @@ describe('risk metrics are per account', () => {
     const chen = await getRiskMetrics('acc-006')
     // Phase 7a Task 5b — the grouped correlations (equity 0.85 with equity, not a flat 0.35) raise
     // σ: acc-040 0.0934 -> 0.1019, acc-006 0.0904 -> 0.1047, so VaR = value x 1.645 x σ x √(1/12)
-    // moves 4,435 -> 4,839 and 515,140 -> 596,627.
-    expect(taylor.var95).toBe(4_839)
+    // moves 4,435 -> 4,839 and 515,140 -> 596,627. Phase 7a · C1: acc-040 now holds its own model's
+    // lineup (Conservative Income, tilted), not the generic 58/35/5/2 mix, so its VaR falls to 3,053.
+    expect(taylor.var95).toBe(3_053)
     expect(chen.var95).toBe(596_627)
     expect(chen.var95 / taylor.var95).toBeGreaterThan(100)
   })
@@ -152,12 +153,12 @@ describe('the performance series the risk numbers are quoted against', () => {
   // compounded a hand-typed 0.92 multiple of the *portfolio's* return, which made the benchmark
   // account-specific and put the chart 0.0036/yr away from the table for acc-001.
   it('the chart benchmark and the table benchmark are the same model figure', async () => {
-    // acc-011 and acc-040 are both assigned mod-002.
-    const [a, b] = await Promise.all([getPerformance('acc-011'), getPerformance('acc-040')])
+    // acc-011 and acc-019 are both assigned mod-002 (acc-040 moved to Conservative Income in Phase 7a · C1).
+    const [a, b] = await Promise.all([getPerformance('acc-011'), getPerformance('acc-019')])
     expect(a.map((p) => p.benchmark)).toEqual(b.map((p) => p.benchmark))
 
     const [benchA, benchB] = await Promise.all([
-      getBenchmarkComparison('acc-011'), getBenchmarkComparison('acc-040'),
+      getBenchmarkComparison('acc-011'), getBenchmarkComparison('acc-019'),
     ])
     const oneYear = (rows: Awaited<ReturnType<typeof getBenchmarkComparison>>) =>
       rows.find((r) => r.period === '1y')!.benchmarkReturn

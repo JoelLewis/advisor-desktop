@@ -13,6 +13,7 @@ import { generateRebalanceProposal, type ProposedTradeLeg } from '@/mocks/handle
 import { generateTaxLots } from '@/mocks/handlers/custodian'
 import { getPositionsForAccount } from '@/mocks/data/positions'
 import { settleBatchWashSales, type LegSale } from '@/mocks/handlers/batch-wash-sales'
+import { isModelManaged } from '@/lib/mandate'
 
 const account = (id: string) => {
   const found = accounts.find((a) => a.id === id)
@@ -34,7 +35,7 @@ describe('§0.2 · a loss sale opens its own wash-sale window', () => {
   })
 
   it('every sell of a security that still recognises a net loss carries the window end; no buy and no coin ever does', async () => {
-    const previews = await previewRebalance({ accountIds: accounts.map((a) => a.id), taxAware: true })
+    const previews = await previewRebalance({ accountIds: accounts.filter(isModelManaged).map((a) => a.id), taxAware: true })
     let windows = 0
     for (const p of previews) {
       for (const t of p.trades) {
@@ -54,7 +55,7 @@ describe('§0.2 · a loss sale opens its own wash-sale window', () => {
   })
 
   it("acc-045's DOT and SOL loss sales (coins held directly) open no window and no restriction", async () => {
-    const [preview] = await previewRebalance({ accountIds: ['acc-045'], taxAware: true })
+    const [preview] = await previewRebalance({ accountIds: ['acc-045'], taxAware: true, modelId: 'mod-002' })
     for (const symbol of ['DOT', 'SOL']) {
       const leg = preview!.trades.find((t) => t.symbol === symbol && t.side === 'sell')!
       expect(leg.realisedShortTerm + leg.realisedLongTerm, symbol).toBeLessThan(0)
@@ -117,7 +118,9 @@ describe('§0.2 · a loss sale opens its own wash-sale window', () => {
   it("one batch for two hh-001 accounts lists each account's projected windows once, beside the recorded one", async () => {
     const previews = await previewRebalance({ accountIds: ['acc-002', 'acc-005'], taxAware: true })
     const lossLegs = previews.flatMap((p) => p.trades.filter((t) => t.repurchaseBlockedUntil).map((t) => `${p.accountId}:${t.symbol}`))
-    expect(lossLegs.length).toBeGreaterThan(1)
+    // Phase 7a · C1: Patricia's account (acc-005) now holds its own model's lineup and sells no loss,
+    // so the batch's one loss leg is Robert's INTC — and acc-005's preview must still list it.
+    expect(lossLegs).toEqual(['acc-002:INTC'])
     for (const p of previews) {
       const projected = p.repurchaseRestrictions.filter((r) => r.source.kind === 'projected').map((r) => `${r.source.accountId}:${r.symbol}`)
       expect(projected.sort()).toEqual([...new Set(lossLegs)].sort())
@@ -167,16 +170,19 @@ describe('§0.2 · the estimate counts only the part of a loss §1091 allows', (
 })
 
 describe('§0.2 · a buy proposed in the same batch washes a loss sold by the same taxpayer', () => {
-  it("acc-002's AGG buy washes 1,567 of acc-005's AGG loss shares; the estimate counts only the rest", async () => {
-    const previews = await previewRebalance({ accountIds: ['acc-002', 'acc-005'], taxAware: true })
-    const [p002, p005] = previews
-    const buy = p002!.trades.find((t) => t.symbol === 'AGG' && t.side === 'buy')!
-    const sell = p005!.trades.find((t) => t.symbol === 'AGG' && t.side === 'sell')!
-    expect(buy.quantity).toBe(1_567)
+  it("acc-028's AGG buy washes acc-026's AGG loss shares; the estimate counts only the rest", async () => {
+    // Phase 7a · C1: the Johnson pair no longer has this shape (Patricia's account follows its own model
+    // and buys AGG rather than selling it). The Patels do: Priya's Growth account buys AGG while Raj's
+    // sells his AGG at a loss, on one joint return.
+    const previews = await previewRebalance({ accountIds: ['acc-028', 'acc-026'], taxAware: true })
+    const [p028, p026] = previews
+    const buy = p028!.trades.find((t) => t.symbol === 'AGG' && t.side === 'buy')!
+    const sell = p026!.trades.find((t) => t.symbol === 'AGG' && t.side === 'sell')!
+    expect(buy.quantity).toBe(338)
     expect(buy.washSaleRisk).toBe(true)
 
-    // The loss shares acc-005 sells, earliest bought first (§1.1091-1(b)); the first 1,567 of them wash.
-    const { legs, sales } = generateRebalanceProposal('acc-005', true)
+    // The loss shares acc-026 sells, earliest bought first (§1.1091-1(b)); the first 338 of them wash.
+    const { legs, sales } = generateRebalanceProposal('acc-026', true)
     const ownLeg = legs.find((l) => l.symbol === 'AGG' && l.side === 'sell')!
     const lossLots = [...sales.get(ownLeg)!.soldLosses].sort((a, b) => a.purchaseDate.localeCompare(b.purchaseDate))
     let unmatched = buy.quantity
@@ -187,7 +193,7 @@ describe('§0.2 · a buy proposed in the same batch washes a loss sold by the sa
       unmatched -= matched
     }
     // No AGG bought by the couple in the last 30 days, so the batch's buy is the only replacement.
-    const recentAgg = ['acc-001', 'acc-002', 'acc-003', 'acc-004', 'acc-005'].flatMap((id) => {
+    const recentAgg = ['acc-026', 'acc-027', 'acc-028', 'acc-029', 'acc-045'].flatMap((id) => {
       const a = account(id)
       const agg = getPositionsForAccount(a.id, a.totalValue).find((p) => p.symbol === 'AGG')
       return generateTaxLots(a.id, a.totalValue).filter((l) => l.positionId === agg?.id && l.purchaseDate >= '2026-01-26')
@@ -200,8 +206,8 @@ describe('§0.2 · a buy proposed in the same batch washes a loss sold by the sa
     // The estimate is the one the recognised result gives, not the one the realised loss would.
     const asServed = estimateTaxOnReturns(previews.map((p) => ({ account: account(p.accountId), legs: p.trades })), MOCK_TODAY_ISO)
     const ignoringWash = estimateTaxOnReturns(previews.map((p) => ({ account: account(p.accountId), legs: p.trades.map((t) => ({ ...t, washedLoss: undefined })) })), MOCK_TODAY_ISO)
-    expect(p005!.estimatedTaxImpact).toBe(asServed[1]!.net)
-    expect(p005!.estimatedTaxImpact).not.toBe(ignoringWash[1]!.net)
+    expect(p026!.estimatedTaxImpact).toBe(asServed[1]!.net)
+    expect(p026!.estimatedTaxImpact).not.toBe(ignoringWash[1]!.net)
   })
 
   it('the generator proposes the same trades either way: settlement only adds §1091 facts', async () => {

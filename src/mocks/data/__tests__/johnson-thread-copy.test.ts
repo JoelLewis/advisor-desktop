@@ -10,12 +10,13 @@ import { ASSET_CLASS_LABELS } from '@/lib/labels'
 import { formatRatePercent } from '@/lib/tax-rules'
 import { formatCalendarDate } from '@/lib/utils'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
+import { requireModelManaged } from '@/lib/mandate'
 
 const wholeDollars = (amount: number) => `$${Math.round(Math.abs(amount)).toLocaleString('en-US')}`
 
 describe("§0.7 · msg-003 reports acc-002's own drift and trades", () => {
   const msg = threadMessages['thread-001']!.find((m) => m.id === 'msg-003')!
-  const account = accounts.find((a) => a.id === 'acc-002')!
+  const account = requireModelManaged(accounts.find((a) => a.id === 'acc-002')!)
   const drift = computeDriftForAccount(account)
 
   it('names only securities acc-002 holds or the engine proposes', () => {

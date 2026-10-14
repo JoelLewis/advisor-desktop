@@ -7,6 +7,7 @@ import { generateTaxLots } from '../custodian'
 import { hasWashSaleRisk } from '@/lib/wash-sale'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import type { Account } from '@/types/account'
+import { isModelManaged } from '@/lib/mandate'
 
 /** Who counts is `sameWashSaleTaxpayer`'s rule, tested in tax-return-netting.test.ts; the rest is recomputed here. */
 function taxpayerAcquisitions(account: Account) {
@@ -27,7 +28,7 @@ function lotIdsOfSymbol(accountId: string, totalValue: number, symbol: string): 
 
 describe('washSaleRisk on every proposed leg equals §1091 recomputed independently', () => {
   it('holds for every account, tax-aware', () => {
-    for (const a of accounts) {
+    for (const a of accounts.filter(isModelManaged)) {
       const windows = openWashSaleWindowsFor(a, MOCK_TODAY_ISO)
       const acquisitions = taxpayerAcquisitions(a)
       for (const leg of generateRebalanceTrades(a.id, true)) {

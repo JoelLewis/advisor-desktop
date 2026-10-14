@@ -11,7 +11,7 @@ import { prospects } from '@/mocks/data/prospects'
 import { clients } from '@/mocks/data/clients'
 import { accounts } from '@/mocks/data/accounts'
 import { complianceAlerts } from '@/mocks/handlers/compliance'
-import { MODEL_DEFINITIONS } from '@/mocks/handlers/pms'
+import { MODEL_DEFINITIONS } from '@/mocks/data/model-definitions'
 import { RISK_PROFILE_TABLE, bandFor, lowerRiskBand } from '@/lib/risk-profile'
 import { FIRM_NAME } from '@/lib/firm'
 

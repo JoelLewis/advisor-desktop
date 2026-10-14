@@ -57,10 +57,11 @@ describe('useDrift', () => {
 })
 
 describe('useDriftSummary', () => {
-  it('fetches drift for all accounts', async () => {
+  it('fetches drift for every model-managed account', async () => {
     const { result } = renderHook(() => useDriftSummary(), { wrapper: createWrapper() })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(result.current.data!.length).toBe(47)
+    // Phase 7a · C1: 47 accounts, of which three are custom mandates with no model to drift from.
+    expect(result.current.data!.length).toBe(44)
   })
 })
 

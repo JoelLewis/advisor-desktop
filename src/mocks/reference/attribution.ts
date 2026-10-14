@@ -3,11 +3,11 @@ import type { AssetClass } from '@/types/portfolio'
 import type { MethodNote, RowQuote } from '@/types/reference'
 import { ATTRIBUTION_PERIODS, isAttributionPeriod, type AttributionPeriod, type AttributionView } from '@/types/reference-attribution'
 import { accounts } from '@/mocks/data/accounts'
-import { MODEL_DEFINITIONS, attributionFor, performanceSeriesFor, periodReturnsFor, periodYears } from '@/mocks/handlers/pms'
+import { attributionFor, performanceSeriesFor, periodReturnsFor, periodYears } from '@/mocks/handlers/pms'
 import { isFirmViewer } from '@/mocks/workspace/visibility'
 import { ASSET_CLASS_LABELS } from '@/lib/labels'
 import { MOCK_NOW_ISO } from '@/lib/clock'
-import { SLEEVE_INDEX, modelBenchmark } from './models'
+import { SLEEVE_INDEX, accountBenchmark, mandateNameOf } from './models'
 
 const METHODS: readonly MethodNote[] = [
   { label: 'Model', modeled: false, text: 'Brinson-Fachler: allocation is (wp − wb) × (Rb,i − Rb), selection is wb × (Rp,i − Rb,i), interaction is (wp − wb) × (Rp,i − Rb,i). The three effects sum exactly to the active return.' },
@@ -23,12 +23,10 @@ const isAssetClass = (value: string): value is AssetClass => value in SLEEVE_IND
 function build(account: Account, period: AttributionPeriod): AttributionView {
   const years = periodYears()[period]
   if (years === undefined) throw new Error(`No period length for ${period}`)
-  const model = MODEL_DEFINITIONS.find((m) => m.id === account.modelId)
-  if (!model) throw new Error(`${account.id} follows no known model`)
   const a = attributionFor(account, years)
   const r = periodReturnsFor(account, years)
   return {
-    asOf: MOCK_NOW_ISO, accountId: account.id, accountName: account.name, modelId: model.id, modelName: model.name, benchmark: modelBenchmark(model.id),
+    asOf: MOCK_NOW_ISO, accountId: account.id, accountName: account.name, modelId: account.mandate === 'model' ? account.modelId : null, mandateName: mandateNameOf(account), benchmark: accountBenchmark(account),
     period, periods: ATTRIBUTION_PERIODS.map((p) => ({ id: p.id, label: p.label })),
     portfolioReturn: r.portfolioReturn, benchmarkReturn: r.benchmarkReturn, activeReturn: r.activeReturn,
     rows: a.rows.map((row, i) => {

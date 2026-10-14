@@ -8,6 +8,7 @@ import { agentConstraints } from '@/mocks/agents/proposal-agent'
 import { eventTime } from '@/lib/clock'
 import { buildVersion } from '../proposal-engine'
 import { applyFills } from '../fills'
+import { isModelManaged, requireModelManaged } from '@/lib/mandate'
 
 const approvable = (v: ProposalVersion) => v.preview.trades.length > 0 && !v.pretrade.violations.some((x) => x.severity === 'block')
 
@@ -15,7 +16,7 @@ describe('releasing every account\'s approvable proposal, one after another', ()
   it('leaves no negative or empty position, no lot sold twice, cash and quantities reconciled, drift from the new holdings', () => {
     const constraints = agentConstraints([])
     let released = 0
-    for (const account of accounts) {
+    for (const account of accounts.filter(isModelManaged)) {
       const built = buildVersion(account.id, constraints, [])
       if (!built.ok) throw new Error(`${account.id}: ${built.message}`)
       const version: ProposalVersion = { n: 1, author: { kind: 'agent', agentId: 'proposal' }, createdAt: eventTime(5), constraints, edits: [], changeSummary: 'x', ...built.built }
@@ -43,13 +44,14 @@ describe('releasing every account\'s approvable proposal, one after another', ()
       const moved = fills.reduce((s, f) => s + (f.side === 'sell' ? f.value : -f.value), 0)
       expect(cashBalanceOf(account), `${account.id} cash`).toBeCloseTo(cashBefore + moved, 2)
       expect(positions.reduce((s, p) => s + p.marketValue, 0), `${account.id} value`).toBeCloseTo(account.totalValue, 1)
-      const after = new Map(computeDriftForAccount(account).assetClassDrifts.map((d) => [d.assetClass, d.drift]))
+      const after = new Map(computeDriftForAccount(requireModelManaged(account)).assetClassDrifts.map((d) => [d.assetClass, d.drift]))
       for (const d of version.preview.projectedDrift.assetClassDrifts) {
         expect(Math.abs((after.get(d.assetClass) ?? 0) - d.drift), `${account.id} ${d.assetClass} drift`).toBeLessThan(0.0005)
       }
     }
-    // acc-012, an IRA, buys BND for the taxpayer's flagged AGG (Rev. Rul. 2008-5), which keeps it inside the pooled-vehicle limit.
-    expect(released).toBe(11)
+    // Phase 7a · C1: 38 of the 44 model-managed accounts have an approvable proposal, where 11 of 47
+    // did against the one generic mix every generated account used to hold; the custom mandates have none.
+    expect(released).toBe(38)
     const ids = accounts.flatMap((a) => generateTaxLots(a.id, a.totalValue).map((l) => l.id))
     expect(new Set(ids).size).toBe(ids.length)
   }, 180_000)

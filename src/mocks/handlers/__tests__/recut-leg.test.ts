@@ -49,7 +49,7 @@ describe('recutLeg', () => {
   })
 
   it('re-cuts a directly held coin, or any position held in a fraction, to a fractional quantity', () => {
-    const crypto = generateRebalanceTrades('acc-045', true)
+    const crypto = generateRebalanceTrades('acc-045', true, undefined, 'mod-002')
     for (const [symbol, held] of [['ETH', 22.5], ['USDC', 15_231.5]] as const) {
       const generated = crypto.find((l) => l.symbol === symbol)
       if (!generated) throw new Error(`acc-045 proposes no ${symbol} leg`)

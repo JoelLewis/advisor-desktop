@@ -1,6 +1,8 @@
 import type { Position, PositionSeed } from '@/types/portfolio'
 import type { Account } from '@/types/account'
 import { bookOf } from './portfolio-ledger'
+import { accounts } from './accounts'
+import { MODEL_BANDS, MODEL_DEFINITIONS } from './model-definitions'
 
 // ─── acc-001: Johnson Family Trust ($8.2M, mod-001 Balanced Growth) ──────────
 const trustPositions: PositionSeed[] = [
@@ -291,30 +293,74 @@ function withDerivedWeights(seeds: readonly PositionSeed[], totalValue: number):
 }
 
 /**
- * Positions as the fixtures state them, weights derived: the book before the session moved it. Two paths: the 17 accounts with explicit rows in
- * `allPositions`, and a generated allocation for the rest. Both go through `withDerivedWeights` —
- * the generated path used to hand-type the same seven weights (0.348/0.145/0.087/0.210/0.140/
- * 0.050/0.020) that its own market values already implied.
+ * Positions as the fixtures state them, weights derived: the book before the session moved it. Two paths: the 17 accounts with
+ * explicit rows in `allPositions`, and for every other account its own model's lineup (`generatedPositions`).
  */
 export function seedPositionsForAccount(accountId: string, totalValue: number): Position[] {
   const explicit = allPositions.filter((p) => p.accountId === accountId)
-  if (explicit.length > 0) return withDerivedWeights(explicit, totalValue)
+  return withDerivedWeights(explicit.length > 0 ? explicit : generatedPositions(accountId, totalValue), totalValue)
+}
 
-  // Generate representative positions based on account value
-  const cash = totalValue * 0.02
-  const equity = totalValue * 0.58
-  const bonds = totalValue * 0.35
-  const other = totalValue * 0.05
+/** Each generated holding's unrealized result as a fraction of its cost: one figure per vehicle, the same across accounts. */
+const GENERATED_GAIN: Readonly<Record<string, number>> = {
+  VTI: 0.091, EFA: 0.087, VWO: 0.045, VXUS: 0.070, AGG: -0.032, QAI: 0.025, VNQ: 0.059, GLD: 0.111,
+}
 
-  return withDerivedWeights([
-    { id: `gen-${accountId}-1`, accountId, symbol: 'VTI', name: 'Vanguard Total Stock Market ETF', assetClass: 'us_equity', quantity: Math.round(equity * 0.6 / 268.5), price: 268.50, costBasis: equity * 0.55, marketValue: equity * 0.6, gainLoss: equity * 0.05, gainLossPercent: 0.091 },
-    { id: `gen-${accountId}-2`, accountId, symbol: 'EFA', name: 'iShares MSCI EAFE ETF', assetClass: 'intl_equity', quantity: Math.round(equity * 0.25 / 82.3), price: 82.30, costBasis: equity * 0.23, marketValue: equity * 0.25, gainLoss: equity * 0.02, gainLossPercent: 0.087 },
-    { id: `gen-${accountId}-3`, accountId, symbol: 'QQQ', name: 'Invesco QQQ Trust', assetClass: 'us_equity', quantity: Math.round(equity * 0.15 / 485.2), price: 485.20, costBasis: equity * 0.12, marketValue: equity * 0.15, gainLoss: equity * 0.03, gainLossPercent: 0.250 },
-    { id: `gen-${accountId}-4`, accountId, symbol: 'AGG', name: 'iShares Core US Aggregate Bond ETF', assetClass: 'fixed_income', quantity: Math.round(bonds * 0.6 / 98.5), price: 98.50, costBasis: bonds * 0.62, marketValue: bonds * 0.6, gainLoss: -bonds * 0.02, gainLossPercent: -0.032 },
-    { id: `gen-${accountId}-5`, accountId, symbol: 'BND', name: 'Vanguard Total Bond Market ETF', assetClass: 'fixed_income', quantity: Math.round(bonds * 0.4 / 72.4), price: 72.40, costBasis: bonds * 0.41, marketValue: bonds * 0.4, gainLoss: -bonds * 0.01, gainLossPercent: -0.024 },
-    { id: `gen-${accountId}-6`, accountId, symbol: 'GLD', name: 'SPDR Gold Shares', assetClass: 'commodities', quantity: Math.round(other / 215.6), price: 215.60, costBasis: other * 0.9, marketValue: other, gainLoss: other * 0.1, gainLossPercent: 0.111 },
-    { id: `gen-${accountId}-7`, accountId, symbol: 'CASH', name: 'Money Market Fund', assetClass: 'cash', quantity: 1, price: cash, costBasis: cash, marketValue: cash, gainLoss: 0, gainLossPercent: 0 },
-  ], totalValue)
+/** A deterministic uniform stream in [0, 1) seeded from a string, so an account's tilt is the same on every read. */
+function seededUniform(seed: string): () => number {
+  let state = [...seed].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7)
+  return () => {
+    state = (state * 1664525 + 1013904223) | 0
+    return (state >>> 0) / 0x1_0000_0000
+  }
+}
+
+/** The quote and name a vehicle carries in the explicit rows of a USD account: one price per symbol across the book. */
+function vehicle(symbol: string): Pick<PositionSeed, 'name' | 'assetClass' | 'price'> {
+  const row = allPositions.find((p) => p.symbol === symbol && (accounts.find((a) => a.id === p.accountId)?.baseCurrency ?? 'USD') === 'USD')
+  if (!row) throw new Error(`No USD quote for model vehicle ${symbol}`)
+  return { name: row.name, assetClass: row.assetClass, price: row.price }
+}
+
+/** The largest tilt a sleeve may take: about 0.5–3pp, never more than 60% of the model's band or half the sleeve's own target. */
+const tiltCap = (target: number, band: number) => Math.min(0.03, band * 0.6, target / 2)
+
+/**
+ * Phase 7a · C1 — an account without explicit rows holds **its own model's** lineup (each sleeve's
+ * implementation symbol), each sleeve tilted by a deterministic amount seeded from the account id:
+ * about ±0.5–3pp, inside the model's drift band. Cash draws its own tilt and, as the residual, takes it once
+ * the sleeves' tilts are evened out to sum to minus it. Quantities are whole shares; the CASH row is the account's `cashBalance`, which
+ * accounts.ts states as the residual so the rows sum to the account's value (`position-weight-invariants`
+ * pins both). The generator used to hand every such account one 58/35/5/2 mix whatever its model, so
+ * 30 accounts shared one σ and most sat outside their bands.
+ */
+function generatedPositions(accountId: string, totalValue: number): PositionSeed[] {
+  const account = accounts.find((a) => a.id === accountId)
+  if (!account) throw new Error(`No account ${accountId} to generate positions for`)
+  if (account.mandate !== 'model') throw new Error(`${accountId} is a custom mandate and needs explicit positions`)
+  const model = MODEL_DEFINITIONS.find((m) => m.id === account.modelId)
+  const band = MODEL_BANDS[account.modelId]?.driftTolerance
+  if (!model || band === undefined) throw new Error(`${accountId} names model ${account.modelId}, which has no definition or band`)
+  const cashTarget = model.assetClasses.find((a) => a.assetClass === 'cash')?.targetWeight ?? 0
+  const sleeves = model.assetClasses.filter((a) => a.assetClass !== 'cash' && a.targetWeight > 0)
+  const rand = seededUniform(accountId)
+  const tilt = (target: number) => (rand() < 0.5 ? -1 : 1) * Math.min(tiltCap(target, band), 0.005 + rand() * 0.025)
+  const drawn = sleeves.map((s) => tilt(s.targetWeight))
+  // Cash draws its own tilt and is the residual, so the sleeves' tilts are evened out to sum to minus it.
+  const cashTilt = tilt(cashTarget)
+  const excess = drawn.reduce((sum, t) => sum + t, 0) + cashTilt
+  const rows = sleeves.map((s, i): PositionSeed => {
+    if (!s.implementationSymbol) throw new Error(`${model.id}'s ${s.assetClass} sleeve names no vehicle`)
+    const { name, assetClass, price } = vehicle(s.implementationSymbol)
+    const gain = GENERATED_GAIN[s.implementationSymbol]
+    if (gain === undefined) throw new Error(`No generated result for ${s.implementationSymbol}`)
+    const quantity = Math.floor((totalValue * (s.targetWeight + (drawn[i] ?? 0) - excess / sleeves.length)) / price)
+    const marketValue = Math.round(quantity * price * 100) / 100
+    const costBasis = Math.round(marketValue / (1 + gain))
+    return { id: `gen-${accountId}-${i + 1}`, accountId, symbol: s.implementationSymbol, name, assetClass, quantity, price, costBasis, marketValue, gainLoss: Math.round((marketValue - costBasis) * 100) / 100, gainLossPercent: gain }
+  })
+  const cash = account.cashBalance
+  return [...rows, { id: `gen-${accountId}-${rows.length + 1}`, accountId, symbol: 'CASH', name: 'Money Market Fund', assetClass: 'cash', quantity: 1, price: cash, costBasis: cash, marketValue: cash, gainLoss: 0, gainLossPercent: 0 }]
 }
 
 /** Positions for an account as they stand: the ledger's book once the session has moved it, else the fixtures'. */

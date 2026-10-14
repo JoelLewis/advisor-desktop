@@ -9,6 +9,7 @@ import { computeDriftForAccount } from '@/mocks/handlers/pms'
 import { accounts } from '@/mocks/data/accounts'
 import type { ProposalVersion } from '@/types/workspace-proposal'
 import { writeClientLetter } from '../client-letter'
+import { requireModelManaged } from '@/lib/mandate'
 
 describe('the Client Letter Agent', () => {
   beforeEach(() => resetWorkspaceStore())
@@ -22,7 +23,7 @@ describe('the Client Letter Agent', () => {
   it("figures are the version's figures: the INTC loss, the return-level estimate, and the drift that prompted it", () => {
     const { v1, letter } = v1Letter()
     const intc = v1.preview.trades.find((t) => t.symbol === 'INTC')!
-    const drift = computeDriftForAccount(accounts.find((a) => a.id === 'acc-002')!)
+    const drift = computeDriftForAccount(requireModelManaged(accounts.find((a) => a.id === 'acc-002')!))
     const usEquity = drift.assetClassDrifts.find((d) => d.assetClass === 'us_equity')!
     expect(letter.figures).toEqual([
       { label: 'US stocks before the rebalance', value: usEquity.actual, unit: '%', source: 'drift.assetClassDrifts.actual' },

@@ -88,13 +88,16 @@ function AccountReadings({ account, drift, positions, lots, from }: AccountReadi
 /** The account's reference views: its risk, its attribution and its model, each remembering the thread. */
 function ReferenceLinks({ account, from }: { account: Account; from: string | null }) {
   const models = useReferenceModels()
-  const model = models.data?.models.find((m) => m.id === account.modelId)
+  const modelId = account.mandate === 'model' ? account.modelId : undefined
+  const model = models.data?.models.find((m) => m.id === modelId)
   const back = from ?? undefined
   return (
     <nav aria-label="Reference" className="flex flex-wrap gap-x-6 gap-y-1">
       <Link to={accountRiskHref(account.id, back)} className={LINK}>Risk</Link>
       <Link to={accountAttributionHref(account.id, back)} className={LINK}>Attribution</Link>
-      <Link to={modelHref(account.modelId, back)} className={LINK}>{model ? `Model · ${model.name}` : 'Model'}</Link>
+      {modelId
+        ? <Link to={modelHref(modelId, back)} className={LINK}>{model ? `Model · ${model.name}` : 'Model'}</Link>
+        : <span className="text-ink-3">Custom mandate · not model-managed</span>}
     </nav>
   )
 }

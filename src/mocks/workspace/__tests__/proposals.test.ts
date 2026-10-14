@@ -12,6 +12,7 @@ import { isTaxableAccount } from '@/lib/tax-treatment'
 import { buildVersion } from '../proposal-engine'
 import { createProposal, previewEdits, readableProposals, reviseProposal, saveVersion } from '../proposals'
 import { runAgent } from '../run-agent'
+import { isModelManaged } from '@/lib/mandate'
 
 const create = () => {
   const r = createProposal('user-001', 'th-johnson-review', 'acc-002')
@@ -220,7 +221,7 @@ describe('workbench versions', () => {
 })
 
 describe('the Proposal Agent over the whole book', () => {
-  it.each(accounts.map((a) => a.id))('%s: digit-free summaries, and no buy that washes one of the taxpayer\'s losses', (id) => {
+  it.each(accounts.filter(isModelManaged).map((a) => a.id))('%s: digit-free summaries, and no buy that washes one of the taxpayer\'s losses', (id) => {
     for (const requested of [[], [{ kind: 'harvest_only' as const }], [{ kind: 'cap_realised_gains' as const, usd: 10_000 }]]) {
       const built = buildVersion(id, agentConstraints(requested), [])
       if (!built.ok) throw new Error(built.message)
@@ -246,7 +247,7 @@ describe('the Proposal Agent never claims a harvest its own buys foreclose', () 
     expect(draftSummary('acc-002', built.built)).toContain('iShares Core US Aggregate Bond ETF is bought here, so its loss cannot be harvested for thirty days without a wash sale.')
   })
 
-  it.each(accounts.map((a) => a.id))('%s: no "harvests losses first", and a caveat exactly when a buy forecloses a flagged harvest', (id) => {
+  it.each(accounts.filter(isModelManaged).map((a) => a.id))('%s: no "harvests losses first", and a caveat exactly when a buy forecloses a flagged harvest', (id) => {
     const flagged = flaggedFor(id)
     for (const requested of [[], [{ kind: 'harvest_only' as const }], [{ kind: 'cap_realised_gains' as const, usd: 10_000 }]]) {
       const built = buildVersion(id, agentConstraints(requested), [])

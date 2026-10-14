@@ -139,8 +139,10 @@ describe('I1 · nba-001 is not scored in dollars; its note states the turnover f
       'Not scored in dollars: rebalancing restores the risk each IPS sets. ' +
       `The batch would sell about ${formatCurrency(facts.valueToTradeUsd, { compact: true })}, and buy about as much, across ${facts.accountCount} accounts.`,
     )
-    expect(nba.estimatedImpactNote).toContain('$20.9M')
-    expect(nba.estimatedImpactNote).toContain('across 40 accounts')
+    // Phase 7a · C1: each generated account holds its own model's lineup inside its band, so the batch
+    // is the seven accounts a story or a transfer moved, not forty: about $6.2M one way, not $20.9M.
+    expect(nba.estimatedImpactNote).toContain('$6.2M')
+    expect(nba.estimatedImpactNote).toContain('across 7 accounts')
   })
 
   it('so the rebalancing category adds no revenue on the effectiveness page', async () => {

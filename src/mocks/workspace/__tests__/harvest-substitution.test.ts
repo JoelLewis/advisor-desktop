@@ -5,6 +5,7 @@ import { harvestOpportunities } from '@/mocks/agents/harvest-scanner'
 import { agentConstraints, draftSummary } from '@/mocks/agents/proposal-agent'
 import { sameWashSaleTaxpayer } from '@/mocks/handlers/tax-return'
 import { buildVersion } from '../proposal-engine'
+import { isModelManaged } from '@/lib/mandate'
 
 const built = (accountId: string): DraftPreview => {
   const r = buildVersion(accountId, agentConstraints([]), [])
@@ -66,7 +67,7 @@ describe('harvest-plus-substitute', () => {
 
   it('across the book, a substitute is never a flagged harvest, and a harvest sells only loss lots', () => {
     let substituted = 0
-    for (const account of accounts) {
+    for (const account of accounts.filter(isModelManaged)) {
       const v = built(account.id)
       const flagged = flaggedFor(account.id)
       for (const s of v.harvestSubstitutions) {

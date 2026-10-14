@@ -19,6 +19,7 @@ import { repurchaseRestrictionsFor } from './repurchase-restrictions'
 import { settleBatchWashSales, type LegSale } from './batch-wash-sales'
 import { taxRateFor } from '@/lib/tax-rules'
 import type { Account } from '@/types/account'
+import { modelIdFor } from '@/lib/mandate'
 import type { LotTake } from '@/types/workspace-proposal'
 import type { AssetClass, Position } from '@/types/portfolio'
 import type { CurrencyCode } from '@/types/currency'
@@ -508,7 +509,7 @@ export function generateRebalanceProposal(
   const account = accounts.find((a) => a.id === accountId)
   if (!account) return { legs: [], sales: new Map(), heldBack: new Map(), harvestSubstitutions: [] }
   const positions = getPositionsForAccount(account.id, account.totalValue)
-  const drift = computeDriftForAccount(account, modelId)
+  const drift = computeDriftForAccount(account, modelIdFor(account, modelId))
   const taxable = isTaxableAccount(account.taxTreatment)
   const currency = currencyForAccount(accountId)
   const lossWindows = openWashSaleWindowsFor(account, MOCK_TODAY_ISO)
@@ -649,7 +650,11 @@ export function generateRebalanceProposal(
   const cashDrift = drift.assetClassDrifts.find((d) => d.assetClass === 'cash')
   const cashValue = positions.find((p) => p.symbol === 'CASH')?.marketValue ?? account.cashBalance
   const cashTargetValue = (cashDrift?.target ?? 0) * account.totalValue
-  const cashHeadroom = Math.max(0, cashTargetValue - cashValue)
+  // Executed money is whole currency units (`estimatedValue` is rounded), so the band is measured
+  // in whole units too: floored, a whole-unit trade set cannot step past a target that falls on a
+  // fraction. Phase 7a · C1 made that reachable — the generated cash balances carry cents, and
+  // acc-008 onto mod-005 netted $38,756 into a $38,755.50 gap.
+  const cashHeadroom = Math.max(0, Math.floor(cashTargetValue - cashValue))
 
   // §9.6 · the round-4 cap above stops sells pushing cash above target. Nothing stopped
   // uncapped buys pulling it below — acc-043 sold €648,900, bought €909,760, and its cash fell
@@ -686,7 +691,7 @@ export function generateRebalanceProposal(
   // This is not new behaviour — it is the choice the floor already made, now named. The existing
   // acc-015 test below ('the floor on cashAboveTarget lets the full $113,820 buy through') is its
   // pin: acc-015 is 0.6 points *under* its cash target and still deploys the full buy.
-  const cashAboveTarget = Math.max(0, cashValue - cashTargetValue)
+  const cashAboveTarget = Math.max(0, Math.floor(cashValue - cashTargetValue))
 
   type Resolved = { legs: ProposedTradeLeg[]; sales: Map<ProposedTradeLeg, LegSale>; rawOf: Map<ProposedTradeLeg, RawLeg> }
 
@@ -1100,7 +1105,7 @@ export function projectDrift(
   const account = accounts.find((a) => a.id === accountId)
   if (!account) throw new Error(`projectDrift: unknown account ${accountId}`)
   const positions = getPositionsForAccount(account.id, account.totalValue)
-  const after = computeDriftForHoldings(account, holdingsAfterTrades(account, positions, legs), modelId)
+  const after = computeDriftForHoldings(account, holdingsAfterTrades(account, positions, legs), modelIdFor(account, modelId))
   const heldBack = taxAware && isTaxableAccount(account.taxTreatment)
     ? recentlyOpenedPositions(generateTaxLots(account.id, account.totalValue), MOCK_TODAY_ISO)
     : new Set<string>()
@@ -1147,7 +1152,8 @@ export function projectDrift(
 }
 
 /** One account's entry in a preview batch. */
-export type PreviewEntry = { account: Account } & RebalanceProposal
+/** `modelId` names the model the proposal was generated against when it is not the account's own. */
+export type PreviewEntry = { account: Account; modelId?: string } & RebalanceProposal
 
 /**
  * The rebalance previews of a batch: §1091 settled across each wash-sale taxpayer's accounts, the
@@ -1187,10 +1193,14 @@ export function buildRebalancePreviews(
       // this account" from "taxed, and the result is zero".
       taxable: isTaxableAccount(account.taxTreatment),
       repurchaseRestrictions: repurchaseRestrictionsFor(account, asOfISO, proposals),
-      projectedDrift: projectDrift(account.id, trades, taxAware, driftThreshold, undefined, proposed[i]!.heldBack),
+      projectedDrift: projectDrift(account.id, trades, taxAware, driftThreshold, proposed[i]!.modelId, proposed[i]!.heldBack),
     }
   })
 }
+
+/** A rebalance of a custom mandate with no model named: there is no model to rebalance it to. */
+const notModelManaged = (accountId: string) =>
+  HttpResponse.json({ error: `${accountId} is a custom mandate, not model-managed: name a model to preview it against` }, { status: 422 })
 
 export const omsHandlers = [
   http.get('/api/oms/orders', ({ request }) => {
@@ -1381,24 +1391,27 @@ export const omsHandlers = [
   }),
 
   http.post('/api/oms/rebalance', async ({ request }) => {
-    const body = await request.json() as { accountIds: string[]; driftThreshold?: number; taxAware: boolean }
+    const body = await request.json() as { accountIds: string[]; driftThreshold?: number; taxAware: boolean; modelId?: string }
     const proposed: PreviewEntry[] = []
     for (const accountId of body.accountIds) {
       const account = accounts.find((a) => a.id === accountId)
       if (!account) return notFound()
+      if (account.mandate === 'custom' && body.modelId === undefined) return notModelManaged(account.id)
       // The Rebalance page's drift-threshold control was sent and ignored; `driftThreshold` was
       // in scope one line away.
-      proposed.push({ account, ...generateRebalanceProposal(accountId, body.taxAware, body.driftThreshold) })
+      proposed.push({ account, ...(body.modelId === undefined ? {} : { modelId: body.modelId }), ...generateRebalanceProposal(accountId, body.taxAware, body.driftThreshold, body.modelId) })
     }
     return HttpResponse.json(buildRebalancePreviews(proposed, body.taxAware, body.driftThreshold, MOCK_TODAY_ISO))
   }),
 
   http.post('/api/oms/rebalance/execute', async ({ request }) => {
-    const body = await request.json() as { accountIds: string[]; taxAware: boolean }
+    const body = await request.json() as { accountIds: string[]; taxAware: boolean; modelId?: string }
+    const custom = body.modelId === undefined ? accounts.find((a) => body.accountIds.includes(a.id) && a.mandate === 'custom') : undefined
+    if (custom) return notModelManaged(custom.id)
     const results = body.accountIds.map((accountId) => ({
       accountId,
       status: 'submitted' as const,
-      ordersCreated: generateRebalanceTrades(accountId, body.taxAware).length,
+      ordersCreated: generateRebalanceTrades(accountId, body.taxAware, undefined, body.modelId).length,
       estimatedCompletion: '2026-02-25T16:00:00Z',
     }))
     return HttpResponse.json(results)

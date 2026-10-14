@@ -10,6 +10,7 @@ import { proposalById } from '@/mocks/data/proposals-store'
 import { MOCK_NOW_ISO, MOCK_TODAY_ISO } from '@/lib/clock'
 import { createProposal } from '../proposals'
 import { ADRIAN, approvedStoryV3, approvedV1, ok, release } from './story-fixture'
+import { requireModelManaged } from '@/lib/mandate'
 
 const subject = { type: 'account', id: 'acc-002' } as const
 const ctx = { asOf: MOCK_NOW_ISO, subject }
@@ -69,10 +70,10 @@ describe('after v1 (the full rebalance) fills', () => {
   })
 
   it("the drift reading is as of the account's last fill, not the morning", () => {
-    expect(computeDriftForAccount(acc002).lastCalculated).toBe(MOCK_NOW_ISO)
+    expect(computeDriftForAccount(requireModelManaged(acc002)).lastCalculated).toBe(MOCK_NOW_ISO)
     release(approvedV1())
     const lastFill = ledgerFills().filter((f) => f.accountId === 'acc-002').map((f) => f.at).sort().pop()!
     expect(lastFill > MOCK_NOW_ISO).toBe(true)
-    expect(computeDriftForAccount(acc002).lastCalculated).toBe(lastFill)
+    expect(computeDriftForAccount(requireModelManaged(acc002)).lastCalculated).toBe(lastFill)
   })
 })

@@ -6,6 +6,7 @@ import { roundTo } from '@/mocks/handlers/utils'
 import { accounts } from '@/mocks/data/accounts'
 import { getPositionsForAccount } from '@/mocks/data/positions'
 import { isMarketTradable } from '@/lib/security-master'
+import { isModelManaged, requireModelManaged } from '@/lib/mandate'
 
 const TAX_MODES = [true, false] as const
 
@@ -25,7 +26,7 @@ function classWeightsAfter(accountId: string, legs: readonly ProposedTradeLeg[])
 
 describe('§0.6 · projected drift after the proposed trades', () => {
   it.each(TAX_MODES)('(a) every account: projected drift is the drift function on the post-trade holdings (taxAware=%s)', (taxAware) => {
-    for (const account of accounts) {
+    for (const account of accounts.filter(isModelManaged)) {
       const legs = generateRebalanceTrades(account.id, taxAware)
       const projected = projectDrift(account.id, legs, taxAware)
       const weights = classWeightsAfter(account.id, legs)
@@ -34,22 +35,22 @@ describe('§0.6 · projected drift after the proposed trades', () => {
         expect(d.drift, `${account.id} ${d.assetClass}`).toBe(roundTo(d.actual - d.target, 4))
       }
       expect(projected.maxAbsDrift).toBe(roundTo(Math.max(0, ...projected.assetClassDrifts.map((d) => Math.abs(d.drift))), 4))
-      expect(projected.driftTolerance).toBe(computeDriftForAccount(account).driftTolerance)
+      expect(projected.driftTolerance).toBe(computeDriftForAccount(requireModelManaged(account)).driftTolerance)
     }
   })
 
   it('an account with no trades projects exactly its current drift', () => {
-    const quiet = accounts.filter((a) => generateRebalanceTrades(a.id, true).length === 0)
+    const quiet = accounts.filter(isModelManaged).filter((a) => generateRebalanceTrades(a.id, true).length === 0)
     expect(quiet.length).toBeGreaterThan(0)
     for (const account of quiet) {
       const projected = projectDrift(account.id, [], true)
       expect(projected.assetClassDrifts.map(({ assetClass, target, actual, drift }) => ({ assetClass, target, actual, drift })))
-        .toEqual(computeDriftForAccount(account).assetClassDrifts)
+        .toEqual(computeDriftForAccount(requireModelManaged(account)).assetClassDrifts)
     }
   })
 
   it('the rebalance preview serves the same projection the engine computes', async () => {
-    const previews = await previewRebalance({ accountIds: accounts.map((a) => a.id), taxAware: true })
+    const previews = await previewRebalance({ accountIds: accounts.filter(isModelManaged).map((a) => a.id), taxAware: true })
     for (const preview of previews) {
       // Through JSON, as the handler serves it (a -0 drift arrives as 0).
       const engine = projectDrift(preview.accountId, generateRebalanceTrades(preview.accountId, true), true)
@@ -59,7 +60,7 @@ describe('§0.6 · projected drift after the proposed trades', () => {
 
   it('(b) acc-002: the trades lower max drift, and private equity stays, unsellable', async () => {
     const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
-    const current = computeDriftForAccount(accounts.find((a) => a.id === 'acc-002')!)
+    const current = computeDriftForAccount(requireModelManaged(accounts.find((a) => a.id === 'acc-002')!))
     expect(preview!.projectedDrift.maxAbsDrift).toBeLessThan(current.maxAbsDrift)
     const pe = preview!.projectedDrift.assetClassDrifts.find((d) => d.assetClass === 'private_equity')!
     expect(pe.drift).toBe(current.assetClassDrifts.find((d) => d.assetClass === 'private_equity')!.drift)
@@ -87,7 +88,7 @@ describe('§0.6 · projected drift after the proposed trades', () => {
 
   it.each(TAX_MODES)('every invested class left beyond the threshold has a reason, and only those (taxAware=%s)', (taxAware) => {
     for (const threshold of [0.005, 0.02, 0.05, 0.1]) {
-      for (const account of accounts) {
+      for (const account of accounts.filter(isModelManaged)) {
         const projected = projectDrift(account.id, generateRebalanceTrades(account.id, taxAware, threshold), taxAware, threshold)
         for (const d of projected.assetClassDrifts) {
           const residual = d.assetClass !== 'cash' && Math.abs(d.drift) > threshold
@@ -100,7 +101,7 @@ describe('§0.6 · projected drift after the proposed trades', () => {
   it.each(TAX_MODES)('cash_capped is only claimed where the cash band stopped the trades (taxAware=%s)', (taxAware) => {
     let claimed = 0
     for (const threshold of [0.005, 0.02, 0.05, 0.1]) {
-      for (const account of accounts) {
+      for (const account of accounts.filter(isModelManaged)) {
         const legs = generateRebalanceTrades(account.id, taxAware, threshold)
         const projected = projectDrift(account.id, legs, taxAware, threshold)
         const startCash = getPositionsForAccount(account.id, account.totalValue).find((p) => p.symbol === 'CASH')?.marketValue ?? 0
@@ -122,7 +123,7 @@ describe('§0.6 · projected drift after the proposed trades', () => {
   })
 
   it('not_market_tradable is only claimed for an overweight class holding a security with no market', () => {
-    for (const account of accounts) {
+    for (const account of accounts.filter(isModelManaged)) {
       const positions = getPositionsForAccount(account.id, account.totalValue)
       for (const d of projectDrift(account.id, generateRebalanceTrades(account.id, true), true).assetClassDrifts) {
         if (d.residualReason !== 'not_market_tradable') continue

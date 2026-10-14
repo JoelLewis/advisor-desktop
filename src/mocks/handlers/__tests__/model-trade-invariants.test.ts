@@ -2,7 +2,8 @@ import { beforeAll, describe, it, expect } from 'vitest'
 import { previewModelTrades, executeModelTrades } from '@/services/trading'
 import { getDrift, getPositions } from '@/services/pms'
 import { getAccounts } from '@/services/custodian'
-import { MODEL_DEFINITIONS, modelImplementationSecurity } from '@/mocks/handlers/pms'
+import { modelImplementationSecurity } from '@/mocks/handlers/pms'
+import { MODEL_DEFINITIONS } from '@/mocks/data/model-definitions'
 import { generateRebalanceTrades } from '@/mocks/handlers/oms'
 import { convertCurrency } from '@/lib/currency'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
@@ -13,6 +14,7 @@ import { MOCK_TODAY_ISO } from '@/lib/clock'
 import type { Account } from '@/types/account'
 import type { DriftStatus, Position } from '@/types/portfolio'
 import type { ModelTradePreview } from '@/types/trading'
+import { modelIdFor } from '@/lib/mandate'
 
 /**
  * Task 9 · `POST /api/oms/model-trade/preview` invented every field it served. The account was
@@ -28,7 +30,10 @@ import type { ModelTradePreview } from '@/types/trading'
  * model diagonal Task 8 swept.
  */
 
-const OWN_MODEL = (a: Account) => a.modelId ?? 'mod-001'
+// Phase 7a · C1: a custom mandate has no model of its own; this sweep previews it onto Growth, as a
+// migration onto a model would be.
+const MIGRATION_TARGET = 'mod-002'
+const OWN_MODEL = (a: Account) => modelIdFor(a, a.mandate === 'custom' ? MIGRATION_TARGET : undefined)
 
 /**
  * The book the sweeps read, fetched once per file. Each sweep used to issue its own round-trip per
@@ -56,7 +61,7 @@ beforeAll(async () => {
   const ids = accounts.map((a) => a.id)
   const [positions, drift, previews, alone] = await Promise.all([
     Promise.all(ids.map(async (id) => [id, await getPositions(id)] as const)),
-    Promise.all(ids.map(async (id) => [id, await getDrift(id)] as const)),
+    Promise.all(accounts.filter((a) => a.mandate === 'model').map(async (a) => [a.id, await getDrift(a.id)] as const)),
     Promise.all(MODEL_DEFINITIONS.map(async (m) => {
       const batch = await previewModelTrades(m.id, ids)
       return [m.id, new Map(batch.map((p) => [p.accountId, p]))] as const
@@ -92,17 +97,33 @@ describe('the book snapshot the sweeps read', () => {
   it('a batched preview is the same answer as previewing each account alone', async () => {
     expect(book.accounts.length).toBeGreaterThan(40)
     let nettedInBatch = 0
+    let washedInBatch = 0
+    // A loss sale's window is a §1091 fact the batch settles: a buy of the same security by the same
+    // taxpayer elsewhere in the batch washes the loss, and a washed loss opens no window. Phase 7a · C1
+    // made this reachable (Jennifer Martinez sells AGG at a loss while Michael's IRA buys it), so that
+    // one field may differ, and only where such a buy exists.
+    const withoutWindow = <T extends { repurchaseBlockedUntil?: string }>({ repurchaseBlockedUntil: _window, ...rest }: T) => rest
     for (const account of book.accounts) {
       const { estimatedTaxImpact: aloneTax, nettedWithAccountIds: aloneNetted, ...single } = previewAlone(account)
       const { estimatedTaxImpact: batchTax, nettedWithAccountIds: batchNetted, ...batched } = previewOf(account)
-      expect(single, account.id).toEqual(batched)
+      expect({ ...single, trades: single.trades.map(withoutWindow) }, account.id).toEqual({ ...batched, trades: batched.trades.map(withoutWindow) })
+      let washedHere = false
+      single.trades.forEach((t, i) => {
+        if (t.repurchaseBlockedUntil === batched.trades[i]?.repurchaseBlockedUntil) return
+        washedInBatch++
+        washedHere = true
+        const washedBy = book.accounts.filter((other) => other.id !== account.id && other.householdId === account.householdId)
+          .some((other) => previewOf(other, OWN_MODEL(account)).trades.some((x) => x.side === 'buy' && x.symbol === t.symbol))
+        expect(washedBy, `${account.id} ${t.symbol}: a window differs with no same-taxpayer buy in the batch`).toBe(true)
+      })
       expect(aloneNetted, account.id).toEqual([])
-      // The tax figure differs only where the batch netted an earlier account on the same return in.
-      if (batchNetted.length === 0) expect(aloneTax, account.id).toBe(batchTax)
+      // The tax figure differs only where the batch netted an earlier account on the same return in, or washed a loss.
+      if (batchNetted.length === 0 && !washedHere) expect(aloneTax, account.id).toBe(batchTax)
       else nettedInBatch++
     }
     // hh-001 files jointly, so its later taxable accounts net against acc-001 in a whole-book batch.
     expect(nettedInBatch, 'vacuity guard — some account must net against an earlier one').toBeGreaterThan(0)
+    expect(washedInBatch).toBeGreaterThan(0)
   })
 })
 
@@ -158,7 +179,7 @@ describe('the model-trade preview names the account and the model it was actuall
 
 describe('currentDrift is the account\'s real drift against the model asked for', () => {
   it('for every account previewed on its own model, it is exactly the drift surface\'s own figure', async () => {
-    const { accounts } = book
+    const accounts = book.accounts.filter((a) => a.mandate === 'model')
     let checked = 0
     for (const account of accounts) {
       const preview = previewOf(account)
@@ -309,7 +330,7 @@ describe('the proposed trades are the account\'s own', () => {
 
 describe('the reason names this account\'s own drift, not a fixed pair of percentages', () => {
   it('every trade quotes the account\'s own weight and the model\'s own target for that sleeve', () => {
-    const { accounts } = book
+    const accounts = book.accounts.filter((a) => a.mandate === 'model')
     let checked = 0
     for (const account of accounts) {
       const preview = previewOf(account)

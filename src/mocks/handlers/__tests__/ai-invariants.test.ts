@@ -53,8 +53,10 @@ describe('AI insight invariants — account_detail tax-loss-harvesting insight g
     const insights = await getAIInsights('account_detail', 'acc-005')
     const harvest = insights.find((i) => i.title === 'Tax-Loss Harvesting Opportunity')
     expect(harvest).toBeDefined()
-    expect(harvest?.metric?.value).toBe('$21,525')
-    expect(harvest?.body).toContain('2 positions')
+    // Phase 7a · C1: acc-005 holds its own model's lineup (Moderate Balanced), whose one loss
+    // position is AGG (the generated BND line is gone): $22,784 across one position, not $21,525 across two.
+    expect(harvest?.metric?.value).toBe('$22,784')
+    expect(harvest?.body).toContain('1 position with')
     expect(harvest?.body).toContain('clear for all candidates')
   })
 

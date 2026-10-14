@@ -11,6 +11,7 @@ import { getPositionsForAccount } from '@/mocks/data/positions'
 import { openWashSaleWindows } from '@/mocks/data/realised-sales'
 import { ledgerFills } from '@/mocks/data/portfolio-ledger'
 import { computeDriftForAccount } from '@/mocks/handlers/pms'
+import { isModelManaged } from '@/lib/mandate'
 import { firstNameOf, joinWords } from '@/lib/words'
 import { firstRmdYear, requiredBeginningAge } from '@/lib/rmd'
 
@@ -77,9 +78,9 @@ function windows(householdId: string, asOf: string): PrepFinding {
   }
 }
 
-/** Each managed account against its model, from the drift engine. */
+/** Each model-managed account against its model, from the drift engine; a custom mandate has no model to drift from. */
 function drift(own: readonly Account[], asOf: string): PrepFinding {
-  const readings = own.map((account) => ({ account, reading: computeDriftForAccount(account) }))
+  const readings = own.filter(isModelManaged).map((account) => ({ account, reading: computeDriftForAccount(account) }))
   const outside = readings.filter(({ reading }) => reading.needsRebalance && reading.assetClassDrifts.length > 0)
   const citations = readings.map(({ account }) => ({ source: `Drift calculation · ${account.name}`, asOf }))
   if (outside.length === 0) {

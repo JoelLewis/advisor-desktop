@@ -5,10 +5,12 @@ import { activities } from '@/mocks/data/activities'
 import { MOCK_NOTIFICATIONS } from '@/mocks/data/notifications'
 import { accounts } from '@/mocks/data/accounts'
 import { clients } from '@/mocks/data/clients'
-import { computeDriftForAccount, modelDisplayName, MODEL_DEFINITIONS } from '@/mocks/handlers/pms'
+import { computeDriftForAccount, modelDisplayName } from '@/mocks/handlers/pms'
+import { MODEL_DEFINITIONS } from '@/mocks/data/model-definitions'
 import { formatRatePercent } from '@/lib/tax-rules'
+import { isModelManaged } from '@/lib/mandate'
 
-const drifted = accounts.map((a) => ({ account: a, drift: computeDriftForAccount(a) })).filter(({ drift }) => drift.needsRebalance)
+const drifted = accounts.filter(isModelManaged).map((a) => ({ account: a, drift: computeDriftForAccount(a) })).filter(({ drift }) => drift.needsRebalance)
 const bandOf = (modelId: string) => `${modelDisplayName(modelId)} ±${formatRatePercent(computeDriftForAccount(drifted.find(({ drift }) => drift.modelId === modelId)!.account).driftTolerance)}`
 
 describe('§0.7 · drift copy states each account\'s own band and the engine\'s count', () => {
@@ -46,11 +48,11 @@ describe('§0.7 · drift copy states each account\'s own band and the engine\'s 
     for (const modelId of new Set(drifted.map(({ drift }) => drift.modelId))) expect(act.description).toContain(bandOf(modelId))
   })
 
-  it('ntf-010 names the Growth model and counts its drifted accounts', () => {
+  it("ntf-010 counts the drifted accounts and names each one's band", () => {
+    // Phase 7a · C1: one Growth account is outside its band now, so the notice counts the whole batch.
     const ntf = MOCK_NOTIFICATIONS.find((n) => n.id === 'ntf-010')!
-    const onGrowth = drifted.filter(({ account }) => account.modelId === 'mod-002').length
-    expect(ntf.body).toContain(`${onGrowth} accounts on the Growth model`)
-    expect(ntf.body).toContain(bandOf('mod-002'))
+    expect(ntf.body).toContain(`${drifted.length} accounts are outside their model's band`)
+    for (const modelId of new Set(drifted.map(({ drift }) => drift.modelId))) expect(ntf.body).toContain(bandOf(modelId))
     expect(ntf.body).not.toContain('Growth Equity')
   })
 

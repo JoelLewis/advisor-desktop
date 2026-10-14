@@ -57,13 +57,15 @@ describe('a washing buy with a substitute', () => {
     expect(avoided.heldBack.size).toBe(0)
   })
 
-  it('acc-005 moves its US Equity buy from VTI (held and the model\'s) to the QQQ it holds, and its sales are unchanged', () => {
-    openWindowOn('acc-005', 'VTI')
-    const plain = engine.generateRebalanceProposal('acc-005', true)
-    const avoided = engine.generateRebalanceProposal('acc-005', true, 0.005, undefined, { avoidSelfWash: true })
+  it('acc-029 moves its US Equity buy from VTI (held and the model\'s) to the QQQ it holds, and its sales are unchanged', () => {
+    // Phase 7a · C1: acc-005 now holds its own model's lineup and sells US equity rather than buying it;
+    // the Patel 529 buys VTI and holds QQQ, the same shape.
+    openWindowOn('acc-029', 'VTI')
+    const plain = engine.generateRebalanceProposal('acc-029', true)
+    const avoided = engine.generateRebalanceProposal('acc-029', true, 0.005, undefined, { avoidSelfWash: true })
     expect(avoided.legs.find((l) => l.side === 'buy' && l.assetClass === 'us_equity')?.symbol).toBe('QQQ')
     expect(sells(avoided.legs)).toEqual(sells(plain.legs))
-    const [settled] = settle([{ account: account('acc-005'), ...avoided }], TODAY)
+    const [settled] = settle([{ account: account('acc-029'), ...avoided }], TODAY)
     expect(settled!.filter((l) => l.side === 'buy').every((l) => !l.washSaleRisk)).toBe(true)
   })
 })
@@ -95,7 +97,7 @@ describe('a washing buy with no substitute', () => {
 
 describe('the whole book, a window opened on each account\'s first buy', () => {
   it('no buy washes after settlement, and no sale is scaled for the constraint', () => {
-    for (const a of book) {
+    for (const a of book.filter((x) => x.mandate === 'model')) {
       const firstBuy = engine.generateRebalanceProposal(a.id, true).legs.find((l) => l.side === 'buy')
       if (!firstBuy) continue
       windows.extra = []

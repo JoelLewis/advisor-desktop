@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { store } from '@/mocks/data/workspace-store'
-import { MODEL_DEFINITIONS } from '@/mocks/handlers/pms'
+import { MODEL_DEFINITIONS } from '@/mocks/data/model-definitions'
 import { accounts } from '@/mocks/data/accounts'
 import { households } from '@/mocks/data/households'
 import { RECON_BREAKS } from '@/mocks/data/reconciliation'

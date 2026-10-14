@@ -1,12 +1,15 @@
 import type { AssetClass } from '@/types/portfolio'
 import type { MethodNote, RowQuote } from '@/types/reference'
-import type { ModelBenchmark, ModelDetail, ModelSummary, ModelsView, ModelTarget, ModelVersionRecord } from '@/types/reference-models'
+import type { Account } from '@/types/account'
+import type { CustomMandateRow, ModelBenchmark, ModelDetail, ModelSummary, ModelsView, ModelTarget, ModelVersionRecord } from '@/types/reference-models'
+import { isModelManaged } from '@/lib/mandate'
 import { accounts } from '@/mocks/data/accounts'
 import { clients } from '@/mocks/data/clients'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
 import { personById } from '@/mocks/data/people'
 import { GLIDE_PATH_MODELS, MODEL_RISK_PROFILES, MODEL_VERSIONS } from '@/mocks/data/model-governance'
-import { MODEL_BANDS, MODEL_DEFINITIONS, computeDriftForAccount } from '@/mocks/handlers/pms'
+import { computeDriftForAccount } from '@/mocks/handlers/pms'
+import { MODEL_BANDS, MODEL_DEFINITIONS } from '@/mocks/data/model-definitions'
 import { isFirmViewer } from '@/mocks/workspace/visibility'
 import { accountValueUSD, deriveBookAUM } from '@/lib/aum'
 import { correlationAssumptionsText, portfolioVolatility } from '@/lib/risk-model'
@@ -47,9 +50,10 @@ function targetsOf(modelId: string): ModelTarget[] {
   })
 }
 
-const hasEmergingSleeve = (modelId: string) => targetsOf(modelId).some((t) => t.assetClass === 'emerging_markets')
-const indexFor = (modelId: string, assetClass: AssetClass) =>
-  assetClass === 'intl_equity' && !hasEmergingSleeve(modelId) ? INTL_WITH_EMERGING_INSIDE : SLEEVE_INDEX[assetClass]
+/** International equity is measured ex-US including emerging markets unless the blend carries its own emerging-markets sleeve. */
+const indexAmong = (classes: readonly AssetClass[], assetClass: AssetClass) =>
+  assetClass === 'intl_equity' && !classes.includes('emerging_markets') ? INTL_WITH_EMERGING_INSIDE : SLEEVE_INDEX[assetClass]
+const indexFor = (modelId: string, assetClass: AssetClass) => indexAmong(targetsOf(modelId).map((t) => t.assetClass), assetClass)
 
 export function modelBenchmark(modelId: string): ModelBenchmark {
   return {
@@ -58,6 +62,17 @@ export function modelBenchmark(modelId: string): ModelBenchmark {
     components: targetsOf(modelId).map((t) => ({ assetClass: t.assetClass, index: indexFor(modelId, t.assetClass), weight: t.targetWeight })),
   }
 }
+
+/** What an account is measured against: its model's policy benchmark, or the benchmark its custom mandate names. */
+export function accountBenchmark(account: Account): ModelBenchmark {
+  if (account.mandate === 'model') return modelBenchmark(account.modelId)
+  const classes = account.benchmark.weights.map((w) => w.assetClass)
+  return { name: account.benchmark.name, kind: 'mandate', components: account.benchmark.weights.map((w) => ({ assetClass: w.assetClass, index: indexAmong(classes, w.assetClass), weight: w.weight })) }
+}
+
+export const CUSTOM_MANDATE_NAME = 'Custom mandate'
+/** The model's name, or "Custom mandate" for an account that follows none. */
+export const mandateNameOf = (account: Account): string => (account.mandate === 'model' ? definition(account.modelId).name : CUSTOM_MANDATE_NAME)
 
 export const modelVolatility = (modelId: string): number => portfolioVolatility(new Map(targetsOf(modelId).map((t) => [t.assetClass, t.targetWeight])))
 export const equityShareOf = (modelId: string): number => targetsOf(modelId).filter((t) => EQUITY.has(t.assetClass)).reduce((s, t) => s + t.targetWeight, 0)
@@ -74,7 +89,7 @@ function summaryOf(modelId: string): ModelSummary {
   const band = MODEL_BANDS[modelId]
   const riskLabel = RISK_PROFILE_TABLE.find((b) => b.profile === riskProfile)?.label
   if (!riskProfile || !band || !riskLabel) throw new Error(`${modelId} has no risk profile or drift band`)
-  const own = accounts.filter((a) => a.modelId === modelId)
+  const own = accounts.filter(isModelManaged).filter((a) => a.modelId === modelId)
   return {
     id: model.id, name: model.name, description: model.description, riskProfile, riskLabel, benchmark: modelBenchmark(modelId), equityShare: equityShareOf(modelId),
     currentVersion: current.version, ...(pending ? { pendingVersion: { version: pending.version, effectiveDate: pending.effectiveDate } } : {}),
@@ -87,12 +102,25 @@ const METHODS: readonly MethodNote[] = [
   { label: 'Benchmarks', modeled: false, text: "Each model's policy benchmark holds every sleeve at the model's target weight, each sleeve measured by the index named for it. The education model's benchmark is its glide path at the current stage." },
   { label: 'History', modeled: false, text: "The firm's record of Investment Committee decisions: each version proposed by the analyst and approved by the committee, with the weights it set. A pending version takes effect only once approved. Read-only here." },
   { label: 'Assigned value', modeled: false, text: "Accounts on each model and their value today, from the book; an account held in another currency is converted at today's exchange rate." },
+  { label: 'Custom mandates', modeled: false, text: "An account held at the client's own instruction (a single market or a single asset class) follows no firm model. It is listed separately, carries no drift band and is left out of model drift; it is still measured on risk against the client's tolerance, and against the benchmark its mandate names." },
   { label: 'Volatility', modeled: true, text: `Modeled, not realized: the standard deviation of the target weights from the firm's asset-class volatility assumptions and its ${correlationAssumptionsText()}.` },
 ]
 
+function clientNameOf(account: Account): string {
+  const client = clients.find((c) => c.id === account.clientId)
+  if (!client) throw new Error(`${account.id} names no client`)
+  return client.fullName
+}
+
+function customMandateRows(): CustomMandateRow[] {
+  return accounts.flatMap((a) => (a.mandate === 'custom'
+    ? [{ accountId: a.id, accountName: a.name, clientName: clientNameOf(a), value: accountValueUSD(a, FX_RATES_USD_BASE), mandateSummary: a.mandateSummary, benchmarkName: a.benchmark.name }]
+    : []))
+}
+
 export function modelsView(viewerId: string): ModelsView | undefined {
   if (!isFirmViewer(viewerId)) return undefined
-  return { asOf: MOCK_NOW_ISO, models: MODEL_DEFINITIONS.map((m) => summaryOf(m.id)), methods: [...METHODS] }
+  return { asOf: MOCK_NOW_ISO, models: MODEL_DEFINITIONS.map((m) => summaryOf(m.id)), customMandates: customMandateRows(), methods: [...METHODS] }
 }
 
 export function modelDetail(viewerId: string, modelId: string): ModelDetail | undefined {
@@ -110,11 +138,9 @@ export function modelDetail(viewerId: string, modelId: string): ModelDetail | un
       if (!person) throw new Error(`${modelId} v${v.version} names no proposer`)
       return { ...v, proposedByName: person.name }
     }),
-    accounts: accounts.filter((a) => a.modelId === modelId).map((a) => {
+    accounts: accounts.filter(isModelManaged).filter((a) => a.modelId === modelId).map((a) => {
       const drift = computeDriftForAccount(a)
-      const client = clients.find((c) => c.id === a.clientId)
-      if (!client) throw new Error(`${a.id} names no client`)
-      return { accountId: a.id, accountName: a.name, clientName: client.fullName, value: accountValueUSD(a, FX_RATES_USD_BASE), maxAbsDrift: drift.maxAbsDrift, withinBand: !drift.needsRebalance }
+      return { accountId: a.id, accountName: a.name, clientName: clientNameOf(a), value: accountValueUSD(a, FX_RATES_USD_BASE), maxAbsDrift: drift.maxAbsDrift, withinBand: !drift.needsRebalance }
     }),
     methods: [...METHODS],
   }

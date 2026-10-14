@@ -1,5 +1,5 @@
 import type { AssetClass } from '@/types/portfolio'
-import { MODEL_DEFINITIONS } from '@/mocks/handlers/pms'
+import { MODEL_DEFINITIONS } from '@/mocks/data/model-definitions'
 
 export type ModelMix = { stocks: number; bonds: number; other: number; cash: number }
 const STOCKS: ReadonlySet<AssetClass> = new Set<AssetClass>(['us_equity', 'intl_equity', 'emerging_markets'])

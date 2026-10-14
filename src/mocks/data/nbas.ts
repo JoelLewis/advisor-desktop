@@ -9,7 +9,8 @@ import { generateTaxLotsWithSaleRisk } from '../handlers/custodian'
 import { estimateTaxOnReturns, taxReturnFor } from '../handlers/tax-return'
 import { formatRatePercent, lossAllowedNow } from '@/lib/tax-rules'
 import { capitalLossUse, ORDINARY_INCOME_OFFSET_LIMIT, ORDINARY_INCOME_OFFSET_LIMIT_SEPARATE, taxEstimateDirection, type TaxedLeg } from '@/lib/capital-gains'
-import type { Account } from '@/types/account'
+import type { Account, ModelManagedAccount } from '@/types/account'
+import { isModelManaged } from '@/lib/mandate'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { formatCalendarDate, formatCurrency } from '@/lib/utils'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
@@ -28,6 +29,7 @@ const clientName = (clientId: string) => clients.find((c) => c.id === clientId)?
  */
 export function driftBatchFacts() {
   const drifted = accounts
+    .filter(isModelManaged)
     .map((account) => accountDriftFacts(account))
     .filter(({ drift }) => drift.needsRebalance)
   const clientIds = [...new Set(drifted.map(({ account }) => account.clientId))]
@@ -52,7 +54,7 @@ export function driftBatchFacts() {
  * (half the sum of the class drifts, the fraction of the account that must trade) of the account's
  * value, in USD.
  */
-export function accountDriftFacts(account: Account) {
+export function accountDriftFacts(account: ModelManagedAccount) {
   const drift = computeDriftForAccount(account)
   const worst = [...drift.assetClassDrifts].sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift))[0]
   if (worst === undefined) throw new Error(`${account.id} has no asset-class drift`)
@@ -71,7 +73,7 @@ export function accountDriftSentence({ account, drift, worst }: Pick<ReturnType<
 
 /** Every account `clientId` owns, and those outside their model's band: a rebalancing letter to that client reads these alone. */
 export function clientDriftFacts(clientId: string) {
-  const own = accounts.filter((a) => a.clientId === clientId).map(accountDriftFacts)
+  const own = accounts.filter((a) => a.clientId === clientId).filter(isModelManaged).map(accountDriftFacts)
   const outOfBand = own.filter(({ drift }) => drift.needsRebalance)
   return { own, outOfBand, valueToTradeUsd: outOfBand.reduce((s, d) => s + d.valueToTradeUsd, 0) }
 }
@@ -378,10 +380,11 @@ export const nbas: NBA[] = [
     actionRoute: { path: '/accounts/acc-011' },
   },
   {
-    // D12 · Anderson's fixed income sleeve (acc-022/023/024/025, generated fallback) holds only
-    // AGG and BND — no TLT to rotate out of. Rewritten to name the securities actually held.
+    // D12 · Anderson's fixed income sleeve (acc-022/023/024/025, generated) holds no TLT to rotate
+    // out of. Rewritten to name the securities actually held; Phase 7a · C1 — each account now holds
+    // its model's lineup, whose fixed income sleeve is AGG alone.
     id: 'nba-008', title: 'Duration mismatch — Anderson fixed income',
-    description: "Richard Anderson's fixed income is entirely AGG and BND, a blended effective duration of about 6.0 years against a 5.0-year target. Shortening with a short-duration sleeve would reduce rate sensitivity; estimate the tracking-error impact before trading.",
+    description: "Richard Anderson's fixed income is entirely AGG, an effective duration of about 6.0 years against a 5.0-year target. Shortening with a short-duration sleeve would reduce rate sensitivity; estimate the tracking-error impact before trading.",
     category: 'risk', priority: 'medium',
     scoring: { urgency: 50, impact: 60, efficiency: 55, relationship: 40, confidence: 80, composite: 55 },
     clients: [{ id: 'cli-009', name: 'Richard Anderson' }],
@@ -572,10 +575,8 @@ export const nbas: NBA[] = [
   },
   {
     // D11 · acc-032 is on mod-006 (Education 529), whose equity target is 55% (45% US + 10%
-    // intl), not 80% — no model in the fixtures targets 80% equity. Review round 1, Important #1:
-    // the actual figure was also wrong (62%) — acc-032 has no explicit positions, so it uses
-    // `getPositionsForAccount`'s generated fallback, whose equity weights (VTI 0.348 + QQQ 0.087
-    // + EFA 0.145) sum to exactly 58.0%, independent of the account's totalValue.
+    // intl), not 80% — no model in the fixtures targets 80% equity. Phase 7a · C1: acc-032 has no
+    // explicit positions and holds its own model's lineup, tilted: 58.5% equity, stated as 58%.
     id: 'nba-020', title: 'Rebalancing overdue — O\'Brien 529',
     description: "The O'Brien 529 account hasn't been rebalanced in 14 months. The equity allocation has drifted from its 55% equity target to 58%.",
     category: 'rebalancing', priority: 'low',

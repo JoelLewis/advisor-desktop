@@ -14,7 +14,11 @@ export type RiskPosture = {
 export type StressRow = { id: string; name: string; description: string; impact: number; impactValue: number }
 export type ConcentrationRow = { symbol: string; name: string; weight: number; limit: number; kind: string; breached: boolean }
 export type AccountRiskView = {
-  asOf: string; accountId: string; accountName: string; clientName: string; modelId: string; modelName: string; benchmarkName: string
+  asOf: string; accountId: string; accountName: string; clientName: string
+  /** The model's id, or null for a custom mandate. */
+  modelId: string | null
+  /** The model's name, or "Custom mandate". */
+  mandateName: string; benchmarkName: string
   /** USD. */
   value: number
   volatility: number; beta: number
@@ -26,5 +30,5 @@ export type AccountRiskView = {
   stress: StressRow[]
   methods: MethodNote[]
 }
-export type BookRiskRow = { accountId: string; accountName: string; householdName: string; clientName: string; modelName: string; value: number; volatility: number; var95: number; posture: RiskPosture }
+export type BookRiskRow = { accountId: string; accountName: string; householdName: string; clientName: string; mandateName: string; value: number; volatility: number; var95: number; posture: RiskPosture }
 export type BookRiskView = { asOf: string; rows: BookRiskRow[]; aboveTolerance: number; methods: MethodNote[] }

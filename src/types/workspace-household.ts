@@ -9,13 +9,16 @@ import type { MeetingState } from './workspace-meeting'
 export type StructuralResidual = 'not_market_tradable' | 'replacement_hold'
 export type OutOfBand = { assetClass: AssetClass; drift: number; residual?: StructuralResidual }
 
-export type HouseholdAccount = {
+type HouseholdAccountBase = {
   accountId: string; name: string; ownerId: string; ownerName: string; typeLabel: string
   /** The sum of the account's positions as the book stands (moved by the session's fills). */
   value: number
-  modelName: string; driftTolerance: number; maxAbsDrift: number; withinBand: boolean
-  outside: OutOfBand[]
 }
+/** A model-managed account against its model's band; a custom mandate has no model and so no drift. */
+export type HouseholdAccount = HouseholdAccountBase & (
+  | { mandate: 'model'; modelName: string; driftTolerance: number; maxAbsDrift: number; withinBand: boolean; outside: OutOfBand[] }
+  | { mandate: 'custom'; mandateSummary: string }
+)
 /** An account the firm does not manage: its value as last reported, outside the firm's view. */
 export type HeldAwayHolding = { id: string; ownerName: string; institution: string; accountType: string; value: number; reportedOn: string }
 /** `funded` is current funding over the target, a fraction. */

@@ -7,13 +7,14 @@ import { settleBatchWashSales } from '@/mocks/handlers/batch-wash-sales'
 import { buildRebalancePreviews, generateRebalanceProposal, realisedGains, washingSymbols, type GenerationConstraints } from '@/mocks/handlers/oms'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
+import { isModelManaged } from '@/lib/mandate'
 
 const account = (id: string) => accounts.find((a) => a.id === id)!
 const generate = (id: string, constraints: GenerationConstraints) => generateRebalanceProposal(id, true, 0.005, undefined, constraints)
 const settled = (id: string, constraints: GenerationConstraints) => settleBatchWashSales([{ account: account(id), ...generate(id, constraints) }], MOCK_TODAY_ISO)[0]!
 
 describe('no constraints', () => {
-  it.each(accounts.map((a) => a.id))('%s: nothing is held back and the legs are the unconstrained ones', (id) => {
+  it.each(accounts.filter(isModelManaged).map((a) => a.id))('%s: nothing is held back and the legs are the unconstrained ones', (id) => {
     const plain = generateRebalanceProposal(id, true)
     const empty = generate(id, {})
     expect(empty.heldBack.size).toBe(0)
@@ -22,7 +23,7 @@ describe('no constraints', () => {
 })
 
 describe('harvest only', () => {
-  it.each(accounts.map((a) => a.id))('%s: every sale draws only on loss lots; a tax-advantaged account sells nothing', (id) => {
+  it.each(accounts.filter(isModelManaged).map((a) => a.id))('%s: every sale draws only on loss lots; a tax-advantaged account sells nothing', (id) => {
     const a = account(id)
     const proposal = generate(id, { harvestOnly: true })
     const lossLots = new Set(generateTaxLots(a.id, a.totalValue).filter((l) => l.gainLoss < 0).map((l) => l.id))
@@ -34,7 +35,7 @@ describe('harvest only', () => {
     }
   })
 
-  it.each(accounts.map((a) => a.id))('%s: a harvest draws only on loss lots even with the tax-aware toggle off', (id) => {
+  it.each(accounts.filter(isModelManaged).map((a) => a.id))('%s: a harvest draws only on loss lots even with the tax-aware toggle off', (id) => {
     const a = account(id)
     const proposal = generateRebalanceProposal(id, false, 0.005, undefined, { harvestOnly: true })
     const lossLots = new Set(generateTaxLots(a.id, a.totalValue).filter((l) => l.gainLoss < 0).map((l) => l.id))
@@ -63,7 +64,7 @@ describe('harvest only', () => {
 })
 
 describe('excluding an asset class', () => {
-  it.each(accounts.map((a) => a.id))('%s: no leg trades the excluded class, which is reported as held back', (id) => {
+  it.each(accounts.filter(isModelManaged).map((a) => a.id))('%s: no leg trades the excluded class, which is reported as held back', (id) => {
     const first = generateRebalanceProposal(id, true).legs[0]
     if (!first) return
     const proposal = generate(id, { excludeAssetClasses: [first.assetClass] })
@@ -93,13 +94,13 @@ describe('capping realised gains', () => {
     expect(capped.heldBack.size).toBeGreaterThan(0)
   })
 
-  it.each(accounts.map((a) => a.id))('%s: a $10,000 cap holds under either tax mode', (id) => {
+  it.each(accounts.filter(isModelManaged).map((a) => a.id))('%s: a $10,000 cap holds under either tax mode', (id) => {
     for (const taxAware of [true, false]) {
       expect(realisedGains(generateRebalanceProposal(id, taxAware, 0.005, undefined, { capRealisedGains: 10_000 }).legs)).toBeLessThanOrEqual(10_000)
     }
   })
 
-  it.each(accounts.map((a) => a.id))('%s: a zero cap realises no gain at all', (id) => {
+  it.each(accounts.filter(isModelManaged).map((a) => a.id))('%s: a zero cap realises no gain at all', (id) => {
     expect(realisedGains(generate(id, { capRealisedGains: 0 }).legs)).toBe(0)
   })
 })
@@ -116,11 +117,11 @@ describe('avoiding self-washing buys', () => {
     expect([...washingSymbols([], ['AGG', 'ETH'])]).toEqual(['AGG'])
   })
 
-  it.each(accounts.map((a) => a.id))('%s: with the constraint on, no buy carries a wash-sale risk after settlement', (id) => {
+  it.each(accounts.filter(isModelManaged).map((a) => a.id))('%s: with the constraint on, no buy carries a wash-sale risk after settlement', (id) => {
     for (const leg of settled(id, { avoidSelfWash: true }).filter((l) => l.side === 'buy')) expect(leg.washSaleRisk).toBe(false)
   })
 
-  it.each(accounts.map((a) => a.id))('%s: no buy names a symbol the proposal sells at a loss', (id) => {
+  it.each(accounts.filter(isModelManaged).map((a) => a.id))('%s: no buy names a symbol the proposal sells at a loss', (id) => {
     const a = account(id)
     const positions = getPositionsForAccount(a.id, a.totalValue)
     const legs = generate(id, { avoidSelfWash: true, harvestOnly: true }).legs

@@ -1,6 +1,7 @@
 import type { Participant, Thread, Message } from '@/types/messaging'
 import { accounts } from './accounts'
 import { computeDriftForAccount, modelDisplayName } from '../handlers/pms'
+import { requireModelManaged } from '@/lib/mandate'
 import { generateRebalanceProposal } from '../handlers/oms'
 import { settleBatchWashSales } from '../handlers/batch-wash-sales'
 import { estimateTaxOnReturns } from '../handlers/tax-return'
@@ -29,7 +30,7 @@ const listing = (items: readonly string[]) => (items.length < 2 ? items.join('')
  * bars buying it back.
  */
 export function johnsonDriftNote() {
-  const account = accounts.find((a) => a.id === 'acc-002')!
+  const account = requireModelManaged(accounts.find((a) => a.id === 'acc-002')!)
   const drift = computeDriftForAccount(account)
   const worst = [...drift.assetClassDrifts].sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift))[0]!
   const [legs] = settleBatchWashSales([{ account, ...generateRebalanceProposal(account.id, true) }], MOCK_TODAY_ISO)

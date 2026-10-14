@@ -4,13 +4,14 @@ import type { AccountRiskView, BookRiskView, RiskPosture, ToleranceStatus } from
 import { accounts } from '@/mocks/data/accounts'
 import { clients } from '@/mocks/data/clients'
 import { households } from '@/mocks/data/households'
-import { MODEL_DEFINITIONS, concentrationFor, riskProfileFor, stressScenariosFor } from '@/mocks/handlers/pms'
+import { concentrationFor, riskProfileFor, stressScenariosFor } from '@/mocks/handlers/pms'
+import { MODEL_DEFINITIONS } from '@/mocks/data/model-definitions'
 import { isFirmViewer } from '@/mocks/workspace/visibility'
 import { correlationAssumptionsText, parametricVaR } from '@/lib/risk-model'
 import { RISK_PROFILE_TABLE, bandFor, type RiskProfile } from '@/lib/risk-profile'
 import { MOCK_NOW_ISO } from '@/lib/clock'
 import { factorRows } from './factors'
-import { modelVolatility } from './models'
+import { mandateNameOf, modelVolatility } from './models'
 import { riskScoreOf } from './risk-score'
 
 export { riskScoreOf }
@@ -72,7 +73,7 @@ function accountRisk(account: Account): AccountRiskView {
   const concentration = concentrationFor(account)
   return {
     asOf: MOCK_NOW_ISO, accountId: account.id, accountName: account.name, clientName: clientOf(account).fullName,
-    modelId: p.modelId, modelName: modelName(p.modelId), benchmarkName: p.benchmarkName, value: p.value,
+    modelId: p.modelId, mandateName: mandateNameOf(account), benchmarkName: p.benchmarkName, value: p.value,
     volatility: p.vol, beta: p.beta,
     var95: { value: var95, percent: var95 / p.value, horizon: 'one month', confidence: 0.95, method: 'parametric normal' },
     trackingError: p.te,
@@ -99,7 +100,7 @@ export function bookRiskView(viewerId: string): BookRiskView | undefined {
     const household = households.find((h) => h.id === a.householdId)
     if (!household) throw new Error(`${a.id} names no household`)
     return {
-      accountId: a.id, accountName: a.name, householdName: household.name, clientName: clientOf(a).fullName, modelName: modelName(p.modelId),
+      accountId: a.id, accountName: a.name, householdName: household.name, clientName: clientOf(a).fullName, mandateName: mandateNameOf(a),
       value: p.value, volatility: p.vol, var95: Math.round(parametricVaR(p.value, p.vol)), posture: postureOf(a, p.vol),
     }
   }).sort((a, b) => b.posture.gap - a.posture.gap || a.accountId.localeCompare(b.accountId))

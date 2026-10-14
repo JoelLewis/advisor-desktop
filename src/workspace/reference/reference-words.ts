@@ -1,6 +1,6 @@
 import type { BillingMethod } from '@/types/reference-billing'
 import type { BlotterStatus } from '@/types/reference-blotter'
-import type { ModelSummary } from '@/types/reference-models'
+import type { ModelBenchmark, ModelSummary } from '@/types/reference-models'
 import type { IntegrationStatus, MatchKind } from '@/types/reference-reconciliation'
 import type { ToleranceStatus } from '@/types/reference-risk'
 
@@ -17,6 +17,9 @@ export const SEVERITY_WORDS: Readonly<Record<'low' | 'medium' | 'high', string>>
 export const MATCH_KIND_WORDS: Readonly<Record<MatchKind, string>> = { positions: 'Positions', cash: 'Cash', transactions: 'Transactions' }
 export const FREQUENCY_WORDS: Readonly<Record<string, string>> = {
   monthly: 'Monthly', quarterly: 'Quarterly', semi_annual: 'Semi-annual', annual: 'Annual', threshold_only: 'On threshold only',
+}
+export const BENCHMARK_KIND_WORDS: Readonly<Record<ModelBenchmark['kind'], string>> = {
+  policy_blend: 'Policy blend', glide_path: 'Glide path at the current stage', mandate: "The mandate's own benchmark",
 }
 export const SEGMENT_WORDS: Readonly<Record<string, string>> = { platinum: 'Platinum', gold: 'Gold', silver: 'Silver', bronze: 'Bronze' }
 

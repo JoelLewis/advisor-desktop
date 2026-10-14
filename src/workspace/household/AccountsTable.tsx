@@ -6,7 +6,8 @@ import { RESIDUAL_WORDS } from '@/workspace/proposal/residual-words'
 import { assetClassLabel } from '@/workspace/asset-class-label'
 import type { HouseholdAccount } from '@/types/workspace-household'
 
-const outsideWords = (a: HouseholdAccount) => a.outside
+type ModelRow = Extract<HouseholdAccount, { mandate: 'model' }>
+const outsideWords = (a: ModelRow) => a.outside
   .map((o) => `${assetClassLabel(o.assetClass)} ${fmtDrift(o.drift)}\u00a0${UNIT.pp}${o.residual ? ` · ${RESIDUAL_WORDS[o.residual]}` : ''}`).join('; ')
 
 type AccountsTableProps = { caption: string; accounts: HouseholdAccount[]; totalValue: number; totalLabel: string }
@@ -20,12 +21,12 @@ export function AccountsTable({ caption, accounts, totalValue, totalLabel }: Acc
       columns={[
         { id: 'account', header: 'Account', cell: (a) => a.name, sortValue: (a) => a.name },
         { id: 'owner', header: 'Owner', cell: (a) => a.ownerName },
-        { id: 'model', header: 'Model', cell: (a) => a.modelName },
+        { id: 'model', header: 'Model', wrap: true, cell: (a) => (a.mandate === 'model' ? a.modelName : 'Custom mandate · not model-managed') },
         { id: 'value', header: 'Value', unit: UNIT.usd, align: 'right', cell: (a) => <Num text={fmtMoney(a.value)} />, sortValue: (a) => a.value },
-        { id: 'drift', header: 'Largest drift', unit: UNIT.pp, align: 'right', cell: (a) => <Num text={fmtWeight(a.maxAbsDrift)} />, sortValue: (a) => a.maxAbsDrift },
-        { id: 'band', header: 'Band', unit: UNIT.pp, align: 'right', cell: (a) => fmtTolerance(a.driftTolerance) },
-        { id: 'status', header: 'Status', cell: (a) => <StatusCode status={a.withinBand ? 'IN' : 'OUT'} label={a.withinBand ? 'inside its band' : 'outside its band'} /> },
-        { id: 'outside', header: 'Outside its band', wrap: true, cell: (a) => outsideWords(a) },
+        { id: 'drift', header: 'Largest drift', unit: UNIT.pp, align: 'right', cell: (a) => (a.mandate === 'model' ? <Num text={fmtWeight(a.maxAbsDrift)} /> : null), sortValue: (a) => (a.mandate === 'model' ? a.maxAbsDrift : -1) },
+        { id: 'band', header: 'Band', unit: UNIT.pp, align: 'right', cell: (a) => (a.mandate === 'model' ? fmtTolerance(a.driftTolerance) : null) },
+        { id: 'status', header: 'Status', cell: (a) => (a.mandate === 'model' ? <StatusCode status={a.withinBand ? 'IN' : 'OUT'} label={a.withinBand ? 'inside its band' : 'outside its band'} /> : null) },
+        { id: 'outside', header: 'Outside its band', wrap: true, cell: (a) => (a.mandate === 'model' ? outsideWords(a) : a.mandateSummary) },
       ]}
       totals={{ label: totalLabel, tiesTo: { label: 'the value the engine states', expected: totalValue, actual: rowsTotal }, cells: { value: fmtMoney(totalValue) } }} />
   )

@@ -13,6 +13,7 @@ import { formatAUM, computeTotalAUM } from './utils'
 import { now, MOCK_NOW_ISO, MOCK_TODAY_ISO } from '@/lib/clock'
 import { bandFor } from '@/lib/risk-profile'
 import { computeMetrics, computeDriftForAccount } from './pms'
+import { isModelManaged } from '@/lib/mandate'
 import { generateTaxLotsWithSaleRisk } from './custodian'
 import { openWashSaleWindows } from '../data/realised-sales'
 import { FX_RATES_USD_BASE } from '../data/currencies'
@@ -110,7 +111,7 @@ function makeBriefing(
  * click-through would land on.
  */
 function driftedAccountsCount(): number {
-  return accounts.filter((a) => computeDriftForAccount(a).needsRebalance).length
+  return accounts.filter(isModelManaged).filter((a) => computeDriftForAccount(a).needsRebalance).length
 }
 
 /**
@@ -136,10 +137,12 @@ function topHarvestableAccount(harvestable: readonly HarvestNow[]): { accountId:
 /**
  * §9.5 · a household's accounts outside their drift band — the set the dashboard's "Review
  * Johnson Rebalance" action acts on. It was hand-typed as "$12.4M across 3 accounts"; hh-001 has
- * 5 accounts, and the 4 that need a rebalance (acc-001, acc-002, acc-004, acc-005) hold $15.2M.
+ * 5 accounts, and the 4 that needed a rebalance (acc-001, acc-002, acc-004, acc-005) held $15.2M.
+ * Phase 7a · C1: Patricia's two accounts now hold their own model's lineup inside its band, so the
+ * set is acc-001 and acc-002. Derived either way.
  */
 function householdRebalanceAccounts(householdId: string) {
-  return accounts.filter((a) => a.householdId === householdId && computeDriftForAccount(a).needsRebalance)
+  return accounts.filter(isModelManaged).filter((a) => a.householdId === householdId && computeDriftForAccount(a).needsRebalance)
 }
 
 /** "7.1%" — max asset-class drift, formatted as the drift surfaces show it (SelectAccountsStep, OverviewTab). */
@@ -246,7 +249,7 @@ export const aiHandlers = [
         ]
       })),
       // §9.5 · per-account max drift, e.g. `{{MAX_DRIFT_ACC_001}}` → "7.1%".
-      ...Object.fromEntries(accounts.map((a) => [
+      ...Object.fromEntries(accounts.filter(isModelManaged).map((a) => [
         `MAX_DRIFT_${a.id.toUpperCase().replace(/-/g, '_')}`,
         formatDriftPercent(computeDriftForAccount(a).maxAbsDrift),
       ])),
@@ -266,7 +269,7 @@ export const aiHandlers = [
       richCards: filled.richCards?.map((card) => {
         if (card.variant !== 'rebalance_workflow') return card
         const account = accounts.find((a) => a.id === card.entityId)
-        if (!account) return card
+        if (!account || !isModelManaged(account)) return card
         const drift = computeDriftForAccount(account)
         return { ...card, driftPercent: drift.maxAbsDrift * 100, needsRebalance: drift.needsRebalance, accountCount: driftedCount }
       }),
@@ -393,7 +396,7 @@ export const aiHandlers = [
           metrics,
           [
             `Last rebalanced ${account.lastRebalance}`,
-            account.modelId ? `Model: ${account.modelId}` : 'No model assigned',
+            account.mandate === 'model' ? `Model: ${account.modelId}` : 'Custom mandate · not model-managed',
           ],
         ))
       }

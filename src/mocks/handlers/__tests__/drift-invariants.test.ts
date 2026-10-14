@@ -110,9 +110,10 @@ describe('drift calculation invariants', () => {
     }
   })
 
-  it('returns drift data for all 47 accounts', async () => {
+  it('returns drift data for the 44 model-managed accounts, none for the three custom mandates', async () => {
     const drifts = await getDriftSummary()
-    expect(drifts).toHaveLength(47)
+    expect(drifts).toHaveLength(44)
+    expect(drifts.map((d) => d.accountId)).not.toContain('acc-041')
   })
 
   it('acc-001 has drift data with valid structure', async () => {

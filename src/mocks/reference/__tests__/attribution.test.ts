@@ -30,14 +30,14 @@ describe('the attribution read model', () => {
     expect(v.rows.reduce((s, r) => s + r.portfolioWeight, 0)).toBeCloseTo(1, 9)
     expect(v.rows.reduce((s, r) => s + r.benchmarkWeight, 0)).toBeCloseTo(1, 9)
     expect(v.benchmark.name).toBe('Growth policy benchmark')
-    expect(v).toMatchObject({ accountName: 'Robert Johnson Individual', modelName: 'Growth' })
+    expect(v).toMatchObject({ accountName: 'Robert Johnson Individual', mandateName: 'Growth', modelId: 'mod-002' })
   })
 
   it("draws the line from the account's modeled series, ending today; one benchmark line per model", () => {
     const v = view()
     expect(v.series).toHaveLength(25)
     expect(v.series[v.series.length - 1]?.date).toBe(MOCK_TODAY_ISO)
-    expect(view('acc-011').series.map((p) => p.benchmark)).toEqual(view('acc-040').series.map((p) => p.benchmark))
+    expect(view('acc-011').series.map((p) => p.benchmark)).toEqual(view('acc-019').series.map((p) => p.benchmark))
   })
 
   it("reflects the moved book: after the release acc-002's weights change", () => {

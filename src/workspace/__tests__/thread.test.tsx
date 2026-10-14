@@ -12,6 +12,7 @@ import { eventTime } from '@/lib/clock'
 import { fmtDrift, fmtTimestamp, fmtTolerance, UNIT } from '@/kit/measure'
 import { assetClassLabel } from '@/workspace/asset-class-label'
 import { embedFor } from '@/workspace/thread/embeds/embed-registry'
+import { requireModelManaged } from '@/lib/mandate'
 
 const ADRIAN = 'user-001'
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
@@ -19,7 +20,7 @@ const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
 function acc002Drift() {
   const account = accounts.find((a) => a.id === 'acc-002')
   if (!account) throw new Error('acc-002 missing from the book')
-  const drift = computeDriftForAccount(account)
+  const drift = computeDriftForAccount(requireModelManaged(account))
   const worst = drift.assetClassDrifts.reduce((a, b) => (Math.abs(b.drift) > Math.abs(a.drift) ? b : a))
   return { drift, worst }
 }

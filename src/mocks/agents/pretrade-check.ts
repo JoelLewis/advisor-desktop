@@ -38,9 +38,10 @@ export function runPretradeCheck({ asOf, subject }: AgentContext): AgentFinding[
   if (subject.type !== 'account') return []
   const account = accounts.find((a) => a.id === subject.id)
   if (!account) return []
-  const legs = generateRebalanceTrades(account.id, true)
   const citations = [{ source: `Pre-trade check · tax-aware rebalance preview · ${account.name}`, asOf }]
   const info = (claim: string): AgentFinding[] => [{ claim, attention: 'info', figures: [], citations }]
+  if (account.mandate === 'custom') return info('This account is a custom mandate, not model-managed: there is no model to rebalance it to, so no proposal to check.')
+  const legs = generateRebalanceTrades(account.id, true)
   if (legs.length === 0) return info('There is no rebalance proposal to check.')
   const result = evaluateProposal(account.id, legs.map((l) => ({ symbol: l.symbol, side: l.side, quantity: l.quantity, estimatedValue: l.estimatedValue })))
   if (!result) return info('The pre-trade check could not evaluate this account.')

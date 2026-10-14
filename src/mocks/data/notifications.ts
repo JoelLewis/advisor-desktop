@@ -3,13 +3,15 @@ import { now } from '@/lib/clock'
 import { driftBatchFacts } from './nbas'
 import { modelDisplayName } from '../handlers/pms'
 
-/** §0.7 · ntf-010 named a "Growth Equity" model that does not exist and a flat 3% band. */
-function growthBatchBody(): string {
-  const modelId = 'mod-002'
+/**
+ * §0.7 · ntf-010 named a "Growth Equity" model that does not exist and a flat 3% band. Phase 7a · C1:
+ * with each account holding its own model's lineup, one Growth account is outside its band, so the
+ * notice counts the whole batch (as nba-001 does) rather than one model's share of it.
+ */
+function batchBody(): string {
   const facts = driftBatchFacts()
-  const count = facts.modelIds.filter((id) => id === modelId).length
-  const band = facts.bands.find((b) => b.startsWith(`${modelDisplayName(modelId)} `))
-  return `${count} accounts on the ${modelDisplayName(modelId)} model are outside its band (${band}). Batch rebalance recommended.`
+  const accounts = facts.accountCount === 1 ? '1 account is' : `${facts.accountCount} accounts are`
+  return `${accounts} outside their model's band (${facts.bands.join(', ')}). Batch rebalance recommended.`
 }
 
 function daysAgo(n: number): string {
@@ -183,7 +185,7 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
     category: 'nba',
     priority: 'medium',
     title: 'Batch Rebalance Opportunity',
-    body: growthBatchBody(),
+    body: batchBody(),
     timestamp: hoursAgo(4),
     read: false,
     dismissed: false,

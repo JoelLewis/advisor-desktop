@@ -120,7 +120,9 @@ describe('NBA narratives match the data', () => {
     const actual = positionsFor('acc-032')
       .filter((p) => equityClasses.has(p.assetClass))
       .reduce((sum, p) => sum + p.weight, 0)
-    expect(actual).toBeCloseTo(0.58, 3)
+    // Phase 7a · C1: acc-032 holds its own model's lineup, tilted; its equity is 58.5%, which the
+    // claim states as 58%.
+    expect(actual).toBeCloseTo(0.5849, 3)
 
     expect(nba.description).toContain(`${Math.round(target * 100)}%`)
     expect(nba.description).toContain(`${Math.round(actual * 100)}%`)

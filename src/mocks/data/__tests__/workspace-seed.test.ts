@@ -5,6 +5,7 @@ import { MOCK_NOW_ISO, eventTime } from '@/lib/clock'
 import { accounts } from '../accounts'
 import { calendarEvents } from '../calendar'
 import { computeDriftForAccount } from '@/mocks/handlers/pms'
+import { requireModelManaged } from '@/lib/mandate'
 
 describe('workspace seed', () => {
   it('has the brief, two team threads and the client thread, with the right owners and members', () => {
@@ -77,7 +78,7 @@ describe('workspace seed', () => {
   it('seed messages take the first event-clock sequences, in order, after the calculation as-of', () => {
     expect(SEED_MESSAGES.map((m) => m.at)).toEqual(SEED_MESSAGES.map((_, i) => eventTime(i + 1)))
     expect(SEED_LAST_SEQUENCE).toBe(SEED_MESSAGES.length)
-    const embeddedDriftAsOf = computeDriftForAccount(accounts.find((a) => a.id === 'acc-002')!).lastCalculated
+    const embeddedDriftAsOf = computeDriftForAccount(requireModelManaged(accounts.find((a) => a.id === 'acc-002')!)).lastCalculated
     for (const m of SEED_MESSAGES) {
       expect(Date.parse(m.at)).toBeGreaterThan(Date.parse(MOCK_NOW_ISO))
       expect(Date.parse(m.at)).toBeGreaterThanOrEqual(Date.parse(embeddedDriftAsOf))

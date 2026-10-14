@@ -4,6 +4,7 @@ import { getAccounts } from '@/services/custodian'
 import { deriveBookAUM } from '@/lib/aum'
 import { convertToBase } from '@/lib/currency'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
+import { isModelManaged } from '@/lib/mandate'
 
 /**
  * §9.3 · currencies-and-fx — `oms.ts`'s rebalance trade generator derives every notional from
@@ -35,7 +36,9 @@ describe('§9.3 · rebalance previews carry their account currency', () => {
     const expected = { 'acc-041': 'HKD', 'acc-042': 'SGD', 'acc-043': 'EUR', 'acc-044': 'CHF' } as const
     let sawATrade = false
     for (const [id, currency] of Object.entries(expected)) {
-      const [preview] = await previewRebalance({ accountIds: [id], taxAware: true })
+      // acc-041 and acc-042 are custom mandates: previewed onto Growth, as a migration onto a model would be.
+      const onto = id === 'acc-041' || id === 'acc-042' ? { modelId: 'mod-002' } : {}
+      const [preview] = await previewRebalance({ accountIds: [id], taxAware: true, ...onto })
       expect(preview, id).toBeDefined()
       expect(preview!.currency, id).toBe(currency)
       // §9.7 · all four now propose trades. acc-041 and acc-044 used to propose none — both are
@@ -97,21 +100,23 @@ describe('§9.3 · rebalance previews carry their account currency', () => {
 })
 
 describe('§9.3 · model AUM derivation uses deriveBookAUM, not a naive totalValue sum', () => {
-  it('a model containing non-USD accounts (mod-002: acc-041 HKD, acc-042 SGD) reports AUM strictly below the naive sum', async () => {
-    const accounts = await getAccounts()
-    const modelAccounts = accounts.filter((a) => a.modelId === 'mod-002')
-    expect(modelAccounts.length).toBeGreaterThan(0)
-    expect(modelAccounts.some((a) => a.baseCurrency && a.baseCurrency !== 'USD')).toBe(true)
+  it('a model containing a non-USD account (mod-001: acc-043 EUR) reports AUM above the naive sum, at the converted value', async () => {
+    // Phase 7a · C1: the HKD and SGD accounts are custom mandates now, on no model; Balanced Growth
+    // holds the EUR account. EUR is 0.92 per USD, so converting a native-currency figure to USD
+    // divides by less than one — the derived figure must be strictly **above** treating every
+    // native amount as if it were already dollars, by exactly the EUR account's conversion.
+    const accounts = (await getAccounts()).filter(isModelManaged)
+    const modelAccounts = accounts.filter((a) => a.modelId === 'mod-001')
+    expect(modelAccounts.map((a) => a.baseCurrency ?? 'USD')).toContain('EUR')
     const naive = modelAccounts.reduce((sum, a) => sum + a.totalValue, 0)
     const derived = deriveBookAUM(modelAccounts, FX_RATES_USD_BASE)
-    // Every non-USD rate in the fixtures is > 1 per USD (HKD 7.82, SGD 1.34), so converting a
-    // native-currency figure to USD always divides it down — the derived figure must be strictly
-    // less than treating every native amount as if it were already dollars.
-    expect(derived).toBeLessThan(naive)
+    const eur = modelAccounts.find((a) => a.baseCurrency === 'EUR')!
+    expect(derived).toBeGreaterThan(naive)
+    expect(derived - naive).toBeCloseTo(eur.totalValue / 0.92 - eur.totalValue, 0)
   })
 
   it('a USD-only model (mod-006: 529 education accounts) reports the derived figure equal to the naive sum', async () => {
-    const accounts = await getAccounts()
+    const accounts = (await getAccounts()).filter(isModelManaged)
     const modelAccounts = accounts.filter((a) => a.modelId === 'mod-006')
     expect(modelAccounts.length).toBeGreaterThan(0)
     expect(modelAccounts.every((a) => !a.baseCurrency || a.baseCurrency === 'USD')).toBe(true)
@@ -119,7 +124,7 @@ describe('§9.3 · model AUM derivation uses deriveBookAUM, not a naive totalVal
     const derived = deriveBookAUM(modelAccounts, FX_RATES_USD_BASE)
     // The mutation this guards against: a conversion applied unconditionally (rather than gated on
     // `baseCurrency !== 'USD'`) would corrupt this figure too, and only a USD-only control catches
-    // that — the mod-002 test above cannot, since some difference is expected there either way.
+    // that — the mod-001 test above cannot, since some difference is expected there either way.
     expect(derived).toBe(naive)
   })
 })

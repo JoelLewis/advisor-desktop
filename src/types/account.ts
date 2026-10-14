@@ -1,5 +1,6 @@
 import type { Currency, Percentage } from './common';
 import type { CurrencyCode } from './currency';
+import type { AssetClass } from './portfolio';
 
 type AccountType =
   | 'individual'
@@ -37,7 +38,7 @@ type UMASleeve = {
  */
 type CostBasisMethod = 'specific_id' | 'fifo' | 'average_cost' | 'not_applicable';
 
-type Account = {
+type AccountBase = {
   id: string;
   accountNumber: string;
   name: string;
@@ -50,13 +51,31 @@ type Account = {
   cashBalance: Currency;
   isUMA: boolean;
   sleeves?: UMASleeve[];
-  modelId: string;
   custodian: string;
   openDate: string;
   lastRebalance: string | null;
   costBasisMethod: CostBasisMethod;
   baseCurrency?: CurrencyCode;
 };
+
+/** Follows one of the firm's models: measured for drift against it and rebalanced to it. */
+type ModelMandate = { mandate: 'model'; modelId: string };
+
+/**
+ * Not model-managed: the client's own instructions for the account (a single market, a single asset
+ * class). There is no model to drift from, so no drift band; the account is still measured on risk
+ * against the client's tolerance, and against the benchmark its mandate names.
+ */
+type CustomMandate = {
+  mandate: 'custom';
+  /** One line, e.g. "Hong Kong-listed equities, held at the client's instruction". */
+  mandateSummary: string;
+  benchmark: { name: string; weights: readonly { assetClass: AssetClass; weight: number }[] };
+};
+
+type ModelManagedAccount = AccountBase & ModelMandate;
+type CustomMandateAccount = AccountBase & CustomMandate;
+type Account = ModelManagedAccount | CustomMandateAccount;
 
 export type {
   AccountType,
@@ -65,4 +84,6 @@ export type {
   CostBasisMethod,
   UMASleeve,
   Account,
+  ModelManagedAccount,
+  CustomMandateAccount,
 };

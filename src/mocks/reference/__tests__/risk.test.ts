@@ -141,12 +141,15 @@ describe('book risk', () => {
   it('puts the grouped-correlation book in order: concentrated and crypto accounts first, conservative IRAs last', () => {
     const book = bookRiskView('user-001')
     expect(book?.rows.slice(0, 4).map((r) => [r.accountId, r.posture.score, r.posture.status])).toEqual([
-      ['acc-045', 100, 'above'], ['acc-002', 89, 'above'], ['acc-039', 50, 'above'], ['acc-040', 50, 'above'],
+      // Phase 7a · C1: the generated accounts hold their own model's lineup, so the conservative clients
+      // held on the generic mix (acc-039, acc-040 at 50) leave the top; James Thompson's Roth on
+      // Aggressive Growth and Linda Garcia's equity-heavy IRA take their places.
+      ['acc-045', 100, 'above'], ['acc-002', 89, 'above'], ['acc-021', 89, 'above'], ['acc-035', 53, 'above'],
     ])
     expect(book?.rows.slice(-3).map((r) => [r.accountId, r.posture.score, r.posture.status])).toEqual([
       ['acc-003', 12, 'below'], ['acc-046', 13, 'below'], ['acc-020', 12, 'below'],
     ])
-    expect(book?.aboveTolerance).toBe(10)
+    expect(book?.aboveTolerance).toBe(11)
   })
 })
 

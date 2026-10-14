@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { accounts } from '@/mocks/data/accounts'
 import { clients } from '@/mocks/data/clients'
 import { households } from '@/mocks/data/households'
+import { MANDATE_BAND_EXCEPTIONS, accounts } from '@/mocks/data/accounts'
+import { GLIDE_PATH_MODELS, MODEL_RISK_PROFILES } from '@/mocks/data/model-governance'
+import { RISK_PROFILE_TABLE, bandFor } from '@/lib/risk-profile'
+import { isModelManaged, requireModelManaged } from '@/lib/mandate'
 
 const clientIds = new Set(clients.map((c) => c.id))
 const householdIds = new Set(households.map((h) => h.id))
@@ -104,12 +107,50 @@ describe('Account Invariants', () => {
       expect(new Set(ids).size).toBe(ids.length)
     })
 
-    it.each(accounts.map((a) => [a.id, a.modelId]))(
+    it.each(accounts.filter(isModelManaged).map((a) => [a.id, a.modelId]))(
       '%s: modelId %s is a valid model (mod-001 through mod-007)',
       (_id, modelId) => {
         expect(validModelIds.has(modelId)).toBe(true)
       },
     )
+  })
+
+  describe('Phase 7a · C1 — mandates', () => {
+    const rank = (profile: string) => RISK_PROFILE_TABLE.findIndex((b) => b.profile === profile)
+    const clientBand = (clientId: string) => {
+      const client = clients.find((c) => c.id === clientId)
+      if (!client) throw new Error(`no client ${clientId}`)
+      return rank(bandFor(client.riskProfile.score).profile)
+    }
+    const modelBand = (modelId: string) => {
+      const profile = MODEL_RISK_PROFILES[modelId]
+      if (!profile) throw new Error(`no risk profile for ${modelId}`)
+      return rank(profile)
+    }
+
+    it('the custom mandates are the Hong Kong, Singapore and digital-asset accounts, each naming a benchmark that sums to 1', () => {
+      const custom = accounts.flatMap((a) => (a.mandate === 'custom' ? [a] : []))
+      expect(custom.map((a) => a.id)).toEqual(['acc-041', 'acc-042', 'acc-045'])
+      for (const a of custom) expect(a.benchmark.weights.reduce((s, w) => s + w.weight, 0), a.id).toBeCloseTo(1, 10)
+    })
+
+    it('the Mueller accounts follow the models their names state', () => {
+      const modelOf = (id: string) => requireModelManaged(accounts.find((a) => a.id === id)!).modelId
+      expect(modelOf('acc-043')).toBe('mod-001')
+      expect(modelOf('acc-044')).toBe('mod-003')
+    })
+
+    it("every model-managed account's model is within one band of its client's tolerance, but for the named exceptions and glide paths", () => {
+      const beyond = accounts.filter(isModelManaged)
+        .filter((a) => !GLIDE_PATH_MODELS.has(a.modelId))
+        .filter((a) => Math.abs(modelBand(a.modelId) - clientBand(a.clientId)) > 1)
+        .map((a) => a.id)
+      expect(beyond).toEqual([...MANDATE_BAND_EXCEPTIONS.keys()].sort())
+    })
+
+    it('each exception gives its reason', () => {
+      for (const [id, reason] of MANDATE_BAND_EXCEPTIONS) expect(reason.length, id).toBeGreaterThan(20)
+    })
   })
 
   describe('UMA accounts', () => {

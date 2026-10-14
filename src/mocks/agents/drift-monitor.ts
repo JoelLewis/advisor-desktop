@@ -18,8 +18,11 @@ export function runDriftMonitor({ asOf, subject }: AgentContext): AgentFinding[]
   if (subject.type !== 'account') return []
   const account = accounts.find((a) => a.id === subject.id)
   if (!account) return []
-  const drift = computeDriftForAccount(account)
   const cite = [{ source: `Drift calculation · ${account.name}`, asOf }]
+  if (account.mandate === 'custom') {
+    return [{ claim: `${account.name} is a custom mandate, not model-managed: there is no model to measure drift against.`, attention: 'info', figures: [], citations: cite }]
+  }
+  const drift = computeDriftForAccount(account)
   const drifts = drift.assetClassDrifts
   if (drifts.length === 0) {
     return [{ claim: 'There are no holdings or model targets to measure drift against.', attention: 'info', figures: [], citations: cite }]

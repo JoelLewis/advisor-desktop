@@ -9,7 +9,7 @@ import { notFound } from './utils'
 import type { AssetClass } from '@/types/portfolio'
 import { now as clockNow } from '@/lib/clock'
 import { bandFor, type ProfileBand, type RiskProfile } from '@/lib/risk-profile'
-import { MODEL_DEFINITIONS } from './pms'
+import { MODEL_DEFINITIONS } from '@/mocks/data/model-definitions'
 
 const proposalStore = new Map<string, ProposalDraft>()
 

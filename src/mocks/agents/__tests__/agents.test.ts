@@ -8,6 +8,7 @@ import { MOCK_NOW_ISO, MOCK_TODAY_ISO } from '@/lib/clock'
 import { getPositionsForAccount } from '@/mocks/data/positions'
 import { openWashSaleWindows, realisedSales, washSaleWindow } from '@/mocks/data/realised-sales'
 import { claimNameOf } from '../claim-name'
+import { isModelManaged, requireModelManaged } from '@/lib/mandate'
 
 const drift = AGENT_DEFINITIONS.get('drift-monitor')!
 const pretrade = AGENT_DEFINITIONS.get('pretrade-check')!
@@ -27,7 +28,7 @@ describe('agents over the whole book', () => {
     }
   })
   it('drift monitor figures equal the engine drift', () => {
-    const account = accounts.find((a) => a.id === 'acc-002')!
+    const account = requireModelManaged(accounts.find((a) => a.id === 'acc-002')!)
     const engine = computeDriftForAccount(account)
     const findings = drift.run(ctx('acc-002'))
     const max = findings.flatMap((f) => f.figures).find((fig) => fig.label.startsWith('Largest drift'))!
@@ -39,6 +40,11 @@ describe('agents over the whole book', () => {
     const claims = drift.run(ctx('acc-002')).map((f) => f.claim).join(' ')
     expect(claims).toMatch(/Private Equity cannot be sold at market/)
   })
+  it('a custom mandate is answered as one: no model to drift from or rebalance to', () => {
+    for (const id of ['acc-041', 'acc-042', 'acc-045']) {
+      for (const agent of [drift, pretrade]) expect(agent.run(ctx(id)).map((f) => f.claim).join(' '), id).toContain('custom mandate')
+    }
+  })
   it('pre-trade check never reports anything as cleared', () => {
     for (const a of accounts) for (const f of pretrade.run(ctx(a.id))) expect(f.claim.toLowerCase()).not.toContain('cleared')
   })
@@ -46,7 +52,7 @@ describe('agents over the whole book', () => {
     expect(drift.run(ctx('acc-002'))).toEqual(drift.run(ctx('acc-002')))
   })
   it('concentration claims agree with the engine weights', () => {
-    for (const a of accounts) {
+    for (const a of accounts.filter(isModelManaged)) {
       const legs = generateRebalanceTrades(a.id, true)
       const result = evaluateProposal(a.id, legs.map((l) => ({ symbol: l.symbol, side: l.side, quantity: l.quantity, estimatedValue: l.estimatedValue })))
       const findings = pretrade.run(ctx(a.id))
@@ -62,7 +68,7 @@ describe('agents over the whole book', () => {
   })
   it('no claim says "A security" when the name or the ticker is digit-free', () => {
     let named = 0
-    for (const a of accounts) {
+    for (const a of accounts.filter(isModelManaged)) {
       const legs = generateRebalanceTrades(a.id, true)
       const result = evaluateProposal(a.id, legs.map((l) => ({ symbol: l.symbol, side: l.side, quantity: l.quantity, estimatedValue: l.estimatedValue })))
       if (!result) continue

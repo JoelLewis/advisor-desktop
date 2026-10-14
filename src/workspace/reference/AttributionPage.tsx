@@ -13,6 +13,7 @@ import { ReferenceGate } from './ReferenceGate'
 import { ReferencePage } from './ReferencePage'
 import { StackedCell } from './StackedCell'
 import { TakeToTeamThread } from './TakeToTeamThread'
+import { BENCHMARK_KIND_WORDS } from './reference-words'
 
 /** Half the last displayed place of fmtEffect (0.01 pp = 0.0001 as a fraction). */
 const EFFECT_TIE_TOLERANCE = 0.00005
@@ -42,7 +43,7 @@ function Attribution({ view }: { view: AttributionView }) {
   const last = view.series[view.series.length - 1]
   return (
     <ReferencePage title={`Attribution · ${view.accountName}`} from={params.get('from')} methods={view.methods}
-      lead={<p className="text-body text-ink-2">{`${view.modelName} · against the ${view.benchmark.name} · gross of fees · as of ${fmtTimestamp(view.asOf)}`}</p>}>
+      lead={<p className="text-body text-ink-2">{`${view.mandateName} · against the ${view.benchmark.name} · gross of fees · as of ${fmtTimestamp(view.asOf)}`}</p>}>
       <Select label="Period" value={view.period} onChange={setPeriod} options={view.periods.map((p) => ({ value: p.id, label: p.label }))} />
       <div className="flex flex-wrap gap-x-10 gap-y-4">
         <Reading label="Portfolio return" value={fmtReturn(view.portfolioReturn)} unit={UNIT.pct} size="readout-md" />
@@ -84,7 +85,7 @@ function Attribution({ view }: { view: AttributionView }) {
             legend={[{ name: view.accountName, value: fmtPrice(last.portfolio) }, { name: view.benchmark.name, value: fmtPrice(last.benchmark), dashed: true }]} />
         ) : null}
       </Pane>
-      <Pane title="The benchmark" meta={view.benchmark.kind === 'glide_path' ? 'Glide path at the current stage' : 'Policy blend'}>
+      <Pane title="The benchmark" meta={BENCHMARK_KIND_WORDS[view.benchmark.kind]}>
         <DataTable caption="Benchmark components" rows={view.benchmark.components} getRowId={(c) => c.assetClass} noun={{ singular: 'sleeve', plural: 'sleeves' }} density="dense"
           columns={[
             { id: 'sleeve', header: 'Sleeve', cell: (c) => assetClassLabel(c.assetClass) },

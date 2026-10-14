@@ -14,7 +14,11 @@ export type AttributionRow = {
   allocation: number; selection: number; interaction: number; total: number
 }
 export type AttributionView = {
-  asOf: string; accountId: string; accountName: string; modelId: string; modelName: string; benchmark: ModelBenchmark
+  asOf: string; accountId: string; accountName: string
+  /** The model's id, or null for a custom mandate. */
+  modelId: string | null
+  /** The model's name, or "Custom mandate". */
+  mandateName: string; benchmark: ModelBenchmark
   period: AttributionPeriod; periods: { id: AttributionPeriod; label: string }[]
   portfolioReturn: number; benchmarkReturn: number; activeReturn: number
   rows: AttributionRow[]; totals: { allocation: number; selection: number; interaction: number; total: number }

@@ -9,6 +9,7 @@ import { clients } from '@/mocks/data/clients'
 import { FIRM_NAME } from '@/lib/firm'
 import { personById } from '@/mocks/data/people'
 import { computeDriftForAccount, modelDisplayName } from '@/mocks/handlers/pms'
+import { requireModelManaged } from '@/lib/mandate'
 import { sameWashSaleTaxpayer, taxReturnFor, washSaleTaxpayer } from '@/mocks/handlers/tax-return'
 import { taxpayerHeldAway } from './harvest-scanner'
 import { canHoldSecurities } from '@/lib/held-away'
@@ -56,7 +57,7 @@ export function writeClientLetter(proposal: Proposal, version: ProposalVersion, 
   const client = clients.find((c) => c.id === proposal.clientId)
   const signer = personById(signedBy)
   if (!account || !client || !signer) throw new Error(`Client Letter Agent: cannot address ${proposal.id}`)
-  const drift = computeDriftForAccount(account)
+  const drift = computeDriftForAccount(requireModelManaged(account))
   const worst = drift.assetClassDrifts.reduce((a, b) => (Math.abs(b.drift) > Math.abs(a.drift) ? b : a))
   const trades = version.preview.trades
   const sells = trades.filter((t) => t.side === 'sell')

@@ -3,6 +3,7 @@ import { getAttribution, getBenchmarkComparison, getDrift, getSensitivity } from
 import { assetClassWeights, assetClassReturn1Y } from '@/lib/risk-model'
 import { getPositionsForAccount } from '@/mocks/data/positions'
 import { accounts } from '@/mocks/data/accounts'
+import { isModelManaged } from '@/lib/mandate'
 
 /** Mirrors the API's publication rounding, so the tests can assert equality rather than nearness. */
 const roundTo = (value: number, decimals: number) =>
@@ -57,7 +58,8 @@ describe('Brinson attribution identity', () => {
    * expected value be written in closed form from the fixture rather than re-deriving the handler.
    */
   it('the allocation effect is Brinson-Fachler, not Brinson-Hood-Beebower', async () => {
-    for (const account of accounts) {
+    // Model-managed accounts, whose benchmark weights are their drift targets; a custom mandate's are its own.
+    for (const account of accounts.filter(isModelManaged)) {
     const weights = assetClassWeights(getPositionsForAccount(account.id, account.totalValue))
     const drift = await getDrift(account.id)
     const benchWeights = new Map(drift.assetClassDrifts.map((d) => [d.assetClass as string, d.target]))

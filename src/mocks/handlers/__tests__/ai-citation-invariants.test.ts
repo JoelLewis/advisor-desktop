@@ -6,6 +6,7 @@ import { computeDriftForAccount } from '@/mocks/handlers/pms'
 import { generateRebalanceTrades } from '@/mocks/handlers/oms'
 import { formatAUM } from '@/mocks/handlers/utils'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
+import { isModelManaged, requireModelManaged } from '@/lib/mandate'
 
 /**
  * §9.5 · AI answers agree with the data they cite.
@@ -44,7 +45,7 @@ describe('§9.5 · AI answers agree with the data they cite', () => {
   })
 
   it('the drifted-account count matches the drift surface (computeDriftForAccount)', async () => {
-    const driftedCount = accounts.filter((a) => computeDriftForAccount(a).needsRebalance).length
+    const driftedCount = accounts.filter(isModelManaged).filter((a) => computeDriftForAccount(a).needsRebalance).length
     // Vacuity guard: a count of 0 would let a claim of "0 accounts have drifted" pass trivially.
     expect(driftedCount).toBeGreaterThan(0)
 
@@ -155,11 +156,11 @@ describe('§9.5 · Position Concentration Alert reflects real single-name breach
  * buy where the engine buys AGG. Every figure is now asserted against the engine.
  */
 describe('§9.5 · AI drift figures for acc-001 match computeDriftForAccount', () => {
-  const account = accounts.find((a) => a.id === 'acc-001')!
+  const account = requireModelManaged(accounts.find((a) => a.id === 'acc-001')!)
   const drift = computeDriftForAccount(account)
   // Same formatting as the drift surfaces (SelectAccountsStep, OverviewTab, RichCard).
   const expected = `${(drift.maxAbsDrift * 100).toFixed(1)}%`
-  const driftedCount = accounts.filter((a) => computeDriftForAccount(a).needsRebalance).length
+  const driftedCount = accounts.filter(isModelManaged).filter((a) => computeDriftForAccount(a).needsRebalance).length
 
   // Every template that names the Johnson Family Trust's drift.
   const answers = () => Promise.all([
@@ -228,7 +229,7 @@ describe('§9.5 · AI drift figures for acc-001 match computeDriftForAccount', (
  */
 describe('§9.5 · Johnson household rebalance action matches household data', () => {
   it('the action\'s value and account count are the hh-001 accounts that need a rebalance', async () => {
-    const targets = accounts.filter((a) => a.householdId === 'hh-001' && computeDriftForAccount(a).needsRebalance)
+    const targets = accounts.filter(isModelManaged).filter((a) => a.householdId === 'hh-001' && computeDriftForAccount(a).needsRebalance)
     // Vacuity guard: an empty set would make "$0 across 0 accounts" pass.
     expect(targets.length).toBeGreaterThan(0)
     const value = formatAUM(targets.reduce((s, a) => s + a.totalValue, 0))
