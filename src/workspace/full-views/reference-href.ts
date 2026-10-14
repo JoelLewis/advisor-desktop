@@ -1,4 +1,5 @@
 import type { ReferenceView } from '@/types/reference'
+import type { Subject } from '@/types/workspace'
 import { isAttributionPeriod, type AttributionPeriod } from '@/types/reference-attribution'
 import type { BlotterFilters } from '@/types/reference-blotter'
 
@@ -27,7 +28,7 @@ export const REFERENCE_VIEW_TITLE: Readonly<Record<ReferenceView, string>> = {
 }
 
 /** Where a quoted row lives, opened from the thread it was quoted into. */
-export function referenceRowHref(view: ReferenceView, rowId: string, fromThreadId: string): string {
+export function referenceRowHref(view: ReferenceView, rowId: string, fromThreadId: string, subject?: Subject): string {
   switch (view) {
     case 'billing': return billingHref(rowId, fromThreadId)
     case 'practice': return practiceHref(fromThreadId)
@@ -38,6 +39,6 @@ export function referenceRowHref(view: ReferenceView, rowId: string, fromThreadI
       return accountAttributionHref(accountId, fromThreadId, isAttributionPeriod(period) ? period : undefined)
     }
     case 'models': return modelHref(rowId.split(':')[0] ?? rowId, fromThreadId)
-    case 'blotter': return blotterHref({}, fromThreadId)
+    case 'blotter': return blotterHref(subject?.type === 'account' ? { accountId: subject.id } : {}, fromThreadId)
   }
 }

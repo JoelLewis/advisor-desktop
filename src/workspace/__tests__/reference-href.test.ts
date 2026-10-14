@@ -14,5 +14,7 @@ describe('reference hrefs', () => {
     expect(referenceRowHref('models', 'mod-005:v3', 'th-x')).toBe(modelHref('mod-005', 'th-x'))
     expect(referenceRowHref('risk', 'acc-045', 'th-x')).toBe('/accounts/acc-045/risk?from=th-x')
     expect(referenceRowHref('reconciliation', 'brk-002', 'th-x')).toBe('/reconciliation?from=th-x')
+    expect(referenceRowHref('blotter', 'ord-001', 'th-x', { type: 'account', id: 'acc-002' })).toBe('/blotter?accountId=acc-002&from=th-x')
+    expect(referenceRowHref('blotter', 'ord-001', 'th-x')).toBe('/blotter?from=th-x')
   })
 })

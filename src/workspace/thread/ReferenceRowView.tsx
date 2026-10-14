@@ -17,7 +17,7 @@ export function ReferenceRowView({ message, directory }: { message: ReferenceRow
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="text-label uppercase text-ink-3">
           {'From '}
-          <Link to={referenceRowHref(message.view, message.rowId, message.threadId)} className="underline decoration-rule-2 underline-offset-4 hover:decoration-ink">{view}</Link>
+          <Link to={referenceRowHref(message.view, message.rowId, message.threadId, message.subject)} className="underline decoration-rule-2 underline-offset-4 hover:decoration-ink">{view}</Link>
           {` · taken by ${personIn(directory, message.takenBy).name}`}
         </span>
         <span className="tabular ml-auto text-label text-ink-3">{fmtTimestamp(message.at)}</span>
