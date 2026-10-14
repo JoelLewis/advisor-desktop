@@ -28,7 +28,7 @@ describe('tax lots partition their positions', () => {
   })
 
   it.each(ACCOUNTS)('%s: lots sum to their position on every dimension', async (accountId) => {
-    const [lots, positions] = await Promise.all([getTaxLots(accountId), getPositions(accountId)])
+    const [lots, positions] = await Promise.all([getTaxLots('user-001', accountId), getPositions('user-001', accountId)])
     for (const position of positions.filter((p) => p.symbol !== 'CASH')) {
       const forPosition = lots.filter((l) => l.positionId === position.id)
       expect(forPosition.length, `${position.symbol} has no lots`).toBeGreaterThan(0)
@@ -40,20 +40,20 @@ describe('tax lots partition their positions', () => {
   })
 
   it('C12: lots are deterministic across calls', async () => {
-    const first = await getTaxLots('acc-001')
-    const second = await getTaxLots('acc-001')
+    const first = await getTaxLots('user-001', 'acc-001')
+    const second = await getTaxLots('user-001', 'acc-001')
     expect(second).toEqual(first)
   })
 
   it('C12: gainLoss === currentValue − costBasis for every lot', async () => {
-    const lots = await getTaxLots('acc-002')
+    const lots = await getTaxLots('user-001', 'acc-002')
     for (const lot of lots) {
       expect(lot.gainLoss).toBeCloseTo(lot.currentValue - lot.costBasis, 0)
     }
   })
 
   it.each(ACCOUNTS)('%s: holdingPeriod follows the purchase date against the clock', async (accountId) => {
-    const lots = await getTaxLots(accountId)
+    const lots = await getTaxLots('user-001', accountId)
     for (const lot of lots) {
       const months = (new Date(MOCK_TODAY_ISO).getTime() - new Date(lot.purchaseDate).getTime())
         / (1000 * 60 * 60 * 24 * 365.25 / 12)
@@ -64,7 +64,7 @@ describe('tax lots partition their positions', () => {
   // Round-1 review, Minor #4: acc-001 alone never exercises the §1222 boundary. acc-011 has lots
   // exactly 12 months old (e.g. lot-pos-071-1) — a real fixture case, not a synthetic one.
   it('C12: the §1222 boundary is exercised by the fixture and classified short-term', async () => {
-    const lots = await getTaxLots('acc-011')
+    const lots = await getTaxLots('user-001', 'acc-011')
     const boundaryLots = lots.filter((l) => l.purchaseDate === '2025-02-25')
     expect(boundaryLots.length, 'fixture no longer produces a lot exactly 12 months old').toBeGreaterThan(0)
     for (const lot of boundaryLots) {
@@ -82,7 +82,7 @@ describe('tax lots partition their positions', () => {
     const byZone = new Map<string, string[]>()
     for (const tz of zones) {
       vi.stubEnv('TZ', tz)
-      const lots = await getTaxLots('acc-001')
+      const lots = await getTaxLots('user-001', 'acc-001')
       byZone.set(tz, lots.map((l) => l.purchaseDate))
     }
     const [firstZone, ...restZones] = zones
@@ -280,8 +280,8 @@ describe('wash sale windows', () => {
 // guess what is restricted, or until when.
 describe('repurchaseBlockedUntil states what is restricted, and until when', () => {
   it('C12: acc-002\'s INTC lots are blocked from repurchase until rs-001\'s window closes', async () => {
-    const lots = await getTaxLots('acc-002')
-    const positions = await getPositions('acc-002')
+    const lots = await getTaxLots('user-001', 'acc-002')
+    const positions = await getPositions('user-001', 'acc-002')
     const intcPositionId = positions.find((p) => p.symbol === 'INTC')!.id
     const intcLots = lots.filter((l) => l.positionId === intcPositionId)
     expect(intcLots.length).toBeGreaterThan(0)
@@ -289,7 +289,7 @@ describe('repurchaseBlockedUntil states what is restricted, and until when', () 
   })
 
   it('C12: a symbol with no open household window is not blocked', async () => {
-    const lots = await getTaxLots('acc-002')
+    const lots = await getTaxLots('user-001', 'acc-002')
     expect(lots.some((l) => l.repurchaseBlockedUntil !== null)).toBe(true)
     expect(lots.some((l) => l.repurchaseBlockedUntil === null)).toBe(true)
   })
@@ -304,13 +304,13 @@ describe('a household window reaches every account in the household, not just th
   it('C12: a sibling account that never sold INTC still sees hh-001\'s INTC window', async () => {
     // acc-003 is Robert Johnson's Traditional IRA — same household as acc-002 (the seller),
     // no INTC holding or sale of its own.
-    const siblingWindows = await getOpenWashSaleWindows('acc-003')
+    const siblingWindows = await getOpenWashSaleWindows('user-001', 'acc-003')
     expect(siblingWindows.some((w) => w.symbol === 'INTC')).toBe(true)
   })
 
   it('C12: an account in an unrelated household does not see hh-001\'s INTC window', async () => {
     // acc-011 is in hh-003 (Williams) — no relation to hh-001 or the INTC sale.
-    const otherHouseholdWindows = await getOpenWashSaleWindows('acc-011')
+    const otherHouseholdWindows = await getOpenWashSaleWindows('user-001', 'acc-011')
     expect(otherHouseholdWindows.some((w) => w.symbol === 'INTC')).toBe(false)
   })
 })
@@ -338,7 +338,7 @@ describe('every realized sale reconciles with a real sell transaction (C14)', ()
 
   it('C14: acc-007 sold its entire NVDA position — the running balance opens above zero, is drawn down by exactly the sale, and lands on the 0 shares it holds today', async () => {
     const txns = transactionsOf('acc-007')
-    const positions = await getPositions('acc-007')
+    const positions = await getPositions('user-001', 'acc-007')
     expect(positions.find((p) => p.symbol === 'NVDA')?.quantity ?? 0).toBe(0)
 
     const nvda = txns
@@ -356,7 +356,7 @@ describe('every realized sale reconciles with a real sell transaction (C14)', ()
 
   it('C14: acc-002 sold part of its INTC position — the running balance lands on the quantity it still holds today', async () => {
     const txns = transactionsOf('acc-002')
-    const positions = await getPositions('acc-002')
+    const positions = await getPositions('user-001', 'acc-002')
     const heldToday = positions.find((p) => p.symbol === 'INTC')!.quantity
 
     const intc = txns
@@ -414,7 +414,7 @@ describe('the harvest threshold is currency-aware (PRE-FLIGHT correction 1)', ()
   // threshold — so the currency-blind filter silently hides a genuine harvest opportunity in
   // every non-USD account whose currency is worth more per unit than the dollar.
   it('acc-044: a CHF 980 loss is hidden by the currency-blind literal but is a real harvestable loss once converted', async () => {
-    const lots = await getTaxLots('acc-044')
+    const lots = await getTaxLots('user-001', 'acc-044')
     const lot = lots.find((l) => l.id === 'lot-pos-234-2')!
     expect(lot.gainLoss).toBeCloseTo(-980, 0)
 

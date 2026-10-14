@@ -50,8 +50,8 @@ describe('rebalance consumes signed drift correctly (Task 21 x Task 22 merge bou
     for (const account of accounts) {
       const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
       if (!preview?.trades.length) continue
-      const drift = await getDrift(account.id)
-      const positions = await getPositions(account.id)
+      const drift = await getDrift('user-001', account.id)
+      const positions = await getPositions('user-001', account.id)
       for (const trade of preview.trades) {
         tradesChecked++
         // §9.7 · a buy may now be in a security the account holds nothing of — that is the whole

@@ -267,7 +267,7 @@ describe('fix round 4 · sells are capped by what buys AND cash-to-target can ab
     const btc = sells.find((t) => t.symbol === 'BTC')!
     // Read from the fixture rather than re-typed: the position is worth $188,017.50, and a
     // hand-copied bound is a second copy that can drift from the thing it guards.
-    const btcPosition = (await getPositions('acc-045')).find((p) => p.symbol === 'BTC')!
+    const btcPosition = (await getPositions('user-001', 'acc-045')).find((p) => p.symbol === 'BTC')!
     expect(btc.estimatedValue).toBeLessThanOrEqual(Math.round(btcPosition.marketValue))
     // This account is where lot granularity bites hardest, and legibly so: BTC's leg wants
     // 2.1487 units and one unit is $87,450, so it trades 2 and the sleeve executes at $370,372
@@ -340,7 +340,7 @@ describe('fix round 4 · sells are capped by what buys AND cash-to-target can ab
       const totalBuy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
       if (totalSell === 0) continue
       examined++
-      const drift = await getDrift(account.id)
+      const drift = await getDrift('user-001', account.id)
       const cashTarget = drift.assetClassDrifts.find((d) => d.assetClass === 'cash')?.target ?? 0
       const ceiling = Math.max(cashTarget * account.totalValue, cashBalanceOf(account))
       const endCash = cashBalanceOf(account) - totalBuy + totalSell
@@ -357,12 +357,12 @@ describe('fix round 4 · sells are capped by what buys AND cash-to-target can ab
 describe('§9.6 · buys are capped by available cash above target, symmetric to the sell cap', () => {
   it('acc-043: rebalancing does not drive cash from 13.69% to 5.56% against a 10% target', async () => {
     const [preview] = await previewRebalance({ accountIds: ['acc-043'], taxAware: true })
-    const positions = await getPositions('acc-043')
+    const positions = await getPositions('user-001', 'acc-043')
     const account = accountFixture.find((a) => a.id === 'acc-043')!
     const cash = positions.find((p) => p.symbol === 'CASH')!.marketValue
     const sell = preview!.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
     const buy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
-    const target = (await getDrift('acc-043')).assetClassDrifts.find((d) => d.assetClass === 'cash')!.target
+    const target = (await getDrift('user-001', 'acc-043')).assetClassDrifts.find((d) => d.assetClass === 'cash')!.target
     // In money, at zero tolerance. The `- 0.0002` weight tolerance this replaces was worth €640
     // on this account — more than three CSBGU0.SW lots — for an invariant whose whole content is
     // "cash does not fall below the target". There is nothing for a tolerance to absorb: both
@@ -384,11 +384,11 @@ describe('§9.6 · buys are capped by available cash above target, symmetric to 
       const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
       if (!preview?.trades.length) continue
       examined++
-      const positions = await getPositions(account.id)
+      const positions = await getPositions('user-001', account.id)
       const cash = positions.find((p) => p.symbol === 'CASH')?.marketValue ?? 0
       const sell = preview.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
       const buy = preview.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
-      const target = (await getDrift(account.id)).assetClassDrifts.find((d) => d.assetClass === 'cash')?.target ?? 0
+      const target = (await getDrift('user-001', account.id)).assetClassDrifts.find((d) => d.assetClass === 'cash')?.target ?? 0
       const targetValue = target * account.totalValue
       const floor = Math.min(cash, targetValue)
       const ceiling = Math.max(cash, targetValue)
@@ -498,7 +498,7 @@ describe('§9.6 · buys are capped by available cash above target, symmetric to 
     const [preview] = await previewRebalance({ accountIds: ['acc-015'], taxAware: true, driftThreshold: 0.001 })
     const totalSell = preview!.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)
     const totalBuy = preview!.trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.estimatedValue, 0)
-    const target = (await getDrift('acc-015')).assetClassDrifts.find((d) => d.assetClass === 'cash')!.target
+    const target = (await getDrift('user-001', 'acc-015')).assetClassDrifts.find((d) => d.assetClass === 'cash')!.target
     const startCashPct = cashBalanceOf(account) / account.totalValue
     const endCashPct = (cashBalanceOf(account) - totalBuy + totalSell) / account.totalValue
 
@@ -534,7 +534,7 @@ describe('fix round 3 · self-financing applies to sells only — buys are never
     // have proposed HK$9,912,500 of 0700.HK against a HK$4,560,000 position — 2.2x, a short sale
     // in a long-only demo.
     const [preview] = await previewRebalance({ accountIds: ['acc-041'], taxAware: true, modelId: 'mod-002' })
-    const positions = await getPositions('acc-041')
+    const positions = await getPositions('user-001', 'acc-041')
     const sells = preview!.trades.filter((t) => t.side === 'sell')
     expect(preview!.trades.length).toBeGreaterThan(0)
     // Vacuity guard: the per-sell bound below is meaningless if there are no sells.
@@ -583,7 +583,7 @@ describe('fix round 3 · rebalance sells never exceed the position actually held
       const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
       const sells = preview!.trades.filter((t) => t.side === 'sell')
       if (sells.length === 0) continue
-      const positions = await getPositions(account.id)
+      const positions = await getPositions('user-001', account.id)
       for (const trade of sells) {
         const position = positions.find((p) => p.symbol === trade.symbol)
         if (!position) continue
@@ -618,9 +618,9 @@ describe('fix round 3 · rebalance tax uses each lot\'s own holding-period rate,
     expect(vti).toBeDefined()
     expect(vti!.taxImpact).toBeGreaterThan(0)
 
-    const positions = await getPositions('acc-037')
+    const positions = await getPositions('user-001', 'acc-037')
     const vtiPosition = positions.find((p) => p.symbol === 'VTI')!
-    const lots = (await getTaxLots('acc-037')).filter((l) => l.positionId === vtiPosition.id)
+    const lots = (await getTaxLots('user-001', 'acc-037')).filter((l) => l.positionId === vtiPosition.id)
     // Sanity: this account's fixture case is genuinely all short-term, so a flat long-term rate
     // is the correct thing to compare against.
     expect(lots.length).toBeGreaterThan(0)
@@ -644,9 +644,9 @@ describe('fix round 3 · rebalance tax uses each lot\'s own holding-period rate,
     expect(vti).toBeDefined()
     expect(vti!.taxImpact).toBeGreaterThan(0)
 
-    const positions = await getPositions('acc-001')
+    const positions = await getPositions('user-001', 'acc-001')
     const vtiPosition = positions.find((p) => p.symbol === 'VTI')!
-    const lots = (await getTaxLots('acc-001')).filter((l) => l.positionId === vtiPosition.id)
+    const lots = (await getTaxLots('user-001', 'acc-001')).filter((l) => l.positionId === vtiPosition.id)
     expect(lots.some((l) => l.holdingPeriod === 'long')).toBe(true)
 
     let remaining = vti!.estimatedValue
@@ -694,8 +694,8 @@ describe('§9.7 round 4 · the tax on a row is the tax on the value that row sta
   it('acc-045 BTC: 2 units at $174,900, taxed on $174,900 — not on the notional the lot was floored from', async () => {
     const [preview] = await previewRebalance({ accountIds: ['acc-045'], taxAware: false, modelId: 'mod-002' })
     const btc = preview!.trades.find((t) => t.symbol === 'BTC' && t.side === 'sell')!
-    const position = (await getPositions('acc-045')).find((p) => p.symbol === 'BTC')!
-    const lots = (await getTaxLots('acc-045')).filter((l) => l.positionId === position.id)
+    const position = (await getPositions('user-001', 'acc-045')).find((p) => p.symbol === 'BTC')!
+    const lots = (await getTaxLots('user-001', 'acc-045')).filter((l) => l.positionId === position.id)
     expect(lots.length).toBeGreaterThan(0)
     expect(btc.quantity).toBe(2)
     expect(btc.estimatedValue).toBe(174_900)
@@ -717,8 +717,8 @@ describe('§9.7 round 4 · the tax on a row is the tax on the value that row sta
       // Gated on the gross figure: netting can offset an account's gains entirely (net estimate 0)
       // while its legs still carry per-leg tax that this test checks.
       if (!preview || preview.grossTaxOnGains <= 0) continue
-      const positions = await getPositions(account.id)
-      const allLots = await getTaxLots(account.id)
+      const positions = await getPositions('user-001', account.id)
+      const allLots = await getTaxLots('user-001', account.id)
       for (const trade of preview.trades) {
         if (trade.side !== 'sell') continue
         const position = positions.find((p) => p.symbol === trade.symbol)
@@ -777,7 +777,7 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     expect(preview!.trades.some((t) => t.side === 'buy')).toBe(true)
     // The direction that matters: the buys are in classes acc-041 holds NOTHING of. A test that
     // only counted trades would pass on an all-sell proposal, which is the state this fixes.
-    const positions = await getPositions('acc-041')
+    const positions = await getPositions('user-001', 'acc-041')
     const heldSymbols = new Set(positions.map((p) => p.symbol))
     const unheldBuys = preview!.trades.filter((t) => t.side === 'buy' && !heldSymbols.has(t.symbol))
     expect(unheldBuys.length).toBeGreaterThan(0)
@@ -879,9 +879,9 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     for (const account of accountList) {
       const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
       if (!preview?.trades.length) continue
-      const positions = await getPositions(account.id)
+      const positions = await getPositions('user-001', account.id)
       const held = new Set(positions.map((p) => p.symbol))
-      const drift = await getDrift(account.id)
+      const drift = await getDrift('user-001', account.id)
       const sleeveSymbols = new Set(
         drift.assetClassDrifts
           .map((d) => modelImplementationSecurity(drift.modelId, d.assetClass)?.symbol)
@@ -902,7 +902,7 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     // throughout ($73,800 of ETH is exactly its market value), so only the share count was wrong.
     // `boundedTradeQty` (custodian.ts) is the codebase's one rounding policy for this and floors
     // to the cap instead.
-    const positions = await getPositions('acc-045')
+    const positions = await getPositions('user-001', 'acc-045')
     const fractional = positions.filter((p) => !Number.isInteger(p.quantity))
     // Vacuity guard: this account must really hold fractional units, or the test proves nothing.
     expect(fractional.map((p) => p.symbol)).toEqual(expect.arrayContaining(['BTC', 'ETH', 'USDC']))
@@ -939,8 +939,8 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     for (const account of accountList) {
       const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
       if (!preview?.trades.length) continue
-      const positions = await getPositions(account.id)
-      const drift = await getDrift(account.id)
+      const positions = await getPositions('user-001', account.id)
+      const drift = await getDrift('user-001', account.id)
       for (const trade of preview.trades) {
         // The price the engine used: the held position's, or the model sleeve's own quote
         // converted into the account's currency for a class the account holds nothing in.
@@ -983,7 +983,7 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     let tradesChecked = 0
     for (const account of accountList) {
       const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
-      const positions = await getPositions(account.id)
+      const positions = await getPositions('user-001', account.id)
       const seen = new Set<string>()
       for (const trade of preview?.trades ?? []) {
         tradesChecked++

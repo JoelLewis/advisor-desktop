@@ -50,7 +50,7 @@ describe('routes', () => {
     expect(r.getByText('APPROVED')).toBeInTheDocument()
     expect(r.getAllByText('Mark Davis').length).toBeGreaterThanOrEqual(1)
     expect(r.getByText('sr-002')).toBeInTheDocument()
-    const sr002 = (await getSupervisionRecords('comp-006')).find((rec) => rec.id === 'sr-002')!
+    const sr002 = (await getSupervisionRecords('user-001', 'comp-006')).find((rec) => rec.id === 'sr-002')!
     expect(r.getAllByText(fmtTimestamp(sr002.timestamp)).length).toBeGreaterThanOrEqual(2)
     expect(r.getByRole('article', { name: 'Potential wash sale cleared — Johnson INTC/SMH' })).toBeInTheDocument()
     expect(records).not.toHaveTextContent('Advisor of record')

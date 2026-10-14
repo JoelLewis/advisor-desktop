@@ -45,7 +45,7 @@ beforeAll(async () => {
   const accounts = accountFixture
   const ids = accounts.map((a) => a.id)
   const [positions, previews, alone] = await Promise.all([
-    Promise.all(ids.map(async (id) => [id, await getPositions(id)] as const)),
+    Promise.all(ids.map(async (id) => [id, await getPositions('user-001', id)] as const)),
     Promise.all(MODEL_DEFINITIONS.map(async (m) => {
       const batch = await previewRebalance({ accountIds: ids, taxAware: true, modelId: m.id })
       return [m.id, new Map(batch.map((p) => [p.accountId, p]))] as const

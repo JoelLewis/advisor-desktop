@@ -16,6 +16,7 @@ import { MOCK_NOW_ISO, startOfToday } from '@/lib/clock'
 import { FX_RATES_USD_BASE } from '../data/currencies'
 import { getPositionsForAccount, seedPositionsForAccount } from '../data/positions'
 import { ledgerFills } from '../data/portfolio-ledger'
+import { refuseExternal } from './workspace-http'
 import { accounts } from '../data/accounts'
 import { notFound, roundTo } from './utils'
 import { MODEL_BANDS, MODEL_DEFINITIONS, type ModelDefinition } from '../data/model-definitions'
@@ -620,13 +621,17 @@ export function concentrationFor(account: Account) {
 }
 
 export const pmsHandlers = [
-  http.get('/api/pms/accounts/:accountId/positions', ({ params }) => {
+  http.get('/api/pms/accounts/:accountId/positions', ({ params, request }) => {
+    const refused = refuseExternal(request)
+    if (refused) return refused
     const account = findAccount(params.accountId)
     if (!account) return notFound()
     return HttpResponse.json(getPositionsForAccount(account.id, account.totalValue))
   }),
 
-  http.get('/api/pms/accounts/:accountId/drift', ({ params }) => {
+  http.get('/api/pms/accounts/:accountId/drift', ({ params, request }) => {
+    const refused = refuseExternal(request)
+    if (refused) return refused
     const account = findAccount(params.accountId)
     if (!account) return notFound()
     // A custom mandate follows no model, so it has no drift to report.

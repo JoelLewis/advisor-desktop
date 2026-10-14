@@ -33,7 +33,7 @@ function sellIntcByHand(sale: RealizedSale = SALE) {
 }
 
 async function json(path: string) {
-  return (await fetch(`/api${path}`)).json()
+  return (await fetch(`/api${path}`, { headers: { 'X-Viewer': 'user-001' } })).json()
 }
 
 describe('every engine read sees the moved book', () => {

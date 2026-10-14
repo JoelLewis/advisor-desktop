@@ -29,7 +29,7 @@ describe('§0.7 · the activity feed agrees with the records', () => {
 
   it('the harvest records follow one another on the day of the sale: fill, replacement, compliance review', async () => {
     const comp006 = complianceAlerts.find((a) => a.id === 'comp-006')!
-    const [sr002] = await getSupervisionRecords('comp-006')
+    const [sr002] = await getSupervisionRecords('user-001', 'comp-006')
     const sequence = [sale.timestamp, replacement.timestamp, comp006.createdAt, comp006.resolvedAt!].map(Date.parse)
     expect(sequence).toEqual([...sequence].sort((a, b) => a - b))
     expect(new Set([sale.timestamp, comp006.createdAt].map((t) => t.slice(0, 10)))).toEqual(new Set([rs001.saleDate]))

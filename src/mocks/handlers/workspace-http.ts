@@ -25,5 +25,14 @@ export function firmViewer(request: Request): { ok: true; viewerId: string } | {
   return { ok: true, viewerId }
 }
 
+/**
+ * The firm's own records (accounts, lots, positions, drift, households, compliance alerts): the response a
+ * request must get instead, or undefined for a firm viewer. Without a known viewer: 401; an outsider: 404.
+ */
+export function refuseExternal(request: Request): Response | undefined {
+  const viewer = firmViewer(request)
+  return viewer.ok ? undefined : viewer.response
+}
+
 /** An act as an outsider may read it: what reached them, without the firm's subject, basis, rationale or presenter marker. */
 export const withoutProvenance = ({ subject: _subject, basis: _basis, recordBasis: _recordBasis, editedBy: _editedBy, messageId: _messageId, viaPresenter: _via, rationale: _rationale, bestInterest: _bestInterest, ...act }: BindingAct): BindingAct => act

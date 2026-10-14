@@ -68,7 +68,7 @@ describe('drift calculation invariants', () => {
   })
 
   it('C24: drift keeps its sign, so overweight and underweight are distinguishable', async () => {
-    const drift = await getDrift('acc-001')
+    const drift = await getDrift('user-001', 'acc-001')
     expect(drift.assetClassDrifts.some((a) => a.drift > 0)).toBe(true)
     expect(drift.assetClassDrifts.some((a) => a.drift < 0)).toBe(true)
     for (const a of drift.assetClassDrifts) {
@@ -78,7 +78,7 @@ describe('drift calculation invariants', () => {
   })
 
   it('signed drifts sum to approximately zero — every overweight is someone else underweight', async () => {
-    const drift = await getDrift('acc-001')
+    const drift = await getDrift('user-001', 'acc-001')
     expect(drift.assetClassDrifts.reduce((s, a) => s + a.drift, 0)).toBeCloseTo(0, 2)
   })
 

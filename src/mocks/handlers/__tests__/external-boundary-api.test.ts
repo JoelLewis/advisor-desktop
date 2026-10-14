@@ -51,3 +51,33 @@ describe('the boundary over HTTP', () => {
     expect(await call('GET', '/acts?threadId=th-pell', 'prsp-011')).toEqual({ status: 200, body: [] })
   })
 })
+
+/** The firm's own records behind the workspace: the custodian, the CRM, the PMS and compliance. */
+const FIRM_RECORDS: readonly string[] = [
+  '/custodian/accounts/acc-002', '/custodian/accounts/acc-002/tax-lots', '/custodian/accounts/acc-002/realized-sales',
+  '/crm/households/hh-001', '/crm/households/hh-001/held-away',
+  '/pms/accounts/acc-002/positions', '/pms/accounts/acc-002/drift',
+  '/compliance/alerts', '/compliance/alerts/comp-002/records',
+]
+
+async function read(path: string, viewer: string | undefined) {
+  const res = await fetch(`/api${path}`, { headers: viewer ? { 'X-Viewer': viewer } : {} })
+  return { status: res.status, body: await res.json().catch(() => null) }
+}
+
+describe("the firm's records over HTTP", () => {
+  it.each(['cli-001', 'prsp-011'])("%s gets a bare 404 from every read of the firm's records (Robert's own household and account included)", async (viewer) => {
+    for (const path of FIRM_RECORDS) expect(await read(path, viewer), path).toEqual({ status: 404, body: null })
+  })
+
+  it('a request that names no known viewer gets 401', async () => {
+    for (const path of FIRM_RECORDS) {
+      expect((await read(path, undefined)).status, path).toBe(401)
+      expect((await read(path, 'nobody')).status, path).toBe(401)
+    }
+  })
+
+  it.each(['user-001', 'user-002', 'user-003', 'cco-001'])('%s, inside the firm, reads every one of them', async (viewer) => {
+    for (const path of FIRM_RECORDS) expect((await read(path, viewer)).status, path).toBe(200)
+  })
+})

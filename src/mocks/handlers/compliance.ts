@@ -6,6 +6,7 @@ import { accounts } from '../data/accounts'
 import { cashBalanceOf, getPositionsForAccount } from '../data/positions'
 import { personById } from '../data/people'
 import { openWashSaleWindowsFor } from './tax-return'
+import { refuseExternal } from './workspace-http'
 import type { ProposalTradeLeg, ProposalViolation, ProposalLegResult, PreTradeCheckProposalResult } from '@/services/oms'
 
 /**
@@ -297,6 +298,8 @@ export const SUPERVISION_RECORDS: readonly SupervisionRecord[] = [
 
 export const complianceHandlers = [
   http.get('/api/compliance/alerts', ({ request }) => {
+    const refused = refuseExternal(request)
+    if (refused) return refused
     const url = new URL(request.url)
     const severity = url.searchParams.get('severity')
     const status = url.searchParams.get('status')
@@ -306,7 +309,9 @@ export const complianceHandlers = [
     return HttpResponse.json(filtered)
   }),
 
-  http.get('/api/compliance/alerts/:alertId/records', ({ params }) => {
+  http.get('/api/compliance/alerts/:alertId/records', ({ params, request }) => {
+    const refused = refuseExternal(request)
+    if (refused) return refused
     const records = SUPERVISION_RECORDS.filter((r) => r.alertId === params.alertId)
     return HttpResponse.json(records)
   }),

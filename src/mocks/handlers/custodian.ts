@@ -4,6 +4,7 @@ import type { TaxLot } from '@/types/portfolio'
 import { accounts } from '../data/accounts'
 import { cashBalanceOf, getPositionsForAccount, seedPositionsForAccount } from '../data/positions'
 import { bookOf, ledgerFills } from '../data/portfolio-ledger'
+import { refuseExternal } from './workspace-http'
 import { realizedSales } from '../data/realized-sales'
 import { openWashSaleWindowsFor, sameWashSaleTaxpayer } from './tax-return'
 import { isTaxableAccount } from '@/lib/tax-treatment'
@@ -530,19 +531,25 @@ export function generateTaxLots(accountId: string, totalValue: number): Custodia
 const withBookCash = (a: Account): Account => ({ ...a, cashBalance: cashBalanceOf(a) })
 
 export const custodianHandlers = [
-  http.get('/api/custodian/accounts/:accountId', ({ params }) => {
+  http.get('/api/custodian/accounts/:accountId', ({ params, request }) => {
+    const refused = refuseExternal(request)
+    if (refused) return refused
     const account = accounts.find((a) => a.id === params.accountId)
     if (!account) return notFound()
     return HttpResponse.json(withBookCash(account))
   }),
 
-  http.get('/api/custodian/accounts/:accountId/tax-lots', ({ params }) => {
+  http.get('/api/custodian/accounts/:accountId/tax-lots', ({ params, request }) => {
+    const refused = refuseExternal(request)
+    if (refused) return refused
     const account = accounts.find((a) => a.id === params.accountId)
     if (!account) return notFound()
     return HttpResponse.json(generateTaxLotsWithSaleRisk(account.id, account.totalValue))
   }),
 
-  http.get('/api/custodian/accounts/:accountId/realized-sales', ({ params }) => {
+  http.get('/api/custodian/accounts/:accountId/realized-sales', ({ params, request }) => {
+    const refused = refuseExternal(request)
+    if (refused) return refused
     const account = accounts.find((a) => a.id === params.accountId)
     if (!account) return notFound()
     return HttpResponse.json(openWashSaleWindowsFor(account, MOCK_TODAY_ISO))

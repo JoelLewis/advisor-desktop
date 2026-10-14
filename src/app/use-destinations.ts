@@ -23,8 +23,8 @@ const REFERENCE_DESTINATIONS: readonly { id: string; label: string; aliases: str
 ]
 
 /**
- * Where the command line can go: home, each thread the viewer can see, the accounts those threads are about, and for
- * the firm, the households they are about with their clients, each meeting, each prospect, each proposal's workbench, the reference views and each model, the desk and the kit.
+ * Where the command line can go: home, each thread the viewer can see, and for the firm, the accounts and households
+ * those threads are about with the households' clients, each meeting, each prospect, each proposal's workbench, the reference views and each model, the desk and the kit.
  */
 export function useDestinations(): Destination[] {
   const navigate = useNavigate()
@@ -36,10 +36,10 @@ export function useDestinations(): Destination[] {
   const meetings = useMeetings(firmViewer).data ?? []
   const prospects = useProspects(firmViewer).data ?? []
   const models = useReferenceModels(firmViewer).data?.models ?? []
-  const accountIds = [...new Set(threads.flatMap((t) => (t.subject?.type === 'account' ? [t.subject.id] : [])))]
+  const accountIds = firmViewer ? [...new Set(threads.flatMap((t) => (t.subject?.type === 'account' ? [t.subject.id] : [])))] : []
   const householdIds = firmViewer ? [...new Set(threads.flatMap((t) => (t.subject?.type === 'household' ? [t.subject.id] : [])))] : []
   // Same keys as useAccount and useHousehold, so the full views reuse what the command line already fetched.
-  const accounts = useQueries({ queries: accountIds.map((id) => ({ queryKey: ['account', id], queryFn: () => getAccount(id) })) })
+  const accounts = useQueries({ queries: accountIds.map((id) => ({ queryKey: ['account', viewerId, id], queryFn: () => getAccount(viewerId, id) })) })
   const households = useQueries({ queries: householdIds.map((id) => ({ queryKey: ['workspace', viewerId, 'household', id], queryFn: () => getHousehold(viewerId, id) })) })
 
   return [

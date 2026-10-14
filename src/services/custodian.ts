@@ -15,14 +15,17 @@ export type Transaction = {
   price?: number
 }
 
-export function getAccount(id: string) {
-  return get<Account>(`/custodian/accounts/${id}`)
+/** The custodian's records are the firm's: each read names its viewer, and an outsider is told they do not exist. */
+const as = (viewer: string) => ({ 'X-Viewer': viewer })
+
+export function getAccount(viewer: string, id: string) {
+  return get<Account>(`/custodian/accounts/${id}`, undefined, as(viewer))
 }
 
-export function getTaxLots(accountId: string) {
-  return get<TaxLot[]>(`/custodian/accounts/${accountId}/tax-lots`)
+export function getTaxLots(viewer: string, accountId: string) {
+  return get<TaxLot[]>(`/custodian/accounts/${accountId}/tax-lots`, undefined, as(viewer))
 }
 
-export function getOpenWashSaleWindows(accountId: string) {
-  return get<OpenWashSaleWindow[]>(`/custodian/accounts/${accountId}/realized-sales`)
+export function getOpenWashSaleWindows(viewer: string, accountId: string) {
+  return get<OpenWashSaleWindow[]>(`/custodian/accounts/${accountId}/realized-sales`, undefined, as(viewer))
 }

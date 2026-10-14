@@ -12,14 +12,17 @@ import { listSourceFiles } from './detectors'
  * caller is dead code; a request with no handler would reach the Worker's SPA fallback in the browser
  * and fail as HTML.
  */
-type Request = { method: string; url: string; via: string }
+type Request = { method: string; url: string; via: string; viewer: string | undefined }
 const requests: Request[] = []
 let via = ''
 
 vi.mock('@/services/api-client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/services/api-client')>()
-  const record = (method: string) => (path: string) => {
-    requests.push({ method, url: `/api${path}`, via })
+  const viewerOf = (headers: unknown) =>
+    typeof headers === 'object' && headers !== null && 'X-Viewer' in headers ? String(headers['X-Viewer']) : undefined
+  // get(path, params, headers); post and put(path, body, headers).
+  const record = (method: string) => (path: string, _second?: unknown, headers?: unknown) => {
+    requests.push({ method, url: `/api${path}`, via, viewer: viewerOf(headers) })
     return Promise.resolve(undefined)
   }
   return { ...actual, get: record('GET'), post: record('POST'), put: record('PUT') }
@@ -68,6 +71,11 @@ describe('the services and the handlers agree', () => {
   })
   it('every request a service makes has a handler for its method and path', () => {
     expect(requests.filter((r) => !routes.some((route) => serves(route, r))).map((r) => `${r.via}: ${r.method} ${r.url}`)).toEqual([])
+  })
+  it("every read of the firm's records (custodian, CRM, PMS, compliance) names its viewer, so the handler can refuse an outsider", () => {
+    const firmRecords = requests.filter((r) => /^\/api\/(custodian|crm|pms|compliance)\//.test(r.url))
+    expect(firmRecords.length).toBeGreaterThanOrEqual(9)
+    expect(firmRecords.filter((r) => r.viewer !== 'x').map((r) => `${r.via}: ${r.method} ${r.url}`)).toEqual([])
   })
   it('every handler route is requested by some service', () => {
     const uncalled = routes.filter((route) => !requests.some((r) => serves(route, r)))

@@ -2,6 +2,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, it, expect } from 'vitest'
 import type { ReactNode } from 'react'
+import { ViewerProvider } from '@/workspace/viewer/ViewerProvider'
 import { usePositions, useDrift } from '../use-portfolio'
 
 function createWrapper() {
@@ -9,7 +10,7 @@ function createWrapper() {
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   })
   return function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    return <QueryClientProvider client={queryClient}><ViewerProvider>{children}</ViewerProvider></QueryClientProvider>
   }
 }
 

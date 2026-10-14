@@ -1,18 +1,21 @@
 import { useQuery } from '@tanstack/react-query'
 import { getAccount, getTaxLots } from '@/services/custodian'
+import { useViewer } from '@/workspace/viewer/use-viewer'
 
 export function useAccount(id: string) {
+  const { viewerId } = useViewer()
   return useQuery({
-    queryKey: ['account', id],
-    queryFn: () => getAccount(id),
+    queryKey: ['account', viewerId, id],
+    queryFn: () => getAccount(viewerId, id),
     enabled: !!id,
   })
 }
 
 export function useTaxLots(accountId: string) {
+  const { viewerId } = useViewer()
   return useQuery({
-    queryKey: ['tax-lots', accountId],
-    queryFn: () => getTaxLots(accountId),
+    queryKey: ['tax-lots', viewerId, accountId],
+    queryFn: () => getTaxLots(viewerId, accountId),
     enabled: !!accountId,
   })
 }
