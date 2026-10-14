@@ -93,6 +93,11 @@ describe('DataTable', () => {
     expect(screen.getByText(`${MINUS}1,200`)).toHaveClass('font-semibold')
     expect(screen.getByText('+1,200')).not.toHaveClass('font-semibold')
   })
+  it('says its own empty sentence in place of "No rows."', () => {
+    renderTable({ rows: [], total: 0, empty: 'Recorded acts appear here.' })
+    expect(screen.getByText('Recorded acts appear here.')).toBeInTheDocument()
+    expect(screen.queryByText('No positions.')).toBeNull()
+  })
   it('handles zero rows without crashing', () => {
     renderTable({ rows: [], total: 0 })
     expect(screen.getByText('0 of 0 positions')).toBeInTheDocument()

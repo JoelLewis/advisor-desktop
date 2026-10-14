@@ -12,6 +12,7 @@ import { useViewer } from '@/workspace/viewer/use-viewer'
 import { DriftGauges } from '@/workspace/drift/DriftGauges'
 import { driftMeta } from '@/workspace/drift/drift-meta'
 import { FullViewNotFound } from '@/workspace/full-views/FullViewNotFound'
+import type { HiddenRedirect } from '@/workspace/full-views/hidden-redirect'
 import { isNotFound } from '@/workspace/is-not-found'
 import type { Account } from '@/types/account'
 import type { DriftStatus, Position, TaxLot } from '@/types/portfolio'
@@ -34,7 +35,7 @@ function AccountGate({ accountId }: { accountId: string }) {
   const viewerIsExternal = directory.data !== undefined && isExternalViewerIn(directory.data, viewerId)
   const switchedToClient = viewerIsExternal && viewerId !== openedAs
   useEffect(() => {
-    if (switchedToClient) navigate('/', { replace: true })
+    if (switchedToClient) navigate('/', { replace: true, state: { hiddenSubject: 'this account' } satisfies HiddenRedirect })
   }, [switchedToClient, navigate])
 
   if (switchedToClient || directory.isPending) return <p role="status" className="text-body text-ink-3">Loading the account…</p>

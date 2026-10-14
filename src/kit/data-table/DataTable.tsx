@@ -27,6 +27,8 @@ type DataTableProps<T> = {
   rows: T[]
   getRowId: (row: T) => string
   noun: { singular: string; plural: string }
+  /** Said in place of "No {plural}." when the table has no rows. */
+  empty?: string
   total?: number
   density?: Density
   totals?: Totals
@@ -37,7 +39,7 @@ type DataTableProps<T> = {
 }
 
 export function DataTable<T>({
-  caption, columns, rows, getRowId, noun, total, density = 'regular', totals, onActivate, initialSort, rowKeys, mutedRow,
+  caption, columns, rows, getRowId, noun, empty, total, density = 'regular', totals, onActivate, initialSort, rowKeys, mutedRow,
 }: DataTableProps<T>) {
   assertTies(totals?.tiesTo)
   const [sorting, setSorting] = useState<SortingState>(initialSort ? [initialSort] : [])
@@ -133,7 +135,7 @@ export function DataTable<T>({
           </thead>
           <tbody>
             {shown === 0 ? (
-              <tr><td colSpan={columns.length} className="px-2 py-3 text-body text-ink-3">{all === 0 ? `No ${noun.plural}.` : `None of ${all} ${all === 1 ? noun.singular : noun.plural} shown.`}</td></tr>
+              <tr><td colSpan={columns.length} className="px-2 py-3 text-body text-ink-3">{all === 0 ? (empty ?? `No ${noun.plural}.`) : `None of ${all} ${all === 1 ? noun.singular : noun.plural} shown.`}</td></tr>
             ) : sorted.map((row, i) => {
               const muted = mutedRow?.(row.original) === true
               return (

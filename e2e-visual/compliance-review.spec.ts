@@ -160,7 +160,7 @@ test('one presenter closes the supervisory loop; the book moves; Robert sees not
   await review.getByLabel('Rationale (required)').fill('Accurate and balanced; conditional while the orders were pending.')
   await review.getByRole('button', { name: 'Record disposition' }).click()
   await page.getByRole('dialog', { name: 'Mark reviewed?' }).getByRole('button', { name: 'Confirm' }).click()
-  await expect(queueOf(page)).toContainText('Nothing sent is waiting for review.')
+  await expect(queueOf(page)).toContainText('Sent client messages appear here for review.')
 
   // 6. The MSFT alert, disposed of onto its record trail.
   await queueOf(page).getByRole('link', { name: /^Single-name concentration — MSFT in Johnson Trust/ }).click()

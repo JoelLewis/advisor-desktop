@@ -1,11 +1,13 @@
 import { it, expect } from 'vitest'
-import { renderHook, act, waitFor } from '@testing-library/react'
+import { renderHook, act, waitFor, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { routes } from '@/app/routes'
 import type { ReactNode } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ViewerProvider } from '@/workspace/viewer/ViewerProvider'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { resolveViewer } from '@/workspace/viewer/viewer-context'
-import { createTestQueryClient } from '@/test/render'
+import { createTestQueryClient, renderRoutes } from '@/test/render'
 
 const wrapper = ({ children }: { children: ReactNode }) => (
   <QueryClientProvider client={createTestQueryClient()}><ViewerProvider>{children}</ViewerProvider></QueryClientProvider>
@@ -35,4 +37,15 @@ it('resolves a viewer only against the people in the directory', () => {
   expect(resolveViewer('cli-001', directory)).toBe('cli-001')
   expect(resolveViewer('user-999', directory)).toBe('user-001')
   expect(resolveViewer('user-999', undefined)).toBe('user-999')
+})
+
+it('switching to Robert on Billing goes home and says why, on the page and in the announcer', async () => {
+  const { router } = renderRoutes(routes, '/billing')
+  await screen.findByRole('heading', { level: 1, name: 'Billing' })
+  const user = userEvent.setup()
+  await screen.findByRole('option', { name: 'Robert Johnson · Client' })
+  await user.selectOptions(screen.getByRole('combobox', { name: 'View as' }), 'Robert Johnson · Client')
+  await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+  expect(await screen.findByText("Robert Johnson can't see Billing; showing the workspace.")).toBeInTheDocument()
+  await waitFor(() => expect(document.querySelector('[data-part="announcer"]')).toHaveTextContent("Robert Johnson can't see Billing; showing the workspace."))
 })

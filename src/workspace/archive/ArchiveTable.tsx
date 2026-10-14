@@ -36,6 +36,7 @@ function EntryLink({ entry }: { entry: ArchiveEntry }) {
 export function ArchiveTable({ entries, directory }: { entries: ArchiveEntry[]; directory: Directory }) {
   return (
     <DataTable caption="Archive" rows={entries} getRowId={(e) => `${e.kind}:${e.id}`} noun={{ singular: 'record', plural: 'records' }} density="dense"
+      empty="Recorded acts appear here: approvals, releases, filings, deliveries and resolutions."
       columns={[
         { id: 'at', header: 'Recorded', wrap: true, cell: (e) => <Recorded entry={e} directory={directory} />, sortValue: (e) => e.at },
         { id: 'summary', header: 'Summary', wrap: true, cell: (e) => <Summary entry={e} /> },

@@ -30,7 +30,7 @@ export function ProspectPage() {
 function ProspectGate({ prospectId }: { prospectId: string }) {
   const prospect = useProspect(prospectId)
   const directory = useDirectory()
-  const hiddenFromNewViewer = useGoHomeWhenHidden(prospect)
+  const hiddenFromNewViewer = useGoHomeWhenHidden(prospect, 'this prospect')
   if (hiddenFromNewViewer || prospect.isPending || directory.isPending) return <p role="status" className="text-body text-ink-3">Loading the prospect…</p>
   if (prospect.isError) return isNotFound(prospect.error) ? <FullViewNotFound subject="Prospect" /> : <p role="alert" className="text-body">{prospect.error.message}</p>
   if (directory.isError) return <p role="alert" className="text-body">{directory.error.message}</p>

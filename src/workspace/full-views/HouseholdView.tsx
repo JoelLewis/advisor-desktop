@@ -28,7 +28,7 @@ export function HouseholdView() {
 /** Firm-only: a client is told the household is not found, and a switch to a client goes home. */
 function HouseholdGate({ householdId }: { householdId: string }) {
   const household = useHousehold(householdId)
-  const hiddenFromNewViewer = useGoHomeWhenHidden(household)
+  const hiddenFromNewViewer = useGoHomeWhenHidden(household, 'this household')
   if (hiddenFromNewViewer || household.isPending) return <p role="status" className="text-body text-ink-3">Loading the household…</p>
   if (household.isError) return isNotFound(household.error) ? <FullViewNotFound subject="Household" /> : <p role="alert" className="text-body">{household.error.message}</p>
   return <HouseholdPage view={household.data} />

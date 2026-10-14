@@ -91,6 +91,15 @@ for (const scene of SCENES) {
   })
 }
 
+test('a proposal on a fresh load · baseline', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await visit(page, '/proposals/prop-0001', 'light')
+  await expect(heading(page)).toHaveText('Proposal not found')
+  await settle(page)
+  await expect(page).toHaveScreenshot('proposal-reset-light.png', SCREENSHOT)
+  await expectNoAxeViolations(page)
+})
+
 test('one presenter runs Brief → proposal → revise → workbench → approve → letter → send; each viewer sees their part', async ({ page }) => {
   test.setTimeout(120_000)
   await page.setViewportSize({ width: 1440, height: 900 })

@@ -7,7 +7,7 @@ type ReferenceQuery<T> = { isError: boolean; error: Error | null; data: T | unde
 
 /** Firm only: an outsider is told the view does not exist, and a switch of "View as" to an outsider goes home. */
 export function ReferenceGate<T>({ query, subject, children }: { query: ReferenceQuery<T>; subject: string; children: (data: T) => ReactNode }) {
-  const hiddenFromNewViewer = useGoHomeWhenHidden(query)
+  const hiddenFromNewViewer = useGoHomeWhenHidden(query, subject)
   const loading = <p role="status" className="text-body text-ink-3">{`Loading ${subject.toLowerCase()}…`}</p>
   if (hiddenFromNewViewer) return loading
   if (query.isError && query.error) return isNotFound(query.error) ? <FullViewNotFound subject={subject} /> : <p role="alert" className="text-body">{query.error.message}</p>

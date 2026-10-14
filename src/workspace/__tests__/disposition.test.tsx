@@ -43,7 +43,7 @@ describe('recording a disposition', () => {
     expect(slip).toHaveTextContent('Rationale · Legs, tax effect and pre-trade reading reviewed.')
     await waitFor(() => expect(document.activeElement).toBe(document.getElementById('act-REC-0002')))
     expect(store().acts.filter((a) => a.kind === 'release_orders')).toHaveLength(1)
-    expect(queue().getByText('No orders are waiting.')).toBeInTheDocument()
+    expect(queue().getByText(/^Orders appear here once an advisor approves/)).toBeInTheDocument()
     expect(queue().getByRole('link', { name: /^Release orders · Johnson rebalance · v1/ })).toBeInTheDocument()
     expect(item).toHaveTextContent('FILLED')
     expect(within(item).queryByRole('region', { name: 'Record a disposition' })).toBeNull()
@@ -66,7 +66,7 @@ describe('recording a disposition', () => {
     await withdrawApproval(ADRIAN, 'prop-0001')
     await user.click(within(screen.getByRole('dialog', { name: 'Release orders?' })).getByRole('button', { name: 'Confirm' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('The approval of v1 (REC-0001) was withdrawn by the advisor; nothing from it can be released.')
-    expect(await screen.findByText('This item is not in the queue. It may have been disposed of on another day, withdrawn by the advisor, or never existed.')).toBeInTheDocument()
+    expect(await screen.findByText('This item is not in the queue. It may have been disposed of on another day, withdrawn by the advisor, or never existed. This demo\'s state resets when the page reloads.')).toBeInTheDocument()
     expect(store().acts.some((a) => a.kind === 'release_orders')).toBe(false)
   })
 

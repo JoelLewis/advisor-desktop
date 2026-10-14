@@ -24,7 +24,7 @@ export function ClientView() {
 /** Firm-only: a client is told the client is not found — even themself — and a switch to a client goes home. */
 function ClientGate({ clientId }: { clientId: string }) {
   const client = useClientView(clientId)
-  const hiddenFromNewViewer = useGoHomeWhenHidden(client)
+  const hiddenFromNewViewer = useGoHomeWhenHidden(client, 'this client')
   if (hiddenFromNewViewer || client.isPending) return <p role="status" className="text-body text-ink-3">Loading the client…</p>
   if (client.isError) return isNotFound(client.error) ? <FullViewNotFound subject="Client" /> : <p role="alert" className="text-body">{client.error.message}</p>
   return <ClientPage view={client.data} />

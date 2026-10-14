@@ -37,6 +37,13 @@ describe('the workbench layout', () => {
     expect(screen.queryByRole('complementary', { name: 'Live thread' })).toBeNull()
   })
 
+  it('a proposal on a fresh load says the demo resets on reload, and links to the Brief', async () => {
+    renderRoutes(routes, '/proposals/prop-0001')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Proposal not found' })).toBeInTheDocument()
+    expect(screen.getByText("This demo's state resets when the page reloads.")).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Start again from the Brief' })).toHaveAttribute('href', '/t/th-brief')
+  })
+
   it('a client is told the proposal is not found', async () => {
     await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
     viewAsOnLoad('cli-001')

@@ -38,7 +38,7 @@ export function MeetingPage() {
 function MeetingGate({ eventId }: { eventId: string }) {
   const meeting = useMeeting(eventId)
   const directory = useDirectory()
-  const hiddenFromNewViewer = useGoHomeWhenHidden(meeting)
+  const hiddenFromNewViewer = useGoHomeWhenHidden(meeting, 'this meeting')
 
   if (hiddenFromNewViewer || meeting.isPending || directory.isPending) return <p role="status" className="text-body text-ink-3">Loading the meeting…</p>
   if (meeting.isError) return isNotFound(meeting.error) ? <FullViewNotFound subject="Meeting" /> : <p role="alert" className="text-body">{meeting.error.message}</p>

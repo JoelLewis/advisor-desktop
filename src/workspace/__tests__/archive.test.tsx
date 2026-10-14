@@ -43,6 +43,11 @@ describe('the Archive', () => {
     expect(router.state.location.search).toBe('?kind=release_orders')
   })
 
+  it('says what fills an empty archive', async () => {
+    renderRoutes(routes, '/archive?kind=send_to_party')
+    expect(await screen.findByText('Recorded acts appear here: approvals, releases, filings, deliveries and resolutions.')).toBeInTheDocument()
+  })
+
   it('reads its filters from the URL', async () => {
     await session()
     renderRoutes(routes, '/archive?kind=send_to_party&partyId=cli-001&from=2026-02-25')

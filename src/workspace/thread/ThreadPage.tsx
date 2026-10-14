@@ -19,7 +19,7 @@ export function ThreadPage() {
 function ThreadView({ threadId }: { threadId: string }) {
   const thread = useThread(threadId)
   const directory = useDirectory()
-  const hiddenFromNewViewer = useGoHomeWhenHidden(thread)
+  const hiddenFromNewViewer = useGoHomeWhenHidden(thread, 'this thread')
 
   if (hiddenFromNewViewer || thread.isPending || directory.isPending) {
     return <p role="status" className="text-body text-ink-3">Loading the thread…</p>

@@ -1,10 +1,13 @@
-import { Link } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import { useAnnounce } from '@/kit/announcer/use-announce'
 import { PAGE_TITLE_ID } from '@/kit/page/ids'
 import { Tag } from '@/kit/tag/Tag'
 import { fmtDayMonthYear, fmtQuantity } from '@/kit/measure'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { FIRM_NAME } from '@/lib/firm'
-import { useDirectory, useStoryProgress } from '@/hooks/use-workspace'
+import { useDirectory, useStoryProgress, useViewAsDirectory } from '@/hooks/use-workspace'
+import { hiddenRedirectOf } from '@/workspace/full-views/hidden-redirect'
 import { isExternalViewerIn } from '@/workspace/people/directory-people'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import type { StoryProgress } from '@/types/workspace-story'
@@ -25,6 +28,7 @@ export function WorkspaceHome() {
         <p className="text-body text-ink-3">
           {`A demonstration: ${FIRM_NAME} and everyone in it are fictional, the date is frozen at ${fmtDayMonthYear(MOCK_TODAY_ISO)}, and nothing here is investment, tax or legal advice.`}
         </p>
+        <RedirectNote />
       </div>
       {firm ? <FiveMinutePath progress={progress.data} /> : null}
     </div>
@@ -51,4 +55,24 @@ function FiveMinutePath({ progress }: { progress: StoryProgress | undefined }) {
       </ol>
     </section>
   )
+}
+
+/** After View-as sent the viewer home from a page the new viewer cannot see: says why, on the page and to the announcer. */
+function RedirectNote() {
+  const location = useLocation()
+  const redirect = hiddenRedirectOf(location.state)
+  const { viewerId } = useViewer()
+  const people = useViewAsDirectory(redirect !== undefined)
+  const announce = useAnnounce()
+  const name = people.data?.people.find((p) => p.id === viewerId)?.name
+  const sentence = redirect && name ? `${name} can't see ${redirect.hiddenSubject}; showing the workspace.` : undefined
+  const said = useRef<string>()
+  useEffect(() => {
+    // Once per redirect (the location key), so a re-render or StrictMode's second effect does not say it twice.
+    if (sentence && said.current !== location.key) {
+      said.current = location.key
+      announce(sentence)
+    }
+  }, [sentence, location.key, announce])
+  return sentence ? <p className="text-body text-ink-2">{sentence}</p> : null
 }

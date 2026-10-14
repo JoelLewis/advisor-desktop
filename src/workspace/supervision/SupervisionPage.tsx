@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { PAGE_TITLE_ID } from '@/kit/page/ids'
 import { useDirectory, useRecordComplianceAct, useSupervision } from '@/hooks/use-workspace'
 import { FullViewNotFound } from '@/workspace/full-views/FullViewNotFound'
+import type { HiddenRedirect } from '@/workspace/full-views/hidden-redirect'
 import { isNotFound } from '@/workspace/is-not-found'
 import { isExternalViewerIn } from '@/workspace/people/directory-people'
 import { useViewer } from '@/workspace/viewer/use-viewer'
@@ -21,7 +22,7 @@ export function SupervisionPage() {
   const viewerIsExternal = directory.data !== undefined && isExternalViewerIn(directory.data, viewerId)
   const switchedToClient = viewerIsExternal && viewerId !== openedAs
   useEffect(() => {
-    if (switchedToClient) navigate('/', { replace: true })
+    if (switchedToClient) navigate('/', { replace: true, state: { hiddenSubject: 'Supervision' } satisfies HiddenRedirect })
   }, [switchedToClient, navigate])
   if (switchedToClient || directory.isPending) return <p role="status" className="text-body text-ink-3">Loading supervision…</p>
   if (directory.isError) return <p role="alert" className="text-body">{directory.error.message}</p>
@@ -59,8 +60,8 @@ function Supervision({ directory }: { directory: Directory }) {
         </div>
         <div className="col-span-12 min-w-0 split:col-span-8">
           {found ? <ItemDetail key={`${found.item.kind}:${found.item.id}`} found={found} directory={directory} record={record} />
-            : kind !== undefined ? <p className="text-body text-ink-2">This item is not in the queue. It may have been disposed of on another day, withdrawn by the advisor, or never existed.</p>
-            : <p className="text-body text-ink-3">Choose an item from the queue.</p>}
+            : kind !== undefined ? <p className="text-body text-ink-2">This item is not in the queue. It may have been disposed of on another day, withdrawn by the advisor, or never existed. This demo's state resets when the page reloads.</p>
+            : <p className="text-body text-ink-3">Choose an item from the queue: its evidence, and the acts compliance can record on it, appear here.</p>}
         </div>
       </div>
     </div>

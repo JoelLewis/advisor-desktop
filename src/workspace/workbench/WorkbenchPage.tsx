@@ -15,10 +15,10 @@ export function WorkbenchPage() {
 function WorkbenchGate({ proposalId }: { proposalId: string }) {
   const proposal = useProposal(proposalId)
   const directory = useDirectory()
-  const hiddenFromNewViewer = useGoHomeWhenHidden(proposal)
+  const hiddenFromNewViewer = useGoHomeWhenHidden(proposal, 'this proposal')
 
   if (hiddenFromNewViewer || proposal.isPending || directory.isPending) return <p role="status" className="text-body text-ink-3">Loading the proposal…</p>
-  if (proposal.isError) return isNotFound(proposal.error) ? <FullViewNotFound subject="Proposal" /> : <p role="alert" className="text-body">{proposal.error.message}</p>
+  if (proposal.isError) return isNotFound(proposal.error) ? <FullViewNotFound subject="Proposal" resetsOnReload /> : <p role="alert" className="text-body">{proposal.error.message}</p>
   if (directory.isError) return <p role="alert" className="text-body">{directory.error.message}</p>
   return <Workbench detail={proposal.data} directory={directory.data} />
 }

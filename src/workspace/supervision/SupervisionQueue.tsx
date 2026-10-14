@@ -26,11 +26,12 @@ function rowOf(item: SupervisionItem, directory: Directory): Row {
   }
 }
 
+/** The empty-group sentences are tour copy that mirrors the README (the Johnson proposal is named, not read over the API). */
 export function SupervisionQueue({ queue, directory }: { queue: Queue; directory: Directory }) {
   const groups: { title: string; empty: string; rows: Row[] }[] = [
-    { title: 'Orders awaiting release', empty: 'No orders are waiting.', rows: queue.orders.map((i) => rowOf(i, directory)) },
+    { title: 'Orders awaiting release', empty: 'Orders appear here once an advisor approves a proposal (Johnson Rebalance Review → Approve).', rows: queue.orders.map((i) => rowOf(i, directory)) },
     { title: 'Open alerts', empty: 'No open alerts.', rows: queue.alerts.map((i) => rowOf(i, directory)) },
-    { title: 'Correspondence to review', empty: 'Nothing sent is waiting for review.', rows: queue.correspondence.map((i) => rowOf(i, directory)) },
+    { title: 'Correspondence to review', empty: 'Sent client messages appear here for review.', rows: queue.correspondence.map((i) => rowOf(i, directory)) },
     {
       title: 'Disposed today', empty: 'Nothing disposed of yet today.',
       rows: queue.disposedToday.map(({ item, act }) => ({
