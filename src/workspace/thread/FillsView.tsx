@@ -2,6 +2,7 @@ import { useId } from 'react'
 import { DataTable } from '@/kit/data-table/DataTable'
 import { Num } from '@/kit/data-table/Num'
 import { fmtMoney, fmtPrice, fmtQuantity, fmtTimestamp } from '@/kit/measure'
+import { BlotterLink } from '@/workspace/proposal/BlotterLink'
 import { FILL_SIDE_WORDS } from '@/workspace/proposal/leg-status'
 import type { Message } from '@/types/workspace'
 
@@ -19,6 +20,7 @@ export function FillsView({ message }: { message: FillsMessage }) {
         <span className="tabular ml-auto text-label text-ink-3">{fmtTimestamp(message.at)}</span>
       </div>
       <p className="text-body text-ink-2">{`Released by ${message.releaseActId}; filled at the day's prices.`}</p>
+      {message.fills[0] ? <BlotterLink accountId={message.fills[0].accountId} /> : null}
       <DataTable caption={`Fills · v${message.version}`} rows={message.fills} getRowId={(f) => f.id} noun={{ singular: 'fill', plural: 'fills' }} density="dense"
         columns={[
           { id: 'symbol', header: 'Symbol', cell: (f) => f.symbol },

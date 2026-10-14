@@ -11,6 +11,7 @@ import { useViewer } from '@/workspace/viewer/use-viewer'
 import { ApprovalNote } from '@/workspace/proposal/ApprovalNote'
 import { isApprovedLatest } from '@/workspace/proposal/approval-words'
 import { latestVersionOf } from '@/workspace/proposal/latest-version'
+import { BlotterLink } from '@/workspace/proposal/BlotterLink'
 import { FillList } from '@/workspace/proposal/FillList'
 import { StagedOrderList } from '@/workspace/proposal/StagedOrderList'
 import type { Directory, Thread } from '@/types/workspace'
@@ -162,6 +163,7 @@ function StagedOrders({ orders, escalated }: { orders: StagedOrder[]; escalated:
       ) : null}
       {source ? <p className="text-label text-ink-2">{`Staged from v${source.version} · ${source.approvalActId}`}</p> : null}
       <StagedOrderList orders={orders} />
+      {source ? <BlotterLink accountId={source.accountId} /> : null}
     </div>
   )
 }
@@ -175,6 +177,7 @@ function FilledOrders({ fills, version, releaseActId }: { fills: Fill[]; version
       </p>
       <p className="text-label text-ink-2">{`Filled from v${version} · released by ${releaseActId}`}</p>
       <FillList fills={fills} label="Filled orders" />
+      {fills[0] ? <BlotterLink accountId={fills[0].accountId} /> : null}
     </div>
   )
 }

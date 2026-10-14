@@ -6,10 +6,10 @@ import type { ToleranceStatus } from '@/types/reference-risk'
 
 export const BILLING_METHOD_WORDS: Readonly<Record<BillingMethod, string>> = { advance: 'In advance', arrears: 'In arrears' }
 export const BLOTTER_STATUS_WORDS: Readonly<Record<BlotterStatus, string>> = {
-  working: 'Working', pending_compliance: 'Pending compliance', filled: 'Filled', cancelled: 'Cancelled', withdrawn: 'Withdrawn', returned: 'Returned',
+  working: 'Working', pending_compliance: 'Pending compliance', filled: 'Filled', cancelled: 'Canceled', withdrawn: 'Withdrawn', returned: 'Returned',
 }
 export const BLOTTER_STATUS_TAG: Readonly<Record<BlotterStatus, string>> = {
-  working: 'WORKING', pending_compliance: 'PENDING COMPLIANCE', filled: 'FILLED', cancelled: 'CANCELLED', withdrawn: 'WITHDRAWN', returned: 'RETURNED',
+  working: 'WORKING', pending_compliance: 'PENDING COMPLIANCE', filled: 'FILLED', cancelled: 'CANCELED', withdrawn: 'WITHDRAWN', returned: 'RETURNED',
 }
 export const TOLERANCE_TAG: Readonly<Record<ToleranceStatus, string>> = { above: 'ABOVE TOLERANCE', within: 'WITHIN TOLERANCE', below: 'BELOW TOLERANCE' }
 export const INTEGRATION_STATUS_TAG: Readonly<Record<IntegrationStatus, string>> = { synced: 'SYNCED', pending: 'PENDING', failed: 'FAILED' }

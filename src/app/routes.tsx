@@ -19,6 +19,7 @@ import { ArchivePage } from '@/workspace/archive/ArchivePage'
 import { BillingPage } from '@/workspace/reference/BillingPage'
 import { ReconciliationPage } from '@/workspace/reference/ReconciliationPage'
 import { BookRiskPage } from '@/workspace/reference/BookRiskPage'
+import { BlotterPage } from '@/workspace/reference/BlotterPage'
 import { AttributionPage } from '@/workspace/reference/AttributionPage'
 import { ModelsPage } from '@/workspace/reference/ModelsPage'
 import { ModelPage } from '@/workspace/reference/ModelPage'
@@ -64,6 +65,7 @@ export const routes: RouteObject[] = [
           { path: 'accounts/:accountId/attribution', element: <AttributionPage />, handle: fullWidthHandle },
           { path: 'models', element: <ModelsPage />, handle: fullWidthHandle },
           { path: 'models/:modelId', element: <ModelPage />, handle: fullWidthHandle },
+          { path: 'blotter', element: <BlotterPage />, handle: fullWidthHandle },
           { path: 'practice', element: <PracticePage />, handle: fullWidthHandle },
           { path: 'reconciliation', element: <ReconciliationPage />, handle: fullWidthHandle },
           { path: 'supervision', element: <SupervisionPage />, handle: fullWidthHandle },
