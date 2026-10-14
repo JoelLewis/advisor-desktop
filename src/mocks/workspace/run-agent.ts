@@ -11,7 +11,7 @@ type Failure = { ok: false; status: 400 | 403 | 404; code: string; message: stri
 type Finding = Extract<Message, { kind: 'agent_finding' }>
 type Resolved = { ok: true; threadId: string; runKey: string; run: () => ReturnType<NonNullable<ReturnType<typeof AGENT_DEFINITIONS.get>>['run']> } | Failure
 
-/** The pure part shared by run and preview: resolve, authorise and validate, touching no store state. */
+/** The pure part shared by run and preview: resolve, authorize and validate, touching no store state. */
 function resolveRun(viewerId: string, threadId: string, agentId: AgentId): Resolved {
   const thread = store().threads.find((t) => t.id === threadId)
   if (!thread || !canSeeThread(viewerId, thread)) return { ok: false, status: 404, code: 'NO_THREAD', message: 'Thread not found.' }

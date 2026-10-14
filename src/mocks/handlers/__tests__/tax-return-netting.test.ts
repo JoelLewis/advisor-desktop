@@ -53,7 +53,7 @@ describe('which accounts share a tax return', () => {
     expect(returnOf('acc-005')).toBe(returnOf('acc-002'))
   })
 
-  it('an IRA or a Roth is on no return — its results are not recognised currently', () => {
+  it('an IRA or a Roth is on no return — its results are not recognized currently', () => {
     expect(returnOf('acc-003')).toBeNull()
     expect(returnOf('acc-004')).toBeNull()
   })

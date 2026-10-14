@@ -122,7 +122,7 @@ describe('approving a proposal', () => {
     expect(within(panel).getByText('v1 is approved')).toBeInTheDocument()
   })
 
-  it('cancelling the withdrawal records nothing and keeps the approval', async () => {
+  it('canceling the withdrawal records nothing and keeps the approval', async () => {
     const created = await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
     await approveProposal(ADRIAN, created.id, 1, created.versions[0]!.fingerprint)
     const panel = await openApproval()

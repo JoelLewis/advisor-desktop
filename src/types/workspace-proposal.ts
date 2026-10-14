@@ -3,7 +3,7 @@ import type { CurrencyCode } from './currency'
 import type { VersionAuthor } from './workspace'
 import type { PreTradeCheckProposalResult, ProposedTrade, RebalancePreview } from '@/services/oms'
 
-/** A rule the Proposal Agent must honour when it drafts or revises the legs. */
+/** A rule the Proposal Agent must honor when it drafts or revises the legs. */
 export type ProposalConstraint =
   | { kind: 'harvest_only' }
   /** Upper bound on the proposal's realized gains, gain legs only and losses not netted, in the account's currency. */

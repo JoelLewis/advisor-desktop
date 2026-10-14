@@ -62,7 +62,7 @@ describe('risk metrics are per account', () => {
     expect(thompsonIRA.vol).toBe(0.0625)
     // 0.5892, not the 0.589 frozen here before Task 10 (itself 0.636 before Task 18, when
     // acc-045's positions summed to $393,630 against a $425,000 balance and `assetClassWeights`
-    // normalised the gap away, modelling the account as 97.8% digital assets).
+    // normalized the gap away, modeling the account as 97.8% digital assets).
     // Task 10 derives the weights: digital_assets 385,130 / 425,000 = 0.906188235 and cash
     // 39,870 / 425,000 = 0.093811765, against the stored 0.905/0.999 = 0.9059059 and
     // 0.094/0.999 = 0.0940941. With s_digital 0.650, s_cash 0.005 and rho 0.35:

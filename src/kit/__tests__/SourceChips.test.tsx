@@ -10,7 +10,7 @@ it('lists what a finding relies on, with as-of time and confidence', () => {
   expect(screen.getByText('confidence 92')).toBeInTheDocument()
 })
 
-it('is a labelled list with one item per source, including bare sources', () => {
+it('is a labeled list with one item per source, including bare sources', () => {
   render(<SourceChips sources={[{ label: 'Drift calculation', asOf: '2026-02-25T12:00:00Z' }, { label: 'Drift calculation', asOf: '2026-02-26T12:00:00Z' }, { label: 'Policy' }]} />)
   const list = screen.getByRole('list', { name: 'Relies on' })
   const items = within(list).getAllByRole('listitem')

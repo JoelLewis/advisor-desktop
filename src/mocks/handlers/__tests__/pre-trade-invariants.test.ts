@@ -226,7 +226,7 @@ describe('fix round 4 · sells are capped by what buys AND cash-to-target can ab
     //
     // Task 10 — the two drifts are 0.1898/0.2872, not the 0.1894/0.2874 the stored three-decimal
     // weights produced. acc-044's stored weights summed to 0.999, so `computeDriftForAccount`
-    // renormalised by 1/0.999; derived, intl_equity is 584,710 / 1,500,000 = 0.389807 and fixed
+    // renormalized by 1/0.999; derived, intl_equity is 584,710 / 1,500,000 = 0.389807 and fixed
     // income 580,800 / 1,500,000 = 0.387200 exactly, against targets of 0.20 and 0.10.
     //
     // Executed at the lots traded: sells NESN.SW 2,500 + NOVN.SW 403 + SRFCHA.SW 2,000 +
@@ -419,7 +419,7 @@ describe('§9.6 · buys are capped by available cash above target, symmetric to 
     //
     // Task 10 — the two notionals are 4,290 and 4,212, not the 4,602 and 4,134 the stored
     // three-decimal weights gave. acc-033's stored weights summed to 1.001, so
-    // `computeDriftForAccount` renormalised by 1/1.001; derived, intl_equity is 82,300 / 780,000
+    // `computeDriftForAccount` renormalized by 1/1.001; derived, intl_equity is 82,300 / 780,000
     // = 0.105513 (drift +0.0055 against a 0.10 target, x 780,000 = 4,290) and fixed_income is
     // 268,810 / 780,000 = 0.344628 (drift -0.0054 against 0.35, x 780,000 = 4,212).
     //
@@ -508,7 +508,7 @@ describe('§9.6 · buys are capped by available cash above target, symmetric to 
     // Sleeves first: the whole buy, not the $111,853 a cash-first reservation would allow. The
     // $62 shortfall against the $113,820 notional is lot granularity (three legs, unit prices
     // summing to 162.30); the $1,967 a cash-first cap would remove is not. The lower bound is the
-    // cash-first cap itself, so this discriminates against exactly the behaviour it names — a
+    // cash-first cap itself, so this discriminates against exactly the behavior it names — a
     // round number below it would pass on the wrong answer.
     expect(totalBuy).toBe(113_758)
     expect(totalBuy).toBeGreaterThan(111_853)

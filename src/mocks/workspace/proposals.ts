@@ -6,7 +6,7 @@ import { can } from '@/mocks/data/people'
 import { nextAt, nextId, store } from '@/mocks/data/workspace-store'
 import { detailOf, filledMessage, latestVersion, nextProposalId, proposalsInThread, releasedApproval } from '@/mocks/data/proposals-store'
 import { agentConstraints, draftSummary, proposalTitle, revisionSummary } from '@/mocks/agents/proposal-agent'
-import { buildVersion, editSummary, normaliseEdits } from './proposal-engine'
+import { buildVersion, editSummary, normalizeEdits } from './proposal-engine'
 import { visibleProposal } from './proposal-acts'
 import { canSeeThread, isFirmViewer } from './visibility'
 
@@ -110,7 +110,7 @@ export function saveVersion(viewerId: string, proposalId: string, edits: readonl
   return {
     ok: true,
     detail: append(proposal, {
-      author: { kind: 'person', personId: viewerId }, constraints: latest.constraints, edits: normaliseEdits(edits),
+      author: { kind: 'person', personId: viewerId }, constraints: latest.constraints, edits: normalizeEdits(edits),
       changeSummary: editSummary(edits, built.names), ...built.built,
     }),
   }

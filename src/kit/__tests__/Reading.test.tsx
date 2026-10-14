@@ -12,7 +12,7 @@ describe('Reading', () => {
     expect(screen.getByText('tol ±5.0 pp')).toBeInTheDocument()
     expect(screen.getByText('OUT')).toBeInTheDocument()
   })
-  it('a loss renders heavier, never coloured', () => {
+  it('a loss renders heavier, never colored', () => {
     render(<Reading value={fmtResult(-45_850)} unit="USD" />)
     const v = screen.getByText(fmtResult(-45_850))
     expect(v).toHaveAttribute('data-negative', 'true')

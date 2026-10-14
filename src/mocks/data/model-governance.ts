@@ -94,7 +94,7 @@ export const MODEL_VERSIONS: readonly ModelVersionRecord[] = [
 
 /**
  * Each model's risk profile; the firm's risk-profile table names five of them for its bands. The rest are
- * labelled by the band their modeled volatility scores in (Phase 7a: mod-005 was Moderate Aggressive, but scores Moderate;
+ * labeled by the band their modeled volatility scores in (Phase 7a: mod-005 was Moderate Aggressive, but scores Moderate;
  * under the grouped correlations mod-006, 55% equity with no real assets, scores Moderate Conservative, below mod-007).
  */
 export const MODEL_RISK_PROFILES: Readonly<Record<string, RiskProfile>> = {

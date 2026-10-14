@@ -476,7 +476,7 @@ export function seedTaxLots(accountId: string, totalValue: number): CustodianLot
       const share = shares[i]!
       const monthsAgo = new Date(anchor)
       // UTC, not local: `anchor` is UTC midnight, and local get/set-Month would bake in the
-      // host timezone's day-of-month, making the serialised date machine-dependent.
+      // host timezone's day-of-month, making the serialized date machine-dependent.
       monthsAgo.setUTCMonth(monthsAgo.getUTCMonth() - ages[i]!)
       // Final review I2 · a whole-month age anchored on the 25th lands on a weekend or holiday
       // about a third of the time, and a lot is bought on a day the market trades. The date rolls
@@ -521,7 +521,12 @@ export function generateTaxLots(accountId: string, totalValue: number): Custodia
   if (!moved) return seedTaxLots(accountId, totalValue)
   const blocked = repurchaseBlocksFor(accountId)
   const symbolOf = new Map(moved.positions.map((p) => [p.id, p.symbol]))
-  return moved.lots.map((lot) => ({ ...lot, repurchaseBlockedUntil: blocked.get(symbolOf.get(lot.positionId) ?? '') ?? null }))
+  const symbolOfLot = (lot: { id: string; positionId: string }) => {
+    const symbol = symbolOf.get(lot.positionId)
+    if (symbol === undefined) throw new Error(`Lot ${lot.id} belongs to no position of account ${accountId}`)
+    return symbol
+  }
+  return moved.lots.map((lot) => ({ ...lot, repurchaseBlockedUntil: blocked.get(symbolOfLot(lot)) ?? null }))
 }
 
 const withBookCash = (a: Account): Account => ({ ...a, cashBalance: cashBalanceOf(a) })

@@ -3,7 +3,7 @@
 @source not "../**/__tests__/**";
 @source not "../../docs";
 
-/* tokens:start — the only place colour values may appear (guardrail 2) */
+/* tokens:start — the only place color values may appear (guardrail 2) */
 :root {
   --ws-bg: oklch(0.944 0.003 250);
   --ws-face: oklch(0.986 0.0015 250);

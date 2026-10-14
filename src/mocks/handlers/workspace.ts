@@ -19,7 +19,7 @@ import { approveProposal, visibleProposal, withdrawApproval } from '../workspace
 import { previewAgent, runAgent } from '../workspace/run-agent'
 import { canSeeThread, isExternalViewer, viewerFrom, visibleThreads } from '../workspace/visibility'
 import { notFound } from './utils'
-import { badRequest, firmViewer, nonEmptyString, readJson, refusal, unauthorised, withoutProvenance } from './workspace-http'
+import { badRequest, firmViewer, nonEmptyString, readJson, refusal, unauthorized, withoutProvenance } from './workspace-http'
 import { workspaceMeetingHandlers } from './workspace-meetings'
 import { workspaceProposalHandlers } from './workspace-proposals'
 import { workspaceProspectHandlers } from './workspace-prospects'
@@ -43,19 +43,19 @@ const isAgentId = (value: string): value is AgentId => AGENTS.some((a) => a.id =
 export const workspaceHandlers = [
   http.get('/api/workspace/people', ({ request }) => {
     const viewer = viewerFrom(request)
-    if (!viewer) return unauthorised()
+    if (!viewer) return unauthorized()
     return HttpResponse.json(isExternalViewer(viewer) ? externalDirectory(viewer) : fullDirectory())
   }),
 
   http.get('/api/workspace/threads', ({ request }) => {
     const viewer = viewerFrom(request)
-    if (!viewer) return unauthorised()
+    if (!viewer) return unauthorized()
     return HttpResponse.json(visibleThreads(viewer))
   }),
 
   http.get('/api/workspace/threads/:id', ({ request, params }) => {
     const viewer = viewerFrom(request)
-    if (!viewer) return unauthorised()
+    if (!viewer) return unauthorized()
     const thread = store().threads.find((t) => t.id === params.id)
     if (!thread || !canSeeThread(viewer, thread)) return notFound()
     if (thread.id === BRIEF_THREAD_ID) remeasureBrief()
@@ -67,7 +67,7 @@ export const workspaceHandlers = [
 
   http.post('/api/workspace/threads/:id/messages', async ({ request, params }) => {
     const viewer = viewerFrom(request)
-    if (!viewer) return unauthorised()
+    if (!viewer) return unauthorized()
     const thread = store().threads.find((t) => t.id === params.id)
     if (!thread || !canSeeThread(viewer, thread)) return notFound()
     const external = isExternalViewer(viewer)
@@ -85,7 +85,7 @@ export const workspaceHandlers = [
 
   http.get('/api/workspace/threads/:id/drafts', ({ request, params }) => {
     const viewer = viewerFrom(request)
-    if (!viewer) return unauthorised()
+    if (!viewer) return unauthorized()
     const thread = store().threads.find((t) => t.id === params.id)
     if (!thread || !canSeeThread(viewer, thread) || isExternalViewer(viewer)) return notFound()
     return HttpResponse.json(draftsFor(thread.id))
@@ -93,7 +93,7 @@ export const workspaceHandlers = [
 
   http.post('/api/workspace/threads/:id/drafts', async ({ request, params }) => {
     const viewer = viewerFrom(request)
-    if (!viewer) return unauthorised()
+    if (!viewer) return unauthorized()
     const thread = store().threads.find((t) => t.id === params.id)
     if (!thread || !canSeeThread(viewer, thread) || !can(viewer, 'draft_for_client')) return notFound()
     if (thread.visibility !== 'client') return HttpResponse.json({ code: 'NOT_CLIENT_THREAD', message: 'Drafts are for client threads.' }, { status: 400 })
@@ -107,7 +107,7 @@ export const workspaceHandlers = [
 
   http.get('/api/workspace/acts', ({ request }) => {
     const viewer = viewerFrom(request)
-    if (!viewer) return unauthorised()
+    if (!viewer) return unauthorized()
     const threadId = new URL(request.url).searchParams.get('threadId')
     const thread = store().threads.find((t) => t.id === threadId)
     if (!thread || !canSeeThread(viewer, thread)) return notFound()
@@ -120,7 +120,7 @@ export const workspaceHandlers = [
 
   http.post('/api/workspace/acts', async ({ request }) => {
     const viewer = viewerFrom(request)
-    if (!viewer) return unauthorised()
+    if (!viewer) return unauthorized()
     // An outsider is told the surface does not exist before anything about the body is read.
     if (isExternalViewer(viewer)) return notFound()
     const body = await readJson(request)
@@ -191,7 +191,7 @@ export const workspaceHandlers = [
 
   http.post('/api/workspace/threads/:id/agents/:agentId/run', ({ request, params }) => {
     const viewer = viewerFrom(request)
-    if (!viewer) return unauthorised()
+    if (!viewer) return unauthorized()
     const agentId = String(params.agentId)
     if (!isAgentId(agentId)) return HttpResponse.json({ code: 'NOT_ON_THREAD', message: 'That agent is not on this thread.' }, { status: 403 })
     const result = runAgent(viewer, String(params.id), agentId)
@@ -201,7 +201,7 @@ export const workspaceHandlers = [
 
   http.get('/api/workspace/threads/:id/agents/:agentId/preview', ({ request, params }) => {
     const viewer = viewerFrom(request)
-    if (!viewer) return unauthorised()
+    if (!viewer) return unauthorized()
     const agentId = String(params.agentId)
     if (!isAgentId(agentId)) return HttpResponse.json({ code: 'NOT_ON_THREAD', message: 'That agent is not on this thread.' }, { status: 403 })
     const result = previewAgent(viewer, String(params.id), agentId)

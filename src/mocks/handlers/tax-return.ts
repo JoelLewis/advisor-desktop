@@ -6,13 +6,13 @@ import { allRealizedSales, openWashSaleWindows, type OpenWashSaleWindow } from '
 import { FX_RATES_USD_BASE } from '../data/currencies'
 import { convertCurrency } from '@/lib/currency'
 import { isTaxableAccount } from '@/lib/tax-treatment'
-import { additionalCapitalGainsTax, netTaxForLegs, recognisedResult, type RealizedByCharacter, type TaxedLeg } from '@/lib/capital-gains'
+import { additionalCapitalGainsTax, netTaxForLegs, recognizedResult, type RealizedByCharacter, type TaxedLeg } from '@/lib/capital-gains'
 import { taxRateFor } from '@/lib/tax-rules'
 import { taxCharacterOf } from '@/lib/security-master'
 
 /**
  * §1222 nets within one taxpayer's return and never across two. Which accounts share a return:
- * - A tax-deferred or tax-free account is on none — its results are not recognised currently.
+ * - A tax-deferred or tax-free account is on none — its results are not recognized currently.
  * - An irrevocable trust, an entity and a custodial (UGMA/UTMA) account are each their own
  *   taxpayer, so each is its own return.
  * - An individual, joint or revocable-trust (grantor trust, §671) account is on its owner's
@@ -121,12 +121,12 @@ export function estimateTaxOnReturns(
     const prior = realizedSoFar.get(returnId) ?? { realized: ytd, accountIds: [] }
     const currency = currencyOf(account)
     const fromUSD = (usd: number) => convertCurrency(usd, 'USD', currency, FX_RATES_USD_BASE)
-    // §1091 · only the recognised part of a loss offsets anything; a washed loss is not netted.
-    const recognised = legs.map(recognisedResult)
+    // §1091 · only the recognized part of a loss offsets anything; a washed loss is not netted.
+    const recognized = legs.map(recognizedResult)
     const added: Required<RealizedByCharacter> = {
-      shortTerm: toUSD(recognised.reduce((s, r) => s + r.shortTerm, 0), currency),
-      longTerm: toUSD(recognised.reduce((s, r) => s + r.longTerm, 0), currency),
-      collectibleLongTerm: toUSD(recognised.reduce((s, r) => s + r.collectibleLongTerm, 0), currency),
+      shortTerm: toUSD(recognized.reduce((s, r) => s + r.shortTerm, 0), currency),
+      longTerm: toUSD(recognized.reduce((s, r) => s + r.longTerm, 0), currency),
+      collectibleLongTerm: toUSD(recognized.reduce((s, r) => s + r.collectibleLongTerm, 0), currency),
     }
     realizedSoFar.set(returnId, {
       realized: {

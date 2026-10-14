@@ -56,8 +56,8 @@ function toLinearSrgb({ l, c, h }: Oklch): [number, number, number] {
   ]
 }
 
-export function luminance(colour: Oklch): number {
-  const [r, g, b] = toLinearSrgb(colour)
+export function luminance(color: Oklch): number {
+  const [r, g, b] = toLinearSrgb(color)
   return 0.2126 * r + 0.7152 * g + 0.0722 * b
 }
 

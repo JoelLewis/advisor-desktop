@@ -2,7 +2,7 @@
  * A small, disclosed, per-account risk model.
  *
  * C5 · forward-risk / historical-risk — every account previously returned the same
- * `var95: 485_000`, which renders as a 485% loss on a $100K account and is unlabelled on an $8.2M
+ * `var95: 485_000`, which renders as a 485% loss on a $100K account and is unlabeled on an $8.2M
  * one. VaR must scale with portfolio value and carry a horizon, a confidence level and a method.
  * C4 · performance-metrics — the reported Sharpe of 1.34 implied a ~19.8% return against the same
  * API's 12.4%; SR = (Rp − Rf)/σp computed from the same series gives 0.71.
@@ -113,7 +113,7 @@ export function correlationAssumptionsText(): string {
   return `correlation assumptions (rounded long-run figures, not estimated from this book's returns): ${[...within, ...across].join('; ')}`
 }
 
-/** Collapse positions to normalised asset-class weights that always sum to 1. */
+/** Collapse positions to normalized asset-class weights that always sum to 1. */
 export function assetClassWeights(
   positions: readonly { assetClass: string; weight: number }[],
 ): Map<string, number> {

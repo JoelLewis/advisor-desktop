@@ -2,7 +2,7 @@ import { cva, type VariantProps } from 'class-variance-authority'
 
 /**
  * Disabled buttons drop to an outline in muted ink rather than fading: a faded solid ink block reads
- * as a heavy grey slab in dark mode. ink-3 text and the rule-2 outline are contrast-checked tokens.
+ * as a heavy gray slab in dark mode. ink-3 text and the rule-2 outline are contrast-checked tokens.
  */
 export const buttonVariants = cva(
   'inline-flex h-9 items-center gap-2 rounded-xs px-4 text-body font-semibold disabled:cursor-not-allowed disabled:text-ink-3',

@@ -16,7 +16,7 @@ import { canHoldSecurities } from '@/lib/held-away'
 import { firstNameOf, joinWords } from '@/lib/words'
 import { buildClientRateDisclosure, formatRatePercent, NIIT_RATE, TAX_RATE_BASIS } from '@/lib/tax-rules'
 import { ACCOUNT_TYPE_LABELS, CLIENT_ASSET_CLASS_WORDS } from '@/lib/labels'
-import { capitalLossUse, ORDINARY_INCOME_OFFSET_LIMIT, ORDINARY_INCOME_OFFSET_LIMIT_SEPARATE, recognisedResult } from '@/lib/capital-gains'
+import { capitalLossUse, ORDINARY_INCOME_OFFSET_LIMIT, ORDINARY_INCOME_OFFSET_LIMIT_SEPARATE, recognizedResult } from '@/lib/capital-gains'
 import { isSubjectToWashSale } from '@/lib/security-master'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { clientDate, clientMoney, clientPercent } from '@/kit/measure'
@@ -27,8 +27,8 @@ const capitalise = (text: string) => `${text.charAt(0).toUpperCase()}${text.slic
 const dayAfter = (iso: string) => new Date(Date.parse(`${iso}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10)
 const security = (t: Pick<ProposedTrade, 'name' | 'symbol'>) => `${t.name} (${t.symbol})`
 /** A leg's result this year: realized less any §1091-washed part, both characters (collectibles are within long-term). */
-const recognised = (t: ProposedTrade) => {
-  const { shortTerm, longTerm } = recognisedResult(t)
+const recognized = (t: ProposedTrade) => {
+  const { shortTerm, longTerm } = recognizedResult(t)
   return shortTerm + longTerm
 }
 /** Client copy states dollars to the nearest hundred; `figures` keep the exact values. */
@@ -96,13 +96,14 @@ export function writeClientLetter(proposal: Proposal, version: ProposalVersion, 
     ? 'A purchase in that period would not forfeit the loss but would postpone it until the new shares are sold.'
     : 'A purchase in that period in a taxable account would not forfeit the loss but would postpone it until the new shares are sold; '
       + 'a purchase in an IRA or Roth IRA would lose it permanently, and a purchase in an employer plan such as a 401(k) or 403(b) may be treated the same way.'
-  const harvested = sells.filter((t) => t.repurchaseBlockedUntil !== undefined && isSubjectToWashSale(t.symbol) && recognised(t) < 0)
+  const harvested = sells.filter((t) => t.repurchaseBlockedUntil !== undefined && isSubjectToWashSale(t.symbol) && recognized(t) < 0)
   for (const t of harvested) {
-    const until = t.repurchaseBlockedUntil ?? ''
+    const until = t.repurchaseBlockedUntil
+    if (until === undefined) throw new Error(`Client Letter Agent: ${t.symbol} is harvested but has no repurchase date`)
     if (until !== window.end) throw new Error(`Client Letter Agent: ${t.symbol}'s repurchase date ${until} is not a sale on ${saleDate}`)
-    figures.push({ label: `${t.symbol} loss`, value: recognised(t), unit: 'USD', source: `version.preview.trades.${t.symbol} realized, less any washed part` })
+    figures.push({ label: `${t.symbol} loss`, value: recognized(t), unit: 'USD', source: `version.preview.trades.${t.symbol} realized, less any washed part` })
     paragraphs.push(
-      `Selling ${security(t)} is expected to realize a loss of about ${aboutMoney(-recognised(t))} at today's prices, which can offset capital gains, now or in later years. `
+      `Selling ${security(t)} is expected to realize a loss of about ${aboutMoney(-recognized(t))} at today's prices, which can offset capital gains, now or in later years. `
       + `To avoid postponing or losing that loss, if the sale is made on ${clientDate(saleDate)}, please don't buy ${t.name} back ${where}, on or before ${clientDate(until)}; from ${clientDate(dayAfter(until))} you may buy it again. ${consequence} `
       + `If the sale is made on ${clientDate(saleDate)}, please also tell us before the sale if ${buyers} bought ${t.name} in any account on or after ${clientDate(window.start)}, because that can affect the loss.`,
     )
@@ -169,7 +170,7 @@ function returnParagraphs(account: Account, version: ProposalVersion, figures: F
   const lines = [`After netting against the gains and losses already realized this year, we expect no federal capital-gains tax from these sales on ${yourReturn}.${saving}`]
   if (ytdRealizedOnReturn === null) return lines
   const priorNet = ytdRealizedOnReturn.shortTerm + ytdRealizedOnReturn.longTerm
-  const added = trades.reduce((s, t) => s + recognised(t), 0)
+  const added = trades.reduce((s, t) => s + recognized(t), 0)
   const limit = ordinaryIncomeLimit(account)
   const { ordinaryIncomeOffset, carriedForward } = capitalLossUse(priorNet, added, limit)
   if (ordinaryIncomeOffset <= 0 && carriedForward <= 0) return lines

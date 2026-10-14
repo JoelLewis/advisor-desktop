@@ -26,6 +26,12 @@ const clientOfDraft = (draft: Draft): string | undefined => {
   return clientId
 }
 
+const requireClientOfDraft = (draft: Draft): string => {
+  const clientId = clientOfDraft(draft)
+  if (clientId === undefined) throw new Error(`Recap ${draft.id} is in a thread with no client`)
+  return clientId
+}
+
 const filingMoved = (draft: Draft): boolean => {
   const basis = draft.recordBasis
   if (!basis) return false
@@ -51,7 +57,7 @@ export const isStale = (draft: Draft): boolean => isDraftStale(draft) || isRecap
 export function staleMessage(draft: Draft): string {
   if (draft.recordBasis && !filingMoved(draft)) {
     const stated = draft.recordBasis.windowEnd
-    const now = latestIntelWindowEnd(clientOfDraft(draft) ?? '')
+    const now = latestIntelWindowEnd(requireClientOfDraft(draft))
     if (stated === undefined) return `This recap states no Intel wash-sale window, but one now runs through ${now === undefined ? 'no date' : clientDate(now)}. Ask for a new recap.`
     if (now === undefined) return `This recap states the Intel wash-sale window through ${clientDate(stated)}, but no window is open now. Ask for a new recap.`
     return `This recap states the Intel wash-sale window through ${clientDate(stated)}, but it now runs through ${clientDate(now)}. Ask for a new recap.`

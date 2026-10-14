@@ -9,7 +9,7 @@ import {
 } from '../workspace/prospect-proposals'
 import { isExternalViewer, viewerFrom } from '../workspace/visibility'
 import { notFound } from './utils'
-import { badRequest, firmViewer, nonEmptyString, readJson, refusal, unauthorised, withoutProvenance } from './workspace-http'
+import { badRequest, firmViewer, nonEmptyString, readJson, refusal, unauthorized, withoutProvenance } from './workspace-http'
 
 function parseAnswers(value: unknown): { ok: true; value?: RiskAnswer[] } | { ok: false; message: string } {
   if (value === undefined) return { ok: true }
@@ -34,7 +34,7 @@ function stepped(r: StepDone | StepFailure, viewer: string) {
 function herRoute(step: ProspectStepName) {
   return http.post(`/api/workspace/prospects/:id/${step}`, async ({ request, params }) => {
     const viewer = viewerFrom(request)
-    if (!viewer) return unauthorised()
+    if (!viewer) return unauthorized()
     const id = String(params.id)
     if (!partySteps(viewer, id)) return notFound()
     const body = (await readJson(request)) ?? {}
@@ -68,7 +68,7 @@ export const workspaceProspectHandlers = [
 
   http.get('/api/workspace/prospects/:id/steps', ({ request, params }) => {
     const viewer = viewerFrom(request)
-    if (!viewer) return unauthorised()
+    if (!viewer) return unauthorized()
     const steps = partySteps(viewer, String(params.id))
     return steps ? HttpResponse.json(steps) : notFound()
   }),

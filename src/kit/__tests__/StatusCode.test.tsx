@@ -8,7 +8,7 @@ describe('StatusCode', () => {
     expect(['OUT', 'BLOCK'].every((s) => isSignal(s as 'OUT'))).toBe(true)
     expect(['WARN', 'AT LIMIT', 'IN', 'CLEAR', 'OPEN'].some((s) => isSignal(s as 'WARN'))).toBe(false)
   })
-  it('always shows its word, so colour is never the only carrier', () => {
+  it('always shows its word, so color is never the only carrier', () => {
     render(<StatusCode status="BLOCK" />)
     expect(screen.getByText('BLOCK')).toBeInTheDocument()
     expect(screen.getByText('BLOCK').closest('[data-status]')).toHaveAttribute('data-signal', 'true')

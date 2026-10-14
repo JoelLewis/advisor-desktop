@@ -176,7 +176,7 @@ export function actAsProspect(presenterId: string, prospectId: string, step: Pro
   return done(record, perform(record, step, { presenterId, path: 'shortcut' }, {}))
 }
 
-/** The labelled clock jumps: her reply (Thu 26 Feb 09:10 ET) and her acceptance (Mon 2 Mar 10:00 ET). Only the presenter. */
+/** The labeled clock jumps: her reply (Thu 26 Feb 09:10 ET) and her acceptance (Mon 2 Mar 10:00 ET). Only the presenter. */
 export function advanceProspect(viewerId: string, prospectId: string, to: 'reply' | 'acceptance'): StepDone | StepFailure {
   if (!isFirmViewer(viewerId)) return NO_PROSPECT
   if (viewerId !== PRESENTER_ID) return refuse(403, 'NOT_PERMITTED', 'Only the presenter moves the clock.')

@@ -21,7 +21,7 @@ export type RealizedSale = {
   /** Negative values are loss sales and open a wash-sale window. */
   realizedGainLoss: number
   holdingPeriod: 'short' | 'long'
-  /** ≤ 0: the part of a loss §1091 washed when the sale was made; it is not recognised on the return. */
+  /** ≤ 0: the part of a loss §1091 washed when the sale was made; it is not recognized on the return. */
   washedLoss?: number
   /**
    * The security bought with the proceeds to keep the market exposure the harvest gave up, when

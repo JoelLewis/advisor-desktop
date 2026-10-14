@@ -34,7 +34,7 @@ function sentToHer() {
 }
 
 describe('the coffee', () => {
-  it('moves the clock to its end and posts a labelled note in the internal thread, once', () => {
+  it('moves the clock to its end and posts a labeled note in the internal thread, once', () => {
     const note = coffee()
     expect(note).toMatchObject({ kind: 'prospect_note', threadId: 'th-pell-work', at: '2026-02-25T21:30:00.000Z', authorId: ADRIAN, eventId: 'evt-004',
       title: 'Coffee with Dr. Amanda Pell', start: '2026-02-25T20:30:00.000Z', end: '2026-02-25T21:30:00.000Z' })

@@ -50,16 +50,16 @@ export type Message =
   | { kind: 'disclosure_delivered'; id: string; threadId: string; at: string; prospectId: string; document: DisclosureDocument; actId: string }
   /** A step she took: her questionnaire answered, her statements shared. */
   | { kind: 'party_step'; id: string; threadId: string; at: string; authorId: string; step: 'questionnaire' | 'statements'; summary: string }
-  /** A labelled firm note about a prospect meeting that is not a Meeting record (the coffee). */
+  /** A labeled firm note about a prospect meeting that is not a Meeting record (the coffee). */
   | { kind: 'prospect_note'; id: string; threadId: string; at: string; authorId: string; prospectId: string; eventId: string; title: string; start: string; end: string; body: string }
   /** The Proposal Agent drafted a prospect proposal. */
   | { kind: 'prospect_proposal'; id: string; threadId: string; at: string; agentId: AgentId; proposalId: string; title: string }
   | { kind: 'prospect_proposal_version'; id: string; threadId: string; at: string; proposalId: string; version: number; author: VersionAuthor; changeSummary: string }
   /** Her acceptance opened onboarding: the checklist as it was opened. */
   | { kind: 'onboarding_opened'; id: string; threadId: string; at: string; prospectId: string; acceptanceActId: string; items: OnboardingItem[] }
-  /** A row of a reference view quoted into a team thread: its claim, its figures with their sources, recomputed by the engine when taken. */
   /** The Brief's line for reconciliation; its counts are read live from the reconciliation view. */
   | { kind: 'reconciliation_notice'; id: string; threadId: string; at: string }
+  /** A row of a reference view quoted into a team thread: its claim, its figures with their sources, recomputed by the engine when taken. */
   | { kind: 'reference_row'; id: string; threadId: string; at: string; takenBy: string; view: ReferenceView; rowId: string; subject: Subject; claim: string; figures: Figure[]; citations: Citation[] }
 /** The acts only compliance performs. */
 export type ComplianceActKind = 'release_orders' | 'return_to_advisor' | 'escalate' | 'dispose_alert' | 'review_correspondence'

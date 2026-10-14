@@ -42,7 +42,7 @@ describe('the workbench body', () => {
     expect(within(detail).getByRole('checkbox', { name: /^lot-pos-020-1/ })).toHaveAccessibleName(/2,363\.668 sh · \+216,446 USD · not sold$/)
   })
 
-  it('summarises the tax, the drift before and after, the restrictions and the held-away accounts', async () => {
+  it('summarizes the tax, the drift before and after, the restrictions and the held-away accounts', async () => {
     await openWorkbench()
     const tape = await screen.findByRole('region', { name: 'Tax effect estimate' })
     expect(tape).toHaveTextContent('10,422')

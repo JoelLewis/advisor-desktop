@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { COLOUR_TOKENS, FONT_SIZE_TOKENS } from '@/lib/utils'
+import { COLOR_TOKENS, FONT_SIZE_TOKENS } from '@/lib/utils'
 
 const css = readFileSync(join(process.cwd(), 'src/styles/app.css'), 'utf8')
 
@@ -28,8 +28,8 @@ function declaredNames(block: string, prefix: 'color' | 'text'): Set<string> {
 const theme = themeBlock(css)
 
 describe('cn token lists match the @theme block in app.css', () => {
-  it('registers every colour token declared in @theme', () => {
-    expect(new Set(COLOUR_TOKENS)).toEqual(declaredNames(theme, 'color'))
+  it('registers every color token declared in @theme', () => {
+    expect(new Set(COLOR_TOKENS)).toEqual(declaredNames(theme, 'color'))
   })
   it('registers every font-size token declared in @theme', () => {
     expect(new Set(FONT_SIZE_TOKENS)).toEqual(declaredNames(theme, 'text'))

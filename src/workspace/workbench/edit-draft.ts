@@ -20,11 +20,11 @@ export function parseQuantityText(text: string): { ok: true; quantity: number | 
 
 const KIND_ORDER: Readonly<Record<LegEdit['kind'], number>> = { exclude: 0, quantity: 1, lots: 2 }
 
-export const normaliseDraftEdits = (edits: readonly LegEdit[]): LegEdit[] =>
+export const normalizeDraftEdits = (edits: readonly LegEdit[]): LegEdit[] =>
   [...edits].sort((a, b) => a.symbol.localeCompare(b.symbol) || KIND_ORDER[a.kind] - KIND_ORDER[b.kind])
 
 export const sameEdits = (a: readonly LegEdit[], b: readonly LegEdit[]): boolean =>
-  JSON.stringify(normaliseDraftEdits(a)) === JSON.stringify(normaliseDraftEdits(b))
+  JSON.stringify(normalizeDraftEdits(a)) === JSON.stringify(normalizeDraftEdits(b))
 
 export const isExcluded = (edits: readonly LegEdit[], symbol: string): boolean =>
   edits.some((e) => e.kind === 'exclude' && e.symbol === symbol)

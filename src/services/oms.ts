@@ -13,7 +13,7 @@ export type Order = {
   orderType: string
   limitPrice?: number
   stopPrice?: number
-  status: 'pending' | 'submitted' | 'filled' | 'cancelled'
+  status: 'pending' | 'submitted' | 'filled' | 'canceled'
   filledQuantity: number
   filledPrice?: number
   submittedAt: string

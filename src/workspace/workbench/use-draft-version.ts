@@ -4,7 +4,7 @@ import { useProposalPreview, useSaveVersion } from '@/hooks/use-workspace'
 import type { DraftPreview, LegEdit, ProposalDetail } from '@/types/workspace-proposal'
 import { latestVersionOf } from '@/workspace/proposal/latest-version'
 import { useViewer } from '@/workspace/viewer/use-viewer'
-import { draftReducer, normaliseDraftEdits, sameEdits, type DraftAction, type DraftState } from './edit-draft'
+import { draftReducer, normalizeDraftEdits, sameEdits, type DraftAction, type DraftState } from './edit-draft'
 
 export type DraftVersion = {
   edits: LegEdit[]; dispatch: (a: DraftAction) => void; dirty: boolean; view: DraftPreview
@@ -70,7 +70,7 @@ export function useDraftVersion(detail: ProposalDetail): DraftVersion {
     if (dirty) sessionStorage.setItem(storageKey, JSON.stringify(state))
     else sessionStorage.removeItem(storageKey)
   }, [dirty, state, storageKey])
-  const edits = useMemo(() => normaliseDraftEdits(state.edits), [state.edits])
+  const edits = useMemo(() => normalizeDraftEdits(state.edits), [state.edits])
   const preview = useProposalPreview(detail.id, edits, dirty)
   const saveVersion = useSaveVersion(detail.id)
   const [saveRequested, setSaveRequested] = useState(false)

@@ -15,7 +15,7 @@ const view = (filters: BlotterFilters = {}) => {
 const row = (id: string) => view().rows.find((r) => r.id === id)
 
 describe('tickets', () => {
-  it('lists every order management ticket, its status read as working, filled or canceled (the OMS spells it cancelled)', () => {
+  it('lists every order management ticket, its status read as working, filled or canceled', () => {
     expect(view().rows.filter((r) => r.source.kind === 'ticket').map((r) => r.id).sort()).toEqual(orders.map((o) => o.id).sort())
     expect(row('ord-003')).toMatchObject({ status: 'working', price: 785, priceKind: 'limit', side: 'sell' })
     expect(row('ord-009')).toMatchObject({ status: 'canceled' })

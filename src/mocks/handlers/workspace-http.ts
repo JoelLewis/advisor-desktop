@@ -3,7 +3,7 @@ import type { BindingAct } from '@/types/workspace'
 import { isFirmViewer, viewerFrom } from '../workspace/visibility'
 import { notFound } from './utils'
 
-export const unauthorised = () => HttpResponse.json({ code: 'NO_VIEWER', message: 'A known viewer is required.' }, { status: 401 })
+export const unauthorized = () => HttpResponse.json({ code: 'NO_VIEWER', message: 'A known viewer is required.' }, { status: 401 })
 export const badRequest = (message: string) => HttpResponse.json({ code: 'BAD_REQUEST', message }, { status: 400 })
 export const refusal = ({ status, code, message }: { status: number; code: string; message: string }) => HttpResponse.json({ code, message }, { status })
 
@@ -20,7 +20,7 @@ export const nonEmptyString = (value: unknown): value is string => typeof value 
  */
 export function firmViewer(request: Request): { ok: true; viewerId: string } | { ok: false; response: Response } {
   const viewerId = viewerFrom(request)
-  if (!viewerId) return { ok: false, response: unauthorised() }
+  if (!viewerId) return { ok: false, response: unauthorized() }
   if (!isFirmViewer(viewerId)) return { ok: false, response: notFound() }
   return { ok: true, viewerId }
 }

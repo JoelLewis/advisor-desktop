@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  findPaletteViolations, findColourLiterals, findFormatterBypass, findRawElements, findRawTokenVars, colourLiteralsOutsideTokens, findBreakpointLiterals,
+  findPaletteViolations, findColorLiterals, findFormatterBypass, findRawElements, findRawTokenVars, colorLiteralsOutsideTokens, findBreakpointLiterals, findMocksImports,
 } from './detectors'
 
 describe('palette detector', () => {
@@ -21,14 +21,14 @@ describe('palette detector', () => {
   ])('allows %s', (src) => expect(findPaletteViolations(src)).toEqual([]))
 })
 
-describe('colour literal detector', () => {
+describe('color literal detector', () => {
   it.each(['const c = "#ff0000"', "style={{ color: 'rgb(0,0,0)' }}", 'fill="oklch(0.5 0.1 20)"', 'hsl(10 20% 30%)'])(
-    'catches %s', (src) => expect(findColourLiterals(src)).not.toEqual([]))
-  it.each(['href="#main"', 'id="page-title"', 'const n = 0xff'])('allows %s', (src) => expect(findColourLiterals(src)).toEqual([]))
-  it('CSS colour values are allowed only inside the token markers', () => {
-    expect(colourLiteralsOutsideTokens('/* tokens:start */ :root { --a: oklch(0.5 0 0); } /* tokens:end */')).toEqual([])
-    expect(colourLiteralsOutsideTokens('/* tokens:start */ /* tokens:end */ .x { color: #fff; }')).not.toEqual([])
-    expect(colourLiteralsOutsideTokens('.x { color: red; }')).not.toEqual([])
+    'catches %s', (src) => expect(findColorLiterals(src)).not.toEqual([]))
+  it.each(['href="#main"', 'id="page-title"', 'const n = 0xff'])('allows %s', (src) => expect(findColorLiterals(src)).toEqual([]))
+  it('CSS color values are allowed only inside the token markers', () => {
+    expect(colorLiteralsOutsideTokens('/* tokens:start */ :root { --a: oklch(0.5 0 0); } /* tokens:end */')).toEqual([])
+    expect(colorLiteralsOutsideTokens('/* tokens:start */ /* tokens:end */ .x { color: #fff; }')).not.toEqual([])
+    expect(colorLiteralsOutsideTokens('.x { color: red; }')).not.toEqual([])
   })
 })
 
@@ -57,4 +57,19 @@ describe('breakpoint literal detector', () => {
     'catches %s', (src) => expect(findBreakpointLiterals(src)).not.toEqual([]))
   it.each(['className="split:col-span-8"', 'className="max-w-(--breakpoint-wide)"', 'className="max-w-[65ch] w-[64px]"', 'className="max-[700px]:grid-cols-1"'])(
     'allows %s', (src) => expect(findBreakpointLiterals(src)).toEqual([]))
+})
+
+describe('findMocksImports', () => {
+  const none = { allowDynamic: [] }
+  it('finds a value import, a side-effect import, a re-export and a dynamic import', () => {
+    expect(findMocksImports("import { accounts } from '@/mocks/data/accounts'", none)).toEqual(['value import: @/mocks/data/accounts'])
+    expect(findMocksImports("import '@/mocks/browser'", none)).toEqual(['side-effect import: @/mocks/browser'])
+    expect(findMocksImports("export { handlers } from '../../mocks/handlers'", none)).toEqual(['re-export: ../../mocks/handlers'])
+    expect(findMocksImports("const m = await import('@/mocks/browser')", none)).toEqual(['dynamic import: @/mocks/browser'])
+    expect(findMocksImports("import { x } from '@/mocks'", none)).toEqual(['value import: @/mocks'])
+  })
+  it('allows type-only imports and the dynamic imports it is told to', () => {
+    expect(findMocksImports("import type { Account } from '@/mocks/data/accounts'\nexport type { X } from '@/mocks/x'", none)).toEqual([])
+    expect(findMocksImports("await import('@/mocks/browser')", { allowDynamic: ['@/mocks/browser'] })).toEqual([])
+  })
 })

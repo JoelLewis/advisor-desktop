@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { cn } from '@/lib/utils'
 
 describe('cn', () => {
-  it('keeps a custom font size alongside a colour', () => {
+  it('keeps a custom font size alongside a color', () => {
     expect(cn('text-label uppercase', 'text-ink')).toBe('text-label uppercase text-ink')
     expect(cn('text-body', 'text-signal-ink')).toBe('text-body text-signal-ink')
   })

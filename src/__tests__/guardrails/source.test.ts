@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { readdirSync } from 'node:fs'
 import {
-  ENGINE_ROOTS, uiRoots, listSourceFiles, findPaletteViolations, findColourLiterals, findFormatterBypass, findRawElements, findRawTokenVars, findBreakpointLiterals,
-  colourLiteralsOutsideTokens,
+  ENGINE_ROOTS, uiRoots, listSourceFiles, findPaletteViolations, findColorLiterals, findFormatterBypass, findRawElements, findRawTokenVars, findBreakpointLiterals,
+  colorLiteralsOutsideTokens,
 } from './detectors'
 
 const ui = uiRoots()
@@ -25,9 +25,9 @@ describe('scan scope', () => {
 
 describe('UI source guardrails', () => {
   it('scans a non-trivial set of files', () => expect(files.length).toBeGreaterThan(3))
-  it.each(files)('%s uses only instrument colours', (f) => {
+  it.each(files)('%s uses only instrument colors', (f) => {
     expect(findPaletteViolations(read(f))).toEqual([])
-    expect(findColourLiterals(read(f))).toEqual([])
+    expect(findColorLiterals(read(f))).toEqual([])
     expect(findRawTokenVars(read(f))).toEqual([])
   })
   it.each(files.filter((f) => f !== 'src/kit/measure.ts'))('%s formats only through measure', (f) => {
@@ -42,7 +42,7 @@ describe('UI source guardrails', () => {
   it('app.css defines the breakpoint tokens', () => {
     expect(read('src/styles/app.css')).toMatch(/--breakpoint-narrow:\s*768px;[\s\S]*--breakpoint-split:\s*1100px;[\s\S]*--breakpoint-wide:\s*1440px;/)
   })
-  it('app.css has colour values only inside the token block', () => {
-    expect(colourLiteralsOutsideTokens(read('src/styles/app.css'))).toEqual([])
+  it('app.css has color values only inside the token block', () => {
+    expect(colorLiteralsOutsideTokens(read('src/styles/app.css'))).toEqual([])
   })
 })

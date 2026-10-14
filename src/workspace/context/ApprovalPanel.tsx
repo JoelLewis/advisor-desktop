@@ -9,7 +9,7 @@ import { useApproveProposal, useProposals, useWithdrawApproval } from '@/hooks/u
 import { PRESENTER_ID } from '@/lib/presenter'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { ApprovalNote } from '@/workspace/proposal/ApprovalNote'
-import { isApprovedLatest } from '@/workspace/proposal/approval-words'
+import { isApprovedLatest, returnedLine } from '@/workspace/proposal/approval-words'
 import { latestVersionOf } from '@/workspace/proposal/latest-version'
 import { BlotterLink } from '@/workspace/proposal/BlotterLink'
 import { FillList } from '@/workspace/proposal/FillList'
@@ -59,7 +59,7 @@ function ProposalApproval({ detail, directory, onRecorded }: { detail: ProposalD
   const approveError = approve.isError && approve.variables.proposalId === detail.id && approve.variables.version === latest.n ? approve.error : undefined
   const pending = detail.staged.filter((o) => o.status === 'pending_compliance')
   const returned = approval.kind === 'unapproved' ? detail.staged.filter((o) => o.status === 'returned').pop() : undefined
-  // The one presenter acts for compliance through a labelled shortcut; compliance itself records in Supervision.
+  // The one presenter acts for compliance through a labeled shortcut; compliance itself records in Supervision.
   const presents = viewerId === PRESENTER_ID && !permissions.includes('release_orders')
 
   // A ref, not render state, so a second click in the same frame cannot send a second act.
@@ -72,7 +72,7 @@ function ProposalApproval({ detail, directory, onRecorded }: { detail: ProposalD
     })
   }
   const openWithdraw = (version: number) => { withdraw.reset(); setSlipTakesFocus(false); setConfirmingWithdrawOf(version) }
-  // An act in flight is not cancellable: closing would reset the mutation and drop the callbacks that release the busy ref.
+  // An act in flight is not cancelable: closing would reset the mutation and drop the callbacks that release the busy ref.
   const closeWithdraw = () => {
     if (withdraw.isPending) return
     withdraw.reset()
@@ -108,7 +108,7 @@ function ProposalApproval({ detail, directory, onRecorded }: { detail: ProposalD
       ) : null}
       {pending.length > 0 && presents && pending[0] ? <PresenterRelease proposalId={detail.id} version={pending[0].version} directory={directory} onRecorded={onRecorded} /> : null}
       {approval.kind === 'released' ? <FilledOrders fills={detail.fills} version={approval.version} releaseActId={approval.releaseActId} /> : null}
-      {returned ? <p className="text-body text-ink-2">{`Compliance returned v${returned.version} (${returned.closedByActId ?? ''}). Revise it, or approve it again, to stage new orders.`}</p> : null}
+      {returned ? <p className="text-body text-ink-2">{returnedLine(returned)}</p> : null}
       {withdrawableVersion !== undefined ? (
         <Button rank="secondary" className="self-start" onClick={() => openWithdraw(withdrawableVersion)}>
           {`Withdraw the approval of v${withdrawableVersion}`}

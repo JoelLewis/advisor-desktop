@@ -18,7 +18,7 @@ export const JOHNSON_REVIEW_TRANSCRIPT: readonly TranscriptLine[] = [
   { id: 't-10', speaker: 'cli-002', text: "I'm more cautious than those models assume." },
   { id: 't-11', speaker: 'user-001', text: "Then I'll review your risk profile and the models on your accounts by Monday, before we trade in them. Nothing is traded in your accounts until that review is done." },
   { id: 't-12', speaker: 'cli-001', text: 'My required distributions start in a few years. Should we be converting some of the IRA to a Roth before then?' },
-  { id: 't-13', speaker: 'user-001', text: 'It is worth modelling. Your distributions begin in the year you turn seventy-three, so the years before that are the window.' },
+  { id: 't-13', speaker: 'user-001', text: 'It is worth modeling. Your distributions begin in the year you turn seventy-three, so the years before that are the window.' },
   { id: 't-14', speaker: 'cli-001', text: 'Please model a few conversion amounts for us.' },
   { id: 't-15', speaker: 'user-001', text: "We will. Mike will run the analysis by Friday next week. It will be an estimate, not tax advice, and I'll contact your CPA by this Friday so they are part of the decision." },
   { id: 't-16', speaker: 'cli-002', text: "We have Robert's Vanguard 401(k) and my TIAA 403(b) sitting outside. Would it make sense to bring them here?" },

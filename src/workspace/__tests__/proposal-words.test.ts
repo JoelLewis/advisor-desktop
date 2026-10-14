@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { approvalWords, isApprovedLatest } from '@/workspace/proposal/approval-words'
+import { approvalWords, isApprovedLatest, returnedLine } from '@/workspace/proposal/approval-words'
 import { RESIDUAL_WORDS } from '@/workspace/proposal/residual-words'
 import { driftRows } from '@/workspace/proposal/drift-rows'
 import { proposalWorkbenchHref } from '@/workspace/proposal/proposal-href'
 import { restrictionSource } from '@/workspace/proposal/restriction-words'
 import type { DriftStatus } from '@/types/portfolio'
+import type { StagedOrder } from '@/types/workspace-proposal'
 import type { ProjectedDrift } from '@/services/oms'
 
 describe('proposal wording', () => {
@@ -53,5 +54,18 @@ describe('proposal wording', () => {
     const released = { kind: 'released', version: 3, latestVersion: 3, approverId: 'user-001', actId: 'REC-0001', releaseActId: 'REC-0003' } as const
     expect(approvalWords(released)).toBe('v3 was released by compliance and filled')
     expect(isApprovedLatest(released)).toBe(false)
+  })
+})
+
+describe('returnedLine', () => {
+  const order: StagedOrder = {
+    id: 'stg-0001', proposalId: 'prop-001', version: 2, accountId: 'acc-002', symbol: 'INTC', side: 'sell', quantity: 5000, estimatedValue: 100_000,
+    currency: 'USD', status: 'returned', stagedAt: '2026-02-25T13:00:00Z', approvalActId: 'REC-0001', closedByActId: 'REC-0002',
+  }
+  it('names the version and the act that returned it', () => {
+    expect(returnedLine(order)).toBe('Compliance returned v2 (REC-0002). Revise it, or approve it again, to stage new orders.')
+  })
+  it('refuses a returned order that names no act, rather than printing "()"', () => {
+    expect(() => returnedLine({ ...order, closedByActId: undefined })).toThrow('Returned order stg-0001 names no act that returned it')
   })
 })

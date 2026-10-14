@@ -3,7 +3,7 @@ import { accounts } from '@/mocks/data/accounts'
 import { clients } from '@/mocks/data/clients'
 import { computeDriftForAccount, modelDisplayName } from '@/mocks/handlers/pms'
 import { requireModelManaged } from '@/lib/mandate'
-import { buildVersion, normaliseConstraints } from '@/mocks/workspace/proposal-engine'
+import { buildVersion, normalizeConstraints } from '@/mocks/workspace/proposal-engine'
 import { sameWashSaleTaxpayer } from '@/mocks/handlers/tax-return'
 import { ASSET_CLASS_PROSE_LABELS } from '@/lib/labels'
 import { isSubjectToWashSale } from '@/lib/security-master'
@@ -25,7 +25,7 @@ const prose = (assetClass: string): string => {
 }
 
 const sameConstraints = (a: readonly ProposalConstraint[], b: readonly ProposalConstraint[]): boolean =>
-  JSON.stringify(normaliseConstraints(a).map(constraintKey)) === JSON.stringify(normaliseConstraints(b).map(constraintKey))
+  JSON.stringify(normalizeConstraints(a).map(constraintKey)) === JSON.stringify(normalizeConstraints(b).map(constraintKey))
 
 /** Key-order independent: each constraint as a fixed tuple. */
 function constraintKey(c: ProposalConstraint): readonly (string | number)[] {
@@ -49,7 +49,7 @@ function capBinds(constraints: readonly ProposalConstraint[], built: DraftPrevie
 
 /** The agent never drafts a buy that would wash a loss the taxpayer has taken or this proposal takes, whatever else is asked. */
 export function agentConstraints(requested: readonly ProposalConstraint[]): ProposalConstraint[] {
-  return normaliseConstraints([{ kind: 'avoid_self_wash' }, ...requested])
+  return normalizeConstraints([{ kind: 'avoid_self_wash' }, ...requested])
 }
 
 export function proposalTitle(accountId: string): string {

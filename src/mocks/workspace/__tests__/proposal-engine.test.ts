@@ -4,7 +4,7 @@ import { washSaleWindow } from '@/mocks/data/realized-sales'
 import type { Acquisition } from '@/lib/wash-sale'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import type { DraftPreview, LegEdit, ProposalConstraint } from '@/types/workspace-proposal'
-import { applyEdits, buildVersion, editSummary, normaliseConstraints, parseConstraints, parseEdits } from '../proposal-engine'
+import { applyEdits, buildVersion, editSummary, normalizeConstraints, parseConstraints, parseEdits } from '../proposal-engine'
 import { buildRebalancePreviews, generateRebalanceProposal } from '@/mocks/handlers/oms'
 import { isModelManaged } from '@/lib/mandate'
 
@@ -91,7 +91,7 @@ describe('a version and the engine agree', () => {
   })
 
   it('several gain caps are the tightest of them', () => {
-    expect(normaliseConstraints([{ kind: 'cap_realized_gains', usd: 90_000 }, { kind: 'cap_realized_gains', usd: 50_000 }])).toEqual([{ kind: 'cap_realized_gains', usd: 50_000 }])
+    expect(normalizeConstraints([{ kind: 'cap_realized_gains', usd: 90_000 }, { kind: 'cap_realized_gains', usd: 50_000 }])).toEqual([{ kind: 'cap_realized_gains', usd: 50_000 }])
     expect(built([{ kind: 'cap_realized_gains', usd: 90_000 }, { kind: 'cap_realized_gains', usd: 50_000 }]).fingerprint)
       .toBe(built([{ kind: 'cap_realized_gains', usd: 50_000 }]).fingerprint)
   })
@@ -175,10 +175,10 @@ describe('parsing request bodies', () => {
     [[{ kind: 'exclude_asset_class', assetClass: 'gold' }]],
   ])('refuses constraints %j', (value) => expect(parseConstraints(value).ok).toBe(false))
 
-  it('accepts and normalises constraints', () => {
+  it('accepts and normalizes constraints', () => {
     const r = parseConstraints([{ kind: 'exclude_asset_class', assetClass: 'digital_assets' }, { kind: 'harvest_only' }, { kind: 'harvest_only' }])
     if (!r.ok) throw new Error(r.message)
-    expect(normaliseConstraints(r.value)).toEqual([{ kind: 'harvest_only' }, { kind: 'exclude_asset_class', assetClass: 'digital_assets' }])
+    expect(normalizeConstraints(r.value)).toEqual([{ kind: 'harvest_only' }, { kind: 'exclude_asset_class', assetClass: 'digital_assets' }])
   })
 
   it.each([

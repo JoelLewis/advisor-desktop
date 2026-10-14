@@ -131,7 +131,7 @@ describe('governance history', () => {
 })
 
 describe('risk profiles are the bands the models score in', () => {
-  it("every model's risk score falls inside the band it is labelled with", () => {
+  it("every model's risk score falls inside the band it is labeled with", () => {
     for (const m of MODEL_DEFINITIONS) {
       const profile = MODEL_RISK_PROFILES[m.id]
       expect(bandFor(riskScoreOf(modelVolatility(m.id))).profile, m.id).toBe(profile)

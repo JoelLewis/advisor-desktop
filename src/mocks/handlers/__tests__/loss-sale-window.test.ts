@@ -6,7 +6,7 @@ import { repurchaseRestrictionsFor } from '@/mocks/handlers/repurchase-restricti
 import { estimateTaxOnReturns } from '@/mocks/handlers/tax-return'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { isTaxableAccount } from '@/lib/tax-treatment'
-import { recognisedResult, type TaxedLeg } from '@/lib/capital-gains'
+import { recognizedResult, type TaxedLeg } from '@/lib/capital-gains'
 import { isSubjectToWashSale } from '@/lib/security-master'
 import { generateRebalanceProposal, type ProposedTradeLeg } from '@/mocks/handlers/oms'
 import { generateTaxLots } from '@/mocks/handlers/custodian'
@@ -19,8 +19,8 @@ const account = (id: string) => {
   if (!found) throw new Error(`no account ${id}`)
   return found
 }
-const recognisedNet = (t: TaxedLeg) => {
-  const r = recognisedResult(t)
+const recognizedNet = (t: TaxedLeg) => {
+  const r = recognizedResult(t)
   return r.shortTerm + r.longTerm
 }
 
@@ -33,7 +33,7 @@ describe('§0.2 · a loss sale opens its own wash-sale window', () => {
     expect(intc.repurchaseBlockedUntil).toBe(washSaleWindow(MOCK_TODAY_ISO).end)
   })
 
-  it('every sell of a security that still recognises a net loss carries the window end; no buy and no coin ever does', async () => {
+  it('every sell of a security that still recognizes a net loss carries the window end; no buy and no coin ever does', async () => {
     const previews = await previewRebalance({ accountIds: accounts.filter(isModelManaged).map((a) => a.id), taxAware: true })
     let windows = 0
     for (const p of previews) {
@@ -45,7 +45,7 @@ describe('§0.2 · a loss sale opens its own wash-sale window', () => {
           expect(t.side, where).toBe('sell')
           expect(isSubjectToWashSale(t.symbol), where).toBe(true)
         }
-        if (t.side === 'sell' && isSubjectToWashSale(t.symbol) && recognisedNet(t) < 0) {
+        if (t.side === 'sell' && isSubjectToWashSale(t.symbol) && recognizedNet(t) < 0) {
           expect(t.repurchaseBlockedUntil, where).toBe('2026-03-27')
         }
       }
@@ -87,7 +87,7 @@ describe('§0.2 · a loss sale opens its own wash-sale window', () => {
     expect(projectedSellers('acc-012')).toEqual(['acc-011'])
   })
 
-  it('a separate taxpayer in the same household sees none of its neighbours\' windows', () => {
+  it('a separate taxpayer in the same household sees none of its neighbors\' windows', () => {
     // hh-002: acc-006 is an irrevocable trust, its own taxpayer. hh-009: acc-033 and acc-034 are two unmarried clients.
     const proposals = [
       { accountId: 'acc-007', legs: [{ symbol: 'AGG', repurchaseBlockedUntil: '2026-03-27' }] },
@@ -195,7 +195,7 @@ describe('§0.2 · a buy proposed in the same batch washes a loss sold by the sa
     expect(sell.washSaleRisk).toBe(true)
     expect(sell.repurchaseBlockedUntil).toBe('2026-03-27')
 
-    // The estimate is the one the recognised result gives, not the one the realized loss would.
+    // The estimate is the one the recognized result gives, not the one the realized loss would.
     const asServed = estimateTaxOnReturns(previews.map((p) => ({ account: account(p.accountId), legs: p.trades })), MOCK_TODAY_ISO)
     const ignoringWash = estimateTaxOnReturns(previews.map((p) => ({ account: account(p.accountId), legs: p.trades.map((t) => ({ ...t, washedLoss: undefined })) })), MOCK_TODAY_ISO)
     expect(p026!.estimatedTaxImpact).toBe(asServed[1]!.net)

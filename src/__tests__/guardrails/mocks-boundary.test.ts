@@ -1,16 +1,20 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { listSourceFiles } from './detectors'
+import { findMocksImports, listSourceFiles } from './detectors'
 
-const ROOTS = ['src/workspace', 'src/app', 'src/kit', 'src/hooks', 'src/services']
+/** The production UI and everything it imports that is not the engine itself. */
+const ROOTS = ['src/workspace', 'src/app', 'src/kit', 'src/hooks', 'src/services', 'src/lib', 'src/types', 'src/main.tsx']
+/** The one load of the engine production makes: `main.tsx` starts the MSW worker, the demo's server. */
+const ALLOWED_DYNAMIC: Readonly<Record<string, readonly string[]>> = { 'src/main.tsx': ['@/mocks/browser'] }
 const files = ROOTS.flatMap(listSourceFiles)
-/** A value import (not `import type`) whose source is the mock engine; the clause holds no quote, so it cannot run on into the next import. */
-const VALUE_IMPORT_FROM_MOCKS = /^import\s+(?!type\b)[^'"]*?from\s+['"](?:@\/mocks\/|(?:\.\.\/)+mocks\/)/m
 
 describe('production UI reads the engine only through the API', () => {
-  it('scans the UI, hooks and services', () => expect(files.length).toBeGreaterThan(50))
-  it.each(files)('%s imports no value from src/mocks', (f) => {
-    expect(readFileSync(join(process.cwd(), f), 'utf8')).not.toMatch(VALUE_IMPORT_FROM_MOCKS)
+  it('scans the UI, hooks, services, lib, types and the entry', () => {
+    expect(files.length).toBeGreaterThan(50)
+    expect(files).toContain('src/main.tsx')
+  })
+  it.each(files)('%s loads no value from src/mocks', (f) => {
+    expect(findMocksImports(readFileSync(join(process.cwd(), f), 'utf8'), { allowDynamic: ALLOWED_DYNAMIC[f] ?? [] })).toEqual([])
   })
 })

@@ -1,8 +1,13 @@
-import { describe, it, expect } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+import { FillsView } from '@/workspace/thread/FillsView'
+import type { Message } from '@/types/workspace'
 import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
 import { store } from '@/mocks/data/workspace-store'
+
+type FillsMessage = Extract<Message, { kind: 'fills' }>
 
 describe('the fills message', () => {
   it('lists each fill with side, quantity, price, value and time, and names the release', async () => {
@@ -21,5 +26,11 @@ describe('the fills message', () => {
     const [intc, vwo] = within(table).getAllByRole('row').slice(1)
     for (const text of ['INTC', 'Sold', '7,000', '28.45', '199,150', '2026-02-25 14:30 UTC']) expect(intc).toHaveTextContent(text)
     for (const text of ['VWO', 'Bought', '1,388', '44.80', '62,182', '2026-02-25 14:31 UTC']) expect(vwo).toHaveTextContent(text)
+  })
+
+  it('refuses a fills message with no fill rather than rendering a blank unit', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const message = { kind: 'fills', id: 'msg-x', threadId: 'th-johnson-review', at: '2026-02-25T15:00:00Z', proposalId: 'prop-001', title: 'Johnson rebalance', version: 1, releaseActId: 'REC-0001', fills: [] } as unknown as FillsMessage
+    expect(() => render(<MemoryRouter><FillsView message={message} /></MemoryRouter>)).toThrow('Fills message msg-x carries no fill')
   })
 })

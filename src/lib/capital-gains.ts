@@ -51,7 +51,7 @@ export type TaxedLeg = {
  * The result a leg puts on the return: what it realized less the loss §1091 washes. A washed loss
  * is deferred into a replacement's basis or lost; either way it offsets no gain this year.
  */
-export function recognisedResult(leg: TaxedLeg): Required<RealizedByCharacter> {
+export function recognizedResult(leg: TaxedLeg): Required<RealizedByCharacter> {
   return {
     shortTerm: leg.realizedShortTerm - (leg.washedLoss?.shortTerm ?? 0),
     longTerm: leg.realizedLongTerm - (leg.washedLoss?.longTerm ?? 0),
@@ -60,8 +60,8 @@ export function recognisedResult(leg: TaxedLeg): Required<RealizedByCharacter> {
 }
 
 /**
- * The estimated tax on one proposal **on its own**: `net` is its legs' recognised results (realized
- * less any §1091-washed loss, `recognisedResult`) netted under §1222
+ * The estimated tax on one proposal **on its own**: `net` is its legs' recognized results (realized
+ * less any §1091-washed loss, `recognizedResult`) netted under §1222
  * (no year-to-date realized results, no other account), `gross` the sum of the legs' own tax on
  * gains. Netting a proposal's own legs never raises its bill, so `net` is clamped to `gross`: it
  * rounds once where `gross` rounds per leg, and with nothing to net the two can differ by a dollar.
@@ -71,10 +71,10 @@ export function recognisedResult(leg: TaxedLeg): Required<RealizedByCharacter> {
  */
 export function netTaxForLegs(legs: readonly TaxedLeg[], rateFor: RateFor): { net: number; gross: number } {
   const gross = legs.reduce((s, l) => s + l.taxImpact, 0)
-  const recognised = legs.map(recognisedResult)
-  const shortTerm = recognised.reduce((s, r) => s + r.shortTerm, 0)
-  const longTerm = recognised.reduce((s, r) => s + r.longTerm, 0)
-  const collectibleLongTerm = recognised.reduce((s, r) => s + r.collectibleLongTerm, 0)
+  const recognized = legs.map(recognizedResult)
+  const shortTerm = recognized.reduce((s, r) => s + r.shortTerm, 0)
+  const longTerm = recognized.reduce((s, r) => s + r.longTerm, 0)
+  const collectibleLongTerm = recognized.reduce((s, r) => s + r.collectibleLongTerm, 0)
   return { net: Math.min(netCapitalGainsTax(shortTerm, longTerm, rateFor, collectibleLongTerm), gross), gross }
 }
 

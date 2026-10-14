@@ -45,11 +45,11 @@ export function wordFor(map: Readonly<Record<string, string>>, key: string): str
   return word
 }
 
-/** "v2", or "v2 · v3 pending from 2026-04-01". */
 /** A model's pending version, if any, as the line beneath its current one. */
 export const pendingVersionWords = (m: Pick<ModelSummary, 'pendingVersion'>) =>
   m.pendingVersion ? `v${m.pendingVersion.version} pending from ${fmtDate(m.pendingVersion.effectiveDate)}` : undefined
 
+/** "v2", or "v2 · v3 pending from 2026-04-01". */
 export const versionWords = (m: Pick<ModelSummary, 'currentVersion' | 'pendingVersion'>) =>
   m.pendingVersion ? `v${m.currentVersion} · v${m.pendingVersion.version} pending from ${fmtDate(m.pendingVersion.effectiveDate)}` : `v${m.currentVersion}`
 

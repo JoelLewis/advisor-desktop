@@ -85,7 +85,7 @@ describe('Gauge', () => {
     expect(Number(bar.getAttribute('x'))).toBeGreaterThanOrEqual(0)
     expect(Number(bar.getAttribute('x')) + Number(bar.getAttribute('width'))).toBeLessThanOrEqual(200)
   })
-  it('colours only OUT with the signal fill', () => {
+  it('colors only OUT with the signal fill', () => {
     const fill = (drift: number) => {
       const { container, unmount } = render(<Gauge label="x" drift={drift} band={0.05} />)
       const cls = container.querySelector('[data-part="bar"]')!.getAttribute('class')

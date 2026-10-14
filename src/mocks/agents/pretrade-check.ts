@@ -24,13 +24,18 @@ function weightPhrase(v: ProposalViolation, noun: string): string {
   return `is already over its ${noun} limit; the proposal does not add to it`
 }
 
+function symbolOf(v: ProposalViolation): string {
+  if (v.symbol === undefined) throw new Error(`A ${v.category} violation names no symbol`)
+  return v.symbol
+}
+
 function describe(v: ProposalViolation, names: Names): { who: string; label: string; phrase: string } {
   switch (v.category) {
-    case 'restricted_securities': return { who: securityName(names, v.symbol ?? ''), label: v.symbol ?? 'Security', phrase: 'is on the restricted list' }
-    case 'concentration_limit': return { who: securityName(names, v.symbol ?? ''), label: v.symbol === 'CASH' ? 'Cash' : v.symbol ?? 'Security', phrase: weightPhrase(v, 'concentration') }
+    case 'restricted_securities': return { who: securityName(names, symbolOf(v)), label: symbolOf(v), phrase: 'is on the restricted list' }
+    case 'concentration_limit': return { who: securityName(names, symbolOf(v)), label: symbolOf(v) === 'CASH' ? 'Cash' : symbolOf(v), phrase: weightPhrase(v, 'concentration') }
     case 'sector_limit': { const sector = sectorOf(v); return { who: sector, label: sector, phrase: weightPhrase(v, 'sector') } }
     case 'cash_minimum': return { who: 'Cash', label: 'Cash', phrase: 'would fall below the minimum reserve' }
-    case 'wash_sale': return { who: securityName(names, v.symbol ?? ''), label: v.symbol ?? 'Security', phrase: 'may trigger a wash sale' }
+    case 'wash_sale': return { who: securityName(names, symbolOf(v)), label: symbolOf(v), phrase: 'may trigger a wash sale' }
   }
 }
 

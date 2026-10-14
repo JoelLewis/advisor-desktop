@@ -30,7 +30,7 @@ const ACC_006 = [
 ]
 
 describe('assetClassWeights', () => {
-  it('normalises so weights always sum to exactly 1', () => {
+  it('normalizes so weights always sum to exactly 1', () => {
     // acc-045's fixture weights sum to 0.925 — D4.
     const w = assetClassWeights([
       { assetClass: 'digital_assets', weight: 0.700 },

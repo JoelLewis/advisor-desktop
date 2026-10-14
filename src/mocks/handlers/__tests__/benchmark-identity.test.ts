@@ -31,7 +31,7 @@ describe('§9.4 · a benchmark label describes what is computed', () => {
       const classes = model.assetClasses.filter((c) => c.targetWeight > 0)
       if (classes.length <= 1) continue
       checked++
-      // A multi-asset blend must not be labelled as a single equity index.
+      // A multi-asset blend must not be labeled as a single equity index.
       expect(model.benchmark, model.id).not.toMatch(/^S&P 500$/)
       expect(model.benchmarkKind, model.id).toBe('model_policy')
     }

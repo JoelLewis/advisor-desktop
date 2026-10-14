@@ -25,7 +25,7 @@ export function AgendaEditor({ meeting, findings, editable }: AgendaEditorProps)
   const findingsId = useId()
   const items = current?.items ?? []
 
-  // Once the new version arrives, focus returns to the control the change came from (or its nearest live neighbour).
+  // Once the new version arrives, focus returns to the control the change came from (or its nearest live neighbor).
   useEffect(() => {
     if (!focusRequest || !current || current.n <= focusRequest.fromVersion) return
     const target = focusAfterChange(focusRequest, current.items)

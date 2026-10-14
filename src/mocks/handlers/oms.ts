@@ -51,7 +51,7 @@ export const orders: Order[] = [
 
   // ── David Williams Individual (acc-011) ──
   { id: 'ord-008', accountId: 'acc-011', symbol: 'SPY', side: 'buy', quantity: 100, orderType: 'market', status: 'submitted', filledQuantity: 0, submittedAt: '2026-02-25T10:00:00Z', assetClass: 'equity' },
-  { id: 'ord-009', accountId: 'acc-011', symbol: 'BND', side: 'sell', quantity: 200, orderType: 'market', status: 'cancelled', filledQuantity: 0, submittedAt: '2026-02-24T15:45:00Z', assetClass: 'equity' },
+  { id: 'ord-009', accountId: 'acc-011', symbol: 'BND', side: 'sell', quantity: 200, orderType: 'market', status: 'canceled', filledQuantity: 0, submittedAt: '2026-02-24T15:45:00Z', assetClass: 'equity' },
 
   // ── Michael Martinez Individual (acc-015) ──
   { id: 'ord-010', accountId: 'acc-015', symbol: 'EFA', side: 'buy', quantity: 350, orderType: 'limit', limitPrice: 81.50, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-25T09:45:00Z', assetClass: 'equity' },
@@ -237,7 +237,7 @@ type TradeCandidate = { symbol: string; name: string; price: number; position?: 
  */
 type Sleeve = {
   assetClass: DriftHolding['assetClass']
-  /** The account's own weight in this class, renormalised — `computeDriftForAccount`'s `actual`. */
+  /** The account's own weight in this class, renormalized — `computeDriftForAccount`'s `actual`. */
   actualWeight: number
   /** The model's target weight for it — the same figure the drift surface bands against. */
   targetWeight: number
@@ -638,7 +638,7 @@ export function generateRebalanceProposal(
   //
   // The **actual** side is deliberately taken in money, from the CASH position itself, not from
   // `cashDrift.actual`. `positions.ts` hand-types each position's `weight` to three decimals and
-  // `computeDriftForAccount` renormalises them, so the cash weight it reports differs from
+  // `computeDriftForAccount` renormalizes them, so the cash weight it reports differs from
   // `cashBalance / totalValue` by up to ~0.06 of a point — $4,695 on acc-001, $4,470 on acc-006.
   // While buys were small that slack never bound; once §9.7 lets an account buy the classes it
   // holds nothing in, `buyCapacity` is consumed to the last dollar and the slack lands straight
@@ -688,7 +688,7 @@ export function generateRebalanceProposal(
   //    funding what the proceeds can reach.
   //  - Cash remains bounded on both sides regardless: it can rise only to target (`cashHeadroom`)
   //    and fall only to target (`cashAboveTarget`), which is Task 7's two-sided invariant.
-  // This is not new behaviour — it is the choice the floor already made, now named. The existing
+  // This is not new behavior — it is the choice the floor already made, now named. The existing
   // acc-015 test below ('the floor on cashAboveTarget lets the full $113,820 buy through') is its
   // pin: acc-015 is 0.6 points *under* its cash target and still deploys the full buy.
   const cashAboveTarget = Math.max(0, Math.floor(cashValue - cashTargetValue))

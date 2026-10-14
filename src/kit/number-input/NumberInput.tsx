@@ -11,7 +11,7 @@ type NumberInputProps = {
   onCommit?: () => void
 }
 
-/** A labelled number field. It holds text; parsing and validation belong to the caller and the engine. */
+/** A labeled number field. It holds text; parsing and validation belong to the caller and the engine. */
 export function NumberInput({ label, value, onChange, unit, error, disabled, onCommit }: NumberInputProps) {
   const id = useId()
   const errorId = useId()

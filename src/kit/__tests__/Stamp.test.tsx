@@ -2,7 +2,7 @@ import { it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { Stamp } from '@/kit/stamp/Stamp'
 
-it('approved and awaiting differ by shape and words, not colour', () => {
+it('approved and awaiting differ by shape and words, not color', () => {
   const { rerender } = render(<Stamp state="awaiting" person="Adrian Hale" role="Advisor of record" />)
   expect(screen.getByRole('status')).toHaveTextContent('AWAITING YOUR SIGNATURE')
   expect(screen.getByText('AWAITING YOUR SIGNATURE')).toHaveAttribute('data-stamp', 'awaiting')

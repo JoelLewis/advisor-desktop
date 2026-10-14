@@ -57,7 +57,7 @@ describe('every engine read sees the moved book', () => {
     expect(ytdRealizedOnReturn(returnId, MOCK_TODAY_ISO).longTerm).toBe(before - 45_850)
   })
 
-  it('a washed part of a recorded loss is not recognised on the return', () => {
+  it('a washed part of a recorded loss is not recognized on the return', () => {
     const returnId = taxReturnFor(acc002)!
     const before = ytdRealizedOnReturn(returnId, MOCK_TODAY_ISO).longTerm
     sellIntcByHand({ ...SALE, washedLoss: -10_000 })

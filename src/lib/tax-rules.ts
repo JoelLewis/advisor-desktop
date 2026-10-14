@@ -3,6 +3,9 @@ import type { TaxCharacter } from '@/lib/capital-gains'
 import type { TaxLot } from '@/types/portfolio'
 import type { CurrencyCode, FXRateMap } from '@/types/currency'
 
+/** The caveat a prospect proposal's tax figures carry. */
+export const TAX_ESTIMATE_NOTE = 'Tax figures are estimates at the top federal rate; state tax is not modeled; consult your tax professional.'
+
 /**
  * C11 · tax-loss-harvesting — a flat 37% was applied to every lot and rendered directly beside a
  * "Long" holding-period badge. Long-term losses offset long-term gains at capital-gains rates.
@@ -15,9 +18,6 @@ import type { CurrencyCode, FXRateMap } from '@/types/currency'
  * against them; the rates themselves are literals because 0.37 + 0.038 is not exactly 0.408 in
  * floating point.
  */
-/** The caveat a prospect proposal's tax figures carry. */
-export const TAX_ESTIMATE_NOTE = 'Tax figures are estimates at the top federal rate; state tax is not modeled; consult your tax professional.'
-
 export const TOP_ORDINARY_RATE = 0.37 as const
 export const TOP_LONG_TERM_GAINS_RATE = 0.2 as const
 export const NIIT_RATE = 0.038 as const

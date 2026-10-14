@@ -11,7 +11,9 @@ type FillsMessage = Extract<Message, { kind: 'fills' }>
 /** The execution report for released orders: each fill at the day's price, in the order it executed. */
 export function FillsView({ message }: { message: FillsMessage }) {
   const titleId = useId()
-  const currency = message.fills[0]?.currency ?? ''
+  const first = message.fills[0]
+  if (!first) throw new Error(`Fills message ${message.id} carries no fill`)
+  const currency = first.currency
   return (
     <article aria-labelledby={titleId} className="flex min-w-0 flex-col gap-3">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -20,7 +22,7 @@ export function FillsView({ message }: { message: FillsMessage }) {
         <span className="tabular ml-auto text-label text-ink-3">{fmtTimestamp(message.at)}</span>
       </div>
       <p className="text-body text-ink-2">{`Released by ${message.releaseActId}; filled at the day's prices.`}</p>
-      {message.fills[0] ? <BlotterLink accountId={message.fills[0].accountId} /> : null}
+      <BlotterLink accountId={first.accountId} />
       <DataTable caption={`Fills · v${message.version}`} rows={message.fills} getRowId={(f) => f.id} noun={{ singular: 'fill', plural: 'fills' }} density="dense"
         columns={[
           { id: 'symbol', header: 'Symbol', cell: (f) => f.symbol },

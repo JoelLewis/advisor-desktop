@@ -332,7 +332,7 @@ type Attribution = {
  * numbers alone do not reveal which is in use, so the response and the page caption name it.
  *
  * C2 · performance-attribution — Σ(A + S + I) = Rp − Rb holds exactly, not approximately. Both
- * weight sets sum to one (`assetClassWeights` normalises; every model's targets sum to 1.00), so
+ * weight sets sum to one (`assetClassWeights` normalizes; every model's targets sum to 1.00), so
  * Σ(wp − wb) = 0, the −Rb in the allocation term cancels, and the three effects collapse to
  * Σ wp·Rp,i − Σ wb·Rb,i. The totals returned here are the totals of the *rounded* rows, so the
  * published cards add up to the published total as well.
@@ -423,7 +423,7 @@ export function periodReturnsFor(account: Account, years: number, positions?: re
 // model" — the question the model-trade screen exists to ask, since it can propose migrating an
 // account onto a model it is not currently assigned to. Omitted, it is the account's own model
 // and every existing caller is unchanged. The override is deliberately the **only** thing that
-// varies: the positions, the renormalisation and the two drift metrics are the same derivation
+// varies: the positions, the renormalization and the two drift metrics are the same derivation
 // the drift surface publishes, so a migration preview and the drift page cannot disagree about
 // what drift means. An unknown model id throws rather than falling back to mod-001 — a silently
 // substituted model here would be a trade instruction against a policy nobody chose.

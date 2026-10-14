@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { NumberInput } from '@/kit/number-input/NumberInput'
 
-it('is labelled with its unit, reports text, commits on Enter, and announces an error', async () => {
+it('is labeled with its unit, reports text, commits on Enter, and announces an error', async () => {
   const onChange = vi.fn()
   const onCommit = vi.fn()
   const { rerender } = render(<NumberInput label="Quantity" unit="sh" value="" onChange={onChange} onCommit={onCommit} />)

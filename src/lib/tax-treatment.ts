@@ -4,7 +4,7 @@ export type { TaxTreatment }
 
 /**
  * §9.1 · tax-loss-harvesting — a loss realized inside a traditional IRA or a Roth is not
- * recognised on the owner's current return (IRS Pub 590-A: do not take IRA investment gains or
+ * recognized on the owner's current return (IRS Pub 590-A: do not take IRA investment gains or
  * losses into account while the IRA remains open), and a 529's earnings are tax-free when used
  * for qualified expenses. In both cases "estimated tax benefit" is not a smaller number, it is a
  * category error — there is no realization event to harvest.

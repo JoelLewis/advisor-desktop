@@ -12,8 +12,7 @@ import { MOCK_NOW_ISO } from '@/lib/clock'
 
 const BUY_SIDES: ReadonlySet<string> = new Set(['buy', 'purchase', 'buy_to_open', 'buy_to_close', 'buy_to_cover'])
 const SELL_SIDES: ReadonlySet<string> = new Set(['sell', 'redemption', 'sell_short', 'sell_to_open', 'sell_to_close'])
-/** The order management system spells it `cancelled`; the blotter's identifier is US English. */
-const TICKET_STATUS: Readonly<Record<Order['status'], BlotterStatus>> = { pending: 'working', submitted: 'working', filled: 'filled', cancelled: 'canceled' }
+const TICKET_STATUS: Readonly<Record<Order['status'], BlotterStatus>> = { pending: 'working', submitted: 'working', filled: 'filled', canceled: 'canceled' }
 const STAGED_STATUS: Readonly<Record<StagedOrder['status'], BlotterStatus>> = {
   pending_compliance: 'pending_compliance', filled: 'filled', withdrawn: 'withdrawn', returned: 'returned',
 }

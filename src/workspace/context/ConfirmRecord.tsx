@@ -39,7 +39,7 @@ export function ConfirmRecord<Variables>({ open, onClose, title, description, mu
   const busy = useRef(false)
   const blockedId = useId()
   useEffect(() => { if (open) setSlipTakesFocus(false) }, [open])
-  // An act in flight is not cancellable: closing would reset the mutation and drop the callbacks that release the busy ref.
+  // An act in flight is not cancelable: closing would reset the mutation and drop the callbacks that release the busy ref.
   const close = () => {
     if (mutation.isPending) return
     mutation.reset()

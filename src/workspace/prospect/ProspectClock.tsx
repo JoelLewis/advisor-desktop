@@ -10,7 +10,7 @@ import { COFFEE_NOTE_DRAFT } from './prospect-words'
 
 type Props = { view: ProspectView; canRecordCoffee: boolean; presents: boolean }
 
-/** The story's clock: the coffee (its note moves the clock to the coffee's end) and the presenter's labelled jumps. Never backwards. */
+/** The story's clock: the coffee (its note moves the clock to the coffee's end) and the presenter's labeled jumps. Never backwards. */
 export function ProspectClock({ view, canRecordCoffee, presents }: Props) {
   const coffee = useRecordCoffee(view.id)
   const advance = useAdvanceProspect(view.id)

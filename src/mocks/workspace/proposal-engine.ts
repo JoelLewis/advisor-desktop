@@ -94,7 +94,7 @@ const editTuple = (e: LegEdit): [string, string, number | string[] | null] =>
   [e.kind, e.symbol, e.kind === 'quantity' ? e.quantity : e.kind === 'lots' ? [...e.lotIds] : null]
 
 /** One spelling per constraint set: duplicates dropped, gain caps collapsed to the tightest, a fixed order. */
-export function normaliseConstraints(constraints: readonly ProposalConstraint[]): ProposalConstraint[] {
+export function normalizeConstraints(constraints: readonly ProposalConstraint[]): ProposalConstraint[] {
   const caps = constraints.flatMap((c) => (c.kind === 'cap_realized_gains' ? [c.usd] : []))
   const collapsed: ProposalConstraint[] = [
     ...constraints.filter((c) => c.kind !== 'cap_realized_gains'),
@@ -105,7 +105,7 @@ export function normaliseConstraints(constraints: readonly ProposalConstraint[])
 }
 
 /** One spelling per edit set: by symbol, then by kind. */
-export function normaliseEdits(edits: readonly LegEdit[]): LegEdit[] {
+export function normalizeEdits(edits: readonly LegEdit[]): LegEdit[] {
   return [...edits].sort((a, b) => byCodeUnit(a.symbol, b.symbol) || EDIT_ORDER[a.kind] - EDIT_ORDER[b.kind])
 }
 
@@ -233,8 +233,8 @@ export function buildVersion(accountId: string, constraints: readonly ProposalCo
   })
   const content = {
     accountId,
-    constraints: normaliseConstraints(constraints).map(constraintTuple),
-    edits: normaliseEdits(edits).map(editTuple),
+    constraints: normalizeConstraints(constraints).map(constraintTuple),
+    edits: normalizeEdits(edits).map(editTuple),
     legs: preview.trades.map((t) => [t.symbol, t.side, t.quantity, t.estimatedValue]),
     lots: legFacts.map((f) => [f.symbol, f.lotIds]),
   }
@@ -248,7 +248,7 @@ export function buildVersion(accountId: string, constraints: readonly ProposalCo
 export function editSummary(edits: readonly LegEdit[], names: ReadonlyMap<string, string>): string {
   if (edits.length === 0) return "Back to the agent's legs, with no workbench edits."
   const who = (symbol: string) => claimNameOf(symbol, names.get(symbol))
-  const parts = normaliseEdits(edits).map((e) => {
+  const parts = normalizeEdits(edits).map((e) => {
     switch (e.kind) {
       case 'exclude': return `excluded ${who(e.symbol)}`
       case 'quantity': return `set the ${who(e.symbol)} quantity`
