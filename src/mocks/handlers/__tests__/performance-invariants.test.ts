@@ -1,17 +1,31 @@
 import { describe, it, expect } from 'vitest'
-import { getBenchmarkComparison, getAttribution, getRiskMetrics } from '@/services/pms'
+import { accounts } from '@/mocks/data/accounts'
+import { attributionFor, periodReturnsFor, periodYears, riskProfileFor } from '@/mocks/handlers/pms'
+
+const account = (id: string) => {
+  const found = accounts.find((a) => a.id === id)
+  if (!found) throw new Error(`no account ${id}`)
+  return found
+}
+const benchmarkTable = (id: string) =>
+  Object.entries(periodYears()).map(([period, years]) => ({ period, ...periodReturnsFor(account(id), years) }))
+const attribution = (id: string, period: string) => {
+  const years = periodYears()[period]
+  if (years === undefined) throw new Error(`no period ${period}`)
+  return attributionFor(account(id), years)
+}
 
 describe('performance & benchmark invariants', () => {
-  it('activeReturn === portfolioReturn - benchmarkReturn within rounding', async () => {
-    const comparisons = await getBenchmarkComparison('acc-001')
+  it('activeReturn === portfolioReturn - benchmarkReturn within rounding', () => {
+    const comparisons = benchmarkTable('acc-001')
     for (const comp of comparisons) {
       const expected = comp.portfolioReturn - comp.benchmarkReturn
       expect(Math.abs(comp.activeReturn - expected)).toBeLessThan(0.001)
     }
   })
 
-  it('all standard periods are present', async () => {
-    const comparisons = await getBenchmarkComparison('acc-001')
+  it('all standard periods are present', () => {
+    const comparisons = benchmarkTable('acc-001')
     const periods = comparisons.map((c) => c.period)
     expect(periods).toContain('mtd')
     expect(periods).toContain('qtd')
@@ -23,26 +37,25 @@ describe('performance & benchmark invariants', () => {
   })
 
   // C6 · performance-reporting — tracking error is one annualized statistic reported on the risk
-  // metrics, not a different number per horizon on every benchmark row.
-  it('tracking error is a single annualized figure on the risk metrics', async () => {
-    const comparisons = await getBenchmarkComparison('acc-001')
+  // profile, not a different number per horizon on every benchmark row.
+  it('tracking error is a single annualized figure on the risk profile', () => {
+    const comparisons = benchmarkTable('acc-001')
     for (const comp of comparisons) {
       expect(comp).not.toHaveProperty('trackingError')
     }
-    const risk = await getRiskMetrics('acc-001')
-    expect(risk.trackingError).toBeGreaterThan(0)
+    expect(riskProfileFor(account('acc-001')).te).toBeGreaterThan(0)
   })
 
-  it('longer periods compound to larger cumulative returns', async () => {
-    const comparisons = await getBenchmarkComparison('acc-001')
+  it('longer periods compound to larger cumulative returns', () => {
+    const comparisons = benchmarkTable('acc-001')
     const mtd = comparisons.find((c) => c.period === 'mtd')!
     const inception = comparisons.find((c) => c.period === 'inception')!
     expect(inception.portfolioReturn).toBeGreaterThan(mtd.portfolioReturn)
   })
 
   // On a February date the quarter-to-date and year-to-date windows are the same window.
-  it('quarter-to-date does not read longer than year-to-date in Q1', async () => {
-    const comparisons = await getBenchmarkComparison('acc-001')
+  it('quarter-to-date does not read longer than year-to-date in Q1', () => {
+    const comparisons = benchmarkTable('acc-001')
     const qtd = comparisons.find((c) => c.period === 'qtd')!
     const ytd = comparisons.find((c) => c.period === 'ytd')!
     expect(qtd.portfolioReturn).toBe(ytd.portfolioReturn)
@@ -50,22 +63,22 @@ describe('performance & benchmark invariants', () => {
 })
 
 describe('attribution invariants', () => {
-  it('total === allocation + selection + interaction per asset class', async () => {
-    const { rows } = await getAttribution('acc-001', 'ytd')
+  it('total === allocation + selection + interaction per asset class', () => {
+    const { rows } = attribution('acc-001', 'ytd')
     for (const a of rows) {
       const computed = a.allocation + a.selection + a.interaction
       expect(Math.abs(a.total - computed)).toBeLessThan(0.001)
     }
   })
 
-  it('attribution covers multiple asset classes', async () => {
-    const { rows } = await getAttribution('acc-001', 'ytd')
+  it('attribution covers multiple asset classes', () => {
+    const { rows } = attribution('acc-001', 'ytd')
     expect(rows.length).toBeGreaterThanOrEqual(5)
   })
 
-  it('different periods return different magnitudes', async () => {
-    const mtd = await getAttribution('acc-001', 'mtd')
-    const ytd = await getAttribution('acc-001', 'ytd')
+  it('different periods return different magnitudes', () => {
+    const mtd = attribution('acc-001', 'mtd')
+    const ytd = attribution('acc-001', 'ytd')
 
     // YTD values should be larger in magnitude than MTD
     expect(Math.abs(ytd.totals.total)).toBeGreaterThan(Math.abs(mtd.totals.total))

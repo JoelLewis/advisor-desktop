@@ -151,14 +151,6 @@ export function reviseProspectProposal(viewerId: string, proposalId: string, con
   return { ok: true, detail: prospectProposalDetail(proposal) }
 }
 
-/** What a revision would make, saved nowhere. Any firm viewer who can see the proposal may look. */
-export function previewProspectRevision(viewerId: string, proposalId: string, constraints: readonly ProspectConstraint[]): { ok: true; preview: BuiltProspectVersion } | ProspectProposalFailure {
-  const proposal = visibleProspectProposal(viewerId, proposalId)
-  if (!proposal) return NO_PROPOSAL
-  const built = buildProspectVersion(requireProspect(proposal.prospectId), constraints)
-  return built.ok ? { ok: true, preview: built.built } : built
-}
-
 export function readableProspectProposals(viewerId: string, prospectId: string): ProspectProposalDetail[] | undefined {
   const record = visibleProspect(viewerId, prospectId)
   return record ? store().prospectProposals.filter((p) => p.prospectId === record.id).map(prospectProposalDetail) : undefined

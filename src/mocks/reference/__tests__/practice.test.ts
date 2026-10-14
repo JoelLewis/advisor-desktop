@@ -3,7 +3,6 @@ import { readFileSync } from 'node:fs'
 import { accounts } from '@/mocks/data/accounts'
 import { households } from '@/mocks/data/households'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
-import { computeMetrics } from '@/mocks/handlers/pms'
 import { deriveBookAUM } from '@/lib/aum'
 import { billingRuns, billingView } from '../billing'
 import { practiceQuote, practiceView } from '../practice'
@@ -30,7 +29,7 @@ describe('practice', () => {
     const { book } = view()
     expect(book.value).toBeCloseTo(deriveBookAUM(accounts, FX_RATES_USD_BASE), 4)
     expect(Math.round(book.value)).toBe(91_320_824)
-    expect(book).toMatchObject({ households: 13, accounts: 47, clients: computeMetrics().totalClients })
+    expect(book).toMatchObject({ households: 13, accounts: 47, clients: new Set(accounts.map((a) => a.clientId)).size })
   })
 
   it('every breakdown sums to the book', () => {

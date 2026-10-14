@@ -1,64 +1,24 @@
 import { http, HttpResponse } from 'msw'
-import type { MetricsSummary, AllocationSlice } from '@/services/pms'
 import type { AssetClass, DriftStatus, Position } from '@/types/portfolio'
-import type { RiskMetrics, FactorExposure, StressScenario } from '@/types/risk'
+import type { StressScenario } from '@/types/risk'
 import type {
-  BenchmarkComparison, PerformanceSeries, AttributionResult, AttributionResponse,
+  PerformanceSeries, AttributionResult,
 } from '@/types/performance'
-import type { CurrencyCode } from '@/types/currency'
 import type { Account, ModelManagedAccount } from '@/types/account'
 import { UnknownModelError, isModelManaged, modelIdFor } from '@/lib/mandate'
-import { convertToBase } from '@/lib/currency'
-import { accountValueUSD, deriveBookAUM, herfindahlIndex, effectiveN } from '@/lib/aum'
+import { accountValueUSD, herfindahlIndex, effectiveN } from '@/lib/aum'
 import { securityKind, concentrationLimitFor } from '@/lib/security-master'
 import {
-  RISK_FREE_RATE, assetClassWeights, portfolioBeta, portfolioVolatility,
-  assetClassReturn1Y, trackingError, parametricVaR, sharpe, sortino,
-  downsideDeviation, modeledMaxDrawdown,
+  assetClassWeights, portfolioBeta, portfolioVolatility,
+  assetClassReturn1Y, trackingError,
 } from '@/lib/risk-model'
-import { MOCK_NOW_ISO, MOCK_TODAY_ISO, startOfToday } from '@/lib/clock'
+import { MOCK_NOW_ISO, startOfToday } from '@/lib/clock'
 import { FX_RATES_USD_BASE } from '../data/currencies'
 import { getPositionsForAccount, seedPositionsForAccount } from '../data/positions'
 import { ledgerFills } from '../data/portfolio-ledger'
 import { accounts } from '../data/accounts'
-import { nbas } from '../data/nbas'
-import { complianceAlerts } from './compliance'
-import { calendarEvents } from '../data/calendar'
 import { notFound, roundTo } from './utils'
-import { factorRows } from '../reference/factors'
 import { MODEL_BANDS, MODEL_DEFINITIONS, type ModelDefinition } from '../data/model-definitions'
-
-/** Convert an account's value from its base currency to USD using static FX rates */
-function toUSD(value: number, baseCurrency?: CurrencyCode): number {
-  if (!baseCurrency || baseCurrency === 'USD') return value
-  return convertToBase(value, baseCurrency, FX_RATES_USD_BASE)
-}
-
-/**
- * D21 · advisor-dashboards — every count previously hardcoded here contradicted the module that
- * owned it: `pendingTasks: 14` against 20 active NBAs, `alertCount: 3` against 5 open compliance
- * alerts, `meetingsToday: 4` against whatever the calendar actually schedules for the frozen
- * "today", and `netFlowsMTD: 1_250_000` against the AI insight's own "+$420K". One count per fact:
- * this is now the single place that counts NBAs, alerts and meetings, and `ai.ts` reads the result
- * rather than recounting.
- */
-const NET_FLOWS_MTD = 1_250_000
-
-export function computeMetrics(): MetricsSummary {
-  const totalAUM = deriveBookAUM(accounts, FX_RATES_USD_BASE)
-  const activeNBAs = nbas.filter((n) => !n.dismissed)
-  const openAlerts = complianceAlerts.filter((a) => !a.resolvedAt && a.reviewStatus !== 'approved')
-  return {
-    totalAUM: Math.round(totalAUM),
-    totalClients: new Set(accounts.map((a) => a.clientId)).size,
-    pendingTasks: activeNBAs.length,
-    criticalCount: activeNBAs.filter((n) => n.priority === 'critical').length,
-    meetingsToday: calendarEvents.filter((e) => e.startTime.startsWith(MOCK_TODAY_ISO)).length,
-    alertCount: openAlerts.length,
-    netFlowsMTD: NET_FLOWS_MTD,
-    asOf: MOCK_NOW_ISO,
-  }
-}
 
 // Seeded PRNG (LCG) for deterministic performance series per account
 function hashSeed(str: string): number {
@@ -537,28 +497,6 @@ export function computeDriftForHoldings(account: Account, positions: readonly Dr
 }
 
 /**
- * FX-aware allocation aggregation shared by the household and client allocation endpoints:
- * convert every position's market value to USD before combining by asset class, so mixed-
- * currency entities (e.g. hh-002's HKD and SGD accounts) aggregate correctly. One derivation,
- * two consumers — keeps the two endpoints from drifting apart on rounding or ordering.
- */
-function deriveAllocationByAssetClass(entityAccounts: readonly (typeof accounts)[0][]): AllocationSlice[] {
-  const byClass = new Map<string, number>()
-  for (const acc of entityAccounts) {
-    for (const pos of getPositionsForAccount(acc.id, acc.totalValue)) {
-      byClass.set(pos.assetClass, (byClass.get(pos.assetClass) ?? 0)
-        + toUSD(pos.marketValue, acc.baseCurrency))
-    }
-  }
-  const total = [...byClass.values()].reduce((sum, v) => sum + v, 0)
-  return [...byClass.entries()]
-    .map(([assetClass, value]) => ({
-      assetClass, weight: roundTo(value / total, 3), value: Math.round(value),
-    }))
-    .sort((a, b) => b.value - a.value)
-}
-
-/**
  * C8 · historical-risk — the Bloomberg Aggregate was flat-to-positive Sep-08 → Mar-09; the
  * flight-to-quality Treasury rally is the single most famous fixed-income fact about 2008.
  * C9 · historical-risk — impacts are computed from the account's own holdings, so the position
@@ -600,28 +538,6 @@ const STRESS_FACTORS: StressFactorSet[] = [
     },
   },
 ]
-
-/**
- * Acklam's inverse normal CDF, accurate to ~1e-9 over (0,1). Used to place percentiles on the
- * same curve the histogram draws, rather than from a second, unrelated table of multipliers.
- */
-function inverseNormalCDF(q: number): number {
-  const a = [-3.969683028665376e1, 2.209460984245205e2, -2.759285104469687e2, 1.383577518672690e2, -3.066479806614716e1, 2.506628277459239]
-  const b = [-5.447609879822406e1, 1.615858368580409e2, -1.556989798598866e2, 6.680131188771972e1, -1.328068155288572e1]
-  const c = [-7.784894002430293e-3, -3.223964580411365e-1, -2.400758277161838, -2.549732539343734, 4.374664141464968, 2.938163982698783]
-  const d = [7.784695709041462e-3, 3.224671290700398e-1, 2.445134137142996, 3.754408661907416]
-  const pLow = 0.02425
-  if (q < pLow) {
-    const u = Math.sqrt(-2 * Math.log(q))
-    return (((((c[0]! * u + c[1]!) * u + c[2]!) * u + c[3]!) * u + c[4]!) * u + c[5]!) /
-      ((((d[0]! * u + d[1]!) * u + d[2]!) * u + d[3]!) * u + 1)
-  }
-  if (q > 1 - pLow) return -inverseNormalCDF(1 - q)
-  const u = q - 0.5
-  const r = u * u
-  return (((((a[0]! * r + a[1]!) * r + a[2]!) * r + a[3]!) * r + a[4]!) * r + a[5]!) * u /
-    (((((b[0]! * r + b[1]!) * r + b[2]!) * r + b[3]!) * r + b[4]!) * r + 1)
-}
 
 /** Each stress scenario's asset-class returns replayed on the account's holdings today. */
 export function stressScenariosFor(account: Account): StressScenario[] {
@@ -704,50 +620,10 @@ export function concentrationFor(account: Account) {
 }
 
 export const pmsHandlers = [
-  http.get('/api/pms/metrics', () => {
-    return HttpResponse.json(computeMetrics())
-  }),
-
-  http.get('/api/pms/drift/summary', () => {
-    return HttpResponse.json(accounts.filter(isModelManaged).map((a) => computeDriftForAccount(a)))
-  }),
-
   http.get('/api/pms/accounts/:accountId/positions', ({ params }) => {
     const account = findAccount(params.accountId)
     if (!account) return notFound()
     return HttpResponse.json(getPositionsForAccount(account.id, account.totalValue))
-  }),
-
-  http.get('/api/pms/accounts/:accountId/holdings', ({ params }) => {
-    const account = findAccount(params.accountId)
-    if (!account) return notFound()
-    const positions = getPositionsForAccount(account.id, account.totalValue)
-    const targets = Object.fromEntries(benchmarkOf(account).benchWeights)
-
-    const groups = new Map<string, { targetWeight: number; actualWeight: number; positions: typeof positions }>()
-    for (const pos of positions) {
-      const existing = groups.get(pos.assetClass)
-      if (existing) {
-        existing.actualWeight += pos.weight
-        existing.positions.push(pos)
-      } else {
-        groups.set(pos.assetClass, {
-          targetWeight: targets[pos.assetClass] ?? 0,
-          actualWeight: pos.weight,
-          positions: [pos],
-        })
-      }
-    }
-
-    return HttpResponse.json(
-      [...groups.entries()].map(([assetClass, data]) => ({
-        assetClass,
-        targetWeight: data.targetWeight,
-        actualWeight: roundTo(data.actualWeight, 3),
-        drift: roundTo(Math.abs(data.actualWeight - data.targetWeight), 3),
-        positions: data.positions,
-      })),
-    )
   }),
 
   http.get('/api/pms/accounts/:accountId/drift', ({ params }) => {
@@ -756,218 +632,5 @@ export const pmsHandlers = [
     // A custom mandate follows no model, so it has no drift to report.
     if (!isModelManaged(account)) return notFound()
     return HttpResponse.json(computeDriftForAccount(account))
-  }),
-
-  http.get('/api/pms/accounts/:accountId/performance', ({ params }) => {
-    const account = findAccount(params.accountId)
-    if (!account) return notFound()
-    return HttpResponse.json(performanceSeriesFor(account))
-  }),
-
-  http.get('/api/pms/accounts/:accountId/benchmark', ({ params }) => {
-    const account = findAccount(params.accountId)
-    if (!account) return notFound()
-
-    // Returns are cumulative over the period, compounded from the annual asset-class figures, and
-    // come from `periodReturnsFor` — the same single derivation the risk tab, the Monte Carlo mean
-    // and the performance chart read. The active return here and Σ(allocation + selection +
-    // interaction) on the attribution page are one quantity, not two that happen to be close.
-    const comparisons: BenchmarkComparison[] = Object.entries(periodYears()).map(([period, years]) => ({
-      period: period as BenchmarkComparison['period'],
-      ...periodReturnsFor(account, years),
-    }))
-    return HttpResponse.json(comparisons)
-  }),
-
-  http.get('/api/pms/accounts/:accountId/attribution', ({ params, request }) => {
-    const account = findAccount(params.accountId)
-    if (!account) return notFound()
-    const url = new URL(request.url)
-    const period = url.searchParams.get('period') ?? 'ytd'
-    // The same clock-derived period lengths the benchmark table uses. A second, hard-coded map
-    // here would put the two endpoints on different windows for the same named period.
-    const years = periodYears()[period] ?? 1
-
-    const a = attributionFor(account, years)
-    const response: AttributionResponse = {
-      model: 'Brinson-Fachler',
-      linking: 'single-period arithmetic',
-      period,
-      benchmark: a.benchmarkName,
-      basis: 'gross of fees',
-      asOf: MOCK_NOW_ISO,
-      rows: a.rows,
-      totals: a.totals,
-      activeReturn: a.totals.total,
-    }
-    return HttpResponse.json(response)
-  }),
-
-  http.get('/api/pms/accounts/:accountId/risk', ({ params }) => {
-    const account = findAccount(params.accountId)
-    if (!account) return notFound()
-    const p = riskProfileFor(account)
-    const dd = roundTo(downsideDeviation(p.vol), 4)
-    // C5 · forward-risk — p.vol is already rounded to 4dp by riskProfileFor, which is required
-    // before parametricVaR; the raw σ moves VaR by tens of dollars on a large account.
-    const var95 = Math.round(parametricVaR(p.value, p.vol))
-
-    const metrics: RiskMetrics = {
-      beta: p.beta,
-      sharpe: roundTo(sharpe(p.ret, p.vol), 2),
-      sortino: roundTo(sortino(p.ret, dd), 2),
-      maxDrawdown: roundTo(modeledMaxDrawdown(p.vol), 3),
-      standardDeviation: p.vol,
-      downsideDeviation: dd,
-      riskFreeRate: RISK_FREE_RATE,
-      var95,
-      var95Percent: roundTo(var95 / p.value, 4),
-      var95Horizon: '1 month',
-      var95Confidence: 0.95,
-      var95Method: 'parametric',
-      benchmark: p.benchmarkName,
-      trackingError: p.te,
-      asOf: MOCK_NOW_ISO,
-    }
-    return HttpResponse.json(metrics)
-  }),
-
-  http.get('/api/pms/accounts/:accountId/factors', ({ params }) => {
-    const account = findAccount(params.accountId)
-    if (!account) return notFound()
-    const p = riskProfileFor(account)
-    const exposures: FactorExposure[] = factorRows(p.weights, p.benchWeights).map((r) => ({ factor: r.label, exposure: r.exposure, benchmark: r.benchmark }))
-    return HttpResponse.json(exposures)
-  }),
-
-  http.get('/api/pms/accounts/:accountId/stress', ({ params }) => {
-    const account = findAccount(params.accountId)
-    if (!account) return notFound()
-    return HttpResponse.json(stressScenariosFor(account))
-  }),
-
-  http.get('/api/pms/accounts/:accountId/sensitivity', ({ params }) => {
-    const account = findAccount(params.accountId)
-    if (!account) return notFound()
-    const p = riskProfileFor(account)
-    // C36 · currencies-and-fx — the ladders scale a USD value, not the raw local-currency one.
-    const value = p.value
-
-    return HttpResponse.json({
-      interestRate: [
-        { shock: -100, impact: value * 0.025 },
-        { shock: -50, impact: value * 0.012 },
-        { shock: 50, impact: value * -0.011 },
-        { shock: 100, impact: value * -0.024 },
-        { shock: 200, impact: value * -0.052 },
-        { shock: 300, impact: value * -0.085 },
-      ],
-      equity: [
-        { shock: -30, impact: value * -0.22 },
-        { shock: -20, impact: value * -0.15 },
-        { shock: -10, impact: value * -0.072 },
-        { shock: 10, impact: value * 0.068 },
-        { shock: 20, impact: value * 0.14 },
-        { shock: 30, impact: value * 0.21 },
-      ],
-      credit: [
-        { shock: -100, impact: value * 0.015 },
-        { shock: -50, impact: value * 0.008 },
-        { shock: 50, impact: value * -0.009 },
-        { shock: 100, impact: value * -0.018 },
-        { shock: 200, impact: value * -0.038 },
-      ],
-      monteCarlo: (() => {
-        const mu = p.ret
-        const sigma = p.vol
-        // The delta-normal form is unbounded below, so at extreme quantiles on a high-σ account
-        // `1 + μ + σz` goes negative — a projected account value below zero. A portfolio cannot be
-        // worth less than nothing, so the displayed value is floored at zero. The floor is a
-        // display bound only: μ, σ and the method are unchanged, and the caption on the page
-        // discloses that the normal form admits sub-zero values here.
-        //
-        // No fixture account currently reaches it. acc-045 used to (σ = 0.636 when its weights
-        // summed to 0.925 and the 9.4% cash weight was normalised away); at its real σ = 0.589 the
-        // 1st percentile lands at 0.0166 of value. The floor stays because the bound is a property
-        // of the method, not of today's book — see risk-invariants.test.ts.
-        const percentiles = [1, 5, 10, 25, 50, 75, 90, 95, 99].map((pct) => ({
-          percentile: pct,
-          value: roundTo(Math.max(0, value * (1 + mu + sigma * inverseNormalCDF(pct / 100))), 2),
-        }))
-        // Same bound on the other axis. The μ − 3σ domain runs to −138% for acc-045, and a
-        // long-only unlevered portfolio cannot lose more than everything, so the domain starts at
-        // −100% at the earliest. The probability the normal approximation places below total loss
-        // is **truncated from the display, not redistributed**: each bar is still the raw Gaussian
-        // density at its own return, so the visible bars sum to slightly less than the whole
-        // distribution. Renormalising would hide the model's edge rather than disclose it, which
-        // is why it is not done here and why the caption states the truncation.
-        const TOTAL_LOSS = -1
-        const lower = Math.max(TOTAL_LOSS, mu - 3 * sigma)
-        const upper = mu + 3 * sigma
-        const step = (upper - lower) / 29
-        const histogram = Array.from({ length: 30 }, (_, i) => {
-          const returnBucket = roundTo(lower + i * step, 4)
-          const density = Math.exp(-0.5 * ((returnBucket - mu) / sigma) ** 2)
-          return { returnBucket, frequency: Math.round(density * 1000) }
-        })
-        return {
-          // C7 · forward-risk — one distribution drives both the table and the chart, and the
-          // method is stated rather than asserting 10,000 simulations that never ran.
-          //
-          // "normal", not "lognormal", and deliberately so: returns are placed arithmetically as
-          // `1 + μ + σz` and the histogram is a Gaussian density in return space, which is the
-          // delta-normal form. Lognormal VaR takes a different form entirely (`exp(μ + σz)`). The
-          // label was corrected to match the maths — do not change it back without changing the
-          // maths, and do not change the maths: the delta-normal form is the intended one.
-          method: 'closed-form normal' as const,
-          horizon: '1Y',
-          expectedReturn: mu,
-          volatility: sigma,
-          baseValue: value,
-          percentiles,
-          histogram,
-        }
-      })(),
-    })
-  }),
-
-  http.get('/api/pms/accounts/:accountId/concentration', ({ params }) => {
-    const account = findAccount(params.accountId)
-    if (!account) return notFound()
-    return HttpResponse.json(concentrationFor(account))
-  }),
-
-  http.get('/api/pms/models', () => {
-    return HttpResponse.json(MODEL_DEFINITIONS)
-  }),
-
-  http.get('/api/pms/households/:householdId/positions', ({ params }) => {
-    const hhAccounts = accounts.filter((a) => a.householdId === params.householdId)
-    if (hhAccounts.length === 0) return notFound()
-    return HttpResponse.json(hhAccounts.flatMap((a) => getPositionsForAccount(a.id, a.totalValue)))
-  }),
-
-  http.get('/api/pms/households/:householdId/drift', ({ params }) => {
-    const hhAccounts = accounts.filter((a) => a.householdId === params.householdId)
-    if (hhAccounts.length === 0) return notFound()
-    return HttpResponse.json(hhAccounts.filter(isModelManaged).map((a) => computeDriftForAccount(a)))
-  }),
-
-  http.get('/api/pms/households/:householdId/allocation', ({ params }) => {
-    const hhAccounts = accounts.filter((a) => a.householdId === params.householdId)
-    if (hhAccounts.length === 0) return notFound()
-    return HttpResponse.json(deriveAllocationByAssetClass(hhAccounts))
-  }),
-
-  http.get('/api/pms/clients/:clientId/allocation', ({ params }) => {
-    const clientAccounts = accounts.filter((a) => a.clientId === params.clientId)
-    if (clientAccounts.length === 0) return notFound()
-    return HttpResponse.json(deriveAllocationByAssetClass(clientAccounts))
-  }),
-
-  http.get('/api/pms/models/:modelId', ({ params }) => {
-    const model = MODEL_DEFINITIONS.find((m) => m.id === params.modelId)
-    if (!model) return notFound()
-    return HttpResponse.json(model)
   }),
 ]

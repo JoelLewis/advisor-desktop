@@ -8,7 +8,6 @@ import { lossAllowedNow, washesOnSale } from '@/lib/tax-rules'
 import { estimateTaxOnReturns } from '@/mocks/handlers/tax-return'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { generateTaxLotsWithSaleRisk } from '@/mocks/handlers/custodian'
-import { getModels } from '@/services/pms'
 
 // These tests pin NBA narratives to the mock data. The action-route guard lives in nba-routes.test.ts.
 
@@ -106,29 +105,6 @@ describe('NBA narratives match the data', () => {
   // EFA 0.145 — fixed constants, independent of totalValue) sum to exactly 58.0% equity, not 62%.
   // Both ends of the claim are now derived: the model target from the live `/pms/models` payload
   // (mod-006), the actual from the account's live positions.
-  it("D11: the O'Brien 529 drift claim matches mod-006's real target and acc-032's real equity weight", async () => {
-    const nba = nbas.find((n) => n.id === 'nba-020')!
-    const equityClasses = new Set(['us_equity', 'intl_equity'])
-
-    const models = await getModels()
-    const mod006 = models.find((m) => m.id === 'mod-006')!
-    const target = mod006.assetClasses
-      .filter((ac) => equityClasses.has(ac.assetClass))
-      .reduce((sum, ac) => sum + ac.targetWeight, 0)
-    expect(target).toBeCloseTo(0.55, 3)
-
-    const actual = positionsFor('acc-032')
-      .filter((p) => equityClasses.has(p.assetClass))
-      .reduce((sum, p) => sum + p.weight, 0)
-    // Phase 7a · C1: acc-032 holds its own model's lineup, tilted; its equity is 58.5%, which the
-    // claim states as 58%.
-    expect(actual).toBeCloseTo(0.5849, 3)
-
-    expect(nba.description).toContain(`${Math.round(target * 100)}%`)
-    expect(nba.description).toContain(`${Math.round(actual * 100)}%`)
-    expect(nba.description).not.toContain('80%')
-  })
-
   it('D12: no NBA recommends rotating out of a security the household does not hold', () => {
     // The original defect (a TLT rotation recommended for a portfolio holding no TLT) lived in
     // `suggestedAction` ("rotating from TLT to BND/SCHZ"), not `description` — scanning only

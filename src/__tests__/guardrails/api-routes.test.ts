@@ -31,8 +31,6 @@ const STEPS: readonly ProspectStepName[] = ['questionnaire', 'statements', 'acce
 const ARGUMENT_SETS: ReadonlyMap<string, readonly (readonly unknown[])[]> = new Map([
   ['workspace.takeHerStep', STEPS.map((step) => ['x', 'x', step])],
 ])
-/** Task 3 removes this: until then only these modules' routes must have a caller. */
-const PRUNED_ROUTES = /^\/api\/(crm|custodian|compliance|oms)\//
 
 type Route = { method: string; path: string }
 const BASE = 'http://localhost'
@@ -72,7 +70,7 @@ describe('the services and the handlers agree', () => {
     expect(requests.filter((r) => !routes.some((route) => serves(route, r))).map((r) => `${r.via}: ${r.method} ${r.url}`)).toEqual([])
   })
   it('every handler route is requested by some service', () => {
-    const uncalled = routes.filter((route) => PRUNED_ROUTES.test(route.path) && !requests.some((r) => serves(route, r)))
+    const uncalled = routes.filter((route) => !requests.some((r) => serves(route, r)))
     expect(uncalled.map((r) => `${r.method} ${r.path}`)).toEqual([])
   })
 })

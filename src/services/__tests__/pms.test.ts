@@ -1,15 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  getPositions,
-  getDrift,
-  getAttribution,
-  getPerformance,
-  getDriftSummary,
-  getModels,
-  getConcentration,
-  getMetricsSummary,
-  getSensitivity,
-} from '../pms'
+import { getPositions, getDrift } from '../pms'
 
 describe('PMS service', () => {
   describe('getPositions', () => {
@@ -26,77 +16,6 @@ describe('PMS service', () => {
       const drift = await getDrift('acc-001')
       expect(drift).toBeTruthy()
       expect(drift).toHaveProperty('accountId')
-    })
-  })
-
-  describe('getAttribution', () => {
-    it('returns attribution data with period param', async () => {
-      const attribution = await getAttribution('acc-001', 'ytd')
-      expect(attribution).toBeTruthy()
-      expect(Array.isArray(attribution.rows)).toBe(true)
-      expect(attribution.period).toBe('ytd')
-    })
-
-    it('returns attribution data without period param', async () => {
-      const attribution = await getAttribution('acc-001')
-      expect(attribution).toBeTruthy()
-      expect(Array.isArray(attribution.rows)).toBe(true)
-      expect(attribution.period).toBe('ytd')
-    })
-  })
-
-  describe('getPerformance', () => {
-    it('returns performance series for a valid account', async () => {
-      const performance = await getPerformance('acc-001')
-      expect(performance).toBeTruthy()
-      expect(Array.isArray(performance)).toBe(true)
-      expect(performance.length).toBeGreaterThan(0)
-    })
-  })
-
-  describe('getDriftSummary', () => {
-    it('returns an array of drift statuses', async () => {
-      const summary = await getDriftSummary()
-      expect(summary).toBeTruthy()
-      expect(Array.isArray(summary)).toBe(true)
-    })
-  })
-
-  describe('getModels', () => {
-    it('returns an array of model assignments', async () => {
-      const models = await getModels()
-      expect(models).toBeTruthy()
-      expect(Array.isArray(models)).toBe(true)
-      expect(models.length).toBeGreaterThan(0)
-    })
-  })
-
-  describe('getConcentration', () => {
-    it('returns concentration analysis for a valid account', async () => {
-      const concentration = await getConcentration('acc-001')
-      expect(concentration).toBeTruthy()
-      expect(concentration).toHaveProperty('positions')
-      expect(concentration).toHaveProperty('summary')
-    })
-  })
-
-  describe('getMetricsSummary', () => {
-    it('returns metrics summary with AUM', async () => {
-      const metrics = await getMetricsSummary()
-      expect(metrics).toBeTruthy()
-      expect(metrics.totalAUM).toBeGreaterThan(0)
-      expect(metrics.totalClients).toBeGreaterThanOrEqual(20)
-    })
-  })
-
-  describe('getSensitivity', () => {
-    it('returns sensitivity analysis for a valid account', async () => {
-      const sensitivity = await getSensitivity('acc-001')
-      expect(sensitivity).toBeTruthy()
-      expect(sensitivity).toHaveProperty('interestRate')
-      expect(sensitivity).toHaveProperty('equity')
-      expect(sensitivity).toHaveProperty('credit')
-      expect(sensitivity).toHaveProperty('monteCarlo')
     })
   })
 })

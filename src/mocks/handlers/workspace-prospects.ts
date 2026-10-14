@@ -5,7 +5,7 @@ import { prospectSummaries, visibleProspect } from '../workspace/prospects'
 import { prospectView } from '../workspace/prospect-view'
 import { actAsProspect, advanceProspect, herStep, partySteps, recordCoffee, type StepDone, type StepFailure } from '../workspace/prospect-steps'
 import {
-  createProspectProposal, parseProspectConstraints, previewProspectRevision, readableProspectProposals, reviseProspectProposal, visibleProspectProposal,
+  createProspectProposal, parseProspectConstraints, readableProspectProposals, reviseProspectProposal, visibleProspectProposal,
 } from '../workspace/prospect-proposals'
 import { isExternalViewer, viewerFrom } from '../workspace/visibility'
 import { notFound } from './utils'
@@ -118,17 +118,6 @@ export const workspaceProspectHandlers = [
     if (!parsed.ok) return badRequest(parsed.message)
     const r = reviseProspectProposal(viewer.viewerId, proposal.id, parsed.value)
     return r.ok ? HttpResponse.json(r.detail, { status: 201 }) : refusal(r)
-  }),
-
-  http.post('/api/workspace/prospects/:id/proposals/:proposalId/preview', async ({ request, params }) => {
-    const viewer = firmViewer(request)
-    if (!viewer.ok) return viewer.response
-    const proposal = visibleProspectProposal(viewer.viewerId, String(params.proposalId))
-    if (!proposal || proposal.prospectId !== params.id) return notFound()
-    const parsed = parseProspectConstraints((await readJson(request))?.constraints)
-    if (!parsed.ok) return badRequest(parsed.message)
-    const r = previewProspectRevision(viewer.viewerId, proposal.id, parsed.value)
-    return r.ok ? HttpResponse.json(r.preview) : refusal(r)
   }),
 
   http.post('/api/workspace/presenter/act-as-prospect', async ({ request }) => {

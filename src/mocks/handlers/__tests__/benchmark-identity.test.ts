@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getModels } from '@/services/pms'
+import { MODEL_DEFINITIONS } from '@/mocks/data/model-definitions'
 
 /**
  * §9.4 · a benchmark label describes what is computed.
@@ -19,8 +19,8 @@ import { getModels } from '@/services/pms'
  */
 
 describe('§9.4 · a benchmark label describes what is computed', () => {
-  it('no model claims a bare external index name while blending multiple asset classes', async () => {
-    const models = await getModels()
+  it('no model claims a bare external index name while blending multiple asset classes', () => {
+    const models = MODEL_DEFINITIONS
     expect(models.length).toBeGreaterThan(0)
 
     // Vacuity guard: the loop below only asserts inside the `classes.length <= 1` branch's
@@ -38,8 +38,8 @@ describe('§9.4 · a benchmark label describes what is computed', () => {
     expect(checked).toBeGreaterThan(0)
   })
 
-  it('the label names the policy benchmark, so the number and its name agree', async () => {
-    const models = await getModels()
+  it('the label names the policy benchmark, so the number and its name agree', () => {
+    const models = MODEL_DEFINITIONS
     const growth = models.find((m) => m.id === 'mod-002')
     expect(growth).toBeDefined()
     expect(growth!.benchmark).toBe('Growth policy benchmark')

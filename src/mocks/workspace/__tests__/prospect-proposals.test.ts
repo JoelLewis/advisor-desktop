@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { store } from '@/mocks/data/workspace-store'
 import { requireProspect } from '../prospects'
 import {
-  buildProspectVersion, createProspectProposal, parseProspectConstraints, previewProspectRevision, readableProspectProposals, reviseProspectProposal,
+  buildProspectVersion, createProspectProposal, parseProspectConstraints, readableProspectProposals, reviseProspectProposal,
 } from '../prospect-proposals'
 import { ADRIAN, withHerReply } from './prospect-fixture'
 
@@ -108,14 +108,6 @@ describe('revising it', () => {
     if (!back.ok) throw new Error(back.message)
     expect(back.detail.versions[2]?.changeSummary).toBe('Removed the staged sale; everything transferred in kind, nothing sold.')
     expect(back.detail.versions[2]?.fingerprint).toBe(back.detail.versions[0]?.fingerprint)
-  })
-
-  it('previews a revision without saving it', () => {
-    withHerReply()
-    const { id } = created()
-    const preview = previewProspectRevision(ADRIAN, id, [{ kind: 'stage_diversification', tranches: 2 }])
-    expect(preview.ok && preview.preview.tranches).toHaveLength(2)
-    expect(store().prospectProposals[0]?.versions).toHaveLength(1)
   })
 
   it('is closed once sent', () => {

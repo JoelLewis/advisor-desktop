@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { getAttribution, getBenchmarkComparison, getDrift, getSensitivity } from '@/services/pms'
 import { assetClassWeights, assetClassReturn1Y } from '@/lib/risk-model'
 import { getPositionsForAccount } from '@/mocks/data/positions'
 import { accounts } from '@/mocks/data/accounts'
 import { isModelManaged } from '@/lib/mandate'
+import { attributionFor, computeDriftForAccount, periodReturnsFor, periodYears, riskProfileFor } from '@/mocks/handlers/pms'
 
 /** Mirrors the API's publication rounding, so the tests can assert equality rather than nearness. */
 const roundTo = (value: number, decimals: number) =>
@@ -11,40 +11,52 @@ const roundTo = (value: number, decimals: number) =>
 
 const PERIODS = ['mtd', 'qtd', 'ytd', '1y']
 
+const attribution = (id: string, period: string) => {
+  const account = accounts.find((a) => a.id === id)
+  const years = periodYears()[period]
+  if (!account || years === undefined) throw new Error(`no account ${id} or period ${period}`)
+  return attributionFor(account, years)
+}
+/** The benchmark table's row for a period: the engine's own derivation, not a second one. */
+const benchmarkRow = (id: string, period: string) => {
+  const account = accounts.find((a) => a.id === id)
+  const years = periodYears()[period]
+  if (!account || years === undefined) throw new Error(`no account ${id} or period ${period}`)
+  return periodReturnsFor(account, years)
+}
+
 describe('Brinson attribution identity', () => {
-  it('C3: every row satisfies total === allocation + selection + interaction', async () => {
-    const result = await getAttribution('acc-001', 'ytd')
+  it('C3: every row satisfies total === allocation + selection + interaction', () => {
+    const result = attribution('acc-001', 'ytd')
     expect(result.rows.length).toBeGreaterThan(0)
     for (const row of result.rows) {
       expect(row.total).toBeCloseTo(row.allocation + row.selection + row.interaction, 6)
     }
   })
 
-  it('C3: the totals block includes interaction, so the summary cards add up', async () => {
-    const result = await getAttribution('acc-001', 'ytd')
+  it('C3: the totals block includes interaction, so the summary cards add up', () => {
+    const result = attribution('acc-001', 'ytd')
     const { allocation, selection, interaction, total } = result.totals
     expect(allocation + selection + interaction).toBeCloseTo(total, 6)
     expect(interaction).not.toBe(0)
   })
 
-  it('C2: Rp − Rb === Σ(A + S + I) — attribution reconciles to active return', async () => {
+  it('C2: Rp − Rb === Σ(A + S + I) — attribution reconciles to active return', () => {
     for (const period of ['mtd', 'qtd', 'ytd', '1y']) {
-      const result = await getAttribution('acc-001', period)
-      const bench = await getBenchmarkComparison('acc-001')
-      const row = bench.find((b) => b.period === period)!
+      const result = attribution('acc-001', period)
+      const row = benchmarkRow('acc-001', period)
       // Exactly, not nearly: the benchmark row's active return *is* the attribution total rounded
       // for publication, so the assertion is on that relationship rather than on a tolerance that
       // a genuinely different figure could still slip through.
-      expect(roundTo(result.activeReturn, 4)).toBe(row.activeReturn)
       expect(roundTo(result.totals.total, 4)).toBe(row.activeReturn)
       // The published row foots at the precision it is published.
       expect(roundTo(row.portfolioReturn - row.benchmarkReturn, 4)).toBe(row.activeReturn)
     }
   })
 
-  it('C1: periods are not a linear stretch of the YTD figure', async () => {
-    const ytd = await getAttribution('acc-001', 'ytd')
-    const oneYear = await getAttribution('acc-001', '1y')
+  it('C1: periods are not a linear stretch of the YTD figure', () => {
+    const ytd = attribution('acc-001', 'ytd')
+    const oneYear = attribution('acc-001', '1y')
     expect(oneYear.totals.total / ytd.totals.total).not.toBeCloseTo(1.8, 2)
   })
 
@@ -57,17 +69,17 @@ describe('Brinson attribution identity', () => {
    * The 1Y window is used because years = 1 makes the compounding an identity, which lets the
    * expected value be written in closed form from the fixture rather than re-deriving the handler.
    */
-  it('the allocation effect is Brinson-Fachler, not Brinson-Hood-Beebower', async () => {
+  it('the allocation effect is Brinson-Fachler, not Brinson-Hood-Beebower', () => {
     // Model-managed accounts, whose benchmark weights are their drift targets; a custom mandate's are its own.
     for (const account of accounts.filter(isModelManaged)) {
     const weights = assetClassWeights(getPositionsForAccount(account.id, account.totalValue))
-    const drift = await getDrift(account.id)
+    const drift = computeDriftForAccount(account)
     const benchWeights = new Map(drift.assetClassDrifts.map((d) => [d.assetClass as string, d.target]))
     const benchmarkTotal = [...benchWeights].reduce(
       (sum, [ac, wb]) => sum + wb * assetClassReturn1Y(ac), 0,
     )
 
-    const { rows } = await getAttribution(account.id, '1y')
+    const { rows } = attribution(account.id, '1y')
     for (const row of rows) {
       const wp = weights.get(row.assetClass) ?? 0
       const wb = benchWeights.get(row.assetClass) ?? 0
@@ -108,31 +120,24 @@ describe('Brinson attribution identity', () => {
    * 10.09% on the performance tab against 10.08% on risk analytics. There is now one derivation,
    * so the two are the same number, not merely close.
    */
-  it('the 1Y portfolio return is one number across the benchmark table and the risk surfaces', async () => {
+  it('the 1Y portfolio return is one number across the benchmark table and the risk profile', () => {
     for (const account of accounts) {
-      const bench = await getBenchmarkComparison(account.id)
-      const { monteCarlo } = await getSensitivity(account.id)
-      const oneYear = bench.find((b) => b.period === '1y')!
-      expect(monteCarlo.expectedReturn, account.id).toBe(oneYear.portfolioReturn)
+      expect(riskProfileFor(account).ret, account.id).toBe(benchmarkRow(account.id, '1y').portfolioReturn)
     }
   })
 
-  it('states the model, the linking, the benchmark and the fee basis', async () => {
-    const result = await getAttribution('acc-001', 'ytd')
-    expect(result.model).toBe('Brinson-Fachler')
-    expect(result.linking).toBe('single-period arithmetic')
-    expect(result.basis).toBe('gross of fees')
-    expect(result.benchmark).toBe('Balanced Growth policy benchmark')
+  it('names the benchmark it is measured against', () => {
+    expect(attribution('acc-001', 'ytd').benchmarkName).toBe('Balanced Growth policy benchmark')
   })
 
   // The identity is the acceptance test for this model, so it is asserted where it is exact —
   // on the attribution response itself — for every account, not just the one the page opens on.
   // Both weight sets sum to one, so the effects collapse to Σ wp·Rp,i − Σ wb·Rb,i with nothing
   // left over; anything beyond float noise means a term has been dropped or double-counted.
-  it('the identity is exact for every account and every period, not merely close', async () => {
+  it('the identity is exact for every account and every period, not merely close', () => {
     for (const account of accounts) {
       for (const period of PERIODS) {
-        const { rows, totals } = await getAttribution(account.id, period)
+        const { rows, totals } = attribution(account.id, period)
         const where = `${account.id} ${period}`
         expect(rows.length, where).toBeGreaterThan(0)
         for (const row of rows) {
@@ -165,12 +170,11 @@ describe('Brinson attribution identity', () => {
    * returns are index returns, so no FX rate enters the arithmetic and none should — but the
    * assertion is written down rather than assumed.
    */
-  it('holds on the non-USD accounts, whose attribution carries no FX term', async () => {
+  it('holds on the non-USD accounts, whose attribution carries no FX term', () => {
     for (const id of ['acc-041', 'acc-042', 'acc-043', 'acc-044']) {
-      const bench = await getBenchmarkComparison(id)
       for (const period of PERIODS) {
-        const result = await getAttribution(id, period)
-        const row = bench.find((b) => b.period === period)!
+        const result = attribution(id, period)
+        const row = benchmarkRow(id, period)
         const where = `${id} ${period}`
         expect(result.totals.total, where).toBeCloseTo(
           result.totals.allocation + result.totals.selection + result.totals.interaction, 12,

@@ -1,10 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { accounts } from '@/mocks/data/accounts'
 import { clients } from '@/mocks/data/clients'
-import { riskProfileFor } from '@/mocks/handlers/pms'
+import { concentrationFor, riskProfileFor, stressScenariosFor } from '@/mocks/handlers/pms'
 import { approvedV1, release } from '@/mocks/workspace/__tests__/story-fixture'
-import { getConcentration, getFactorExposures, getRiskMetrics, getStressScenarios } from '@/services/pms'
-import { ASSET_CLASS_RISK, assetClassBeta, portfolioBeta } from '@/lib/risk-model'
+import { ASSET_CLASS_RISK, assetClassBeta, parametricVaR, portfolioBeta } from '@/lib/risk-model'
 import { modelVolatility } from '../models'
 import { FACTORS, factorRows, loadingOf } from '../factors'
 import { accountRiskView, bookRiskView, riskQuote } from '../risk'
@@ -52,10 +51,8 @@ describe('factor exposures', () => {
     }))
   })
 
-  it('the legacy factors endpoint reads the same engine, per account', async () => {
-    const [growth, ira] = await Promise.all([getFactorExposures('acc-002'), getFactorExposures('acc-020')])
-    expect(growth.map((f) => f.exposure)).toEqual(vector('acc-002'))
-    expect(growth.map((f) => f.exposure)).not.toEqual(ira.map((f) => f.exposure))
+  it('differ by account', () => {
+    expect(vector('acc-002')).not.toEqual(vector('acc-020'))
   })
 })
 
@@ -79,22 +76,22 @@ describe('the risk score against the client tolerance', () => {
 })
 
 describe('account risk', () => {
-  it('VaR is parametric, normal, one month, 95%: the legacy figure, from the same σ', async () => {
+  it("VaR is parametric, normal, one month, 95%: from the engine's σ", () => {
     for (const id of ['acc-001', 'acc-002', 'acc-045']) {
       const v = risk(id)
       expect(v.var95.value, id).toBe(Math.round(v.value * 1.645 * v.volatility * Math.sqrt(1 / 12)))
       expect(v.var95.percent, id).toBeCloseTo(v.var95.value / v.value, 12)
       expect(v.var95).toMatchObject({ horizon: 'one month', confidence: 0.95, method: 'parametric normal' })
-      expect(v.var95.value, id).toBe((await getRiskMetrics(id)).var95)
+      expect(v.var95.value, id).toBe(Math.round(parametricVaR(v.value, v.volatility)))
     }
   })
 
-  it('stress tests replay each scenario on today\'s holdings; concentration is the legacy HHI', async () => {
+  it('stress tests replay each scenario on today\'s holdings; concentration is the engine HHI', () => {
     const v = risk('acc-001')
-    const legacy = await getStressScenarios('acc-001')
-    expect(v.stress.map((s) => [s.id, s.impact])).toEqual(legacy.map((s) => [s.id, s.portfolioImpact]))
+    const account = accounts.find((a) => a.id === 'acc-001')!
+    expect(v.stress.map((s) => [s.id, s.impact])).toEqual(stressScenariosFor(account).map((s) => [s.id, s.portfolioImpact]))
     for (const s of v.stress) expect(s.impactValue).toBeCloseTo(s.impact * v.value, 6)
-    expect(v.concentration.hhi).toBe((await getConcentration('acc-001')).summary.herfindahlIndex)
+    expect(v.concentration.hhi).toBe(concentrationFor(account).summary.herfindahlIndex)
   })
 
   it("reflects the moved book: after the release acc-002's volatility and factors change", () => {

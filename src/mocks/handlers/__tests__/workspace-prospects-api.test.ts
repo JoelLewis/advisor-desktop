@@ -109,13 +109,12 @@ describe('prospect acts over HTTP', () => {
     expect(firmCopy).toHaveProperty('viaPresenter')
   })
 
-  it('proposals over HTTP: list, revise, preview; nothing is edited or deleted', async () => {
+  it('proposals over HTTP: list, revise; nothing is edited or deleted', async () => {
     await call('POST', '/prospects/prsp-011/coffee', ADRIAN, { body: 'Coffee.' })
     await call('POST', '/prospects/prsp-011/advance', ADRIAN, { to: 'reply' })
     const { body: created } = await call('POST', '/prospects/prsp-011/proposals', ADRIAN, {})
     expect((await call('POST', '/prospects/prsp-011/proposals', ADRIAN, {})).status).toBe(200)
     expect(await call('POST', `/prospects/prsp-011/proposals/${created.id}/revise`, ADRIAN, { constraints: [{ kind: 'stage_diversification', tranches: 5 }] })).toMatchObject({ status: 400 })
-    expect((await call('POST', `/prospects/prsp-011/proposals/${created.id}/preview`, ADRIAN, { constraints: [{ kind: 'stage_diversification', tranches: 2 }] })).body.tranches).toHaveLength(2)
     expect(await call('POST', `/prospects/prsp-011/proposals/${created.id}/revise`, ADRIAN, { constraints: [{ kind: 'stage_diversification', tranches: 2 }] })).toMatchObject({ status: 201 })
     expect((await call('GET', '/prospects/prsp-011/proposals', ADRIAN)).body[0].versions).toHaveLength(2)
     expect((await call('POST', `/prospects/prsp-011/proposals/${created.id}/revise`, PELL, { constraints: [] })).status).toBe(404)
