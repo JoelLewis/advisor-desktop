@@ -24,5 +24,9 @@ export default defineConfig({
     // the 5s test timeout. On an idle machine this costs a few seconds of wall time; under that
     // contention it is the difference between green and 1–5 timeouts.
     maxWorkers: '50%',
+    // The same 30s the plans pass on a loaded workstation (`--testTimeout 30000`), for CI's
+    // two workers as well: a long UI flow is slow under contention, not stuck. A real hang still
+    // fails, and a flaky test is fixed, never retried.
+    testTimeout: 30_000,
   },
 })
