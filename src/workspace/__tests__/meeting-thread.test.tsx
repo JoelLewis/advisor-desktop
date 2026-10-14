@@ -26,7 +26,7 @@ describe('the meeting thread', () => {
     const user = userEvent.setup()
     const intc = await screen.findByRole('article', { name: `Harvest Scanner: ${INTC_CLAIM}` })
     await user.click(await within(intc).findByRole('button', { name: 'Take to' }))
-    await user.click(within(within(intc).getByRole('list', { name: 'Take to' })).getByRole('button', { name: 'Johnson annual review' }))
+    await user.click(within(within(intc).getByRole('menu', { name: 'Take to' })).getByRole('menuitem', { name: 'Johnson annual review' }))
     expect(await within(intc).findByRole('status')).toHaveTextContent('Taken to Johnson annual review.')
     await user.click(within(await screen.findByRole('region', { name: 'Today' })).getByRole('link', { name: 'Open the meeting thread' }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/t/th-johnson-meeting'))
