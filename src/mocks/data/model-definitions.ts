@@ -1,7 +1,7 @@
 import type { BenchmarkKind } from '@/types/portfolio'
 
 /**
- * §9.7 · rebalancing — `implementationSymbol` is the security a model actually buys to fill this
+ * `implementationSymbol` is the security a model actually buys to fill this
  * sleeve. Without it the rebalance engine could only ever trade what an account already held, so
  * an underweight class the account holds *nothing* in was unreachable: acc-041 sat at 94.4%
  * international equity against a 15% target and proposed no trades at all, because every class it
@@ -26,18 +26,18 @@ export type ModelDefinition = {
 }
 
 /**
- * §9.4 · `benchmark` is not a real external index return series for any model — `weightsFor` in `handlers/pms.ts`
+ * `benchmark` is not a real external index return series for any model — `weightsFor` in `handlers/pms.ts`
  * always derives the "benchmark" return from the model's own `assetClasses` target weights
  * (`benchWeights`), never from a fetched index. `benchmark` is therefore the model's own policy
  * blend, named as such (`benchmarkKind: 'model_policy'`), not a bare index name implying an
  * external return series. mod-001, mod-002 and mod-007 previously named a single equity index (or
  * an equity/bond pair) for blends that also carry international equity, emerging markets,
  * alternatives, real estate, commodities and cash — publishing e.g. an "S&P 500" return of ~11.11%
- * against a 14.5% US-equity-only proxy return. The fix is naming, not the arithmetic (Task 12
- * verified the Brinson-Fachler math reconciles): describe the blend instead of borrowing an index's
+ * against a 14.5% US-equity-only proxy return. The fix is naming, not the arithmetic (the
+ * Brinson-Fachler math reconciles): describe the blend instead of borrowing an index's
  * identity for it.
  *
- * Phase 7a · R8 — each label is now the model's policy benchmark: every sleeve at its target weight, measured by the index named for it in src/mocks/reference/models.ts.
+ * Each label is now the model's policy benchmark: every sleeve at its target weight, measured by the index named for it in src/mocks/reference/models.ts.
  */
 /**
  * The firm's models: the one place a model's targets, implementation symbols and name are stated. Read
@@ -86,7 +86,7 @@ export const MODEL_DEFINITIONS: readonly ModelDefinition[] = [
   ]},
 ]
 
-/** C24 · rebalancing — these were defined per model and displayed on Model Governance, but the
+/** These were defined per model and displayed on Model Governance, but the
  *  rebalance engine never read them; a 7%-band model was treated identically to a 3%-band one.
  *  Shared by `computeDriftForAccount` and the models view, so the band shown to a model
  *  administrator is the same band the rebalance engine evaluates against. */

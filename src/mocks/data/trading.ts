@@ -1,7 +1,7 @@
 import type { SymbolSearchResult } from '@/types/trading'
 
 /**
- * D24/D25 — one price per security. This quote feed disagreed with the positions it prices: NVDA
+ * One price per security. This quote feed disagreed with the positions it prices: NVDA
  * was $870.00 here against $780.00 in positions.ts, AAPL $185.00 against $195.40, MSFT $420.00
  * against $420.15, and three of the crypto quotes disagreed with the acc-045 holdings they value.
  * Positions are the book of record, so every quote below is the position's price, and

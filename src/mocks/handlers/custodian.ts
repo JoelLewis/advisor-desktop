@@ -17,8 +17,8 @@ import type { Account } from '@/types/account'
 const DAY_MS = 1000 * 60 * 60 * 24
 
 /**
- * C12 · tax-loss-harvesting / data-quality — lots must partition their position, and transactions
- * (D33) must be deterministic and priced from the position they reference. The previous generators
+ * Lots must partition their position, and transactions
+ * must be deterministic and priced from the position they reference. The previous generators
  * called `Math.random()` directly: lot cost basis was unrelated to the position's own `costBasis`
  * and `gainLoss` so lots never summed to the position, transaction prices were drawn from a fresh
  * random range unrelated to any real holding, and both modules changed on every page load.
@@ -155,16 +155,14 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
   const txns: Transaction[] = []
   const trades: TradeShell[] = []
 
-  // C14 · data-integrity — every realized sale in `realizedSales` must appear in its own account's
-  // transaction stream as a real sell (previously the two fixtures were unrelated: acc-002's
-  // stream held exactly one sell, SPY, never the INTC sale the tax page reports as having
-  // happened on 2026-02-20; acc-007's stream held zero sells at all). The PRNG below never draws
+  // Every realized sale in `realizedSales` appears in its own account's transaction stream as a
+  // real sell (acc-002's INTC sale of 2026-02-20 among them). The PRNG below never draws
   // these symbols for its own buy/sell trades (see `tradePool`), so the match is exact — the
   // fixture's sale, not a coincidentally similar random one.
   const accountSales = realizedSales.filter((s) => s.accountId === accountId)
   const soldSymbols = new Set(accountSales.map((s) => s.symbol))
   const heldBySymbol = new Map(held.map((p) => [p.symbol, p]))
-  // §0.7 · a position still held was opened when its oldest lot was bought: acc-002's INTC opening
+  // A position still held was opened when its oldest lot was bought: acc-002's INTC opening
   // was dated 2025-12-27 against a lot bought 2022-07-25, and a long-term sale (rs-001) cannot come
   // out of shares bought two months earlier.
   const oldestLotDate = new Map<string, string>()
@@ -173,7 +171,7 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
     if (known === undefined || lot.purchaseDate < known) oldestLotDate.set(lot.positionId, lot.purchaseDate)
   }
 
-  // Task 13's running-balance model starts every symbol at zero 60 days ago — already unrealistic
+  // The running-balance model starts every symbol at zero 60 days ago — already unrealistic
   // (it implicitly claims the account held nothing two months ago), and it makes an injected sell
   // of an already-established position impossible without a preceding buy. Seed an opening balance
   // instead: `opening = current position quantity + total quantity sold in the window`. That's
@@ -181,7 +179,7 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
   // exactly the sold amount, and the running balance lands on today's real holding: 0 for
   // acc-007/acc-022 (sold out entirely) or the current quantity for acc-002/acc-015/acc-011 (sold
   // only part). Modeled as a real 'buy' transaction dated before the earliest of this symbol's
-  // sales, so the existing per-symbol running-balance check (D33) — which recomputes balances from
+  // sales, so the existing per-symbol running-balance check — which recomputes balances from
   // the transaction stream alone, starting at zero — verifies the same invariant it already
   // verifies for every other symbol, rather than needing a carve-out.
   for (const symbol of soldSymbols) {
@@ -420,7 +418,7 @@ export function generateTaxLotsWithSaleRisk(accountId: string, totalValue: numbe
 }
 
 /**
- * C12 · tax-loss-harvesting — the last day each symbol may not be bought back, for the account's
+ * The last day each symbol may not be bought back, for the account's
  * wash-sale taxpayer (`openWashSaleWindowsFor`), IRAs and Roths included. Windows arrive sorted by
  * `end`, so the last one written per symbol is the latest to close. An account that can't be
  * resolved restricts nothing.
@@ -462,7 +460,7 @@ export function seedTaxLots(accountId: string, totalValue: number): CustodianLot
     // Older lots first, so FIFO and LIFO orderings are meaningful.
     const drawnAges = Array.from({ length: lotCount }, () => 3 + Math.floor(rand() * 45))
       .sort((a, b) => b - a)
-    // §0.7 · no lot predates its security: IBIT drew 2022 and 2023 dates for a fund launched in
+    // No lot predates its security: IBIT drew 2022 and 2023 dates for a fund launched in
     // January 2024. The draws are kept (the PRNG stream, and so every other lot, is unchanged)
     // and only capped at the inception.
     const inception = inceptionDate(pos.symbol)
@@ -478,7 +476,7 @@ export function seedTaxLots(accountId: string, totalValue: number): CustodianLot
       // UTC, not local: `anchor` is UTC midnight, and local get/set-Month would bake in the
       // host timezone's day-of-month, making the serialized date machine-dependent.
       monthsAgo.setUTCMonth(monthsAgo.getUTCMonth() - ages[i]!)
-      // Final review I2 · a whole-month age anchored on the 25th lands on a weekend or holiday
+      // A whole-month age anchored on the 25th lands on a weekend or holiday
       // about a third of the time, and a lot is bought on a day the market trades. The date rolls
       // back to the last trading day after the draws, so the PRNG stream is unchanged. A roll of a
       // few days never changes the holding period: the one lot near a year old (12 months,

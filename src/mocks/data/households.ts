@@ -6,8 +6,6 @@ import { deriveHouseholdAUM } from '@/lib/aum'
 /**
  * Leaf data only. `heldAwayAUM` describes accounts that are not in `accounts.ts` and is therefore
  * hand-typed; `managedAUM` and `totalAUM` are derived below.
- *
- * D1 · data-quality / reconciliation / currencies-and-fx
  */
 export const householdFixtures: HouseholdFixture[] = [
   {

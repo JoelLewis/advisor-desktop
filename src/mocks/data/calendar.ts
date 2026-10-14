@@ -3,7 +3,7 @@ import type { CalendarEvent } from '@/types/calendar'
 /**
  * The advisor's calendar around the frozen today (Wednesday 2026-02-25), in Eastern Time with the
  * offset stated (UTC−5 until daylight time starts on 2026-03-08), so every time parses to one instant.
- * Phase 5 · the Johnson annual review is this afternoon, between the Patel call and Dr. Pell's
+ * The Johnson annual review is this afternoon, between the Patel call and Dr. Pell's
  * coffee; no event falls on a weekend.
  */
 export const calendarEvents: CalendarEvent[] = [

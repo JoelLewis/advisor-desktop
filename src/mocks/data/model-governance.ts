@@ -2,9 +2,9 @@ import type { ModelVersionRecord } from '@/types/reference-models'
 import type { RiskProfile } from '@/lib/risk-profile'
 
 /**
- * Seeded Investment Committee history (R9). Every version was proposed by the analyst, Mike Chen
+ * Seeded Investment Committee history. Every version was proposed by the analyst, Mike Chen
  * (`user-003`), and approved by the committee. Dates are NYSE trading days; the one pending version
- * takes effect after today. Phase 7a moved four dates off weekends and holidays (2025-01-01, 2025-06-01,
+ * takes effect after today. An earlier pass moved four dates off weekends and holidays (2025-01-01, 2025-06-01,
  * 2025-09-01 and 2025-11-01), gave mod-005 v2 its missing US equity change and replaced its "private
  * equity sleeve (BXPE)" line, which the model never held, with the QAI sleeve it does.
  */
@@ -94,7 +94,7 @@ export const MODEL_VERSIONS: readonly ModelVersionRecord[] = [
 
 /**
  * Each model's risk profile; the firm's risk-profile table names five of them for its bands. The rest are
- * labeled by the band their modeled volatility scores in (Phase 7a: mod-005 was Moderate Aggressive, but scores Moderate;
+ * labeled by the band their modeled volatility scores in (mod-005 was once labeled Moderate Aggressive, but scores Moderate;
  * under the grouped correlations mod-006, 55% equity with no real assets, scores Moderate Conservative, below mod-007).
  */
 export const MODEL_RISK_PROFILES: Readonly<Record<string, RiskProfile>> = {
@@ -102,5 +102,5 @@ export const MODEL_RISK_PROFILES: Readonly<Record<string, RiskProfile>> = {
   'mod-005': 'moderate', 'mod-006': 'moderate_conservative', 'mod-007': 'moderate_conservative',
 }
 
-/** The education model's benchmark is its glide path's current-stage targets, held static over a period (R8). */
+/** The education model's benchmark is its glide path's current-stage targets, held static over a period. */
 export const GLIDE_PATH_MODELS: ReadonlySet<string> = new Set(['mod-006'])

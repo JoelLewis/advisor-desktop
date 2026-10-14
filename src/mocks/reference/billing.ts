@@ -41,7 +41,7 @@ function seriesOf(account: Account): readonly PerformanceSeries[] {
 }
 
 /**
- * Modeled, not realized (R3): today's USD value scaled by the account's fixtures-book series, linearly
+ * Modeled, not realized: today's USD value scaled by the account's fixtures-book series, linearly
  * interpolated between the two monthly points around `day`. The demo keeps no price history.
  */
 export function modeledAccountValueAt(account: Account, day: string): number {

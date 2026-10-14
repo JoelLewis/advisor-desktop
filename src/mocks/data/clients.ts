@@ -514,7 +514,7 @@ const clientFixtures: ClientFixture[] = [
 ]
 
 /**
- * D23 · fee-billing / regulatory-reporting — client AUM is the FX-applied sum of the client's own
+ * Client AUM is the FX-applied sum of the client's own
  * accounts. The hand-typed values summed to $107,055,000 against a book of $91,320,824, and were
  * an unlabeled blend of managed and held-away assets. Only managed AUM is billable and reportable
  * as Regulatory AUM under Form ADV Item 5.

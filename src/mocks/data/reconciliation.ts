@@ -2,7 +2,7 @@ import type { IntegrationLogEntry, ReconBreakRecord } from '@/types/reference-re
 
 /**
  * Leaf data: each break states only how far the custodian's figure sat from the book's; the book's side is
- * read off the book at read time (R6). brk-002 is this morning's open break; the rest are seeded history,
+ * read off the book at read time. brk-002 is this morning's open break; the rest are seeded history,
  * resolved before the session, so the 30-day trend reads something real. Every account is a USD account
  * the story does not move.
  */
@@ -20,7 +20,7 @@ export const RECON_BREAKS: readonly ReconBreakRecord[] = [
 
 export const PLANNING_INTEGRATION = 'MoneyGuidePro'
 
-/** Why each feed shows the sync time it does (R6). A feed outside the US syncs on its own market's close. */
+/** Why each feed shows the sync time it does. A feed outside the US syncs on its own market's close. */
 export const INTEGRATION_LOG: readonly IntegrationLogEntry[] = [
   { integration: 'Schwab', at: '2026-02-24T07:00:00Z', status: 'synced', detail: 'Nightly positions, cash and transactions file for 23 Feb received and matched.' },
   { integration: 'Schwab', at: '2026-02-25T07:00:00Z', status: 'synced', detail: 'Nightly positions, cash and transactions file for 24 Feb received; one cash break raised (brk-002).' },

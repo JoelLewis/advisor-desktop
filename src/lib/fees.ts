@@ -2,7 +2,7 @@
 export type FeeTier = { upTo: number | null; rate: number }
 
 /**
- * C33 · fee-billing / fee-disclosure — marginal tiered billing. A proposal previously hardcoded
+ * Marginal tiered billing. A proposal previously hardcoded
  * "$40,250 (0.805% blended rate)" for a $5,000,000 portfolio; tpl-001's own tier table gives
  * $45,500 / 0.91%, a $5,250/yr understatement in a client-facing fee disclosure. Each tier's rate
  * applies only to the slice of AUM that falls within it — not to the whole balance.

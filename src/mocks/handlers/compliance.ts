@@ -9,7 +9,7 @@ import { openWashSaleWindowsFor } from './tax-return'
 import type { ProposalTradeLeg, ProposalViolation, ProposalLegResult, PreTradeCheckProposalResult } from '@/services/oms'
 
 /**
- * D29 · pre-trade compliance / conflicts of interest — one list, used by both the trade ticket
+ * Pre-trade compliance / conflicts of interest — one list, used by both the trade ticket
  * (oms.ts) and the pre-trade engine below. They previously kept separate lists that disagreed:
  * this one omitted the ticket's BBBY, and the ticket omitted every name here except GME and AMC.
  *
@@ -26,7 +26,7 @@ const RESTRICTED_SECURITIES = new Set([
 ])
 
 // ── Concentration limits ──
-// C23 · diversification — per-kind limits (single-issuer / fund / cash), imported from the one
+// Per-kind limits (single-issuer / fund / cash), imported from the one
 // place they are defined (`security-master.ts`), not a blanket 10% restated here.
 // Exported so `oms.ts`'s pre-check handler reads the same 2% floor, rather than a second literal.
 const CASH_MINIMUM_PCT = 0.02       // 2% cash minimum
@@ -84,7 +84,7 @@ export function evaluateProposal(accountId: string, trades: readonly ProposalTra
   const movers = (indexes: readonly number[], rose: boolean) =>
     indexes.filter((i) => (trades[i]!.side === 'buy') === rose)
 
-  // ── Restricted securities — D29: one list. Blocks any leg, buy or sell. ──
+  // ── Restricted securities — one list. Blocks any leg, buy or sell. ──
   trades.forEach((t, i) => {
     if (!RESTRICTED_SECURITIES.has(t.symbol)) return
     violations.push({
@@ -100,7 +100,7 @@ export function evaluateProposal(accountId: string, trades: readonly ProposalTra
     })
   })
 
-  // ── Concentration per security kind, over the whole end state (§9.2) ──
+  // ── Concentration per security kind, over the whole end state ──
   for (const symbol of projected.keys()) {
     const assetClass = held.get(symbol)?.assetClass ?? 'us_equity'
     const kind = securityKind(symbol, assetClass)
@@ -196,7 +196,7 @@ export function evaluateProposal(accountId: string, trades: readonly ProposalTra
       limitWeight: CASH_MINIMUM_PCT,
     })
   }
-  // Cash's own concentration limit (C23 — 15%), on projected cash.
+  // Cash's own concentration limit (15%), on projected cash.
   const cashLimit = concentrationLimitFor('cash')
   const cashNow = startingCash / accountValue
   if (projectedCashPct > cashLimit * WARN_AT) {
@@ -222,7 +222,7 @@ export function evaluateProposal(accountId: string, trades: readonly ProposalTra
     })
   }
 
-  // ── Wash sale — the wash-sale taxpayer's 61-day windows (Task 14 / C10). Buys only. ──
+  // ── Wash sale — the wash-sale taxpayer's 61-day windows. Buys only. ──
   const openWindows = openWashSaleWindowsFor(account, todayISO())
   trades.forEach((t, i) => {
     if (t.side !== 'buy') return
@@ -263,7 +263,7 @@ export function invalidProposal(trades: unknown): string | undefined {
   if (!Array.isArray(trades)) return 'trades must be an array of legs'
   for (const t of trades as ProposalTradeLeg[]) {
     if (t.side !== 'buy' && t.side !== 'sell') return `leg ${t.symbol}: side must be buy or sell`
-    // C28 — notional is required and positive on every leg, as on the single-order check.
+    // Notional is required and positive on every leg, as on the single-order check.
     if (typeof t.estimatedValue !== 'number' || !Number.isFinite(t.estimatedValue) || t.estimatedValue <= 0) {
       return `leg ${t.symbol}: estimatedValue (notional) must be a positive number`
     }
@@ -271,8 +271,7 @@ export function invalidProposal(trades: unknown): string | undefined {
   return undefined
 }
 
-// D21 — exported so the dashboard metrics derivation (`pms.ts`) reads the same alerts the
-// compliance surfaces do, rather than a second hardcoded count.
+// Exported so Supervision and the workspace alerts read these same records, never a second copy.
 export const complianceAlerts: ComplianceAlert[] = [
   { id: 'comp-001', type: 'Large Wire', severity: 'critical', title: 'Large wire deposit — source-of-funds required', description: '$250,000 incoming wire to Richard Anderson (acc-022). BSA/AML documentation required before funds release.', entityType: 'account', entityId: 'acc-022', reviewStatus: 'pending', createdAt: '2026-02-24T15:10:00Z' },
   { id: 'comp-002', type: 'Concentration', severity: 'warning', title: 'Single-name concentration — AAPL in Johnson Trust', description: 'AAPL position at 7.6% of account value approaching 10% single-name guideline.', entityType: 'account', entityId: 'acc-001', reviewStatus: 'in_review', createdAt: '2026-02-23T08:00:00Z' },
@@ -284,7 +283,7 @@ export const complianceAlerts: ComplianceAlert[] = [
 ]
 
 /**
- * §0.3 · the chief compliance officer, the supervisory principal who disposes of these alerts.
+ * The chief compliance officer, the supervisory principal who disposes of these alerts.
  * Records carry his directory id; the display label is read from the directory, not re-typed.
  */
 const CCO_ID = 'cco-001'

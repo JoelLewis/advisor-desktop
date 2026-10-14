@@ -44,7 +44,7 @@ export type Order = {
 
 export type RebalancePreview = {
   accountId: string
-  // §9.3 · currencies-and-fx — the account's own base currency (`accounts.ts`'s `baseCurrency`,
+  // The account's own base currency (`accounts.ts`'s `baseCurrency`,
   // defaulting to USD). Every trade in `trades` carries the same tag, and every notional on this
   // preview (`estimatedTaxImpact`, each trade's `estimatedValue`/`taxImpact`) is denominated in it,
   // not USD — `oms.ts`'s trade generator derives everything from `account.totalValue`, which is
@@ -106,7 +106,7 @@ export type RepurchaseRestriction = {
 
 /**
  * Why an asset class is still away from target after the proposed trades. The last four are a
- * Phase 3 proposal constraint (or a workbench exclusion) holding the class back.
+ * proposal constraint (or a workbench exclusion) holding the class back.
  */
 export type ResidualDriftReason =
   | 'not_market_tradable' | 'cash_capped' | 'replacement_hold' | 'below_lot_size'
@@ -196,7 +196,7 @@ export type ProposalTradeLeg = {
   symbol: string
   side: 'buy' | 'sell'
   quantity: number
-  /** Required and positive, as on `PreTradeCheckRequest` (C28). Account currency. */
+  /** Required and positive, as on `PreTradeCheckRequest`. Account currency. */
   estimatedValue: number
 }
 

@@ -4,7 +4,7 @@ import { formatRatePercent } from '@/lib/tax-rules'
 import { isModelManaged } from '@/lib/mandate'
 
 /**
- * §0.7 · the drift-alert activity (act-012) once said "seven portfolios … beyond the 3% threshold"
+ * The drift-alert activity (act-012) once said "seven portfolios … beyond the 3% threshold"
  * against per-model bands of 3%, 5% and 7%. Its figures now come from the drift engine: the
  * accounts whose own model band is breached (`needsRebalance`), each band stated with its model's name.
  */

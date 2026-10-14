@@ -3,7 +3,7 @@ import { modelVolatility } from './models'
 
 type Anchor = { vol: number; score: number }
 
-/** (0, 0), each band's model σ at the band's midpoint score, and twice the riskiest model's σ at 100 (R10). */
+/** (0, 0), each band's model σ at the band's midpoint score, and twice the riskiest model's σ at 100. */
 function anchors(): Anchor[] {
   const bands = RISK_PROFILE_TABLE.map((b) => ({ vol: modelVolatility(b.modelId), score: (b.floor + b.ceiling) / 2 }))
   const top = bands[bands.length - 1]

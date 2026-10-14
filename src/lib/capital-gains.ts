@@ -1,7 +1,7 @@
 type HoldingCharacter = 'short' | 'long'
 
 /**
- * §0.6 · what kind of asset a gain is on. A collectible (§408(m): art, coins, any metal) is taxed
+ * What kind of asset a gain is on. A collectible (§408(m): art, coins, any metal) is taxed
  * long-term at up to 28% (§1(h)(4)–(5)), not 20%. Short-term, it is ordinary income like any
  * other short-term gain.
  */

@@ -55,7 +55,7 @@ type SeriesParams = {
 }
 
 /**
- * C34 · performance-reporting — the monthly series is drawn from the account's own μ and σ. The
+ * The monthly series is drawn from the account's own μ and σ. The
  * previous uniform [−2%, +4%] draw was identical for every account and could not produce the
  * drawdown the risk tab reported alongside it.
  *
@@ -123,9 +123,9 @@ function requireModel(modelId: string): ModelDefinition {
 
 /**
  * The lookup without a throw, for security selection: an unknown model there proposes nothing for the
- * sleeve. Every other reader goes through `requireModel`, which throws — Phase 7a removed the old
+ * sleeve. Every other reader goes through `requireModel`, which throws; the old
  * `?? getModelByIndex(0)` fallback, which silently measured an account on an unknown model (or on
- * none) against Balanced Growth.
+ * none) against Balanced Growth, is gone.
  */
 function findModel(modelId: string): ModelDefinition | undefined {
   return MODEL_DEFINITIONS.find((m) => m.id === modelId)
@@ -154,7 +154,7 @@ const USD_SECURITY_QUOTES: ReadonlyMap<string, { name: string; price: number; as
 export type ModelSecurity = { symbol: string; name: string; price: number }
 
 /**
- * §9.7 · the security a model buys to fill `assetClass` when the account holds nothing in it, with
+ * The security a model buys to fill `assetClass` when the account holds nothing in it, with
  * its **USD** price and name read from `positions.ts` rather than re-typed here — a hand-typed
  * price alongside the symbol is exactly the second copy Global Constraint 1 forbids, and a symbol
  * with no quote behind it produces a zero notional that the engine's `estimatedValue > 0` filter
@@ -174,7 +174,7 @@ export function usdQuoteFor(symbol: string): { name: string; price: number; asse
 }
 
 /**
- * §0.4 · a model's display name ("mod-002" → "Growth"), from `MODEL_DEFINITIONS` — the one place a model is
+ * A model's display name ("mod-002" → "Growth"), from `MODEL_DEFINITIONS` — the one place a model is
  * named. Throws on an unknown id: a name that silently fell back to another model's would label
  * one policy with another's name.
  */
@@ -197,7 +197,7 @@ function findAccount(accountId: string | readonly string[] | undefined): typeof 
   return accounts.find((a) => a.id === accountId)
 }
 
-/** C36 · currencies-and-fx — risk and sensitivity read a USD value, not the raw local-currency one. */
+/** Risk and sensitivity read a USD value, not the raw local-currency one. */
 function accountUSD(account: typeof accounts[0]): number {
   return accountValueUSD(account, FX_RATES_USD_BASE)
 }
@@ -314,7 +314,7 @@ type Attribution = {
  * Two handlers computing the same decomposition independently is precisely how the three summary
  * cards came to disagree with the benchmark table.
  *
- * C3 · performance-attribution — the interaction effect is retained and totalled. The previous
+ * The interaction effect is retained and totalled. The previous
  * implementation summed only allocation and selection, so the summary cards were short of active
  * return by the whole interaction term. It is reported as its own column and its own card, not
  * folded into selection: folding is a defensible presentation choice in some shops, but it is a
@@ -331,13 +331,13 @@ type Attribution = {
  * overweighting any class with a positive return rather than one that beat the benchmark. The
  * numbers alone do not reveal which is in use, so the response and the page caption name it.
  *
- * C2 · performance-attribution — Σ(A + S + I) = Rp − Rb holds exactly, not approximately. Both
+ * Σ(A + S + I) = Rp − Rb holds exactly, not approximately. Both
  * weight sets sum to one (`assetClassWeights` normalizes; every model's targets sum to 1.00), so
  * Σ(wp − wb) = 0, the −Rb in the allocation term cancels, and the three effects collapse to
  * Σ wp·Rp,i − Σ wb·Rb,i. The totals returned here are the totals of the *rounded* rows, so the
  * published cards add up to the published total as well.
  *
- * C1 · performance-attribution — the period is compounded from the annual class returns rather
+ * The period is compounded from the annual class returns rather
  * than multiplied by an arbitrary scale factor, and compounding happens per asset class so that
  * Σ wb·Rb,i is the benchmark return for the period by construction. Sub-period geometric linking
  * (Carino, Menchero, GRAP) is **not** modeled; the response labels the model single-period
@@ -404,7 +404,7 @@ export function attributionFor(account: Account, years: number, positions?: read
 export function periodReturnsFor(account: Account, years: number, positions?: readonly Position[]) {
   const a = attributionFor(account, years, positions)
   const benchmarkReturn = roundTo(a.benchmarkReturn, 4)
-  // C6 · performance-reporting — active (excess) return, not Jensen's alpha. It is the
+  // Active (excess) return, not Jensen's alpha. It is the
   // attribution's own total rounded once: rounding Rp and Rb separately and subtracting differs
   // from it by a full basis point on a month-to-date window, which is most of the figure.
   const activeReturn = roundTo(a.totals.total, 4)
@@ -419,7 +419,7 @@ export function periodReturnsFor(account: Account, years: number, positions?: re
 // Exported so `oms.ts`'s rebalance trade generator reads the same drift the drift surface does,
 // rather than a second computation.
 //
-// §9.7 / Task 9 · `modelIdOverride` answers "what would this account's drift be against *that*
+// `modelIdOverride` answers "what would this account's drift be against *that*
 // model" — the question the model-trade screen exists to ask, since it can propose migrating an
 // account onto a model it is not currently assigned to. Omitted, it is the account's own model
 // and every existing caller is unchanged. The override is deliberately the **only** thing that
@@ -443,7 +443,7 @@ function holdingsAsOf(accountId: string): string {
 export type DriftHolding = Pick<Position, 'assetClass' | 'weight'>
 
 /**
- * §0.6 · the drift derivation itself, over any set of holdings. `computeDriftForAccount` runs it on
+ * The drift derivation itself, over any set of holdings. `computeDriftForAccount` runs it on
  * the account's positions today; the rebalance preview runs it on the same positions with the
  * proposed trades applied, so current and projected drift are one function, not two.
  */
@@ -466,7 +466,7 @@ export function computeDriftForHoldings(account: Account, positions: readonly Dr
     .map((ac) => {
       const actual = actualWeights.get(ac) ?? 0
       const target = targets[ac] ?? 0
-      // C24 — signed, so the UI can say "overweight" or "underweight" rather than "drifted".
+      // Signed, so the UI can say "overweight" or "underweight" rather than "drifted".
       return { assetClass: ac as DriftStatus['assetClassDrifts'][0]['assetClass'], target, actual, drift: roundTo(actual - target, 4) }
     })
     .filter((d) => d.target > 0 || d.actual > 0)
@@ -497,9 +497,9 @@ export function computeDriftForHoldings(account: Account, positions: readonly Dr
 }
 
 /**
- * C8 · historical-risk — the Bloomberg Aggregate was flat-to-positive Sep-08 → Mar-09; the
+ * The Bloomberg Aggregate was flat-to-positive Sep-08 → Mar-09; the
  * flight-to-quality Treasury rally is the single most famous fixed-income fact about 2008.
- * C9 · historical-risk — impacts are computed from the account's own holdings, so the position
+ * Impacts are computed from the account's own holdings, so the position
  * rows reconcile to the headline by construction.
  */
 type StressFactorSet = {
@@ -557,7 +557,7 @@ export function stressScenariosFor(account: Account): StressScenario[] {
       }
     })
     const covered = positionImpacts.reduce((s, p) => s + p.currentValue, 0)
-    // Left unrounded on purpose: C9 asks that Σ position impact equal portfolioImpact × Σ
+    // Left unrounded on purpose: the stress test requires that Σ position impact equal portfolioImpact × Σ
     // position value exactly. Rounding this ratio to 4dp puts that reconciliation hundreds of
     // dollars out on a large account. The display layer rounds it, the API does not.
     const portfolioImpact = covered === 0
@@ -606,7 +606,7 @@ export function concentrationFor(account: Account) {
     positions: concentrationMetrics,
     summary: {
       top10Weight: roundTo(top10Weight, 3),
-      // C22 · diversification — one HHI scale across the product (0–10,000), with effective N.
+      // One HHI scale across the product (0–10,000), with effective N.
       herfindahlIndex: Math.round(herfindahlIndex(positions.map((p) => p.weight / totalWeight))),
       effectiveN: roundTo(effectiveN(herfindahlIndex(positions.map((p) => p.weight / totalWeight))), 1),
       singleNameWeight: roundTo(singleNames.reduce((s, c) => s + c.weight, 0), 3),

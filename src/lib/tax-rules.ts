@@ -7,12 +7,12 @@ import type { CurrencyCode, FXRateMap } from '@/types/currency'
 export const TAX_ESTIMATE_NOTE = 'Tax figures are estimates at the top federal rate; state tax is not modeled; consult your tax professional.'
 
 /**
- * C11 · tax-loss-harvesting — a flat 37% was applied to every lot and rendered directly beside a
+ * A flat 37% was applied to every lot and rendered directly beside a
  * "Long" holding-period badge. Long-term losses offset long-term gains at capital-gains rates.
  *
  * These are the top federal marginal rates and exclude state tax. The screen must say so.
  *
- * §0.6 · the 3.8% net investment income tax (IRC §1411) applies to net gain of either character,
+ * The 3.8% net investment income tax (IRC §1411) applies to net gain of either character,
  * so it belongs on the short-term rate as much as the long-term one: a top-bracket short-term gain
  * is taxed at 37% + 3.8% = 40.8%, not 37%. The components are kept so the rates can be checked
  * against them; the rates themselves are literals because 0.37 + 0.038 is not exactly 0.408 in
@@ -27,7 +27,7 @@ export const SHORT_TERM_RATE = 0.408 as const
 export const LONG_TERM_RATE = 0.238 as const
 
 /**
- * §0.6 · a long-term collectibles gain — including a sale of GLD or another grantor trust holding
+ * A long-term collectibles gain — including a sale of GLD or another grantor trust holding
  * physical metal (`taxCharacterOf`) — is taxed at up to 28% (§1(h)(4)), not 20%, and NIIT applies
  * to it as to any gain. Short-term, a collectible is taxed like any short-term gain.
  */
@@ -54,15 +54,15 @@ export const TAX_RATE_BASIS: TaxRateBasis = {
 
 /**
  * 0.238 → "23.8%", 0.37 → "37%". Trims a bare ".0" so whole-percent rates read cleanly.
- * Exported so every surface quoting a rate (the tax page, the dashboard insight, NBA templates)
- * formats it identically rather than re-deriving the same trim logic per call site.
+ * Exported so every place that quotes a rate formats it identically rather than re-deriving the
+ * same trim logic per call site.
  */
 export function formatRatePercent(rate: number): string {
   return `${Number((rate * 100).toFixed(1))}%`
 }
 
 /**
- * Fix-round-2 review, Minor M1 · a test asserting `RATE_DISCLOSURE` contains `'37%'` and
+ * A test asserting `RATE_DISCLOSURE` contains `'37%'` and
  * `'23.8%'` passes identically whether the string is templated from the rate constants or
  * hardcoded prose that happens to say the same thing — it cannot distinguish "derived" from
  * "coincidentally correct today". Exporting the builder as a function of its own arguments lets
@@ -108,7 +108,7 @@ export function taxRateFor(holdingPeriod: TaxLot['holdingPeriod'], character: Ta
  * native-currency `gainLoss` directly against a bare `-1000`, applied identically across acc-041
  * (HKD), acc-042 (SGD), acc-043 (EUR) and acc-044 (CHF). HK$1,000 is about US$128 and CHF 1,000
  * about US$1,120, so the same literal meant wildly different real losses per account. The
- * threshold is in USD; convert the lot to USD before comparing. Exported so Task 17 imports this
+ * threshold is in USD; convert the lot to USD before comparing. Exported so every caller imports this
  * constant rather than hardcoding `-1000` a third time.
  */
 export const HARVEST_LOSS_THRESHOLD_USD = -1000 as const
@@ -128,8 +128,7 @@ function lossOnShares(lot: WashFacts, shares: number): number {
 /**
  * The loss a sale of this lot today realizes this year (negative), or 0. §1091 takes only the
  * loss on the shares a replacement was matched to (Treas. Reg. §1.1091-1(c)); the rest is
- * allowed. Every harvest total — the tax page's card, the dashboard insight, the chat answer, the
- * account insight — counts this figure, never the lot's whole loss.
+ * allowed. Every harvest total counts this figure, never the lot's whole loss.
  */
 export function lossAllowedNow(lot: WashFacts): number {
   const { deferredShares, disallowedShares } = lot.saleWash

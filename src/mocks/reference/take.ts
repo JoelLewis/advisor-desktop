@@ -9,7 +9,7 @@ type ReferenceRowMessage = Extract<Message, { kind: 'reference_row' }>
 export type TakeFailure = { ok: false; status: 403 | 404; code: string; message: string }
 export type Taken = { ok: true; created: boolean; thread: Thread; message: ReferenceRowMessage }
 
-/** A thread opened for a row is the taker's, the advisor's and client service's (R14). */
+/** A thread opened for a row is the taker's, the advisor's and client service's. */
 const OPENED_WITH: readonly string[] = ['user-001', 'user-002']
 
 const sameSubject = (a: Subject | undefined, b: Subject) => a !== undefined && a.type === b.type && a.id === b.id

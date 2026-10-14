@@ -3,7 +3,7 @@ import { blendedTieredFee, type FeeTier } from '@/lib/fees'
 
 /**
  * The firm's one published schedule, the one Form ADV Part 2A discloses. Billing, the prospect proposal and
- * every proposal template's fee section price on it (Phase 7a · I4: two legacy templates carried schedules of
+ * every proposal template's fee section price on it (two legacy templates once carried schedules of
  * their own, 1.00/0.80/0.65% and 0.95/0.75/0.60%, that the ADV does not disclose).
  */
 const PUBLISHED_TIERS: readonly ProposalFeeTier[] = [

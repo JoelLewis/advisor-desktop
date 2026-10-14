@@ -27,7 +27,7 @@ const followsGlidePath = (account: Account) => account.mandate === 'model' && GL
 const STATUS_RANK: Readonly<Record<ToleranceStatus, number>> = { above: 3, below: 2, within: 1, glide_path: 0 }
 
 /**
- * Phase 7a · I1 — tolerance is a band, not a point: a questionnaire score of 60 accepts the Moderate
+ * Tolerance is a band, not a point: a questionnaire score of 60 accepts the Moderate
  * Aggressive band (56–75), not "exactly 60". `beyond` is how far the account's score sits outside that
  * band; its sign is the status, and because the bands partition 0–100 in whole points this is the same
  * status a band-rank comparison gives. One key orders the book and the table's header click alike.

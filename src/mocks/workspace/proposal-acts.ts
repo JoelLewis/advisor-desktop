@@ -66,7 +66,7 @@ export function approveProposal(viewerId: string, proposalId: string, version: n
   }
   const s = store()
   s.approvals.push({ proposalId: proposal.id, version, fingerprint: v.fingerprint, actId, approverId: viewerId, at, status: 'active' })
-  // Staged, never released: Phase 4 adds the compliance disposition and release.
+  // Staged only: compliance's disposition releases, returns or escalates them (compliance-acts.ts).
   const staged: StagedOrder[] = v.preview.trades.map((t) => ({
     id: nextStagedId(), proposalId: proposal.id, version, accountId: proposal.accountId, symbol: t.symbol, side: t.side,
     quantity: t.quantity, estimatedValue: t.estimatedValue, currency: t.currency, status: 'pending_compliance', stagedAt: at, approvalActId: actId,

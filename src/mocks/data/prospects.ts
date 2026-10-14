@@ -224,7 +224,7 @@ export const prospects: Prospect[] = [
     notes: 'DC-area consultant. Transferring $5.7M from Merrill Lynch. Advisory agreement signed, ACAT pending.',
   },
 
-  // ── Referral this week (Phase 6) ──
+  // ── Referral this week ──
   {
     id: 'prsp-011',
     name: 'Dr. Amanda Pell',

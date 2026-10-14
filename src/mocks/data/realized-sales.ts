@@ -1,5 +1,5 @@
 /**
- * C10 · tax-loss-harvesting (IRC §1091) / rebalancing — a wash-sale window is opened by a realized
+ * A wash-sale window (IRC §1091) is opened by a realized
  * loss **sale**, not by a purchase. The previous calendar anchored on `lot.purchaseDate` and passed
  * it into a parameter literally named `saleDate`, so every recently-bought lot — including
  * profitable ones — was displayed as an open wash-sale window.

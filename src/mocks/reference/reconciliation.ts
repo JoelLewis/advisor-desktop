@@ -83,7 +83,7 @@ function breakView(b: ReconBreakRecord): ReconBreakView {
 const isOpenAt = (b: ReconBreakView, instant: string) => b.detectedAt <= instant && (b.resolvedAt === undefined || b.resolvedAt > instant)
 
 /**
- * Phase 7a · a break is counted against the record it is about: a quantity break against one position, a
+ * A break is counted against the record it is about: a quantity break against one position, a
  * market-value break against one account's valuation, a cash break against one balance, and a
  * transaction-count break against one account's transaction stream. Counting a valuation break
  * against every position (or a stream break against every transaction) diluted the rates.
@@ -165,7 +165,7 @@ export function reconciliationView(viewerId: string): ReconciliationView | undef
   }
 }
 
-/** R7 · the advisor or client service closes a break, once, against the figures they read. */
+/** The advisor or client service closes a break, once, against the figures they read. */
 export function resolveBreak(viewerId: string, r: ResolveBreakRequest): { ok: true; act: BindingAct } | ResolveFailure {
   const record = RECON_BREAKS.find((b) => b.id === r.breakId)
   if (!record || !isFirmViewer(viewerId)) return refuse(404, 'NO_BREAK', 'Break not found.')

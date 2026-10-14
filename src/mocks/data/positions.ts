@@ -24,7 +24,7 @@ const trustPositions: PositionSeed[] = [
 // ─── acc-002: Robert Johnson Individual ($4.5M, mod-002 Growth) ─────────────
 // Growth tilt with digital assets, PE, and INTC loss position (TLH candidate).
 //
-// D2/D28 — the nine positions summed to $4,832,000 against a $4,500,000 balance, and INTC still
+// The nine positions summed to $4,832,000 against a $4,500,000 balance, and INTC still
 // showed the full 12,000 shares five days after ord-004/rs-001 sold 5,000 of them. INTC is now the
 // 7,000 shares actually held (cost basis $35.00/share, matching rs-001's $175,000 on 5,000), and the
 // remaining holdings are scaled by 0.923909 (= $4,031,210 / $4,363,210) with quantities re-derived
@@ -41,7 +41,7 @@ const robertIndividualPositions: PositionSeed[] = [
   { id: 'pos-026', accountId: 'acc-002', symbol: 'IBIT', name: 'iShares Bitcoin Trust ETF', assetClass: 'digital_assets', quantity: 3234, price: 52.80, costBasis: 129_347, marketValue: 170_755.20, gainLoss: 41_408.20, gainLossPercent: 0.320 },
   { id: 'pos-027', accountId: 'acc-002', symbol: 'ETHE', name: 'Grayscale Ethereum Trust ETF', assetClass: 'digital_assets', quantity: 3882, price: 18.45, costBasis: 60_054, marketValue: 71_622.90, gainLoss: 11_568.90, gainLossPercent: 0.193 },
   { id: 'pos-028', accountId: 'acc-002', symbol: 'BXPE', name: 'Blackstone Private Equity Strategies Fund', assetClass: 'private_equity', quantity: 1110, price: 108.50, costBasis: 106_250, marketValue: 120_435, gainLoss: 14_185, gainLossPercent: 0.134 },
-  // Bought 2026-02-20 as the INTC tax-loss-harvest replacement (activities.ts, note-002, comp-006).
+  // Bought 2026-02-20 as the INTC tax-loss-harvest replacement (activities.ts, comp-006).
   { id: 'pos-265', accountId: 'acc-002', symbol: 'SMH', name: 'VanEck Semiconductor ETF', assetClass: 'us_equity', quantity: 180, price: 245.20, costBasis: 44_136, marketValue: 44_136, gainLoss: 0, gainLossPercent: 0 },
   { id: 'pos-025', accountId: 'acc-002', symbol: 'CASH', name: 'Money Market Fund', assetClass: 'cash', quantity: 1, price: 225_504, costBasis: 225_504, marketValue: 225_504, gainLoss: 0, gainLossPercent: 0 },
 ]
@@ -120,16 +120,14 @@ const jamesThompsonIRAPositions: PositionSeed[] = [
   { id: 'pos-105', accountId: 'acc-020', symbol: 'VCIT', name: 'Vanguard Intermediate-Term Corporate Bond ETF', assetClass: 'fixed_income', quantity: 2920, price: 83.50, costBasis: 248_000, marketValue: 243_820, gainLoss: -4_180, gainLossPercent: -0.017 },
   { id: 'pos-106', accountId: 'acc-020', symbol: 'QAI', name: 'IQ Hedge Multi-Strategy Tracker ETF', assetClass: 'alternatives', quantity: 3000, price: 35.20, costBasis: 108_000, marketValue: 105_600, gainLoss: -2_400, gainLossPercent: -0.022 },
   { id: 'pos-107', accountId: 'acc-020', symbol: 'VNQ', name: 'Vanguard Real Estate ETF', assetClass: 'real_estate', quantity: 1200, price: 89.20, costBasis: 100_000, marketValue: 107_040, gainLoss: 7_040, gainLossPercent: 0.070 },
-  // D3 — the eight non-cash holdings sum to $1,979,220, so cash is the $220,780 residual, not
+  // The eight non-cash holdings sum to $1,979,220, so cash is the $220,780 residual, not
   // $220,840: the account's positions overstated its $2,200,000 balance by $60.
   { id: 'pos-108', accountId: 'acc-020', symbol: 'CASH', name: 'Money Market Fund', assetClass: 'cash', quantity: 1, price: 220_780, costBasis: 220_780, marketValue: 220_780, gainLoss: 0, gainLossPercent: 0 },
 ]
 
 // ─── acc-029: Patel 529 Education ($340K, mod-006 Education) ────────────────
 // Age-based glide path with target-date logic for education goal.
-// D3 — the section claimed $600K against accounts.ts's $340,000. The glide-path narrative
-// (nba-016) needs the account, not the balance, so the holdings are scaled by 340/600 with
-// quantities re-derived as whole shares and cash taking the $42,800 residual.
+// Holdings sum to accounts.ts's $340,000: whole shares, with cash taking the $42,800 residual.
 const patel529Positions: PositionSeed[] = [
   { id: 'pos-120', accountId: 'acc-029', symbol: 'VTI', name: 'Vanguard Total Stock Market ETF', assetClass: 'us_equity', quantity: 397, price: 268.50, costBasis: 96_333, marketValue: 106_594.50, gainLoss: 10_261.50, gainLossPercent: 0.107 },
   { id: 'pos-121', accountId: 'acc-029', symbol: 'QQQ', name: 'Invesco QQQ Trust', assetClass: 'us_equity', quantity: 85, price: 485.20, costBasis: 36_833, marketValue: 41_242, gainLoss: 4_409, gainLossPercent: 0.120 },
@@ -156,7 +154,6 @@ const thomasKimPositions: PositionSeed[] = [
 
 // ─── acc-035: Linda Garcia Traditional IRA ($520K, mod-003 Conservative Income) ──
 // MASSIVE ALLOCATION MISMATCH: 61% equity for a 75-year-old on Conservative Income model (20% equity target)
-// Supports nba-006 "Allocation mismatch for client age"
 const lindaGarciaIRAPositions: PositionSeed[] = [
   { id: 'pos-140', accountId: 'acc-035', symbol: 'VTI', name: 'Vanguard Total Stock Market ETF', assetClass: 'us_equity', quantity: 600, price: 268.50, costBasis: 130_000, marketValue: 161_100, gainLoss: 31_100, gainLossPercent: 0.239 },
   { id: 'pos-141', accountId: 'acc-035', symbol: 'SPY', name: 'SPDR S&P 500 ETF', assetClass: 'us_equity', quantity: 300, price: 520.30, costBasis: 125_000, marketValue: 156_090, gainLoss: 31_090, gainLossPercent: 0.249 },
@@ -235,9 +232,9 @@ const muellerCHFPositions: PositionSeed[] = [
 
 // ── acc-045: Patel Digital Assets ($425K) ─────────────────────────────────────
 // Crypto portfolio in USD-denominated Coinbase account.
-// D4 — the eight positions summed to $393,630 and their weights to 0.925 against a $425,000
+// The eight positions summed to $393,630 and their weights to 0.925 against a $425,000
 // balance. The $31,370 shortfall is cash, and every weight is now marketValue / 425,000.
-// D24 — BTC's market value was rounded to $188,018 while 2.15 x $87,450 is $188,017.50, which is
+// BTC's market value was rounded to $188,018 while 2.15 x $87,450 is $188,017.50, which is
 // the one figure `marketValue === quantity * price` could not tolerate. Prices here are the book
 // of record for BTC/ETH/SOL/AVAX/DOT/LINK: trading.ts's quote feed and currencies.ts's implied
 // crypto rates both derive from them.
@@ -280,7 +277,7 @@ export const allPositions: PositionSeed[] = [
 ]
 
 /**
- * Task 10 — the single place a position weight comes into existence. `weight` is
+ * The single place a position weight comes into existence. `weight` is
  * `marketValue / totalValue` and nothing else, evaluated against the total this call was handed,
  * so no consumer can read a weight that disagrees with the money beside it. A zero-value account
  * has no meaningful weights, so it gets zeroes rather than a NaN that would propagate into every
@@ -327,7 +324,7 @@ function vehicle(symbol: string): Pick<PositionSeed, 'name' | 'assetClass' | 'pr
 const tiltCap = (target: number, band: number) => Math.min(0.03, band * 0.6, target / 2)
 
 /**
- * Phase 7a · C1 — an account without explicit rows holds **its own model's** lineup (each sleeve's
+ * An account without explicit rows holds **its own model's** lineup (each sleeve's
  * implementation symbol), each sleeve tilted by a deterministic amount seeded from the account id:
  * about ±0.5–3pp, inside the model's drift band. Cash draws its own tilt and, as the residual, takes it once
  * the sleeves' tilts are evened out to sum to minus it. Quantities are whole shares; the CASH row is the account's `cashBalance`, which

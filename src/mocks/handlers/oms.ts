@@ -27,7 +27,7 @@ import type { CurrencyCode } from '@/types/currency'
 // Exported so `ai.ts`'s trading-desk chat response reads the same pending-order counts this
 // handler serves, rather than a second, independently hand-typed "3 open orders" figure.
 //
-// Final review I2 · every timestamp is real UTC, as `clock.ts` reads it (12:00Z is 7:00 ET). Fills
+// Every timestamp is real UTC, as `clock.ts` reads it (12:00Z is 7:00 ET). Fills
 // were written as New York time with a Z, so several read as pre-market fills; they now fall in the
 // regular session, 14:30–21:00Z before daylight time starts on 2026-03-08. Pending orders submitted
 // before 12:00Z today are pre-market submissions still waiting for the open. ord-014, which filled on
@@ -39,9 +39,9 @@ export const orders: Order[] = [
   { id: 'ord-003', accountId: 'acc-001', symbol: 'NVDA', side: 'sell', quantity: 25, orderType: 'limit', limitPrice: 785.00, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-25T09:31:00Z', assetClass: 'equity' },
 
   // ── Robert Johnson Individual (acc-002) ──
-  // D28 — this fill is the same event as rs-001, so it prices at rs-001's $142,250 / 5,000 shares
-  // and acc-002's INTC position now shows the 7,000 shares left after it. Final review I2: it was
-  // dated Saturday 2026-02-21; it filled Friday 2026-02-20 at 10:15 ET (15:15Z).
+  // This fill is the same event as rs-001, so it prices at rs-001's $142,250 / 5,000 shares
+  // and acc-002's INTC position now shows the 7,000 shares left after it. It
+  // filled Friday 2026-02-20 at 10:15 ET (15:15Z).
   { id: 'ord-004', accountId: 'acc-002', symbol: 'INTC', side: 'sell', quantity: 5000, orderType: 'market', status: 'filled', filledQuantity: 5000, filledPrice: 28.45, submittedAt: '2026-02-20T15:15:00Z', filledAt: '2026-02-20T15:15:03Z', assetClass: 'equity' },
   { id: 'ord-005', accountId: 'acc-002', symbol: 'QQQ', side: 'buy', quantity: 200, orderType: 'limit', limitPrice: 480.00, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-25T09:35:00Z', assetClass: 'equity' },
 
@@ -59,7 +59,7 @@ export const orders: Order[] = [
   { id: 'ord-012', accountId: 'acc-015', symbol: 'VNQ', side: 'buy', quantity: 200, orderType: 'market', status: 'filled', filledQuantity: 200, filledPrice: 89.15, submittedAt: '2026-02-24T18:20:00Z', filledAt: '2026-02-24T18:20:02Z', assetClass: 'equity' },
 
   // ── Multi-asset orders ──
-  // D26 — a mutual fund order cannot fill at 11:00 ET. Rule 22c-1 requires forward pricing at the
+  // A mutual fund order cannot fill at 11:00 ET. Rule 22c-1 requires forward pricing at the
   // next computed NAV, which for VFIAX is 4:00 PM ET (21:00Z), and a $25,000 dollar-amount purchase
   // buys $25,000 / $465.32 shares, not the placeholder 1.
   //
@@ -70,7 +70,7 @@ export const orders: Order[] = [
   // a claim about any particular clearing system's record layout.
   { id: 'ord-013', accountId: 'acc-001', symbol: 'VFIAX', side: 'purchase', quantity: 53.72647, orderType: 'market', status: 'filled', filledQuantity: 53.72647, filledPrice: 465.32, submittedAt: '2026-02-23T15:00:00Z', filledAt: '2026-02-23T21:00:00Z', assetClass: 'mutual_fund', dollarAmount: 25000, amountType: 'dollars' },
   { id: 'ord-014', accountId: 'acc-002', symbol: 'UST-10Y', side: 'buy', quantity: 50, orderType: 'limit', limitPrice: 95.25, status: 'filled', filledQuantity: 50, filledPrice: 95.20, submittedAt: '2026-02-20T15:30:00Z', filledAt: '2026-02-20T15:30:05Z', assetClass: 'fixed_income', parAmount: 50000, bondPriceType: 'price', priceOrYield: 95.25 },
-  // D27 — spot BTC settled into acc-002, a Schwab brokerage that can only hold the IBIT and ETHE
+  // Spot BTC settled into acc-002, a Schwab brokerage that can only hold the IBIT and ETHE
   // ETFs. It belongs in acc-045, the Coinbase account that actually custodies coins, and at the one
   // BTC price the app knows.
   { id: 'ord-015', accountId: 'acc-045', symbol: 'BTC', side: 'buy', quantity: 0.25, orderType: 'market', status: 'filled', filledQuantity: 0.25, filledPrice: 87_450.00, submittedAt: '2026-02-21T14:15:00Z', filledAt: '2026-02-21T14:15:01Z', assetClass: 'digital_asset', fractionalQuantity: true },
@@ -78,7 +78,7 @@ export const orders: Order[] = [
 ]
 
 /**
- * §9.3 · currencies-and-fx — the one place an account's native currency is resolved for the
+ * The one place an account's native currency is resolved for the
  * rebalance surface, so the preview and every trade on it read the same fact instead of each
  * re-deriving (and potentially disagreeing on) the USD fallback for an account with no
  * `baseCurrency` set.
@@ -156,7 +156,7 @@ function taxAwareLotOrder(lots: readonly CustodianLot[], symbol: string): Custod
 /** Realize a sale of `notional` drawn from `ordered` in exactly that order. */
 function realizeOrderedLots(ordered: readonly CustodianLot[], symbol: string, notional: number): RealizedSale {
   if (ordered.length === 0 || notional <= 0) return NOTHING_REALIZED
-  // §0.6 · GLD's long-term gain is collectibles gain (31.8%), not 23.8%.
+  // GLD's long-term gain is collectibles gain (31.8%), not 23.8%.
   const character = taxCharacterOf(symbol)
   const rateFor = (holdingPeriod: CustodianLot['holdingPeriod']) => taxRateFor(holdingPeriod, character)
   let remaining = notional
@@ -205,7 +205,7 @@ function realizeOrderedLots(ordered: readonly CustodianLot[], symbol: string, no
 
 /**
  * Realize a sale of `notional` dollars out of `target`: the signed short- and long-term result
- * and the capital-gains tax on its gains, using the same per-lot generator the tax page reads (`generateTaxLots`) and the same rate function
+ * and the capital-gains tax on its gains, using the book's per-lot generator (`generateTaxLots`) and the same rate function
  * (`taxRateFor`) it applies — a short-term-heavy sell is taxed at `SHORT_TERM_RATE` (40.8%), not
  * silently at the long-term rate (23.8%) for the entire position. A tax-aware pass sells the lots
  * carrying the least tax per dollar sold first (`taxAwareLotOrder`); a tax-unaware pass sells the
@@ -219,7 +219,7 @@ function realizeSale(accountLots: readonly CustodianLot[], target: Position, not
 /**
  * What a proposed trade executes against: a symbol, its price **in the account's own currency**,
  * and — for a sell — the position being trimmed. A buy into an asset class the account holds
- * nothing in has no position, which is precisely §9.7's point.
+ * nothing in has no position, which is precisely the point.
  */
 type TradeCandidate = { symbol: string; name: string; price: number; position?: Position }
 
@@ -227,7 +227,7 @@ type TradeCandidate = { symbol: string; name: string; price: number; position?: 
  * The model sleeve a leg is trading, carried alongside the leg rather than re-derived by whoever
  * needs it.
  *
- * Task 9 · the model-trade preview has to say *why* it proposes each trade, and its `reason`
+ * The model-trade preview has to say *why* it proposes each trade, and its `reason`
  * string is exactly this sleeve's drift stated in words ("US Equity 47.2% against a 42.0%
  * target"). Recomputing the weights in `trading.ts` to write that sentence would put the
  * rebalance engine's arithmetic and the sentence describing it in two files, free to disagree —
@@ -246,7 +246,7 @@ type Sleeve = {
 export type ProposedTradeLeg = ProposedTrade & Sleeve
 
 /**
- * §9.7 · the order in which an overweight class is sold down. The engine used to take
+ * The order in which an overweight class is sold down. The engine used to take
  * `candidates[0]` — the fixture's declaration order — so acc-002 trimmed SPY, carrying a
  * $355,206.70 embedded gain, while INTC sat in the same asset class with a $45,850 unrealized
  * loss. A "tax-aware" toggle that picks a materially worse tax outcome than an obvious loss lot
@@ -270,7 +270,7 @@ export type ProposedTradeLeg = ProposedTrade & Sleeve
  *
  * A tax-aware pass also never sells a position whose every lot is `recentlyOpened` (held 31 days
  * or fewer). Such a position is, in practice, a harvest replacement: acc-002's 180 SMH were
- * bought 2026-02-20 to keep semiconductor exposure after the INTC loss sale (note-002, comp-006),
+ * bought 2026-02-20 to keep semiconductor exposure after the INTC loss sale (comp-006),
  * and at zero gain they ranked ahead of SPY, so the toggle sold them five days later and undid the
  * harvest. Holding the replacement past the 31st day is the TLH practice; the sleeve then fills
  * from the next candidate as it always would.
@@ -292,7 +292,7 @@ function recentlyOpenedPositions(lots: readonly CustodianLot[], asOfISO: string)
 }
 
 /**
- * §9.7 · which security to buy into an underweight class. An account that already holds the class
+ * Which security to buy into an underweight class. An account that already holds the class
  * adds to what it holds; an account that holds **nothing** in it buys the model's own
  * implementation security, which is the case the engine previously could not express at all —
  * acc-041 was 94.4% international equity against a 15% target and proposed nothing, because every
@@ -303,7 +303,7 @@ function recentlyOpenedPositions(lots: readonly CustodianLot[], asOfISO: string)
  * $268.50). Dividing an HKD notional by a USD price yields a quantity that is 7.82x too large and
  * means nothing in either currency. The price is therefore converted into the account's currency
  * once, here, at the same `FX_RATES_USD_BASE` the rest of the app reads — so `estimatedValue`
- * stays native (matching the trade's own `currency` tag, §9.3) and `quantity` is a real share
+ * stays native (matching the trade's own `currency` tag) and `quantity` is a real share
  * count. A held position needs no conversion: `positions.ts` already prices each account's
  * holdings in that account's currency.
  */
@@ -320,7 +320,7 @@ function pickBuyCandidate(held: Position[], modelId: string, assetClass: string,
 }
 
 /**
- * Phase 3 · a buy for an underweight class that `pickBuyCandidate`'s choice would wash
+ * A buy for an underweight class that `pickBuyCandidate`'s choice would wash
  * (`washingSymbols`): the model's own implementation security for the class first, then what the
  * account already holds in it, skipping every washing symbol. "Substantially identical" is the
  * same symbol here, as throughout `wash-sale.ts`. A model security the account holds is bought as
@@ -344,7 +344,7 @@ function substituteBuyCandidate(
 }
 
 /**
- * C26 · rebalancing / tax-efficiency — `taxImpact: taxAware ? 3_800 : 0` made the riskier setting
+ * `taxImpact: taxAware ? 3_800 : 0` made the riskier setting
  * display as free. Tax is estimated per-lot from the account's actual embedded gains at the
  * lot's own holding-period rate, so a tax-unaware rebalance realizes MORE than a tax-aware one,
  * never zero — and a Roth IRA or traditional IRA (`isTaxableAccount`) shows zero, always.
@@ -352,21 +352,21 @@ function substituteBuyCandidate(
  * Trades come from the account's own drift (`computeDriftForAccount`, the same function the
  * drift surface reads) filtered by the caller's own `driftThreshold` (the Rebalance page's
  * control), not a hardcoded 0.005. `d.actual > d.target` is what tells an overweight asset class
- * (sell) from an underweight one (buy). Task 21 made `d.drift` **signed** (negative = underweight),
+ * (sell) from an underweight one (buy). `d.drift` is **signed** (negative = underweight),
  * so both the threshold test and the notional take `Math.abs` — comparing the raw value against a
  * positive threshold would silently drop every underweight class, leaving an all-sell proposal.
  *
- * Fix round 3 — self-financing applies to the **sell** side only, and only to avoid stranding
+ * Self-financing applies to the **sell** side only, and only to avoid stranding
  * proceeds that have nowhere to go: `sellScale` caps sells at what the buy side can actually
  * absorb, which correctly falls to **zero** — propose nothing — when there is nothing at all to
- * absorb them (round 2's `totalBuy > 0 &&` guard left this branch unscaled instead, which read
+ * absorb them (an earlier `totalBuy > 0 &&` guard left this branch unscaled instead, which read
  * as a short sale in a long-only demo on the account's proxy holding for an asset class it's
  * overweight but can't rebalance out of). Buys are **never** capped: an account draws on its own
  * cash reserve to fund a purchase, exactly as it always could — capping buys to match sells
- * (round 2's `buyScale`) needlessly shrank purchases an account had ample cash to make outright,
+ * (an earlier `buyScale`) needlessly shrank purchases an account had ample cash to make outright,
  * leaving both the overweight-cash and the underweight-target gaps uncorrected.
  *
- * Fix round 4 — proceeds have a second home the round-3 cap ignored: **cash itself**. `cash` is
+ * Proceeds have a second home the sell cap above ignored: **cash itself**. `cash` is
  * an asset class in the model with its own target weight, but it never yields a tradeable
  * candidate (the `p.symbol !== 'CASH'` filter below), so it could never contribute to
  * `totalBuy`. Capping sells at `totalBuy` alone therefore stranded every account whose only
@@ -418,7 +418,7 @@ export function standingHarvestSubstitutions(
   return substitutions.filter((s) => traded('buy', s.bought.symbol) && (!s.harvested || traded('sell', s.foreclosed.symbol)))
 }
 
-/** Phase 3 · constraints a proposal is generated under. All optional; `{}` is the unconstrained generator. */
+/** Constraints a proposal is generated under. All optional; `{}` is the unconstrained generator. */
 export type GenerationConstraints = {
   /** Sell only loss lots. Tax-advantaged accounts have no loss to harvest and sell nothing. */
   harvestOnly?: boolean
@@ -487,7 +487,7 @@ function largestSaleWithin(realize: (value: number) => RealizedResult, ceiling: 
  * `generateRebalanceTrades` with the lots each leg sells. A preview passes the batch's proposals
  * through `settleBatchWashSales`, which needs them; the legs are the same either way.
  *
- * Phase 3 · `constraints` narrow what the proposal may do, and every class a constraint holds away
+ * `constraints` narrow what the proposal may do, and every class a constraint holds away
  * from target is named in `heldBack` with the constraint that did it:
  * - `harvestOnly` sells only lots standing at a loss, and keeps the buys those sales and the cash
  *   above target can fund. A tax-advantaged account has no loss to harvest and sells nothing.
@@ -583,7 +583,7 @@ export function generateRebalanceProposal(
       return [{ target, side, notional: rawNotional, sleeve }]
     })
 
-  // Phase 4 · a buy of a security the Harvest Scanner flags for this taxpayer forecloses that harvest.
+  // A buy of a security the Harvest Scanner flags for this taxpayer forecloses that harvest.
   // Where the class has a non-identical substitute that is neither flagged nor washing, the substitute
   // is bought instead; a loss this account holds in the flagged security is harvested now, its loss
   // lots only, and its proceeds go to the substitute. With no substitute the buy stands. The rule
@@ -640,7 +640,7 @@ export function generateRebalanceProposal(
   // `cashDrift.actual`. `positions.ts` hand-types each position's `weight` to three decimals and
   // `computeDriftForAccount` renormalizes them, so the cash weight it reports differs from
   // `cashBalance / totalValue` by up to ~0.06 of a point — $4,695 on acc-001, $4,470 on acc-006.
-  // While buys were small that slack never bound; once §9.7 lets an account buy the classes it
+  // While buys were small that slack never bound; once an account may buy the classes it
   // holds nothing in, `buyCapacity` is consumed to the last dollar and the slack lands straight
   // in the post-trade cash balance: acc-001 spent down to 4.943% actual cash against a 5% target,
   // acc-044 to 4.977%, acc-045 to 2.972%, acc-046 to 9.959% — real breaches of the model's own
@@ -652,17 +652,17 @@ export function generateRebalanceProposal(
   const cashTargetValue = (cashDrift?.target ?? 0) * account.totalValue
   // Executed money is whole currency units (`estimatedValue` is rounded), so the band is measured
   // in whole units too: floored, a whole-unit trade set cannot step past a target that falls on a
-  // fraction. Phase 7a · C1 made that reachable — the generated cash balances carry cents, and
+  // fraction. That is reachable: the generated cash balances carry cents, and
   // acc-008 onto mod-005 netted $38,756 into a $38,755.50 gap.
   const cashHeadroom = Math.max(0, Math.floor(cashTargetValue - cashValue))
 
-  // §9.6 · the round-4 cap above stops sells pushing cash above target. Nothing stopped
+  // The cash-headroom cap above stops sells pushing cash above target. Nothing stopped
   // uncapped buys pulling it below — acc-043 sold €648,900, bought €909,760, and its cash fell
   // 13.69% -> 5.56% against a 10% target. The mirror bound: buys draw on cash, and an account
   // may not spend below its own cash target to fund them. `buyCapacity` is what sells raise
   // plus the cash genuinely available above target — the `cashAboveTarget` term is what makes
-  // this correct where a round-2 attempt (`buyScale = totalSell / totalBuy`, capping buys to
-  // match sells alone, reverted in round 3) was not: acc-006 legitimately funds buys from its
+  // this correct where an earlier attempt (`buyScale = totalSell / totalBuy`, capping buys to
+  // match sells alone, since reverted) was not: acc-006 legitimately funds buys from its
   // own cash above target — now with no sells at all, since BXPE is periodic-liquidity and never
   // sold — and must continue to.
   //
@@ -687,7 +687,7 @@ export function generateRebalanceProposal(
   //    under-funds every sleeve AND still misses the cash target — worse on both axes than fully
   //    funding what the proceeds can reach.
   //  - Cash remains bounded on both sides regardless: it can rise only to target (`cashHeadroom`)
-  //    and fall only to target (`cashAboveTarget`), which is Task 7's two-sided invariant.
+  //    and fall only to target (`cashAboveTarget`), the two-sided cash invariant.
   // This is not new behavior — it is the choice the floor already made, now named. The existing
   // acc-015 test below ('the floor on cashAboveTarget lets the full $113,820 buy through') is its
   // pin: acc-015 is 0.6 points *under* its cash target and still deploys the full buy.
@@ -707,7 +707,7 @@ export function generateRebalanceProposal(
      */
     const toTrade = ({ target, side, notional: rawNotional, sleeve }: RawLeg, scale: number): ProposedTradeLeg => {
       const notional = rawNotional * scale
-        // §9.7 · `Math.round(notional / price)` rounded a share count **up**, so a sell could name
+        // `Math.round(notional / price)` rounded a share count **up**, so a sell could name
         // more units than the account owns: acc-045 holds 22.5 ETH and 15,231.5 USDC (fractional
         // crypto), and rounding 22.5 to 23 emitted an order to sell more ETH than exists — a
         // custodian rejection. The value cap (`Math.min(rawNotional, position.marketValue)`) held
@@ -789,15 +789,15 @@ export function generateRebalanceProposal(
       return executed
     }
 
-    // §9.6/§9.7 · the two caps are two halves of one statement about the money the proposal moves
+    // The two caps are two halves of one statement about the money the proposal moves
     // into cash. With `endCash = cashValue − executedBuy + executedSell` required to lie between
     // where the account started and its own model cash target:
     //
     //     −cashAboveTarget  ≤  executedSell − executedBuy  ≤  cashHeadroom
     //
     // One bound is the target the account is moving toward; the other is where it started. **Both
-    // are real, and both must be measured on executed money** — which is the round-4 correction
-    // applied to only one of them. Round 4 made the *binding* cap on each branch read the executed
+    // are real, and both must be measured on executed money** — a correction once
+    // applied to only one of them. That version made the *binding* cap on each branch read the executed
     // total and left the *non*-binding one reading the pre-floor total, on the argument that the
     // starting bound "sits far from either result". That argument is false for a thinly-drifted
     // account: acc-033 is only 0.88 of a point overweight cash, its sell cap read the pre-floor
@@ -835,7 +835,7 @@ export function generateRebalanceProposal(
     //  - **The pair stops moving.** A fixed point `b = B(s), s = S(b)`. See the caveat on this one
     //    below — it is very nearly, but not exactly, a proof that the band holds.
     //
-    // Task 9 · the previous form ran a fixed **four** passes and then simply returned whatever it
+    // The previous form ran a fixed **four** passes and then simply returned whatever it
     // held, band or no band. That was sound while the only reachable inputs were each account
     // against its own model — but the model-trade screen previews an account against *any* model,
     // and acc-045 onto mod-003 (or mod-006) converges too slowly for four passes: the gap closed
@@ -952,7 +952,7 @@ export function generateRebalanceProposal(
 }
 
 /**
- * §0.6 · the account's holdings after `legs` execute: a sell reduces its position, a buy adds to
+ * The account's holdings after `legs` execute: a sell reduces its position, a buy adds to
  * its position (or opens one), and cash takes the difference. Weights stay `marketValue /
  * totalValue`, the definition `getPositionsForAccount` uses, because trades move money between
  * holdings without changing the account's value.
@@ -994,7 +994,7 @@ const tradesInFractions = (symbol: string, position: Position | undefined) =>
   SPOT_CRYPTO_SYMBOLS.has(symbol) || (position !== undefined && !Number.isInteger(position.quantity))
 
 /**
- * Phase 3 · a workbench edit re-cut onto one leg. A sale is re-realized lot by lot: from `lotIds`
+ * A workbench edit re-cut onto one leg. A sale is re-realized lot by lot: from `lotIds`
  * in the order given (specific identification) or, without them, in the generator's own tax-aware
  * order. A purchase is re-priced. The engine refuses what cannot be traded rather than clamping it.
  *
@@ -1087,7 +1087,7 @@ export function residualReason(facts: ResidualFacts): ResidualDriftReason {
 }
 
 /**
- * §0.6 · drift after the proposed trades, by asset class, from `computeDriftForHoldings` — the
+ * Drift after the proposed trades, by asset class, from `computeDriftForHoldings` — the
  * function current drift comes from — run on `holdingsAfterTrades`. Every invested class whose
  * |drift| still exceeds `driftThreshold` (the threshold the trades were generated against) carries
  * the reason the proposal could not close it. Cash carries none: it is the balancing item the
@@ -1159,7 +1159,7 @@ export type PreviewEntry = { account: Account; modelId?: string } & RebalancePro
  * The rebalance previews of a batch: §1091 settled across each wash-sale taxpayer's accounts, the
  * tax each proposal adds to its return netted against that return's year-to-date results (and
  * earlier accounts in the batch), the repurchase restrictions, and the drift after the trades. The
- * one assembly behind `/api/oms/rebalance` and every Phase 3 proposal version.
+ * one assembly behind `/api/oms/rebalance` and every proposal version.
  */
 export function buildRebalancePreviews(
   proposed: readonly PreviewEntry[],
@@ -1167,7 +1167,7 @@ export function buildRebalancePreviews(
   driftThreshold: number | undefined,
   asOfISO: string,
 ): RebalancePreview[] {
-  // §0.2 · §1091 across the batch: a buy here can wash a loss sold there, for one taxpayer.
+  // §1091 across the batch: a buy here can wash a loss sold there, for one taxpayer.
   const settled = settleBatchWashSales(proposed, asOfISO)
   const batch = proposed.map(({ account }, i) => ({ account, legs: settled[i]! }))
   const estimates = estimateTaxOnReturns(batch, asOfISO)
@@ -1176,7 +1176,7 @@ export function buildRebalancePreviews(
     const tax = estimates[i]!
     return {
       accountId: account.id,
-      // §9.3 — same source as every trade on this preview (`currencyForAccount`), so a preview
+      // Same source as every trade on this preview (`currencyForAccount`), so a preview
       // with zero proposed trades still carries a correct currency tag rather than an implicit
       // USD default.
       currency: currencyForAccount(account.id),

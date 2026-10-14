@@ -20,10 +20,10 @@ const generated = accounts.filter(isModelManaged).filter((a) => !explicit.has(a.
  * Every other model-following account sits inside its band.
  */
 const SEED_OUTSIDE_BAND: ReadonlyMap<string, string> = new Map([
-  ['acc-001', 'Johnson Family Trust: the household rebalance the dashboard names'],
-  ['acc-002', "Johnson story: Robert's drift is what the Phase 3 proposal and today's release correct"],
+  ['acc-001', 'Johnson Family Trust: the household-level rebalance'],
+  ['acc-002', "Johnson story: Robert's drift is what the proposal and today's release correct"],
   ['acc-006', 'Chen trust: the Ultra-HNW batch rebalance narrative'],
-  ['acc-035', "Garcia: equity far above Conservative Income for a 75-year-old (nba-006)"],
+  ['acc-035', "Garcia: equity far above Conservative Income for a 75-year-old"],
   ['acc-046', 'Thompson inherited IRA: cash held back for the required distributions'],
 ])
 

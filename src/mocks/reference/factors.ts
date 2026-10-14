@@ -7,7 +7,7 @@ export const FACTORS: readonly { id: FactorId; label: string }[] = [
 ]
 
 /**
- * Model assumptions (R11), not loadings estimated from returns: how much of each style factor one unit of
+ * Model assumptions, not loadings estimated from returns: how much of each style factor one unit of
  * an asset class carries. The market loading is not here; it is the class's beta, derived from the correlation
  * and volatility assumptions (`assetClassBeta`).
  */

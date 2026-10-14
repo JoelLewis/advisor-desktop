@@ -18,7 +18,7 @@ type BatchEntry = { account: Account } & Pick<RebalanceProposal, 'legs' | 'sales
 const NOTHING_SOLD: LegSale = { soldLosses: [], consumedLotIds: [], lotTakes: [] }
 
 /**
- * §0.2 · the IRC §1091 consequences of executing a whole batch today, settled across each wash-sale
+ * The IRC §1091 consequences of executing a whole batch today, settled across each wash-sale
  * taxpayer's accounts at once:
  * - Replacement shares are the taxpayer's purchases in the last 30 days (IRAs and Roths included)
  *   **and every buy the batch itself proposes in any of the taxpayer's accounts**, dated today.

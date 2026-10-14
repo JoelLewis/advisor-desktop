@@ -4,7 +4,7 @@ import type { BillingExceptionRecord, BillingMethod, BillingRunDate } from '@/ty
  * Leaf data only: how each household's agreement bills, the firm's quarterly runs, and the exceptions
  * those runs raised. Every figure — value, fee, run total — is derived in `src/mocks/reference/billing.ts`.
  *
- * Phase 7a · R1 — the hand-typed per-household rates ("tiered" on a flat rate) and breakpoint analyses
+ * The hand-typed per-household rates ("tiered" on a flat rate) and breakpoint analyses
  * are gone: every household bills on the firm's one tiered schedule.
  */
 export const FEE_TERMS: readonly { householdId: string; method: BillingMethod }[] = [
@@ -15,7 +15,7 @@ export const FEE_TERMS: readonly { householdId: string; method: BillingMethod }[
   { householdId: 'hh-013', method: 'advance' },
 ]
 
-/** The firm bills on the first trading day of each quarter, on the value at the quarter end before it (R2). */
+/** The firm bills on the first trading day of each quarter, on the value at the quarter end before it. */
 export const BILLING_RUNS: readonly BillingRunDate[] = [
   { id: 'run-2025-07', runDate: '2025-07-01', valuationDate: '2025-06-30', advanceQuarter: 'Q3 2025', arrearsQuarter: 'Q2 2025' },
   { id: 'run-2025-10', runDate: '2025-10-01', valuationDate: '2025-09-30', advanceQuarter: 'Q4 2025', arrearsQuarter: 'Q3 2025' },

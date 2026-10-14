@@ -69,7 +69,7 @@ export function practiceView(viewerId: string): PracticeView | undefined {
         return years < under && years >= (TENURE[i - 1]?.under ?? 0)
       }).length,
     })),
-    // The index is stated in whole points, as the legacy book page did; effective N comes from the unrounded index.
+    // The index is stated in whole points; effective N comes from the unrounded index.
     concentration: { hhi: Math.round(index), effectiveN: effectiveN(index) },
     households: rows,
     methods: [...METHODS],

@@ -1,12 +1,12 @@
 /**
  * A small, disclosed, per-account risk model.
  *
- * C5 · forward-risk / historical-risk — every account previously returned the same
+ * Every account previously returned the same
  * `var95: 485_000`, which renders as a 485% loss on a $100K account and is unlabeled on an $8.2M
  * one. VaR must scale with portfolio value and carry a horizon, a confidence level and a method.
- * C4 · performance-metrics — the reported Sharpe of 1.34 implied a ~19.8% return against the same
+ * The reported Sharpe of 1.34 implied a ~19.8% return against the same
  * API's 12.4%; SR = (Rp − Rf)/σp computed from the same series gives 0.71.
- * C6 · performance-metrics / performance-reporting — tracking error is one annualized statistic,
+ * Tracking error is one annualized statistic,
  * not a different number per horizon, and R_p − R_b is *active return*, not Jensen's alpha.
  *
  * Assumptions are constants here so they can be rendered as disclosure text next to the numbers.
@@ -21,7 +21,7 @@ export type AssetClassRisk = {
 }
 
 /**
- * Phase 7a · beta is no longer hand-set beside σ: it is derived from these volatilities and the
+ * Beta is no longer hand-set beside σ: it is derived from these volatilities and the
  * correlation table below (`assetClassBeta`), so the factor table and σ agree about how equity-like
  * a sleeve is. Hand-set, real estate read 0.80 and private equity 1.20 while their correlations
  * implied 0.56 and 0.74.

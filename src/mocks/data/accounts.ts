@@ -1,13 +1,13 @@
 import type { Account } from '@/types/account'
 
 /**
- * D5 — every `cashBalance` was exactly 2.00% of `totalValue`, a placeholder that disagreed with the
+ * Every `cashBalance` was exactly 2.00% of `totalValue`, a placeholder that disagreed with the
  * CASH position in each of the 17 accounts that carry explicit positions (8.1%–22.3% there).
  * `cashBalance` is now the account's actual CASH position. For the 30 accounts served by the position
- * generator (Phase 7a · C1: each holds its own model's lineup, tilted per account), it is the residual
+ * generator (each holds its own model's lineup, tilted per account), it is the residual
  * once the generated whole-share holdings are bought, so the rows sum to `totalValue`.
  *
- * Phase 7a · C1 — mandates. 44 accounts follow a firm model (`mandate: 'model'`); acc-041 (Hong Kong
+ * Mandates. 44 accounts follow a firm model (`mandate: 'model'`); acc-041 (Hong Kong
  * equities), acc-042 (Singapore equities, REITs and bonds; no US equity, so it follows no firm model)
  * and acc-045 (digital assets) are custom mandates, held at the client's instruction, with no model and
  * no drift band. acc-043 and acc-044 now follow the models their names state (Balanced Growth,
@@ -16,7 +16,7 @@ import type { Account } from '@/types/account'
  * 025, 027, 030, 034, 036, 037, 040); the deliberate exceptions are listed, each with its reason, in
  * `MANDATE_BAND_EXCEPTIONS` below.
  *
- * D6 — both UMA sleeve sets are rebuilt from the account's real positions grouped by asset class.
+ * Both UMA sleeve sets are rebuilt from the account's real positions grouped by asset class.
  * acc-001 previously claimed an `Alternatives / Blackstone` sleeve worth $1,230,000 in an account
  * holding zero alternatives, and neither set summed to its account's `totalValue`.
  */
@@ -126,7 +126,7 @@ export const accounts: Account[] = [
 ]
 
 /**
- * Phase 7a · C1 — model-managed accounts whose model sits more than one risk band from the client's
+ * Model-managed accounts whose model sits more than one risk band from the client's
  * questionnaire band, each with the reason the firm holds it there. `account-invariants.test.ts` pins
  * that every other model-managed account is within one band. Glide-path (529) accounts are exempt by
  * rule: their risk follows the beneficiary's time horizon, not the owner's questionnaire.

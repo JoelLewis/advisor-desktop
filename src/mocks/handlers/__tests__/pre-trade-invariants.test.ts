@@ -812,7 +812,7 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
     //
     // "Prefer losses, then the smallest embedded gain" is an ordering drawn from until the
     // sleeve is filled, not a single pick — with one exclusion. The 180 SMH (pos-265) were bought
-    // 2026-02-20 as the INTC harvest replacement (note-002, comp-006, nba-002); selling them five
+    // 2026-02-20 as the INTC harvest replacement (comp-006); selling them five
     // days later at zero gain would undo the harvest, and TLH practice is to hold the replacement
     // past the 31st day. A position whose every lot is that recent is not a tax-aware sell
     // candidate, so the sequence is INTC in full ($199,150), then SPY for the rest.

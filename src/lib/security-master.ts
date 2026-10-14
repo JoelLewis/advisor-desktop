@@ -1,14 +1,14 @@
 /**
- * C23 · diversification / investment-policy — a 10% single-*name* limit applied to broad index
+ * A 10% single-*name* limit applied to broad index
  * ETFs made VTI (27.8%), SPY and AGG read as IPS breaches, which tells an advisor the tool does
  * not know what an ETF is. Single-issuer limits apply to individual securities; funds get a
  * separate, higher fund-level limit. NVDA at 13.9% in acc-011 is then the only breach in the
  * book — which is the genuine, and far more compelling, concentration story.
  *
- * Fix round 1: the first pass only listed US-domiciled tickers, so eight foreign-listed pooled
+ * The first pass only listed US-domiciled tickers, so eight foreign-listed pooled
  * vehicles held in the non-USD accounts (acc-041 HKD, acc-042 SGD, acc-043 EUR, acc-044 CHF) fell
- * through to the single-name default and reintroduced C23 for a different set of tickers. Those
- * accounts are also the ones the FX fix (Task 10) touched — they are the only non-USD accounts in
+ * through to the single-name default and reintroduced the false breaches for a different set of tickers.
+ * Those accounts are the only non-USD accounts in
  * the book, so anything written against a US-centric symbol list breaks there first. Note that
  * `intl_equity` also holds genuine individual foreign stocks (HSBC, Tencent, ASML, Nestle, ...),
  * so the fix is explicit symbols, not adding `intl_equity`/`fixed_income` to FUND_ONLY_CLASSES —
@@ -90,7 +90,7 @@ export function concentrationLimitFor(kind: SecurityKind): number {
 }
 
 /**
- * §0.6 · grantor trusts that hold physical precious metal. A grantor trust's holders are treated
+ * Grantor trusts that hold physical precious metal. A grantor trust's holders are treated
  * as owning its assets (§§671–677), so selling a share is selling metal, a collectible under
  * §408(m)(2): its long-term gain is collectibles gain, taxed at up to 28% (§1(h)(4)–(5)), not
  * 20%. Funds that hold futures or miners' shares are not collectibles and are not listed.

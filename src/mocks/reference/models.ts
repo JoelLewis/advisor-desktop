@@ -17,7 +17,7 @@ import { RISK_PROFILE_TABLE } from '@/lib/risk-profile'
 import { MOCK_NOW_ISO } from '@/lib/clock'
 
 /**
- * The index each sleeve is measured by (R8). International equity depends on whether the model carries a
+ * The index each sleeve is measured by. International equity depends on whether the model carries a
  * separate emerging-markets sleeve. The commodities sleeve holds GLD, so it is gold and measured by the LBMA
  * gold price; digital assets are measured by a broad index that covers the coins and trusts the book holds,
  * not bitcoin alone, and its return here is the modeled assumption, not the index's record.
