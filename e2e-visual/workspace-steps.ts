@@ -53,7 +53,7 @@ export async function sendLetter(page: Page) {
 
 export const viewAs = (page: Page, label: string) => page.getByLabel('View as').selectOption({ label })
 /** A firm surface from the Desk pane at the top of the thread list. */
-export const deskLink = (page: Page, name: 'Supervision' | 'Archive') =>
+export const deskLink = (page: Page, name: 'Supervision' | 'Archive' | 'Billing' | 'Reconciliation' | 'Risk' | 'Models' | 'Practice' | 'Blotter') =>
   page.getByRole('navigation', { name: 'Threads' }).getByRole('link', { name, exact: true })
 
 /** The presenter's shortcut beside pending staged orders: Mark's default release, confirmed. */
@@ -151,4 +151,20 @@ export async function sendToHer(page: Page, version: number) {
   await context(page).getByRole('region', { name: 'Proposal' }).getByRole('button', { name: `Send v${version} to Dr. Pell` }).click()
   await page.getByRole('dialog', { name: `Send v${version} to Dr. Pell?` }).getByRole('button', { name: 'Confirm' }).click()
   await expect(conversation(page)).toContainText('Dear Dr. Pell,')
+}
+
+/** Resolve a reconciliation break as a binding act, from the reconciliation view. */
+export async function resolveBreakNamed(page: Page, breakId: string, resolution: string, rationale: string) {
+  await page.getByRole('button', { name: `Resolve ${breakId}`, exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: `Resolve ${breakId}?` })
+  await dialog.getByLabel('Resolution').selectOption({ label: resolution })
+  await dialog.getByLabel('Rationale').fill(rationale)
+  await dialog.getByRole('button', { name: 'Confirm' }).click()
+  await expect(page.getByRole('main')).toContainText(/Resolved · REC-\d{4}/)
+}
+
+/** A row of a reference view, taken to its team thread; returns once the link to the thread shows. */
+export async function takeToTeamThread(page: Page, rowLabel: string) {
+  await page.getByRole('button', { name: `Take ${rowLabel} to a team thread`, exact: true }).click()
+  await expect(page.getByRole('link', { name: /^In / }).first()).toBeVisible()
 }
