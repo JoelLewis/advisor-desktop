@@ -3,7 +3,7 @@ import { isDraftStale } from '@/mocks/data/proposals-store'
 import { accounts } from '@/mocks/data/accounts'
 import { store } from '@/mocks/data/workspace-store'
 import { openWashSaleWindowsFor } from '@/mocks/handlers/tax-return'
-import type { OpenWashSaleWindow } from '@/mocks/data/realised-sales'
+import type { OpenWashSaleWindow } from '@/mocks/data/realized-sales'
 import { todayISO } from '@/lib/clock'
 import { clientDate } from '@/kit/measure'
 

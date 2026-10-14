@@ -51,7 +51,7 @@ export function clientSummaryOf(record: ProspectRecord, c: ProspectVersionConten
     const head = `- ${l.name} (${l.symbol}): ${fmtQuantity(l.quantity)} shares, ${clientMoney(l.marketValue)}`
     if (c.concentration?.symbol !== l.symbol) return `${head}.`
     const term = l.holdingPeriod === 'long' ? 'long-term' : 'short-term'
-    return `${head}, about ${clientWholePercent(c.concentration.weightOfAssets)} of your total assets across both accounts. Selling it now would realize a ${term} gain of about ${aboutMoney(l.unrealised)}, with an estimated federal tax of about ${aboutMoney(l.taxIfSoldNow)} (estimate; consult your tax professional).`
+    return `${head}, about ${clientWholePercent(c.concentration.weightOfAssets)} of your total assets across both accounts. Selling it now would realize a ${term} gain of about ${aboutMoney(l.unrealized)}, with an estimated federal tax of about ${aboutMoney(l.taxIfSoldNow)} (estimate; consult your tax professional).`
   })
   const staged = c.tranches.length > 0 && c.concentration ? [
     '',

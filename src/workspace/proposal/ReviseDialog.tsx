@@ -59,10 +59,10 @@ export function ReviseDialog({ open, onOpenChange, detail }: ReviseDialogProps) 
       <form ref={formRef} onSubmit={submit} className="flex flex-col gap-4">
         {latest.edits.length > 0 ? <p className="text-body">{`Edits made in v${latest.n} are not carried into the revision.`}</p> : null}
         <Checkbox label="Harvest only: sell only lots at a loss" checked={form.harvestOnly} onChange={(v) => edit({ harvestOnly: v })} />
-        <Checkbox label="Cap realised gains" checked={form.capOn} onChange={(v) => edit({ capOn: v })} />
+        <Checkbox label="Cap realized gains" checked={form.capOn} onChange={(v) => edit({ capOn: v })} />
         {form.capOn ? (
           <div className="pl-7">
-            <NumberInput label="Realised gains cap" unit="USD" value={form.cap} error={problemOn('cap')} onChange={(v) => edit({ cap: v })} />
+            <NumberInput label="Realized gains cap" unit="USD" value={form.cap} error={problemOn('cap')} onChange={(v) => edit({ cap: v })} />
           </div>
         ) : null}
         {positions.isPending ? <p role="status" className="text-body text-ink-3">Loading the holdings…</p>

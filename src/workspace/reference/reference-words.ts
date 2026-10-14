@@ -3,14 +3,15 @@ import type { BlotterStatus } from '@/types/reference-blotter'
 import type { ModelBenchmark, ModelSummary } from '@/types/reference-models'
 import type { IntegrationStatus, MatchKind } from '@/types/reference-reconciliation'
 import type { RiskPosture, ToleranceStatus } from '@/types/reference-risk'
-import { fmtPoints } from '@/kit/measure'
+import { fmtDate, fmtPoints } from '@/kit/measure'
+import { assetClassLabel } from '@/workspace/asset-class-label'
 
 export const BILLING_METHOD_WORDS: Readonly<Record<BillingMethod, string>> = { advance: 'In advance', arrears: 'In arrears' }
 export const BLOTTER_STATUS_WORDS: Readonly<Record<BlotterStatus, string>> = {
-  working: 'Working', pending_compliance: 'Pending compliance', filled: 'Filled', cancelled: 'Canceled', withdrawn: 'Withdrawn', returned: 'Returned',
+  working: 'Working', pending_compliance: 'Pending compliance', filled: 'Filled', canceled: 'Canceled', withdrawn: 'Withdrawn', returned: 'Returned',
 }
 export const BLOTTER_STATUS_TAG: Readonly<Record<BlotterStatus, string>> = {
-  working: 'WORKING', pending_compliance: 'PENDING COMPLIANCE', filled: 'FILLED', cancelled: 'CANCELED', withdrawn: 'WITHDRAWN', returned: 'RETURNED',
+  working: 'WORKING', pending_compliance: 'PENDING COMPLIANCE', filled: 'FILLED', canceled: 'CANCELED', withdrawn: 'WITHDRAWN', returned: 'RETURNED',
 }
 export const TOLERANCE_TAG: Readonly<Record<ToleranceStatus, string>> = { above: 'ABOVE TOLERANCE', within: 'WITHIN TOLERANCE', below: 'BELOW TOLERANCE', glide_path: 'GLIDE PATH' }
 
@@ -33,7 +34,7 @@ export const FREQUENCY_WORDS: Readonly<Record<string, string>> = {
   monthly: 'Monthly', quarterly: 'Quarterly', semi_annual: 'Semi-annual', annual: 'Annual', threshold_only: 'On threshold only',
 }
 export const BENCHMARK_KIND_WORDS: Readonly<Record<ModelBenchmark['kind'], string>> = {
-  policy_blend: 'Policy blend', glide_path: 'Glide path at the current stage', mandate: "The mandate's own benchmark",
+  policy_blend: 'Policy blend', glide_path: "Glide path · today's stage targets", mandate: "The mandate's own benchmark",
 }
 export const SEGMENT_WORDS: Readonly<Record<string, string>> = { platinum: 'Platinum', gold: 'Gold', silver: 'Silver', bronze: 'Bronze' }
 
@@ -47,7 +48,10 @@ export function wordFor(map: Readonly<Record<string, string>>, key: string): str
 /** "v2", or "v2 · v3 pending from 2026-04-01". */
 /** A model's pending version, if any, as the line beneath its current one. */
 export const pendingVersionWords = (m: Pick<ModelSummary, 'pendingVersion'>) =>
-  m.pendingVersion ? `v${m.pendingVersion.version} pending from ${m.pendingVersion.effectiveDate}` : undefined
+  m.pendingVersion ? `v${m.pendingVersion.version} pending from ${fmtDate(m.pendingVersion.effectiveDate)}` : undefined
 
 export const versionWords = (m: Pick<ModelSummary, 'currentVersion' | 'pendingVersion'>) =>
-  m.pendingVersion ? `v${m.currentVersion} · v${m.pendingVersion.version} pending from ${m.pendingVersion.effectiveDate}` : `v${m.currentVersion}`
+  m.pendingVersion ? `v${m.currentVersion} · v${m.pendingVersion.version} pending from ${fmtDate(m.pendingVersion.effectiveDate)}` : `v${m.currentVersion}`
+
+/** A sleeve's name on the reference views: the commodities sleeve holds GLD and is measured by the LBMA gold price, so it is Gold. */
+export const sleeveLabel = (assetClass: string) => (assetClass === 'commodities' ? 'Gold' : assetClassLabel(assetClass))

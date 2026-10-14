@@ -15,7 +15,7 @@ import { bandFor } from '@/lib/risk-profile'
 import { computeMetrics, computeDriftForAccount } from './pms'
 import { isModelManaged } from '@/lib/mandate'
 import { generateTaxLotsWithSaleRisk } from './custodian'
-import { openWashSaleWindows } from '../data/realised-sales'
+import { openWashSaleWindows } from '../data/realized-sales'
 import { FX_RATES_USD_BASE } from '../data/currencies'
 import { convertToBase } from '@/lib/currency'
 import { sumAccountsUSD } from '@/lib/aum'
@@ -54,7 +54,7 @@ export function harvestWashSaleNote(lots: readonly Pick<TaxLot, 'repurchaseBlock
       disallowed && 'where the replacement was bought in an IRA or Roth, that part of the loss is permanently disallowed',
       deferred && 'where it was bought in a taxable account, that part is deferred into the replacement\'s basis',
     ].filter((o): o is string => typeof o === 'string')
-    return "At least one candidate's sale would be a wash sale, in part or in whole — the same security was bought by the same taxpayer within the last 30 days, so the loss on the matched shares is not realised now: "
+    return "At least one candidate's sale would be a wash sale, in part or in whole — the same security was bought by the same taxpayer within the last 30 days, so the loss on the matched shares is not realized now: "
       + `${outcomes.join('; ')}.`
   }
   if (lots.some((l) => l.repurchaseBlockedUntil !== null)) {
@@ -63,7 +63,7 @@ export function harvestWashSaleNote(lots: readonly Pick<TaxLot, 'repurchaseBlock
   return 'Wash sale window clear for all candidates.'
 }
 
-/** A harvest candidate reduced to what a sale today realises: `lossNow` is the allowed part of its loss, in USD, negative. */
+/** A harvest candidate reduced to what a sale today realizes: `lossNow` is the allowed part of its loss, in USD, negative. */
 type HarvestNow = { accountId: string; positionId: string; holdingPeriod: TaxLot['holdingPeriod']; lossNow: number }
 
 function harvestCandidatesAcrossBook(): (TaxLot & { accountId: string })[] {
@@ -82,7 +82,7 @@ function harvestCandidatesAcrossBook(): (TaxLot & { accountId: string })[] {
 }
 
 /**
- * The candidates whose loss is realised this year, at least in part, if sold now, each carrying only
+ * The candidates whose loss is realized this year, at least in part, if sold now, each carrying only
  * that allowed part — what every harvest total counts. §1091 takes only the washed shares' loss.
  */
 function harvestableLotsAcrossBook(): HarvestNow[] {
@@ -690,7 +690,7 @@ export const aiHandlers = [
           // `TaxLot.repurchaseBlockedUntil` and `saleWash` through `harvestWashSaleNote` —
           // both set by `generateTaxLotsWithSaleRisk` (custodian.ts) — rather than asserting the window is clear
           // unconditionally. No harvestable losses means no insight, not a $0 one.
-          // Figures count only the part of each loss realised now; the §1091 sentence reads every
+          // Figures count only the part of each loss realized now; the §1091 sentence reads every
           // candidate, so a washing one is still named.
           const accountCandidates = harvestCandidatesAcrossBook().filter((l) => l.accountId === entityId)
           const accountHarvestable = accountCandidates.filter(harvestsNow).map(toHarvestNow)

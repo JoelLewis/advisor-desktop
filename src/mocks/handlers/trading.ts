@@ -15,7 +15,7 @@ import type { ModelTradePreview } from '@/types/trading'
  * The model-trade screen has no tax-awareness toggle — unlike the rebalance wizard, which exposes
  * one and defaults it on. Rather than leave the setting implicit, this names the choice: previews
  * are generated tax-aware, matching that default, so a sell is drawn from the account's
- * lowest-tax-per-dollar lots first. The alternative (tax-unaware) realises strictly more gain, and
+ * lowest-tax-per-dollar lots first. The alternative (tax-unaware) realizes strictly more gain, and
  * silently choosing the worse of the two for a screen that displays an "Est. Tax Impact" total is
  * not a defensible default.
  */

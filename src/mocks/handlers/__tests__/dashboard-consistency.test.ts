@@ -18,7 +18,7 @@ const formatUSD = (value: number) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value)
 
 // Fix round 1, Important #2 — a loss inside a tax-deferred or tax-free wrapper produces no
-// deduction: there is no realisation event to harvest. Kept independent of `ai.ts`'s
+// deduction: there is no realization event to harvest. Kept independent of `ai.ts`'s
 // `HARVEST_ELIGIBLE_TREATMENTS` so a regression to that constant (e.g. dropping `trust_taxable`,
 // or gating on `taxTreatment === 'taxable'` alone and silently excluding acc-006) is caught rather
 // than both sides drifting together.

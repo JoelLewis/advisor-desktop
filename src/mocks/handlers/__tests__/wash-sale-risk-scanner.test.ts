@@ -55,7 +55,7 @@ describe('saleWash: how many shares of this lot would a sale today wash?', () =>
     expect(smh.reduce((s, l) => s + l.saleWash.disallowedShares, 0)).toBe(0)
   })
 
-  it('only the washed proportion of the loss is held back: 220/400 is realised now, 180/400 deferred', async () => {
+  it('only the washed proportion of the loss is held back: 220/400 is realized now, 180/400 deferred', async () => {
     const { generateTaxLots } = await engine()
     const smh = generateTaxLots('acc-001', 8_200_000).filter((l) => l.positionId === TRUST_SMH)
     // −21,920 × 220/400 = −12,056 allowed now; −21,920 × 180/400 = −9,864 deferred; nothing lost.
@@ -90,7 +90,7 @@ describe('saleWash: how many shares of this lot would a sale today wash?', () =>
     const { generateTaxLots, generateRebalanceTrades } = await engine()
     const smhSell = generateRebalanceTrades('acc-001', true).find((t) => t.symbol === 'SMH' && t.side === 'sell')
     expect(smhSell, 'vacuity guard — the preview must sell the SMH').toBeDefined()
-    expect(smhSell!.realisedShortTerm + smhSell!.realisedLongTerm).toBeLessThan(0)
+    expect(smhSell!.realizedShortTerm + smhSell!.realizedLongTerm).toBeLessThan(0)
     const lots = generateTaxLots('acc-001', 8_200_000).filter((l) => l.positionId === TRUST_SMH)
     expect(smhSell!.washSaleRisk).toBe(true)
     expect(lots.some(washesOnSale)).toBe(true)

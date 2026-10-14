@@ -14,7 +14,8 @@ export type AgentProfile = { id: AgentId; name: string; produces: AgentOutput; s
 export type Visibility = 'private' | 'internal' | 'client'
 export type Subject = { type: 'account' | 'household' | 'client' | 'prospect' | 'draft' | 'proposal' | 'prospect_proposal' | 'alert' | 'message' | 'meeting' | 'model' | 'recon_break'; id: string }
 export type Thread = { id: string; title: string; visibility: Visibility; ownerId?: string; partyId?: string; memberIds: string[]; agentIds: AgentId[]; subject?: Subject }
-export type FigureUnit = 'USD' | 'pp' | '%' | 'sh' | 'd' | 'pts' | 'count'
+/** `contracts` counts option contracts; `par` is a bond's face amount in USD. */
+export type FigureUnit = 'USD' | 'pp' | '%' | 'sh' | 'contracts' | 'par' | 'd' | 'pts' | 'count'
 export type Figure = { label: string; value: number; unit: FigureUnit; source: string }   // pp and % values are fractions (0.132)
 export type Citation = { source: string; asOf: string }
 export type Attention = 'info' | 'attention'

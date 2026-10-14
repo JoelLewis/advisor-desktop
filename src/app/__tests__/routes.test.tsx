@@ -51,9 +51,9 @@ describe('routes', () => {
   it('the tax tape states the year-to-date results its estimate nets against', async () => {
     await renderKitReady()
     const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
-    const ytd = preview!.ytdRealisedOnReturn!
+    const ytd = preview!.ytdRealizedOnReturn!
     const tape = screen.getByRole('region', { name: 'Tax effect estimate' })
-    expect(tape).toHaveTextContent(`year-to-date realised results (short-term ${fmtResult(ytd.shortTerm)}, long-term ${fmtResult(ytd.longTerm)} USD)`)
+    expect(tape).toHaveTextContent(`year-to-date realized results (short-term ${fmtResult(ytd.shortTerm)}, long-term ${fmtResult(ytd.longTerm)} USD)`)
     expect(tape).not.toHaveTextContent("legs only")
   })
   it('the cash line has no share count or price', async () => {

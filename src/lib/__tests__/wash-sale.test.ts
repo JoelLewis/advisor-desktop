@@ -5,29 +5,29 @@ const window = { symbol: 'INTC', start: '2026-01-21', end: '2026-03-22' }
 
 describe('hasWashSaleRisk (IRC §1091, same-symbol approximation)', () => {
   it('a buy inside an open loss-sale window for the same symbol is at risk', () => {
-    expect(hasWashSaleRisk({ symbol: 'INTC', side: 'buy', realisesLoss: false, soldLotIds: [] }, [window], [], '2026-02-25')).toBe(true)
+    expect(hasWashSaleRisk({ symbol: 'INTC', side: 'buy', realizesLoss: false, soldLotIds: [] }, [window], [], '2026-02-25')).toBe(true)
   })
   it('a buy of a different symbol is not', () => {
-    expect(hasWashSaleRisk({ symbol: 'SMH', side: 'buy', realisesLoss: false, soldLotIds: [] }, [window], [], '2026-02-25')).toBe(false)
+    expect(hasWashSaleRisk({ symbol: 'SMH', side: 'buy', realizesLoss: false, soldLotIds: [] }, [window], [], '2026-02-25')).toBe(false)
   })
   it('a buy after the window closed is not', () => {
-    expect(hasWashSaleRisk({ symbol: 'INTC', side: 'buy', realisesLoss: false, soldLotIds: [] }, [window], [], '2026-03-23')).toBe(false)
+    expect(hasWashSaleRisk({ symbol: 'INTC', side: 'buy', realizesLoss: false, soldLotIds: [] }, [window], [], '2026-03-23')).toBe(false)
   })
   it('a loss sale with the same symbol acquired in the prior 30 days is at risk', () => {
-    expect(hasWashSaleRisk({ symbol: 'TLT', side: 'sell', realisesLoss: true, soldLotIds: [] }, [], [{ symbol: 'TLT', date: '2026-02-01', lotId: 'l1' }], '2026-02-25')).toBe(true)
+    expect(hasWashSaleRisk({ symbol: 'TLT', side: 'sell', realizesLoss: true, soldLotIds: [] }, [], [{ symbol: 'TLT', date: '2026-02-01', lotId: 'l1' }], '2026-02-25')).toBe(true)
   })
   it('a loss sale whose last acquisition is 31 days back is not', () => {
-    expect(hasWashSaleRisk({ symbol: 'TLT', side: 'sell', realisesLoss: true, soldLotIds: [] }, [], [{ symbol: 'TLT', date: '2026-01-25', lotId: 'l1' }], '2026-02-25')).toBe(false)
+    expect(hasWashSaleRisk({ symbol: 'TLT', side: 'sell', realizesLoss: true, soldLotIds: [] }, [], [{ symbol: 'TLT', date: '2026-01-25', lotId: 'l1' }], '2026-02-25')).toBe(false)
   })
   it('a gain sale is never at risk', () => {
-    expect(hasWashSaleRisk({ symbol: 'TLT', side: 'sell', realisesLoss: false, soldLotIds: [] }, [], [{ symbol: 'TLT', date: '2026-02-20', lotId: 'l1' }], '2026-02-25')).toBe(false)
+    expect(hasWashSaleRisk({ symbol: 'TLT', side: 'sell', realizesLoss: false, soldLotIds: [] }, [], [{ symbol: 'TLT', date: '2026-02-20', lotId: 'l1' }], '2026-02-25')).toBe(false)
   })
   it('a loss sale whose only recent acquisition is the lot being sold is not at risk', () => {
-    const leg = { symbol: 'TLT', side: 'sell' as const, realisesLoss: true, soldLotIds: ['l1'] }
+    const leg = { symbol: 'TLT', side: 'sell' as const, realizesLoss: true, soldLotIds: ['l1'] }
     expect(hasWashSaleRisk(leg, [], [{ symbol: 'TLT', date: '2026-02-20', lotId: 'l1' }], '2026-02-25')).toBe(false)
   })
   it('a loss sale is at risk when another lot (e.g. another household account) bought the symbol in the window', () => {
-    const leg = { symbol: 'TLT', side: 'sell' as const, realisesLoss: true, soldLotIds: ['l1'] }
+    const leg = { symbol: 'TLT', side: 'sell' as const, realizesLoss: true, soldLotIds: ['l1'] }
     const acquisitions = [{ symbol: 'TLT', date: '2026-02-20', lotId: 'l1' }, { symbol: 'TLT', date: '2026-02-10', lotId: 'other-acct-lot' }]
     expect(hasWashSaleRisk(leg, [], acquisitions, '2026-02-25')).toBe(true)
   })
@@ -125,8 +125,8 @@ describe('washedLoss (the dollars of a sale\'s loss §1091 takes, pro rata to th
       const lots = [sold('c', '2025-06-03', 100, -1_000, 'long', coin)]
       expect(washedLossOf(lots, [buy('back', 100, 'taxable', coin)]), coin).toEqual({ shortTerm: 0, longTerm: 0, deferred: 0, disallowed: 0 })
       expect(hasUnwashedLossShares(lots, matchWashedShares(lots, [], today)), coin).toBe(false)
-      expect(hasWashSaleRisk({ symbol: coin, side: 'sell', realisesLoss: true, soldLotIds: ['c'] }, [], [buy('back', 100, 'taxable', coin)], today)).toBe(false)
-      expect(hasWashSaleRisk({ symbol: coin, side: 'buy', realisesLoss: false, soldLotIds: [] }, [{ symbol: coin, start: '2026-01-26', end: '2026-03-27' }], [], today)).toBe(false)
+      expect(hasWashSaleRisk({ symbol: coin, side: 'sell', realizesLoss: true, soldLotIds: ['c'] }, [], [buy('back', 100, 'taxable', coin)], today)).toBe(false)
+      expect(hasWashSaleRisk({ symbol: coin, side: 'buy', realizesLoss: false, soldLotIds: [] }, [{ symbol: coin, start: '2026-01-26', end: '2026-03-27' }], [], today)).toBe(false)
     }
     const ibit = [sold('i', '2025-06-03', 100, -1_000, 'long', 'IBIT')]
     expect(washedLossOf(ibit, [buy('back', 40, 'taxable', 'IBIT')])).toEqual({ shortTerm: 0, longTerm: -400, deferred: -400, disallowed: 0 })

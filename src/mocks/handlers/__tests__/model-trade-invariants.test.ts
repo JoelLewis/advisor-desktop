@@ -7,7 +7,7 @@ import { MODEL_DEFINITIONS } from '@/mocks/data/model-definitions'
 import { generateRebalanceTrades } from '@/mocks/handlers/oms'
 import { convertCurrency } from '@/lib/currency'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
-import { taxReturnFor, ytdRealisedOnReturn } from '@/mocks/handlers/tax-return'
+import { taxReturnFor, ytdRealizedOnReturn } from '@/mocks/handlers/tax-return'
 import { netCapitalGainsTax } from '@/lib/capital-gains'
 import { taxRateFor } from '@/lib/tax-rules'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
@@ -417,19 +417,19 @@ describe('tax follows the account\'s own treatment and its own trades', () => {
         taxableWithTax++
       }
       // The estimate is what the proposal adds to its return, so it is negative only when the
-      // proposal's losses offset gains already realised this year (acc-011 against rs-004), and
+      // proposal's losses offset gains already realized this year (acc-011 against rs-004), and
       // it can never save more than that year-to-date tax. The YTD ledger is in USD; acc-041 (HKD)
       // and acc-042 (SGD) share hh-002's joint return with rs-002, so the floor is converted into
       // the preview's own currency, with a unit of slack for the rounding on either side.
       const returnId = taxReturnFor(account)
-      const ytd = returnId === null ? { shortTerm: 0, longTerm: 0 } : ytdRealisedOnReturn(returnId, MOCK_TODAY_ISO)
+      const ytd = returnId === null ? { shortTerm: 0, longTerm: 0 } : ytdRealizedOnReturn(returnId, MOCK_TODAY_ISO)
       const ytdTax = convertCurrency(netCapitalGainsTax(ytd.shortTerm, ytd.longTerm, taxRateFor), 'USD', preview.currency, FX_RATES_USD_BASE)
       expect(preview.estimatedTaxImpact, account.id).toBeGreaterThanOrEqual(-ytdTax - 1)
     }
     // Both guards matter: the first says the zero above was asserted against accounts that
     // actually traded, the second that a non-zero figure is reachable at all.
     expect(shelteredWithTrades, 'vacuity guard — sheltered accounts must have proposed trades').toBeGreaterThan(3)
-    expect(taxableWithTax, 'vacuity guard — some taxable account must realise gains').toBeGreaterThan(3)
+    expect(taxableWithTax, 'vacuity guard — some taxable account must realize gains').toBeGreaterThan(3)
   })
 })
 

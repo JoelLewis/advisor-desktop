@@ -123,19 +123,19 @@ describe('revising under constraints', () => {
 
   it('says when a gain cap changes no trade, and not when it does', () => {
     const { id } = create()
-    const loose = reviseProposal('user-001', id, [{ kind: 'cap_realised_gains', usd: 100_000_000 }])
+    const loose = reviseProposal('user-001', id, [{ kind: 'cap_realized_gains', usd: 100_000_000 }])
     if (!loose.ok) throw new Error(loose.message)
-    expect(loose.detail.versions[1]!.changeSummary).toBe('Revised to cap the gains it realises. The cap changes no trade. Every asset class ends inside its band. '
+    expect(loose.detail.versions[1]!.changeSummary).toBe('Revised to cap the gains it realizes. The cap changes no trade. Every asset class ends inside its band. '
       + 'iShares Core US Aggregate Bond ETF is bought here, so its loss cannot be harvested for thirty days without a wash sale.')
-    const tight = reviseProposal('user-001', id, [{ kind: 'cap_realised_gains', usd: 1_000 }])
+    const tight = reviseProposal('user-001', id, [{ kind: 'cap_realized_gains', usd: 1_000 }])
     if (!tight.ok) throw new Error(tight.message)
     expect(tight.detail.versions[2]!.changeSummary).not.toContain('The cap changes no trade.')
   })
 
   it('refuses the same constraints whatever their key order', () => {
     const { id } = create()
-    reviseProposal('user-001', id, [{ kind: 'cap_realised_gains', usd: 50_000 }])
-    const reordered = JSON.parse('[{"usd":50000,"kind":"cap_realised_gains"}]') as ProposalConstraint[]
+    reviseProposal('user-001', id, [{ kind: 'cap_realized_gains', usd: 50_000 }])
+    const reordered = JSON.parse('[{"usd":50000,"kind":"cap_realized_gains"}]') as ProposalConstraint[]
     expect(reviseProposal('user-001', id, reordered)).toMatchObject({ ok: false, status: 409, code: 'NO_CHANGE' })
   })
 
@@ -175,11 +175,11 @@ describe('workbench versions', () => {
 
   it('saves the edits on top of the latest constraints as a person version, and says what changed', () => {
     const { id } = create()
-    reviseProposal('user-001', id, [{ kind: 'cap_realised_gains', usd: 50_000 }])
+    reviseProposal('user-001', id, [{ kind: 'cap_realized_gains', usd: 50_000 }])
     const r = saveVersion('user-001', id, [{ kind: 'exclude', symbol: 'QAI' }])
     if (!r.ok) throw new Error(r.message)
     const v3 = r.detail.versions[2]!
-    expect(v3).toMatchObject({ n: 3, author: { kind: 'person', personId: 'user-001' }, constraints: [{ kind: 'avoid_self_wash' }, { kind: 'cap_realised_gains', usd: 50_000 }], edits: [{ kind: 'exclude', symbol: 'QAI' }] })
+    expect(v3).toMatchObject({ n: 3, author: { kind: 'person', personId: 'user-001' }, constraints: [{ kind: 'avoid_self_wash' }, { kind: 'cap_realized_gains', usd: 50_000 }], edits: [{ kind: 'exclude', symbol: 'QAI' }] })
     expect(v3.changeSummary).toBe('Workbench edits: excluded IQ Hedge Multi-Strategy Tracker ETF.')
     expect(store().messages[store().messages.length - 1]).toMatchObject({ kind: 'proposal_version', version: 3, author: { kind: 'person', personId: 'user-001' } })
   })
@@ -222,7 +222,7 @@ describe('workbench versions', () => {
 
 describe('the Proposal Agent over the whole book', () => {
   it.each(accounts.filter(isModelManaged).map((a) => a.id))('%s: digit-free summaries, and no buy that washes one of the taxpayer\'s losses', (id) => {
-    for (const requested of [[], [{ kind: 'harvest_only' as const }], [{ kind: 'cap_realised_gains' as const, usd: 10_000 }]]) {
+    for (const requested of [[], [{ kind: 'harvest_only' as const }], [{ kind: 'cap_realized_gains' as const, usd: 10_000 }]]) {
       const built = buildVersion(id, agentConstraints(requested), [])
       if (!built.ok) throw new Error(built.message)
       for (const leg of built.built.preview.trades.filter((t) => t.side === 'buy')) expect(leg.washSaleRisk).toBe(false)
@@ -249,7 +249,7 @@ describe('the Proposal Agent never claims a harvest its own buys foreclose', () 
 
   it.each(accounts.filter(isModelManaged).map((a) => a.id))('%s: no "harvests losses first", and a caveat exactly when a buy forecloses a flagged harvest', (id) => {
     const flagged = flaggedFor(id)
-    for (const requested of [[], [{ kind: 'harvest_only' as const }], [{ kind: 'cap_realised_gains' as const, usd: 10_000 }]]) {
+    for (const requested of [[], [{ kind: 'harvest_only' as const }], [{ kind: 'cap_realized_gains' as const, usd: 10_000 }]]) {
       const built = buildVersion(id, agentConstraints(requested), [])
       if (!built.ok) throw new Error(built.message)
       const forecloses = built.built.preview.trades.filter((t) => t.side === 'buy' && isSubjectToWashSale(t.symbol) && flagged.has(t.symbol))

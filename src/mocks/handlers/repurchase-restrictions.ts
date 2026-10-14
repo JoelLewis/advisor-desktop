@@ -1,7 +1,7 @@
 import type { Account } from '@/types/account'
 import type { ProposedTrade, RepurchaseRestriction } from '@/services/oms'
 import { isSubjectToWashSale } from '@/lib/security-master'
-import { washSaleWindow } from '../data/realised-sales'
+import { washSaleWindow } from '../data/realized-sales'
 import { openWashSaleWindowsFor, sameWashSaleTaxpayer } from './tax-return'
 
 /** The legs of one account's proposal, as far as a restriction list needs them. */

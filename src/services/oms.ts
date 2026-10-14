@@ -92,10 +92,10 @@ export type RebalancePreview = {
   trades: ProposedTrade[]
   /**
    * The tax this proposal adds to its owner's return: its legs netted under IRC §1222 with the
-   * return's year-to-date realised results and with earlier accounts in this batch on the same
+   * return's year-to-date realized results and with earlier accounts in this batch on the same
    * return (`nettedWithAccountIds`). Never another taxpayer's results. Signed, and not bounded by
    * `grossTaxOnGains` (`additionalCapitalGainsTax` has the reasoning):
-   * - negative when the proposal saves tax — its losses offset gains already realised this year —
+   * - negative when the proposal saves tax — its losses offset gains already realized this year —
    *   but never by more than the tax those results already owe;
    * - at most `grossTaxOnGains` (to rounding) when what it nets against is a gain or nil in each
    *   rate group: short-term, long-term collectibles and other long-term;
@@ -105,8 +105,8 @@ export type RebalancePreview = {
    * modelled.
    */
   estimatedTaxImpact: number
-  /** Year-to-date realised results on this account's return; `null` when it is on none (an IRA, a Roth). */
-  ytdRealisedOnReturn: { shortTerm: number; longTerm: number; collectibleLongTerm: number } | null
+  /** Year-to-date realized results on this account's return; `null` when it is on none (an IRA, a Roth). */
+  ytdRealizedOnReturn: { shortTerm: number; longTerm: number; collectibleLongTerm: number } | null
   /** Accounts earlier in this batch, on the same return, whose proposals this estimate nets against. */
   nettedWithAccountIds: string[]
   /**
@@ -115,7 +115,7 @@ export type RebalancePreview = {
    * on `estimatedTaxImpact`, which can exceed it.
    */
   grossTaxOnGains: number
-  /** False for an IRA, Roth or other tax-advantaged account, where a sale realises nothing taxable. */
+  /** False for an IRA, Roth or other tax-advantaged account, where a sale realizes nothing taxable. */
   taxable: boolean
   /**
    * IRC §1091 repurchase restrictions on this account: windows opened by loss sales already
@@ -130,7 +130,7 @@ export type RebalancePreview = {
 
 /**
  * A window in which buying `symbol` back would wash a loss (IRC §1091): 30 days either side of the
- * loss sale, inclusive. `recorded` windows come from sales already made (`realisedSales`);
+ * loss sale, inclusive. `recorded` windows come from sales already made (`realizedSales`);
  * `projected` windows are the ones a proposal's own loss legs would open if executed today. The two
  * are never merged: a reviewer needs to see both that a window exists and that a proposal extends it.
  */
@@ -179,18 +179,18 @@ export type ProposedTrade = {
   quantity: number
   estimatedValue: number
   taxImpact: number
-  /** Realised result of this leg by holding period, signed (loss < 0), account currency. 0 for buys. */
-  realisedShortTerm: number
-  realisedLongTerm: number
-  /** The part of `realisedLongTerm` that is collectibles gain or loss (GLD and other physical-metal trusts), taxed at up to 28% + NIIT. */
-  realisedCollectibleLongTerm: number
+  /** Realized result of this leg by holding period, signed (loss < 0), account currency. 0 for buys. */
+  realizedShortTerm: number
+  realizedLongTerm: number
+  /** The part of `realizedLongTerm` that is collectibles gain or loss (GLD and other physical-metal trusts), taxed at up to 28% + NIIT. */
+  realizedCollectibleLongTerm: number
   washSaleRisk: boolean
   /**
    * Sell legs that sell any loss lot, judged per lot (so a leg that nets to a gain can carry it):
    * the part of those lots' loss IRC §1091 washes because the taxpayer bought the symbol in the
    * last 30 days or this batch buys it today in any of the taxpayer's accounts (Treas. Reg.
    * §1.1091-1(c), pro rata to the replaced shares; `settleBatchWashSales`).
-   * Signed like the loss (≤ 0), account currency; `realisedShortTerm`/`realisedLongTerm` still
+   * Signed like the loss (≤ 0), account currency; `realizedShortTerm`/`realizedLongTerm` still
    * include it. The tax estimate nets only the rest. Absent when nothing washes.
    */
   washedLoss?: WashedLoss & { collectibleLongTerm: number }

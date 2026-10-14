@@ -7,16 +7,16 @@ import type { Account } from '@/types/account'
 // `openWashSaleWindows` every taxpayer-scoped lookup goes through.
 const windows = vi.hoisted(() => ({ extra: [] as { accountId: string; householdId: string; symbol: string }[] }))
 
-vi.mock('@/mocks/data/realised-sales', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@/mocks/data/realised-sales')>()
-  const template = original.realisedSales[0]!
+vi.mock('@/mocks/data/realized-sales', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@/mocks/data/realized-sales')>()
+  const template = original.realizedSales[0]!
   return {
     ...original,
     openWashSaleWindows: (asOf: string, householdId?: string) => [
       ...original.openWashSaleWindows(asOf, householdId),
       ...windows.extra
         .filter((w) => householdId === undefined || w.householdId === householdId)
-        .map((w) => ({ ...template, ...w, id: `rs-test-${w.symbol}`, realisedGainLoss: -1_000, start: '2026-02-01', end: '2026-03-31', daysRemaining: 34 })),
+        .map((w) => ({ ...template, ...w, id: `rs-test-${w.symbol}`, realizedGainLoss: -1_000, start: '2026-02-01', end: '2026-03-31', daysRemaining: 34 })),
     ],
   }
 })

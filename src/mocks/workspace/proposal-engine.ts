@@ -9,7 +9,7 @@ import { computeDriftForAccount } from '@/mocks/handlers/pms'
 import { requireModelManaged } from '@/lib/mandate'
 import type { LegSale } from '@/mocks/handlers/batch-wash-sales'
 import {
-  buildRebalancePreviews, generateRebalanceProposal, realisedGains, recutLeg, standingHarvestSubstitutions,
+  buildRebalancePreviews, generateRebalanceProposal, realizedGains, recutLeg, standingHarvestSubstitutions,
   type GenerationConstraints, type ProposedTradeLeg, type RebalanceProposal,
 } from '@/mocks/handlers/oms'
 import { harvestOpportunities } from '@/mocks/agents/harvest-scanner'
@@ -39,9 +39,9 @@ export function parseConstraints(value: unknown): { ok: true; value: ProposalCon
       case 'avoid_self_wash':
         out.push({ kind: item.kind })
         break
-      case 'cap_realised_gains':
+      case 'cap_realized_gains':
         if (typeof item.usd !== 'number' || !Number.isFinite(item.usd) || item.usd < 0) return fail('BAD_CONSTRAINTS', 'A gains cap must be zero or a positive amount.')
-        out.push({ kind: 'cap_realised_gains', usd: item.usd })
+        out.push({ kind: 'cap_realized_gains', usd: item.usd })
         break
       case 'exclude_asset_class':
         if (!isAssetClass(item.assetClass)) return fail('BAD_CONSTRAINTS', 'That is not an asset class.')
@@ -79,7 +79,7 @@ export function parseEdits(value: unknown): { ok: true; value: LegEdit[] } | Eng
   return { ok: true, value: out }
 }
 
-const CONSTRAINT_ORDER: Readonly<Record<ProposalConstraint['kind'], number>> = { avoid_self_wash: 0, harvest_only: 1, cap_realised_gains: 2, exclude_asset_class: 3 }
+const CONSTRAINT_ORDER: Readonly<Record<ProposalConstraint['kind'], number>> = { avoid_self_wash: 0, harvest_only: 1, cap_realized_gains: 2, exclude_asset_class: 3 }
 const EDIT_ORDER: Readonly<Record<LegEdit['kind'], number>> = { exclude: 0, quantity: 1, lots: 2 }
 
 /** Code-unit order, the same on every machine and locale: what feeds a fingerprint never sorts by locale. */
@@ -87,7 +87,7 @@ const byCodeUnit = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
 
 /** A constraint as a fixed tuple, so its spelling never depends on an object's key order. */
 const constraintTuple = (c: ProposalConstraint): [string, number | string | null] =>
-  [c.kind, c.kind === 'cap_realised_gains' ? c.usd : c.kind === 'exclude_asset_class' ? c.assetClass : null]
+  [c.kind, c.kind === 'cap_realized_gains' ? c.usd : c.kind === 'exclude_asset_class' ? c.assetClass : null]
 
 /** An edit as a fixed tuple, so its spelling never depends on an object's key order. */
 const editTuple = (e: LegEdit): [string, string, number | string[] | null] =>
@@ -95,10 +95,10 @@ const editTuple = (e: LegEdit): [string, string, number | string[] | null] =>
 
 /** One spelling per constraint set: duplicates dropped, gain caps collapsed to the tightest, a fixed order. */
 export function normaliseConstraints(constraints: readonly ProposalConstraint[]): ProposalConstraint[] {
-  const caps = constraints.flatMap((c) => (c.kind === 'cap_realised_gains' ? [c.usd] : []))
+  const caps = constraints.flatMap((c) => (c.kind === 'cap_realized_gains' ? [c.usd] : []))
   const collapsed: ProposalConstraint[] = [
-    ...constraints.filter((c) => c.kind !== 'cap_realised_gains'),
-    ...(caps.length > 0 ? [{ kind: 'cap_realised_gains', usd: Math.min(...caps) } as const] : []),
+    ...constraints.filter((c) => c.kind !== 'cap_realized_gains'),
+    ...(caps.length > 0 ? [{ kind: 'cap_realized_gains', usd: Math.min(...caps) } as const] : []),
   ]
   const unique = [...new Map(collapsed.map((c) => [JSON.stringify(constraintTuple(c)), c])).values()]
   return unique.sort((a, b) => CONSTRAINT_ORDER[a.kind] - CONSTRAINT_ORDER[b.kind] || byCodeUnit(JSON.stringify(constraintTuple(a)), JSON.stringify(constraintTuple(b))))
@@ -110,10 +110,10 @@ export function normaliseEdits(edits: readonly LegEdit[]): LegEdit[] {
 }
 
 export function generationConstraintsOf(constraints: readonly ProposalConstraint[]): GenerationConstraints {
-  const caps = constraints.flatMap((c) => (c.kind === 'cap_realised_gains' ? [c.usd] : []))
+  const caps = constraints.flatMap((c) => (c.kind === 'cap_realized_gains' ? [c.usd] : []))
   return {
     harvestOnly: constraints.some((c) => c.kind === 'harvest_only'),
-    capRealisedGains: caps.length > 0 ? Math.min(...caps) : undefined,
+    capRealizedGains: caps.length > 0 ? Math.min(...caps) : undefined,
     excludeAssetClasses: constraints.flatMap((c) => (c.kind === 'exclude_asset_class' ? [c.assetClass] : [])),
     avoidSelfWash: constraints.some((c) => c.kind === 'avoid_self_wash'),
   }
@@ -166,10 +166,10 @@ export function taxSummaryOf(preview: RebalancePreview): ProposalTaxSummary {
   return {
     sold: sum((t) => (t.side === 'sell' ? t.estimatedValue : 0)),
     bought: sum((t) => (t.side === 'buy' ? t.estimatedValue : 0)),
-    gains: realisedGains(preview.trades),
-    losses: sum((t) => Math.min(0, t.realisedShortTerm) + Math.min(0, t.realisedLongTerm)),
-    netShortTerm: sum((t) => t.realisedShortTerm),
-    netLongTerm: sum((t) => t.realisedLongTerm),
+    gains: realizedGains(preview.trades),
+    losses: sum((t) => Math.min(0, t.realizedShortTerm) + Math.min(0, t.realizedLongTerm)),
+    netShortTerm: sum((t) => t.realizedShortTerm),
+    netLongTerm: sum((t) => t.realizedLongTerm),
     washed: sum((t) => (t.washedLoss?.shortTerm ?? 0) + (t.washedLoss?.longTerm ?? 0)),
     grossTax: preview.grossTaxOnGains,
     netTax: preview.estimatedTaxImpact,

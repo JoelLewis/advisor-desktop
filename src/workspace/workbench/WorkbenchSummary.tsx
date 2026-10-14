@@ -25,7 +25,7 @@ type WorkbenchSummaryProps = {
 export function WorkbenchSummary({ detail, view, notPreviewed = false }: WorkbenchSummaryProps) {
   const s = view.summary
   // Collectibles gains are part of the long-term result, so short plus long is the whole year to date.
-  const ytd = view.preview.ytdRealisedOnReturn
+  const ytd = view.preview.ytdRealizedOnReturn
   return (
     <>
       <Pane title="Tax effect" meta="return-level estimate against this year's results">

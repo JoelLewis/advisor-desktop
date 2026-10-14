@@ -4,7 +4,7 @@ import { MeasureError, UNIT, fmtMoney, fmtResult, isNegative } from '@/kit/measu
 type TaxTapeProps = {
   gains: number; losses: number; netShortTerm: number; netLongTerm: number
   grossTax: number; netTax: number; scope: string; rateBasis: string
-  /** The return's realised result so far this year, when the estimate nets against it; the tape then shows the year's net too. */
+  /** The return's realized result so far this year, when the estimate nets against it; the tape then shows the year's net too. */
   yearToDate?: number
 }
 

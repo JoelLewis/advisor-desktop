@@ -14,7 +14,7 @@ import { clients } from '@/mocks/data/clients'
 import { calendarEvents } from '@/mocks/data/calendar'
 import { OPEN_ITEMS } from '@/mocks/data/open-items'
 import { getPositionsForAccount } from '@/mocks/data/positions'
-import { openWashSaleWindows } from '@/mocks/data/realised-sales'
+import { openWashSaleWindows } from '@/mocks/data/realized-sales'
 import { sessionNow } from '@/mocks/data/workspace-store'
 import { computeDriftForAccount, modelDisplayName } from '@/mocks/handlers/pms'
 import { projectDrift } from '@/mocks/handlers/oms'
@@ -81,7 +81,7 @@ function summaryOf(household: HouseholdFixture): HouseholdSummary {
     goals: (plan?.goals ?? []).map((g) => ({ id: g.id, name: g.name, probability: g.probability, funded: g.currentFunding / g.targetAmount, status: g.status })),
     ...(plan ? { planProbability: plan.aggregateProbability } : {}),
     windows: openWashSaleWindows(MOCK_TODAY_ISO, household.id).map((w) => ({
-      saleId: w.id, accountName: accountName(w.accountId), symbol: w.symbol, name: w.name, saleDate: w.saleDate, through: w.end, loss: w.realisedGainLoss,
+      saleId: w.id, accountName: accountName(w.accountId), symbol: w.symbol, name: w.name, saleDate: w.saleDate, through: w.end, loss: w.realizedGainLoss,
     })),
     ...(ips ? { ips } : {}),
     openItems: [

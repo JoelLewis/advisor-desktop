@@ -13,7 +13,7 @@ const METHODS: readonly MethodNote[] = [
   { label: 'Model', modeled: false, text: 'Brinson-Fachler: allocation is (wp − wb) × (Rb,i − Rb), selection is wb × (Rp,i − Rb,i), interaction is (wp − wb) × (Rp,i − Rb,i). The three effects sum exactly to the active return.' },
   { label: 'Linking', modeled: false, text: 'Single-period and arithmetic: each period is compounded from annual class returns as one period; sub-periods are not linked.' },
   { label: 'Returns', modeled: true, text: "Modeled, not realized: each asset class's return is a modeled index return, and the account's edge within a class is a modeled assumption. Weights are today's holdings, applied to the whole period: a holdings-based approximation, not the account's path. A period longer than a year is cumulative, shown beside its annualized equivalent." },
-  { label: 'Benchmark', modeled: false, text: "The model's policy benchmark: each sleeve at the model's target weight, measured by the index named for it." },
+  { label: 'Benchmark', modeled: false, text: "The model's policy benchmark: each sleeve at the model's target weight, measured by the index named for it. A custom mandate is measured against the benchmark its mandate names; the education model's is its glide path's current-stage targets, not re-weighted along the path within the period." },
   { label: 'Performance line', modeled: true, text: "Modeled, not realized: the monthly line is drawn from the account's modeled return and volatility as the fixtures state its holdings, so today's trades do not rewrite it, and the benchmark line from the model's; neither is a record of realized returns." },
   { label: 'Fees', modeled: false, text: 'Gross of fees.' },
 ]

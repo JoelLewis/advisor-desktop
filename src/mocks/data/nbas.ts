@@ -2,7 +2,7 @@ import type { NBA, NBAClient, NBAPriority, NBAScoring, TriggerSignal } from '@/t
 import { accounts } from './accounts'
 import { clients } from './clients'
 import { getPositionsForAccount } from './positions'
-import { allRealisedSales } from './realised-sales'
+import { allRealizedSales } from './realized-sales'
 import { computeDriftForAccount, modelDisplayName } from '../handlers/pms'
 import { householdFixtures } from './households'
 import { generateTaxLotsWithSaleRisk } from '../handlers/custodian'
@@ -80,10 +80,10 @@ export function clientDriftFacts(clientId: string) {
 
 /**
  * §0.7 · the INTC harvest across the book, return by return. For every taxable account still
- * holding INTC below cost: the loss a sale today realises (`lossAllowedNow`, so any share §1091
- * would wash is left out), the partial harvests already in the realised-sales ledger, and what
+ * holding INTC below cost: the loss a sale today realizes (`lossAllowedNow`, so any share §1091
+ * would wash is left out), the partial harvests already in the realized-sales ledger, and what
  * harvesting the rest does on that client's own return this year. That is the capital-gains tax
- * it saves against the year's realised results so far (`estimateTaxOnReturns`), the ordinary
+ * it saves against the year's realized results so far (`estimateTaxOnReturns`), the ordinary
  * income it newly offsets under §1211(b), and the loss that carries forward under §1212(b)
  * (`capitalLossUse`). §1222 nets within one return and never across two, so nothing here is pooled
  * across clients except the face value of the losses.
@@ -96,7 +96,7 @@ export function intcHarvestFacts() {
       if (!position) return []
       const lots = generateTaxLotsWithSaleRisk(account.id, account.totalValue).filter((l) => l.positionId === position.id)
       const allowed = (period: 'short' | 'long') => lots.filter((l) => l.holdingPeriod === period).reduce((s, l) => s + lossAllowedNow(l), 0)
-      const leg: TaxedLeg = { realisedShortTerm: allowed('short'), realisedLongTerm: allowed('long'), taxImpact: 0 }
+      const leg: TaxedLeg = { realizedShortTerm: allowed('short'), realizedLongTerm: allowed('long'), taxImpact: 0 }
       return [{ account, position, leg }]
     })
   const estimates = estimateTaxOnReturns(candidates.map(({ account, leg }) => ({ account, legs: [leg] })), MOCK_TODAY_ISO)
@@ -105,9 +105,9 @@ export function intcHarvestFacts() {
   const holders = candidates.map(({ account, position, leg }, i) => {
     const estimate = estimates[i]
     const returnId = taxReturnFor(account)
-    if (estimate === undefined || returnId === null || estimate.ytdRealisedOnReturn === null) throw new Error(`INTC holder ${account.id} has no return-level estimate`)
-    const loss = leg.realisedShortTerm + leg.realisedLongTerm
-    const ytdNet = estimate.ytdRealisedOnReturn.shortTerm + estimate.ytdRealisedOnReturn.longTerm
+    if (estimate === undefined || returnId === null || estimate.ytdRealizedOnReturn === null) throw new Error(`INTC holder ${account.id} has no return-level estimate`)
+    const loss = leg.realizedShortTerm + leg.realizedLongTerm
+    const ytdNet = estimate.ytdRealizedOnReturn.shortTerm + estimate.ytdRealizedOnReturn.longTerm
     const priorNet = ytdNet + (addedSoFar.get(returnId) ?? 0)
     addedSoFar.set(returnId, (addedSoFar.get(returnId) ?? 0) + loss)
     const filing = ordinaryIncomeOffsetFiling(account)
@@ -115,7 +115,7 @@ export function intcHarvestFacts() {
       account,
       position,
       loss,
-      sales: allRealisedSales().filter((r) => r.accountId === account.id && r.symbol === 'INTC'),
+      sales: allRealizedSales().filter((r) => r.accountId === account.id && r.symbol === 'INTC'),
       jointReturn: returnId.startsWith('joint:'),
       ytdNet,
       priorNet,
@@ -136,7 +136,7 @@ export function intcHarvestFacts() {
   }
 }
 
-/** The tax a harvest saves on its return; a harvest realises only losses, so it can add none. */
+/** The tax a harvest saves on its return; a harvest realizes only losses, so it can add none. */
 function taxSaved(account: Account, estimate: number): number {
   const { direction, amount } = taxEstimateDirection(estimate)
   if (direction === 'added to' && amount > 0) throw new Error(`an INTC harvest in ${account.id} adds ${amount} of tax`)
@@ -242,8 +242,8 @@ function intcHarvestDescription(): string {
   const perAccount = holders.map((h) => `${intcHoldingSentence(h, 'advisor')} ${intcReturnSentence(h, 'advisor')}`)
   return `Intel (INTC) is still below cost in ${holders.length} client accounts, ${dollars(totalLoss)} of harvestable losses in all. ` +
     `${perAccount.join(' ')} ` +
-    `Figures are capital-gains tax at top federal rates against each return's sales realised so far this year; ` +
-    `gains realised later in ${MOCK_TODAY_ISO.slice(0, 4)} would use loss shown as carried forward. ` +
+    `Figures are capital-gains tax at top federal rates against each return's sales realized so far this year; ` +
+    `gains realized later in ${MOCK_TODAY_ISO.slice(0, 4)} would use loss shown as carried forward. ` +
     'Losses carried in from earlier years are not modelled, nor is state tax.'
 }
 
@@ -289,7 +289,7 @@ export const nbas: NBA[] = [
     id: INTC_HARVEST_NBA_ID, title: 'Tax-loss harvesting opportunity — INTC position',
     // §0.7 · this read as if nothing had been harvested, stated the benefit at long-term rates for
     // all three accounts, and said a 2026 harvest could offset Q4 (2025) gains. The description now
-    // states the partial harvests already made (the realised-sales ledger), the INTC still held, and
+    // states the partial harvests already made (the realized-sales ledger), the INTC still held, and
     // what harvesting the rest does on each client's own return this year (`intcReturnSentence`).
     description: intcHarvestDescription(),
     category: 'tax_management',
@@ -306,7 +306,7 @@ export const nbas: NBA[] = [
     suggestedAction: 'Sell INTC, replace with semiconductor ETF (SMH) to maintain sector exposure',
     // §0.7 · the tax harvesting saves this year, return by return (`estimateTaxOnReturns`): not
     // the harvestable loss, and not each lot's loss at its own rate, which assumed gains of that
-    // character these clients have not realised. Two of the three returns are already at a net
+    // character these clients have not realized. Two of the three returns are already at a net
     // loss for 2026, so only acc-011's $6,260 gain is there to offset.
     estimatedImpact: intcHarvest.totalSavingThisYear,
     estimatedImpactNote: `Capital-gains tax saved this year only. Most of the harvest's value is the ${dollars(intcHarvest.totalCarriedForward)} of loss that carries forward to later years, which this figure does not count.`,
@@ -350,14 +350,14 @@ export const nbas: NBA[] = [
   },
   {
     id: 'nba-006', title: 'Retirement plan review — Linda Garcia',
-    description: 'Linda Garcia is 75 and her portfolio is 60% equities, which exceeds the risk tolerance guidelines for her age and conservative profile. Consider shifting to 40/60.',
+    description: 'Linda Garcia is 75 and her portfolio is 60% equities, which exceeds the risk tolerance guidelines for her age and Moderate Conservative profile. Consider shifting to 40/60.',
     category: 'planning', priority: 'medium',
     scoring: { urgency: 60, impact: 55, efficiency: 45, relationship: 50, confidence: 78, composite: 56 },
     clients: [{ id: 'cli-016', name: 'Linda Garcia' }],
     trigger: { source: 'planning', condition: 'allocation_age_mismatch', value: '60% equity at age 75', detectedAt: '2026-02-22T08:00:00Z' },
     suggestedAction: 'Schedule review meeting; present de-risking glide path',
     estimatedImpact: 15_000, createdAt: '2026-02-22T08:30:00Z', dismissed: false,
-    actionRoute: { path: '/accounts/acc-035', openAI: true, aiMessage: 'Review retirement plan for Linda Garcia — portfolio is 60% equities at age 75 with conservative profile. Present de-risking glide path' },
+    actionRoute: { path: '/accounts/acc-035', openAI: true, aiMessage: 'Review retirement plan for Linda Garcia — portfolio is 60% equities at age 75 with a Moderate Conservative profile. Present de-risking glide path' },
   },
   // ── Risk ──
   {
@@ -366,7 +366,7 @@ export const nbas: NBA[] = [
     // "founder shares" at all. Re-pointed at the real concentration in the dataset: acc-011
     // (David Williams) holds NVDA at 13.9% (pos-070, weight 0.139) against the 10% IPS limit.
     id: 'nba-007', title: 'Concentration risk — David Williams NVDA >13%',
-    description: 'David Williams holds NVDA at 13.9% of his individual account (acc-011), against a 10% single-issuer IPS limit. A phased reduction paired with harvesting in correlated positions would bring it inside the limit while limiting the realised gain.',
+    description: 'David Williams holds NVDA at 13.9% of his individual account (acc-011), against a 10% single-issuer IPS limit. A phased reduction paired with harvesting in correlated positions would bring it inside the limit while limiting the realized gain.',
     category: 'risk', priority: 'high',
     scoring: { urgency: 70, impact: 85, efficiency: 40, relationship: 55, confidence: 95, composite: 72 },
     clients: [{ id: 'cli-004', name: 'David Williams' }],

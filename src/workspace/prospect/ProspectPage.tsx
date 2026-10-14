@@ -88,7 +88,7 @@ function ProspectRecordPage({ view, directory }: { view: ProspectView; directory
                 { id: 'holding', header: 'Holding', wrap: true, cell: (l) => `${l.name} (${l.symbol})` },
                 { id: 'shares', header: 'Shares', unit: 'sh', align: 'right', cell: (l) => <Num text={fmtQuantity(l.quantity)} /> },
                 { id: 'value', header: 'Value', unit: 'USD', align: 'right', cell: (l) => <Num text={fmtMoney(l.marketValue)} /> },
-                { id: 'unrealised', header: 'Unrealized', unit: 'USD', align: 'right', cell: (l) => <Num text={fmtResult(l.unrealised)} /> },
+                { id: 'unrealized', header: 'Unrealized', unit: 'USD', align: 'right', cell: (l) => <Num text={fmtResult(l.unrealized)} /> },
                 { id: 'tax', header: 'Tax if sold now', unit: 'USD', align: 'right', cell: (l) => <Num text={fmtMoney(l.taxIfSoldNow)} /> },
               ]} />
             <p className="tabular text-body">{`Transfers ${fmtMoney(view.transfer.transferValue)} USD of ${fmtMoney(view.transfer.totalAssets)} USD; the 403(b) stays held away (rollover: asked about; comparison to follow).`}</p>

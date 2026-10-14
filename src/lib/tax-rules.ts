@@ -108,7 +108,7 @@ export function taxRateFor(holdingPeriod: TaxLot['holdingPeriod'], character: Ta
 
 /**
  * A harvest benefit is stated at the lot's holding-period rate for an ordinary capital asset,
- * whatever the lot is. A collectibles loss saves 31.8% only against collectibles gain realised the
+ * whatever the lot is. A collectibles loss saves 31.8% only against collectibles gain realized the
  * same year, which a per-lot estimate cannot know; stating it at 23.8% long-term never overstates
  * the saving on that ground.
  */
@@ -140,7 +140,7 @@ function lossOnShares(lot: WashFacts, shares: number): number {
 }
 
 /**
- * The loss a sale of this lot today realises this year (negative), or 0. §1091 takes only the
+ * The loss a sale of this lot today realizes this year (negative), or 0. §1091 takes only the
  * loss on the shares a replacement was matched to (Treas. Reg. §1.1091-1(c)); the rest is
  * allowed. Every harvest total — the tax page's card, the dashboard insight, the chat answer, the
  * account insight — counts this figure, never the lot's whole loss.
@@ -150,7 +150,7 @@ export function lossAllowedNow(lot: WashFacts): number {
   return lossOnShares(lot, lot.quantity - deferredShares - disallowedShares)
 }
 
-/** The part of the loss §1091 moves into a taxable replacement's basis (§1091(d)): not realised now, recovered later. */
+/** The part of the loss §1091 moves into a taxable replacement's basis (§1091(d)): not realized now, recovered later. */
 export function lossDeferred(lot: WashFacts): number {
   return lossOnShares(lot, lot.saleWash.deferredShares)
 }
@@ -165,7 +165,7 @@ export function washesOnSale(lot: Pick<TaxLot, 'saleWash'>): boolean {
   return lot.saleWash.deferredShares + lot.saleWash.disallowedShares > 0
 }
 
-/** Whether selling this lot today realises any loss this year. */
+/** Whether selling this lot today realizes any loss this year. */
 export function harvestsNow(lot: WashFacts): boolean {
   return lossAllowedNow(lot) < 0
 }
@@ -220,7 +220,7 @@ export type MethodImpact = { realizedGain: number; shortTermGain: number; longTe
 
 /**
  * C13/C14 · tax-efficiency — cost-basis method simulation: sells the top 10% (by quantity) of
- * each position under the given method and reports the realised gain/loss it would produce,
+ * each position under the given method and reports the realized gain/loss it would produce,
  * split by holding period.
  *
  * Fix-round-1 review: this was originally an inline closure inside `TaxManagementPage`'s
@@ -242,8 +242,8 @@ export function computeCostBasisImpact(taxLots: readonly TaxLot[], method: CostB
     const totalQty = lots.reduce((s, l) => s + l.quantity, 0)
     const sellQty = Math.ceil(totalQty * 0.1)
 
-    // C13 · under average cost every share carries an identical basis, so a 10% sale realises
-    // exactly 10% of the unrealised gain, with holding period allocated FIFO across the sold
+    // C13 · under average cost every share carries an identical basis, so a 10% sale realizes
+    // exactly 10% of the unrealized gain, with holding period allocated FIFO across the sold
     // shares.
     if (method === 'AvgCost') {
       const totalBasis = lots.reduce((s, l) => s + l.costBasis, 0)

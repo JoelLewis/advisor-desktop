@@ -23,10 +23,13 @@ export const RATIONALE_MAX = 2000
 const refuse = (status: ComplianceFailure['status'], code: string, message: string): ComplianceFailure => ({ ok: false, status, code, message })
 const via = (options: ActOptions) => (options.viaPresenter ? { viaPresenter: options.viaPresenter } : {})
 
-/** Every disposition carries a rationale: something other than whitespace, and not an essay. */
-export function rationaleRefusal(rationale: string): ComplianceFailure | undefined {
+/**
+ * Every binding act carries a rationale: something other than whitespace, and not an essay. `subject`
+ * names what the act decides, so a break's refusal speaks of a break rather than a disposition.
+ */
+export function rationaleRefusal(rationale: string, subject: 'disposition' | 'break resolution' = 'disposition'): ComplianceFailure | undefined {
   const trimmed = rationale.trim()
-  if (trimmed.length === 0) return refuse(400, 'RATIONALE_REQUIRED', 'A rationale is required for every disposition.')
+  if (trimmed.length === 0) return refuse(400, 'RATIONALE_REQUIRED', `A rationale is required for every ${subject}.`)
   if (trimmed.length > RATIONALE_MAX) return refuse(400, 'RATIONALE_TOO_LONG', `Keep the rationale to ${RATIONALE_MAX} characters or fewer.`)
   return undefined
 }

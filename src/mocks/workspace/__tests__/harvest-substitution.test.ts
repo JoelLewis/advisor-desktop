@@ -23,8 +23,8 @@ describe('harvest-plus-substitute', () => {
     }])
     const sell = v.preview.trades.find((t) => t.symbol === 'CSBGU0.SW')
     expect(sell?.side).toBe('sell')
-    expect(sell!.realisedShortTerm + sell!.realisedLongTerm).toBeLessThan(0)
-    expect(v.legFacts.find((f) => f.symbol === 'CSBGU0.SW')!.lots.every((t) => t.realised <= 0)).toBe(true)
+    expect(sell!.realizedShortTerm + sell!.realizedLongTerm).toBeLessThan(0)
+    expect(v.legFacts.find((f) => f.symbol === 'CSBGU0.SW')!.lots.every((t) => t.realized <= 0)).toBe(true)
     expect(v.preview.trades.some((t) => t.side === 'buy' && t.symbol === 'AGG')).toBe(true)
     expect(v.preview.trades.some((t) => t.side === 'buy' && t.symbol === 'CSBGU0.SW')).toBe(false)
     const summary = draftSummary('acc-043', v)
@@ -74,7 +74,7 @@ describe('harvest-plus-substitute', () => {
         substituted += 1
         expect(flagged.has(s.bought.symbol), `${account.id} buys flagged ${s.bought.symbol}`).toBe(false)
         expect(v.preview.trades.some((t) => t.side === 'buy' && t.symbol === s.foreclosed.symbol), `${account.id} still buys ${s.foreclosed.symbol}`).toBe(false)
-        if (s.harvested) expect(v.legFacts.find((f) => f.symbol === s.foreclosed.symbol)!.lots.every((t) => t.realised <= 0), account.id).toBe(true)
+        if (s.harvested) expect(v.legFacts.find((f) => f.symbol === s.foreclosed.symbol)!.lots.every((t) => t.realized <= 0), account.id).toBe(true)
       }
     }
     expect(substituted).toBeGreaterThan(0)

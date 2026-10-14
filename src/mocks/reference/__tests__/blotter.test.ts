@@ -15,10 +15,10 @@ const view = (filters: BlotterFilters = {}) => {
 const row = (id: string) => view().rows.find((r) => r.id === id)
 
 describe('tickets', () => {
-  it('lists every order management ticket, its status read as working, filled or cancelled', () => {
+  it('lists every order management ticket, its status read as working, filled or canceled (the OMS spells it cancelled)', () => {
     expect(view().rows.filter((r) => r.source.kind === 'ticket').map((r) => r.id).sort()).toEqual(orders.map((o) => o.id).sort())
     expect(row('ord-003')).toMatchObject({ status: 'working', price: 785, priceKind: 'limit', side: 'sell' })
-    expect(row('ord-009')).toMatchObject({ status: 'cancelled' })
+    expect(row('ord-009')).toMatchObject({ status: 'canceled' })
     expect(row('ord-001')).toMatchObject({ status: 'filled', price: 268.35, priceKind: 'fill', filledAt: '2026-02-24T14:30:02Z', currency: 'USD' })
     expect(row('ord-001')?.recId).toBeUndefined()
   })
@@ -29,6 +29,14 @@ describe('tickets', () => {
     expect(row('ord-014')?.value).toBeCloseTo(47_600, 6)
     expect(row('ord-015')?.value).toBeCloseTo(21_862.5, 6)
     expect(row('ord-016')).toMatchObject({ side: 'buy', status: 'working' })
+  })
+
+  it('quotes each quantity in its instrument: option contracts, bond par, shares otherwise', () => {
+    expect(row('ord-016')).toMatchObject({ quantity: 5, quantityUnit: 'contracts' })
+    expect(row('ord-014')).toMatchObject({ quantity: 50_000, quantityUnit: 'par' })
+    expect(row('ord-001')).toMatchObject({ quantityUnit: 'sh' })
+    expect(blotterQuote('ord-016')?.figures[0]).toMatchObject({ label: 'Quantity', unit: 'contracts' })
+    expect(blotterQuote('ord-014')?.figures[0]).toMatchObject({ label: 'Par', value: 50_000, unit: 'par' })
   })
 })
 
@@ -62,7 +70,7 @@ describe("the session's proposal orders", () => {
 
 describe('filters and order', () => {
   it('filters by status, account and submitted day, newest first', () => {
-    expect(view({ status: 'cancelled' }).rows.map((r) => r.id)).toEqual(['ord-009'])
+    expect(view({ status: 'canceled' }).rows.map((r) => r.id)).toEqual(['ord-009'])
     expect(view({ accountId: 'acc-001' }).rows.every((r) => r.accountId === 'acc-001')).toBe(true)
     expect(view({ since: '2026-02-24', until: '2026-02-24' }).rows.every((r) => r.submittedAt.startsWith('2026-02-24'))).toBe(true)
     const times = view().rows.map((r) => r.submittedAt)
@@ -71,10 +79,10 @@ describe('filters and order', () => {
 
   it('lists the accounts and days of the whole blotter for the filter controls, whatever the filter', () => {
     const all = view()
-    const filtered = view({ status: 'cancelled' })
+    const filtered = view({ status: 'canceled' })
     expect(filtered.accounts).toEqual(all.accounts)
     expect(filtered.days).toEqual(all.days)
-    expect(filtered.filters).toEqual({ status: 'cancelled' })
+    expect(filtered.filters).toEqual({ status: 'canceled' })
   })
 })
 

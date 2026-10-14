@@ -6,8 +6,8 @@ import type { PreTradeCheckProposalResult, ProposedTrade, RebalancePreview } fro
 /** A rule the Proposal Agent must honour when it drafts or revises the legs. */
 export type ProposalConstraint =
   | { kind: 'harvest_only' }
-  /** Upper bound on the proposal's realised gains, gain legs only and losses not netted, in the account's currency. */
-  | { kind: 'cap_realised_gains'; usd: number }
+  /** Upper bound on the proposal's realized gains, gain legs only and losses not netted, in the account's currency. */
+  | { kind: 'cap_realized_gains'; usd: number }
   | { kind: 'exclude_asset_class'; assetClass: AssetClass }
   | { kind: 'avoid_self_wash' }
 
@@ -18,14 +18,14 @@ export type LegEdit =
   | { kind: 'lots'; symbol: string; lotIds: string[] }
 
 /**
- * What a sale takes from one lot: the shares, and the result they realise (signed, whole dollars)
- * by holding period. A leg's takes sum to its quantity and, by character, to its realised results.
+ * What a sale takes from one lot: the shares, and the result they realize (signed, whole dollars)
+ * by holding period. A leg's takes sum to its quantity and, by character, to its realized results.
  */
-export type LotTake = { lotId: string; shares: number; realised: number; character: 'short' | 'long' }
+export type LotTake = { lotId: string; shares: number; realized: number; character: 'short' | 'long' }
 
 /**
  * What each sell leg disposes of: its lots in sale order, what it takes from each (empty for a
- * tax-advantaged account, which realises nothing), and the part of its loss §1091 washes (≤ 0).
+ * tax-advantaged account, which realizes nothing), and the part of its loss §1091 washes (≤ 0).
  */
 export type LegFacts = { symbol: string; lotIds: string[]; lots: LotTake[]; washed: number }
 

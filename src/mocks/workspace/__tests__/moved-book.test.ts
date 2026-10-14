@@ -5,7 +5,7 @@ import { computeDriftForAccount } from '@/mocks/handlers/pms'
 import { ledgerFills } from '@/mocks/data/portfolio-ledger'
 import { runHarvestScanner } from '@/mocks/agents/harvest-scanner'
 import { generateTaxLotsWithSaleRisk } from '@/mocks/handlers/custodian'
-import { taxReturnFor, ytdRealisedOnReturn } from '@/mocks/handlers/tax-return'
+import { taxReturnFor, ytdRealizedOnReturn } from '@/mocks/handlers/tax-return'
 import { proposalById } from '@/mocks/data/proposals-store'
 import { MOCK_NOW_ISO, MOCK_TODAY_ISO } from '@/lib/clock'
 import { createProposal } from '../proposals'
@@ -22,7 +22,7 @@ describe("after the story's v3 fills, every engine read sees the moved book", ()
     const findings = runHarvestScanner(ctx)
     expect(findings.some((f) => f.claim.startsWith('Intel Corp. can be sold at a loss today'))).toBe(false)
     const recorded = findings.find((f) => f.citations.some((c) => c.source === 'Wash-sale window · rs-006 · INTC loss sale of 2026-02-25, open through 2026-03-27'))
-    expect(recorded?.figures).toContainEqual({ label: 'Loss realised · INTC', value: -45_850, unit: 'USD', source: 'realisedSales.realisedGainLoss' })
+    expect(recorded?.figures).toContainEqual({ label: 'Loss realized · INTC', value: -45_850, unit: 'USD', source: 'realizedSales.realizedGainLoss' })
   })
 
   it('the Drift Monitor measures the new holdings: US Equity still outside its band after a harvest-only version', () => {
@@ -34,11 +34,11 @@ describe("after the story's v3 fills, every engine read sees the moved book", ()
     expect(Math.abs(first!.figures[0]!.value - projected)).toBeLessThan(0.0005)
   })
 
-  it('the return-level results include the realised INTC loss', () => {
+  it('the return-level results include the realized INTC loss', () => {
     const returnId = taxReturnFor(acc002)!
-    const before = ytdRealisedOnReturn(returnId, MOCK_TODAY_ISO).longTerm
+    const before = ytdRealizedOnReturn(returnId, MOCK_TODAY_ISO).longTerm
     release(approvedStoryV3())
-    expect(ytdRealisedOnReturn(returnId, MOCK_TODAY_ISO).longTerm).toBe(before - 45_850)
+    expect(ytdRealizedOnReturn(returnId, MOCK_TODAY_ISO).longTerm).toBe(before - 45_850)
   })
 })
 

@@ -32,7 +32,7 @@ describe('drafting her proposal', () => {
       cash: 100_782, transferValue: 2_100_000, totalAssets: 3_000_000, tranches: [], pricesAsOf: '2026-02-25',
       fees: { scheduleName: 'Comprehensive Wealth Management', base: 2_100_000, annual: 20_850 },
       heldAway: [{ custodian: 'TIAA', value: 900_000, rollover: 'asked_about' }],
-      concentration: { symbol: 'SYK', unrealised: 481_378, taxIfSoldNow: 114_567.96 },
+      concentration: { symbol: 'SYK', unrealized: 481_378, taxIfSoldNow: 114_567.96 },
       changeSummary: "Drafted from her questionnaire's model, Growth: one individual taxable account, everything transferred in kind, nothing sold.",
     })
     expect(v1?.transfer.every((l) => l.plan === 'in_kind')).toBe(true)

@@ -2,7 +2,7 @@ import type { ActivityItem } from '@/types/activity'
 import { driftBatchFacts } from './nbas'
 import { accounts } from './accounts'
 import { getPositionsForAccount } from './positions'
-import { realisedSales } from './realised-sales'
+import { realizedSales } from './realized-sales'
 import { orders } from '../handlers/oms'
 import { KNOWN_OPEN_DATES } from '../handlers/custodian'
 
@@ -11,7 +11,7 @@ import { KNOWN_OPEN_DATES } from '../handlers/custodian'
  * its fill (ord-004) for the sale, pos-265 and its recorded open date for the purchase. The feed
  * said "Sold 500 shares … Realized loss: $6,820" against a 5,000-share, −$32,750 sale.
  */
-const rs001 = realisedSales.find((s) => s.id === 'rs-001')!
+const rs001 = realizedSales.find((s) => s.id === 'rs-001')!
 const ord004 = orders.find((o) => o.id === 'ord-004')!
 const acc002 = accounts.find((a) => a.id === rs001.accountId)!
 const smh = getPositionsForAccount(acc002.id, acc002.totalValue).find((p) => p.id === 'pos-265')!
@@ -57,7 +57,7 @@ export const activities: ActivityItem[] = [
     id: 'act-005', type: 'trade', source: 'oms',
     title: `Trade executed — ${rs001.symbol} sell for tax harvest`,
     description: `Sold ${rs001.quantity.toLocaleString('en-US')} shares ${rs001.symbol} at ${dollarsAndCents(rs001.proceeds / rs001.quantity)} in ${acc002.name}. ` +
-      `Realised ${rs001.holdingPeriod}-term loss: $${Math.abs(rs001.realisedGainLoss).toLocaleString('en-US')}.`,
+      `Realized ${rs001.holdingPeriod}-term loss: $${Math.abs(rs001.realizedGainLoss).toLocaleString('en-US')}.`,
     entityType: 'client', entityId: 'cli-001', entityName: 'Robert Johnson',
     timestamp: ord004.filledAt!, read: true,
   },

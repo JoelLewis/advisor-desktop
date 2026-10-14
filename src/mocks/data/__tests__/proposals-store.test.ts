@@ -10,7 +10,7 @@ function version(n: number, fingerprint: string): ProposalVersion {
   return {
     n, author: { kind: 'agent', agentId: 'proposal' }, createdAt: '2026-02-25T12:05:00.000Z', constraints: [{ kind: 'avoid_self_wash' }], edits: [],
     preview: {
-      accountId: 'acc-002', currency: 'USD', trades: [], estimatedTaxImpact: 0, ytdRealisedOnReturn: null, nettedWithAccountIds: [], grossTaxOnGains: 0,
+      accountId: 'acc-002', currency: 'USD', trades: [], estimatedTaxImpact: 0, ytdRealizedOnReturn: null, nettedWithAccountIds: [], grossTaxOnGains: 0,
       taxable: true, repurchaseRestrictions: [],
       projectedDrift: { driftTolerance: 0.05, driftThreshold: 0.005, totalDrift: 0, maxAbsDrift: 0, withinBand: true, assetClassDrifts: [] },
     },

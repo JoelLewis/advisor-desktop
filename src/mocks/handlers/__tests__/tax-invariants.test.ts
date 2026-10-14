@@ -5,7 +5,7 @@ import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { accounts } from '@/mocks/data/accounts'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
 import { boundedTradeQty } from '@/mocks/handlers/custodian'
-import { realisedSales, washSaleWindow, openWashSaleWindows } from '@/mocks/data/realised-sales'
+import { realizedSales, washSaleWindow, openWashSaleWindows } from '@/mocks/data/realized-sales'
 import {
   estimatedTaxBenefit,
   SHORT_TERM_RATE,
@@ -112,7 +112,7 @@ describe('tax lots partition their positions', () => {
   // zero and every trade in the 60-day window was itself bounded by that same running balance —
   // under that model "currently held" and "held at any point in the window" always coincided.
   // Seeding an opening balance (`current quantity + total quantity sold in the window`) to make
-  // `realisedSales` injectable breaks that coincidence on purpose: acc-007 legitimately sells 300
+  // `realizedSales` injectable breaks that coincidence on purpose: acc-007 legitimately sells 300
   // NVDA while holding 0 today, because it sold all 300. The property this assertion was actually
   // guarding — a sell can never exceed what the account held *at the time of the sale* — is the
   // one already, and more correctly, covered below by "D33: no transaction implies a negative
@@ -227,21 +227,21 @@ describe('wash sale windows', () => {
   })
 
   it('C10: only loss sales open a window', () => {
-    for (const sale of realisedSales) {
-      expect(typeof sale.realisedGainLoss).toBe('number')
+    for (const sale of realizedSales) {
+      expect(typeof sale.realizedGainLoss).toBe('number')
     }
     const open = openWashSaleWindows('2026-02-25')
     expect(open.length).toBeGreaterThan(0)
-    for (const w of open) expect(w.realisedGainLoss).toBeLessThan(0)
+    for (const w of open) expect(w.realizedGainLoss).toBeLessThan(0)
   })
 
   it('C10: a gain sale is excluded by the loss filter, not by coincidence of dates', () => {
     // rs-004 (EFA, +6,260) is a *gain* sale planted to prove the loss filter works. Its 61-day
     // window (2026-01-13 .. 2026-03-14) is still date-live at MOCK_TODAY_ISO — confirmed below —
-    // so `realisedGainLoss < 0`, not the `daysRemaining` bound, is what has to keep it out.
-    const efaSale = realisedSales.find((s) => s.id === 'rs-004')!
+    // so `realizedGainLoss < 0`, not the `daysRemaining` bound, is what has to keep it out.
+    const efaSale = realizedSales.find((s) => s.id === 'rs-004')!
     expect(efaSale.symbol).toBe('EFA')
-    expect(efaSale.realisedGainLoss).toBeGreaterThan(0)
+    expect(efaSale.realizedGainLoss).toBeGreaterThan(0)
     const window = washSaleWindow(efaSale.saleDate)
     const asOfMs = new Date('2026-02-25T00:00:00Z').getTime()
     expect(asOfMs).toBeGreaterThanOrEqual(new Date(`${window.start}T00:00:00Z`).getTime())
@@ -266,7 +266,7 @@ describe('wash sale windows', () => {
     const intc = open.find((w) => w.symbol === 'INTC')!
     expect(intc.accountId).toBe('acc-002')
     // The household's IRAs are in scope for the same symbol — the IRA wash-sale trap.
-    expect(realisedSales.filter((s) => s.householdId === 'hh-001').length).toBeGreaterThan(0)
+    expect(realizedSales.filter((s) => s.householdId === 'hh-001').length).toBeGreaterThan(0)
   })
 
   it('C10: a window that has already closed is not reported as open', () => {
@@ -298,7 +298,7 @@ describe('repurchaseBlockedUntil states what is restricted, and until when', () 
 // C12 · the IRA wash-sale trap — hh-001's only INTC holder is acc-002, the account that sold it,
 // so a lot-level check against acc-002 alone can't distinguish household scoping from
 // account-only scoping (both restrict the seller identically). These tests go through the
-// account-keyed but household-scoped /realised-sales endpoint instead, against a sibling that
+// account-keyed but household-scoped /realized-sales endpoint instead, against a sibling that
 // never sold INTC and against an unrelated household, which *does* discriminate between the two.
 describe('a household window reaches every account in the household, not just the seller', () => {
   it('C12: a sibling account that never sold INTC still sees hh-001\'s INTC window', async () => {
@@ -315,13 +315,13 @@ describe('a household window reaches every account in the household, not just th
   })
 })
 
-// C14 · data-integrity follow-up — the tax page (realisedSales) and the transactions page
-// (generateTransactions) previously described two different worlds: none of the five realised
+// C14 · data-integrity follow-up — the tax page (realizedSales) and the transactions page
+// (generateTransactions) previously described two different worlds: none of the five realized
 // sales was backed by a matching sell transaction. These tests prove the match is exact — by id
 // and by the full (symbol, saleDate, quantity, proceeds) tuple — for every one of the five, so a
 // dropped or mismatched sale is named in the failure, not just counted.
-describe('every realised sale reconciles with a real sell transaction (C14)', () => {
-  it.each(realisedSales.map((s) => [s.id, s] as const))(
+describe('every realized sale reconciles with a real sell transaction (C14)', () => {
+  it.each(realizedSales.map((s) => [s.id, s] as const))(
     '%s: appears in its account\'s transaction stream as a matching sell',
     async (_id, sale) => {
       const txns = await getTransactions(sale.accountId)
@@ -394,7 +394,7 @@ describe('tax-loss harvesting rates', () => {
   //
   // Fix-round-1 review, Minor: the original account here (acc-018) is a Roth IRA — harvesting a
   // loss in a tax-free account yields no real tax benefit, so a $3,849.30 headline figure could
-  // never actually be realised. acc-015 (Michael Martinez Individual, taxable) has the same kind
+  // never actually be realized. acc-015 (Michael Martinez Individual, taxable) has the same kind
   // of genuine short+long mix in an account where the number means something.
   it('C11: acc-015 (taxable) holds both a short-term and a long-term harvestable lot; the aggregate benefit uses each lot\'s own rate', async () => {
     const lots = await getTaxLots('acc-015')
@@ -506,7 +506,7 @@ describe('computeCostBasisImpact (fix-round-1 review, Important #1)', () => {
     expect(distinct.size).toBe(3)
   })
 
-  it('acc-011 pos-072: AvgCost realises exactly 10% of the position\'s unrealised gain, with holding period allocated FIFO', async () => {
+  it('acc-011 pos-072: AvgCost realizes exactly 10% of the position\'s unrealized gain, with holding period allocated FIFO', async () => {
     const lots = await getTaxLots('acc-011')
     const posLots = lots.filter((l) => l.positionId === 'pos-072')
 
@@ -515,13 +515,13 @@ describe('computeCostBasisImpact (fix-round-1 review, Important #1)', () => {
     expect(avg.realizedGain).toBeCloseTo(3624.0, 2)
     expect(avg.shortTermGain + avg.longTermGain).toBeCloseTo(avg.realizedGain, 6)
     // FIFO-allocated holding period: the oldest (long-term) lot alone covers the sold quantity,
-    // so the entire realised gain is attributed long-term despite the position holding a
+    // so the entire realized gain is attributed long-term despite the position holding a
     // short-term lot too.
     expect(avg.shortTermGain).toBe(0)
     expect(avg.longTermGain).toBeCloseTo(3624.0, 2)
   })
 
-  it('acc-011 pos-072: every method realises a materially similar total (same 80 shares, same lots) but attributes holding period differently', async () => {
+  it('acc-011 pos-072: every method realizes a materially similar total (same 80 shares, same lots) but attributes holding period differently', async () => {
     const lots = await getTaxLots('acc-011')
     const posLots = lots.filter((l) => l.positionId === 'pos-072')
 

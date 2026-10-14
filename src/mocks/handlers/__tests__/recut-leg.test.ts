@@ -10,13 +10,13 @@ const leg = (symbol: string): ProposedTradeLeg => {
 const cut = (symbol: string, quantity: number, lotIds?: string[]) => recutLeg('acc-002', leg(symbol), { quantity, lotIds })
 
 describe('recutLeg', () => {
-  it('re-cuts a sale to fewer shares and re-realises it lot by lot', () => {
+  it('re-cuts a sale to fewer shares and re-realizes it lot by lot', () => {
     const r = cut('INTC', 3_000)
     if (!r.ok) throw new Error(r.message)
     expect(r.leg.quantity).toBe(3_000)
     expect(r.leg.estimatedValue).toBe(85_350)           // 3,000 × $28.45
-    expect(r.leg.realisedLongTerm).toBe(-19_650)        // 3/7 of the lot's −$45,850
-    expect(r.leg.realisedShortTerm).toBe(0)
+    expect(r.leg.realizedLongTerm).toBe(-19_650)        // 3/7 of the lot's −$45,850
+    expect(r.leg.realizedShortTerm).toBe(0)
     expect(r.sale.consumedLotIds).toEqual(['lot-pos-023-0'])
     expect(r.sale.soldLosses).toHaveLength(1)
   })
@@ -25,10 +25,10 @@ describe('recutLeg', () => {
     const asGenerated = leg('SPY')
     const shortLot = cut('SPY', asGenerated.quantity, ['lot-pos-020-1'])
     if (!shortLot.ok) throw new Error(shortLot.message)
-    expect(asGenerated.realisedLongTerm).toBeGreaterThan(0)
-    expect(asGenerated.realisedShortTerm).toBe(0)
-    expect(shortLot.leg.realisedLongTerm).toBe(0)
-    expect(shortLot.leg.realisedShortTerm).toBeGreaterThan(0)
+    expect(asGenerated.realizedLongTerm).toBeGreaterThan(0)
+    expect(asGenerated.realizedShortTerm).toBe(0)
+    expect(shortLot.leg.realizedLongTerm).toBe(0)
+    expect(shortLot.leg.realizedShortTerm).toBeGreaterThan(0)
     expect(shortLot.leg.taxImpact).toBeGreaterThan(asGenerated.taxImpact)
     expect(shortLot.sale.consumedLotIds).toEqual(['lot-pos-020-1'])
   })
@@ -37,7 +37,7 @@ describe('recutLeg', () => {
     const r = cut('EFA', 1_000)
     if (!r.ok) throw new Error(r.message)
     expect(r.leg.estimatedValue).toBe(82_300)           // 1,000 × $82.30
-    expect(r.leg.realisedLongTerm).toBe(0)
+    expect(r.leg.realizedLongTerm).toBe(0)
     expect(r.sale.consumedLotIds).toEqual([])
   })
 

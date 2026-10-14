@@ -80,14 +80,14 @@ async function acc002Legs() {
   return generateRebalanceTrades('acc-002', true)
 }
 
-describe('washSaleRisk on a loss-realising sell, from the engine', () => {
+describe('washSaleRisk on a loss-realizing sell, from the engine', () => {
   beforeEach(() => { scenario.current = 'roth-buys-intc' })
 
   it('INTC sold at a loss with INTC bought in the household Roth 10 days earlier is at risk', async () => {
     const legs = await acc002Legs()
     const intc = legs.find((l) => l.symbol === 'INTC' && l.side === 'sell')
     expect(intc).toBeDefined()
-    expect(intc!.realisedShortTerm + intc!.realisedLongTerm).toBeLessThan(0)
+    expect(intc!.realizedShortTerm + intc!.realizedLongTerm).toBeLessThan(0)
     expect(intc!.washSaleRisk).toBe(true)
     // The flag is specific to the symbol: gain legs in the same proposal are not touched by it.
     expect(legs.filter((l) => l.side === 'sell' && l.symbol !== 'INTC').every((l) => !l.washSaleRisk)).toBe(true)
@@ -100,7 +100,7 @@ describe('washSaleRisk on a loss-realising sell, from the engine', () => {
     expect(intc).toBeDefined()
     // The whole position goes, so both lots — including the one bought 2026-02-15 — are sold.
     expect(intc!.quantity).toBe(7_000)
-    expect(intc!.realisedShortTerm + intc!.realisedLongTerm).toBeLessThan(0)
+    expect(intc!.realizedShortTerm + intc!.realizedLongTerm).toBeLessThan(0)
     expect(intc!.washSaleRisk).toBe(false)
   })
 

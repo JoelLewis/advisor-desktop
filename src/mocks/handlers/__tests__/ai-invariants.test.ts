@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { getAIInsights } from '@/services/ai'
 import { clients } from '@/mocks/data/clients'
 import { MOCK_NOW_ISO, MOCK_TODAY_ISO } from '@/lib/clock'
-import { openWashSaleWindows } from '@/mocks/data/realised-sales'
+import { openWashSaleWindows } from '@/mocks/data/realized-sales'
 import { formatCalendarDate } from '@/lib/utils'
 
 // Regression test for fix round 2: the "Contact Gap Detected" insight's daysSinceContact was
@@ -60,7 +60,7 @@ describe('AI insight invariants — account_detail tax-loss-harvesting insight g
     expect(harvest?.body).toContain('clear for all candidates')
   })
 
-  // acc-002 sold INTC at a loss (rs-001, realised-sales.ts) — opening its own household's
+  // acc-002 sold INTC at a loss (rs-001, realized-sales.ts) — opening its own household's
   // wash-sale window — and still holds 7,000 remaining INTC shares (D28). Those shares are one of
   // its two harvestable positions, so this account's real lots include a genuinely
   // wash-sale-restricted candidate: the insight must not claim the window is clear for it.

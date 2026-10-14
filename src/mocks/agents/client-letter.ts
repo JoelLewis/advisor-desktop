@@ -4,7 +4,7 @@ import type { Proposal, ProposalVersion } from '@/types/workspace-proposal'
 import type { Account } from '@/types/account'
 import { accounts } from '@/mocks/data/accounts'
 import { householdFixtures } from '@/mocks/data/households'
-import { washSaleWindow } from '@/mocks/data/realised-sales'
+import { washSaleWindow } from '@/mocks/data/realized-sales'
 import { clients } from '@/mocks/data/clients'
 import { FIRM_NAME } from '@/lib/firm'
 import { personById } from '@/mocks/data/people'
@@ -26,7 +26,7 @@ export type ClientLetter = { body: string; figures: Figure[] }
 const capitalise = (text: string) => `${text.charAt(0).toUpperCase()}${text.slice(1)}`
 const dayAfter = (iso: string) => new Date(Date.parse(`${iso}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10)
 const security = (t: Pick<ProposedTrade, 'name' | 'symbol'>) => `${t.name} (${t.symbol})`
-/** A leg's result this year: realised less any §1091-washed part, both characters (collectibles are within long-term). */
+/** A leg's result this year: realized less any §1091-washed part, both characters (collectibles are within long-term). */
 const recognised = (t: ProposedTrade) => {
   const { shortTerm, longTerm } = recognisedResult(t)
   return shortTerm + longTerm
@@ -100,7 +100,7 @@ export function writeClientLetter(proposal: Proposal, version: ProposalVersion, 
   for (const t of harvested) {
     const until = t.repurchaseBlockedUntil ?? ''
     if (until !== window.end) throw new Error(`Client Letter Agent: ${t.symbol}'s repurchase date ${until} is not a sale on ${saleDate}`)
-    figures.push({ label: `${t.symbol} loss`, value: recognised(t), unit: 'USD', source: `version.preview.trades.${t.symbol} realised, less any washed part` })
+    figures.push({ label: `${t.symbol} loss`, value: recognised(t), unit: 'USD', source: `version.preview.trades.${t.symbol} realized, less any washed part` })
     paragraphs.push(
       `Selling ${security(t)} is expected to realize a loss of about ${aboutMoney(-recognised(t))} at today's prices, which can offset capital gains, now or in later years. `
       + `To avoid postponing or losing that loss, if the sale is made on ${clientDate(saleDate)}, please don't buy ${t.name} back ${where}, on or before ${clientDate(until)}; from ${clientDate(dayAfter(until))} you may buy it again. ${consequence} `
@@ -139,7 +139,7 @@ const harvestOnly = (version: ProposalVersion) => version.constraints.some((c) =
 /** What the approved version sets out to do, from its constraints: a harvest or a capped rebalance only moves toward the model. */
 function opening(accountName: string, modelName: string, version: ProposalVersion): string {
   if (harvestOnly(version)) return `We plan to move your ${accountName} toward its ${modelName} model.`
-  if (version.constraints.some((c) => c.kind === 'cap_realised_gains')) {
+  if (version.constraints.some((c) => c.kind === 'cap_realized_gains')) {
     return `We plan to move your ${accountName} toward its ${modelName} model while limiting the gains it realizes.`
   }
   return `We plan to rebalance your ${accountName} to bring it back in line with its ${modelName} model.`
@@ -154,11 +154,11 @@ function ordinaryIncomeLimit(account: Account): number {
 }
 
 /**
- * The version's effect on this year's return. The estimate already nets against the year's realised results;
+ * The version's effect on this year's return. The estimate already nets against the year's realized results;
  * when it adds no tax, what becomes of any net capital loss is stated from `capitalLossUse`.
  */
 function returnParagraphs(account: Account, version: ProposalVersion, figures: Figure[]): string[] {
-  const { estimatedTaxImpact, ytdRealisedOnReturn, trades } = version.preview
+  const { estimatedTaxImpact, ytdRealizedOnReturn, trades } = version.preview
   const yourReturn = `your ${taxReturnFor(account)?.startsWith('joint:') === true ? 'joint ' : ''}return for ${MOCK_TODAY_ISO.slice(0, 4)}`
   if (estimatedTaxImpact > 0) {
     return [`After netting against the gains and losses already realized this year, we estimate about ${aboutMoney(estimatedTaxImpact)} of federal tax on these gains, ${INCLUDING_NIIT}, added to ${yourReturn}.`]
@@ -167,8 +167,8 @@ function returnParagraphs(account: Account, version: ProposalVersion, figures: F
     ? ` We estimate they would reduce the federal tax on gains already realized this year, ${INCLUDING_NIIT}, by about ${aboutMoney(-estimatedTaxImpact)}.`
     : ''
   const lines = [`After netting against the gains and losses already realized this year, we expect no federal capital-gains tax from these sales on ${yourReturn}.${saving}`]
-  if (ytdRealisedOnReturn === null) return lines
-  const priorNet = ytdRealisedOnReturn.shortTerm + ytdRealisedOnReturn.longTerm
+  if (ytdRealizedOnReturn === null) return lines
+  const priorNet = ytdRealizedOnReturn.shortTerm + ytdRealizedOnReturn.longTerm
   const added = trades.reduce((s, t) => s + recognised(t), 0)
   const limit = ordinaryIncomeLimit(account)
   const { ordinaryIncomeOffset, carriedForward } = capitalLossUse(priorNet, added, limit)

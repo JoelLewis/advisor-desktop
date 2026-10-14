@@ -40,7 +40,7 @@ describe('Transfer-In', () => {
       ['Rollover of the former employer 403(b): asked about; comparison to follow.', 'info'],
     ])
     expect([figure(findings[1], 'Market value'), figure(findings[1], 'Unrealized'), figure(findings[1], 'Tax if sold now')]).toEqual([542_378, 481_378, 114_567.96])
-    expect(figure(findings[1], 'Share of her total assets')).toBeCloseTo(0.18079, 5)
+    expect(figure(findings[1], 'Share of her total assets across both accounts')).toBeCloseTo(0.18079, 5)
     expect(figure(findings[1], 'Rate')).toBe(0.238)
     expect(figure(findings[3], 'Value')).toBe(900_000)
   })

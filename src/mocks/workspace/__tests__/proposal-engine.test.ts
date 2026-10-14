@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { accounts } from '@/mocks/data/accounts'
-import { washSaleWindow } from '@/mocks/data/realised-sales'
+import { washSaleWindow } from '@/mocks/data/realized-sales'
 import type { Acquisition } from '@/lib/wash-sale'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import type { DraftPreview, LegEdit, ProposalConstraint } from '@/types/workspace-proposal'
@@ -28,7 +28,7 @@ describe('buildVersion · acc-002', () => {
     })
     expect(v.pretrade.passed).toBe(true)
     expect(v.pretrade.violations.map((x) => [x.category, x.symbol, x.severity])).toEqual([['concentration_limit', 'SPY', 'warning']])
-    expect(v.legFacts.find((f) => f.symbol === 'INTC')).toEqual({ symbol: 'INTC', lotIds: ['lot-pos-023-0'], lots: [{ lotId: 'lot-pos-023-0', shares: 7_000, realised: -45_850, character: 'long' }], washed: 0 })
+    expect(v.legFacts.find((f) => f.symbol === 'INTC')).toEqual({ symbol: 'INTC', lotIds: ['lot-pos-023-0'], lots: [{ lotId: 'lot-pos-023-0', shares: 7_000, realized: -45_850, character: 'long' }], washed: 0 })
     expect(v.excludedLegs).toEqual([])
   })
 
@@ -80,20 +80,20 @@ describe('a version and the engine agree', () => {
 
   it('the fingerprint does not depend on the key order a constraint or edit was written in', () => {
     const a = built(
-      [{ kind: 'exclude_asset_class', assetClass: 'digital_assets' }, { kind: 'cap_realised_gains', usd: 50_000 }],
+      [{ kind: 'exclude_asset_class', assetClass: 'digital_assets' }, { kind: 'cap_realized_gains', usd: 50_000 }],
       [{ kind: 'quantity', symbol: 'SPY', quantity: 700 }, { kind: 'lots', symbol: 'INTC', lotIds: ['lot-pos-023-0'] }],
     )
     const b = built(
-      [{ assetClass: 'digital_assets', kind: 'exclude_asset_class' } as ProposalConstraint, { usd: 50_000, kind: 'cap_realised_gains' } as ProposalConstraint],
+      [{ assetClass: 'digital_assets', kind: 'exclude_asset_class' } as ProposalConstraint, { usd: 50_000, kind: 'cap_realized_gains' } as ProposalConstraint],
       [{ quantity: 700, symbol: 'SPY', kind: 'quantity' } as LegEdit, { lotIds: ['lot-pos-023-0'], symbol: 'INTC', kind: 'lots' } as LegEdit],
     )
     expect(b.fingerprint).toBe(a.fingerprint)
   })
 
   it('several gain caps are the tightest of them', () => {
-    expect(normaliseConstraints([{ kind: 'cap_realised_gains', usd: 90_000 }, { kind: 'cap_realised_gains', usd: 50_000 }])).toEqual([{ kind: 'cap_realised_gains', usd: 50_000 }])
-    expect(built([{ kind: 'cap_realised_gains', usd: 90_000 }, { kind: 'cap_realised_gains', usd: 50_000 }]).fingerprint)
-      .toBe(built([{ kind: 'cap_realised_gains', usd: 50_000 }]).fingerprint)
+    expect(normaliseConstraints([{ kind: 'cap_realized_gains', usd: 90_000 }, { kind: 'cap_realized_gains', usd: 50_000 }])).toEqual([{ kind: 'cap_realized_gains', usd: 50_000 }])
+    expect(built([{ kind: 'cap_realized_gains', usd: 90_000 }, { kind: 'cap_realized_gains', usd: 50_000 }]).fingerprint)
+      .toBe(built([{ kind: 'cap_realized_gains', usd: 50_000 }]).fingerprint)
   })
 
   it('a re-cut loss sale is settled again against a purchase inside its window', async () => {
@@ -118,7 +118,7 @@ describe('a version and the engine agree', () => {
 
       // Two thousand of six thousand loss shares wash; the rest keep the repurchase window open.
       const part = version([{ kind: 'quantity', symbol: 'INTC', quantity: 6_000 }])
-      expect(part.sale.realisedLongTerm).toBe(-39_300)
+      expect(part.sale.realizedLongTerm).toBe(-39_300)
       expect(part.washed).toBe(-13_100)
       expect(part.built.legFacts.find((f) => f.symbol === 'INTC')?.washed).toBe(part.washed)
       expect(part.built.summary.washed).toBe(part.washed)
@@ -126,7 +126,7 @@ describe('a version and the engine agree', () => {
 
       // Cut to fewer shares than were bought, the whole loss washes and no window is left open.
       const whole = version([{ kind: 'quantity', symbol: 'INTC', quantity: 1_500 }])
-      expect(whole.washed).toBe(whole.sale.realisedLongTerm)
+      expect(whole.washed).toBe(whole.sale.realizedLongTerm)
       expect(whole.washed).toBeLessThan(0)
       expect(whole.built.legFacts.find((f) => f.symbol === 'INTC')?.washed).toBe(whole.washed)
       expect(whole.built.summary.washed).toBe(whole.washed)
@@ -171,7 +171,7 @@ describe('edits are re-validated by the engine', () => {
 
 describe('parsing request bodies', () => {
   it.each([
-    [undefined], [{}], [[{ kind: 'nope' }]], [[{ kind: 'cap_realised_gains', usd: -1 }]], [[{ kind: 'cap_realised_gains', usd: 'lots' }]],
+    [undefined], [{}], [[{ kind: 'nope' }]], [[{ kind: 'cap_realized_gains', usd: -1 }]], [[{ kind: 'cap_realized_gains', usd: 'lots' }]],
     [[{ kind: 'exclude_asset_class', assetClass: 'gold' }]],
   ])('refuses constraints %j', (value) => expect(parseConstraints(value).ok).toBe(false))
 
@@ -204,7 +204,7 @@ describe('every account', () => {
     const symbols = r.built.preview.trades.map((t) => t.symbol)
     expect(new Set(symbols).size).toBe(symbols.length)
   })
-  it.each(accounts.filter(isModelManaged).map((a) => a.id))('%s: each sell leg\'s lot takes sum to its quantity and, by character, to its realised results', (id) => {
+  it.each(accounts.filter(isModelManaged).map((a) => a.id))('%s: each sell leg\'s lot takes sum to its quantity and, by character, to its realized results', (id) => {
     const r = buildVersion(id, AGENT, [])
     if (!r.ok) throw new Error(r.message)
     expectTakesTie(r.built)
@@ -217,21 +217,21 @@ function expectTakesTie(v: DraftPreview) {
     if (!facts) throw new Error(`no facts for ${t.symbol}`)
     expect(facts.lots.map((l) => l.lotId)).toEqual(facts.lotIds)
     if (facts.lots.length === 0) {
-      // A tax-advantaged sale realises nothing, so it records no takes.
-      expect([t.realisedShortTerm, t.realisedLongTerm]).toEqual([0, 0])
+      // A tax-advantaged sale realizes nothing, so it records no takes.
+      expect([t.realizedShortTerm, t.realizedLongTerm]).toEqual([0, 0])
       continue
     }
     expect(facts.lots.reduce((s, l) => s + l.shares, 0)).toBeCloseTo(t.quantity, 9)
-    for (const l of facts.lots) expect(Number.isInteger(l.realised)).toBe(true)
-    const by = (c: 'short' | 'long') => facts.lots.filter((l) => l.character === c).reduce((s, l) => s + l.realised, 0)
-    expect([by('short'), by('long')]).toEqual([t.realisedShortTerm, t.realisedLongTerm])
+    for (const l of facts.lots) expect(Number.isInteger(l.realized)).toBe(true)
+    const by = (c: 'short' | 'long') => facts.lots.filter((l) => l.character === c).reduce((s, l) => s + l.realized, 0)
+    expect([by('short'), by('long')]).toEqual([t.realizedShortTerm, t.realizedLongTerm])
   }
 }
 
 describe('lot takes · acc-002', () => {
   it('SPY sells 758 shares of its first lot for the leg\'s whole long-term result', () => {
     const spy = built(AGENT).legFacts.find((f) => f.symbol === 'SPY')
-    expect(spy?.lots).toEqual([{ lotId: 'lot-pos-020-0', shares: 758, realised: 69_411, character: 'long' }])
+    expect(spy?.lots).toEqual([{ lotId: 'lot-pos-020-0', shares: 758, realized: 69_411, character: 'long' }])
   })
   it('a re-cut leg (a quantity and lots chosen in the workbench) ties too', () => {
     const v = built(AGENT, [{ kind: 'quantity', symbol: 'SPY', quantity: 2_000 }, { kind: 'lots', symbol: 'INTC', lotIds: ['lot-pos-023-0'] }])

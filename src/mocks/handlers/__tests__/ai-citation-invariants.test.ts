@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { sendMessage, getAIInsights, getContextBriefing } from '@/services/ai'
 import { accounts } from '@/mocks/data/accounts'
-import { openWashSaleWindows } from '@/mocks/data/realised-sales'
+import { openWashSaleWindows } from '@/mocks/data/realized-sales'
 import { computeDriftForAccount } from '@/mocks/handlers/pms'
 import { generateRebalanceTrades } from '@/mocks/handlers/oms'
 import { formatAUM } from '@/mocks/handlers/utils'

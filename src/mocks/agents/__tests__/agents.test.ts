@@ -6,7 +6,7 @@ import { evaluateProposal } from '@/mocks/handlers/compliance'
 import { generateRebalanceTrades } from '@/mocks/handlers/oms'
 import { MOCK_NOW_ISO, MOCK_TODAY_ISO } from '@/lib/clock'
 import { getPositionsForAccount } from '@/mocks/data/positions'
-import { openWashSaleWindows, realisedSales, washSaleWindow } from '@/mocks/data/realised-sales'
+import { openWashSaleWindows, realizedSales, washSaleWindow } from '@/mocks/data/realized-sales'
 import { claimNameOf } from '../claim-name'
 import { isModelManaged, requireModelManaged } from '@/lib/mandate'
 
@@ -111,7 +111,7 @@ describe('drift monitor replacement holds', () => {
     expect(hold!.attention).toBe('info')
     const account = accounts.find((a) => a.id === 'acc-002')!
     const smh = getPositionsForAccount(account.id, account.totalValue).find((p) => p.symbol === 'SMH')!
-    const sale = realisedSales.find((s) => s.id === 'rs-001')!
+    const sale = realizedSales.find((s) => s.id === 'rs-001')!
     const { end } = washSaleWindow(sale.saleDate)
     const daysToClose = (Date.parse(`${end}T00:00:00Z`) - Date.parse(`${MOCK_TODAY_ISO}T00:00:00Z`)) / 86_400_000
     // The INTC harvest is Fri 2026-02-20 (Phase 0 trading-day ruling), so the window closes 03-22, 25 days out.
@@ -124,7 +124,7 @@ describe('drift monitor replacement holds', () => {
   })
 
   it('the replacement link lives on the loss sale, not in the agent', () => {
-    expect(realisedSales.filter((s) => s.replacementSymbol !== undefined).map((s) => [s.id, s.symbol, s.replacementSymbol])).toEqual([['rs-001', 'INTC', 'SMH']])
+    expect(realizedSales.filter((s) => s.replacementSymbol !== undefined).map((s) => [s.id, s.symbol, s.replacementSymbol])).toEqual([['rs-001', 'INTC', 'SMH']])
     expect(openWashSaleWindows(MOCK_TODAY_ISO).find((w) => w.id === 'rs-001')?.replacementSymbol).toBe('SMH')
   })
 

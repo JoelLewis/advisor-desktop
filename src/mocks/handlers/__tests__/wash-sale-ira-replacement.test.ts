@@ -67,7 +67,7 @@ describe('a loss washed by an IRA or Roth purchase is permanently disallowed, no
     expect(trustSmh.reduce((s, l) => s + l.saleWash.deferredShares, 0)).toBe(180)
   })
 
-  it('the loss splits by the rule: −5,480 disallowed, −9,864 deferred, −6,576 realised now', () => {
+  it('the loss splits by the rule: −5,480 disallowed, −9,864 deferred, −6,576 realized now', () => {
     expect(trustSmh.reduce((s, l) => s + lossDisallowed(l), 0)).toBeCloseTo(-5_480, 6)
     expect(trustSmh.reduce((s, l) => s + lossDeferred(l), 0)).toBeCloseTo(-9_864, 6)
     expect(trustSmh.reduce((s, l) => s + lossAllowedNow(l), 0)).toBeCloseTo(-6_576, 6)

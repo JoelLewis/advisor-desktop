@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { previewRebalance } from '@/services/oms'
 import { previewModelTrades } from '@/services/trading'
 import { accounts } from '@/mocks/data/accounts'
-import { openWashSaleWindows, realisedSales, washSaleWindow } from '@/mocks/data/realised-sales'
+import { openWashSaleWindows, realizedSales, washSaleWindow } from '@/mocks/data/realized-sales'
 import { repurchaseRestrictionsFor } from '@/mocks/handlers/repurchase-restrictions'
 import { estimateTaxOnReturns } from '@/mocks/handlers/tax-return'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
@@ -29,7 +29,7 @@ describe('§0.2 · a loss sale opens its own wash-sale window', () => {
   it("acc-002's tax-aware INTC sale today blocks repurchase through 2026-03-27", async () => {
     const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
     const intc = preview!.trades.find((t) => t.symbol === 'INTC' && t.side === 'sell')!
-    expect(intc.realisedShortTerm + intc.realisedLongTerm).toBeLessThan(0)
+    expect(intc.realizedShortTerm + intc.realizedLongTerm).toBeLessThan(0)
     expect(intc.repurchaseBlockedUntil).toBe('2026-03-27')
     expect(intc.repurchaseBlockedUntil).toBe(washSaleWindow(MOCK_TODAY_ISO).end)
   })
@@ -58,7 +58,7 @@ describe('§0.2 · a loss sale opens its own wash-sale window', () => {
     const [preview] = await previewRebalance({ accountIds: ['acc-045'], taxAware: true, modelId: 'mod-002' })
     for (const symbol of ['DOT', 'SOL']) {
       const leg = preview!.trades.find((t) => t.symbol === symbol && t.side === 'sell')!
-      expect(leg.realisedShortTerm + leg.realisedLongTerm, symbol).toBeLessThan(0)
+      expect(leg.realizedShortTerm + leg.realizedLongTerm, symbol).toBeLessThan(0)
       expect(leg.repurchaseBlockedUntil, symbol).toBeUndefined()
       expect(leg.washSaleRisk, symbol).toBe(false)
       expect(leg.washedLoss, symbol).toBeUndefined()
@@ -69,7 +69,7 @@ describe('§0.2 · a loss sale opens its own wash-sale window', () => {
   it("the restriction list keeps rs-001's recorded window (to 2026-03-22) separate from the projected one", async () => {
     const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
     const intc = preview!.repurchaseRestrictions.filter((r) => r.symbol === 'INTC')
-    const rs001 = realisedSales.find((s) => s.id === 'rs-001')!
+    const rs001 = realizedSales.find((s) => s.id === 'rs-001')!
     expect(intc).toEqual([
       { symbol: 'INTC', start: '2026-01-21', until: '2026-03-22', source: { kind: 'recorded', saleId: 'rs-001', accountId: 'acc-002', saleDate: rs001.saleDate } },
       { symbol: 'INTC', start: '2026-01-26', until: '2026-03-27', source: { kind: 'projected', accountId: 'acc-002', saleDate: MOCK_TODAY_ISO } },
@@ -106,7 +106,7 @@ describe('§0.2 · a loss sale opens its own wash-sale window', () => {
     expect(repurchaseRestrictionsFor(account('acc-045'), MOCK_TODAY_ISO, proposals).map((r) => r.symbol)).toEqual(['AGG'])
   })
 
-  it('a loss inside an IRA or Roth opens no window: nothing deductible is realised there', async () => {
+  it('a loss inside an IRA or Roth opens no window: nothing deductible is realized there', async () => {
     const sheltered = accounts.filter((a) => !isTaxableAccount(a.taxTreatment))
     const previews = await previewRebalance({ accountIds: sheltered.map((a) => a.id), taxAware: true })
     for (const p of previews) {
@@ -137,13 +137,13 @@ describe('§0.2 · a loss sale opens its own wash-sale window', () => {
 })
 
 describe('§0.2 · the estimate counts only the part of a loss §1091 allows', () => {
-  // A constructed proposal on acc-033's return (single filer, nothing realised this year): a
+  // A constructed proposal on acc-033's return (single filer, nothing realized this year): a
   // +$20,000 long-term gain leg and a −$10,000 long-term loss leg of which 30% of the shares were
   // replaced in the last 30 days, so −$3,000 of the loss is washed and only −$7,000 offsets the gain.
-  const gain: TaxedLeg = { realisedShortTerm: 0, realisedLongTerm: 20_000, taxImpact: 4_760 }
-  const partlyWashed: TaxedLeg = { realisedShortTerm: 0, realisedLongTerm: -10_000, taxImpact: 0, washedLoss: { shortTerm: 0, longTerm: -3_000 } }
+  const gain: TaxedLeg = { realizedShortTerm: 0, realizedLongTerm: 20_000, taxImpact: 4_760 }
+  const partlyWashed: TaxedLeg = { realizedShortTerm: 0, realizedLongTerm: -10_000, taxImpact: 0, washedLoss: { shortTerm: 0, longTerm: -3_000 } }
 
-  it('nets the gain against the allowed $7,000, not the realised $10,000: 13,000 × 23.8% = 3,094', () => {
+  it('nets the gain against the allowed $7,000, not the realized $10,000: 13,000 × 23.8% = 3,094', () => {
     const [estimate] = estimateTaxOnReturns([{ account: account('acc-033'), legs: [gain, partlyWashed] }], MOCK_TODAY_ISO)
     expect(estimate!.net).toBe(Math.round(13_000 * 0.238))
     expect(estimate!.net).not.toBe(Math.round(10_000 * 0.238))
@@ -162,7 +162,7 @@ describe('§0.2 · the estimate counts only the part of a loss §1091 allows', (
       MOCK_TODAY_ISO,
     )
     const [alone] = estimateTaxOnReturns(
-      [{ account: account('acc-002'), legs: [{ ...partlyWashed, realisedLongTerm: -7_000, washedLoss: undefined }] }, { account: account('acc-005'), legs: [gain] }],
+      [{ account: account('acc-002'), legs: [{ ...partlyWashed, realizedLongTerm: -7_000, washedLoss: undefined }] }, { account: account('acc-005'), legs: [gain] }],
       MOCK_TODAY_ISO,
     ).slice(1)
     expect(second!.net).toBe(alone!.net)
@@ -203,7 +203,7 @@ describe('§0.2 · a buy proposed in the same batch washes a loss sold by the sa
     expect(sell.washSaleRisk).toBe(true)
     expect(sell.repurchaseBlockedUntil).toBe('2026-03-27')
 
-    // The estimate is the one the recognised result gives, not the one the realised loss would.
+    // The estimate is the one the recognised result gives, not the one the realized loss would.
     const asServed = estimateTaxOnReturns(previews.map((p) => ({ account: account(p.accountId), legs: p.trades })), MOCK_TODAY_ISO)
     const ignoringWash = estimateTaxOnReturns(previews.map((p) => ({ account: account(p.accountId), legs: p.trades.map((t) => ({ ...t, washedLoss: undefined })) })), MOCK_TODAY_ISO)
     expect(p026!.estimatedTaxImpact).toBe(asServed[1]!.net)
@@ -228,9 +228,9 @@ describe('§0.2 · a buy proposed in the same batch washes a loss sold by the sa
 })
 
 describe('§0.2 · settleBatchWashSales on constructed legs', () => {
-  const leg = (symbol: string, side: 'buy' | 'sell', quantity: number, realisedLongTerm = 0): ProposedTradeLeg => ({
-    symbol, name: symbol, side, quantity, estimatedValue: quantity, taxImpact: 0, realisedShortTerm: 0, realisedLongTerm,
-    realisedCollectibleLongTerm: 0, washSaleRisk: false, currency: 'USD', assetClass: 'us_equity', actualWeight: 0, targetWeight: 0,
+  const leg = (symbol: string, side: 'buy' | 'sell', quantity: number, realizedLongTerm = 0): ProposedTradeLeg => ({
+    symbol, name: symbol, side, quantity, estimatedValue: quantity, taxImpact: 0, realizedShortTerm: 0, realizedLongTerm,
+    realizedCollectibleLongTerm: 0, washSaleRisk: false, currency: 'USD', assetClass: 'us_equity', actualWeight: 0, targetWeight: 0,
   })
   const settleOne = (accountId: string, sell: ProposedTradeLeg, sale: LegSale, others: ProposedTradeLeg[] = []) =>
     settleBatchWashSales([{ account: account(accountId), legs: [sell, ...others], sales: new Map([[sell, sale]]) }], MOCK_TODAY_ISO)[0]!

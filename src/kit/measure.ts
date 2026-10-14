@@ -1,5 +1,5 @@
 export const MINUS = '−'
-export const UNIT = { usd: 'USD', pp: 'pp', pct: '%', shares: 'sh', days: 'd', points: 'pts', bps: 'bps' } as const
+export const UNIT = { usd: 'USD', pp: 'pp', pct: '%', shares: 'sh', contracts: 'contracts', par: 'par', days: 'd', points: 'pts', bps: 'bps' } as const
 
 export class MeasureError extends Error {
   constructor(message: string) {

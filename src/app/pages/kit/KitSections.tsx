@@ -41,10 +41,10 @@ export function KitSections({ data }: { data: KitData }) {
   const [harvestOnly, setHarvestOnly] = useState(false)
   const [gainsCap, setGainsCap] = useState('')
   const worst = [...drift.assetClassDrifts].sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift))[0]
-  const gains = preview.trades.reduce((s, t) => s + Math.max(0, t.realisedShortTerm) + Math.max(0, t.realisedLongTerm), 0)
-  const losses = preview.trades.reduce((s, t) => s + Math.min(0, t.realisedShortTerm) + Math.min(0, t.realisedLongTerm), 0)
-  const netShortTerm = preview.trades.reduce((s, t) => s + t.realisedShortTerm, 0)
-  const netLongTerm = preview.trades.reduce((s, t) => s + t.realisedLongTerm, 0)
+  const gains = preview.trades.reduce((s, t) => s + Math.max(0, t.realizedShortTerm) + Math.max(0, t.realizedLongTerm), 0)
+  const losses = preview.trades.reduce((s, t) => s + Math.min(0, t.realizedShortTerm) + Math.min(0, t.realizedLongTerm), 0)
+  const netShortTerm = preview.trades.reduce((s, t) => s + t.realizedShortTerm, 0)
+  const netLongTerm = preview.trades.reduce((s, t) => s + t.realizedLongTerm, 0)
   const estimate = taxEstimateDirection(preview.estimatedTaxImpact)
   const restriction = windows[0]
   const gaugeDomain = sharedGaugeDomain(drift.assetClassDrifts.map((d) => d.drift), drift.driftTolerance)
@@ -68,7 +68,7 @@ export function KitSections({ data }: { data: KitData }) {
           <div className="flex flex-wrap gap-4"><Button>Approve</Button><Button rank="secondary">Withdraw</Button><Button rank="quiet">View lots</Button></div>
           <div className="flex flex-wrap items-start gap-8">
             <Checkbox label="Harvest only: sell only lots at a loss" checked={harvestOnly} onChange={setHarvestOnly} />
-            <NumberInput label="Realised gains cap" unit="USD" value={gainsCap} onChange={setGainsCap} />
+            <NumberInput label="Realized gains cap" unit="USD" value={gainsCap} onChange={setGainsCap} />
           </div>
         </Pane>
         <Pane title="Drift against model" meta={`band ${fmtTolerance(drift.driftTolerance)} pp`}>

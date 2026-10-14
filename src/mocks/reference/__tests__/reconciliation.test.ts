@@ -146,7 +146,7 @@ describe('resolve_break', () => {
 
   it('needs a rationale', () => {
     expect(resolveBreak(ADRIAN, { breakId: 'brk-002', fingerprint: brk('brk-002').fingerprint, resolution: 'book_corrected', rationale: '   ' }))
-      .toMatchObject({ ok: false, status: 400, code: 'RATIONALE_REQUIRED' })
+      .toMatchObject({ ok: false, status: 400, code: 'RATIONALE_REQUIRED', message: 'A rationale is required for every break resolution.' })
   })
 
   it("is in the Archive for any firm viewer, under the account's client", () => {

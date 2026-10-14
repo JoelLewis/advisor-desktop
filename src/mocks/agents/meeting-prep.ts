@@ -8,7 +8,7 @@ import { plans } from '@/mocks/data/planning'
 import { documents } from '@/mocks/data/documents'
 import { OPEN_ITEMS } from '@/mocks/data/open-items'
 import { getPositionsForAccount } from '@/mocks/data/positions'
-import { openWashSaleWindows } from '@/mocks/data/realised-sales'
+import { openWashSaleWindows } from '@/mocks/data/realized-sales'
 import { ledgerFills } from '@/mocks/data/portfolio-ledger'
 import { computeDriftForAccount } from '@/mocks/handlers/pms'
 import { isModelManaged } from '@/lib/mandate'
@@ -60,17 +60,17 @@ function changes(own: readonly Account[], asOf: string): PrepFinding {
   }
 }
 
-/** The taxpayer's open loss-sale windows, from the realised-sales ledger (fixtures and the session's fills). */
+/** The taxpayer's open loss-sale windows, from the realized-sales ledger (fixtures and the session's fills). */
 function windows(householdId: string, asOf: string): PrepFinding {
   const open = openWashSaleWindows(asOf.slice(0, 10), householdId)
   if (open.length === 0) {
-    return { claim: 'The taxpayer has no open wash-sale window.', attention: 'info', figures: [], citations: [{ source: `Realised sales · ${householdId}`, asOf }], agendaTitle: 'Wash-sale windows' }
+    return { claim: 'The taxpayer has no open wash-sale window.', attention: 'info', figures: [], citations: [{ source: `Realized sales · ${householdId}`, asOf }], agendaTitle: 'Wash-sale windows' }
   }
   return {
     claim: "The taxpayer has open wash-sale windows: what was sold at a loss must not be bought back in any of the taxpayer's accounts, including IRAs and Roths, before each window closes, and reinvested dividends count as buying.",
     attention: 'attention',
     figures: open.flatMap((w) => [
-      { label: `${w.symbol} loss · ${w.id}`, value: w.realisedGainLoss, unit: 'USD' as const, source: 'realisedSales.realisedGainLoss' },
+      { label: `${w.symbol} loss · ${w.id}`, value: w.realizedGainLoss, unit: 'USD' as const, source: 'realizedSales.realizedGainLoss' },
       { label: `Days until the ${w.symbol} window closes · ${w.id}`, value: w.daysRemaining, unit: 'd' as const, source: 'openWashSaleWindows.daysRemaining' },
     ]),
     citations: open.map((w) => ({ source: `Wash-sale window · ${w.id} · ${w.symbol} loss sale of ${w.saleDate}, open through ${w.end}`, asOf })),

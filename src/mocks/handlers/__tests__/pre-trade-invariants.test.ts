@@ -170,11 +170,11 @@ describe('rebalance tax estimation', () => {
     expect(preview!.grossTaxOnGains)
       .toBeCloseTo(preview!.trades.reduce((s, t) => s + t.taxImpact, 0), 0)
     // acc-001 (Robert Johnson's revocable trust) is on hh-001's joint return, which already
-    // realised rs-001's −$32,750 long-term loss this year; that loss shelters acc-001's gains.
-    expect(preview!.ytdRealisedOnReturn).toEqual({ shortTerm: 0, longTerm: -32_750, collectibleLongTerm: 0 })
-    const shortTerm = preview!.trades.reduce((s, t) => s + t.realisedShortTerm, 0)
-    const longTerm = preview!.trades.reduce((s, t) => s + t.realisedLongTerm, 0)
-    const collectibleLongTerm = preview!.trades.reduce((s, t) => s + t.realisedCollectibleLongTerm, 0)
+    // realized rs-001's −$32,750 long-term loss this year; that loss shelters acc-001's gains.
+    expect(preview!.ytdRealizedOnReturn).toEqual({ shortTerm: 0, longTerm: -32_750, collectibleLongTerm: 0 })
+    const shortTerm = preview!.trades.reduce((s, t) => s + t.realizedShortTerm, 0)
+    const longTerm = preview!.trades.reduce((s, t) => s + t.realizedLongTerm, 0)
+    const collectibleLongTerm = preview!.trades.reduce((s, t) => s + t.realizedCollectibleLongTerm, 0)
     expect(preview!.estimatedTaxImpact)
       .toBe(additionalCapitalGainsTax({ shortTerm: 0, longTerm: -32_750 }, { shortTerm, longTerm, collectibleLongTerm }, taxRateFor))
     expect(preview!.estimatedTaxImpact).toBeLessThan(preview!.grossTaxOnGains)
@@ -191,7 +191,7 @@ describe('rebalance tax estimation', () => {
     let withYtdGain = 0
     for (const account of (await getAccounts()).filter(isModelManaged)) {
       const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
-      const ytd = preview!.ytdRealisedOnReturn
+      const ytd = preview!.ytdRealizedOnReturn
       if (ytd === null) {
         expect(preview!.estimatedTaxImpact, account.id).toBe(0)
         continue
@@ -199,7 +199,7 @@ describe('rebalance tax estimation', () => {
       expect(preview!.estimatedTaxImpact, account.id).toBeGreaterThanOrEqual(-netCapitalGainsTax(ytd.shortTerm, ytd.longTerm, taxRateFor, ytd.collectibleLongTerm) - 1)
       const collectibles = ytd.collectibleLongTerm ?? 0
       if (ytd.shortTerm < 0 || collectibles < 0 || ytd.longTerm - collectibles < 0) continue
-      // Slack: the gross rounds each leg's tax and the estimate rounds its realised results per
+      // Slack: the gross rounds each leg's tax and the estimate rounds its realized results per
       // leg, each under a dollar, plus one for the estimate's own two roundings.
       const taxedLegs = preview!.trades.filter((t) => t.side === 'sell').length
       expect(preview!.estimatedTaxImpact, account.id).toBeLessThanOrEqual(preview!.grossTaxOnGains + 1 + taxedLegs)
@@ -752,7 +752,7 @@ describe('fix round 3 · rebalance sells never exceed the position actually held
  * aware/unaware comparison can't distinguish a flat rate from a per-lot one because both branches
  * read the same `taxRateFor`. These are golden-model cross-checks (the same pattern
  * `drift-invariants.test.ts` uses) against a *fixed*, single rate applied to the same lot-by-lot
- * notional walk the production code performs — not a re-statement of `realiseSale` itself.
+ * notional walk the production code performs — not a re-statement of `realizeSale` itself.
  */
 describe('fix round 3 · rebalance tax uses each lot\'s own holding-period rate, not a flat rate', () => {
   it('acc-037: VTI has only short-term lots, so its sell tax must exceed what a flat 23.8% long-term rate would produce', async () => {
@@ -816,7 +816,7 @@ describe('fix round 3 · rebalance tax uses each lot\'s own holding-period rate,
  * affected book-wide; the per-leg exposure is bounded by `unitPrice / estimatedValue`, which is
  * 50.0% on acc-045's BTC, 7.7% on acc-040's GLD and 4.6% on acc-045's ETH.
  *
- * These run **tax-unaware** on purpose: `realiseSale` re-orders lots by tax-per-dollar when
+ * These run **tax-unaware** on purpose: `realizeSale` re-orders lots by tax-per-dollar when
  * the toggle is on, and reproducing that sort in the test would make this a copy of the function
  * rather than a check on it. Unaware, the walk is the fixture's own lot order, so what is actually
  * under test is the *argument* — which figure the tax is computed from — and not the algorithm.
@@ -905,8 +905,8 @@ describe('fix round 2 · rebalance trade direction follows actual vs target, not
   })
 })
 
-describe('oms.ts pre-trade wash-sale check is derived from realised sales, not a hand-typed symbol list', () => {
-  it('flags INTC in acc-002 (hh-001), which itself realised the INTC loss sale 5 days ago', async () => {
+describe('oms.ts pre-trade wash-sale check is derived from realized sales, not a hand-typed symbol list', () => {
+  it('flags INTC in acc-002 (hh-001), which itself realized the INTC loss sale 5 days ago', async () => {
     const result = await preTradeCheck({
       accountId: 'acc-002', symbol: 'INTC', side: 'buy', quantity: 100, estimatedValue: 2_845,
     })
@@ -1081,7 +1081,7 @@ describe('fix round 2 · the two compliance endpoints agree on a single severity
  * international equity against a 15% target, because every class it needed to buy was one it held
  * zero of; and where the engine did propose, it never chose *which* security to trade — acc-002
  * trimmed SPY (a $355,206.70 embedded gain) while INTC sat in the same asset class with a $45,850
- * unrealised loss, so the "tax-aware" toggle picked a materially worse tax outcome than an obvious
+ * unrealized loss, so the "tax-aware" toggle picked a materially worse tax outcome than an obvious
  * loss lot already in the account.
  */
 describe('§9.7 · rebalancing reaches classes the account does not yet hold', () => {
@@ -1175,7 +1175,7 @@ describe('§9.7 · rebalancing reaches classes the account does not yet hold', (
   })
 
   it('the tax-aware ordering is confined to taxable accounts — a tax-deferred account is unmoved by the toggle', async () => {
-    // acc-047 is a SIMPLE IRA: gains are not taxed, `realiseSale` already returns 0, and
+    // acc-047 is a SIMPLE IRA: gains are not taxed, `realizeSale` already returns 0, and
     // re-ranking its sleeves by embedded gain would be an arbitrary preference wearing a
     // tax-awareness label. Its two toggle states must therefore be identical — and the toggle
     // must still bite on the taxable account above, or this is asserting that the toggle is dead.
@@ -1342,15 +1342,15 @@ describe('§0.6 · a long-term GLD gain is collectibles gain', () => {
     const gld = preview!.trades.find((t) => t.symbol === 'GLD' && t.side === 'sell')!
     const vti = preview!.trades.find((t) => t.symbol === 'VTI' && t.side === 'sell')!
     // Both legs are wholly long-term gain, so each leg's tax is that gain at one rate.
-    expect([gld.realisedShortTerm, vti.realisedShortTerm]).toEqual([0, 0])
-    expect(gld.realisedCollectibleLongTerm).toBe(gld.realisedLongTerm)
-    expect(vti.realisedCollectibleLongTerm).toBe(0)
+    expect([gld.realizedShortTerm, vti.realizedShortTerm]).toEqual([0, 0])
+    expect(gld.realizedCollectibleLongTerm).toBe(gld.realizedLongTerm)
+    expect(vti.realizedCollectibleLongTerm).toBe(0)
     // 21,324 × 0.318 = 6,781.03 → 6,781 (it was 21,324 × 0.238 = 5,075).
-    expect(gld.realisedLongTerm).toBe(21_324)
+    expect(gld.realizedLongTerm).toBe(21_324)
     expect(gld.taxImpact).toBe(Math.round(21_324 * 0.318))
     expect(gld.taxImpact).toBe(6_781)
     // 109,639 × 0.238 = 26,094.08 → 26,094.
-    expect(vti.taxImpact).toBe(Math.round(vti.realisedLongTerm * 0.238))
+    expect(vti.taxImpact).toBe(Math.round(vti.realizedLongTerm * 0.238))
   })
 
   it('acc-001: the estimate nets the year-to-date loss against the 23.8% gain, leaving the 28% gain whole', async () => {

@@ -4,7 +4,7 @@ import { getPositionsForAccount } from '@/mocks/data/positions'
 import { computeDriftForAccount } from '@/mocks/handlers/pms'
 import { ASSET_CLASS_LABELS } from '@/lib/labels'
 import { isMarketTradable } from '@/lib/security-master'
-import { openWashSaleWindows } from '@/mocks/data/realised-sales'
+import { openWashSaleWindows } from '@/mocks/data/realized-sales'
 import type { Position } from '@/types/portfolio'
 import { claimNameOf } from './claim-name'
 

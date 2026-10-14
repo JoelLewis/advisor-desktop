@@ -9,8 +9,8 @@ export function TaxReadings({ summary, currency }: { summary: ProposalTaxSummary
     <div className="flex flex-wrap gap-x-10 gap-y-3">
       <Reading label="Sold" value={fmtMoney(summary.sold)} unit={currency} />
       <Reading label="Bought" value={fmtMoney(summary.bought)} unit={currency} />
-      <Reading label="Gains realised" value={fmtResult(summary.gains)} unit={currency} />
-      <Reading label="Losses realised" value={fmtResult(summary.losses)} unit={currency} />
+      <Reading label="Gains realized" value={fmtResult(summary.gains)} unit={currency} />
+      <Reading label="Losses realized" value={fmtResult(summary.losses)} unit={currency} />
       {summary.washed !== 0 ? <Reading label="Washed" value={fmtResult(summary.washed)} unit={currency} /> : null}
       <Reading label={`Est. tax ${estimate.direction} the return`} value={fmtMoney(estimate.amount)} unit={currency} />
     </div>

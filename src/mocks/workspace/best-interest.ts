@@ -25,7 +25,7 @@ export function bestInterestDraftOf(v: ProspectVersionContent): BestInterestDraf
   return {
     profileLabel: v.profileLabel, score: v.score, modelId: v.modelId, modelName: v.modelName, alternatives,
     costs: { scheduleName: v.fees.scheduleName, annualFee: v.fees.annual, blendedRate: v.fees.blendedRate },
-    ...(v.concentration ? { concentration: { symbol: v.concentration.symbol, name: v.concentration.name, weightOfAssets: v.concentration.weightOfAssets, unrealised: v.concentration.unrealised, taxIfSoldNow: v.concentration.taxIfSoldNow } } : {}),
+    ...(v.concentration ? { concentration: { symbol: v.concentration.symbol, name: v.concentration.name, weightOfAssets: v.concentration.weightOfAssets, unrealized: v.concentration.unrealized, taxIfSoldNow: v.concentration.taxIfSoldNow } } : {}),
     inKindVsModel: inKindVsModelLine(v, 'she'),
     rollover: ROLLOVER_LINE,
   }

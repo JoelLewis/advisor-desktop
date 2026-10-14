@@ -39,7 +39,7 @@ export function WorkbenchLegs({ view, caption, onExpand, onToggleExclude }: Work
         ]} />
       <p className="text-label text-ink-3">
         {onToggleExclude ? 'Enter shows a leg and its lots · x excludes or includes it · ⌘S or Ctrl+S saves the draft' : 'Enter shows a leg and its lots'}
-        {' · ST and LT are realised short- and long-term results; washed is the part of a loss the wash-sale rule takes.'}
+        {' · ST and LT are realized short- and long-term results; washed is the part of a loss the wash-sale rule takes.'}
       </p>
     </div>
   )

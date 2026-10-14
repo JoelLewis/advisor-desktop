@@ -179,20 +179,20 @@ describe('D22: nba-002 states the post-Task-18 harvestable loss, not the stale p
   }
   const intcLots = intcAccounts.flatMap(intcLotsOf)
 
-  it('no INTC lot washes on sale today, so a harvest realises every lot\'s whole loss', () => {
+  it('no INTC lot washes on sale today, so a harvest realizes every lot\'s whole loss', () => {
     expect(intcLots.some(washesOnSale)).toBe(false)
   })
 
   // §0.7 fix round 1 · the benefit was each lot's loss at its own holding-period rate ($61,400), as
   // if every client had gains of that character to offset. They do not: the tax a harvest saves
   // this year is what it takes off each client's own return (`estimateTaxOnReturns`, netted against
-  // `ytdRealisedOnReturn`). At 2026-02-25: acc-002's joint return is already −32,750 LT (rs-001)
+  // `ytdRealizedOnReturn`). At 2026-02-25: acc-002's joint return is already −32,750 LT (rs-001)
   // and acc-015's −24,867 ST (rs-003), so harvesting saves them nothing this year; acc-011's
   // return has +6,260 LT (rs-004), so it saves 6,260 × 0.238 = 1,489.88, rounded 1,490.
   const savingThisYear = intcAccounts.map((account) => {
     const lots = intcLotsOf(account)
     const allowed = (period: 'short' | 'long') => lots.filter((l) => l.holdingPeriod === period).reduce((s, l) => s + lossAllowedNow(l), 0)
-    const estimate = estimateTaxOnReturns([{ account, legs: [{ realisedShortTerm: allowed('short'), realisedLongTerm: allowed('long'), taxImpact: 0 }] }], MOCK_TODAY_ISO)[0]!
+    const estimate = estimateTaxOnReturns([{ account, legs: [{ realizedShortTerm: allowed('short'), realizedLongTerm: allowed('long'), taxImpact: 0 }] }], MOCK_TODAY_ISO)[0]!
     return 0 - estimate.net
   })
 
@@ -202,7 +202,7 @@ describe('D22: nba-002 states the post-Task-18 harvestable loss, not the stale p
 
   it('estimatedImpact is the sum of those return-level savings, not a lot-rate benefit or the raw loss', () => {
     // Review round 1, Critical · this was once 224_000, the raw loss; then 61,430, each lot at its
-    // own rate. Both price a loss against gains these clients have not realised.
+    // own rate. Both price a loss against gains these clients have not realized.
     expect(nba.estimatedImpact).toBe(savingThisYear.reduce((s, x) => s + x, 0))
     expect(nba.estimatedImpact).not.toBe(Math.abs(total))
     expect(nba.estimatedImpact).not.toBe(224_000)

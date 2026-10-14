@@ -5,7 +5,7 @@ import type { ProposedTradeLeg, RebalanceProposal } from './oms'
 import { hasUnwashedLossShares, matchWashedShares, washedLoss, type Acquisition, type SoldLossLot, type WashedShares } from '@/lib/wash-sale'
 import { isSubjectToWashSale, taxCharacterOf } from '@/lib/security-master'
 import { isTaxableAccount } from '@/lib/tax-treatment'
-import { washSaleWindow } from '../data/realised-sales'
+import { washSaleWindow } from '../data/realized-sales'
 import { generateTaxLots, washSaleAcquisitions, type CustodianLot } from './custodian'
 import { washSaleTaxpayer } from './tax-return'
 

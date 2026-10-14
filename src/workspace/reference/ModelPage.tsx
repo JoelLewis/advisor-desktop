@@ -4,16 +4,15 @@ import { Num } from '@/kit/data-table/Num'
 import { Pane } from '@/kit/layout/Pane'
 import { Reading } from '@/kit/reading/Reading'
 import { Tag } from '@/kit/tag/Tag'
-import { UNIT, fmtMoney, fmtQuantity, fmtTimestamp, fmtTolerance, fmtWeight } from '@/kit/measure'
+import { UNIT, fmtDate, fmtMoney, fmtQuantity, fmtTimestamp, fmtTolerance, fmtWeight } from '@/kit/measure'
 import { useReferenceModel } from '@/hooks/use-reference'
-import { assetClassLabel } from '@/workspace/asset-class-label'
 import { accountFullViewHref } from '@/workspace/full-views/full-view-href'
 import type { ModelDetail } from '@/types/reference-models'
 import { ReferenceGate } from './ReferenceGate'
 import { ReferencePage } from './ReferencePage'
 import { StackedCell } from './StackedCell'
 import { TakeToTeamThread } from './TakeToTeamThread'
-import { FREQUENCY_WORDS, versionWords, wordFor } from './reference-words'
+import { FREQUENCY_WORDS, sleeveLabel, versionWords, wordFor } from './reference-words'
 
 export function ModelPage() {
   const { modelId } = useParams()
@@ -47,7 +46,7 @@ function Model({ view }: { view: ModelDetail }) {
       <Pane title="Targets">
         <DataTable caption="Targets" rows={view.targets} getRowId={(t) => t.assetClass} noun={{ singular: 'sleeve', plural: 'sleeves' }} density="dense"
           columns={[
-            { id: 'class', header: 'Sleeve', cell: (t) => assetClassLabel(t.assetClass) },
+            { id: 'class', header: 'Sleeve', cell: (t) => sleeveLabel(t.assetClass) },
             { id: 'target', header: 'Target', unit: UNIT.pct, align: 'right', cell: (t) => <Num text={fmtWeight(t.targetWeight)} /> },
             { id: 'vehicle', header: 'Vehicle', cell: (t) => t.implementationSymbol ?? 'Cash' },
             { id: 'index', header: 'Benchmark index', cell: (t) => t.index },
@@ -59,8 +58,8 @@ function Model({ view }: { view: ModelDetail }) {
             { id: 'version', header: 'Version', wrap: true, cell: (v) => <StackedCell primary={`v${v.version}`} action={<TakeToTeamThread inline view="models" rowId={`${view.id}:v${v.version}`} rowLabel={`${view.name} v${v.version}`} />} /> },
             { id: 'status', header: 'Status', cell: (v) => <Tag tone={v.status === 'approved' ? 'outline' : 'solid'}>{v.status === 'approved' ? 'APPROVED' : 'PENDING APPROVAL'}</Tag> },
             { id: 'proposed', header: 'Proposed by', cell: (v) => v.proposedByName },
-            { id: 'approved', header: 'Approved', cell: (v) => (v.approvedBy && v.approvedOn ? `${v.approvedBy}, ${v.approvedOn}` : 'Not yet') },
-            { id: 'effective', header: 'Effective', cell: (v) => v.effectiveDate },
+            { id: 'approved', header: 'Approved', cell: (v) => (v.approvedBy && v.approvedOn ? `${v.approvedBy}, ${fmtDate(v.approvedOn)}` : 'Not yet') },
+            { id: 'effective', header: 'Effective', cell: (v) => fmtDate(v.effectiveDate) },
             { id: 'changes', header: 'Changes', wrap: true, cell: (v) => v.changes.map((c) => c.description).join('; ') },
           ]} />
       </Pane>

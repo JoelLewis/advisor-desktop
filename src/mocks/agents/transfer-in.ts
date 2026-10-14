@@ -21,7 +21,7 @@ export function runTransferIn({ asOf, subject }: AgentContext): AgentFinding[] {
   const statement = { source: `Statement · ${taxable.custodian} · taxable brokerage`, asOf: taxable.asOf }
   const holdings: AgentFinding[] = summary.lines.map((l) => {
     const name = claimNameOf(l.symbol, l.name)
-    const result = `${l.holdingPeriod === 'long' ? 'long-term' : 'short-term'} ${l.unrealised >= 0 ? 'gain' : 'loss'}`
+    const result = `${l.holdingPeriod === 'long' ? 'long-term' : 'short-term'} ${l.unrealized >= 0 ? 'gain' : 'loss'}`
     const concentrated = concentration?.symbol === l.symbol
     return {
       claim: concentrated
@@ -31,11 +31,11 @@ export function runTransferIn({ asOf, subject }: AgentContext): AgentFinding[] {
       figures: [
         { label: 'Market value', value: l.marketValue, unit: 'USD', source: 'transfer.marketValue' },
         { label: 'Cost basis', value: l.costBasis, unit: 'USD', source: 'statement.costBasis' },
-        { label: 'Unrealized', value: l.unrealised, unit: 'USD', source: 'transfer.unrealised' },
+        { label: 'Unrealized', value: l.unrealized, unit: 'USD', source: 'transfer.unrealized' },
         { label: 'Tax if sold now', value: l.taxIfSoldNow, unit: 'USD', source: 'transfer.taxIfSoldNow' },
         { label: 'Rate', value: taxRateFor(l.holdingPeriod), unit: '%', source: 'taxRateFor' },
         ...(concentrated && concentration ? [
-          { label: 'Share of her total assets', value: concentration.weightOfAssets, unit: '%' as const, source: 'concentration.weightOfAssets' },
+          { label: 'Share of her total assets across both accounts', value: concentration.weightOfAssets, unit: '%' as const, source: 'concentration.weightOfAssets' },
           { label: 'Single-name limit', value: SINGLE_NAME_LIMIT, unit: '%' as const, source: 'SINGLE_NAME_LIMIT' },
         ] : []),
       ],

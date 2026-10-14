@@ -5,7 +5,7 @@ import { Pane } from '@/kit/layout/Pane'
 import { Reading } from '@/kit/reading/Reading'
 import { Select } from '@/kit/select/Select'
 import { Tag } from '@/kit/tag/Tag'
-import { UNIT, fmtDate, fmtMoney, fmtRate, fmtTimestamp } from '@/kit/measure'
+import { UNIT, fmtBasisPoints, fmtDate, fmtMoney, fmtRate, fmtTimestamp } from '@/kit/measure'
 import { useBilling } from '@/hooks/use-reference'
 import type { BillingView, HouseholdBilling } from '@/types/reference-billing'
 import { ReferenceGate } from './ReferenceGate'
@@ -36,7 +36,7 @@ function Billing({ view }: { view: BillingView }) {
       <div className="flex flex-wrap gap-x-10 gap-y-4">
         <Reading label="Annual fees on today's value" value={fmtMoney(view.totals.annualFee)} unit={UNIT.usd} size="readout-md" />
         <Reading label="A quarter" value={fmtMoney(view.totals.quarterlyFee)} unit={UNIT.usd} size="readout-md" />
-        <Reading label="Effective rate" value={fmtRate(view.totals.effectiveRate)} unit={UNIT.pct} size="readout-md" />
+        <Reading label="Effective rate" value={fmtBasisPoints(view.totals.effectiveRate)} unit={UNIT.bps} size="readout-md" />
         <Reading label="Value billed on" value={fmtMoney(view.totals.value)} unit={UNIT.usd} size="readout-md" />
       </div>
       <Pane title="The schedule">
@@ -60,13 +60,13 @@ function Billing({ view }: { view: BillingView }) {
             { id: 'method', header: 'Billing', cell: (h) => BILLING_METHOD_WORDS[h.method] },
             { id: 'value', header: 'Value', unit: UNIT.usd, align: 'right', cell: (h) => usd(h.value), sortValue: (h) => h.value },
             { id: 'annual', header: 'Annual fee', unit: UNIT.usd, align: 'right', cell: (h) => usd(h.annualFee), sortValue: (h) => h.annualFee },
-            { id: 'rate', header: 'Effective', unit: UNIT.pct, align: 'right', cell: (h) => <Num text={fmtRate(h.effectiveRate)} />, sortValue: (h) => h.effectiveRate },
+            { id: 'rate', header: 'Effective', unit: UNIT.bps, align: 'right', cell: (h) => <Num text={fmtBasisPoints(h.effectiveRate)} />, sortValue: (h) => h.effectiveRate },
             { id: 'quarterly', header: 'A quarter', unit: UNIT.usd, align: 'right', cell: (h) => usd(h.quarterlyFee) },
             { id: 'exceptions', header: 'Exceptions', cell: (h) => (h.openExceptionIds.length > 0 ? <Tag>{h.openExceptionIds.join(' · ')}</Tag> : null) },
           ]} />
       </Pane>
       {household ? <TierBreakdown households={view.households} household={household} onPick={set('household')} /> : null}
-      <Pane title="Billing runs" meta="Modeled, not realized">
+      <Pane title="Billing runs" meta={<span className="inline-flex items-baseline gap-2">Modeled, not realized <Tag>MODELED</Tag></span>}>
         <DataTable caption="Billing runs" rows={view.runs} getRowId={(r) => r.id} noun={{ singular: 'run', plural: 'runs' }} density="dense"
           columns={[
             { id: 'run', header: 'Run', cell: (r) => fmtDate(r.runDate) },

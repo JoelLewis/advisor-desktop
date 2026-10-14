@@ -25,7 +25,7 @@ export function OrdersEvidence({ item, directory }: { item: OrdersItem; director
   const v = item.version
   const s = v.summary
   // As the workbench's tape: the return's year to date, short plus long (collectibles are part of long).
-  const ytd = v.preview.ytdRealisedOnReturn
+  const ytd = v.preview.ytdRealizedOnReturn
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <Pane title="Approval record">

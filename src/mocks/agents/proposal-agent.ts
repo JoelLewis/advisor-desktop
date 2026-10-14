@@ -32,7 +32,7 @@ function constraintKey(c: ProposalConstraint): readonly (string | number)[] {
   switch (c.kind) {
     case 'harvest_only': return [c.kind]
     case 'avoid_self_wash': return [c.kind]
-    case 'cap_realised_gains': return [c.kind, c.usd]
+    case 'cap_realized_gains': return [c.kind, c.usd]
     case 'exclude_asset_class': return [c.kind, c.assetClass]
   }
 }
@@ -41,8 +41,8 @@ const legsOf = (built: DraftPreview) => JSON.stringify(built.preview.trades.map(
 
 /** Whether a gain cap changed the legs: the same constraints without it draft the same trades when it does not bind. */
 function capBinds(constraints: readonly ProposalConstraint[], built: DraftPreview): boolean | undefined {
-  if (!constraints.some((c) => c.kind === 'cap_realised_gains')) return undefined
-  const uncapped = buildVersion(built.preview.accountId, constraints.filter((c) => c.kind !== 'cap_realised_gains'), [])
+  if (!constraints.some((c) => c.kind === 'cap_realized_gains')) return undefined
+  const uncapped = buildVersion(built.preview.accountId, constraints.filter((c) => c.kind !== 'cap_realized_gains'), [])
   if (!uncapped.ok) throw new Error(`Proposal Agent: cannot draft ${built.preview.accountId} without its cap: ${uncapped.message}`)
   return legsOf(uncapped.built) !== legsOf(built)
 }
@@ -119,7 +119,7 @@ export function draftSummary(accountId: string, built: DraftPreview): string {
 const asked = (c: ProposalConstraint): string[] => {
   switch (c.kind) {
     case 'harvest_only': return ['sell only lots at a loss']
-    case 'cap_realised_gains': return ['cap the gains it realises']
+    case 'cap_realized_gains': return ['cap the gains it realizes']
     case 'exclude_asset_class': return [`leave ${prose(c.assetClass)} untouched`]
     case 'avoid_self_wash': return []
   }
@@ -128,7 +128,7 @@ const asked = (c: ProposalConstraint): string[] => {
 const under = (c: ProposalConstraint): string[] => {
   switch (c.kind) {
     case 'harvest_only': return ['the rule to sell only lots at a loss']
-    case 'cap_realised_gains': return ['the cap on realised gains']
+    case 'cap_realized_gains': return ['the cap on realized gains']
     case 'exclude_asset_class': return [`the exclusion of ${prose(c.assetClass)}`]
     case 'avoid_self_wash': return []
   }

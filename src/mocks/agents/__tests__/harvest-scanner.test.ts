@@ -60,7 +60,7 @@ describe('Harvest Scanner on acc-002', () => {
     const restriction = findings.find((f) => f.citations.some((c) => c.source.startsWith('Wash-sale window · rs-001')))!
     expect(restriction.claim).toBe('Intel Corp. was sold at a loss recently; buying it back in any account of the same taxpayer, IRAs and Roths included, would wash that loss until its window closes.')
     expect(figure([restriction], 'Days until the INTC window closes')?.value).toBe(25)
-    expect(figure([restriction], 'Loss realised · INTC')?.value).toBe(-32_750)
+    expect(figure([restriction], 'Loss realized · INTC')?.value).toBe(-32_750)
     expect(restriction.citations[0]!.source).toBe('Wash-sale window · rs-001 · INTC loss sale of 2026-02-20, open through 2026-03-22')
   })
 

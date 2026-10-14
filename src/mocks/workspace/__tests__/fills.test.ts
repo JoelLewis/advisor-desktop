@@ -65,11 +65,11 @@ describe('fills for the story\'s v3', () => {
     expect(lots.find((l) => l.id === 'lot-pos-acc-002-VWO-fill-0003')).toMatchObject({ positionId: 'pos-acc-002-VWO', quantity: 1388, gainLoss: 0 })
   })
 
-  it('records the INTC sale as realised long-term, opening its recorded window', () => {
+  it('records the INTC sale as realized long-term, opening its recorded window', () => {
     fill(v3())
     expect(recordedSales()).toEqual([{
       id: 'rs-006', accountId: 'acc-002', householdId: 'hh-001', symbol: 'INTC', name: 'Intel Corp.', saleDate: '2026-02-25',
-      quantity: 7000, proceeds: 199_150, costBasis: 245_000, realisedGainLoss: -45_850, holdingPeriod: 'long',
+      quantity: 7000, proceeds: 199_150, costBasis: 245_000, realizedGainLoss: -45_850, holdingPeriod: 'long',
     }])
   })
 
@@ -118,7 +118,7 @@ describe('the invariants hold or nothing is committed', () => {
     expect(position('INTC')?.quantity).toBe(7000)
   })
 
-  it('an account whose sales are not taxed records no realised sale but still consumes its lots', () => {
+  it('an account whose sales are not taxed records no realized sale but still consumes its lots', () => {
     const candidate = accounts.filter((a) => !isTaxableAccount(a.taxTreatment))
       .map((account) => ({ account, v: versionFor(account.id) }))
       .find(({ v }) => v.preview.trades.some((t) => t.side === 'sell') && !v.pretrade.violations.some((x) => x.severity === 'block'))

@@ -80,7 +80,7 @@ describe("C1 · the nba-002 email states the addressee's own saving", () => {
     for (const client of nba.clients) {
       const template = templateFor('nba-002', client.id)
       expect(JSON.stringify(template)).not.toContain('applicable rate')
-      expect(template.talkingPoints.join(' ')).toContain("against this return's realised results so far this year")
+      expect(template.talkingPoints.join(' ')).toContain("against this return's realized results so far this year")
     }
   })
 

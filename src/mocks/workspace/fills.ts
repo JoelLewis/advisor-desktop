@@ -5,7 +5,7 @@ import type { ProposedTrade } from '@/services/oms'
 import { accounts } from '@/mocks/data/accounts'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
 import { seedPositionsForAccount } from '@/mocks/data/positions'
-import { realisedSales, type RealisedSale } from '@/mocks/data/realised-sales'
+import { realizedSales, type RealizedSale } from '@/mocks/data/realized-sales'
 import { bookOf, commitMove, ledgerFills, recordedSales, type AccountBook, type LedgerLot } from '@/mocks/data/portfolio-ledger'
 import { seedTaxLots } from '@/mocks/handlers/custodian'
 import { currencyForAccount } from '@/mocks/handlers/oms'
@@ -124,26 +124,26 @@ function moveCash(positions: readonly PositionSeed[], delta: number): PositionSe
   })
 }
 
-/** One realised sale per holding period the sale touches, numbered from `firstNumber`; none in an account whose sales are not taxed. */
-function realisedSalesOf(account: Account, fill: Fill, taken: readonly Taken[], trade: ProposedTrade, replacement: string | undefined, firstNumber: number): RealisedSale[] {
+/** One realized sale per holding period the sale touches, numbered from `firstNumber`; none in an account whose sales are not taxed. */
+function realizedSalesOf(account: Account, fill: Fill, taken: readonly Taken[], trade: ProposedTrade, replacement: string | undefined, firstNumber: number): RealizedSale[] {
   if (!isTaxableAccount(account.taxTreatment)) return []
   const groups = (['short', 'long'] as const)
     .map((period) => ({ period, takes: taken.filter((t) => t.lot.holdingPeriod === period) }))
     .filter((g) => g.takes.length > 0)
   let proceedsLeft = fill.value
-  return groups.map((g, i): RealisedSale => {
+  return groups.map((g, i): RealizedSale => {
     const shares = g.takes.reduce((s, t) => s + t.shares, 0)
     const proceeds = i === groups.length - 1 ? cents(proceedsLeft) : cents(fill.value * (shares / fill.quantity))
     proceedsLeft -= proceeds
     const costBasis = cents(g.takes.reduce((s, t) => s + t.lot.costBasis * (t.shares / t.lot.quantity), 0))
-    const realisedGainLoss = Math.round(proceeds - costBasis)
+    const realizedGainLoss = Math.round(proceeds - costBasis)
     const washed = g.period === 'short' ? trade.washedLoss?.shortTerm ?? 0 : trade.washedLoss?.longTerm ?? 0
     return {
       id: `rs-${String(firstNumber + i).padStart(3, '0')}`,
       accountId: account.id, householdId: account.householdId, symbol: fill.symbol, name: fill.name, saleDate: fill.at.slice(0, 10),
-      quantity: shares, proceeds, costBasis, realisedGainLoss, holdingPeriod: g.period,
+      quantity: shares, proceeds, costBasis, realizedGainLoss, holdingPeriod: g.period,
       ...(washed < 0 ? { washedLoss: washed } : {}),
-      ...(replacement !== undefined && realisedGainLoss < 0 ? { replacementSymbol: replacement } : {}),
+      ...(replacement !== undefined && realizedGainLoss < 0 ? { replacementSymbol: replacement } : {}),
     }
   })
 }
@@ -165,7 +165,7 @@ export function applyFills({ accountId, proposalId, version, orders, times }: Fi
   let { positions, lots } = bookToMove(account)
   const valueBefore = positions.reduce((s, p) => s + p.marketValue, 0)
   const fills: Fill[] = []
-  const sales: RealisedSale[] = []
+  const sales: RealizedSale[] = []
 
   sequence.forEach((order, i) => {
     const at = times[i]
@@ -192,7 +192,7 @@ export function applyFills({ accountId, proposalId, version, orders, times }: Fi
         lots = restated.lots
       }
       const replacement = version.harvestSubstitutions.find((s) => s.harvested && s.foreclosed.symbol === order.symbol)?.bought.symbol
-      sales.push(...realisedSalesOf(account, fill, consumed.taken, trade, replacement, realisedSales.length + recordedSales().length + sales.length + 1))
+      sales.push(...realizedSalesOf(account, fill, consumed.taken, trade, replacement, realizedSales.length + recordedSales().length + sales.length + 1))
       positions = moveCash(positions, fill.value)
       fills.push(fill)
       return

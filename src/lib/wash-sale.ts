@@ -26,7 +26,7 @@ export type LossSaleWindow = { symbol: string; start: string; end: string }
  */
 export type Acquisition = { symbol: string; date: string; lotId: string; quantity: number; account: 'taxable' | 'tax_advantaged' }
 /** `soldLotIds`: the lots a sell consumes — shares disposed of in the sale are not replacement shares. */
-export type WashSaleLeg = { symbol: string; side: 'buy' | 'sell'; realisesLoss: boolean; soldLotIds: readonly string[] }
+export type WashSaleLeg = { symbol: string; side: 'buy' | 'sell'; realizesLoss: boolean; soldLotIds: readonly string[] }
 
 const DAY_MS = 86_400_000
 
@@ -44,12 +44,12 @@ export function hasWashSaleRisk(
   if (leg.side === 'buy') {
     return openLossWindows.some((w) => w.symbol === leg.symbol && w.start <= asOfISO && asOfISO <= w.end)
   }
-  if (!leg.realisesLoss) return false
+  if (!leg.realizesLoss) return false
   const from = isoDaysBefore(asOfISO, 30)
   return recentAcquisitions.some((a) => a.symbol === leg.symbol && !leg.soldLotIds.includes(a.lotId) && a.date >= from && a.date <= asOfISO)
 }
 
-/** A lot that would realise a loss if sold today. */
+/** A lot that would realize a loss if sold today. */
 export type LossLot = { lotId: string; symbol: string; purchaseDate: string; quantity: number }
 
 /** The shares of one loss lot whose loss §1091 would take, by what becomes of it. */
@@ -104,11 +104,11 @@ export function matchWashedShares(
   return washed
 }
 
-/** Shares of one lot a sale disposes of at a loss: how many, and the signed loss they realise (< 0). */
+/** Shares of one lot a sale disposes of at a loss: how many, and the signed loss they realize (< 0). */
 export type SoldLossLot = LossLot & { loss: number; holdingPeriod: 'short' | 'long' }
 
 /**
- * The part of a sale's realised loss §1091 does not allow now, signed like the loss (≤ 0), by
+ * The part of a sale's realized loss §1091 does not allow now, signed like the loss (≤ 0), by
  * holding period and by what becomes of it: `deferred` into a taxable replacement's basis
  * (§1091(d)), or `disallowed` for good by an IRA or Roth replacement. `shortTerm + longTerm` and
  * `deferred + disallowed` are the same total.

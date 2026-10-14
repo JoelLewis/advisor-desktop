@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { accounts } from '@/mocks/data/accounts'
-import { realisedSales } from '@/mocks/data/realised-sales'
+import { realizedSales } from '@/mocks/data/realized-sales'
 import { orders } from '@/mocks/handlers/oms'
 import { KNOWN_OPEN_DATES, generateTaxLots, generateTransactions, holdingPeriodOn } from '@/mocks/handlers/custodian'
 import { isDuringNyseSession, isTradingDay, nyseSessionUtc } from '@/lib/trading-calendar'
@@ -10,8 +10,8 @@ import { MOCK_NOW_ISO, MOCK_TODAY_ISO } from '@/lib/clock'
  * Final review I2 · the Task 14 ruling: every trade the engine records happened on a day the NYSE
  * traded, and every exchange fill in its regular session.
  *
- * Scope, by name: realised sales, the order book, tax-lot purchase dates, recorded open dates and
- * the narrative transactions built from them (opening balances, realised-sale sells, recorded
+ * Scope, by name: realized sales, the order book, tax-lot purchase dates, recorded open dates and
+ * the narrative transactions built from them (opening balances, realized-sale sells, recorded
  * purchases). EXCLUDED: the synthetic custodian transaction history, the 60-day stream of random
  * buys, sells, dividends, interest, fees and transfers `generateTransactions` draws as
  * `txn-<account>-<n>`. It does not yet agree with the lots (review I3), and dating it is deferred
@@ -23,8 +23,8 @@ function narrativeTransactions() {
   return accounts.flatMap((a) => generateTransactions(a.id, a.totalValue)).filter((t) => !SYNTHETIC_TRANSACTION.test(t.id))
 }
 
-describe('I2 · every realised sale is dated on a trading day', () => {
-  for (const sale of realisedSales) {
+describe('I2 · every realized sale is dated on a trading day', () => {
+  for (const sale of realizedSales) {
     it(`${sale.id} (${sale.symbol}) sold on ${sale.saleDate}`, () => {
       expect(isTradingDay(sale.saleDate)).toBe(true)
     })
@@ -66,14 +66,14 @@ describe('I2 · every opening date is a trading day', () => {
     for (const [positionId, date] of KNOWN_OPEN_DATES) expect(isTradingDay(date), `${positionId} ${date}`).toBe(true)
   })
 
-  it('the narrative transactions: opening balances, realised-sale sells and recorded purchases', () => {
+  it('the narrative transactions: opening balances, realized-sale sells and recorded purchases', () => {
     const narrative = narrativeTransactions()
     expect(narrative.some((t) => t.id.includes('-opening-'))).toBe(true)
     for (const t of narrative) expect(isTradingDay(t.date), `${t.id} ${t.date}`).toBe(true)
   })
 
   it('a position opens on or before its first sale', () => {
-    for (const sale of realisedSales) {
+    for (const sale of realizedSales) {
       const opening = narrativeTransactions().find((t) => t.id === `txn-${sale.accountId}-opening-${sale.symbol}`)
       expect(opening, `${sale.id} has an opening`).toBeDefined()
       expect(opening!.date.slice(0, 10) <= sale.saleDate, `${opening!.id} ${opening!.date} vs ${sale.saleDate}`).toBe(true)

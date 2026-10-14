@@ -15,7 +15,7 @@ export function legRows(view: DraftPreview): LegRow[] {
     if (sell && !facts) throw new Error(`The ${t.symbol} sale has no record of its lots or washed loss`)
     return {
       symbol: t.symbol, name: t.name, side: t.side, quantity: t.quantity, estimatedValue: t.estimatedValue,
-      shortTerm: sell ? t.realisedShortTerm : undefined, longTerm: sell ? t.realisedLongTerm : undefined,
+      shortTerm: sell ? t.realizedShortTerm : undefined, longTerm: sell ? t.realizedLongTerm : undefined,
       washed: sell ? facts?.washed : undefined, restrictedTo: t.repurchaseBlockedUntil,
       status: legStatus(view.pretrade, i, t.symbol), excluded: false,
     }

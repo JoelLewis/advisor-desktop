@@ -24,8 +24,8 @@ const listing = (items: readonly string[]) => (items.length < 2 ? items.join('')
  * and the trades the tax-aware rebalance proposes.
  *
  * Ledger Task 11 · the trades are the preview's own: settled for §1091 across the taxpayer
- * (`settleBatchWashSales`), so a washed loss is never stated as realised. The note says the
- * rebalance *proposes* them, gives each sale's realised result, gains as well as the INTC loss, and
+ * (`settleBatchWashSales`), so a washed loss is never stated as realized. The note says the
+ * rebalance *proposes* them, gives each sale's realized result, gains as well as the INTC loss, and
  * the net, the tax the preview estimates they add to the return, and the date to which selling INTC
  * bars buying it back.
  */

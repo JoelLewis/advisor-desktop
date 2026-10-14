@@ -7,7 +7,7 @@ import { nbas } from '@/mocks/data/nbas'
 import { notes } from '@/mocks/data/notes'
 import { clientComms } from '@/mocks/data/client-comms'
 import { documents } from '@/mocks/data/documents'
-import { realisedSales } from '@/mocks/data/realised-sales'
+import { realizedSales } from '@/mocks/data/realized-sales'
 import { clients } from '@/mocks/data/clients'
 import { MOCK_NOW_ISO } from '@/lib/clock'
 
@@ -96,10 +96,10 @@ describe('client communications', () => {
 
   it("comm-009 reports rs-001: its quantity, its loss and its window, after the sale", () => {
     const comm = clientComms.find((c) => c.id === 'comm-009')
-    const sale = realisedSales.find((s) => s.id === 'rs-001')
+    const sale = realizedSales.find((s) => s.id === 'rs-001')
     if (!comm || !sale) throw new Error('comm-009 and rs-001 are fixtures')
     expect(comm.summary).toContain(`${sale.quantity.toLocaleString('en-US')} INTC`)
-    expect(comm.summary).toContain(`$${Math.abs(sale.realisedGainLoss).toLocaleString('en-US')} long-term loss`)
+    expect(comm.summary).toContain(`$${Math.abs(sale.realizedGainLoss).toLocaleString('en-US')} long-term loss`)
     expect(comm.summary).toContain('through March 22')
     expect(comm.timestamp.slice(0, 10) >= sale.saleDate).toBe(true)
   })

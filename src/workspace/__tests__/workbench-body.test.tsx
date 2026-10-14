@@ -16,7 +16,7 @@ async function openWorkbench() {
 }
 
 describe('the workbench body', () => {
-  it('shows every leg with name, side, quantity, value, realised result by character, washed part, restriction and pre-trade', async () => {
+  it('shows every leg with name, side, quantity, value, realized result by character, washed part, restriction and pre-trade', async () => {
     const legs = await openWorkbench()
     expect(within(legs).getAllByRole('row')).toHaveLength(10)
     const intc = within(legs).getByRole('row', { name: /^INTC/ })

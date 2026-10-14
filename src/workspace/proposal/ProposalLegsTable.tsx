@@ -9,7 +9,7 @@ import { SIDE_WORDS, legStatus } from './leg-status'
 
 type Row = ProposedTrade & { index: number; status: Status }
 
-/** The compact legs table of the thread embed: realised results by character, pre-trade per leg. */
+/** The compact legs table of the thread embed: realized results by character, pre-trade per leg. */
 export function ProposalLegsTable({ version, caption }: { version: DraftPreview; caption: string }) {
   const currency = version.preview.currency
   const rows: Row[] = version.preview.trades.map((t, i) => ({ ...t, index: i, status: legStatus(version.pretrade, i, t.symbol) }))
@@ -20,8 +20,8 @@ export function ProposalLegsTable({ version, caption }: { version: DraftPreview;
         { id: 'side', header: 'Side', cell: (r) => SIDE_WORDS[r.side] },
         { id: 'qty', header: 'Qty', unit: 'sh', align: 'right', cell: (r) => <Num text={fmtQuantity(r.quantity)} /> },
         { id: 'value', header: 'Value', unit: currency, align: 'right', cell: (r) => fmtMoney(r.estimatedValue) },
-        { id: 'st', header: 'ST', unit: currency, align: 'right', cell: (r) => fmtResult(r.realisedShortTerm) },
-        { id: 'lt', header: 'LT', unit: currency, align: 'right', cell: (r) => fmtResult(r.realisedLongTerm) },
+        { id: 'st', header: 'ST', unit: currency, align: 'right', cell: (r) => fmtResult(r.realizedShortTerm) },
+        { id: 'lt', header: 'LT', unit: currency, align: 'right', cell: (r) => fmtResult(r.realizedLongTerm) },
         { id: 'check', header: 'Pre-trade', cell: (r) => <StatusCode status={r.status} /> },
       ]} />
   )

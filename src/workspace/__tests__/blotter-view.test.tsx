@@ -24,7 +24,7 @@ describe('the Blotter view', () => {
     const { router } = renderRoutes(routes, '/blotter')
     await screen.findByRole('heading', { level: 1, name: 'Blotter' })
     await userEvent.setup().selectOptions(screen.getByRole('combobox', { name: 'Status' }), 'Canceled')
-    await waitFor(() => expect(router.state.location.search).toBe('?status=cancelled'))
+    await waitFor(() => expect(router.state.location.search).toBe('?status=canceled'))
     await waitFor(() => expect(within(orders()).getAllByRole('row').slice(1).map((r) => r.textContent)).toEqual([expect.stringContaining('ord-009')]))
   })
 

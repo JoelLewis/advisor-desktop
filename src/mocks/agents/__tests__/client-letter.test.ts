@@ -28,7 +28,7 @@ describe('the Client Letter Agent', () => {
     expect(letter.figures).toEqual([
       { label: 'US stocks before the rebalance', value: usEquity.actual, unit: '%', source: 'drift.assetClassDrifts.actual' },
       { label: 'US stocks target', value: usEquity.target, unit: '%', source: 'drift.assetClassDrifts.target' },
-      { label: 'INTC loss', value: intc.realisedShortTerm + intc.realisedLongTerm, unit: 'USD', source: 'version.preview.trades.INTC realised, less any washed part' },
+      { label: 'INTC loss', value: intc.realizedShortTerm + intc.realizedLongTerm, unit: 'USD', source: 'version.preview.trades.INTC realized, less any washed part' },
       { label: 'Estimated tax on the return', value: v1.preview.estimatedTaxImpact, unit: 'USD', source: 'version.preview.estimatedTaxImpact' },
     ])
     expect(letter.body).toContain(`${clientPercent(usEquity.actual)} of the account against a ${clientPercent(usEquity.target)} target`)
@@ -89,9 +89,9 @@ describe('the Client Letter Agent', () => {
     if (!approved.ok) throw new Error(approved.message)
     expect(v2.preview.estimatedTaxImpact).toBeLessThanOrEqual(0)
     const letter = writeClientLetter(revised.detail, v2, 'user-001')
-    const ytd = v2.preview.ytdRealisedOnReturn!
+    const ytd = v2.preview.ytdRealizedOnReturn!
     const intc = v2.preview.trades.find((t) => t.symbol === 'INTC')!
-    const use = capitalLossUse(ytd.shortTerm + ytd.longTerm, intc.realisedShortTerm + intc.realisedLongTerm, ORDINARY_INCOME_OFFSET_LIMIT)
+    const use = capitalLossUse(ytd.shortTerm + ytd.longTerm, intc.realizedShortTerm + intc.realizedLongTerm, ORDINARY_INCOME_OFFSET_LIMIT)
     expect(use.carriedForward).toBeGreaterThan(0)
     expect(letter.body).toContain('We plan to move your individual account toward its Growth model.')
     expect(letter.body).toContain('so we plan to sell only a holding at a loss and add to the areas below their targets')
@@ -111,14 +111,14 @@ describe('the Client Letter Agent', () => {
     if (!revised.ok) throw new Error(revised.message)
     return { proposal: revised.detail, v2: revised.detail.versions[1]! }
   }
-  /** The harvest-only version on a return that had already realised `ytdLongTerm` this year, with a stated estimate: these tests exercise the letter's branches, not the engine's pricing. */
+  /** The harvest-only version on a return that had already realized `ytdLongTerm` this year, with a stated estimate: these tests exercise the letter's branches, not the engine's pricing. */
   const onReturnWith = (v2: ProposalVersion, ytdLongTerm: number, estimatedTaxImpact: number): ProposalVersion =>
-    ({ ...v2, preview: { ...v2.preview, estimatedTaxImpact, ytdRealisedOnReturn: { shortTerm: 0, longTerm: ytdLongTerm, collectibleLongTerm: 0 } } })
+    ({ ...v2, preview: { ...v2.preview, estimatedTaxImpact, ytdRealizedOnReturn: { shortTerm: 0, longTerm: ytdLongTerm, collectibleLongTerm: 0 } } })
 
   it('a gains cap moves toward the model while limiting the gains it realizes', () => {
     const created = createProposal('user-001', 'th-johnson-review', 'acc-002')
     if (!created.ok) throw new Error(created.message)
-    const revised = reviseProposal('user-001', created.detail.id, [{ kind: 'cap_realised_gains', usd: 20_000 }])
+    const revised = reviseProposal('user-001', created.detail.id, [{ kind: 'cap_realized_gains', usd: 20_000 }])
     if (!revised.ok) throw new Error(revised.message)
     const letter = writeClientLetter(revised.detail, revised.detail.versions[1]!, 'user-001')
     expect(letter.body).toContain('We plan to move your individual account toward its Growth model while limiting the gains it realizes.')
@@ -127,7 +127,7 @@ describe('the Client Letter Agent', () => {
 
   it('a saving against gains already realized is stated, with no loss left to use', () => {
     const { proposal, v2 } = harvestOnlyV2()
-    const loss = v2.preview.trades.find((t) => t.symbol === 'INTC')!.realisedLongTerm
+    const loss = v2.preview.trades.find((t) => t.symbol === 'INTC')!.realizedLongTerm
     // The year's gains exceed the loss, so the return keeps a net gain and the harvest only saves tax on it.
     const version = onReturnWith(v2, -loss + 10_000, -10_913)
     const letter = writeClientLetter(proposal, version, 'user-001')
@@ -139,7 +139,7 @@ describe('the Client Letter Agent', () => {
 
   it('a net loss within the limit offsets ordinary income and carries nothing forward', () => {
     const { proposal, v2 } = harvestOnlyV2()
-    const loss = v2.preview.trades.find((t) => t.symbol === 'INTC')!.realisedLongTerm
+    const loss = v2.preview.trades.find((t) => t.symbol === 'INTC')!.realizedLongTerm
     const ytd = -loss - 1_850
     const use = capitalLossUse(ytd, loss, ORDINARY_INCOME_OFFSET_LIMIT)
     expect(use).toEqual({ ordinaryIncomeOffset: 1_850, carriedForward: 0 })

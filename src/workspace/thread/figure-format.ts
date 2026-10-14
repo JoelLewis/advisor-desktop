@@ -9,6 +9,8 @@ const BY_UNIT: Readonly<Record<FigureUnit, { format: (v: number) => string; unit
   '%': { format: fmtWeight, unit: UNIT.pct },
   USD: { format: fmtMoney, unit: UNIT.usd },
   sh: { format: fmtQuantity, unit: UNIT.shares },
+  contracts: { format: fmtQuantity, unit: UNIT.contracts },
+  par: { format: fmtMoney, unit: `${UNIT.usd} ${UNIT.par}` },
   d: { format: fmtDays, unit: UNIT.days },
   pts: { format: fmtPoints, unit: UNIT.points },
   count: { format: fmtQuantity, unit: '' },

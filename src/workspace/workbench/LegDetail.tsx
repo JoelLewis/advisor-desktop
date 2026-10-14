@@ -45,7 +45,7 @@ function lotLabel(lot: TaxLot, take: LotTake | undefined, takesUnknown: boolean)
   const head = `${lot.id} · bought ${fmtDate(lot.purchaseDate)} · ${lot.holdingPeriod === 'long' ? 'long-term' : 'short-term'}`
   if (takesUnknown) return `${head} · ${fmtQuantity(lot.quantity)} sh · ${fmtResult(lot.gainLoss)} USD · sold —`
   if (!take) return `${head} · ${fmtQuantity(lot.quantity)} sh · ${fmtResult(lot.gainLoss)} USD · not sold`
-  return `${head} · ${fmtQuantity(take.shares)} of ${fmtQuantity(lot.quantity)} sh · ${fmtResult(take.realised)} of ${fmtResult(lot.gainLoss)} USD`
+  return `${head} · ${fmtQuantity(take.shares)} of ${fmtQuantity(lot.quantity)} sh · ${fmtResult(take.realized)} of ${fmtResult(lot.gainLoss)} USD`
 }
 
 export function LegDetail({ accountId, view, symbol, excluded, quantity, lotIds, onToggleExclude, onQuantity, onLots, refusal, takesUnknown = false, pendingEdit, onTypedText }: LegDetailProps) {

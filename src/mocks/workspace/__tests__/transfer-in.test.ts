@@ -14,7 +14,7 @@ describe('her transfer, at the 25 Feb close', () => {
 
   it('values each holding at the close and sets in kind against selling it now, at 23.8% long-term', () => {
     const summary = transferSummary(withHerReply())
-    expect(summary?.lines.map((l) => [l.symbol, l.securityKind, l.price, l.marketValue, l.unrealised, l.holdingPeriod, l.taxIfSoldNow, l.plan])).toEqual([
+    expect(summary?.lines.map((l) => [l.symbol, l.securityKind, l.price, l.marketValue, l.unrealized, l.holdingPeriod, l.taxIfSoldNow, l.plan])).toEqual([
       ['SPY', 'fund', 520.3, 1_456_840, 446_840, 'long', 106_347.92, 'in_kind'],
       ['SYK', 'single_name', 390.2, 542_378, 481_378, 'long', 114_567.96, 'in_kind'],
     ])
@@ -26,7 +26,7 @@ describe('her transfer, at the 25 Feb close', () => {
     const summary = transferSummary(withHerReply())
     if (!summary) throw new Error('no summary')
     const c = concentrationOf(summary)
-    expect(c).toMatchObject({ symbol: 'SYK', marketValue: 542_378, totalAssets: 3_000_000, unrealised: 481_378, taxIfSoldNow: 114_567.96 })
+    expect(c).toMatchObject({ symbol: 'SYK', marketValue: 542_378, totalAssets: 3_000_000, unrealized: 481_378, taxIfSoldNow: 114_567.96 })
     expect(c?.weightOfAssets).toBeCloseTo(0.18079, 5)
   })
 

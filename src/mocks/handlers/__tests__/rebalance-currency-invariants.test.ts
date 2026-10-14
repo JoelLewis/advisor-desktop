@@ -84,7 +84,7 @@ describe('§9.3 · rebalance previews carry their account currency', () => {
   it("a batch tax-impact total: converting each preview's own-currency figure before summing differs from summing them raw", async () => {
     // Mirrors the fix at RebalancePage.tsx's `totalTaxImpact` — proves the *right* aggregation
     // (convert each preview's own-currency `estimatedTaxImpact` before summing) is not
-    // interchangeable with the naive one, using an account whose tax-unaware sells realise a
+    // interchangeable with the naive one, using an account whose tax-unaware sells realize a
     // nonzero impact.
     const previews = await previewRebalance({ accountIds: ['acc-002', 'acc-043'], taxAware: false })
     const naiveTotal = previews.reduce((sum, p) => sum + p.estimatedTaxImpact, 0)

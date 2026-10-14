@@ -6,7 +6,7 @@ import type { Figure } from '@/types/workspace'
 import { accounts } from '@/mocks/data/accounts'
 import { getPositionsForAccount } from '@/mocks/data/positions'
 import { heldAwayAssets } from '@/mocks/data/held-away'
-import { washSaleWindow } from '@/mocks/data/realised-sales'
+import { washSaleWindow } from '@/mocks/data/realized-sales'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
 import { generateTaxLotsWithSaleRisk } from '@/mocks/handlers/custodian'
 import { openWashSaleWindowsFor, sameWashSaleTaxpayer, washSaleTaxpayer } from '@/mocks/handlers/tax-return'
@@ -97,7 +97,7 @@ export function runHarvestScanner({ asOf, subject }: AgentContext): AgentFinding
       claim: `${claimNameOf(w.symbol, w.name)} was sold at a loss ${w.saleDate === today ? 'today' : 'recently'}; buying it back in any account of the same taxpayer, IRAs and Roths included, would wash that loss until its window closes.`,
       attention: 'info',
       figures: [
-        { label: `Loss realised · ${w.symbol}`, value: w.realisedGainLoss, unit: 'USD', source: 'realisedSales.realisedGainLoss' },
+        { label: `Loss realized · ${w.symbol}`, value: w.realizedGainLoss, unit: 'USD', source: 'realizedSales.realizedGainLoss' },
         { label: `Days until the ${w.symbol} window closes`, value: w.daysRemaining, unit: 'd', source: 'openWashSaleWindows.daysRemaining' },
       ],
       citations: [{ source: `Wash-sale window · ${w.id} · ${w.symbol} loss sale of ${w.saleDate}, open through ${w.end}`, asOf }],

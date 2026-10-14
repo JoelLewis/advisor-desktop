@@ -102,5 +102,5 @@ export const MODEL_RISK_PROFILES: Readonly<Record<string, RiskProfile>> = {
   'mod-005': 'moderate', 'mod-006': 'moderate_conservative', 'mod-007': 'moderate_conservative',
 }
 
-/** The education model's benchmark is its glide path at the current stage (R8). */
+/** The education model's benchmark is its glide path's current-stage targets, held static over a period (R8). */
 export const GLIDE_PATH_MODELS: ReadonlySet<string> = new Set(['mod-006'])

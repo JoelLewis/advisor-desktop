@@ -123,8 +123,8 @@ function takesForQuantity(takes: readonly RawTake[], quantity: number, price: nu
  * `lotTakes`: what the sale takes from each lot; the shares are drawn by value, not yet tied to the
  * leg's quantity (`takesForQuantity`).
  */
-type RealisedSale = { shortTerm: number; longTerm: number; collectibleLongTerm: number; tax: number; consumedLotIds: string[]; soldLosses: SoldLossLot[]; lotTakes: RawTake[] }
-const NOTHING_REALISED: RealisedSale = { shortTerm: 0, longTerm: 0, collectibleLongTerm: 0, tax: 0, consumedLotIds: [], soldLosses: [], lotTakes: [] }
+type RealizedSale = { shortTerm: number; longTerm: number; collectibleLongTerm: number; tax: number; consumedLotIds: string[]; soldLosses: SoldLossLot[]; lotTakes: RawTake[] }
+const NOTHING_REALIZED: RealizedSale = { shortTerm: 0, longTerm: 0, collectibleLongTerm: 0, tax: 0, consumedLotIds: [], soldLosses: [], lotTakes: [] }
 
 /** Rounds each value to whole dollars so they sum to `total`, moving the gap onto the largest remainders. */
 function roundToTotal(values: readonly number[], total: number): number[] {
@@ -153,9 +153,9 @@ function taxAwareLotOrder(lots: readonly CustodianLot[], symbol: string): Custod
   return [...lots].sort((a, b) => taxPerDollar(a) - taxPerDollar(b))
 }
 
-/** Realise a sale of `notional` drawn from `ordered` in exactly that order. */
-function realiseOrderedLots(ordered: readonly CustodianLot[], symbol: string, notional: number): RealisedSale {
-  if (ordered.length === 0 || notional <= 0) return NOTHING_REALISED
+/** Realize a sale of `notional` drawn from `ordered` in exactly that order. */
+function realizeOrderedLots(ordered: readonly CustodianLot[], symbol: string, notional: number): RealizedSale {
+  if (ordered.length === 0 || notional <= 0) return NOTHING_REALIZED
   // §0.6 · GLD's long-term gain is collectibles gain (31.8%), not 23.8%.
   const character = taxCharacterOf(symbol)
   const rateFor = (holdingPeriod: CustodianLot['holdingPeriod']) => taxRateFor(holdingPeriod, character)
@@ -170,15 +170,15 @@ function realiseOrderedLots(ordered: readonly CustodianLot[], symbol: string, no
     if (remaining <= 0 || lot.currentValue <= 0) continue
     const portion = Math.min(1, remaining / lot.currentValue)
     consumedLotIds.push(lot.id)
-    const realised = lot.gainLoss * portion
-    rawTakes.push({ lotId: lot.id, shares: lot.quantity * portion, realised, character: lot.holdingPeriod, held: lot.quantity })
-    if (lot.holdingPeriod === 'short') shortTerm += realised
-    else longTerm += realised
-    if (realised > 0) tax += realised * rateFor(lot.holdingPeriod)
-    if (realised < 0) {
+    const realized = lot.gainLoss * portion
+    rawTakes.push({ lotId: lot.id, shares: lot.quantity * portion, realized, character: lot.holdingPeriod, held: lot.quantity })
+    if (lot.holdingPeriod === 'short') shortTerm += realized
+    else longTerm += realized
+    if (realized > 0) tax += realized * rateFor(lot.holdingPeriod)
+    if (realized < 0) {
       soldLosses.push({
         lotId: lot.id, symbol, purchaseDate: lot.purchaseDate,
-        quantity: lot.quantity * portion, loss: realised, holdingPeriod: lot.holdingPeriod,
+        quantity: lot.quantity * portion, loss: realized, holdingPeriod: lot.holdingPeriod,
       })
     }
     remaining -= lot.currentValue * portion
@@ -189,9 +189,9 @@ function realiseOrderedLots(ordered: readonly CustodianLot[], symbol: string, no
   const wholeDollars = new Map<RawTake, number>()
   for (const [character, total] of [['short', roundedShortTerm], ['long', roundedLongTerm]] as const) {
     const ofCharacter = rawTakes.filter((t) => t.character === character)
-    roundToTotal(ofCharacter.map((t) => t.realised), total).forEach((v, i) => { const t = ofCharacter[i]; if (t) wholeDollars.set(t, v) })
+    roundToTotal(ofCharacter.map((t) => t.realized), total).forEach((v, i) => { const t = ofCharacter[i]; if (t) wholeDollars.set(t, v) })
   }
-  const lotTakes = rawTakes.map((t) => ({ ...t, realised: wholeDollars.get(t) ?? 0 }))
+  const lotTakes = rawTakes.map((t) => ({ ...t, realized: wholeDollars.get(t) ?? 0 }))
   return {
     shortTerm: roundedShortTerm,
     longTerm: roundedLongTerm,
@@ -204,16 +204,16 @@ function realiseOrderedLots(ordered: readonly CustodianLot[], symbol: string, no
 }
 
 /**
- * Realise a sale of `notional` dollars out of `target`: the signed short- and long-term result
+ * Realize a sale of `notional` dollars out of `target`: the signed short- and long-term result
  * and the capital-gains tax on its gains, using the same per-lot generator the tax page reads (`generateTaxLots`) and the same rate function
  * (`taxRateFor`) it applies — a short-term-heavy sell is taxed at `SHORT_TERM_RATE` (40.8%), not
  * silently at the long-term rate (23.8%) for the entire position. A tax-aware pass sells the lots
  * carrying the least tax per dollar sold first (`taxAwareLotOrder`); a tax-unaware pass sells the
  * lots in their own oldest-first order.
  */
-function realiseSale(accountLots: readonly CustodianLot[], target: Position, notional: number, taxAware: boolean): RealisedSale {
+function realizeSale(accountLots: readonly CustodianLot[], target: Position, notional: number, taxAware: boolean): RealizedSale {
   const lots = accountLots.filter((l) => l.positionId === target.id)
-  return realiseOrderedLots(taxAware ? taxAwareLotOrder(lots, target.symbol) : lots, target.symbol, notional)
+  return realizeOrderedLots(taxAware ? taxAwareLotOrder(lots, target.symbol) : lots, target.symbol, notional)
 }
 
 /**
@@ -248,12 +248,12 @@ export type ProposedTradeLeg = ProposedTrade & Sleeve
 /**
  * §9.7 · the order in which an overweight class is sold down. The engine used to take
  * `candidates[0]` — the fixture's declaration order — so acc-002 trimmed SPY, carrying a
- * $355,206.70 embedded gain, while INTC sat in the same asset class with a $45,850 unrealised
+ * $355,206.70 embedded gain, while INTC sat in the same asset class with a $45,850 unrealized
  * loss. A "tax-aware" toggle that picks a materially worse tax outcome than an obvious loss lot
  * already in the account is worse than no toggle.
  *
  * Ranking is by **gain per dollar of market value** — gain per dollar *sold*, the same
- * per-dollar logic `realiseSale` applies across lots — not by absolute gain, which would
+ * per-dollar logic `realizeSale` applies across lots — not by absolute gain, which would
  * simply prefer whichever position happens to be biggest. Ascending order puts losses first
  * (harvestable), then the smallest embedded gains.
  *
@@ -264,7 +264,7 @@ export type ProposedTradeLeg = ProposedTrade & Sleeve
  * the account overweight us_equity after a rebalance that reported success, while SPY sat in the
  * same sleeve able to absorb the rest. Sell INTC out first, then top up from SPY.
  *
- * Gated on `taxable`: in an IRA or a Roth, gains are not taxed at all (`realiseSale` already
+ * Gated on `taxable`: in an IRA or a Roth, gains are not taxed at all (`realizeSale` already
  * returns 0 there), so re-ordering by embedded gain would be an arbitrary preference dressed up
  * as tax awareness. Those accounts keep the held order under either toggle setting.
  *
@@ -346,7 +346,7 @@ function substituteBuyCandidate(
 /**
  * C26 · rebalancing / tax-efficiency — `taxImpact: taxAware ? 3_800 : 0` made the riskier setting
  * display as free. Tax is estimated per-lot from the account's actual embedded gains at the
- * lot's own holding-period rate, so a tax-unaware rebalance realises MORE than a tax-aware one,
+ * lot's own holding-period rate, so a tax-unaware rebalance realizes MORE than a tax-aware one,
  * never zero — and a Roth IRA or traditional IRA (`isTaxableAccount`) shows zero, always.
  *
  * Trades come from the account's own drift (`computeDriftForAccount`, the same function the
@@ -422,8 +422,8 @@ export function standingHarvestSubstitutions(
 export type GenerationConstraints = {
   /** Sell only loss lots. Tax-advantaged accounts have no loss to harvest and sell nothing. */
   harvestOnly?: boolean
-  /** Upper bound on realised gains (gain legs only, losses not netted), in the account's currency. */
-  capRealisedGains?: number
+  /** Upper bound on realized gains (gain legs only, losses not netted), in the account's currency. */
+  capRealizedGains?: number
   /** Asset classes the proposal leaves untouched. */
   excludeAssetClasses?: readonly AssetClass[]
   /** Never buy a symbol whose purchase would wash a loss of the same wash-sale taxpayer. */
@@ -436,15 +436,15 @@ export type GenerationConstraints = {
   protectHarvests?: ReadonlySet<string>
 }
 
-type RealisedResult = Pick<ProposedTrade, 'realisedShortTerm' | 'realisedLongTerm'>
+type RealizedResult = Pick<ProposedTrade, 'realizedShortTerm' | 'realizedLongTerm'>
 
-const legGain = (l: RealisedResult) => Math.max(0, l.realisedShortTerm) + Math.max(0, l.realisedLongTerm)
+const legGain = (l: RealizedResult) => Math.max(0, l.realizedShortTerm) + Math.max(0, l.realizedLongTerm)
 
 /**
- * Gains realised by these legs, gain legs only: Σ max(0, short-term) + max(0, long-term). Losses
+ * Gains realized by these legs, gain legs only: Σ max(0, short-term) + max(0, long-term). Losses
  * are not netted, so the figure ties to the tax tape's "Gains realized".
  */
-export function realisedGains(legs: readonly RealisedResult[]): number {
+export function realizedGains(legs: readonly RealizedResult[]): number {
   return legs.reduce((s, l) => s + legGain(l), 0)
 }
 
@@ -467,17 +467,17 @@ function lossLotValue(lots: readonly CustodianLot[], position: Position): number
 const MAX_GAIN_CAP_PASSES = 32
 
 /**
- * The largest whole-dollar sale, at most `ceiling`, whose realised gains stay at or under
+ * The largest whole-dollar sale, at most `ceiling`, whose realized gains stay at or under
  * `allowedGain`. Found by bisection: in the tax-aware lot order a sale's gains only grow with its
  * size (losses are drawn first), and the lower bound always satisfies the limit, so the answer
  * does even where an oldest-first order makes the growth uneven.
  */
-function largestSaleWithin(realise: (value: number) => RealisedResult, ceiling: number, allowedGain: number): number {
+function largestSaleWithin(realize: (value: number) => RealizedResult, ceiling: number, allowedGain: number): number {
   let lo = 0
   let hi = Math.floor(ceiling)
   while (lo < hi) {
     const mid = Math.ceil((lo + hi) / 2)
-    if (legGain(realise(mid)) <= allowedGain) lo = mid
+    if (legGain(realize(mid)) <= allowedGain) lo = mid
     else hi = mid - 1
   }
   return lo
@@ -491,8 +491,8 @@ function largestSaleWithin(realise: (value: number) => RealisedResult, ceiling: 
  * from target is named in `heldBack` with the constraint that did it:
  * - `harvestOnly` sells only lots standing at a loss, and keeps the buys those sales and the cash
  *   above target can fund. A tax-advantaged account has no loss to harvest and sells nothing.
- * - `capRealisedGains` trims the gain leg with the most gain per dollar first until the proposal's
- *   realised gains (losses not netted) are at or under the cap.
+ * - `capRealizedGains` trims the gain leg with the most gain per dollar first until the proposal's
+ *   realized gains (losses not netted) are at or under the cap.
  * - `excludeAssetClasses` leaves those classes untouched.
  * - `avoidSelfWash` never proposes a buy that would wash one of the proposal's own loss sales or an
  *   open loss sale of the same wash-sale taxpayer in any of their accounts. It buys a substitute
@@ -514,7 +514,7 @@ export function generateRebalanceProposal(
   const currency = currencyForAccount(accountId)
   const lossWindows = openWashSaleWindowsFor(account, MOCK_TODAY_ISO)
   // The account's own lots are generated once and shared by the sell ordering, every leg's
-  // `realiseSale`, and the taxpayer's acquisitions below.
+  // `realizeSale`, and the taxpayer's acquisitions below.
   const ownLots = generateTaxLots(account.id, account.totalValue)
   const recentlyOpened = recentlyOpenedPositions(ownLots, MOCK_TODAY_ISO)
   const acquisitions = washSaleAcquisitions(account, (a) => (a.id === account.id ? ownLots : generateTaxLots(a.id, a.totalValue)))
@@ -524,7 +524,7 @@ export function generateRebalanceProposal(
   // identification), so no rounding of the share count can reach into a gain lot.
   const sellTaxAware = taxAware || harvestOnly
   const saleLots = harvestOnly ? ownLots.filter((l) => l.gainLoss < 0) : ownLots
-  const saleOf = (position: Position, value: number) => realiseSale(saleLots, position, value, sellTaxAware)
+  const saleOf = (position: Position, value: number) => realizeSale(saleLots, position, value, sellTaxAware)
   const excluded = new Set<AssetClass>(constraints.excludeAssetClasses ?? [])
   const heldBack = new Map<AssetClass, ResidualDriftReason>()
   const lossValueOf = (p: Position) => lossLotValue(ownLots, p)
@@ -589,7 +589,7 @@ export function generateRebalanceProposal(
   // lots only, and its proceeds go to the substitute. With no substitute the buy stands. The rule
   // holds in an IRA or Roth too: its purchase washes the taxpayer's taxable loss and disallows it
   // permanently (Rev. Rul. 2008-5), so it moves to the substitute; only the harvest leg needs a
-  // taxable account, since only there does a sale realise a loss.
+  // taxable account, since only there does a sale realize a loss.
   const protectedHarvests: ReadonlySet<string> = constraints.protectHarvests ?? new Set<string>()
   const lossSoldIn = (legs: readonly RawLeg[]) => (taxable
     ? legs.filter((l) => l.side === 'sell' && l.target.position && saleOf(l.target.position, l.notional).soldLosses.length > 0).map((l) => l.target.symbol)
@@ -616,7 +616,7 @@ export function generateRebalanceProposal(
   })
 
   // A buy of a symbol the taxpayer has an open loss window on, or that this proposal sells at a
-  // loss, is the replacement purchase §1091 looks for. Only a taxable account's sale realises a loss.
+  // loss, is the replacement purchase §1091 looks for. Only a taxable account's sale realizes a loss.
   const lossSold = lossSoldIn(withHarvests)
   const washing = constraints.avoidSelfWash ? washingSymbols(lossWindows, lossSold) : new Set<string>()
   // A washing buy moves to a substitute in the same class; only a class with none is held back.
@@ -746,27 +746,27 @@ export function generateRebalanceProposal(
         // unit is half this leg's executed value. 48 taxed legs book-wide were affected; the
         // exposure per leg is bounded by `unitPrice / estimatedValue`. All three numbers on the
         // row now describe one trade.
-        const realised = side === 'sell' && taxable && target.position
+        const realized = side === 'sell' && taxable && target.position
           ? saleOf(target.position, estimatedValue)
-          : NOTHING_REALISED
+          : NOTHING_REALIZED
         const trade: ProposedTradeLeg = {
           symbol: target.symbol,
           name: target.name,
           side,
           quantity,
           estimatedValue,
-          taxImpact: realised.tax,
-          realisedShortTerm: realised.shortTerm,
-          realisedLongTerm: realised.longTerm,
-          realisedCollectibleLongTerm: realised.collectibleLongTerm,
+          taxImpact: realized.tax,
+          realizedShortTerm: realized.shortTerm,
+          realizedLongTerm: realized.longTerm,
+          realizedCollectibleLongTerm: realized.collectibleLongTerm,
           washSaleRisk: hasWashSaleRisk(
-            { symbol: target.symbol, side, realisesLoss: realised.shortTerm + realised.longTerm < 0, soldLotIds: realised.consumedLotIds },
+            { symbol: target.symbol, side, realizesLoss: realized.shortTerm + realized.longTerm < 0, soldLotIds: realized.consumedLotIds },
             lossWindows, acquisitions, MOCK_TODAY_ISO,
           ),
           currency,
           ...sleeve,
         }
-        sales.set(trade, { soldLosses: realised.soldLosses, consumedLotIds: realised.consumedLotIds, lotTakes: takesForQuantity(realised.lotTakes, quantity, target.price) })
+        sales.set(trade, { soldLosses: realized.soldLosses, consumedLotIds: realized.consumedLotIds, lotTakes: takesForQuantity(realized.lotTakes, quantity, target.price) })
         return trade
     }
 
@@ -918,13 +918,13 @@ export function generateRebalanceProposal(
 
   let current: readonly RawLeg[] = raw
   let resolved = resolve(current)
-  const cap = constraints.capRealisedGains
+  const cap = constraints.capRealizedGains
   if (cap !== undefined) {
     // Trim the gain leg with the most gain per dollar first, re-resolving the cash band each pass:
-    // the gains realised last are the ones a cap gives up first. Each trim keeps the largest sale
+    // the gains realized last are the ones a cap gives up first. Each trim keeps the largest sale
     // of that leg still inside the cap, so a leg that harvests losses before its gains keeps the
     // harvest. Trimming one sale can let the band scale the others back up, hence the passes.
-    for (let pass = 0; pass < MAX_GAIN_CAP_PASSES && realisedGains(resolved.legs) > cap; pass++) {
+    for (let pass = 0; pass < MAX_GAIN_CAP_PASSES && realizedGains(resolved.legs) > cap; pass++) {
       const top = resolved.legs
         .filter((l) => l.side === 'sell' && legGain(l) > 0)
         .sort((a, b) => legGain(b) / b.estimatedValue - legGain(a) / a.estimatedValue)[0]
@@ -932,16 +932,16 @@ export function generateRebalanceProposal(
       const position = source?.target.position
       if (!top || !source || !position) break
       heldBack.set(source.sleeve.assetClass, 'gains_capped')
-      const allowedGain = Math.max(0, legGain(top) - (realisedGains(resolved.legs) - cap))
-      const realise = (value: number): RealisedResult => {
+      const allowedGain = Math.max(0, legGain(top) - (realizedGains(resolved.legs) - cap))
+      const realize = (value: number): RealizedResult => {
         const sale = saleOf(position, value)
-        return { realisedShortTerm: sale.shortTerm, realisedLongTerm: sale.longTerm }
+        return { realizedShortTerm: sale.shortTerm, realizedLongTerm: sale.longTerm }
       }
-      const notional = largestSaleWithin(realise, top.estimatedValue, allowedGain)
+      const notional = largestSaleWithin(realize, top.estimatedValue, allowedGain)
       current = current.flatMap((leg) => (leg !== source ? [leg] : notional > 0 ? [{ ...leg, notional }] : []))
       resolved = resolve(current)
     }
-    if (realisedGains(resolved.legs) > cap) {
+    if (realizedGains(resolved.legs) > cap) {
       throw new Error(`gain cap resolution did not reach ${cap} for ${account.id}: refusing to propose gains past the cap`)
     }
   }
@@ -994,7 +994,7 @@ const tradesInFractions = (symbol: string, position: Position | undefined) =>
   SPOT_CRYPTO_SYMBOLS.has(symbol) || (position !== undefined && !Number.isInteger(position.quantity))
 
 /**
- * Phase 3 · a workbench edit re-cut onto one leg. A sale is re-realised lot by lot: from `lotIds`
+ * Phase 3 · a workbench edit re-cut onto one leg. A sale is re-realized lot by lot: from `lotIds`
  * in the order given (specific identification) or, without them, in the generator's own tax-aware
  * order. A purchase is re-priced. The engine refuses what cannot be traded rather than clamping it.
  *
@@ -1017,7 +1017,7 @@ export function recutLeg(accountId: string, leg: ProposedTradeLeg, { quantity, l
   if (leg.side === 'buy') {
     if (lotIds) return { ok: false, code: 'LOTS_ON_BUY', message: `${leg.symbol}: lots are chosen for a sale, not a purchase.` }
     const estimatedValue = Math.round(quantity * unitPriceFor(account, leg, position))
-    const washSaleRisk = hasWashSaleRisk({ symbol: leg.symbol, side: 'buy', realisesLoss: false, soldLotIds: [] }, lossWindows, acquisitions, MOCK_TODAY_ISO)
+    const washSaleRisk = hasWashSaleRisk({ symbol: leg.symbol, side: 'buy', realizesLoss: false, soldLotIds: [] }, lossWindows, acquisitions, MOCK_TODAY_ISO)
     return { ok: true, leg: { ...unsettled(leg), quantity, estimatedValue, washSaleRisk }, sale: { soldLosses: [], consumedLotIds: [], lotTakes: [] } }
   }
 
@@ -1038,21 +1038,21 @@ export function recutLeg(accountId: string, leg: ProposedTradeLeg, { quantity, l
     ordered = taxable ? taxAwareLotOrder(positionLots, position.symbol) : positionLots
   }
   const estimatedValue = Math.round(quantity * position.price)
-  const realised = taxable ? realiseOrderedLots(ordered, position.symbol, estimatedValue) : NOTHING_REALISED
+  const realized = taxable ? realizeOrderedLots(ordered, position.symbol, estimatedValue) : NOTHING_REALIZED
   const trade: ProposedTradeLeg = {
     ...unsettled(leg),
     quantity,
     estimatedValue,
-    taxImpact: realised.tax,
-    realisedShortTerm: realised.shortTerm,
-    realisedLongTerm: realised.longTerm,
-    realisedCollectibleLongTerm: realised.collectibleLongTerm,
+    taxImpact: realized.tax,
+    realizedShortTerm: realized.shortTerm,
+    realizedLongTerm: realized.longTerm,
+    realizedCollectibleLongTerm: realized.collectibleLongTerm,
     washSaleRisk: hasWashSaleRisk(
-      { symbol: leg.symbol, side: 'sell', realisesLoss: realised.shortTerm + realised.longTerm < 0, soldLotIds: realised.consumedLotIds },
+      { symbol: leg.symbol, side: 'sell', realizesLoss: realized.shortTerm + realized.longTerm < 0, soldLotIds: realized.consumedLotIds },
       lossWindows, acquisitions, MOCK_TODAY_ISO,
     ),
   }
-  return { ok: true, leg: trade, sale: { soldLosses: realised.soldLosses, consumedLotIds: realised.consumedLotIds, lotTakes: takesForQuantity(realised.lotTakes, quantity, position.price) } }
+  return { ok: true, leg: trade, sale: { soldLosses: realized.soldLosses, consumedLotIds: realized.consumedLotIds, lotTakes: takesForQuantity(realized.lotTakes, quantity, position.price) } }
 }
 
 /** What the classifier needs to know about one invested asset class still away from target. */
@@ -1187,7 +1187,7 @@ export function buildRebalancePreviews(
       // not a bound on it (see `RebalancePreview.estimatedTaxImpact`).
       estimatedTaxImpact: tax.net,
       grossTaxOnGains: tax.gross,
-      ytdRealisedOnReturn: tax.ytdRealisedOnReturn,
+      ytdRealizedOnReturn: tax.ytdRealizedOnReturn,
       nettedWithAccountIds: tax.nettedWithAccountIds,
       // Whether a sale here is a taxable event at all; a surface reads it to tell "not taxed in
       // this account" from "taxed, and the result is zero".
@@ -1319,7 +1319,7 @@ export const omsHandlers = [
       })
     }
 
-    // Wash sale check — derived from the actual realised loss sales (Task 14's 61-day window),
+    // Wash sale check — derived from the actual realized loss sales (Task 14's 61-day window),
     // not a hand-typed symbol list. A wash sale is triggered by *repurchasing* a security recently
     // sold at a loss, so this applies to buys, and it is scoped to the account's wash-sale
     // taxpayer (`openWashSaleWindowsFor`) — the same fact the tax page reads.

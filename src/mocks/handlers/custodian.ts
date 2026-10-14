@@ -4,7 +4,7 @@ import type { TaxLot } from '@/types/portfolio'
 import { accounts } from '../data/accounts'
 import { cashBalanceOf, getPositionsForAccount, seedPositionsForAccount } from '../data/positions'
 import { bookOf, ledgerFills } from '../data/portfolio-ledger'
-import { realisedSales } from '../data/realised-sales'
+import { realizedSales } from '../data/realized-sales'
 import { openWashSaleWindowsFor, sameWashSaleTaxpayer } from './tax-return'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { notFound } from './utils'
@@ -155,13 +155,13 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
   const txns: Transaction[] = []
   const trades: TradeShell[] = []
 
-  // C14 · data-integrity — every realised sale in `realisedSales` must appear in its own account's
+  // C14 · data-integrity — every realized sale in `realizedSales` must appear in its own account's
   // transaction stream as a real sell (previously the two fixtures were unrelated: acc-002's
   // stream held exactly one sell, SPY, never the INTC sale the tax page reports as having
   // happened on 2026-02-20; acc-007's stream held zero sells at all). The PRNG below never draws
   // these symbols for its own buy/sell trades (see `tradePool`), so the match is exact — the
   // fixture's sale, not a coincidentally similar random one.
-  const accountSales = realisedSales.filter((s) => s.accountId === accountId)
+  const accountSales = realizedSales.filter((s) => s.accountId === accountId)
   const soldSymbols = new Set(accountSales.map((s) => s.symbol))
   const heldBySymbol = new Map(held.map((p) => [p.symbol, p]))
   // §0.7 · a position still held was opened when its oldest lot was bought: acc-002's INTC opening
@@ -567,7 +567,7 @@ export const custodianHandlers = [
     return HttpResponse.json(generateTaxLotsWithSaleRisk(account.id, account.totalValue))
   }),
 
-  http.get('/api/custodian/accounts/:accountId/realised-sales', ({ params }) => {
+  http.get('/api/custodian/accounts/:accountId/realized-sales', ({ params }) => {
     const account = accounts.find((a) => a.id === params.accountId)
     if (!account) return notFound()
     return HttpResponse.json(openWashSaleWindowsFor(account, MOCK_TODAY_ISO))

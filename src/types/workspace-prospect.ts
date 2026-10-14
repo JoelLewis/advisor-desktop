@@ -68,15 +68,15 @@ export type ProspectRecord = {
 /** The one revision the Proposal Agent takes for a prospect: document a staged sale of the concentrated stock. */
 export type ProspectConstraint = { kind: 'stage_diversification'; tranches: 2 | 3 }
 
-/** A holding she would transfer: in kind, with what selling it now would realise. */
+/** A holding she would transfer: in kind, with what selling it now would realize. */
 export type TransferLine = {
   statementId: string; symbol: string; name: string; assetClass: AssetClass; securityKind: 'single_name' | 'fund'
   quantity: number; price: number; marketValue: number; costBasis: number; acquired: string; holdingPeriod: 'short' | 'long'
-  unrealised: number; taxIfSoldNow: number; plan: 'in_kind'
+  unrealized: number; taxIfSoldNow: number; plan: 'in_kind'
 }
 export type HeldAwayLine = { statementId: string; custodian: string; accountType: '403b'; value: number; rollover: 'asked_about' }
 export type Sleeve = { assetClass: AssetClass; target: number; transferred: number }
-export type Concentration = { symbol: string; name: string; marketValue: number; weightOfAssets: number; totalAssets: number; unrealised: number; taxIfSoldNow: number }
+export type Concentration = { symbol: string; name: string; marketValue: number; weightOfAssets: number; totalAssets: number; unrealized: number; taxIfSoldNow: number }
 export type Tranche = { n: number; taxYear: number; shares: number; proceeds: number; gain: number; tax: number }
 export type FeeEstimate = { scheduleName: string; base: number; annual: number; blendedRate: number; tiers: { label: string; rate: number }[] }
 
@@ -117,7 +117,7 @@ export type BestInterestRecord = {
   modelName: string
   alternatives: BestInterestAlternative[]
   costs: { scheduleName: string; annualFee: number; blendedRate: number }
-  concentration?: { symbol: string; name: string; weightOfAssets: number; unrealised: number; taxIfSoldNow: number }
+  concentration?: { symbol: string; name: string; weightOfAssets: number; unrealized: number; taxIfSoldNow: number }
   /** What she would hold if everything moves in kind, against the model; reaching the model takes sales. */
   inKindVsModel: string
   rollover: string

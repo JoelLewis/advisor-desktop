@@ -4,7 +4,7 @@ import { accounts } from '@/mocks/data/accounts'
 import { computeDriftForAccount, modelDisplayName } from '@/mocks/handlers/pms'
 import { generateRebalanceTrades } from '@/mocks/handlers/oms'
 import { getPositionsForAccount } from '@/mocks/data/positions'
-import { washSaleWindow } from '@/mocks/data/realised-sales'
+import { washSaleWindow } from '@/mocks/data/realized-sales'
 import { previewRebalance } from '@/services/oms'
 import { ASSET_CLASS_LABELS } from '@/lib/labels'
 import { formatRatePercent } from '@/lib/tax-rules'
@@ -47,7 +47,7 @@ describe("§0.7 · msg-003 reports acc-002's own drift and trades", () => {
     // rs-001's −32,750 on the joint return: 43,788 × 23.8% = 10,422 (tax-return-netting).
     const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
     const sells = preview!.trades.filter((t) => t.side === 'sell')
-    const recognised = (t: (typeof sells)[number]) => t.realisedShortTerm + t.realisedLongTerm - (t.washedLoss ? t.washedLoss.shortTerm + t.washedLoss.longTerm : 0)
+    const recognised = (t: (typeof sells)[number]) => t.realizedShortTerm + t.realizedLongTerm - (t.washedLoss ? t.washedLoss.shortTerm + t.washedLoss.longTerm : 0)
     for (const t of sells) {
       const result = recognised(t)
       expect(msg.content).toContain(`${t.quantity.toLocaleString('en-US')} ${t.symbol} (a ${wholeDollars(result)} ${result < 0 ? 'loss' : 'gain'})`)

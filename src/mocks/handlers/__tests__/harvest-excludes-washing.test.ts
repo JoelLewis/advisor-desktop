@@ -72,7 +72,7 @@ beforeAll(async () => {
   withWashingLot = await figures()
 }, 30_000)
 
-describe('harvest figures count only the part of a loss a sale realises now', () => {
+describe('harvest figures count only the part of a loss a sale realizes now', () => {
   it('vacuity guard: the planted lot is one harvest candidate, 180 of its 400 shares washed and deferred', () => {
     expect(smh).toHaveLength(1)
     expect(smh[0]!.gainLoss).toBeLessThan(-1_000)

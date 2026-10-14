@@ -21,12 +21,12 @@ function lineOf(statement: Statement, holding: Holding): TransferLine {
   if (kind === 'cash') throw new Error(`${statement.id} lists cash as a holding; cash is the statement's own field`)
   const price = closeOf(holding.symbol).price
   const marketValue = cents(holding.quantity * price)
-  const unrealised = cents(marketValue - holding.costBasis)
+  const unrealized = cents(marketValue - holding.costBasis)
   const holdingPeriod = holdingPeriodOn(holding.acquired, PRICES_AS_OF)
   return {
     statementId: statement.id, symbol: holding.symbol, name: holding.name, assetClass: holding.assetClass, securityKind: kind,
-    quantity: holding.quantity, price, marketValue, costBasis: holding.costBasis, acquired: holding.acquired, holdingPeriod, unrealised,
-    taxIfSoldNow: unrealised > 0 ? cents(unrealised * taxRateFor(holdingPeriod)) : 0, plan: 'in_kind',
+    quantity: holding.quantity, price, marketValue, costBasis: holding.costBasis, acquired: holding.acquired, holdingPeriod, unrealized,
+    taxIfSoldNow: unrealized > 0 ? cents(unrealized * taxRateFor(holdingPeriod)) : 0, plan: 'in_kind',
   }
 }
 
@@ -51,6 +51,6 @@ export function concentrationOf(summary: TransferSummary): Concentration | undef
   const weightOfAssets = largest.marketValue / summary.totalAssets
   return weightOfAssets > SINGLE_NAME_LIMIT ? {
     symbol: largest.symbol, name: largest.name, marketValue: largest.marketValue, weightOfAssets, totalAssets: summary.totalAssets,
-    unrealised: largest.unrealised, taxIfSoldNow: largest.taxIfSoldNow,
+    unrealized: largest.unrealized, taxIfSoldNow: largest.taxIfSoldNow,
   } : undefined
 }

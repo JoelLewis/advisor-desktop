@@ -31,12 +31,12 @@ describe('Meeting Prep', () => {
     expect(titled(findings, 'Changes since the last review')).toMatchObject({ claim: "No orders have been filled in the household's accounts today.", attention: 'info', figures: [] })
   })
 
-  it("states the taxpayer's open windows, figures and dates from the realised-sales ledger", () => {
+  it("states the taxpayer's open windows, figures and dates from the realized-sales ledger", () => {
     const windows = titled(findings, 'Wash-sale windows: what not to buy back')
     expect(windows.attention).toBe('attention')
     expect(windows.claim).toContain("in any of the taxpayer's accounts, including IRAs and Roths")
     expect(windows.claim).not.toMatch(/household/i)
-    expect(windows.figures).toContainEqual({ label: 'INTC loss · rs-001', value: -32_750, unit: 'USD', source: 'realisedSales.realisedGainLoss' })
+    expect(windows.figures).toContainEqual({ label: 'INTC loss · rs-001', value: -32_750, unit: 'USD', source: 'realizedSales.realizedGainLoss' })
     expect(windows.citations.map((c) => c.source)).toContain('Wash-sale window · rs-001 · INTC loss sale of 2026-02-20, open through 2026-03-22')
   })
 

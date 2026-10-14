@@ -40,12 +40,12 @@ describe('asking and revising', () => {
 
   it('Revise offers the constraints; the agent posts v2 with a change summary', async () => {
     const { user, embed, dialog } = await openReviseDialog()
-    await user.click(within(dialog).getByRole('checkbox', { name: 'Cap realised gains' }))
-    await user.type(within(dialog).getByRole('textbox', { name: 'Realised gains cap USD' }), '50,000')
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Cap realized gains' }))
+    await user.type(within(dialog).getByRole('textbox', { name: 'Realized gains cap USD' }), '50,000')
     await user.click(within(dialog).getByRole('button', { name: 'Ask Proposal Agent to revise' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     const line = await screen.findByRole('article', { name: 'v2 · Proposal Agent' })
-    expect(line).toHaveTextContent('Revised to cap the gains it realises.')
+    expect(line).toHaveTextContent('Revised to cap the gains it realizes.')
     expect(await within(embed).findByRole('table', { name: 'Proposal legs · v2' })).toBeInTheDocument()
   })
 
@@ -65,8 +65,8 @@ describe('asking and revising', () => {
 
   it('refuses a negative cap before asking the engine, on Enter, and moves focus to the field', async () => {
     const { user, dialog } = await openReviseDialog()
-    await user.click(within(dialog).getByRole('checkbox', { name: 'Cap realised gains' }))
-    const cap = within(dialog).getByRole('textbox', { name: 'Realised gains cap USD' })
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Cap realized gains' }))
+    const cap = within(dialog).getByRole('textbox', { name: 'Realized gains cap USD' })
     await user.type(cap, '-5{Enter}')
     expect(cap).toHaveAccessibleDescription('Enter the cap as a dollar amount, zero or more.')
     expect(cap).toHaveFocus()

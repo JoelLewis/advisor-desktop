@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { nbas, intcHarvestFacts } from '@/mocks/data/nbas'
-import { realisedSales } from '@/mocks/data/realised-sales'
+import { realizedSales } from '@/mocks/data/realized-sales'
 import { accounts } from '@/mocks/data/accounts'
 import { getPositionsForAccount } from '@/mocks/data/positions'
 import { generateTaxLotsWithSaleRisk } from '@/mocks/handlers/custodian'
-import { taxReturnFor, ytdRealisedOnReturn } from '@/mocks/handlers/tax-return'
+import { taxReturnFor, ytdRealizedOnReturn } from '@/mocks/handlers/tax-return'
 import { LONG_TERM_RATE, lossAllowedNow } from '@/lib/tax-rules'
 import { formatCalendarDate } from '@/lib/utils'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
@@ -14,8 +14,8 @@ const dollars = (amount: number) => `$${Math.round(Math.abs(amount)).toLocaleStr
 describe('§0.7 · nba-002 refers to the partial harvests already made', () => {
   const nba = nbas.find((n) => n.id === 'nba-002')!
 
-  it("states Robert Johnson's 2026-02-20 harvest and the 7,000 shares he still holds, at the loss a sale today realises", () => {
-    const rs001 = realisedSales.find((s) => s.id === 'rs-001')!
+  it("states Robert Johnson's 2026-02-20 harvest and the 7,000 shares he still holds, at the loss a sale today realizes", () => {
+    const rs001 = realizedSales.find((s) => s.id === 'rs-001')!
     const acc002 = accounts.find((a) => a.id === 'acc-002')!
     const intc = getPositionsForAccount(acc002.id, acc002.totalValue).find((p) => p.symbol === 'INTC')!
     const lossNow = generateTaxLotsWithSaleRisk(acc002.id, acc002.totalValue)
@@ -27,7 +27,7 @@ describe('§0.7 · nba-002 refers to the partial harvests already made', () => {
   })
 
   it('states every recorded INTC harvest in the accounts it names', () => {
-    for (const sale of realisedSales.filter((s) => s.symbol === 'INTC')) {
+    for (const sale of realizedSales.filter((s) => s.symbol === 'INTC')) {
       expect(nba.description).toContain(`harvested ${sale.quantity.toLocaleString('en-US')} shares on ${formatCalendarDate(sale.saleDate)}`)
     }
   })
@@ -48,9 +48,9 @@ describe("§0.7 · nba-002 states each client's position on their own return", (
   const nba = nbas.find((n) => n.id === 'nba-002')!
   const facts = intcHarvestFacts()
 
-  it("states each return's net result so far this year, from the realised-sales ledger", () => {
+  it("states each return's net result so far this year, from the realized-sales ledger", () => {
     for (const { account } of facts.holders) {
-      const ytd = ytdRealisedOnReturn(taxReturnFor(account)!, MOCK_TODAY_ISO)
+      const ytd = ytdRealizedOnReturn(taxReturnFor(account)!, MOCK_TODAY_ISO)
       const net = ytd.shortTerm + ytd.longTerm
       expect(nba.description).toContain(`${dollars(net)} net capital ${net < 0 ? 'loss' : 'gain'} so far this year`)
     }

@@ -7,13 +7,12 @@ import { Select } from '@/kit/select/Select'
 import { SeriesLines } from '@/kit/series/SeriesLines'
 import { UNIT, fmtEffect, fmtPrice, fmtReturn, fmtTimestamp, fmtWeight } from '@/kit/measure'
 import { useReferenceAttribution } from '@/hooks/use-reference'
-import { assetClassLabel } from '@/workspace/asset-class-label'
 import { isAttributionPeriod, type AttributionPeriod, type AttributionView } from '@/types/reference-attribution'
 import { ReferenceGate } from './ReferenceGate'
 import { ReferencePage } from './ReferencePage'
 import { StackedCell } from './StackedCell'
 import { TakeToTeamThread } from './TakeToTeamThread'
-import { BENCHMARK_KIND_WORDS } from './reference-words'
+import { BENCHMARK_KIND_WORDS, sleeveLabel } from './reference-words'
 
 /** Half the last displayed place of fmtEffect (0.01 pp = 0.0001 as a fraction). */
 const EFFECT_TIE_TOLERANCE = 0.00005
@@ -72,8 +71,8 @@ function Attribution({ view }: { view: AttributionView }) {
           columns={[
             {
               id: 'class', header: 'Asset class', wrap: true, cell: (r) => (
-                <StackedCell primary={assetClassLabel(r.assetClass)}
-                  action={<TakeToTeamThread inline view="attribution" rowId={`${view.accountId}:${view.period}:${r.assetClass}`} rowLabel={assetClassLabel(r.assetClass)} />} />
+                <StackedCell primary={sleeveLabel(r.assetClass)}
+                  action={<TakeToTeamThread inline view="attribution" rowId={`${view.accountId}:${view.period}:${r.assetClass}`} rowLabel={sleeveLabel(r.assetClass)} />} />
               ),
             },
             { id: 'wp', header: 'Weight', unit: UNIT.pct, align: 'right', cell: (r) => <Num text={fmtWeight(r.portfolioWeight)} /> },
@@ -96,7 +95,7 @@ function Attribution({ view }: { view: AttributionView }) {
       <Pane title="The benchmark" meta={BENCHMARK_KIND_WORDS[view.benchmark.kind]}>
         <DataTable caption="Benchmark components" rows={view.benchmark.components} getRowId={(c) => c.assetClass} noun={{ singular: 'sleeve', plural: 'sleeves' }} density="dense"
           columns={[
-            { id: 'sleeve', header: 'Sleeve', cell: (c) => assetClassLabel(c.assetClass) },
+            { id: 'sleeve', header: 'Sleeve', cell: (c) => sleeveLabel(c.assetClass) },
             { id: 'index', header: 'Index', cell: (c) => c.index },
             { id: 'weight', header: 'Weight', unit: UNIT.pct, align: 'right', cell: (c) => <Num text={fmtWeight(c.weight)} /> },
           ]} />

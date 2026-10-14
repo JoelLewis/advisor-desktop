@@ -170,7 +170,7 @@ export function resolveBreak(viewerId: string, r: ResolveBreakRequest): { ok: tr
   const record = RECON_BREAKS.find((b) => b.id === r.breakId)
   if (!record || !isFirmViewer(viewerId)) return refuse(404, 'NO_BREAK', 'Break not found.')
   if (!can(viewerId, 'resolve_break')) return refuse(403, 'NOT_PERMITTED', 'Only the advisor or client service can resolve a break.')
-  const badRationale = rationaleRefusal(r.rationale)
+  const badRationale = rationaleRefusal(r.rationale, 'break resolution')
   if (badRationale) return badRationale
   if (!isBreakResolution(r.resolution)) return refuse(400, 'BAD_RESOLUTION', 'The resolution is book_corrected, custodian_corrected or timing_difference.')
   const earlier = resolutionAct(record.id)

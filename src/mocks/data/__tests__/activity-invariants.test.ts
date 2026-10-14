@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { activities } from '@/mocks/data/activities'
-import { realisedSales } from '@/mocks/data/realised-sales'
+import { realizedSales } from '@/mocks/data/realized-sales'
 import { orders } from '@/mocks/handlers/oms'
 import { KNOWN_OPEN_DATES } from '@/mocks/handlers/custodian'
 import { notes } from '@/mocks/data/notes'
@@ -12,12 +12,12 @@ import { getSupervisionRecords } from '@/services/compliance'
 describe('§0.7 · the activity feed agrees with the records', () => {
   const sale = activities.find((a) => a.id === 'act-005')!
   const replacement = activities.find((a) => a.id === 'act-011')!
-  const rs001 = realisedSales.find((s) => s.id === 'rs-001')!
+  const rs001 = realizedSales.find((s) => s.id === 'rs-001')!
 
   it("act-005 is rs-001: 5,000 INTC at $28.45, a $32,750 long-term loss, at ord-004's fill", () => {
-    expect(sale.description).toBe('Sold 5,000 shares INTC at $28.45 in Robert Johnson Individual. Realised long-term loss: $32,750.')
+    expect(sale.description).toBe('Sold 5,000 shares INTC at $28.45 in Robert Johnson Individual. Realized long-term loss: $32,750.')
     expect(rs001.proceeds / rs001.quantity).toBe(28.45)
-    expect(rs001.realisedGainLoss).toBe(-32_750)
+    expect(rs001.realizedGainLoss).toBe(-32_750)
     expect(sale.timestamp).toBe(orders.find((o) => o.id === 'ord-004')!.filledAt)
     expect(sale.description).not.toContain('500 shares INTC at')
     expect(sale.description).not.toContain('6,820')

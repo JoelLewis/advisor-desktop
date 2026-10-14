@@ -16,23 +16,28 @@ import { correlationAssumptionsText, portfolioVolatility } from '@/lib/risk-mode
 import { RISK_PROFILE_TABLE } from '@/lib/risk-profile'
 import { MOCK_NOW_ISO } from '@/lib/clock'
 
-/** The index each sleeve is measured by (R8). International equity depends on whether the model carries a separate emerging-markets sleeve. */
+/**
+ * The index each sleeve is measured by (R8). International equity depends on whether the model carries a
+ * separate emerging-markets sleeve. The commodities sleeve holds GLD, so it is gold and measured by the LBMA
+ * gold price; digital assets are measured by a broad index that covers the coins and trusts the book holds,
+ * not bitcoin alone, and its return here is the modeled assumption, not the index's record.
+ */
 export const SLEEVE_INDEX: Readonly<Record<AssetClass, string>> = {
   us_equity: 'MSCI USA IMI', intl_equity: 'MSCI EAFE', emerging_markets: 'MSCI Emerging Markets', fixed_income: 'Bloomberg US Aggregate',
   alternatives: 'HFRX Global Hedge Fund', real_estate: 'MSCI US IMI Real Estate 25/50', commodities: 'LBMA Gold Price PM',
-  cash: 'ICE BofA US 3-Month Treasury Bill', digital_assets: 'CME CF Bitcoin Reference Rate', private_equity: 'Cambridge Associates US Private Equity',
+  cash: 'ICE BofA US 3-Month Treasury Bill', digital_assets: 'Bloomberg Galaxy Crypto Index (modeled)', private_equity: 'Cambridge Associates US Private Equity',
 }
 const INTL_WITH_EMERGING_INSIDE = 'MSCI ACWI ex USA IMI'
 const EQUITY: ReadonlySet<string> = new Set(['us_equity', 'intl_equity', 'emerging_markets'])
 /** Asset classes as prose, for a claim that reads as a sentence; the display labels abbreviate. */
 const ASSET_CLASS_WORDS: Readonly<Record<AssetClass, string>> = {
   us_equity: 'US equity', intl_equity: 'international equity', emerging_markets: 'emerging markets', fixed_income: 'fixed income',
-  alternatives: 'alternatives', real_estate: 'real estate', commodities: 'commodities', cash: 'cash',
+  alternatives: 'alternatives', real_estate: 'real estate', commodities: 'gold', cash: 'cash',
   digital_assets: 'digital assets', private_equity: 'private equity',
 }
 const ASSET_CLASS_TITLES: Readonly<Record<AssetClass, string>> = {
   us_equity: 'US Equity', intl_equity: 'International Equity', emerging_markets: 'Emerging Markets', fixed_income: 'Fixed Income',
-  alternatives: 'Alternatives', real_estate: 'Real Estate', commodities: 'Commodities', cash: 'Cash',
+  alternatives: 'Alternatives', real_estate: 'Real Estate', commodities: 'Gold', cash: 'Cash',
   digital_assets: 'Digital Assets', private_equity: 'Private Equity',
 }
 const isAssetClass = (value: string): value is AssetClass => value in SLEEVE_INDEX
@@ -99,7 +104,7 @@ function summaryOf(modelId: string): ModelSummary {
 }
 
 const METHODS: readonly MethodNote[] = [
-  { label: 'Benchmarks', modeled: false, text: "Each model's policy benchmark holds every sleeve at the model's target weight, each sleeve measured by the index named for it. The education model's benchmark is its glide path at the current stage." },
+  { label: 'Benchmarks', modeled: false, text: "Each model's policy benchmark holds every sleeve at the model's target weight, each sleeve measured by the index named for it. The education model's benchmark holds its glide path's current-stage targets, today's weights; it is not re-weighted along the path within a period." },
   { label: 'History', modeled: false, text: "The firm's record of Investment Committee decisions: each version proposed by the analyst and approved by the committee, with the weights it set. A pending version takes effect only once approved. Read-only here." },
   { label: 'Assigned value', modeled: false, text: "Accounts on each model and their value today, from the book; an account held in another currency is converted at today's exchange rate." },
   { label: 'Custom mandates', modeled: false, text: "An account held at the client's own instruction (a single market or a single asset class) follows no firm model. It is listed separately, carries no drift band and is left out of model drift; it is still measured on risk against the client's tolerance, and against the benchmark its mandate names." },
