@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { act, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { delay, http } from 'msw'
 import { server } from '@/test/server'
@@ -109,6 +109,20 @@ describe('the Brief', () => {
     expect(items[items.length - 1]).toHaveFocus()
     await user.tab()
     expect(within(intc).queryByRole('menu', { name: 'Take to' })).toBeNull()
+  })
+
+  it('a blur with no related target does not close the Take to menu, so a click on an item still carries', async () => {
+    renderRoutes(routes, '/t/th-brief')
+    const intc = await screen.findByRole('article', { name: `Harvest Scanner: ${INTC_CLAIM}` })
+    const user = userEvent.setup()
+    await user.click(await within(intc).findByRole('button', { name: 'Take to' }))
+    const item = within(intc).getByRole('menuitem', { name: 'Johnson Rebalance Review' })
+    item.focus()
+    fireEvent.blur(item, { relatedTarget: null })
+    expect(within(intc).getByRole('menu', { name: 'Take to' })).toBeInTheDocument()
+    await user.click(item)
+    expect(await within(intc).findByRole('status')).toHaveTextContent('Taken to Johnson Rebalance Review.')
+    expect(store().messages.filter((m) => m.kind === 'carried')).toHaveLength(1)
   })
 
   it('the team thread shows the carried finding as a quoted card with who carried it', async () => {

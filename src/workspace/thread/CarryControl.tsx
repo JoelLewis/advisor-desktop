@@ -70,7 +70,8 @@ export function CarryControl({ thread, findingId }: { thread: Thread; findingId:
     if (e.key === 'Escape' && open) { e.preventDefault(); e.stopPropagation(); close() }
   }
   const onBlur = (e: FocusEvent) => {
-    if (open && !(e.relatedTarget instanceof Node && containerRef.current?.contains(e.relatedTarget))) setOpen(false)
+    // A null relatedTarget (Safari does not focus a button on mousedown) is left to the outside-press handler.
+    if (open && e.relatedTarget instanceof Node && !containerRef.current?.contains(e.relatedTarget)) setOpen(false)
   }
   return (
     <div ref={containerRef} className="flex flex-col items-start gap-2" onKeyDown={onKeyDown} onBlur={onBlur}>
