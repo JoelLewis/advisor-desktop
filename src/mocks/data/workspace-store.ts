@@ -7,7 +7,7 @@ import { eventTime } from '@/lib/clock'
 import { briefMessages } from '@/mocks/workspace/brief'
 import { bookVersion, resetLedger } from './portfolio-ledger'
 import { SEED_PROSPECTS } from './prospect-seed'
-import { SEED_LAST_SEQUENCE, SEED_MEETINGS, SEED_MESSAGES, SEED_THREADS } from './workspace-seed'
+import { RECONCILIATION_NOTICE, SEED_LAST_SEQUENCE, SEED_MEETINGS, SEED_MESSAGES, SEED_THREADS } from './workspace-seed'
 
 type Counter = 'msg' | 'draft' | 'act' | 'proposal' | 'staged' | 'record' | 'agenda' | 'task' | 'note' | 'pproposal' | 'ptask' | 'thread'
 
@@ -34,7 +34,7 @@ export type WorkspaceState = {
 function seed(): WorkspaceState {
   return {
     threads: SEED_THREADS.map((t) => ({ ...t, memberIds: [...t.memberIds], agentIds: [...t.agentIds] })),
-    messages: [...briefMessages(), ...SEED_MESSAGES.map((m) => ({ ...m }))],
+    messages: [...briefMessages(), { ...RECONCILIATION_NOTICE }, ...SEED_MESSAGES.map((m) => ({ ...m }))],
     acts: [],
     drafts: [],
     proposals: [],

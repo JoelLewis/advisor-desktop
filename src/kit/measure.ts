@@ -1,5 +1,5 @@
 export const MINUS = '−'
-export const UNIT = { usd: 'USD', pp: 'pp', pct: '%', shares: 'sh', days: 'd', points: 'pts' } as const
+export const UNIT = { usd: 'USD', pp: 'pp', pct: '%', shares: 'sh', days: 'd', points: 'pts', bps: 'bps' } as const
 
 export class MeasureError extends Error {
   constructor(message: string) {
@@ -66,6 +66,16 @@ export const fmtQuantity = (v: number) => unsigned(v, 0, 3)
 export const fmtDays = (n: number) => unsigned(n, 0, 0)
 export const fmtPoints = (n: number) => unsigned(n, 0, 0)
 export const fmtScore = (fraction: number) => unsigned(fraction, 0, 0, 2)
+/** A fee or rate in percent, two places: 0.0085 → "0.85". */
+export const fmtRate = (fraction: number) => unsigned(fraction, 2, 2, 2)
+/** A rate in basis points, one place: 0.0074387 → "74.4". */
+export const fmtBasisPoints = (fraction: number) => unsigned(fraction, 1, 1, 4)
+/** A ratio such as beta, two places. */
+export const fmtRatio = (v: number) => unsigned(v, 2, 2)
+/** A factor exposure, signed, two places. */
+export const fmtExposure = (v: number) => signed(v, 2, 2)
+/** An attribution effect in percentage points, signed, two places: 0.00123 → "+0.12". */
+export const fmtEffect = (fraction: number) => signed(fraction, 2, 2, 2)
 
 export function splitFraction(formatted: string): { whole: string; fraction: string } {
   const dot = formatted.indexOf('.')

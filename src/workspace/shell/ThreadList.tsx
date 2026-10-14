@@ -80,14 +80,29 @@ function DeskAgents({ threads }: { threads: Thread[] }) {
 /** Firm surfaces that are not threads. A client is never offered them. */
 const DESK: readonly { to: string; label: string }[] = [{ to: '/supervision', label: 'Supervision' }, { to: '/archive', label: 'Archive' }]
 
+/** The firm's reference views, one step from every thread. */
+const REFERENCE: readonly { to: string; label: string }[] = [
+  { to: '/billing', label: 'Billing' }, { to: '/reconciliation', label: 'Reconciliation' }, { to: '/risk', label: 'Risk' },
+  { to: '/models', label: 'Models' }, { to: '/practice', label: 'Practice' }, { to: '/blotter', label: 'Blotter' },
+]
+
 function DeskLinks() {
   const { viewerId } = useViewer()
   const directory = useDirectory()
   if (!directory.data || isExternalViewerIn(directory.data, viewerId)) return null
   return (
-    <Pane title="Desk">
+    <>
+      <LinkPane title="Desk" links={DESK} />
+      <LinkPane title="Reference" links={REFERENCE} />
+    </>
+  )
+}
+
+function LinkPane({ title, links }: { title: string; links: readonly { to: string; label: string }[] }) {
+  return (
+    <Pane title={title}>
       <ul className="flex flex-col">
-        {DESK.map(({ to, label }) => (
+        {links.map(({ to, label }) => (
           <li key={to}>
             <NavLink to={to} className={({ isActive }) => cn('flex border-l-2 py-2 pl-3 pr-2 text-body hover:bg-face', isActive ? 'border-ink bg-face font-semibold' : 'border-transparent')}>
               {label}

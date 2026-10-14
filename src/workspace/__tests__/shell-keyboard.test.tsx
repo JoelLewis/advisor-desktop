@@ -48,6 +48,7 @@ describe('keyboard in the shell', () => {
     await waitFor(() => expect(destinationNames()).toContain('Account · Robert Johnson Individual'))
     await waitFor(() => expect(destinationNames()).toContain('Client · Patricia Johnson'))
     await waitFor(() => expect(destinationNames()).toContain('Meeting · Johnson annual review'))
+    await waitFor(() => expect(destinationNames()).toContain('Model · Moderate Balanced'))
     expect(destinationNames()).toEqual([
       'Workspace home',
       'Thread · Brief',
@@ -62,6 +63,21 @@ describe('keyboard in the shell', () => {
       'Client · Patricia Johnson',
       'Meeting · Johnson annual review',
       'Prospect · Dr. Amanda Pell',
+      'Billing',
+      'Reconciliation',
+      'Risk · book',
+      'Models',
+      'Practice',
+      'Blotter',
+      'Risk · Robert Johnson Individual',
+      'Attribution · Robert Johnson Individual',
+      'Model · Balanced Growth',
+      'Model · Growth',
+      'Model · Conservative Income',
+      'Model · Aggressive Growth',
+      'Model · Ultra-HNW Multi-Strategy',
+      'Model · Education 529',
+      'Model · Moderate Balanced',
       'Supervision',
       'Archive',
       'Component kit',

@@ -57,6 +57,8 @@ export type Message =
   /** Her acceptance opened onboarding: the checklist as it was opened. */
   | { kind: 'onboarding_opened'; id: string; threadId: string; at: string; prospectId: string; acceptanceActId: string; items: OnboardingItem[] }
   /** A row of a reference view quoted into a team thread: its claim, its figures with their sources, recomputed by the engine when taken. */
+  /** The Brief's line for reconciliation; its counts are read live from the reconciliation view. */
+  | { kind: 'reconciliation_notice'; id: string; threadId: string; at: string }
   | { kind: 'reference_row'; id: string; threadId: string; at: string; takenBy: string; view: ReferenceView; rowId: string; subject: Subject; claim: string; figures: Figure[]; citations: Citation[] }
 /** The acts only compliance performs. */
 export type ComplianceActKind = 'release_orders' | 'return_to_advisor' | 'escalate' | 'dispose_alert' | 'review_correspondence'

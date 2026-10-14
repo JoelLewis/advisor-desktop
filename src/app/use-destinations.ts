@@ -5,15 +5,26 @@ import { getHousehold } from '@/services/workspace'
 import { useDirectory, useProposals, useThreads } from '@/hooks/use-workspace'
 import { useMeetings } from '@/hooks/use-meetings'
 import { useProspects } from '@/hooks/use-prospect-work'
+import { useReferenceModels } from '@/hooks/use-reference'
 import { proposalWorkbenchHref } from '@/workspace/proposal/proposal-href'
+import { accountAttributionHref, accountRiskHref, billingHref, blotterHref, bookRiskHref, modelHref, modelsHref, practiceHref, reconciliationHref } from '@/workspace/full-views/reference-href'
 import { clientFullViewHref, householdFullViewHref, meetingFullViewHref, prospectFullViewHref } from '@/workspace/full-views/full-view-href'
 import { isExternalViewerIn } from '@/workspace/people/directory-people'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import type { Destination } from '@/kit/keyboard/keys'
 
+const REFERENCE_DESTINATIONS: readonly { id: string; label: string; aliases: string[]; href: () => string }[] = [
+  { id: 'billing', label: 'Billing', aliases: ['fees', 'billing runs'], href: () => billingHref() },
+  { id: 'reconciliation', label: 'Reconciliation', aliases: ['breaks', 'custodian'], href: () => reconciliationHref() },
+  { id: 'risk-book', label: 'Risk · book', aliases: ['risk', 'tolerance'], href: () => bookRiskHref() },
+  { id: 'models', label: 'Models', aliases: ['model governance', 'benchmarks'], href: () => modelsHref() },
+  { id: 'practice', label: 'Practice', aliases: ['revenue', 'book of business'], href: () => practiceHref() },
+  { id: 'blotter', label: 'Blotter', aliases: ['orders', 'trades', 'fills'], href: () => blotterHref() },
+]
+
 /**
  * Where the command line can go: home, each thread the viewer can see, the accounts those threads are about, and for
- * the firm, the households they are about with their clients, each meeting, each prospect, each proposal's workbench, the desk and the kit.
+ * the firm, the households they are about with their clients, each meeting, each prospect, each proposal's workbench, the reference views and each model, the desk and the kit.
  */
 export function useDestinations(): Destination[] {
   const navigate = useNavigate()
@@ -24,6 +35,7 @@ export function useDestinations(): Destination[] {
   const proposals = useProposals(undefined, firmViewer).data ?? []
   const meetings = useMeetings(firmViewer).data ?? []
   const prospects = useProspects(firmViewer).data ?? []
+  const models = useReferenceModels(firmViewer).data?.models ?? []
   const accountIds = [...new Set(threads.flatMap((t) => (t.subject?.type === 'account' ? [t.subject.id] : [])))]
   const householdIds = firmViewer ? [...new Set(threads.flatMap((t) => (t.subject?.type === 'household' ? [t.subject.id] : [])))] : []
   // Same keys as useAccount and useHousehold, so the full views reuse what the command line already fetched.
@@ -43,6 +55,12 @@ export function useDestinations(): Destination[] {
     ...meetings.map((m) => ({ id: `meeting-${m.eventId}`, label: `Meeting · ${m.title}`, aliases: ['meeting', 'review'], run: () => navigate(meetingFullViewHref(m.eventId, m.threadId)) })),
     ...prospects.map((p) => ({ id: `prospect-${p.id}`, label: `Prospect · ${p.name}`, aliases: ['prospect'], run: () => navigate(prospectFullViewHref(p.id)) })),
     ...proposals.map((p) => ({ id: `proposal-${p.id}`, label: `Proposal · ${p.title}`, aliases: ['workbench'], run: () => navigate(proposalWorkbenchHref(p.id, p.threadId)) })),
+    ...(firmViewer ? REFERENCE_DESTINATIONS.map((r) => ({ id: r.id, label: r.label, aliases: r.aliases, run: () => navigate(r.href()) })) : []),
+    ...(firmViewer ? accounts.flatMap(({ data }) => (data ? [
+      { id: `risk-${data.id}`, label: `Risk · ${data.name}`, aliases: ['risk'], run: () => navigate(accountRiskHref(data.id)) },
+      { id: `attribution-${data.id}`, label: `Attribution · ${data.name}`, aliases: ['attribution', 'performance'], run: () => navigate(accountAttributionHref(data.id)) },
+    ] : [])) : []),
+    ...models.map((m) => ({ id: `model-${m.id}`, label: `Model · ${m.name}`, aliases: ['model'], run: () => navigate(modelHref(m.id)) })),
     ...(firmViewer ? [{ id: 'supervision', label: 'Supervision', aliases: ['queue', 'compliance'], run: () => navigate('/supervision') }] : []),
     ...(firmViewer ? [{ id: 'archive', label: 'Archive', aliases: ['records', 'books and records'], run: () => navigate('/archive') }] : []),
     ...(firmViewer ? [{ id: 'kit', label: 'Component kit', aliases: ['kit', 'components', 'gallery'], run: () => navigate('/kit') }] : []),

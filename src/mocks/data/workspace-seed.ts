@@ -1,6 +1,6 @@
 import type { Message, Thread } from '@/types/workspace'
 import type { Meeting } from '@/types/workspace-meeting'
-import { eventTime } from '@/lib/clock'
+import { MOCK_NOW_ISO, eventTime } from '@/lib/clock'
 import { PELL_ID, PELL_THREAD_ID, PELL_WORK_THREAD_ID } from './prospect-seed'
 import { PELL_INTRO } from './prospect-script'
 
@@ -43,6 +43,12 @@ export const SEED_MESSAGES: readonly Message[] = [
     detail: 'James Thompson introduced her on 20 Feb. Coffee with Adrian Hale today at 15:30 ET; firm policy: deliver Form CRS before it.',
     targetThreadId: PELL_THREAD_ID, linkLabel: 'Open her thread' },
 ]
+
+/**
+ * R15 · the Brief's reconciliation line, stamped at the morning's measurement like the Brief's findings and
+ * kept out of SEED_MESSAGES, so the event clock's sequences do not move.
+ */
+export const RECONCILIATION_NOTICE: Message = { kind: 'reconciliation_notice', id: 'msg-brecon', threadId: 'th-brief', at: MOCK_NOW_ISO }
 
 /** The last event-clock sequence the seed uses; the session's own events follow it. */
 export const SEED_LAST_SEQUENCE = 8

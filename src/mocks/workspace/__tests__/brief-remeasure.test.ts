@@ -18,7 +18,7 @@ const summary = () => {
 async function openBrief() {
   const res = await fetch(`/api/workspace/threads/${BRIEF_THREAD_ID}`, { headers: { 'X-Viewer': 'user-001' } })
   const { messages } = (await res.json()) as { messages: Message[] }
-  return { messages: messages.filter((m) => m.kind !== 'meeting_notice' && m.kind !== 'next_action') }
+  return { messages: messages.filter((m) => m.kind !== 'meeting_notice' && m.kind !== 'next_action' && m.kind !== 'reconciliation_notice') }
 }
 
 describe('the Brief re-measures on view once the book has moved', () => {
