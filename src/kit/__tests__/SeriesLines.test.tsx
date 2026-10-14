@@ -16,8 +16,22 @@ describe('SeriesLines', () => {
   })
 
   it('refuses series of different lengths or of one point', () => {
-    vi.spyOn(console, 'error').mockImplementation(() => undefined)
-    expect(() => render(<SeriesLines label="x" legend={[]} lines={[{ name: 'a', values: [1, 2] }, { name: 'b', values: [1] }]} />)).toThrow(MeasureError)
-    expect(() => render(<SeriesLines label="x" legend={[]} lines={[{ name: 'a', values: [1] }]} />)).toThrow(MeasureError)
+    const quiet = (e: ErrorEvent) => e.preventDefault()
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    window.addEventListener('error', quiet)
+    try {
+      expect(() => render(<SeriesLines label="x" legend={[]} lines={[{ name: 'a', values: [1, 2] }, { name: 'b', values: [1] }]} />)).toThrow(MeasureError)
+      expect(() => render(<SeriesLines label="x" legend={[]} lines={[{ name: 'a', values: [1] }]} />)).toThrow(MeasureError)
+    } finally {
+      window.removeEventListener('error', quiet)
+      consoleError.mockRestore()
+    }
+  })
+
+  it('draws every line 2px and shows no legend for a single line', () => {
+    const { container } = render(<SeriesLines label="One" legend={[{ name: 'A', value: '1' }]} lines={[{ name: 'A', values: [1, 2] }]} />)
+    expect(container.querySelector('figcaption')).toBeNull()
+    expect(screen.getByRole('img', { name: 'One' })).not.toHaveAttribute('aria-describedby')
+    expect(container.querySelector('polyline')?.getAttribute('stroke-width')).toBe('2')
   })
 })

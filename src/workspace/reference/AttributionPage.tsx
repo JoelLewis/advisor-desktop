@@ -50,6 +50,7 @@ function Attribution({ view }: { view: AttributionView }) {
         <DataTable caption={`Attribution · ${periodLabel}`} rows={view.rows} getRowId={(r) => r.assetClass} noun={{ singular: 'asset class', plural: 'asset classes' }}
           totals={{
             label: 'Total',
+            tiesTo: { label: 'the active return', expected: view.activeReturn, actual: view.rows.reduce((sum, r) => sum + r.total, 0) },
             cells: {
               allocation: <Num text={fmtEffect(view.totals.allocation)} />, selection: <Num text={fmtEffect(view.totals.selection)} />,
               interaction: <Num text={fmtEffect(view.totals.interaction)} />, total: <Num text={fmtEffect(view.totals.total)} />,
@@ -68,7 +69,7 @@ function Attribution({ view }: { view: AttributionView }) {
             { id: 'take', header: 'Thread', cell: (r) => <TakeToTeamThread view="attribution" rowId={`${view.accountId}:${view.period}:${r.assetClass}`} rowLabel={assetClassLabel(r.assetClass)} /> },
           ]} />
       </Pane>
-      <Pane title="Benchmark line" meta="24 months · modeled, not realized">
+      <Pane title="Benchmark line" meta={`${view.series.length} months · modeled, not realized`}>
         {last ? (
           <SeriesLines label={`Modeled growth of 100 · ${view.accountName} against the ${view.benchmark.name}`}
             lines={[{ name: view.accountName, values: view.series.map((p) => p.portfolio) }, { name: view.benchmark.name, values: view.series.map((p) => p.benchmark), dashed: true }]}
