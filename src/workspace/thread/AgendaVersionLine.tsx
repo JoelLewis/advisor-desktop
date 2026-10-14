@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { fmtTimestamp } from '@/kit/measure'
+import { fmtEasternStamp } from '@/kit/measure'
 import { authorName } from '@/workspace/proposal/author-name'
 import { meetingFullViewHref } from '@/workspace/full-views/full-view-href'
 import type { Directory, Message } from '@/types/workspace'
@@ -14,7 +14,7 @@ export function AgendaVersionLine({ message, directory }: { message: AgendaMessa
         <span className="tabular text-body font-semibold">{`Agenda v${message.version}`}</span>
         <span className="text-body">{name}</span>
         <span className="text-label uppercase text-ink-3">{message.author.kind === 'agent' ? 'Agent' : 'Advisor'}</span>
-        <span className="tabular ml-auto text-label text-ink-3">{fmtTimestamp(message.at)}</span>
+        <span className="tabular ml-auto text-label text-ink-3">{fmtEasternStamp(message.at)}</span>
       </div>
       <p className="text-copy">{message.changeSummary}</p>
       <Link to={meetingFullViewHref(message.eventId, message.threadId)} className="self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink">

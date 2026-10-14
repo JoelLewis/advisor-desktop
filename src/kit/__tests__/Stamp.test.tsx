@@ -8,7 +8,7 @@ it('approved and awaiting differ by shape and words, not color', () => {
   expect(screen.getByText('AWAITING YOUR SIGNATURE')).toHaveAttribute('data-stamp', 'awaiting')
   rerender(<Stamp state="approved" person="Adrian Hale" role="Advisor of record" at="2026-02-25T12:03:00Z" />)
   expect(screen.getByText('APPROVED')).toHaveAttribute('data-stamp', 'approved')
-  expect(screen.getByText('2026-02-25 12:03 UTC')).toBeInTheDocument()
+  expect(screen.getByText('25 Feb 07:03 ET')).toBeInTheDocument()
 })
 
 it('an awaiting stamp may name no one', () => {

@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Pane } from '@/kit/layout/Pane'
 import { Tag } from '@/kit/tag/Tag'
-import { fmtTimestamp } from '@/kit/measure'
+import { fmtEasternStamp } from '@/kit/measure'
 import { personIn } from '@/workspace/people/directory-people'
 import { ACT_KIND_LABEL } from '@/workspace/thread/act-kind-label'
 import type { Directory } from '@/types/workspace'
@@ -20,9 +20,9 @@ function rowOf(item: SupervisionItem, directory: Directory): Row {
       return { key: `orders:${item.id}`, href, label: item.title, meta: `approved by ${approver} · ${pending} ${pending === 1 ? 'order' : 'orders'}`, tags: item.escalation ? ['ESCALATED'] : [] }
     }
     case 'alert':
-      return { key: `alert:${item.id}`, href, label: item.title, meta: `${item.id} · raised ${fmtTimestamp(item.alert.createdAt)}`, tags: [item.alert.severity] }
+      return { key: `alert:${item.id}`, href, label: item.title, meta: `${item.id} · raised ${fmtEasternStamp(item.alert.createdAt)}`, tags: [item.alert.severity] }
     case 'correspondence':
-      return { key: `correspondence:${item.id}`, href, label: item.title, meta: `sent ${fmtTimestamp(item.message.at)}`, tags: item.flagged ? ['FLAGGED'] : [] }
+      return { key: `correspondence:${item.id}`, href, label: item.title, meta: `sent ${fmtEasternStamp(item.message.at)}`, tags: item.flagged ? ['FLAGGED'] : [] }
   }
 }
 
@@ -35,7 +35,7 @@ export function SupervisionQueue({ queue, directory }: { queue: Queue; directory
       title: 'Disposed today', empty: 'Nothing disposed of yet today.',
       rows: queue.disposedToday.map(({ item, act }) => ({
         key: act.id, href: supervisionHref(item.kind, item.id), label: `${ACT_KIND_LABEL[act.kind]} · ${item.title}`,
-        meta: `${personIn(directory, act.actorId).name} · ${fmtTimestamp(act.at)} · ${act.id}`, tags: [],
+        meta: `${personIn(directory, act.actorId).name} · ${fmtEasternStamp(act.at)} · ${act.id}`, tags: [],
       })),
     },
   ]

@@ -5,7 +5,7 @@ import { Pane } from '@/kit/layout/Pane'
 import { Reading } from '@/kit/reading/Reading'
 import { Select } from '@/kit/select/Select'
 import { SeriesLines } from '@/kit/series/SeriesLines'
-import { UNIT, fmtEffect, fmtPrice, fmtReturn, fmtTimestamp, fmtWeight } from '@/kit/measure'
+import { UNIT, fmtEffect, fmtPrice, fmtReturn, fmtEasternStamp, fmtWeight } from '@/kit/measure'
 import { useReferenceAttribution } from '@/hooks/use-reference'
 import { isAttributionPeriod, type AttributionPeriod, type AttributionView } from '@/types/reference-attribution'
 import { ReferenceGate } from './ReferenceGate'
@@ -44,7 +44,7 @@ function Attribution({ view }: { view: AttributionView }) {
   const last = view.series[view.series.length - 1]
   return (
     <ReferencePage title={`Attribution · ${view.accountName}`} from={params.get('from')} methods={view.methods}
-      lead={<p className="text-body text-ink-2">{`${view.mandateName} · against the ${view.benchmark.name} · gross of fees · as of ${fmtTimestamp(view.asOf)}`}</p>}>
+      lead={<p className="text-body text-ink-2">{`${view.mandateName} · against the ${view.benchmark.name} · gross of fees · as of ${fmtEasternStamp(view.asOf)}`}</p>}>
       <Select label="Period" value={view.period} onChange={setPeriod} options={view.periods.map((p) => ({ value: p.id, label: p.label }))} />
       <div className="flex flex-wrap gap-x-10 gap-y-4">
         <Reading label={`Portfolio return${cumulative}`} value={fmtReturn(view.portfolioReturn)} unit={UNIT.pct} size="readout-md" />

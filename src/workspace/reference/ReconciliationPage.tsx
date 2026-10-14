@@ -5,7 +5,7 @@ import { Num } from '@/kit/data-table/Num'
 import { Pane } from '@/kit/layout/Pane'
 import { Reading } from '@/kit/reading/Reading'
 import { Tag } from '@/kit/tag/Tag'
-import { UNIT, fmtDate, fmtMoney, fmtQuantity, fmtResult, fmtTimestamp, fmtWeight } from '@/kit/measure'
+import { UNIT, fmtDate, fmtMoney, fmtQuantity, fmtResult, fmtEasternStamp, fmtWeight } from '@/kit/measure'
 import { useDirectory } from '@/hooks/use-workspace'
 import { useReconciliation } from '@/hooks/use-reference'
 import { useViewer } from '@/workspace/viewer/use-viewer'
@@ -33,7 +33,7 @@ function Reconciliation({ view }: { view: ReconciliationView }) {
   const [recorded, setRecorded] = useState<string>()
   return (
     <ReferencePage title="Reconciliation" from={params.get('from')} methods={view.methods}
-      lead={<p className="text-body text-ink-2">{`Book against custodian · as of ${fmtTimestamp(view.asOf)}`}</p>}>
+      lead={<p className="text-body text-ink-2">{`Book against custodian · as of ${fmtEasternStamp(view.asOf)}`}</p>}>
       <div className="flex flex-wrap gap-x-10 gap-y-4">
         <Reading label="Open breaks" value={fmtQuantity(view.summary.openBreaks)} size="readout-md" />
         <Reading label="Resolved today" value={fmtQuantity(view.summary.resolvedToday)} size="readout-md" />
@@ -54,7 +54,7 @@ function Reconciliation({ view }: { view: ReconciliationView }) {
                 <span className="flex flex-col items-start gap-1">
                   <Tag tone={b.status === 'open' ? 'solid' : 'outline'}>{b.status === 'open' ? 'OPEN' : 'RESOLVED'}</Tag>
                   {b.resolution ? <span className="text-label text-ink-2">{`${RESOLUTION_WORDS[b.resolution.resolution]} · ${b.resolution.actorName} · ${b.resolution.actId}`}</span>
-                    : b.resolvedAt ? <span className="text-label text-ink-3">{`Before this session · ${fmtTimestamp(b.resolvedAt)}`}</span> : null}
+                    : b.resolvedAt ? <span className="text-label text-ink-3">{`Before this session · ${fmtEasternStamp(b.resolvedAt)}`}</span> : null}
                 </span>
               ),
             },
@@ -65,7 +65,7 @@ function Reconciliation({ view }: { view: ReconciliationView }) {
             },
             {
               id: 'field', header: 'Field · detected', wrap: true, sortValue: (b) => b.detectedAt,
-              cell: (b) => <StackedCell primary={b.symbol ? `${b.fieldLabel} · ${b.symbol}` : b.fieldLabel} secondary={fmtTimestamp(b.detectedAt)} />,
+              cell: (b) => <StackedCell primary={b.symbol ? `${b.fieldLabel} · ${b.symbol}` : b.fieldLabel} secondary={fmtEasternStamp(b.detectedAt)} />,
             },
             {
               id: 'book', header: 'Book', align: 'right',
@@ -83,13 +83,13 @@ function Reconciliation({ view }: { view: ReconciliationView }) {
             { id: 'name', header: 'Feed', cell: (i) => i.name },
             { id: 'kind', header: 'Kind', cell: (i) => (i.kind === 'custodian' ? 'Custodian' : 'Planning') },
             { id: 'status', header: 'Status', cell: (i) => <Tag tone={i.status === 'synced' ? 'outline' : 'solid'}>{INTEGRATION_STATUS_TAG[i.status]}</Tag> },
-            { id: 'sync', header: 'Last sync', cell: (i) => (i.lastSync ? fmtTimestamp(i.lastSync) : 'Never') },
+            { id: 'sync', header: 'Last sync', cell: (i) => (i.lastSync ? fmtEasternStamp(i.lastSync) : 'Never') },
             { id: 'open', header: 'Open breaks', align: 'right', cell: (i) => <Num text={fmtQuantity(i.openBreaks)} /> },
           ]} />
         <ol aria-label="Integration log" className="flex flex-col gap-2">
           {view.integrations.flatMap((i) => i.log).sort((a, b) => b.at.localeCompare(a.at)).map((e) => (
             <li key={`${e.integration}-${e.at}`} className="flex min-w-0 flex-wrap items-baseline gap-x-3 text-body">
-              <span className="tabular text-label text-ink-3">{fmtTimestamp(e.at)}</span>
+              <span className="tabular text-label text-ink-3">{fmtEasternStamp(e.at)}</span>
               <span className="font-semibold">{e.integration}</span>
               <Tag>{INTEGRATION_STATUS_TAG[e.status]}</Tag>
               <span className="text-ink-2">{e.detail}</span>

@@ -100,7 +100,8 @@ export function fmtDate(iso: string): string {
   return parseIso(iso).toISOString().slice(0, 10)
 }
 
-export function fmtTimestamp(iso: string): string {
+/** The record slip's books-and-records time, labeled UTC: "2026-02-25 12:00 UTC". Only the record slip shows it. */
+export function fmtUtcStamp(iso: string): string {
   const utc = parseIso(iso).toISOString()
   return `${utc.slice(0, 10)} ${utc.slice(11, 16)} UTC`
 }
@@ -130,6 +131,26 @@ const partOf = (parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatPartT
 export function fmtEasternDayTime(iso: string): string {
   const parts = easternDayParts.formatToParts(parseIso(iso))
   return `${partOf(parts, 'weekday')} ${partOf(parts, 'day')} ${monthAbbreviation(Number(partOf(parts, 'month')))} ${fmtEasternTime(iso)} ET`
+}
+
+const easternStampParts = new Intl.DateTimeFormat('en-US', {
+  year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'America/New_York',
+})
+
+function easternParts(iso: string): { dayKey: string; day: string; month: number; time: string } {
+  const parts = easternStampParts.formatToParts(parseIso(iso))
+  const [year, month, day] = [partOf(parts, 'year'), Number(partOf(parts, 'month')), partOf(parts, 'day')]
+  return { dayKey: `${year}-${month}-${day}`, day, month, time: `${partOf(parts, 'hour')}:${partOf(parts, 'minute')}` }
+}
+
+/**
+ * A moment as people here read it, in New York time with the zone: "25 Feb 07:00 ET". Given `sameDayAs`,
+ * a moment on that New York day drops its date: "07:00 ET". Deterministic in any machine zone; DST from the IANA zone.
+ */
+export function fmtEasternStamp(iso: string, sameDayAs?: string): string {
+  const at = easternParts(iso)
+  if (sameDayAs !== undefined && easternParts(sameDayAs).dayKey === at.dayKey) return `${at.time} ET`
+  return `${at.day} ${monthAbbreviation(at.month)} ${at.time} ET`
 }
 
 /** A meeting's window in New York time, with the zone: "14:00–15:15 ET". */

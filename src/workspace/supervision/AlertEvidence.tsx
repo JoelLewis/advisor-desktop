@@ -1,7 +1,7 @@
 import { Pane } from '@/kit/layout/Pane'
 import { RecordTrail } from '@/kit/record-trail/RecordTrail'
 import { Tag } from '@/kit/tag/Tag'
-import { fmtTimestamp } from '@/kit/measure'
+import { fmtEasternStamp } from '@/kit/measure'
 import type { AlertOutcome } from '@/types/workspace'
 import type { AlertItem } from '@/types/workspace-supervision'
 
@@ -22,7 +22,7 @@ export function AlertEvidence({ item }: { item: AlertItem }) {
           <span>{alert.type}</span>
         </p>
         <p className="text-copy">{alert.description}</p>
-        <p className="tabular text-label text-ink-3">{`${alert.id} · raised ${fmtTimestamp(alert.createdAt)}`}</p>
+        <p className="tabular text-label text-ink-3">{`${alert.id} · raised ${fmtEasternStamp(alert.createdAt)}`}</p>
         {item.disposition ? <p className="text-body text-ink-2">{DISPOSITION_WORDS[item.disposition]}</p> : null}
       </Pane>
       <Pane title="Record trail">

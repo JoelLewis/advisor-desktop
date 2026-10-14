@@ -1,4 +1,4 @@
-import { fmtMoney, fmtPrice, fmtQuantity, fmtTimestamp } from '@/kit/measure'
+import { fmtMoney, fmtPrice, fmtQuantity, fmtEasternStamp } from '@/kit/measure'
 import type { Fill } from '@/types/workspace-proposal'
 import { FILL_SIDE_WORDS } from './leg-status'
 
@@ -11,7 +11,7 @@ export function FillList({ fills, label, withTime = false }: { fills: Fill[]; la
           <span>{`${FILL_SIDE_WORDS[f.side]} ${fmtQuantity(f.quantity)} ${f.symbol} at ${fmtPrice(f.price)}`}</span>
           <span className="tabular text-ink-2">
             {fmtMoney(f.value)} <span className="text-ink-3">{f.currency}</span>
-            {withTime ? ` · ${fmtTimestamp(f.at)}` : ''}
+            {withTime ? ` · ${fmtEasternStamp(f.at)}` : ''}
           </span>
         </li>
       ))}

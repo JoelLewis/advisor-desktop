@@ -2,7 +2,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { DataTable } from '@/kit/data-table/DataTable'
 import { Num } from '@/kit/data-table/Num'
 import { Pane } from '@/kit/layout/Pane'
-import { UNIT, fmtMoney, fmtQuantity, fmtTimestamp, fmtTolerance, fmtWeight } from '@/kit/measure'
+import { UNIT, fmtMoney, fmtQuantity, fmtEasternStamp, fmtTolerance, fmtWeight } from '@/kit/measure'
 import { useReferenceModels } from '@/hooks/use-reference'
 import { accountRiskHref, modelHref } from '@/workspace/full-views/reference-href'
 import type { ModelsView } from '@/types/reference-models'
@@ -22,7 +22,7 @@ function Models({ view }: { view: ModelsView }) {
   const from = params.get('from') ?? undefined
   return (
     <ReferencePage title="Models" from={params.get('from')} methods={view.methods}
-      lead={<p className="text-body text-ink-2">{`Model governance · read-only · as of ${fmtTimestamp(view.asOf)}`}</p>}>
+      lead={<p className="text-body text-ink-2">{`Model governance · read-only · as of ${fmtEasternStamp(view.asOf)}`}</p>}>
       <Pane title="Models">
         <DataTable caption="Models" rows={view.models} getRowId={(m) => m.id} noun={{ singular: 'model', plural: 'models' }}
           columns={[

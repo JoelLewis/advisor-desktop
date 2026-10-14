@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   MINUS, MeasureError, isNegative, fmtMoney, fmtResult, fmtPrice, fmtWeight, fmtReturn, fmtDrift,
-  fmtTolerance, fmtQuantity, splitFraction, fmtDays, fmtScore, fmtDate, fmtTimestamp, clientMoney,
+  fmtTolerance, fmtQuantity, splitFraction, fmtDays, fmtScore, fmtDate, fmtEasternStamp, fmtUtcStamp, clientMoney,
   clientPercent, clientWholePercent, clientDate, fmtEasternTime, fmtEasternDayTime, fmtEasternRange, clientRate, fmtDayMonthYear,
 } from '@/kit/measure'
 
@@ -41,7 +41,6 @@ describe('measure', () => {
     expect(fmtScore(0.92)).toBe('92')
     expect(fmtDate('2026-03-23')).toBe('2026-03-23')
     expect(fmtDate('2026-02-25T12:00:00Z')).toBe('2026-02-25')
-    expect(fmtTimestamp('2026-02-25T12:00:00Z')).toBe('2026-02-25 12:00 UTC')
   })
   it('client copy is plain language', () => {
     expect(clientMoney(45_850)).toBe('$45,850')
@@ -110,7 +109,7 @@ describe('measure', () => {
     })
     it.each(['garbage', '2026-03-23T12:00:00', '2026-02-30'])('date formatter throws for %s', (iso) => {
       expect(() => fmtDate(iso)).toThrow(MeasureError)
-      expect(() => fmtTimestamp(iso)).toThrow(MeasureError)
+      expect(() => fmtUtcStamp(iso)).toThrow(MeasureError)
       expect(() => clientDate(iso)).toThrow(MeasureError)
     })
     it('carries the error name', () => {
@@ -120,7 +119,7 @@ describe('measure', () => {
 
   describe('time zones', () => {
     it('converts an offset datetime to UTC', () => {
-      expect(fmtTimestamp('2026-02-25T07:00:00-05:00')).toBe('2026-02-25 12:00 UTC')
+      expect(fmtUtcStamp('2026-02-25T07:00:00-05:00')).toBe('2026-02-25 12:00 UTC')
     })
   })
   it('reads a time in Eastern Time, 24-hour, and a range with its zone', () => {
@@ -129,6 +128,37 @@ describe('measure', () => {
     expect(fmtEasternTime('2026-02-25T05:05:00Z')).toBe('00:05')
     expect(fmtEasternRange('2026-02-25T19:00:00.000Z', '2026-02-25T20:15:00.000Z')).toBe('14:00–15:15 ET')
     expect(() => fmtEasternTime('2026-02-25T14:00:00')).toThrow(MeasureError)
+  })
+})
+
+describe('fmtEasternStamp', () => {
+  it('states the New York day and time with the zone', () => {
+    expect(fmtEasternStamp('2026-02-25T12:00:00Z')).toBe('25 Feb 07:00 ET')
+    expect(fmtEasternStamp('2026-02-25T19:00:00.000Z')).toBe('25 Feb 14:00 ET')
+    expect(fmtEasternStamp('2026-03-02T15:00:00-05:00')).toBe('2 Mar 15:00 ET')
+  })
+  it('takes the New York date across UTC midnight', () => {
+    expect(fmtEasternStamp('2026-02-26T03:30:00Z')).toBe('25 Feb 22:30 ET')
+  })
+  it('follows daylight saving time both ways', () => {
+    expect(fmtEasternStamp('2026-03-08T06:30:00Z')).toBe('8 Mar 01:30 ET')
+    expect(fmtEasternStamp('2026-03-08T07:30:00Z')).toBe('8 Mar 03:30 ET')
+    expect(fmtEasternStamp('2026-11-01T05:30:00Z')).toBe('1 Nov 01:30 ET')
+    expect(fmtEasternStamp('2026-11-01T06:30:00Z')).toBe('1 Nov 01:30 ET')
+  })
+  it('drops the date on the New York day it is compared with, and only then', () => {
+    expect(fmtEasternStamp('2026-02-25T19:00:00Z', '2026-02-25T12:00:00Z')).toBe('14:00 ET')
+    expect(fmtEasternStamp('2026-02-26T03:30:00Z', '2026-02-25T12:00:00Z')).toBe('22:30 ET')
+    expect(fmtEasternStamp('2026-02-25T19:00:00Z', '2026-02-26T14:10:00Z')).toBe('25 Feb 14:00 ET')
+  })
+  it('refuses a time with no offset', () => {
+    expect(() => fmtEasternStamp('2026-02-25T12:00:00')).toThrow(MeasureError)
+  })
+})
+
+describe('fmtUtcStamp', () => {
+  it('is the books-and-records time, labeled UTC', () => {
+    expect(fmtUtcStamp('2026-02-25T07:00:00-05:00')).toBe('2026-02-25 12:00 UTC')
   })
 })
 

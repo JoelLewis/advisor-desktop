@@ -4,7 +4,7 @@ import { Num } from '@/kit/data-table/Num'
 import { Pane } from '@/kit/layout/Pane'
 import { Reading } from '@/kit/reading/Reading'
 import { Tag } from '@/kit/tag/Tag'
-import { UNIT, fmtDate, fmtExposure, fmtMoney, fmtPoints, fmtQuantity, fmtRatio, fmtResult, fmtReturn, fmtTimestamp, fmtWeight } from '@/kit/measure'
+import { UNIT, fmtDate, fmtExposure, fmtMoney, fmtPoints, fmtQuantity, fmtRatio, fmtResult, fmtReturn, fmtEasternStamp, fmtWeight } from '@/kit/measure'
 import { useAccountRisk } from '@/hooks/use-reference'
 import type { AccountRiskView } from '@/types/reference-risk'
 import { ReferenceGate } from './ReferenceGate'
@@ -30,7 +30,7 @@ function AccountRisk({ view }: { view: AccountRiskView }) {
     <ReferencePage title={`Risk · ${view.accountName}`} from={params.get('from')} methods={view.methods}
       lead={(
         <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
-          <p className="text-body text-ink-2">{`${view.clientName} · ${view.mandateName} · tracking the ${view.benchmarkName} · modeled, not realized · as of ${fmtTimestamp(view.asOf)}`}</p>
+          <p className="text-body text-ink-2">{`${view.clientName} · ${view.mandateName} · tracking the ${view.benchmarkName} · modeled, not realized · as of ${fmtEasternStamp(view.asOf)}`}</p>
           <TakeToTeamThread view="risk" rowId={view.accountId} rowLabel={view.accountName} />
         </div>
       )}>

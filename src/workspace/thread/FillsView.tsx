@@ -1,7 +1,7 @@
 import { useId } from 'react'
 import { DataTable } from '@/kit/data-table/DataTable'
 import { Num } from '@/kit/data-table/Num'
-import { fmtMoney, fmtPrice, fmtQuantity, fmtTimestamp } from '@/kit/measure'
+import { fmtMoney, fmtPrice, fmtQuantity, fmtEasternStamp } from '@/kit/measure'
 import { BlotterLink } from '@/workspace/proposal/BlotterLink'
 import { FILL_SIDE_WORDS } from '@/workspace/proposal/leg-status'
 import type { Message } from '@/types/workspace'
@@ -19,7 +19,7 @@ export function FillsView({ message }: { message: FillsMessage }) {
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <h2 id={titleId} className="text-body font-semibold">{`Fills · ${message.title} v${message.version}`}</h2>
         <span className="text-label uppercase text-ink-3">Execution</span>
-        <span className="tabular ml-auto text-label text-ink-3">{fmtTimestamp(message.at)}</span>
+        <span className="tabular ml-auto text-label text-ink-3">{fmtEasternStamp(message.at)}</span>
       </div>
       <p className="text-body text-ink-2">{`Released by ${message.releaseActId}; filled at the day's prices.`}</p>
       <BlotterLink accountId={first.accountId} />
@@ -30,7 +30,7 @@ export function FillsView({ message }: { message: FillsMessage }) {
           { id: 'qty', header: 'Qty', unit: 'sh', align: 'right', cell: (f) => <Num text={fmtQuantity(f.quantity)} /> },
           { id: 'price', header: 'Price', unit: currency, align: 'right', cell: (f) => fmtPrice(f.price) },
           { id: 'value', header: 'Value', unit: currency, align: 'right', cell: (f) => fmtMoney(f.value) },
-          { id: 'at', header: 'Time', cell: (f) => fmtTimestamp(f.at) },
+          { id: 'at', header: 'Time', cell: (f) => fmtEasternStamp(f.at) },
         ]} />
     </article>
   )

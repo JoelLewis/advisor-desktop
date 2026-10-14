@@ -1,6 +1,6 @@
 import { useId } from 'react'
 import { cn } from '@/lib/utils'
-import { fmtScore, fmtTimestamp } from '@/kit/measure'
+import { fmtScore, fmtEasternStamp } from '@/kit/measure'
 
 export type Source = { label: string; detail?: string; asOf?: string; confidence?: number }
 
@@ -12,7 +12,7 @@ const PART = "whitespace-nowrap before:inline-block before:w-4 before:text-cente
 function chipParts(s: Source): string[] {
   return [
     ...(s.detail ? [s.detail] : []),
-    ...(s.asOf ? [`as of ${fmtTimestamp(s.asOf)}`] : []),
+    ...(s.asOf ? [`as of ${fmtEasternStamp(s.asOf)}`] : []),
     ...(s.confidence !== undefined ? [`confidence ${fmtScore(s.confidence)}`] : []),
   ]
 }

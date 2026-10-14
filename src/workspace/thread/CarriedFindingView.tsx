@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { fmtTimestamp } from '@/kit/measure'
+import { fmtEasternStamp } from '@/kit/measure'
 import { personIn } from '@/workspace/people/directory-people'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import type { Directory, Message } from '@/types/workspace'
@@ -28,7 +28,7 @@ export function CarriedFindingView({ message, directory }: { message: Carried; d
             ? <><Link to={`/t/${encodeURIComponent(message.fromThreadId)}`} className="underline decoration-rule-2 underline-offset-4 hover:decoration-ink">{from}</Link>{` · carried by ${carrier}`}</>
             : from}
         </span>
-        <span className="tabular ml-auto text-label text-ink-3">{fmtTimestamp(message.at)}</span>
+        <span className="tabular ml-auto text-label text-ink-3">{fmtEasternStamp(message.at)}</span>
       </div>
       <blockquote className="border-l-2 border-rule-2 pl-4">
         <AgentFindingView finding={message.finding} agent={agent} />

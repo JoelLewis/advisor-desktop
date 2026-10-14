@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { fmtEasternRange, fmtEasternTime, fmtTimestamp } from '@/kit/measure'
+import { fmtEasternRange, fmtEasternTime, fmtEasternStamp } from '@/kit/measure'
 import { REFERENCE_VIEW_TITLE } from '@/workspace/full-views/reference-href'
 import { personIn } from '@/workspace/people/directory-people'
 import { authorName } from '@/workspace/proposal/author-name'
@@ -42,7 +42,7 @@ function Line({ who, at, children }: { who: string; at: string; children: ReactN
     <div className="flex min-w-0 flex-col gap-1">
       <div className="flex items-baseline gap-2 text-label">
         <span className="font-semibold uppercase text-ink-2">{who}</span>
-        <span className="tabular ml-auto text-ink-3">{fmtTimestamp(at)}</span>
+        <span className="tabular ml-auto text-ink-3">{fmtEasternStamp(at)}</span>
       </div>
       <p className="whitespace-pre-line text-body">{children}</p>
     </div>

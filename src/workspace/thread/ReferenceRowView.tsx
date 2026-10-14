@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { fmtTimestamp } from '@/kit/measure'
+import { fmtEasternStamp } from '@/kit/measure'
 import { Reading } from '@/kit/reading/Reading'
 import { SourceChips } from '@/kit/source-chips/SourceChips'
 import { personIn } from '@/workspace/people/directory-people'
@@ -20,7 +20,7 @@ export function ReferenceRowView({ message, directory }: { message: ReferenceRow
           <Link to={referenceRowHref(message.view, message.rowId, message.threadId, message.subject)} className="underline decoration-rule-2 underline-offset-4 hover:decoration-ink">{view}</Link>
           {` · taken by ${personIn(directory, message.takenBy).name}`}
         </span>
-        <span className="tabular ml-auto text-label text-ink-3">{fmtTimestamp(message.at)}</span>
+        <span className="tabular ml-auto text-label text-ink-3">{fmtEasternStamp(message.at)}</span>
       </div>
       <blockquote className="flex min-w-0 flex-col gap-3 border-l-2 border-rule-2 pl-4">
         <p className="text-copy">{message.claim}</p>

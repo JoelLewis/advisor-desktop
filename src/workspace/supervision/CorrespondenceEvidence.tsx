@@ -1,7 +1,7 @@
 import { Pane } from '@/kit/layout/Pane'
 import { Tag } from '@/kit/tag/Tag'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
-import { fmtTimestamp } from '@/kit/measure'
+import { fmtEasternStamp } from '@/kit/measure'
 import { sentLetterOrigin } from '@/workspace/context/draft-origin'
 import { personIn } from '@/workspace/people/directory-people'
 import type { Directory } from '@/types/workspace'
@@ -15,7 +15,7 @@ export function CorrespondenceEvidence({ item, directory }: { item: Corresponden
     <div className="flex min-w-0 flex-col gap-6">
       <Pane title={`As ${item.partyName} saw it`}>
         <VisibilityBand visibility="client" scale="message" audience={item.partyName} party={item.partyKind} />
-        <p className="tabular text-label text-ink-3">{`Sent by ${sender.name} · ${fmtTimestamp(item.message.at)}`}</p>
+        <p className="tabular text-label text-ink-3">{`Sent by ${sender.name} · ${fmtEasternStamp(item.message.at)}`}</p>
         <p className="whitespace-pre-line text-copy">{item.message.body}</p>
       </Pane>
       <Pane title="Provenance">

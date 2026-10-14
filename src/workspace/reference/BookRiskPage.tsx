@@ -4,7 +4,7 @@ import { Num } from '@/kit/data-table/Num'
 import { Pane } from '@/kit/layout/Pane'
 import { Reading } from '@/kit/reading/Reading'
 import { Tag } from '@/kit/tag/Tag'
-import { UNIT, fmtMoney, fmtPoints, fmtQuantity, fmtTimestamp, fmtWeight } from '@/kit/measure'
+import { UNIT, fmtMoney, fmtPoints, fmtQuantity, fmtEasternStamp, fmtWeight } from '@/kit/measure'
 import { useBookRisk } from '@/hooks/use-reference'
 import { accountRiskHref } from '@/workspace/full-views/reference-href'
 import type { BookRiskView } from '@/types/reference-risk'
@@ -24,7 +24,7 @@ function BookRisk({ view }: { view: BookRiskView }) {
   const from = params.get('from') ?? undefined
   return (
     <ReferencePage title="Risk" from={params.get('from')} methods={view.methods}
-      lead={<p className="text-body text-ink-2">{`Every account against its client's tolerance · modeled, not realized · as of ${fmtTimestamp(view.asOf)}`}</p>}>
+      lead={<p className="text-body text-ink-2">{`Every account against its client's tolerance · modeled, not realized · as of ${fmtEasternStamp(view.asOf)}`}</p>}>
       <div className="flex flex-wrap gap-x-10 gap-y-4">
         <Reading label="Accounts above tolerance" value={fmtQuantity(view.aboveTolerance)} size="readout-md" limit={`of ${fmtQuantity(view.rows.length)} accounts`} />
         <Reading label="Accounts below tolerance" value={fmtQuantity(view.belowTolerance)} size="readout-md" limit={`of ${fmtQuantity(view.rows.length)} accounts`} />

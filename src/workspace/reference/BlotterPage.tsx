@@ -5,7 +5,7 @@ import { Pane } from '@/kit/layout/Pane'
 import { Reading } from '@/kit/reading/Reading'
 import { Select } from '@/kit/select/Select'
 import { Tag } from '@/kit/tag/Tag'
-import { UNIT, fmtDate, fmtMoney, fmtPrice, fmtQuantity, fmtTimestamp } from '@/kit/measure'
+import { UNIT, fmtDate, fmtMoney, fmtPrice, fmtQuantity, fmtEasternStamp } from '@/kit/measure'
 import { useBlotter } from '@/hooks/use-reference'
 import { SIDE_WORDS } from '@/workspace/proposal/leg-status'
 import { BLOTTER_STATUSES, isBlotterStatus, type BlotterFilters, type BlotterRow, type BlotterView } from '@/types/reference-blotter'
@@ -48,7 +48,7 @@ function Blotter({ view }: { view: BlotterView }) {
   const dayOptions = (none: string) => [{ value: '', label: none }, ...view.days.map((d) => ({ value: d, label: fmtDate(d) }))]
   return (
     <ReferencePage title="Blotter" from={params.get('from')} methods={view.methods}
-      lead={<p className="text-body text-ink-2">{`Every order across accounts · as of ${fmtTimestamp(view.asOf)}`}</p>}>
+      lead={<p className="text-body text-ink-2">{`Every order across accounts · as of ${fmtEasternStamp(view.asOf)}`}</p>}>
       <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
         <Select label="Status" value={view.filters.status ?? ''} onChange={set('status')}
           options={[{ value: '', label: 'All statuses' }, ...BLOTTER_STATUSES.map((s) => ({ value: s, label: BLOTTER_STATUS_WORDS[s] }))]} />
@@ -66,7 +66,7 @@ function Blotter({ view }: { view: BlotterView }) {
             { id: 'account', header: 'Account', wrap: true, cell: (r) => r.accountName },
             {
               id: 'submitted', header: 'Submitted · filled', wrap: true, sortValue: (r) => r.submittedAt,
-              cell: (r) => <StackedCell primary={fmtTimestamp(r.submittedAt)} secondary={r.filledAt ? `Filled ${fmtTimestamp(r.filledAt)}` : undefined} />,
+              cell: (r) => <StackedCell primary={fmtEasternStamp(r.submittedAt)} secondary={r.filledAt ? `Filled ${fmtEasternStamp(r.filledAt)}` : undefined} />,
             },
             { id: 'side', header: 'Side', cell: (r) => SIDE_WORDS[r.side] },
             { id: 'symbol', header: 'Symbol', cell: (r) => r.symbol },

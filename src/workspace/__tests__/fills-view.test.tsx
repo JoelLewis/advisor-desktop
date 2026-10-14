@@ -24,8 +24,8 @@ describe('the fills message', () => {
     expect(report).toHaveTextContent("Released by REC-0003; filled at the day's prices.")
     const table = within(report).getByRole('table', { name: 'Fills · v3' })
     const [intc, vwo] = within(table).getAllByRole('row').slice(1)
-    for (const text of ['INTC', 'Sold', '7,000', '28.45', '199,150', '2026-02-25 14:30 UTC']) expect(intc).toHaveTextContent(text)
-    for (const text of ['VWO', 'Bought', '1,388', '44.80', '62,182', '2026-02-25 14:31 UTC']) expect(vwo).toHaveTextContent(text)
+    for (const text of ['INTC', 'Sold', '7,000', '28.45', '199,150', '25 Feb 09:30 ET']) expect(intc).toHaveTextContent(text)
+    for (const text of ['VWO', 'Bought', '1,388', '44.80', '62,182', '25 Feb 09:31 ET']) expect(vwo).toHaveTextContent(text)
   })
 
   it('refuses a fills message with no fill rather than rendering a blank unit', () => {

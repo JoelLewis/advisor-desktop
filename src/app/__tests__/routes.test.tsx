@@ -5,7 +5,7 @@ import { http, HttpResponse } from 'msw'
 import { renderRoutes } from '@/test/render'
 import { server } from '@/test/server'
 import { getSupervisionRecords } from '@/services/compliance'
-import { fmtResult, fmtTimestamp } from '@/kit/measure'
+import { fmtResult, fmtEasternStamp } from '@/kit/measure'
 import { previewRebalance } from '@/services/oms'
 import { RouteError } from '@/app/RouteError'
 
@@ -71,7 +71,7 @@ describe('routes', () => {
     expect(r.getAllByText('Mark Davis').length).toBeGreaterThanOrEqual(1)
     expect(r.getByText('sr-002')).toBeInTheDocument()
     const sr002 = (await getSupervisionRecords('user-001', 'comp-006')).find((rec) => rec.id === 'sr-002')!
-    expect(r.getAllByText(fmtTimestamp(sr002.timestamp)).length).toBeGreaterThanOrEqual(2)
+    expect(r.getAllByText(fmtEasternStamp(sr002.timestamp)).length).toBeGreaterThanOrEqual(2)
     expect(r.getByRole('article', { name: 'Potential wash sale cleared — Johnson INTC/SMH' })).toBeInTheDocument()
     expect(records).not.toHaveTextContent('Advisor of record')
     expect(records).not.toHaveTextContent('REC-EXAMPLE')

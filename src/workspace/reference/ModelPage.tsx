@@ -4,7 +4,7 @@ import { Num } from '@/kit/data-table/Num'
 import { Pane } from '@/kit/layout/Pane'
 import { Reading } from '@/kit/reading/Reading'
 import { Tag } from '@/kit/tag/Tag'
-import { UNIT, fmtDate, fmtMoney, fmtQuantity, fmtTimestamp, fmtTolerance, fmtWeight } from '@/kit/measure'
+import { UNIT, fmtDate, fmtMoney, fmtQuantity, fmtEasternStamp, fmtTolerance, fmtWeight } from '@/kit/measure'
 import { useReferenceModel } from '@/hooks/use-reference'
 import { accountFullViewHref } from '@/workspace/full-views/full-view-href'
 import type { ModelDetail } from '@/types/reference-models'
@@ -32,7 +32,7 @@ function Model({ view }: { view: ModelDetail }) {
     <ReferencePage title={view.name} from={params.get('from')} methods={view.methods}
       lead={(
         <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
-          <p className="text-body text-ink-2">{`${view.description} · ${view.riskLabel} · against the ${view.benchmark.name} · ${versionWords(view)} · as of ${fmtTimestamp(view.asOf)}`}</p>
+          <p className="text-body text-ink-2">{`${view.description} · ${view.riskLabel} · against the ${view.benchmark.name} · ${versionWords(view)} · as of ${fmtEasternStamp(view.asOf)}`}</p>
           <TakeToTeamThread view="models" rowId={view.id} rowLabel={view.name} />
         </div>
       )}>

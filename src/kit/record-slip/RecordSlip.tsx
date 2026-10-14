@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from 'react'
-import { fmtTimestamp } from '@/kit/measure'
+import { fmtEasternStamp, fmtUtcStamp } from '@/kit/measure'
 
 type RecordSlipProps = {
   kind: string; title: string; recordId: string; fingerprint?: string
@@ -18,7 +18,8 @@ export function RecordSlip({ kind, title, recordId, fingerprint, recordedBy, at,
       {children ? <div className="mt-2 text-body">{children}</div> : null}
       <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 border-t border-rule pt-2 text-label">
         <dt className="uppercase text-ink-3">Recorded by</dt><dd className="normal-case">{`${recordedBy.name}, ${recordedBy.role}`}</dd>
-        <dt className="uppercase text-ink-3">At</dt><dd className="tabular normal-case">{fmtTimestamp(at)}</dd>
+        <dt className="uppercase text-ink-3">At</dt><dd className="tabular normal-case">{fmtEasternStamp(at)}</dd>
+        <dt className="uppercase text-ink-3">UTC</dt><dd className="tabular normal-case">{fmtUtcStamp(at)}</dd>
         <dt className="uppercase text-ink-3">Archive</dt><dd className="normal-case">{archive}</dd>
         {fingerprint ? (<><dt className="uppercase text-ink-3">Fingerprint</dt><dd className="tabular normal-case">{fingerprint}</dd></>) : null}
       </dl>

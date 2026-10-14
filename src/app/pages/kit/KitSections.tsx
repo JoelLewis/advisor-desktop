@@ -19,7 +19,7 @@ import { Stamp } from '@/kit/stamp/Stamp'
 import { RecordSlip } from '@/kit/record-slip/RecordSlip'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
 import { RecordTrail } from '@/kit/record-trail/RecordTrail'
-import { clientMoney, fmtDrift, fmtMoney, fmtTimestamp, fmtTolerance } from '@/kit/measure'
+import { clientMoney, fmtDrift, fmtMoney, fmtEasternStamp, fmtTolerance } from '@/kit/measure'
 import { todayISO, now } from '@/lib/clock'
 import { RATE_DISCLOSURE } from '@/lib/tax-rules'
 import { taxEstimateDirection } from '@/lib/capital-gains'
@@ -133,7 +133,7 @@ export function KitSections({ data }: { data: KitData }) {
           grossTax={preview.grossTaxOnGains} netTax={preview.estimatedTaxImpact}
           scope={taxScope(preview)} rateBasis={RATE_DISCLOSURE} />
         <p className="text-body">{`Estimated capital-gains tax ${estimate.direction} this return: about `}<FigureRef source={TAX_SOURCE} path="rebalance.estimatedTaxImpact" note={1}>{clientMoney(estimate.amount)}</FigureRef>.</p>
-        <p className="text-label normal-case text-ink-3"><span aria-hidden="true">1. </span>{`Source: ${TAX_SOURCE} for ${account.name}, as of ${fmtTimestamp(stamp)}.`}</p>
+        <p className="text-label normal-case text-ink-3"><span aria-hidden="true">1. </span>{`Source: ${TAX_SOURCE} for ${account.name}, as of ${fmtEasternStamp(stamp)}.`}</p>
         <SourceChips sources={[{ label: 'Rebalance preview', detail: account.name, asOf: stamp }, { label: 'Drift calculation', detail: `${drift.assetClassDrifts.length} asset classes`, asOf: stamp }]} />
       </SidePanel>
     </Grid>

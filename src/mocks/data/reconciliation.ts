@@ -29,7 +29,7 @@ export const INTEGRATION_LOG: readonly IntegrationLogEntry[] = [
   { integration: 'HSBC', at: '2026-02-24T23:00:00Z', status: 'synced', detail: 'Hong Kong file for 24 Feb received overnight, after the Hong Kong close; it syncs hours before the US feeds.' },
   { integration: 'DBS', at: '2026-02-24T23:30:00Z', status: 'synced', detail: 'Singapore file for 24 Feb received overnight, after the Singapore close.' },
   { integration: 'UBS', at: '2026-02-25T05:00:00Z', status: 'synced', detail: 'Zurich file for 24 Feb received at the start of the European day.' },
-  { integration: 'Coinbase', at: '2026-02-25T00:05:00Z', status: 'synced', detail: 'Balances snapshot at 00:00 UTC; digital assets trade every day, so the feed closes at midnight UTC.' },
+  { integration: 'Coinbase', at: '2026-02-25T00:05:00Z', status: 'synced', detail: 'Balances snapshot at 19:00 ET; digital assets trade every day, so the feed closes at 19:00 ET (midnight UTC).' },
   { integration: PLANNING_INTEGRATION, at: '2026-02-24T22:00:00Z', status: 'synced', detail: 'Plans synced.' },
-  { integration: PLANNING_INTEGRATION, at: '2026-02-25T07:00:00Z', status: 'pending', detail: "Nightly export requested; MoneyGuidePro has not returned it (a delay on the provider's side). Planning figures stay as of the 24 Feb 22:00 UTC sync." },
+  { integration: PLANNING_INTEGRATION, at: '2026-02-25T07:00:00Z', status: 'pending', detail: "Nightly export requested; MoneyGuidePro has not returned it (a delay on the provider's side). Planning figures stay as of the 24 Feb 17:00 ET sync." },
 ]

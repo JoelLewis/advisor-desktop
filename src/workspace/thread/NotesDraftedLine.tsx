@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { fmtTimestamp } from '@/kit/measure'
+import { fmtEasternStamp } from '@/kit/measure'
 import { meetingFullViewHref } from '@/workspace/full-views/full-view-href'
 import type { Directory, Message } from '@/types/workspace'
 
@@ -13,7 +13,7 @@ export function NotesDraftedLine({ message, directory }: { message: Drafted; dir
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="text-body font-semibold">{agent.name}</span>
         <span className="text-label uppercase text-ink-3">Agent</span>
-        <span className="tabular ml-auto text-label text-ink-3">{fmtTimestamp(message.at)}</span>
+        <span className="tabular ml-auto text-label text-ink-3">{fmtEasternStamp(message.at)}</span>
       </div>
       <p className="text-copy">Drafted the notes from the transcript; every line cites the lines it records.</p>
       <Link to={meetingFullViewHref(message.eventId, message.threadId)} className="self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink">

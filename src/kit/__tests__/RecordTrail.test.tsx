@@ -12,7 +12,7 @@ it('lists ordered steps with state and actor', () => {
   expect(items).toHaveLength(3)
   expect(within(items[1]!).getByText('PENDING')).toBeInTheDocument()
   expect(items[1]).toHaveTextContent('Not yet recorded')
-  expect(within(items[0]!).getByText('2026-02-25 12:03 UTC')).toBeInTheDocument()
+  expect(within(items[0]!).getByText('25 Feb 07:03 ET')).toBeInTheDocument()
 })
 
 it('says so when a step has no named actor, rather than inventing one', () => {

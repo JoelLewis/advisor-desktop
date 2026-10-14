@@ -1,5 +1,5 @@
 import { Tag } from '@/kit/tag/Tag'
-import { fmtTimestamp } from '@/kit/measure'
+import { fmtEasternStamp } from '@/kit/measure'
 import type { Message } from '@/types/workspace'
 import { DISCLOSURE_TITLES } from '@/types/workspace-prospect'
 
@@ -12,7 +12,7 @@ export function DisclosureLine({ message }: { message: Delivered }) {
     <article aria-label={`Delivered · ${title}`} className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
       <Tag>Delivered</Tag>
       <span className="text-copy">{title}</span>
-      <span className="tabular ml-auto text-label text-ink-3">{fmtTimestamp(message.at)}</span>
+      <span className="tabular ml-auto text-label text-ink-3">{fmtEasternStamp(message.at)}</span>
     </article>
   )
 }

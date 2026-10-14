@@ -9,7 +9,7 @@ import { accounts } from '@/mocks/data/accounts'
 import { computeDriftForAccount } from '@/mocks/handlers/pms'
 import { createDraft, getDrafts, runAgent, sendToParty } from '@/services/workspace'
 import { eventTime } from '@/lib/clock'
-import { fmtDrift, fmtTimestamp, fmtTolerance, UNIT } from '@/kit/measure'
+import { fmtDrift, fmtEasternStamp, fmtTolerance, UNIT } from '@/kit/measure'
 import { assetClassLabel } from '@/workspace/asset-class-label'
 import { embedFor } from '@/workspace/thread/embeds/embed-registry'
 import { requireModelManaged } from '@/lib/mandate'
@@ -66,8 +66,8 @@ describe('thread view', () => {
     expect(items).toHaveLength(3)
     expect(items[0]).toHaveTextContent('Sarah Mitchell')
     expect(items[0]).toHaveTextContent('Client service')
-    expect(items[0]).toHaveTextContent(fmtTimestamp(eventTime(2)))
-    expect(items[0]).toHaveTextContent('2026-02-25 12:02 UTC')
+    expect(items[0]).toHaveTextContent(fmtEasternStamp(eventTime(2)))
+    expect(items[0]).toHaveTextContent('25 Feb 07:02 ET')
     expect(items[0]).toHaveTextContent('Robert asked when his annual review is this year.')
     expect(items[2]).toHaveTextContent('Adrian Hale')
     expect(items[2]).toHaveTextContent('Mike, can you look at the tax side before we build anything?')

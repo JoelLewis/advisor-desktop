@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { Pane } from '@/kit/layout/Pane'
 import { Tag } from '@/kit/tag/Tag'
 import { TaxTape } from '@/kit/tax-tape/TaxTape'
-import { fmtTimestamp } from '@/kit/measure'
+import { fmtEasternStamp } from '@/kit/measure'
 import { RATE_DISCLOSURE } from '@/lib/tax-rules'
 import { personIn } from '@/workspace/people/directory-people'
 import { ROLE_LABEL } from '@/workspace/people/role-label'
@@ -33,7 +33,7 @@ export function OrdersEvidence({ item, directory }: { item: OrdersItem; director
           <dt className={TERM}>Version</dt><dd className="tabular">{`v${v.n}`}</dd>
           <dt className={TERM}>Fingerprint</dt><dd className="tabular">{item.approval.fingerprint}</dd>
           <dt className={TERM}>Approved by</dt><dd>{`${approver.name}, ${ROLE_LABEL[approver.role]}`}</dd>
-          <dt className={TERM}>At</dt><dd className="tabular">{fmtTimestamp(item.approval.at)}</dd>
+          <dt className={TERM}>At</dt><dd className="tabular">{fmtEasternStamp(item.approval.at)}</dd>
           <dt className={TERM}>Record</dt><dd className="tabular">{item.approval.actId}</dd>
         </dl>
         {item.latestVersion > v.n ? <p className="text-body text-ink-2">{`v${item.latestVersion} is newer and unapproved; these orders are from v${v.n}.`}</p> : null}

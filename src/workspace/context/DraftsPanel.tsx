@@ -2,7 +2,7 @@ import { useId, useRef, useState } from 'react'
 import { Button } from '@/kit/button/Button'
 import { Tag } from '@/kit/tag/Tag'
 import { TextInput } from '@/kit/text-input/TextInput'
-import { fmtTimestamp } from '@/kit/measure'
+import { fmtEasternStamp } from '@/kit/measure'
 import { useDrafts, useProposals, useReviseDraft, useSendToParty } from '@/hooks/use-workspace'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { personIn } from '@/workspace/people/directory-people'
@@ -95,7 +95,7 @@ function DraftView({ draft, directory, threadId, canEdit, staleReason, sendLabel
     <article aria-labelledby={titleId} className="flex flex-col gap-3 border border-ink p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h3 id={titleId} className="text-label uppercase text-ink">Draft · not sent</h3>
-        <span className="tabular text-label text-ink-3">{fmtTimestamp(draft.createdAt)}</span>
+        <span className="tabular text-label text-ink-3">{fmtEasternStamp(draft.createdAt)}</span>
       </div>
       {staleReason ? (
         <p className="flex flex-wrap items-baseline gap-2 text-body">

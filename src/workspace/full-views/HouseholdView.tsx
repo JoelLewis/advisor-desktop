@@ -4,7 +4,7 @@ import { Tag } from '@/kit/tag/Tag'
 import { DataTable } from '@/kit/data-table/DataTable'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
 import { PAGE_TITLE_ID } from '@/kit/page/ids'
-import { fmtDate, fmtEasternRange, fmtTimestamp } from '@/kit/measure'
+import { fmtDate, fmtEasternRange, fmtEasternStamp } from '@/kit/measure'
 import { useHousehold } from '@/hooks/use-meetings'
 import { isNotFound } from '@/workspace/is-not-found'
 import { HouseholdSummaryPanes } from '@/workspace/household/HouseholdSummaryPanes'
@@ -78,7 +78,7 @@ function HouseholdPage({ view }: { view: HouseholdReadModel }) {
               <li key={a.id} className="flex min-w-0 flex-col gap-1 border-b border-rule py-3 first:pt-0 last:border-b-0">
                 <span className="flex flex-wrap items-baseline gap-x-3">
                   <span className="text-body font-semibold">{a.title}</span>
-                  <span className="tabular ml-auto text-label text-ink-3">{fmtTimestamp(a.at)}</span>
+                  <span className="tabular ml-auto text-label text-ink-3">{fmtEasternStamp(a.at)}</span>
                 </span>
                 <span className="text-copy text-ink-2">{a.description}</span>
               </li>

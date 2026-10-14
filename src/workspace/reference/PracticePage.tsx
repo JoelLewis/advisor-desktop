@@ -4,7 +4,7 @@ import { Num } from '@/kit/data-table/Num'
 import { Pane } from '@/kit/layout/Pane'
 import { Tag } from '@/kit/tag/Tag'
 import { Reading } from '@/kit/reading/Reading'
-import { UNIT, fmtBasisPoints, fmtDate, fmtMoney, fmtQuantity, fmtRatio, fmtTimestamp, fmtWeight } from '@/kit/measure'
+import { UNIT, fmtBasisPoints, fmtDate, fmtMoney, fmtQuantity, fmtRatio, fmtEasternStamp, fmtWeight } from '@/kit/measure'
 import { usePractice } from '@/hooks/use-reference'
 import type { PracticeView } from '@/types/reference-practice'
 import { ReferenceGate } from './ReferenceGate'
@@ -24,7 +24,7 @@ function Practice({ view }: { view: PracticeView }) {
   const [params] = useSearchParams()
   return (
     <ReferencePage title="Practice" from={params.get('from')} methods={view.methods}
-      lead={<p className="text-body text-ink-2">{`Revenue and the book of business · as of ${fmtTimestamp(view.asOf)}`}</p>}>
+      lead={<p className="text-body text-ink-2">{`Revenue and the book of business · as of ${fmtEasternStamp(view.asOf)}`}</p>}>
       <div className="flex flex-wrap gap-x-10 gap-y-4">
         <Reading label="Book value" value={fmtMoney(view.book.value)} unit={UNIT.usd} size="readout-md" />
         <Reading label="Annual revenue, run rate" value={fmtMoney(view.revenue.annual)} unit={UNIT.usd} size="readout-md" />

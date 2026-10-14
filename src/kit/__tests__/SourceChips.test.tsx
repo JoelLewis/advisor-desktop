@@ -6,7 +6,7 @@ it('lists what a finding relies on, with as-of time and confidence', () => {
   render(<SourceChips sources={[{ label: 'Drift calculation', detail: 'acc-002 vs Growth', asOf: '2026-02-25T12:00:00Z', confidence: 0.92 }]} />)
   expect(screen.getByText('Relies on')).toBeInTheDocument()
   expect(screen.getByText('Drift calculation')).toBeInTheDocument()
-  expect(screen.getByText('as of 2026-02-25 12:00 UTC')).toBeInTheDocument()
+  expect(screen.getByText('as of 25 Feb 07:00 ET')).toBeInTheDocument()
   expect(screen.getByText('confidence 92')).toBeInTheDocument()
 })
 
@@ -28,7 +28,7 @@ it('draws separators in CSS before each part, clipped at the start of a line, ne
   const item = screen.getByRole('listitem')
   expect(item).not.toHaveTextContent('·')
   const parts = [...item.querySelectorAll('[data-part="chip-part"]')]
-  expect(parts.map((p) => p.textContent)).toEqual(['Rebalance preview', 'Robert Johnson Individual', 'as of 2026-02-25 12:00 UTC'])
+  expect(parts.map((p) => p.textContent)).toEqual(['Rebalance preview', 'Robert Johnson Individual', 'as of 25 Feb 07:00 ET'])
   for (const part of parts) expect(part.className).toContain("before:content-['·'_/_'']")
   const row = parts[0]!.parentElement!
   expect(row.className).toContain('-ml-4')

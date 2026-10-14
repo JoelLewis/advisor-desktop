@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Button } from '@/kit/button/Button'
-import { fmtTimestamp } from '@/kit/measure'
+import { fmtEasternStamp } from '@/kit/measure'
 import { usePositions } from '@/hooks/use-portfolio'
 import { useActs, useProposal } from '@/hooks/use-workspace'
 import { useProspectProposals } from '@/hooks/use-prospect-work'
@@ -149,7 +149,7 @@ function ByAgent({ name, at, children }: { name: string; at: string; children: R
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="text-body font-semibold">{name}</span>
         <span className="text-label uppercase text-ink-3">Agent</span>
-        <span className="tabular ml-auto text-label text-ink-3">{fmtTimestamp(at)}</span>
+        <span className="tabular ml-auto text-label text-ink-3">{fmtEasternStamp(at)}</span>
       </div>
       {children}
     </div>
@@ -162,7 +162,7 @@ function Authored({ author, at, children }: { author: Person; at: string; childr
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="text-body font-semibold">{author.name}</span>
         <span className="text-label uppercase text-ink-3">{ROLE_LABEL[author.role]}</span>
-        <span className="tabular ml-auto text-label text-ink-3">{fmtTimestamp(at)}</span>
+        <span className="tabular ml-auto text-label text-ink-3">{fmtEasternStamp(at)}</span>
       </div>
       {children}
     </div>

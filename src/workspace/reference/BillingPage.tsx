@@ -5,7 +5,7 @@ import { Pane } from '@/kit/layout/Pane'
 import { Reading } from '@/kit/reading/Reading'
 import { Select } from '@/kit/select/Select'
 import { Tag } from '@/kit/tag/Tag'
-import { UNIT, fmtBasisPoints, fmtDate, fmtMoney, fmtRate, fmtTimestamp } from '@/kit/measure'
+import { UNIT, fmtBasisPoints, fmtDate, fmtMoney, fmtRate, fmtEasternStamp } from '@/kit/measure'
 import { useBilling } from '@/hooks/use-reference'
 import type { BillingView, HouseholdBilling } from '@/types/reference-billing'
 import { ReferenceGate } from './ReferenceGate'
@@ -32,7 +32,7 @@ function Billing({ view }: { view: BillingView }) {
   const run = view.runs.find((r) => r.id === params.get('run')) ?? view.runs[0]
   return (
     <ReferencePage title="Billing" from={params.get('from')} methods={view.methods}
-      lead={<p className="text-body text-ink-2">{`${view.schedule.name} schedule · billed quarterly · as of ${fmtTimestamp(view.asOf)}`}</p>}>
+      lead={<p className="text-body text-ink-2">{`${view.schedule.name} schedule · billed quarterly · as of ${fmtEasternStamp(view.asOf)}`}</p>}>
       <div className="flex flex-wrap gap-x-10 gap-y-4">
         <Reading label="Annual fees on today's value" value={fmtMoney(view.totals.annualFee)} unit={UNIT.usd} size="readout-md" />
         <Reading label="A quarter" value={fmtMoney(view.totals.quarterlyFee)} unit={UNIT.usd} size="readout-md" />
@@ -98,7 +98,7 @@ function Billing({ view }: { view: BillingView }) {
               <span className="flex flex-wrap items-baseline gap-x-3">
                 <span className="text-body font-semibold">{`${e.id} · ${e.householdName}`}</span>
                 <Tag tone={e.resolvedAt ? 'outline' : 'solid'}>{e.resolvedAt ? 'RESOLVED' : 'OPEN'}</Tag>
-                <span className="tabular ml-auto text-label text-ink-3">{`Opened ${fmtTimestamp(e.openedAt)}${e.resolvedAt ? ` · resolved ${fmtTimestamp(e.resolvedAt)}` : ''}`}</span>
+                <span className="tabular ml-auto text-label text-ink-3">{`Opened ${fmtEasternStamp(e.openedAt)}${e.resolvedAt ? ` · resolved ${fmtEasternStamp(e.resolvedAt)}` : ''}`}</span>
               </span>
               <span className="text-copy text-ink-2">{e.description}</span>
             </li>

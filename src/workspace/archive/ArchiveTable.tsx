@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { DataTable } from '@/kit/data-table/DataTable'
 import { NotApplicable } from '@/kit/data-table/NotApplicable'
-import { fmtTimestamp } from '@/kit/measure'
+import { fmtEasternStamp } from '@/kit/measure'
 import { personIn } from '@/workspace/people/directory-people'
 import { PATH_NOTE } from '@/workspace/prospect/prospect-words'
 import { supervisionHref } from '@/workspace/supervision/supervision-items'
@@ -17,7 +17,7 @@ function recordedBy(entry: ArchiveEntry, directory: Directory): string {
 }
 
 function Recorded({ entry, directory }: { entry: ArchiveEntry; directory: Directory }) {
-  return <><span className="block whitespace-nowrap tabular">{fmtTimestamp(entry.at)}</span><span className="block">{recordedBy(entry, directory)}</span></>
+  return <><span className="block whitespace-nowrap tabular">{fmtEasternStamp(entry.at)}</span><span className="block">{recordedBy(entry, directory)}</span></>
 }
 
 /** The record id leads, so books-and-records keep their reference beside what was done. */

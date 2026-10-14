@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils'
-import { fmtTimestamp } from '@/kit/measure'
+import { fmtEasternStamp } from '@/kit/measure'
 
 type StampProps =
   | { state: 'approved'; person: string; role?: string; at: string }
@@ -20,7 +20,7 @@ export function Stamp(props: StampProps) {
         <span className="flex flex-col text-body">
           {person ? <span className="font-semibold">{person}</span> : null}
           {role ? <span className="text-ink-2">{role}</span> : null}
-          {at ? <span className="tabular text-ink-3">{fmtTimestamp(at)}</span> : null}
+          {at ? <span className="tabular text-ink-3">{fmtEasternStamp(at)}</span> : null}
         </span>
       ) : null}
     </div>
