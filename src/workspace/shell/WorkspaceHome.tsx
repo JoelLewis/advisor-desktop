@@ -38,7 +38,7 @@ function FiveMinutePath({ progress }: { progress: StoryProgress | undefined }) {
       <h2 id="five-minute-path" className="border-b border-ink pb-2 text-label uppercase text-ink-2">Five minutes, in order</h2>
       <ol aria-label="The five-minute path" className="flex flex-col">
         {HOME_STEPS.map((step, i) => (
-          <li key={step.id} className="grid grid-cols-[1.75rem_1fr_auto] items-baseline gap-x-3 border-b border-rule py-3 last:border-b-0">
+          <li key={step.id} aria-current={progress?.next === step.id ? 'step' : undefined} className="grid grid-cols-[1.75rem_1fr_auto] items-baseline gap-x-3 border-b border-rule py-3 last:border-b-0">
             <span className="tabular text-body text-ink-3">{fmtQuantity(i + 1)}</span>
             <div className="flex min-w-0 flex-col gap-1">
               <span className="text-copy font-semibold">{step.title}</span>

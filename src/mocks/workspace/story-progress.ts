@@ -1,8 +1,10 @@
 import { STORY_STEP_IDS, type StoryProgress, type StoryStepId } from '@/types/workspace-story'
-import type { BindingActKind } from '@/types/workspace'
+import type { BindingAct } from '@/types/workspace'
 import { store } from '@/mocks/data/workspace-store'
 import { PELL_ID } from '@/mocks/data/prospect-seed'
 import { prospectOf } from './prospects'
+
+const JOHNSON_THREAD_ID = 'th-johnson-review'
 
 /**
  * How far the session has come along the README's path. Steps 2, 3, 5, 6 and 7 are done by what the
@@ -11,12 +13,14 @@ import { prospectOf } from './prospects'
  */
 export function storyProgress(): StoryProgress {
   const s = store()
-  const recorded = (kind: BindingActKind) => s.acts.some((a) => a.kind === kind)
+  // Each rule names its own subject: Dr. Pell's approval records the same kind as the Johnson one.
+  const onJohnsonProposal = (a: BindingAct) => a.threadId === JOHNSON_THREAD_ID && a.subject?.type === 'proposal'
+  const recorded = (kind: BindingAct['kind'], scope: (a: BindingAct) => boolean = () => true) => s.acts.some((a) => a.kind === kind && scope(a))
   const pell = prospectOf(PELL_ID)
   if (!pell) throw new Error(`The story's prospect ${PELL_ID} is not in the session`)
   const ruled = new Map<StoryStepId, boolean>([
-    ['rebalance', recorded('approve_proposal')],
-    ['release', recorded('release_orders')],
+    ['rebalance', recorded('approve_proposal', onJohnsonProposal)],
+    ['release', recorded('release_orders', onJohnsonProposal)],
     ['meeting', s.meetings.some((m) => m.state === 'filed') && s.acts.some((a) => a.kind === 'send_to_party' && a.recordBasis !== undefined)],
     ['pell', pell.sent !== undefined && pell.accepted !== undefined],
     ['reference', recorded('resolve_break')],

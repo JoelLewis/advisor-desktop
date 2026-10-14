@@ -7,7 +7,10 @@ import { fileMeetingRecord } from '../meeting-acts'
 import { draftRecap } from '../recap'
 import { sendToParty } from '../acts'
 import { reconciliationView, resolveBreak } from '@/mocks/reference/reconciliation'
+import { createProspectProposal } from '../prospect-proposals'
+import { approveProspectProposal } from '../prospect-acts'
 import { ADRIAN, approvedV1, ok, release } from './story-fixture'
+import { withHerReply } from './prospect-fixture'
 
 const done = () => Object.fromEntries(storyProgress().steps.map((s) => [s.id, s.done]))
 
@@ -15,6 +18,14 @@ describe('the five-minute path, from session state', () => {
   it('starts with nothing done and the Brief next', () => {
     expect(storyProgress()).toEqual({ steps: expect.any(Array), next: 'brief' })
     expect(Object.values(done()).every((d) => !d)).toBe(true)
+  })
+
+  it("Dr. Pell's approval alone completes nothing: the rebalance is the Johnson proposal's", () => {
+    withHerReply()
+    const { detail } = ok(createProspectProposal(ADRIAN, 'prsp-011'))
+    ok(approveProspectProposal(ADRIAN, detail.id, 1, detail.versions[0]!.fingerprint, 'Reviewed the proposal and its best-interest record.'))
+    expect(done()).toMatchObject({ brief: false, rebalance: false })
+    expect(storyProgress().next).toBe('brief')
   })
 
   it('an approval completes the rebalance, and the Brief before it', () => {

@@ -16,6 +16,9 @@ describe('home', () => {
     expect(steps).toHaveLength(8)
     expect(within(steps[0]!).getByRole('link', { name: 'Open the Brief' })).toHaveAttribute('href', '/t/th-brief')
     await waitFor(() => expect(steps[0]).toHaveTextContent('NEXT'))
+    expect(steps[0]).toHaveAttribute('aria-current', 'step')
+    expect(steps.filter((s) => s.hasAttribute('aria-current'))).toHaveLength(1)
+    expect(within(steps[2]!).getByRole('link', { name: 'Release the orders' })).toHaveAttribute('href', '/t/th-johnson-review')
     expect(screen.queryByText('DONE')).toBeNull()
   })
 
@@ -24,6 +27,8 @@ describe('home', () => {
     renderRoutes(routes, '/')
     const steps = within(await path()).getAllByRole('listitem')
     await waitFor(() => expect(steps[2]).toHaveTextContent('NEXT'))
+    expect(steps[2]).toHaveAttribute('aria-current', 'step')
+    expect(steps[0]).not.toHaveAttribute('aria-current')
     expect(steps[0]).toHaveTextContent('DONE')
     expect(steps[1]).toHaveTextContent('DONE')
   })

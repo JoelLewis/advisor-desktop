@@ -9,7 +9,7 @@ export type HomeStep = { id: StoryStepId; title: string; detail: string; to: str
 export const HOME_STEPS: readonly HomeStep[] = [
   { id: 'brief', title: 'The Brief', detail: 'Today, what needs a decision, and the context behind it.', to: '/t/th-brief', linkLabel: 'Open the Brief' },
   { id: 'rebalance', title: 'The Johnson rebalance and harvest', detail: 'Take the Intel finding to the team thread, ask the Proposal Agent, revise to harvest only, exclude QAI in the workbench, approve v3.', to: '/t/th-johnson-review', linkLabel: 'Open Johnson Rebalance Review' },
-  { id: 'release', title: 'Compliance releases, as Mark Davis', detail: "The presenter's shortcut records Mark's release; the orders fill at the day's prices.", to: '/t/th-johnson-review', linkLabel: 'Open the approval' },
+  { id: 'release', title: 'Compliance releases, as Mark Davis', detail: "The presenter's shortcut records Mark's release; the orders fill at the day's prices.", to: '/t/th-johnson-review', linkLabel: 'Release the orders' },
   { id: 'blotter', title: 'The blotter and the moved book', detail: "Each order filled under the release's record; Intel leaves the holdings and the Brief's decisions.", to: '/blotter', linkLabel: 'Open the blotter' },
   { id: 'meeting', title: 'The Johnson annual review', detail: 'Prep, hold the meeting, draft and file the notes, then send Robert the recap.', to: '/t/th-johnson-meeting', linkLabel: 'Open Johnson annual review' },
   { id: 'pell', title: 'Dr. Amanda Pell, first contact to onboarding', detail: 'Form CRS before the coffee (firm policy), her reply, a staged sale over two tax years, her acceptance.', to: '/t/th-pell', linkLabel: 'Open her thread' },
