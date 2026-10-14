@@ -24,6 +24,7 @@ import { nbas } from '../data/nbas'
 import { complianceAlerts } from './compliance'
 import { calendarEvents } from '../data/calendar'
 import { notFound, roundTo } from './utils'
+import { factorRows } from '../reference/factors'
 
 /** Convert an account's value from its base currency to USD using static FX rates */
 function toUSD(value: number, baseCurrency?: CurrencyCode): number {
@@ -717,6 +718,86 @@ function inverseNormalCDF(q: number): number {
     (((((b[0]! * r + b[1]!) * r + b[2]!) * r + b[3]!) * r + b[4]!) * r + 1)
 }
 
+/** Each stress scenario's asset-class returns replayed on the account's holdings today. */
+export function stressScenariosFor(account: Account): StressScenario[] {
+  const positions = getPositionsForAccount(account.id, account.totalValue)
+
+  const scenarios: StressScenario[] = STRESS_FACTORS.map((scenario) => {
+    const positionImpacts = positions.map((p) => {
+      const impactPct = scenario.factors[p.assetClass] ?? 0
+      return {
+        positionId: p.id,
+        symbol: p.symbol,
+        name: p.name,
+        currentValue: p.marketValue,
+        projectedValue: p.marketValue * (1 + impactPct),
+        impact: p.marketValue * impactPct,
+        impactPercent: impactPct,
+      }
+    })
+    const covered = positionImpacts.reduce((s, p) => s + p.currentValue, 0)
+    // Left unrounded on purpose: C9 asks that Σ position impact equal portfolioImpact × Σ
+    // position value exactly. Rounding this ratio to 4dp puts that reconciliation hundreds of
+    // dollars out on a large account. The display layer rounds it, the API does not.
+    const portfolioImpact = covered === 0
+      ? 0
+      : positionImpacts.reduce((s, p) => s + p.impact, 0) / covered
+    return {
+      id: scenario.id,
+      name: scenario.name,
+      description: scenario.description,
+      portfolioImpact,
+      positionImpacts,
+    }
+  })
+  return scenarios
+}
+
+/** Position concentration against the IPS limits, with one HHI scale (0–10,000) and its effective N. */
+export function concentrationFor(account: Account) {
+  const positions = getPositionsForAccount(account.id, account.totalValue)
+
+  const sorted = [...positions].sort((a, b) => b.weight - a.weight)
+  const concentrationMetrics = sorted.map((pos) => {
+    const kind = securityKind(pos.symbol, pos.assetClass)
+    const limit = concentrationLimitFor(kind)
+    return {
+      positionId: pos.id,
+      symbol: pos.symbol,
+      name: pos.name,
+      assetClass: pos.assetClass,
+      marketValue: pos.marketValue,
+      weight: pos.weight,
+      kind,
+      limit,
+      limitBasis: kind === 'single_name' ? 'Single issuer (IPS)'
+        : kind === 'fund' ? 'Pooled vehicle (IPS)'
+        : 'Cash and equivalents (IPS)',
+      breached: pos.weight > limit,
+    }
+  })
+
+  const singleNames = concentrationMetrics.filter((c) => c.kind === 'single_name')
+  const totalWeight = positions.reduce((s, p) => s + p.weight, 0) || 1
+  const top10Weight = sorted.slice(0, 10).reduce((s, p) => s + p.weight, 0)
+
+  return {
+    positions: concentrationMetrics,
+    summary: {
+      top10Weight: roundTo(top10Weight, 3),
+      // C22 · diversification — one HHI scale across the product (0–10,000), with effective N.
+      herfindahlIndex: Math.round(herfindahlIndex(positions.map((p) => p.weight / totalWeight))),
+      effectiveN: roundTo(effectiveN(herfindahlIndex(positions.map((p) => p.weight / totalWeight))), 1),
+      singleNameWeight: roundTo(singleNames.reduce((s, c) => s + c.weight, 0), 3),
+      largestSingleName: singleNames[0]
+        ? { symbol: singleNames[0].symbol, weight: singleNames[0].weight }
+        : null,
+      breachCount: concentrationMetrics.filter((c) => c.breached).length,
+      totalPositions: positions.length,
+    },
+  }
+}
+
 export const pmsHandlers = [
   http.get('/api/pms/metrics', () => {
     return HttpResponse.json(computeMetrics())
@@ -844,53 +925,18 @@ export const pmsHandlers = [
     return HttpResponse.json(metrics)
   }),
 
-  http.get('/api/pms/accounts/:accountId/factors', () => {
-    const exposures: FactorExposure[] = [
-      { factor: 'Market', exposure: 0.95, benchmark: 1.00 },
-      { factor: 'Size (SMB)', exposure: -0.12, benchmark: 0.00 },
-      { factor: 'Value (HML)', exposure: 0.08, benchmark: 0.05 },
-      { factor: 'Momentum', exposure: 0.22, benchmark: 0.10 },
-      { factor: 'Quality', exposure: 0.35, benchmark: 0.15 },
-      { factor: 'Low Volatility', exposure: 0.18, benchmark: 0.10 },
-      { factor: 'Yield', exposure: 0.14, benchmark: 0.20 },
-    ]
+  http.get('/api/pms/accounts/:accountId/factors', ({ params }) => {
+    const account = findAccount(params.accountId)
+    if (!account) return notFound()
+    const p = riskProfileFor(account)
+    const exposures: FactorExposure[] = factorRows(p.weights, p.benchWeights).map((r) => ({ factor: r.label, exposure: r.exposure, benchmark: r.benchmark }))
     return HttpResponse.json(exposures)
   }),
 
   http.get('/api/pms/accounts/:accountId/stress', ({ params }) => {
     const account = findAccount(params.accountId)
     if (!account) return notFound()
-    const positions = getPositionsForAccount(account.id, account.totalValue)
-
-    const scenarios: StressScenario[] = STRESS_FACTORS.map((scenario) => {
-      const positionImpacts = positions.map((p) => {
-        const impactPct = scenario.factors[p.assetClass] ?? 0
-        return {
-          positionId: p.id,
-          symbol: p.symbol,
-          name: p.name,
-          currentValue: p.marketValue,
-          projectedValue: p.marketValue * (1 + impactPct),
-          impact: p.marketValue * impactPct,
-          impactPercent: impactPct,
-        }
-      })
-      const covered = positionImpacts.reduce((s, p) => s + p.currentValue, 0)
-      // Left unrounded on purpose: C9 asks that Σ position impact equal portfolioImpact × Σ
-      // position value exactly. Rounding this ratio to 4dp puts that reconciliation hundreds of
-      // dollars out on a large account. The display layer rounds it, the API does not.
-      const portfolioImpact = covered === 0
-        ? 0
-        : positionImpacts.reduce((s, p) => s + p.impact, 0) / covered
-      return {
-        id: scenario.id,
-        name: scenario.name,
-        description: scenario.description,
-        portfolioImpact,
-        positionImpacts,
-      }
-    })
-    return HttpResponse.json(scenarios)
+    return HttpResponse.json(stressScenariosFor(account))
   }),
 
   http.get('/api/pms/accounts/:accountId/sensitivity', ({ params }) => {
@@ -981,47 +1027,7 @@ export const pmsHandlers = [
   http.get('/api/pms/accounts/:accountId/concentration', ({ params }) => {
     const account = findAccount(params.accountId)
     if (!account) return notFound()
-    const positions = getPositionsForAccount(account.id, account.totalValue)
-
-    const sorted = [...positions].sort((a, b) => b.weight - a.weight)
-    const concentrationMetrics = sorted.map((pos) => {
-      const kind = securityKind(pos.symbol, pos.assetClass)
-      const limit = concentrationLimitFor(kind)
-      return {
-        positionId: pos.id,
-        symbol: pos.symbol,
-        name: pos.name,
-        assetClass: pos.assetClass,
-        marketValue: pos.marketValue,
-        weight: pos.weight,
-        kind,
-        limit,
-        limitBasis: kind === 'single_name' ? 'Single issuer (IPS)'
-          : kind === 'fund' ? 'Pooled vehicle (IPS)'
-          : 'Cash and equivalents (IPS)',
-        breached: pos.weight > limit,
-      }
-    })
-
-    const singleNames = concentrationMetrics.filter((c) => c.kind === 'single_name')
-    const totalWeight = positions.reduce((s, p) => s + p.weight, 0) || 1
-    const top10Weight = sorted.slice(0, 10).reduce((s, p) => s + p.weight, 0)
-
-    return HttpResponse.json({
-      positions: concentrationMetrics,
-      summary: {
-        top10Weight: roundTo(top10Weight, 3),
-        // C22 · diversification — one HHI scale across the product (0–10,000), with effective N.
-        herfindahlIndex: Math.round(herfindahlIndex(positions.map((p) => p.weight / totalWeight))),
-        effectiveN: roundTo(effectiveN(herfindahlIndex(positions.map((p) => p.weight / totalWeight))), 1),
-        singleNameWeight: roundTo(singleNames.reduce((s, c) => s + c.weight, 0), 3),
-        largestSingleName: singleNames[0]
-          ? { symbol: singleNames[0].symbol, weight: singleNames[0].weight }
-          : null,
-        breachCount: concentrationMetrics.filter((c) => c.breached).length,
-        totalPositions: positions.length,
-      },
-    })
+    return HttpResponse.json(concentrationFor(account))
   }),
 
   http.get('/api/pms/models', () => {

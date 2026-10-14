@@ -104,7 +104,7 @@ describe('the client view', () => {
     const view = clientView(ADRIAN, 'cli-002')!
     expect(view).toMatchObject({
       id: 'cli-002', name: 'Patricia Johnson', householdId: 'hh-001', householdName: 'Johnson Household', dateOfBirth: '1960-07-11', occupation: 'Retired',
-      preferredContact: 'phone', risk: { tolerance: 'Conservative', scoreFraction: 0.35, assessedOn: '2025-09-15' },
+      preferredContact: 'phone', risk: { tolerance: 'Moderate Conservative', scoreFraction: 0.35, assessedOn: '2025-09-15' },
     })
     expect(view.accounts.map((a) => a.accountId)).toEqual(['acc-004', 'acc-005'])
     expect(view.accountsValue).toBe(view.accounts.reduce((s, a) => s + a.value, 0))

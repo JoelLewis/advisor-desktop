@@ -18,8 +18,9 @@ import { openWashSaleWindows } from '@/mocks/data/realised-sales'
 import { sessionNow } from '@/mocks/data/workspace-store'
 import { computeDriftForAccount, modelDisplayName } from '@/mocks/handlers/pms'
 import { projectDrift } from '@/mocks/handlers/oms'
-import { ACCOUNT_TYPE_LABELS, capitalize } from '@/lib/labels'
+import { ACCOUNT_TYPE_LABELS } from '@/lib/labels'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
+import { bandFor } from '@/lib/risk-profile'
 import { meetingOf, meetingTitle } from './meetings'
 import { isFirmViewer } from './visibility'
 
@@ -127,7 +128,7 @@ export function clientView(viewerId: string, clientId: string): ClientView | und
   return {
     id: client.id, name: client.fullName, householdId: household.id, householdName: household.name, dateOfBirth: client.dateOfBirth, occupation: client.occupation,
     ...(client.contactInfo.preferredContactMethod ? { preferredContact: client.contactInfo.preferredContactMethod } : {}),
-    risk: { tolerance: capitalize(client.riskProfile.tolerance), scoreFraction: client.riskProfile.score / 100, assessedOn: client.riskProfile.lastAssessed },
+    risk: { tolerance: bandFor(client.riskProfile.score).label, scoreFraction: client.riskProfile.score / 100, assessedOn: client.riskProfile.lastAssessed },
     accounts: owned,
     accountsValue: owned.reduce((s, a) => s + a.value, 0),
     ...(ips ? { ips } : {}),
