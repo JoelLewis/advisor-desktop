@@ -5,9 +5,9 @@ import { Button } from '@/kit/button/Button'
 import { Checkbox } from '@/kit/checkbox/Checkbox'
 import { Dialog } from '@/kit/dialog/Dialog'
 import { StatusCode } from '@/kit/status/StatusCode'
-import { fmtQuantity } from '@/kit/measure'
 import { Tag } from '@/kit/tag/Tag'
 import { useActs, useApproveProposal, useProposals, useWithdrawApproval } from '@/hooks/use-workspace'
+import { releaseAnnouncement } from './release-announcement'
 import { personIn } from '@/workspace/people/directory-people'
 import { PRESENTER_ID } from '@/lib/presenter'
 import { useViewer } from '@/workspace/viewer/use-viewer'
@@ -147,7 +147,7 @@ function useAnnounceRelease(detail: ProposalDetail, directory: Directory) {
     previousKind.current = kind
     if (!awaitingReleaseAct.current || !releaseAct) return
     awaitingReleaseAct.current = false
-    announce(`Released by ${personIn(directory, releaseAct.actorId).name}; ${fmtQuantity(detail.fills.length)} orders filled`)
+    announce(releaseAnnouncement(personIn(directory, releaseAct.actorId).name, detail.fills.length))
   }, [kind, releaseAct, announce, directory, detail.fills.length])
 }
 

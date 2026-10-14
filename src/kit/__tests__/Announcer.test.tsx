@@ -33,6 +33,13 @@ describe('the announcer', () => {
     rerender(<AnnouncerProvider resetKey="b"><Speaker /></AnnouncerProvider>)
     expect(region()).toBeEmptyDOMElement()
   })
+  it('drops a message still waiting for its frame when the reset key changes', async () => {
+    const { rerender } = render(<AnnouncerProvider resetKey="a"><Speaker /></AnnouncerProvider>)
+    act(() => say('Sent to the client.'))
+    rerender(<AnnouncerProvider resetKey="b"><Speaker /></AnnouncerProvider>)
+    await frame()
+    expect(region()).toBeEmptyDOMElement()
+  })
   it('refuses to be used outside its provider', () => {
     expect(() => render(<Speaker />)).toThrow('useAnnounce must be used inside AnnouncerProvider')
   })

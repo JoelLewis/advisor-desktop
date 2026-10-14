@@ -50,7 +50,7 @@ function BeforeTheMeeting({ meeting }: { meeting: MeetingView }) {
   const confirmHold = () => {
     if (holding.current) return
     holding.current = true
-    hold.mutate(undefined, { onSuccess: () => setConfirming(false), onSettled: () => { holding.current = false } })
+    hold.mutate(undefined, { onSuccess: () => { setConfirming(false); announce('Meeting held.') }, onSettled: () => { holding.current = false } })
   }
   return (
     <div className="flex flex-col items-start gap-3">
@@ -58,7 +58,7 @@ function BeforeTheMeeting({ meeting }: { meeting: MeetingView }) {
         <Button rank="secondary" disabled={prep.isPending} onClick={runPrep}>Run prep</Button>
         <Button onClick={() => { hold.reset(); setConfirming(true) }}>Hold the meeting</Button>
       </div>
-      {report ? <p role="status" className="text-body text-ink-2">{report}</p> : null}
+      {report ? <p className="text-body text-ink-2">{report}</p> : null}
       {prep.isError ? <p role="alert" className="text-body">{prep.error.message}</p> : null}
       <Dialog open={confirming} onOpenChange={(open) => { if (!open && !hold.isPending) setConfirming(false) }} title="Hold the meeting?"
         description={`The session clock moves to the end of the meeting, ${fmtEasternTime(meeting.end)} ET, and the transcript arrives. Prep and the agenda close.`}>
@@ -99,7 +99,7 @@ function AfterTheMeeting({ meeting, onRecorded, filingBlockedReason }: { meeting
       {fingerprint === undefined
         ? <Button disabled={draft.isPending} onClick={askForNotes}>Draft notes</Button>
         : <Button onClick={() => { file.reset(); setConfirming(true) }}>File the record</Button>}
-      {report ? <p role="status" className="text-body text-ink-2">{report}</p> : null}
+      {report ? <p className="text-body text-ink-2">{report}</p> : null}
       {draft.isError ? <p role="alert" className="text-body">{draft.error.message}</p> : null}
       {fingerprint !== undefined ? (
         <ConfirmRecord open={confirming} onClose={() => setConfirming(false)} mutation={file} variables={fingerprint} onRecorded={onRecorded}

@@ -47,9 +47,9 @@ describe('the client letter', () => {
     expect(draft).toHaveTextContent('State tax is not modeled.')
     expect(draft).toHaveTextContent("Drafted by Client Letter Agent at Adrian Hale's request · from v1")
     expect(store().drafts).toHaveLength(1)
-    expect(within(drafts).getByRole('status')).toHaveTextContent('The Client Letter Agent drafted a letter from v1 of the Johnson rebalance.')
+    expect(within(drafts).getByText('The Client Letter Agent drafted a letter from v1 of the Johnson rebalance.')).toBeInTheDocument()
     await user.dblClick(within(drafts).getByRole('button', { name: 'Ask Client Letter Agent' }))
-    await waitFor(() => expect(within(drafts).getByRole('status')).toHaveTextContent("The Client Letter Agent's letter from v1 of the Johnson rebalance is already in the drafts."))
+    expect(await within(drafts).findByText("The Client Letter Agent's letter from v1 of the Johnson rebalance is already in the drafts.")).toBeInTheDocument()
     expect(store().drafts).toHaveLength(1)
 
     await user.click(within(draft).getByRole('button', { name: 'Edit' }))
@@ -65,7 +65,7 @@ describe('the client letter', () => {
     expect(within(acts).getByRole('list', { name: 'Record trail' })).toHaveTextContent('Send to client')
     const fingerprint = store().acts.find((a) => a.kind === 'approve_proposal')!.fingerprint
     expect(within(acts).getByRole('article', { name: 'Message sent to the client' })).toHaveTextContent(`from v1 · fingerprint ${fingerprint} · edited by Adrian Hale`)
-    expect(within(drafts).queryByRole('status')).toBeNull()
+    expect(within(drafts).queryByText(/^The Client Letter Agent('s letter| drafted a letter)/)).toBeNull()
 
     await viewAs('Robert Johnson · Client')
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'Message' })).toBeInTheDocument())

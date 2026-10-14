@@ -30,7 +30,7 @@ export function DraftBar({ draft, latestVersion, saveEnabled, onBeforeSave, onSa
       {draft.saveRequested && !draft.saving ? <p role="status" className="text-body text-ink-3">Saving once the preview is ready…</p> : null}
       {draft.previewPending && !draft.previewError && !draft.saveRequested && !draft.saving ? <p role="status" className="text-body text-ink-3">Updating the preview…</p> : null}
       {draft.newerArrived ? <p role="status" className="text-body text-ink-2">{`v${latestVersion} arrived while you were editing; your edits will apply on top of it.`}</p> : null}
-      {draft.savedVersion !== undefined ? <p role="status" className="text-body text-ink-2">{`Saved as v${draft.savedVersion} · posted to the thread.`}</p> : null}
+      {draft.savedVersion !== undefined ? <p className="text-body text-ink-2">{`Saved as v${draft.savedVersion} · posted to the thread.`}</p> : null}
       {draft.previewError ? <p role="alert" className="text-body">{draft.previewError.message}</p> : null}
       {draft.saveError ? <p role="alert" className="text-body">{draft.saveError.message}</p> : null}
     </div>

@@ -23,7 +23,7 @@ export function ProspectAgentControl({ prospectId, agent }: { prospectId: string
     <div className="flex flex-col items-start gap-2">
       <Button rank="secondary" disabled={create.isPending} onClick={ask}>{`Ask ${agent.name}`}</Button>
       {create.isError ? <p role="alert" className="text-body">{create.error.message}</p> : null}
-      {report ? <p role="status" className="text-body text-ink-2">{report}</p> : null}
+      {report ? <p className="text-body text-ink-2">{report}</p> : null}
     </div>
   )
 }

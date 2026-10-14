@@ -24,7 +24,7 @@ const adrianAsksDriftMonitor = (theme: Theme) => async (page: Page) => {
   const findings = page.getByRole('article', { name: /^Drift Monitor: / })
   await expect(findings).toHaveCount(0)
   await page.getByRole('button', { name: 'Ask Drift Monitor' }).click()
-  await expect(page.locator('#context-column').getByRole('status').filter({ hasText: 'Drift Monitor reported in the thread.' })).toBeVisible()
+  await expect(page.locator('#context-column').getByText('Drift Monitor reported in the thread.')).toBeVisible()
   await expect(findings.first()).toBeVisible()
   await settle(page)
 }

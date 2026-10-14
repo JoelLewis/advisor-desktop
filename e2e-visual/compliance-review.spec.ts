@@ -117,7 +117,7 @@ test('one presenter closes the supervisory loop; the book moves; Robert sees not
   await page.keyboard.press('x')
   await expect(page.getByRole('table', { name: 'Legs · draft' }).getByRole('row', { name: /^QAI/ })).toHaveAttribute('data-muted', 'true')
   await page.keyboard.press('ControlOrMeta+s')
-  await expect(page.getByRole('group', { name: 'Draft version' }).getByRole('status').filter({ hasText: 'Saved as v3 · posted to the thread.' })).toBeVisible()
+  await expect(page.getByRole('group', { name: 'Draft version' }).getByText('Saved as v3 · posted to the thread.')).toBeVisible()
   await page.getByRole('link', { name: 'Back to the thread' }).click()
   await approve(page, 3)
   await askForLetter(page)

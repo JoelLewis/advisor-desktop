@@ -137,7 +137,7 @@ test('one presenter runs Brief → proposal → revise → workbench → approve
   await expect(bar).toContainText('Draft · not saved')
   await expect(bar.getByRole('button', { name: 'Save as v3' })).toBeEnabled()
   await page.keyboard.press('ControlOrMeta+s')
-  await expect(bar.getByRole('status').filter({ hasText: 'Saved as v3 · posted to the thread.' })).toBeVisible()
+  await expect(bar.getByText('Saved as v3 · posted to the thread.')).toBeVisible()
   const liveThread = page.getByRole('complementary', { name: 'Live thread' }).getByRole('list', { name: 'Thread feed' })
   await expect(liveThread).toContainText(/v3 · .*IQ Hedge Multi-Strategy Tracker ETF/)
 

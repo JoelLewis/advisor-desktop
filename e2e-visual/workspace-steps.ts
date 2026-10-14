@@ -173,5 +173,5 @@ export async function takeToTeamThread(page: Page, rowLabel: string) {
 export async function takeFindingTo(finding: Locator, threadTitle: string) {
   await finding.getByRole('button', { name: 'Take to', exact: true }).click()
   await finding.getByRole('menu', { name: 'Take to' }).getByRole('menuitem', { name: threadTitle, exact: true }).click()
-  await expect(finding.getByRole('status')).toHaveText(`Taken to ${threadTitle}.`)
+  await expect(finding.getByText(`Taken to ${threadTitle}.`)).toBeVisible()
 }

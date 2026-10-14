@@ -92,7 +92,7 @@ export function CarryControl({ thread, findingId }: { thread: Thread; findingId:
           ))}
         </ul>
       ) : null}
-      {taken ? <p role="status" className="text-body text-ink-2">{`Taken to ${taken}.`}</p> : null}
+      {taken ? <p className="text-body text-ink-2">{`Taken to ${taken}.`}</p> : null}
       {carry.isError ? <p role="alert" className="text-body">{carry.error.message}</p> : null}
     </div>
   )

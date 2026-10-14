@@ -65,7 +65,7 @@ describe('the Brief', () => {
     expect(toggle).toHaveFocus()
     await user.click(toggle)
     await user.click(within(within(intc).getByRole('menu', { name: 'Take to' })).getByRole('menuitem', { name: 'Johnson Rebalance Review' }))
-    expect(await within(intc).findByRole('status')).toHaveTextContent('Taken to Johnson Rebalance Review.')
+    expect(await within(intc).findByText('Taken to Johnson Rebalance Review.')).toBeInTheDocument()
     expect(menu).not.toBeInTheDocument()
     expect(within(intc).queryByRole('menu', { name: 'Take to' })).toBeNull()
     expect(store().messages.filter((m) => m.kind === 'carried')).toHaveLength(1)
@@ -121,7 +121,7 @@ describe('the Brief', () => {
     fireEvent.blur(item, { relatedTarget: null })
     expect(within(intc).getByRole('menu', { name: 'Take to' })).toBeInTheDocument()
     await user.click(item)
-    expect(await within(intc).findByRole('status')).toHaveTextContent('Taken to Johnson Rebalance Review.')
+    expect(await within(intc).findByText('Taken to Johnson Rebalance Review.')).toBeInTheDocument()
     expect(store().messages.filter((m) => m.kind === 'carried')).toHaveLength(1)
   })
 

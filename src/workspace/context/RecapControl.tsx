@@ -57,7 +57,7 @@ export function RecapControl({ thread }: { thread: Thread }) {
       )))}
       {recap.isError ? <p role="alert" className="text-body">{recap.error.message}</p> : null}
       {reported ? (
-        <p role="status" className="text-body text-ink-2">{recapReport(reported)}</p>
+        <p className="text-body text-ink-2">{recapReport(reported)}</p>
       ) : null}
     </div>
   )

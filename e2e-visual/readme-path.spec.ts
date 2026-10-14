@@ -35,7 +35,7 @@ test("the README's five-minute path, end to end", async ({ page }) => {
   await page.getByRole('table', { name: 'Legs · v2' }).getByRole('row', { name: /^QAI/ }).focus()
   await page.keyboard.press('x')
   await page.keyboard.press('ControlOrMeta+s')
-  await expect(page.getByRole('group', { name: 'Draft version' }).getByRole('status').filter({ hasText: 'Saved as v3 · posted to the thread.' })).toBeVisible()
+  await expect(page.getByRole('group', { name: 'Draft version' }).getByText('Saved as v3 · posted to the thread.')).toBeVisible()
   await back()
   await approve(page, 3)
 

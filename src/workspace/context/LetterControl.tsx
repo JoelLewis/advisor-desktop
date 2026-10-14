@@ -58,7 +58,7 @@ export function LetterControl({ thread }: { thread: Thread }) {
         </div>
       ))}
       {letter.isError ? <p role="alert" className="text-body">{letter.error.message}</p> : null}
-      {report ? <p role="status" className="text-body text-ink-2">{report}</p> : null}
+      {report ? <p className="text-body text-ink-2">{report}</p> : null}
     </div>
   )
 }

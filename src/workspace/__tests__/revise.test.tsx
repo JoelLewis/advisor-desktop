@@ -33,7 +33,7 @@ describe('asking and revising', () => {
     const user = userEvent.setup()
     await user.dblClick(within(ask).getByRole('button', { name: 'Ask Proposal Agent' }))
     expect(await screen.findByRole('region', { name: 'Proposal · Johnson rebalance' })).toBeInTheDocument()
-    expect(within(ask).getByRole('status')).toHaveTextContent(/Proposal Agent (posted v1 in the thread|has already drafted this proposal)/)
+    expect(within(ask).getByText(/Proposal Agent (posted v1 in the thread|has already drafted this proposal)/)).toBeInTheDocument()
     expect(store().proposals).toHaveLength(1)
     expect(store().messages.filter((m) => m.kind === 'proposal')).toHaveLength(1)
   })
@@ -89,11 +89,11 @@ describe('asking and revising', () => {
 
   it('stops saying v1 was posted once v2 is in the thread', async () => {
     const { user, ask, dialog } = await openReviseDialog()
-    expect(within(ask).getByRole('status', { hidden: true })).toHaveTextContent('Proposal Agent posted v1 in the thread.')
+    expect(within(ask).getByText('Proposal Agent posted v1 in the thread.')).toBeInTheDocument()
     await user.click(within(dialog).getByRole('checkbox', { name: 'Harvest only: sell only lots at a loss' }))
     await user.click(within(dialog).getByRole('button', { name: 'Ask Proposal Agent to revise' }))
     await screen.findByRole('article', { name: 'v2 · Proposal Agent' })
-    await waitFor(() => expect(within(ask).queryByRole('status')).toBeNull())
+    await waitFor(() => expect(within(ask).queryByText('Proposal Agent posted v1 in the thread.')).toBeNull())
   })
 
   it('says plainly when a revision changes nothing, without an error', async () => {

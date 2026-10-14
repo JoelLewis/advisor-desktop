@@ -88,8 +88,8 @@ export function AgendaEditor({ meeting, findings, editable }: AgendaEditorProps)
           })}
         </ol>
       ) : <p className="text-body text-ink-3">No agenda yet. Run prep, or add the first item.</p>}
-      {/* Mounted from the start and filled on change, so the first change is announced; empty, it takes no space. */}
-      <p ref={statusLine} tabIndex={-1} role="status" className={announcement ? 'text-label text-ink-2' : 'sr-only'}>{announcement}</p>
+      {/* The visible line for the last change, and where focus lands when its control is gone. The app announcer speaks it; this is not a live region. Empty, it takes no space. */}
+      <p ref={statusLine} tabIndex={-1} data-part="agenda-change" className={announcement ? 'text-label text-ink-2' : 'sr-only'}>{announcement}</p>
       {editable ? (
         <div className="flex flex-col items-start gap-2">
           <TextInput label="New agenda item" rows={1} value={title} onChange={setTitle} />

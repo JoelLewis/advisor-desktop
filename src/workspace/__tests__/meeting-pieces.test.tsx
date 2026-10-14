@@ -27,8 +27,12 @@ function LiveAgenda() {
   const findings = agendaFindings(store().messages.filter((m) => m.threadId === 'th-johnson-meeting'))
   return <div data-testid="agenda-editor"><AgendaEditor meeting={view.data} findings={findings} editable /></div>
 }
-/** The editor's own status line, not the app announcer that repeats it. */
-const editorStatus = () => within(screen.getByTestId('agenda-editor')).getByRole('status')
+/** The editor's own visible change line; the app announcer speaks it, so it is not a live region. */
+const editorStatus = () => {
+  const line = screen.getByTestId('agenda-editor').querySelector<HTMLElement>('[data-part="agenda-change"]')
+  if (!line) throw new Error('the agenda editor has no change line')
+  return line
+}
 
 describe('meeting controls', () => {
   afterEach(() => sessionStorage.clear())
@@ -147,16 +151,17 @@ describe('the agenda editor', () => {
     expect(within(v4).getByRole('button', { name: `Drop “${v1[0]!.title}”` })).toHaveFocus()
   })
 
-  it('holds its status region from the start, empty until the first change', async () => {
+  it('holds its change line from the start, empty and not a live region until the first change', async () => {
     await runMeetingPrep(ADRIAN, 'evt-010')
     const v1 = meeting().agenda[0]!.items
     renderWithProviders(<LiveAgenda />)
     const list = await screen.findByRole('list', { name: 'Agenda · v1' })
     const status = editorStatus()
     expect(status).toBeEmptyDOMElement()
+    expect(status).not.toHaveAttribute('role')
     await userEvent.setup().click(within(list).getByRole('button', { name: `Move “${v1[1]!.title}” up` }))
     await screen.findByRole('list', { name: 'Agenda · v2' })
-    // The same element, now filled: a live region announces a change, not its own arrival.
+    // The same element, now filled; the announcer, not this line, is what gets spoken.
     expect(editorStatus()).toBe(status)
     expect(status).toHaveTextContent(/^Agenda v2: /)
   })

@@ -48,7 +48,7 @@ export function AskAgents({ thread, agents, canPost }: { thread: Thread; agents:
             ))}
           </div>
           {run.isError ? <p role="alert" className="text-body">{run.error.message}</p> : null}
-          {report ? <p role="status" className="text-body text-ink-2">{report}</p> : null}
+          {report ? <p className="text-body text-ink-2">{report}</p> : null}
         </div>
       ) : null}
       {subject?.type === 'account' ? drafting.map((a) => <ProposalAgentControl key={a.id} thread={thread} agent={a} />) : null}

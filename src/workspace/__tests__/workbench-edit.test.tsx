@@ -35,7 +35,7 @@ describe('editing a draft version', () => {
     const watch = new MutationObserver(() => seen.add(bar.textContent ?? ''))
     watch.observe(bar, { subtree: true, childList: true, characterData: true })
     await userEvent.setup().click(save)
-    expect(await within(bar).findByRole('status')).toHaveTextContent('Saved as v2 · posted to the thread.')
+    expect(await within(bar).findByText('Saved as v2 · posted to the thread.')).toBeInTheDocument()
     watch.disconnect()
     expect([...seen].some((text) => text.includes('Saving…'))).toBe(true)
     await waitFor(() => expect(feed()).toHaveTextContent('v2 · Workbench edits: excluded IQ Hedge Multi-Strategy Tracker ETF.'))

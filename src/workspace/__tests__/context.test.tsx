@@ -127,7 +127,7 @@ describe('thread context column', () => {
     await userEvent.setup().click(ask.getByRole('button', { name: 'Ask Drift Monitor' }))
     expect(await within(conversation()).findAllByRole('article', { name: /^Drift Monitor: / })).not.toHaveLength(0)
     expect(router.state.location.pathname).toBe('/t/th-johnson-review')
-    expect(within(section('Ask an agent')).getByRole('status')).toHaveTextContent('Drift Monitor reported in the thread.')
+    expect(within(section('Ask an agent')).getByText('Drift Monitor reported in the thread.')).toBeInTheDocument()
     await userEvent.setup().click(ask.getByRole('button', { name: 'Ask Drift Monitor' }))
     expect(await within(section('Ask an agent')).findByText('Drift Monitor has already reported for this as-of.')).toBeInTheDocument()
   })

@@ -58,7 +58,7 @@ function ComposerForm({ label, action, pending, error, placeholder, savedNote, s
         onChange={(v) => { setBody(v); setSaved(false) }} />
       <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
         {error ? <p role="alert" className="mr-auto text-body">{error.message}</p> : null}
-        {saved && savedNote ? <p role="status" className="mr-auto text-body text-ink-2">{savedNote}</p> : null}
+        {saved && savedNote ? <p className="mr-auto text-body text-ink-2">{savedNote}</p> : null}
         <Button type="submit" disabled={pending || body.trim() === ''}>{action}</Button>
       </div>
     </form>
