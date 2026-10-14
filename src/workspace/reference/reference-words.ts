@@ -1,5 +1,6 @@
 import type { BillingMethod } from '@/types/reference-billing'
 import type { BlotterStatus } from '@/types/reference-blotter'
+import type { ModelSummary } from '@/types/reference-models'
 import type { IntegrationStatus, MatchKind } from '@/types/reference-reconciliation'
 import type { ToleranceStatus } from '@/types/reference-risk'
 
@@ -25,3 +26,7 @@ export function wordFor(map: Readonly<Record<string, string>>, key: string): str
   if (word === undefined) throw new Error(`No word for "${key}"`)
   return word
 }
+
+/** "v2", or "v2 · v3 pending from 2026-04-01". */
+export const versionWords = (m: Pick<ModelSummary, 'currentVersion' | 'pendingVersion'>) =>
+  m.pendingVersion ? `v${m.currentVersion} · v${m.pendingVersion.version} pending from ${m.pendingVersion.effectiveDate}` : `v${m.currentVersion}`
