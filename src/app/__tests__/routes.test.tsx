@@ -17,6 +17,14 @@ async function renderKitReady() {
 }
 
 describe('routes', () => {
+  it("an unknown path shows the not-found page with the demo's two starting points, and nothing else", async () => {
+    renderAt('/portfolios/trading')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Page not found' })).toBeInTheDocument()
+    const main = screen.getByRole('main')
+    const links = within(main).getAllByRole('link')
+    expect(links.map((l) => [l.textContent, l.getAttribute('href')])).toEqual([['The workspace', '/'], ['The Brief', '/t/th-brief']])
+    expect(within(main).getByRole('list', { name: 'Starting points' })).toBeInTheDocument()
+  })
   it('the kit is not ready while loading', () => {
     const { container } = renderAt('/kit')
     expect(container.querySelector('[data-kit-ready="true"]')).toBeNull()

@@ -49,6 +49,7 @@ const SCENES: Scene[] = [
   { name: 'robert-thread-light', hasContext: true, open: robertOnHisThread('light') },
   { name: 'robert-thread-dark', hasContext: true, open: robertOnHisThread('dark') },
   { name: 'account-full-view-light', hasContext: false, open: accountFullView },
+  { name: 'not-found-light', hasContext: false, open: async (page) => { await visit(page, '/portfolios/trading', 'light'); await settle(page) } },
 ]
 
 async function boxOf(region: Locator) {
