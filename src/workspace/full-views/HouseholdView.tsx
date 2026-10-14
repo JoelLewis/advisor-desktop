@@ -14,6 +14,7 @@ import { MEETING_STATE_TAG } from '@/workspace/meeting/meeting-words'
 import type { HouseholdView as HouseholdReadModel, MeetingRef } from '@/types/workspace-household'
 import { FullViewNotFound } from './FullViewNotFound'
 import { clientFullViewHref, meetingFullViewHref } from './full-view-href'
+import { billingHref } from './reference-href'
 import { useGoHomeWhenHidden } from './use-go-home-when-hidden'
 
 const LINK = 'self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink'
@@ -50,6 +51,9 @@ function HouseholdPage({ view }: { view: HouseholdReadModel }) {
             </li>
           ))}
         </ul>
+        <nav aria-label="Reference" className="flex flex-wrap gap-x-6 gap-y-1">
+          <Link to={billingHref(view.id, from)} className={LINK}>Billing for this household</Link>
+        </nav>
       </header>
       <HouseholdSummaryPanes summary={view} />
       <Pane title="Meetings">

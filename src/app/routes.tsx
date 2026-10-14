@@ -16,6 +16,8 @@ import { ProspectPage } from '@/workspace/prospect/ProspectPage'
 import { MeetingThreadColumn } from '@/workspace/meeting/MeetingThreadColumn'
 import { useMeetingThreadAvailable } from '@/workspace/meeting/use-meeting-thread-available'
 import { ArchivePage } from '@/workspace/archive/ArchivePage'
+import { BillingPage } from '@/workspace/reference/BillingPage'
+import { PracticePage } from '@/workspace/reference/PracticePage'
 import { SupervisionPage } from '@/workspace/supervision/SupervisionPage'
 import type { ShellHandle } from '@/workspace/shell/context-column'
 import { RootLayout } from './RootLayout'
@@ -50,6 +52,8 @@ export const routes: RouteObject[] = [
           { path: 'households/:householdId', element: <HouseholdView />, handle: fullWidthHandle },
           { path: 'clients/:clientId', element: <ClientView />, handle: fullWidthHandle },
           { path: 'archive', element: <ArchivePage /> },
+          { path: 'billing', element: <BillingPage />, handle: fullWidthHandle },
+          { path: 'practice', element: <PracticePage />, handle: fullWidthHandle },
           { path: 'supervision', element: <SupervisionPage />, handle: fullWidthHandle },
           { path: 'supervision/:kind/:id', element: <SupervisionPage />, handle: fullWidthHandle },
           { path: 'proposals/:proposalId', element: <WorkbenchPage />, handle: workbenchHandle },
