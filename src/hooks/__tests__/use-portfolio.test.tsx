@@ -11,7 +11,6 @@ import {
   useHouseholdPositions,
   useHouseholdDrift,
   useHouseholdAllocation,
-  useModelGovernance,
   usePerformance,
   useBenchmark,
   useAttribution,
@@ -110,14 +109,6 @@ describe('useHouseholdAllocation', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     const totalWeight = result.current.data!.reduce((s, a) => s + a.weight, 0)
     expect(totalWeight).toBeCloseTo(1.0, 1)
-  })
-})
-
-describe('useModelGovernance', () => {
-  it('fetches governance data with staleTime', async () => {
-    const { result } = renderHook(() => useModelGovernance(), { wrapper: createWrapper() })
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(result.current.data!.length).toBe(7)
   })
 })
 

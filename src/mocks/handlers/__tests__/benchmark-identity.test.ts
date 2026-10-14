@@ -38,10 +38,10 @@ describe('§9.4 · a benchmark label describes what is computed', () => {
     expect(checked).toBeGreaterThan(0)
   })
 
-  it('the label names the policy blend, so the number and its name agree', async () => {
+  it('the label names the policy benchmark, so the number and its name agree', async () => {
     const models = await getModels()
     const growth = models.find((m) => m.id === 'mod-002')
     expect(growth).toBeDefined()
-    expect(growth!.benchmark).toMatch(/model policy/i)
+    expect(growth!.benchmark).toBe('Growth policy benchmark')
   })
 })

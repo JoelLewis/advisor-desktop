@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { getPositions, getHoldingGroups, getDrift, getDriftSummary, getPerformance, getBenchmarkComparison, getAttribution, getModels } from '@/services/pms'
 import { getHouseholdPositions, getHouseholdDrift, getHouseholdAllocation, getClientAllocation } from '@/services/pms'
-import { getRiskMetrics, getFactorExposures, getStressScenarios, getSensitivity, getConcentration, getModelGovernance } from '@/services/pms'
+import { getRiskMetrics, getFactorExposures, getStressScenarios, getSensitivity, getConcentration } from '@/services/pms'
 
 export function usePositions(accountId: string) {
   return useQuery({
@@ -151,13 +151,5 @@ export function useConcentration(accountId: string) {
     queryFn: () => getConcentration(accountId),
     enabled: !!accountId,
     staleTime: 60_000,
-  })
-}
-
-export function useModelGovernance() {
-  return useQuery({
-    queryKey: ['models', 'governance'],
-    queryFn: () => getModelGovernance(),
-    staleTime: 30_000,
   })
 }

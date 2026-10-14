@@ -145,47 +145,6 @@ type ConcentrationMetric = {
   breached: boolean;
 };
 
-// ── Model Governance ──
-
-type ModelChangeType = 'weight_change' | 'security_add' | 'security_remove' | 'benchmark_change' | 'description_change';
-
-type ModelChangeEntry = {
-  id: string;
-  type: ModelChangeType;
-  description: string;
-  assetClass?: AssetClass;
-  oldValue?: number | string;
-  newValue?: number | string;
-};
-
-type ModelVersion = {
-  version: number;
-  effectiveDate: string;
-  author: string;
-  status: 'draft' | 'pending_approval' | 'approved' | 'rejected';
-  approvedBy?: string;
-  approvedDate?: string;
-  changes: ModelChangeEntry[];
-  assetClasses: AssetClassTarget[];
-};
-
-type ModelGovernanceDetail = {
-  id: string;
-  name: string;
-  benchmark: string;
-  benchmarkKind: BenchmarkKind;
-  description: string;
-  riskProfile: 'conservative' | 'moderate_conservative' | 'moderate' | 'moderate_aggressive' | 'aggressive';
-  currentVersion: number;
-  assignedAccounts: number;
-  totalAUM: Currency;
-  lastRebalanceDate: string;
-  driftTolerance: Percentage;
-  rebalanceFrequency: 'monthly' | 'quarterly' | 'semi_annual' | 'annual' | 'threshold_only';
-  versions: ModelVersion[];
-  assetClasses: AssetClassTarget[];
-};
-
 export type {
   AssetClass,
   HoldingPeriod,
@@ -201,8 +160,4 @@ export type {
   DriftStatus,
   SecurityKind,
   ConcentrationMetric,
-  ModelChangeType,
-  ModelChangeEntry,
-  ModelVersion,
-  ModelGovernanceDetail,
 };

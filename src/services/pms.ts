@@ -1,5 +1,5 @@
 import { get } from './api-client'
-import type { Position, DriftStatus, ModelAssignment, HoldingGroup, ModelGovernanceDetail } from '@/types/portfolio'
+import type { Position, DriftStatus, ModelAssignment, HoldingGroup } from '@/types/portfolio'
 import type { SecurityKind } from '@/lib/security-master'
 import type { PerformanceSeries, BenchmarkComparison, AttributionResponse } from '@/types/performance'
 import type { RiskMetrics, FactorExposure, StressScenario } from '@/types/risk'
@@ -143,8 +143,4 @@ export function getHouseholdAllocation(householdId: string) {
 
 export function getClientAllocation(clientId: string) {
   return get<AllocationSlice[]>(`/pms/clients/${clientId}/allocation`)
-}
-
-export function getModelGovernance() {
-  return get<ModelGovernanceDetail[]>('/pms/models/governance')
 }

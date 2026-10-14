@@ -1,6 +1,4 @@
 import { describe, it, expect } from 'vitest'
-import { http, HttpResponse } from 'msw'
-import { server } from '@/test/server'
 import {
   getPositions,
   getDrift,
@@ -9,7 +7,6 @@ import {
   getDriftSummary,
   getModels,
   getConcentration,
-  getModelGovernance,
   getMetricsSummary,
   getSensitivity,
 } from '../pms'
@@ -80,25 +77,6 @@ describe('PMS service', () => {
       expect(concentration).toBeTruthy()
       expect(concentration).toHaveProperty('positions')
       expect(concentration).toHaveProperty('summary')
-    })
-  })
-
-  describe('getModelGovernance', () => {
-    it('returns model governance details', async () => {
-      // The /api/pms/models/governance route is defined after /api/pms/models/:modelId
-      // in the handler array, so MSW matches the parametric route first.
-      // We override with a specific handler to test the service call.
-      server.use(
-        http.get('/api/pms/models/governance', () => {
-          return HttpResponse.json([
-            { id: 'mod-001', name: 'Balanced Growth' },
-          ])
-        }),
-      )
-      const governance = await getModelGovernance()
-      expect(governance).toBeTruthy()
-      expect(Array.isArray(governance)).toBe(true)
-      expect(governance.length).toBeGreaterThan(0)
     })
   })
 

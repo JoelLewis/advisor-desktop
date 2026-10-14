@@ -176,41 +176,43 @@ type ModelDefinition = {
  * against a 14.5% US-equity-only proxy return. The fix is naming, not the arithmetic (Task 12
  * verified the Brinson-Fachler math reconciles): describe the blend instead of borrowing an index's
  * identity for it.
+ *
+ * Phase 7a · R8 — each label is now the model's policy benchmark: every sleeve at its target weight, measured by the index named for it in src/mocks/reference/models.ts.
  */
 const MODELS: ModelDefinition[] = [
-  { id: 'mod-001', name: 'Balanced Growth', benchmark: 'Model policy blend (Balanced Growth)', benchmarkKind: 'model_policy', description: 'Core 60/40 model with growth tilt', assetClasses: [
+  { id: 'mod-001', name: 'Balanced Growth', benchmark: 'Balanced Growth policy benchmark', benchmarkKind: 'model_policy', description: 'Core 60/40 model with growth tilt', assetClasses: [
     { assetClass: 'us_equity', targetWeight: 0.40, implementationSymbol: 'VTI' }, { assetClass: 'intl_equity', targetWeight: 0.12, implementationSymbol: 'EFA' },
     { assetClass: 'emerging_markets', targetWeight: 0.03, implementationSymbol: 'VWO' }, { assetClass: 'fixed_income', targetWeight: 0.30, implementationSymbol: 'AGG' },
     { assetClass: 'alternatives', targetWeight: 0.05, implementationSymbol: 'QAI' }, { assetClass: 'real_estate', targetWeight: 0.03, implementationSymbol: 'VNQ' },
     { assetClass: 'commodities', targetWeight: 0.02, implementationSymbol: 'GLD' }, { assetClass: 'cash', targetWeight: 0.05 },
   ]},
-  { id: 'mod-002', name: 'Growth', benchmark: 'Model policy blend (Growth)', benchmarkKind: 'model_policy', description: 'Equity-focused growth model', assetClasses: [
+  { id: 'mod-002', name: 'Growth', benchmark: 'Growth policy benchmark', benchmarkKind: 'model_policy', description: 'Equity-focused growth model', assetClasses: [
     { assetClass: 'us_equity', targetWeight: 0.55, implementationSymbol: 'VTI' }, { assetClass: 'intl_equity', targetWeight: 0.15, implementationSymbol: 'EFA' },
     { assetClass: 'emerging_markets', targetWeight: 0.05, implementationSymbol: 'VWO' }, { assetClass: 'fixed_income', targetWeight: 0.15, implementationSymbol: 'AGG' },
     { assetClass: 'alternatives', targetWeight: 0.05, implementationSymbol: 'QAI' }, { assetClass: 'commodities', targetWeight: 0.02, implementationSymbol: 'GLD' },
     { assetClass: 'cash', targetWeight: 0.03 },
   ]},
-  { id: 'mod-003', name: 'Conservative Income', benchmark: 'Barclays Agg', benchmarkKind: 'model_policy', description: 'Income-focused with capital preservation', assetClasses: [
+  { id: 'mod-003', name: 'Conservative Income', benchmark: 'Conservative Income policy benchmark', benchmarkKind: 'model_policy', description: 'Income-focused with capital preservation', assetClasses: [
     { assetClass: 'us_equity', targetWeight: 0.20, implementationSymbol: 'VTI' }, { assetClass: 'intl_equity', targetWeight: 0.05, implementationSymbol: 'VXUS' },
     { assetClass: 'fixed_income', targetWeight: 0.55, implementationSymbol: 'AGG' }, { assetClass: 'alternatives', targetWeight: 0.05, implementationSymbol: 'QAI' },
     { assetClass: 'real_estate', targetWeight: 0.05, implementationSymbol: 'VNQ' }, { assetClass: 'cash', targetWeight: 0.10 },
   ]},
-  { id: 'mod-004', name: 'Aggressive Growth', benchmark: 'MSCI ACWI', benchmarkKind: 'model_policy', description: 'High-growth equity allocation', assetClasses: [
+  { id: 'mod-004', name: 'Aggressive Growth', benchmark: 'Aggressive Growth policy benchmark', benchmarkKind: 'model_policy', description: 'High-growth equity allocation', assetClasses: [
     { assetClass: 'us_equity', targetWeight: 0.50, implementationSymbol: 'VTI' }, { assetClass: 'intl_equity', targetWeight: 0.20, implementationSymbol: 'EFA' },
     { assetClass: 'emerging_markets', targetWeight: 0.10, implementationSymbol: 'VWO' }, { assetClass: 'fixed_income', targetWeight: 0.10, implementationSymbol: 'AGG' },
     { assetClass: 'alternatives', targetWeight: 0.05, implementationSymbol: 'QAI' }, { assetClass: 'cash', targetWeight: 0.05 },
   ]},
-  { id: 'mod-005', name: 'Ultra-HNW Multi-Strategy', benchmark: 'Custom Blended', benchmarkKind: 'model_policy', description: 'Multi-strategy for large accounts', assetClasses: [
+  { id: 'mod-005', name: 'Ultra-HNW Multi-Strategy', benchmark: 'Ultra-HNW Multi-Strategy policy benchmark', benchmarkKind: 'model_policy', description: 'Multi-strategy for large accounts', assetClasses: [
     { assetClass: 'us_equity', targetWeight: 0.35, implementationSymbol: 'VTI' }, { assetClass: 'intl_equity', targetWeight: 0.15, implementationSymbol: 'EFA' },
     { assetClass: 'emerging_markets', targetWeight: 0.05, implementationSymbol: 'VWO' }, { assetClass: 'fixed_income', targetWeight: 0.20, implementationSymbol: 'AGG' },
     { assetClass: 'alternatives', targetWeight: 0.15, implementationSymbol: 'QAI' }, { assetClass: 'real_estate', targetWeight: 0.05, implementationSymbol: 'VNQ' },
     { assetClass: 'cash', targetWeight: 0.05 },
   ]},
-  { id: 'mod-006', name: 'Education 529', benchmark: 'Age-Based Glide', benchmarkKind: 'model_policy', description: 'Age-based education savings glide path', assetClasses: [
+  { id: 'mod-006', name: 'Education 529', benchmark: 'Education 529 glide-path benchmark', benchmarkKind: 'model_policy', description: 'Age-based education savings glide path', assetClasses: [
     { assetClass: 'us_equity', targetWeight: 0.45, implementationSymbol: 'VTI' }, { assetClass: 'intl_equity', targetWeight: 0.10, implementationSymbol: 'VXUS' },
     { assetClass: 'fixed_income', targetWeight: 0.35, implementationSymbol: 'AGG' }, { assetClass: 'cash', targetWeight: 0.10 },
   ]},
-  { id: 'mod-007', name: 'Moderate Balanced', benchmark: 'Model policy blend (Moderate Balanced)', benchmarkKind: 'model_policy', description: 'Balanced 50/50 equity-bond split', assetClasses: [
+  { id: 'mod-007', name: 'Moderate Balanced', benchmark: 'Moderate Balanced policy benchmark', benchmarkKind: 'model_policy', description: 'Balanced 50/50 equity-bond split', assetClasses: [
     { assetClass: 'us_equity', targetWeight: 0.35, implementationSymbol: 'VTI' }, { assetClass: 'intl_equity', targetWeight: 0.10, implementationSymbol: 'EFA' },
     { assetClass: 'emerging_markets', targetWeight: 0.05, implementationSymbol: 'VWO' }, { assetClass: 'fixed_income', targetWeight: 0.35, implementationSymbol: 'AGG' },
     { assetClass: 'alternatives', targetWeight: 0.05, implementationSymbol: 'QAI' }, { assetClass: 'real_estate', targetWeight: 0.03, implementationSymbol: 'VNQ' },
@@ -242,7 +244,7 @@ function resolveModel(modelId: string): ModelDefinition {
 /**
  * The same lookup **without** the fallback, for the one caller where guessing is not a display
  * degradation but a trade instruction. `resolveModel`'s `?? getModelByIndex(0)` is pre-existing and
- * defensible for `getModelTargets` and `modelIdentity` — an unrecognised model there renders a
+ * defensible for `getModelTargets` — an unrecognised model there renders a
  * plausible target set rather than an empty page. Extending it to **security selection** is not the
  * same thing: an account on an unknown model would be told to buy mod-001's lineup, a Growth
  * equity lineup, with no signal that the model behind it was never found. It returns `undefined`
@@ -309,31 +311,6 @@ function getModelByIndex(index: number): ModelDefinition {
   const model = MODELS[index]
   if (!model) throw new Error(`Model at index ${index} not found`)
   return model
-}
-
-/**
- * The four identity fields the model-governance list previously re-typed for all seven models,
- * duplicating `MODELS`. The two copies were byte-identical as of this change — there was no
- * existing drift, and §9.4's mislabelled benchmark was present identically in both, so a single
- * source of truth would not have prevented it. The rationale here is purely prospective: two
- * hand-typed copies of the same strings have no mechanism keeping them in sync. Governance now
- * reads identity from `MODELS` instead of re-declaring it, so a future edit to one can't leave
- * the other stale.
- */
-function modelIdentity(modelId: string): Pick<ModelDefinition, 'id' | 'name' | 'benchmark' | 'benchmarkKind' | 'description'> {
-  const { id, name, benchmark, benchmarkKind, description } = resolveModel(modelId)
-  return { id, name, benchmark, benchmarkKind, description }
-}
-
-/** §5.2 · model-governance — these were hand-typed and summed to $118.67M across 40 accounts
- *  against a derived book of $91.32M across 47, rendering 130% of the book. Derived from the
- *  same `deriveBookAUM` the book page reads, so the two can never disagree again. */
-function modelBookFor(modelId: string): { assignedAccounts: number; totalAUM: number } {
-  const own = accounts.filter((a) => a.modelId === modelId)
-  return {
-    assignedAccounts: own.length,
-    totalAUM: Math.round(deriveBookAUM(own, FX_RATES_USD_BASE)),
-  }
 }
 
 function getModelTargets(modelId: string): Record<string, number> {
@@ -447,6 +424,8 @@ export function periodYears(): Record<string, number> {
 
 type Attribution = {
   rows: AttributionResult[]
+  /** The same classes as `rows`, in order: the weights and the period returns each effect is computed from. */
+  legs: { assetClass: string; wp: number; wb: number; rp: number; rb: number }[]
   totals: { allocation: number; selection: number; interaction: number; total: number }
   /** Σ wb·Rb,i — the benchmark's cumulative return over the period. Rp is Rb + totals.total. */
   benchmarkReturn: number
@@ -529,7 +508,7 @@ export function attributionFor(account: Account, years: number, positions?: read
     { allocation: 0, selection: 0, interaction: 0, total: 0 },
   )
 
-  return { rows, totals, benchmarkReturn, benchmarkName: p.benchmarkName }
+  return { rows, legs, totals, benchmarkReturn, benchmarkName: p.benchmarkName }
 }
 
 /**
@@ -562,10 +541,10 @@ export function periodReturnsFor(account: Account, years: number, positions?: re
 
 /** C24 · rebalancing — these were defined per model and displayed on Model Governance, but the
  *  rebalance engine never read them; a 7%-band model was treated identically to a 3%-band one.
- *  Shared by `computeDriftForAccount` and the governance handler, so the band shown to a model
+ *  Shared by `computeDriftForAccount` and the models view, so the band shown to a model
  *  administrator is the same band the rebalance engine evaluates against. */
 type RebalanceFrequency = 'monthly' | 'quarterly' | 'semi_annual' | 'annual' | 'threshold_only'
-const MODEL_BANDS: Record<string, { driftTolerance: number; rebalanceFrequency: RebalanceFrequency }> = {
+export const MODEL_BANDS: Readonly<Record<string, { driftTolerance: number; rebalanceFrequency: RebalanceFrequency }>> = {
   'mod-001': { driftTolerance: 0.05, rebalanceFrequency: 'quarterly' },
   'mod-002': { driftTolerance: 0.05, rebalanceFrequency: 'quarterly' },
   'mod-003': { driftTolerance: 0.03, rebalanceFrequency: 'quarterly' },
@@ -1071,206 +1050,6 @@ export const pmsHandlers = [
     const clientAccounts = accounts.filter((a) => a.clientId === params.clientId)
     if (clientAccounts.length === 0) return notFound()
     return HttpResponse.json(deriveAllocationByAssetClass(clientAccounts))
-  }),
-
-  http.get('/api/pms/models/governance', () => {
-    const modelGovernance = [
-      {
-        ...modelIdentity('mod-001'),
-        riskProfile: 'moderate', currentVersion: 3, ...modelBookFor('mod-001'),
-        lastRebalanceDate: '2026-02-10', ...MODEL_BANDS['mod-001'],
-        assetClasses: getModelByIndex(0).assetClasses,
-        versions: [
-          {
-            version: 3, effectiveDate: '2026-01-15', author: 'Sarah Kim, CIO', status: 'approved',
-            approvedBy: 'Investment Committee', approvedDate: '2026-01-14',
-            changes: [
-              { id: 'chg-001', type: 'weight_change', description: 'Reduced emerging markets from 5% to 3%', assetClass: 'emerging_markets', oldValue: 0.05, newValue: 0.03 },
-              { id: 'chg-002', type: 'weight_change', description: 'Increased fixed income from 28% to 30%', assetClass: 'fixed_income', oldValue: 0.28, newValue: 0.30 },
-            ],
-            assetClasses: getModelByIndex(0).assetClasses,
-          },
-          {
-            version: 2, effectiveDate: '2025-07-01', author: 'Sarah Kim, CIO', status: 'approved',
-            approvedBy: 'Investment Committee', approvedDate: '2025-06-28',
-            changes: [
-              { id: 'chg-003', type: 'weight_change', description: 'Increased US equity from 38% to 40%', assetClass: 'us_equity', oldValue: 0.38, newValue: 0.40 },
-              { id: 'chg-004', type: 'weight_change', description: 'Reduced cash from 7% to 5%', assetClass: 'cash', oldValue: 0.07, newValue: 0.05 },
-            ],
-            assetClasses: [
-              { assetClass: 'us_equity', targetWeight: 0.40 }, { assetClass: 'intl_equity', targetWeight: 0.12 },
-              { assetClass: 'emerging_markets', targetWeight: 0.05 }, { assetClass: 'fixed_income', targetWeight: 0.28 },
-              { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'real_estate', targetWeight: 0.03 },
-              { assetClass: 'commodities', targetWeight: 0.02 }, { assetClass: 'cash', targetWeight: 0.05 },
-            ],
-          },
-          {
-            version: 1, effectiveDate: '2025-01-01', author: 'Sarah Kim, CIO', status: 'approved',
-            approvedBy: 'Investment Committee', approvedDate: '2024-12-18',
-            changes: [{ id: 'chg-005', type: 'description_change', description: 'Initial model creation' }],
-            assetClasses: [
-              { assetClass: 'us_equity', targetWeight: 0.38 }, { assetClass: 'intl_equity', targetWeight: 0.12 },
-              { assetClass: 'emerging_markets', targetWeight: 0.05 }, { assetClass: 'fixed_income', targetWeight: 0.28 },
-              { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'real_estate', targetWeight: 0.03 },
-              { assetClass: 'commodities', targetWeight: 0.02 }, { assetClass: 'cash', targetWeight: 0.07 },
-            ],
-          },
-        ],
-      },
-      {
-        ...modelIdentity('mod-002'),
-        riskProfile: 'moderate_aggressive', currentVersion: 2, ...modelBookFor('mod-002'),
-        lastRebalanceDate: '2026-02-12', ...MODEL_BANDS['mod-002'],
-        assetClasses: getModelByIndex(1).assetClasses,
-        versions: [
-          {
-            version: 2, effectiveDate: '2025-10-01', author: 'David Park, PM', status: 'approved',
-            approvedBy: 'Investment Committee', approvedDate: '2025-09-25',
-            changes: [
-              { id: 'chg-006', type: 'weight_change', description: 'Increased intl equity from 12% to 15%', assetClass: 'intl_equity', oldValue: 0.12, newValue: 0.15 },
-              { id: 'chg-007', type: 'weight_change', description: 'Reduced US equity from 58% to 55%', assetClass: 'us_equity', oldValue: 0.58, newValue: 0.55 },
-            ],
-            assetClasses: getModelByIndex(1).assetClasses,
-          },
-          {
-            version: 1, effectiveDate: '2025-01-01', author: 'David Park, PM', status: 'approved',
-            approvedBy: 'Investment Committee', approvedDate: '2024-12-18',
-            changes: [{ id: 'chg-008', type: 'description_change', description: 'Initial model creation' }],
-            assetClasses: [
-              { assetClass: 'us_equity', targetWeight: 0.58 }, { assetClass: 'intl_equity', targetWeight: 0.12 },
-              { assetClass: 'emerging_markets', targetWeight: 0.05 }, { assetClass: 'fixed_income', targetWeight: 0.15 },
-              { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'commodities', targetWeight: 0.02 },
-              { assetClass: 'cash', targetWeight: 0.03 },
-            ],
-          },
-        ],
-      },
-      {
-        ...modelIdentity('mod-003'),
-        riskProfile: 'conservative', currentVersion: 2, ...modelBookFor('mod-003'),
-        lastRebalanceDate: '2026-01-28', ...MODEL_BANDS['mod-003'],
-        assetClasses: getModelByIndex(2).assetClasses,
-        versions: [
-          {
-            version: 2, effectiveDate: '2025-09-01', author: 'Sarah Kim, CIO', status: 'approved',
-            approvedBy: 'Investment Committee', approvedDate: '2025-08-27',
-            changes: [
-              { id: 'chg-009', type: 'weight_change', description: 'Increased fixed income from 50% to 55%', assetClass: 'fixed_income', oldValue: 0.50, newValue: 0.55 },
-              { id: 'chg-010', type: 'weight_change', description: 'Reduced US equity from 25% to 20%', assetClass: 'us_equity', oldValue: 0.25, newValue: 0.20 },
-            ],
-            assetClasses: getModelByIndex(2).assetClasses,
-          },
-          {
-            version: 1, effectiveDate: '2025-01-01', author: 'Sarah Kim, CIO', status: 'approved',
-            approvedBy: 'Investment Committee', approvedDate: '2024-12-18',
-            changes: [{ id: 'chg-011', type: 'description_change', description: 'Initial model creation' }],
-            assetClasses: [
-              { assetClass: 'us_equity', targetWeight: 0.25 }, { assetClass: 'intl_equity', targetWeight: 0.05 },
-              { assetClass: 'fixed_income', targetWeight: 0.50 }, { assetClass: 'alternatives', targetWeight: 0.05 },
-              { assetClass: 'real_estate', targetWeight: 0.05 }, { assetClass: 'cash', targetWeight: 0.10 },
-            ],
-          },
-        ],
-      },
-      {
-        ...modelIdentity('mod-004'),
-        riskProfile: 'aggressive', currentVersion: 1, ...modelBookFor('mod-004'),
-        lastRebalanceDate: '2026-02-05', ...MODEL_BANDS['mod-004'],
-        assetClasses: getModelByIndex(3).assetClasses,
-        versions: [
-          {
-            version: 1, effectiveDate: '2025-01-01', author: 'David Park, PM', status: 'approved',
-            approvedBy: 'Investment Committee', approvedDate: '2024-12-18',
-            changes: [{ id: 'chg-012', type: 'description_change', description: 'Initial model creation' }],
-            assetClasses: getModelByIndex(3).assetClasses,
-          },
-        ],
-      },
-      {
-        ...modelIdentity('mod-005'),
-        riskProfile: 'moderate_aggressive', currentVersion: 3, ...modelBookFor('mod-005'),
-        lastRebalanceDate: '2026-01-20', ...MODEL_BANDS['mod-005'],
-        assetClasses: getModelByIndex(4).assetClasses,
-        versions: [
-          {
-            version: 3, effectiveDate: '2026-02-01', author: 'Sarah Kim, CIO', status: 'pending_approval',
-            changes: [
-              { id: 'chg-013', type: 'weight_change', description: 'Proposed increase in alternatives from 15% to 18%', assetClass: 'alternatives', oldValue: 0.15, newValue: 0.18 },
-              { id: 'chg-014', type: 'weight_change', description: 'Proposed reduction in fixed income from 20% to 17%', assetClass: 'fixed_income', oldValue: 0.20, newValue: 0.17 },
-            ],
-            assetClasses: [
-              { assetClass: 'us_equity', targetWeight: 0.35 }, { assetClass: 'intl_equity', targetWeight: 0.15 },
-              { assetClass: 'emerging_markets', targetWeight: 0.05 }, { assetClass: 'fixed_income', targetWeight: 0.17 },
-              { assetClass: 'alternatives', targetWeight: 0.18 }, { assetClass: 'real_estate', targetWeight: 0.05 },
-              { assetClass: 'cash', targetWeight: 0.05 },
-            ],
-          },
-          {
-            version: 2, effectiveDate: '2025-06-01', author: 'Sarah Kim, CIO', status: 'approved',
-            approvedBy: 'Investment Committee', approvedDate: '2025-05-28',
-            changes: [
-              { id: 'chg-015', type: 'security_add', description: 'Added private equity sleeve (BXPE)', assetClass: 'alternatives' },
-              { id: 'chg-016', type: 'weight_change', description: 'Increased alternatives from 10% to 15%', assetClass: 'alternatives', oldValue: 0.10, newValue: 0.15 },
-            ],
-            assetClasses: getModelByIndex(4).assetClasses,
-          },
-          {
-            version: 1, effectiveDate: '2025-01-01', author: 'Sarah Kim, CIO', status: 'approved',
-            approvedBy: 'Investment Committee', approvedDate: '2024-12-18',
-            changes: [{ id: 'chg-017', type: 'description_change', description: 'Initial model creation' }],
-            assetClasses: [
-              { assetClass: 'us_equity', targetWeight: 0.40 }, { assetClass: 'intl_equity', targetWeight: 0.15 },
-              { assetClass: 'emerging_markets', targetWeight: 0.05 }, { assetClass: 'fixed_income', targetWeight: 0.20 },
-              { assetClass: 'alternatives', targetWeight: 0.10 }, { assetClass: 'real_estate', targetWeight: 0.05 },
-              { assetClass: 'cash', targetWeight: 0.05 },
-            ],
-          },
-        ],
-      },
-      {
-        ...modelIdentity('mod-006'),
-        riskProfile: 'moderate', currentVersion: 1, ...modelBookFor('mod-006'),
-        lastRebalanceDate: '2026-01-15', ...MODEL_BANDS['mod-006'],
-        assetClasses: getModelByIndex(5).assetClasses,
-        versions: [
-          {
-            version: 1, effectiveDate: '2025-01-01', author: 'David Park, PM', status: 'approved',
-            approvedBy: 'Investment Committee', approvedDate: '2024-12-18',
-            changes: [{ id: 'chg-018', type: 'description_change', description: 'Initial model creation' }],
-            assetClasses: getModelByIndex(5).assetClasses,
-          },
-        ],
-      },
-      {
-        ...modelIdentity('mod-007'),
-        riskProfile: 'moderate_conservative', currentVersion: 2, ...modelBookFor('mod-007'),
-        lastRebalanceDate: '2026-02-01', ...MODEL_BANDS['mod-007'],
-        assetClasses: getModelByIndex(6).assetClasses,
-        versions: [
-          {
-            version: 2, effectiveDate: '2025-11-01', author: 'Sarah Kim, CIO', status: 'approved',
-            approvedBy: 'Investment Committee', approvedDate: '2025-10-28',
-            changes: [
-              { id: 'chg-019', type: 'weight_change', description: 'Increased fixed income from 30% to 35%', assetClass: 'fixed_income', oldValue: 0.30, newValue: 0.35 },
-              { id: 'chg-020', type: 'weight_change', description: 'Reduced US equity from 40% to 35%', assetClass: 'us_equity', oldValue: 0.40, newValue: 0.35 },
-            ],
-            assetClasses: getModelByIndex(6).assetClasses,
-          },
-          {
-            version: 1, effectiveDate: '2025-01-01', author: 'David Park, PM', status: 'approved',
-            approvedBy: 'Investment Committee', approvedDate: '2024-12-18',
-            changes: [{ id: 'chg-021', type: 'description_change', description: 'Initial model creation' }],
-            assetClasses: [
-              { assetClass: 'us_equity', targetWeight: 0.40 }, { assetClass: 'intl_equity', targetWeight: 0.10 },
-              { assetClass: 'emerging_markets', targetWeight: 0.05 }, { assetClass: 'fixed_income', targetWeight: 0.30 },
-              { assetClass: 'alternatives', targetWeight: 0.05 }, { assetClass: 'real_estate', targetWeight: 0.03 },
-              { assetClass: 'commodities', targetWeight: 0.02 }, { assetClass: 'cash', targetWeight: 0.05 },
-            ],
-          },
-        ],
-      },
-    ]
-    return HttpResponse.json(modelGovernance)
   }),
 
   http.get('/api/pms/models/:modelId', ({ params }) => {

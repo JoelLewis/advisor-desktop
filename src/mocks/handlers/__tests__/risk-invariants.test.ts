@@ -80,7 +80,7 @@ describe('risk metrics are per account', () => {
       expect(row).not.toHaveProperty('alpha')
       expect(row).not.toHaveProperty('trackingError')
     }
-    expect(risk.benchmark).toBe('Model policy blend (Balanced Growth)')
+    expect(risk.benchmark).toBe('Balanced Growth policy benchmark')
     // 0.0127, not 0.0126 — the same Task 10 weight shift behind the Sharpe above; TE is computed
     // from the account's own weights against the model's target weights.
     expect(risk.trackingError).toBeCloseTo(0.0127, 4)
