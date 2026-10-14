@@ -11,7 +11,7 @@ type Scene = { name: string; layout: Layout; open: (page: Page) => Promise<void>
 
 const brief = (theme: Theme) => async (page: Page) => {
   await visit(page, '/t/th-brief', theme)
-  await expect(page.getByRole('region', { name: 'Ranked summary' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Needs a decision' })).toBeVisible()
   await settle(page)
 }
 
@@ -97,7 +97,7 @@ test('one presenter runs Brief → proposal → revise → workbench → approve
 
   // 1. The Brief, ready on load.
   await visit(page, '/t/th-brief', 'light')
-  await expect(page.getByRole('region', { name: 'Ranked summary' }).getByRole('listitem').first()).toContainText('US Equity is outside its tolerance band.')
+  await expect(page.getByRole('region', { name: 'Needs a decision' }).getByRole('listitem').first()).toContainText('US Equity is outside its tolerance band')
 
   // 2. The INTC finding goes to the team thread.
   const intc = conversation(page).getByRole('article', { name: /^Harvest Scanner: The remaining Intel Corp\. shares can be sold at a loss today/ })

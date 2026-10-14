@@ -1,4 +1,5 @@
-import type { AgentContext, AgentFinding } from './agent'
+import type { AgentContext } from './agent'
+import type { TopicFinding } from './brief-topic'
 import type { Account } from '@/types/account'
 import type { Position } from '@/types/portfolio'
 import type { HeldAwayAsset } from '@/types/held-away'
@@ -61,13 +62,13 @@ export function harvestOpportunities(account: Account): HarvestOpportunity[] {
     .sort((a, b) => a.losses.allowed - b.losses.allowed)
 }
 
-export function runHarvestScanner({ asOf, subject }: AgentContext): AgentFinding[] {
+export function runHarvestScanner({ asOf, subject }: AgentContext): TopicFinding[] {
   if (subject.type !== 'account') return []
   const account = accounts.find((a) => a.id === subject.id)
   if (!account) return []
   const today = asOf.slice(0, 10)
   const lotsCite = [{ source: `Tax lots with wash-sale matching · ${account.name}`, asOf }]
-  const findings: AgentFinding[] = []
+  const findings: TopicFinding[] = []
   const openWindows = openWashSaleWindowsFor(account, today)
   // A position partly sold at a loss already: its claim says the rest can be sold, so the two findings agree.
   const partlySold = new Set(openWindows.map((w) => w.symbol))
@@ -75,14 +76,14 @@ export function runHarvestScanner({ asOf, subject }: AgentContext): AgentFinding
     partlySold.has(symbol) ? `The remaining ${claimNameOf(symbol, name)} shares` : claimNameOf(symbol, name)
 
   if (!isTaxableAccount(account.taxTreatment)) {
-    findings.push({ claim: 'Sales in this account are not taxed, so there is no loss to harvest here.', attention: 'info', figures: [], citations: lotsCite })
+    findings.push({ claim: 'Sales in this account are not taxed, so there is no loss to harvest here.', attention: 'info', figures: [], citations: lotsCite, topic: { kind: 'not_measured' } })
   } else {
     const currency = account.baseCurrency ?? 'USD'
     const usd = (amount: number) => Math.round(convertToBase(amount, currency, FX_RATES_USD_BASE))
     const window = washSaleWindow(today)
     const harvestable = harvestOpportunities(account)
     if (harvestable.length === 0) {
-      findings.push({ claim: 'No position in this account can be sold at a loss today.', attention: 'info', figures: [], citations: lotsCite })
+      findings.push({ claim: 'No position in this account can be sold at a loss today.', attention: 'info', figures: [], citations: lotsCite, topic: { kind: 'not_measured' } })
     }
     for (const { position: p, losses } of harvestable) {
       const figures: Figure[] = [
@@ -93,7 +94,10 @@ export function runHarvestScanner({ asOf, subject }: AgentContext): AgentFinding
       const citations = isSubjectToWashSale(p.symbol)
         ? [...lotsCite, { source: `Wash-sale window · a sale of ${p.symbol} on ${today} restricts buying it back through ${window.end}`, asOf }]
         : lotsCite
-      findings.push({ claim: harvestClaim(harvestName(p.symbol, p.name), p.symbol, losses), attention: 'attention', figures, citations })
+      findings.push({
+        claim: harvestClaim(harvestName(p.symbol, p.name), p.symbol, losses), attention: 'attention', figures, citations,
+        topic: { kind: 'harvest_allowed', symbol: p.symbol, name: claimNameOf(p.symbol, p.name), remaining: partlySold.has(p.symbol) },
+      })
     }
   }
 
@@ -101,6 +105,7 @@ export function runHarvestScanner({ asOf, subject }: AgentContext): AgentFinding
     findings.push({
       claim: `${claimNameOf(w.symbol, w.name)} was sold at a loss ${w.saleDate === today ? 'today' : 'recently'}; buying it back in any account of the same taxpayer, IRAs and Roths included, would wash that loss until its window closes.`,
       attention: 'info',
+      topic: { kind: 'realized_loss', symbol: w.symbol, name: claimNameOf(w.symbol, w.name), when: w.saleDate === today ? 'today' : 'recently' },
       figures: [
         { label: `Loss realized · ${w.symbol}`, value: w.realizedGainLoss, unit: 'USD', source: 'realizedSales.realizedGainLoss' },
         { label: `Days until the ${w.symbol} window closes`, value: w.daysRemaining, unit: 'd', source: 'openWashSaleWindows.daysRemaining' },
@@ -114,6 +119,7 @@ export function runHarvestScanner({ asOf, subject }: AgentContext): AgentFinding
     findings.push({
       claim: 'Held-away accounts are not visible to wash-sale checks; a purchase in one can still wash a loss.',
       attention: 'info',
+      topic: { kind: 'held_away' },
       figures: away.map((h) => ({ label: `Held away · ${h.institutionName} ${shortAccountType(h.accountType)}`, value: h.estimatedValue, unit: 'USD' as const, source: 'heldAwayAssets.estimatedValue' })),
       citations: away.map((h) => ({ source: `Held-away assets · ${h.institutionName} · as reported by the client`, asOf: h.lastUpdated })),
     })

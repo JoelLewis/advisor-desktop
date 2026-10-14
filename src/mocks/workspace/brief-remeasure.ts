@@ -5,7 +5,7 @@ import { BRIEF_THREAD_ID, composeBrief } from './brief'
 
 /**
  * The Brief re-measures on view: once fills have moved the book since its findings were measured,
- * they and the ranked summary are composed again and replace the earlier ones. Carried cards in
+ * they and the summary are composed again and replace the earlier ones. Carried cards in
  * team threads keep their own quotation of what the Brief said when they were carried.
  */
 export function remeasureBrief(): void {
@@ -24,7 +24,7 @@ const isMeasured = (m: Message) => m.kind === 'brief_summary' || m.kind === 'age
 const byTime = (a: Message, b: Message) => a.at.localeCompare(b.at)
 
 /**
- * The Brief reads as it does in the morning whenever it was measured: the ranked summary and its
+ * The Brief reads as it does in the morning whenever it was measured: the summary and its
  * findings first, then the day's lines (the meeting notice) in time order. A re-measure stamps the
  * measured messages later than the seeded lines, so time order alone would lift those lines above them.
  */

@@ -21,7 +21,11 @@ export type Citation = { source: string; asOf: string }
 export type Attention = 'info' | 'attention'
 export type VersionAuthor = { kind: 'agent'; agentId: AgentId } | { kind: 'person'; personId: string }
 type CarriedFinding = { agentId: AgentId; at: string; claim: string; figures: Figure[]; citations: Citation[]; attention: Attention }
-type BriefItem = { findingId: string; agentId: AgentId; claim: string; attention: Attention }
+export type BriefGroup = 'decide' | 'context'
+/** One reading of a Brief item: a line in words with no digits and, for a decision, its key figure, formatted by the kit. */
+export type BriefReading = { findingId: string; line: string; figure?: Figure }
+/** A line of the Brief's summary: one finding, or the findings about one security under its name (`title`). */
+export type BriefItem = { key: string; agentId: AgentId; attention: Attention; title?: string; readings: BriefReading[] }
 export type EmbedKind = 'drift' | 'rebalance_preview'
 export type Message =
   | { kind: 'text'; id: string; threadId: string; authorId: string; at: string; body: string }
@@ -31,7 +35,7 @@ export type Message =
   | { kind: 'proposal'; id: string; threadId: string; agentId: AgentId; at: string; proposalId: string }
   | { kind: 'proposal_version'; id: string; threadId: string; at: string; proposalId: string; version: number; author: VersionAuthor; changeSummary: string }
   | { kind: 'carried'; id: string; threadId: string; at: string; carriedBy: string; fromThreadId: string; findingId: string; finding: CarriedFinding }
-  | { kind: 'brief_summary'; id: string; threadId: string; at: string; items: BriefItem[] }
+  | { kind: 'brief_summary'; id: string; threadId: string; at: string; decide: BriefItem[]; context: BriefItem[] }
   /** The execution report for released orders, posted in the proposal's team thread after its fills. */
   | { kind: 'fills'; id: string; threadId: string; at: string; proposalId: string; title: string; version: number; releaseActId: string; fills: Fill[] }
   /** The Brief's line for a meeting today. */

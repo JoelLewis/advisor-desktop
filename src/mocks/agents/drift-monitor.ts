@@ -1,4 +1,5 @@
-import type { AgentContext, AgentFinding } from './agent'
+import type { AgentContext } from './agent'
+import type { TopicFinding } from './brief-topic'
 import { accounts } from '@/mocks/data/accounts'
 import { getPositionsForAccount } from '@/mocks/data/positions'
 import { computeDriftForAccount } from '@/mocks/handlers/pms'
@@ -14,26 +15,27 @@ const label = (key: string): string => {
   return name
 }
 
-export function runDriftMonitor({ asOf, subject }: AgentContext): AgentFinding[] {
+export function runDriftMonitor({ asOf, subject }: AgentContext): TopicFinding[] {
   if (subject.type !== 'account') return []
   const account = accounts.find((a) => a.id === subject.id)
   if (!account) return []
   const cite = [{ source: `Drift calculation · ${account.name}`, asOf }]
   if (account.mandate === 'custom') {
-    return [{ claim: `${account.name} is a custom mandate, not model-managed: there is no model to measure drift against.`, attention: 'info', figures: [], citations: cite }]
+    return [{ claim: `${account.name} is a custom mandate, not model-managed: there is no model to measure drift against.`, attention: 'info', figures: [], citations: cite, topic: { kind: 'not_measured' } }]
   }
   const drift = computeDriftForAccount(account)
   const drifts = drift.assetClassDrifts
   if (drifts.length === 0) {
-    return [{ claim: 'There are no holdings or model targets to measure drift against.', attention: 'info', figures: [], citations: cite }]
+    return [{ claim: 'There are no holdings or model targets to measure drift against.', attention: 'info', figures: [], citations: cite, topic: { kind: 'not_measured' } }]
   }
   const band = drift.driftTolerance
   const worst = drifts.reduce((a, b) => (Math.abs(b.drift) > Math.abs(a.drift) ? b : a))
   const outside = drifts.filter((d) => Math.abs(d.drift) > band)
-  const findings: AgentFinding[] = [{
+  const findings: TopicFinding[] = [{
     claim: drift.needsRebalance ? `${label(worst.assetClass)} is outside its tolerance band.` : 'Every asset class is inside its tolerance band.',
     attention: drift.needsRebalance ? 'attention' : 'info',
     citations: cite,
+    topic: drift.needsRebalance ? { kind: 'out_of_band', assetClass: label(worst.assetClass) } : { kind: 'in_band' },
     figures: [
       { label: `Largest drift · ${label(worst.assetClass)}`, value: worst.drift, unit: 'pp', source: 'drift.assetClassDrifts' },
       { label: 'Tolerance', value: band, unit: 'pp', source: 'drift.driftTolerance' },
@@ -46,6 +48,7 @@ export function runDriftMonitor({ asOf, subject }: AgentContext): AgentFinding[]
       claim: 'Some holdings sit outside the model.',
       attention: 'info',
       citations: cite,
+      topic: { kind: 'off_model' },
       figures: offModel.map((d) => ({ label: label(d.assetClass), value: d.actual, unit: '%' as const, source: 'drift.assetClassDrifts.actual' })),
     })
   }
@@ -56,6 +59,7 @@ export function runDriftMonitor({ asOf, subject }: AgentContext): AgentFinding[]
       findings.push({
         claim: `${label(d.assetClass)} cannot be sold at market; it can only be reduced at the fund's periodic repurchase windows.`,
         attention: 'info', citations: cite,
+        topic: { kind: 'illiquid', assetClass: label(d.assetClass) },
         figures: [{ label: label(d.assetClass), value: d.drift, unit: 'pp', source: 'drift.assetClassDrifts' }],
       })
     }
@@ -65,7 +69,7 @@ export function runDriftMonitor({ asOf, subject }: AgentContext): AgentFinding[]
 }
 
 /** Replacements bought for a loss sale whose wash-sale window is still open: a rebalance should not trim them away. */
-function replacementHolds(accountId: string, positions: readonly Position[], asOf: string): AgentFinding[] {
+function replacementHolds(accountId: string, positions: readonly Position[], asOf: string): TopicFinding[] {
   return openWashSaleWindows(asOf.slice(0, 10))
     .filter((w) => w.accountId === accountId && w.replacementSymbol !== undefined)
     .flatMap((w) => {
@@ -74,6 +78,7 @@ function replacementHolds(accountId: string, positions: readonly Position[], asO
       const held = claimNameOf(replacement.symbol, replacement.name)
       const sold = claimNameOf(w.symbol, w.name)
       return [{
+        topic: { kind: 'replacement_hold' as const, held, sold },
         claim: `${held} was bought in place of the ${sold} shares sold at a loss, keeping related exposure while the wash-sale window is open. `
           + `A ${label(replacement.assetClass)} trim should leave it in place, and ${sold} should not be bought back in any account of the same taxpayer before the window closes: a buyback in a taxable account would defer the harvested loss into the new shares, and one in an IRA or Roth would disallow it permanently.`,
         attention: 'info' as const,

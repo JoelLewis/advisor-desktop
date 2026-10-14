@@ -12,17 +12,13 @@ const findings = () => briefMessages().filter((m): m is Finding => m.kind === 'a
 describe('the Brief, ready on load', () => {
   beforeEach(() => resetWorkspaceStore())
 
-  it('opens with a ranked summary: findings that need attention first, Drift Monitor before Harvest Scanner', () => {
+  it('opens with its summary: decisions first, in rank, Drift Monitor before Harvest Scanner', () => {
     const [summary] = briefMessages()
     if (summary?.kind !== 'brief_summary') throw new Error('The Brief must open with its summary')
-    const byId = new Map(findings().map((f) => [f.id, f]))
-    const ranked = summary.items.map((i) => byId.get(i.findingId)!)
-    expect(ranked.length).toBe(findings().length)
-    const attention = ranked.map((f) => f.attention)
+    expect(summary.decide[0]).toMatchObject({ agentId: 'drift-monitor', attention: 'attention', readings: [{ line: 'US Equity is outside its tolerance band' }] })
+    expect(summary.decide[1]).toMatchObject({ agentId: 'harvest-scanner', title: 'Intel Corp.' })
+    const attention = [...summary.decide, ...summary.context].map((i) => i.attention)
     expect(attention).toEqual([...attention].sort((a, b) => Number(b === 'attention') - Number(a === 'attention')))
-    expect(ranked[0]).toMatchObject({ agentId: 'drift-monitor', claim: 'US Equity is outside its tolerance band.' })
-    expect(ranked[1]).toMatchObject({ agentId: 'harvest-scanner', claim: 'The remaining Intel Corp. shares can be sold at a loss today, and nothing bought in the last thirty days would wash the loss.' })
-    for (const item of summary.items) expect(item.claim).not.toMatch(/\d/)
   })
 
   it('is computed at the frozen morning with the run keys a run would use', () => {

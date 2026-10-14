@@ -35,7 +35,7 @@ describe('the Brief re-measures on view once the book has moved', () => {
     expect(messages.every((m) => m.at > MOCK_NOW_ISO)).toBe(true)
     expect(findings().some((f) => f.claim.startsWith('The remaining Intel Corp. shares can be sold at a loss today'))).toBe(false)
     expect(findings().some((f) => f.citations.some((c) => c.source === 'Wash-sale window · rs-006 · INTC loss sale of 2026-02-25, open through 2026-03-27'))).toBe(true)
-    expect(summary().items[0]?.claim).toBe('US Equity is outside its tolerance band.')
+    expect(summary().decide[0]?.readings[0]?.line).toBe('US Equity is outside its tolerance band')
     expect(findings().every((f) => f.runKey.endsWith('|book 1'))).toBe(true)
     const ids = brief().map((m) => m.id)
     await openBrief()
@@ -45,7 +45,7 @@ describe('the Brief re-measures on view once the book has moved', () => {
   it('after v1 fills: every class inside its band, private equity still noted', async () => {
     release(approvedV1())
     await openBrief()
-    expect(summary().items.map((i) => i.claim)).toContain('Every asset class is inside its tolerance band.')
+    expect(summary().context.flatMap((i) => i.readings.map((r) => r.line))).toContain('Every asset class is inside its tolerance band')
     expect(findings().map((f) => f.claim)).toContain("Private Equity cannot be sold at market; it can only be reduced at the fund's periodic repurchase windows.")
   })
 
@@ -57,13 +57,15 @@ describe('the Brief re-measures on view once the book has moved', () => {
     expect(engineCites.every(({ at, asOf }) => asOf === at && asOf > MOCK_NOW_ISO)).toBe(true)
   })
 
-  it('after v1 fills: no two summary items read the same', async () => {
+  it('after v1 fills: Intel is one item in Context with its two realized losses, and no two items read the same', async () => {
     release(approvedV1())
     await openBrief()
-    const claims = summary().items.map((i) => i.claim)
-    expect(new Set(claims).size).toBe(claims.length)
-    expect(claims).toContain('Intel Corp. was sold at a loss today; buying it back in any account of the same taxpayer, IRAs and Roths included, would wash that loss until its window closes.')
-    expect(claims).toContain('Intel Corp. was sold at a loss recently; buying it back in any account of the same taxpayer, IRAs and Roths included, would wash that loss until its window closes.')
+    const { decide, context } = summary()
+    const titles = [...decide, ...context].map((i) => i.title ?? i.readings[0]?.line)
+    expect(new Set(titles).size).toBe(titles.length)
+    expect(context.find((i) => i.title === 'Intel Corp.')?.readings.map((r) => r.line)).toEqual([
+      'Sold at a loss today; a buyback would wash the loss', 'Sold at a loss recently; a buyback would wash the loss',
+    ])
   })
 
   it("the meeting line survives a re-measure, unchanged, and still reads below the ranked summary and its findings", async () => {

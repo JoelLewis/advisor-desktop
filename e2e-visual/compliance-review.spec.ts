@@ -46,7 +46,7 @@ const briefAfterFills = async (page: Page) => {
   await approvedV1(page, 'light')
   await releaseByShortcut(page)
   await threadLink(page, 'Brief').click()
-  await expect(page.getByRole('region', { name: 'Ranked summary' })).toContainText('Every asset class is inside its tolerance band.')
+  await expect(page.getByRole('region', { name: 'Context' })).toContainText('Every asset class is inside its tolerance band')
   await settle(page)
 }
 
@@ -184,7 +184,7 @@ test('one presenter closes the supervisory loop; the book moves; Robert sees not
   await expect(holdings.getByRole('row', { name: /^INTC/ })).toHaveCount(0)
   await page.getByRole('link', { name: 'Back to the thread' }).click()
   await threadLink(page, 'Brief').click()
-  await expect(page.getByRole('region', { name: 'Ranked summary' })).not.toContainText('The remaining Intel Corp. shares can be sold at a loss today')
+  await expect(page.getByRole('region', { name: 'Needs a decision' })).not.toContainText('Intel Corp.')
   await expect(conversation(page)).toContainText('INTC loss sale of 2026-02-25, open through 2026-03-27')
 
   // 8. Robert: exactly what he saw before.
