@@ -13,7 +13,7 @@ import { ReferencePage } from './ReferencePage'
 import { StackedCell } from './StackedCell'
 import { TakeToTeamThread } from './TakeToTeamThread'
 import { TOLERANCE_TAG, beyondWords } from './reference-words'
-import { LINK_TARGET } from '@/kit/link-target'
+import { TABLE_LINK_TARGET } from '@/kit/link-target'
 
 export function BookRiskPage() {
   const risk = useBookRisk()
@@ -36,7 +36,7 @@ function BookRisk({ view }: { view: BookRiskView }) {
           columns={[
             {
               id: 'account', header: 'Account · client · model', wrap: true, cell: (r) => (
-                <StackedCell primary={<Link to={accountRiskHref(r.accountId, from)} className={`${LINK_TARGET} underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>{r.accountName}</Link>}
+                <StackedCell primary={<Link to={accountRiskHref(r.accountId, from)} className={`${TABLE_LINK_TARGET} underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>{r.accountName}</Link>}
                   secondary={`${r.posture.tolerance.clientName} · ${r.mandateName}`} action={<TakeToTeamThread inline view="risk" rowId={r.accountId} rowLabel={r.accountName} />} />
               ),
             },

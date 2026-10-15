@@ -11,7 +11,7 @@ import { ReferencePage } from './ReferencePage'
 import { StackedCell } from './StackedCell'
 import { TakeToTeamThread } from './TakeToTeamThread'
 import { FREQUENCY_WORDS, pendingVersionWords, wordFor } from './reference-words'
-import { LINK_TARGET } from '@/kit/link-target'
+import { TABLE_LINK_TARGET } from '@/kit/link-target'
 
 export function ModelsPage() {
   const models = useReferenceModels()
@@ -29,7 +29,7 @@ function Models({ view }: { view: ModelsView }) {
           columns={[
             {
               id: 'name', header: 'Model · benchmark', wrap: true, cell: (m) => (
-                <StackedCell primary={<Link to={modelHref(m.id, from)} className={`${LINK_TARGET} underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>{m.name}</Link>}
+                <StackedCell primary={<Link to={modelHref(m.id, from)} className={`${TABLE_LINK_TARGET} underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>{m.name}</Link>}
                   secondary={m.benchmark.name} action={<TakeToTeamThread inline view="models" rowId={m.id} rowLabel={m.name} />} />
               ),
             },
@@ -48,7 +48,7 @@ function Models({ view }: { view: ModelsView }) {
           columns={[
             {
               id: 'account', header: 'Account · client', wrap: true, cell: (c) => (
-                <StackedCell primary={<Link to={accountRiskHref(c.accountId, from)} className={`${LINK_TARGET} underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>{c.accountName}</Link>} secondary={c.clientName} />
+                <StackedCell primary={<Link to={accountRiskHref(c.accountId, from)} className={`${TABLE_LINK_TARGET} underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>{c.accountName}</Link>} secondary={c.clientName} />
               ),
             },
             { id: 'mandate', header: 'Mandate · benchmark', wrap: true, cell: (c) => <StackedCell primary={c.mandateSummary} secondary={c.benchmarkName} /> },

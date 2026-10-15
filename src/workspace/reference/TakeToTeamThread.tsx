@@ -5,7 +5,7 @@ import { Button } from '@/kit/button/Button'
 import { cn } from '@/lib/utils'
 import { useTakeToTeamThread } from '@/hooks/use-reference'
 import type { ReferenceView, TakeResult } from '@/types/reference'
-import { LINK_TARGET } from '@/kit/link-target'
+import { LINK_TARGET, TABLE_LINK_TARGET } from '@/kit/link-target'
 
 /**
  * "Take to team thread": the row becomes a quoted card in the team thread about its subject, opened if there is none.
@@ -17,14 +17,14 @@ export function TakeToTeamThread({ view, rowId, rowLabel, inline = false }: { vi
   const [taken, setTaken] = useState<TakeResult>()
   if (taken) {
     return (
-      <Link to={`/t/${encodeURIComponent(taken.threadId)}`} className={cn(LINK_TARGET, inline ? 'text-table-dense text-ink-3 hover:text-ink' : 'text-body', 'underline decoration-rule-2 underline-offset-4 hover:decoration-ink')}>
+      <Link to={`/t/${encodeURIComponent(taken.threadId)}`} className={cn(inline ? TABLE_LINK_TARGET : LINK_TARGET, inline ? 'text-table-dense text-ink-3 hover:text-ink' : 'text-body', 'underline decoration-rule-2 underline-offset-4 hover:decoration-ink')}>
         {`In ${taken.threadTitle}`}
       </Link>
     )
   }
   return (
     <span className="inline-flex flex-wrap items-baseline gap-2">
-      <Button rank={inline ? 'quiet' : 'secondary'} className={inline ? 'whitespace-normal text-left text-table-dense font-normal text-ink-3 not-disabled:not-aria-disabled:hover:text-ink' : undefined} aria-label={`Take ${rowLabel} to a team thread`} pending={take.isPending}
+      <Button rank={inline ? 'quiet' : 'secondary'} className={inline ? 'relative min-h-0 whitespace-normal text-left text-table-dense font-normal text-ink-3 before:absolute before:-inset-1 before:content-[\'\'] not-disabled:not-aria-disabled:hover:text-ink' : undefined} aria-label={`Take ${rowLabel} to a team thread`} pending={take.isPending}
         onClick={() => take.mutate({ view, rowId }, { onSuccess: (result) => { setTaken(result); announce(`Taken to ${result.threadTitle}.`) } })}>
         Take to team thread
       </Button>

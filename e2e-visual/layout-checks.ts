@@ -59,9 +59,18 @@ export async function smallTargets(page: Page, min: number): Promise<string[]> {
   return page.evaluate((least) => {
     const inRunningText = (el: HTMLElement) => el.tagName === 'A' && getComputedStyle(el).display === 'inline'
       && [...(el.parentNode?.childNodes ?? [])].some((n) => n.nodeType === Node.TEXT_NODE && (n.textContent ?? '').trim() !== '')
+    // The box a click lands on: the element's own, grown by an absolutely positioned ::before (its insets are px from the padding box).
+    const hitBox = (el: HTMLElement) => {
+      const r = el.getBoundingClientRect()
+      const box = { left: r.left, right: r.right, top: r.top, bottom: r.bottom }
+      const before = getComputedStyle(el, '::before')
+      if (before.position !== 'absolute' || before.content === 'none') return box
+      const [top, right, bottom, left] = [before.top, before.right, before.bottom, before.left].map(parseFloat)
+      return { left: Math.min(box.left, r.left + left), right: Math.max(box.right, r.right - right), top: Math.min(box.top, r.top + top), bottom: Math.max(box.bottom, r.bottom - bottom) }
+    }
     const visuallyHidden = (el: HTMLElement) => getComputedStyle(el).clipPath === 'inset(50%)'
     return [...document.querySelectorAll<HTMLElement>('button, select, summary, [role="option"], a[href]')]
-      .filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && (r.width < least - 0.5 || r.height < least - 0.5) && !inRunningText(el) && !visuallyHidden(el) })
-      .map((el) => { const r = el.getBoundingClientRect(); return `${el.tagName.toLowerCase()} "${(el.textContent ?? '').trim().slice(0, 40)}" ${Math.round(r.width)}×${Math.round(r.height)}px` })
+      .filter((el) => { const r = el.getBoundingClientRect(); const h = hitBox(el); return r.width > 0 && r.height > 0 && (h.right - h.left < least - 0.5 || h.bottom - h.top < least - 0.5) && !inRunningText(el) && !visuallyHidden(el) })
+      .map((el) => { const h = hitBox(el); return `${el.tagName.toLowerCase()} "${(el.textContent ?? '').trim().slice(0, 40)}" ${Math.round(h.right - h.left)}×${Math.round(h.bottom - h.top)}px` })
   }, min)
 }
