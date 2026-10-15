@@ -33,7 +33,7 @@ export const householdFixtures: HouseholdFixture[] = [
     accountIds: ['acc-006', 'acc-007', 'acc-008', 'acc-009', 'acc-010', 'acc-041', 'acc-042'],
     primaryContactId: 'cli-003',
     segment: 'platinum',
-    createdAt: '2019-06-01',
+    createdAt: '2019-05-31',
     filingStatus: 'married_filing_jointly',
   },
   {
@@ -72,7 +72,7 @@ export const householdFixtures: HouseholdFixture[] = [
     accountIds: ['acc-019', 'acc-020', 'acc-021', 'acc-046'],
     primaryContactId: 'cli-008',
     segment: 'gold',
-    createdAt: '2017-11-05',
+    createdAt: '2017-11-03',
   },
   {
     id: 'hh-006',

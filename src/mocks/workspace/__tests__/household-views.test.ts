@@ -50,7 +50,7 @@ describe('the household view', () => {
   it('flags the held-away plans, outside the firm\'s view', () => {
     expect(johnson().heldAway).toEqual([
       { id: 'ha-001', ownerName: 'Robert Johnson', institution: 'Vanguard', accountType: '401(k) — Former employer', value: 2_400_000, reportedOn: '2025-12-01' },
-      { id: 'ha-002', ownerName: 'Patricia Johnson', institution: 'TIAA', accountType: '403(b) — University', value: 1_500_000, reportedOn: '2025-11-15' },
+      { id: 'ha-002', ownerName: 'Patricia Johnson', institution: 'TIAA', accountType: '403(b) — University', value: 1_500_000, reportedOn: '2025-11-14' },
     ])
     expect(johnson().heldAwayValue).toBe(3_900_000)
   })

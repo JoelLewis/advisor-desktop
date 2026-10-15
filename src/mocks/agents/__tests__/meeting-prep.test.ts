@@ -53,7 +53,7 @@ describe('Meeting Prep', () => {
     expect(goals).toMatchObject({ claim: 'In the financial plan, Legacy / Estate is at risk; Retirement Income is on track.', attention: 'attention' })
     expect(goals.figures).toContainEqual({ label: 'Probability · Legacy / Estate', value: 0.78, unit: '%', source: 'plan.goals.probability' })
     expect(goals.figures).toContainEqual({ label: 'Funded · Legacy / Estate', value: 0.85, unit: '%', source: 'plan.goals.currentFunding / targetAmount' })
-    expect(goals.citations).toEqual([{ source: 'Financial plan · plan-001', asOf: '2025-11-15' }])
+    expect(goals.citations).toEqual([{ source: 'Financial plan · plan-001', asOf: '2025-11-14' }])
   })
 
   it('flags the held-away plans as outside the firm\'s view, and still inside the taxpayer\'s windows', () => {

@@ -71,7 +71,7 @@ const clientFixtures: ClientFixture[] = [
     },
     dateOfBirth: '1965-11-03',
     occupation: 'Tech Entrepreneur',
-    createdAt: '2019-06-01',
+    createdAt: '2019-05-31',
     updatedAt: '2025-12-10',
   },
   {
@@ -95,7 +95,7 @@ const clientFixtures: ClientFixture[] = [
     dateOfBirth: '1970-05-18',
     occupation: 'Attorney / Partner',
     createdAt: '2020-03-10',
-    updatedAt: '2025-11-15',
+    updatedAt: '2025-11-14',
   },
   {
     id: 'cli-005',
@@ -118,7 +118,7 @@ const clientFixtures: ClientFixture[] = [
     dateOfBirth: '1972-09-25',
     occupation: 'Pediatrician',
     createdAt: '2020-03-10',
-    updatedAt: '2025-11-15',
+    updatedAt: '2025-11-14',
   },
   {
     id: 'cli-006',
@@ -177,7 +177,7 @@ const clientFixtures: ClientFixture[] = [
     tier: { segment: 'gold', label: 'Gold', minAUM: 2_000_000, reviewFrequency: 'semi_annual' },
     advisorId: 'adv-001',
     householdId: 'hh-005',
-    riskProfile: { tolerance: 'moderate', score: 58, lastAssessed: '2025-06-15' },
+    riskProfile: { tolerance: 'moderate', score: 58, lastAssessed: '2025-06-13' },
     contactInfo: {
       email: 'james.thompson@email.com',
       phone: '(212) 555-0533',
@@ -186,7 +186,7 @@ const clientFixtures: ClientFixture[] = [
     },
     dateOfBirth: '1953-08-30',
     occupation: 'Retired Surgeon',
-    createdAt: '2017-11-05',
+    createdAt: '2017-11-03',
     updatedAt: '2025-12-08',
   },
   {
@@ -210,7 +210,7 @@ const clientFixtures: ClientFixture[] = [
     dateOfBirth: '1962-01-19',
     occupation: 'Business Owner',
     createdAt: '2020-07-15',
-    updatedAt: '2025-11-30',
+    updatedAt: '2025-11-28',
   },
   {
     id: 'cli-010',
@@ -233,7 +233,7 @@ const clientFixtures: ClientFixture[] = [
     dateOfBirth: '1964-06-05',
     occupation: 'Nonprofit Director',
     createdAt: '2020-07-15',
-    updatedAt: '2025-11-22',
+    updatedAt: '2025-11-21',
   },
   {
     id: 'cli-011',
@@ -246,7 +246,7 @@ const clientFixtures: ClientFixture[] = [
     tier: { segment: 'gold', label: 'Gold', minAUM: 2_000_000, reviewFrequency: 'semi_annual' },
     advisorId: 'adv-001',
     householdId: 'hh-007',
-    riskProfile: { tolerance: 'moderate', score: 55, lastAssessed: '2025-09-20' },
+    riskProfile: { tolerance: 'moderate', score: 55, lastAssessed: '2025-09-19' },
     contactInfo: {
       email: 'raj.patel@patelmedical.com',
       phone: '(404) 555-0744',
@@ -269,7 +269,7 @@ const clientFixtures: ClientFixture[] = [
     tier: { segment: 'gold', label: 'Gold', minAUM: 2_000_000, reviewFrequency: 'semi_annual' },
     advisorId: 'adv-001',
     householdId: 'hh-007',
-    riskProfile: { tolerance: 'moderate', score: 48, lastAssessed: '2025-09-20' },
+    riskProfile: { tolerance: 'moderate', score: 48, lastAssessed: '2025-09-19' },
     contactInfo: {
       email: 'priya.patel@email.com',
       phone: '(404) 555-0745',
@@ -292,7 +292,7 @@ const clientFixtures: ClientFixture[] = [
     tier: { segment: 'silver', label: 'Silver', minAUM: 500_000, reviewFrequency: 'annual' },
     advisorId: 'adv-001',
     householdId: 'hh-008',
-    riskProfile: { tolerance: 'aggressive', score: 75, lastAssessed: '2025-05-10' },
+    riskProfile: { tolerance: 'aggressive', score: 75, lastAssessed: '2025-05-09' },
     contactInfo: {
       email: 'brian.obrien@email.com',
       phone: '(773) 555-0821',
@@ -315,7 +315,7 @@ const clientFixtures: ClientFixture[] = [
     tier: { segment: 'silver', label: 'Silver', minAUM: 500_000, reviewFrequency: 'annual' },
     advisorId: 'adv-001',
     householdId: 'hh-008',
-    riskProfile: { tolerance: 'moderate', score: 50, lastAssessed: '2025-05-10' },
+    riskProfile: { tolerance: 'moderate', score: 50, lastAssessed: '2025-05-09' },
     contactInfo: {
       email: 'karen.obrien@email.com',
       phone: '(773) 555-0822',
@@ -384,7 +384,7 @@ const clientFixtures: ClientFixture[] = [
     tier: { segment: 'silver', label: 'Silver', minAUM: 500_000, reviewFrequency: 'annual' },
     advisorId: 'adv-001',
     householdId: 'hh-011',
-    riskProfile: { tolerance: 'aggressive', score: 80, lastAssessed: '2025-07-05' },
+    riskProfile: { tolerance: 'aggressive', score: 80, lastAssessed: '2025-07-03' },
     contactInfo: {
       email: 'william.foster@fosterventures.com',
       phone: '(303) 555-1152',
@@ -417,7 +417,7 @@ const clientFixtures: ClientFixture[] = [
     dateOfBirth: '1948-12-01',
     occupation: 'Retired Nurse',
     createdAt: '2023-01-05',
-    updatedAt: '2025-09-20',
+    updatedAt: '2025-09-19',
   },
   {
     id: 'cli-019',
@@ -430,7 +430,7 @@ const clientFixtures: ClientFixture[] = [
     tier: { segment: 'bronze', label: 'Bronze', minAUM: 0, reviewFrequency: 'annual' },
     advisorId: 'adv-001',
     householdId: 'hh-009',
-    riskProfile: { tolerance: 'moderate', score: 55, lastAssessed: '2025-06-01' },
+    riskProfile: { tolerance: 'moderate', score: 55, lastAssessed: '2025-05-30' },
     contactInfo: {
       email: 'daniel.lee@leeadvisors.com',
       phone: '(310) 555-1375',
@@ -462,7 +462,7 @@ const clientFixtures: ClientFixture[] = [
     },
     dateOfBirth: '1967-09-14',
     occupation: 'Business Executive',
-    createdAt: '2019-06-01',
+    createdAt: '2019-05-31',
     updatedAt: '2025-12-10',
   },
   {
