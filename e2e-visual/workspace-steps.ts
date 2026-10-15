@@ -13,7 +13,8 @@ export async function settle(page: Page) {
 export async function visit(page: Page, path: string, theme: Theme) {
   await page.emulateMedia({ colorScheme: theme })
   await page.goto(`${path}${path.includes('?') ? '&' : '?'}theme=${theme}`)
-  await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 15_000 })
+  // Rendered, not necessarily shown: on a phone the home page opens on the thread list, and its h1 waits in the Thread pane.
+  await expect(page.getByRole('heading', { level: 1, includeHidden: true })).toBeAttached({ timeout: 15_000 })
 }
 
 export const heading = (page: Page) => page.getByRole('heading', { level: 1 })
@@ -50,6 +51,10 @@ export async function sendLetter(page: Page) {
   await expect(conversation(page)).toContainText('Dear Robert,')
   await expect(letterDraft(page)).toHaveCount(0)
 }
+
+/** On a phone the shell shows one pane at a time; the tab bar under the header switches them. */
+export const openPhonePane = (page: Page, name: 'Threads' | 'Thread' | 'Context') =>
+  page.getByRole('navigation', { name: 'Panes' }).getByRole('button', { name, exact: true }).click()
 
 export const viewAs = (page: Page, label: string) => page.getByLabel('View as').selectOption({ label })
 /** A firm surface from the Desk pane at the top of the thread list. */

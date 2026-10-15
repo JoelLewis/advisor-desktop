@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { pageOverflowX } from './layout-checks'
-import { askProposalAgent, embedOf, heading, settle, visit } from './workspace-steps'
+import { context, embedOf, heading, openPhonePane, settle, visit } from './workspace-steps'
 
 for (const width of [320, 390]) {
   for (const path of ['/', '/t/th-brief', '/billing', '/practice', '/models/mod-005', '/blotter', '/risk', '/reconciliation']) {
@@ -13,7 +13,12 @@ for (const width of [320, 390]) {
   }
   test(`the workbench does not scroll sideways at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 })
-    await askProposalAgent(page, 'light')
+    await visit(page, '/t/th-johnson-review', 'light')
+    // On a phone the context column is a pane of its own: open it to ask, then return to the thread.
+    await openPhonePane(page, 'Context')
+    await context(page).getByRole('button', { name: 'Ask Proposal Agent', exact: true }).click()
+    await openPhonePane(page, 'Thread')
+    await expect(embedOf(page).getByRole('table', { name: 'Proposal legs · v1' })).toBeVisible()
     await embedOf(page).getByRole('link', { name: 'Workbench' }).click()
     await expect(heading(page)).toHaveText('Johnson rebalance')
     await settle(page)

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { SCREENSHOT, pageOverflowX } from './layout-checks'
 import { expectNoAxeViolations } from './axe'
-import { deskLink, settle, visit } from './workspace-steps'
+import { deskLink, openPhonePane, settle, visit } from './workspace-steps'
 
 test('the command line at 1440×600 shows its title, its field and Close · baseline', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 600 })
@@ -22,6 +22,7 @@ test('the command line at 1440×600 shows its title, its field and Close · base
 test('the Resolve dialog at 320 px reaches its title, its select and Confirm · baseline', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 })
   await visit(page, '/', 'light')
+  await openPhonePane(page, 'Threads')
   await deskLink(page, 'Reconciliation').click()
   await page.getByRole('button', { name: 'Resolve brk-002', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Resolve brk-002?' })

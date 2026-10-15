@@ -23,7 +23,7 @@ export function Select({ label, value, options, onChange, layout = 'inline', err
       <span className="relative inline-flex min-w-0 max-w-full">
         <select id={id} value={value} onChange={(e) => onChange(e.target.value)}
           aria-invalid={error ? true : undefined} aria-describedby={error ? errorId : undefined}
-          className="min-h-9 max-w-full min-w-0 appearance-none py-1.5 rounded-xs border border-ink bg-transparent pl-3 pr-8 text-body font-semibold text-ink hover:bg-face aria-invalid:border-2">
+          className="min-h-9 coarse:min-h-11 max-w-full min-w-0 appearance-none py-1.5 rounded-xs border border-ink bg-transparent pl-3 pr-8 text-body font-semibold text-ink hover:bg-face aria-invalid:border-2">
           {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
         <svg aria-hidden="true" viewBox="0 0 8 5" className="pointer-events-none absolute right-3 top-1/2 w-2 -translate-y-1/2 fill-ink">

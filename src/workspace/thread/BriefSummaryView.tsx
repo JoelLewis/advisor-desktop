@@ -31,7 +31,7 @@ export function BriefSummaryView({ summary, directory }: { summary: Summary; dir
       </section>
       <section aria-label="Context" className="flex min-w-0 flex-col gap-3">
         <details className="group">
-          <summary className="cursor-pointer border-b border-rule pb-2 text-label uppercase text-ink-3">
+          <summary className="min-h-6 cursor-pointer border-b border-rule pb-2 coarse:min-h-11 text-label uppercase text-ink-3">
             {`Context · ${fmtQuantity(summary.context.length)}`}
           </summary>
           <ul className="mt-3 flex flex-col gap-3">

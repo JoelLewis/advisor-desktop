@@ -27,5 +27,5 @@ export function ThemeToggle() {
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
   }, [])
-  return <Button rank="quiet" onClick={next}>{themeLabel(choice, systemDark)}</Button>
+  return <Button rank="quiet" className="whitespace-nowrap" onClick={next}>{themeLabel(choice, systemDark)}</Button>
 }

@@ -92,7 +92,7 @@ function MeetingFullView({ meeting, directory }: { meeting: MeetingView; directo
       ) : null}
       <section aria-label="Household reference" className="flex min-w-0 flex-col gap-3">
         <details>
-          <summary className="cursor-pointer border-b border-ink pb-2 text-label uppercase text-ink-2">Household reference</summary>
+          <summary className="min-h-6 cursor-pointer border-b border-ink pb-2 coarse:min-h-11 text-label uppercase text-ink-2">Household reference</summary>
           <div className="mt-4">
             {household.isPending ? <p role="status" className="text-body text-ink-3">Loading the household…</p>
               : household.isError ? <p role="alert" className="text-body">{household.error.message}</p>

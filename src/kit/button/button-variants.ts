@@ -11,7 +11,7 @@ export const buttonVariants = cva(
       rank: {
         primary: 'bg-ink text-face not-disabled:not-aria-disabled:hover:bg-ink-2 disabled:border disabled:border-rule-2 disabled:bg-transparent aria-disabled:border aria-disabled:border-rule-2 aria-disabled:bg-transparent',
         secondary: 'border border-ink bg-transparent text-ink not-disabled:not-aria-disabled:hover:bg-face disabled:border-rule-2 aria-disabled:border-rule-2',
-        quiet: 'h-auto px-0 text-ink underline decoration-rule-2 underline-offset-4 not-disabled:not-aria-disabled:hover:decoration-ink disabled:no-underline aria-disabled:no-underline',
+        quiet: 'h-auto min-h-6 coarse:min-h-11 px-0 text-ink underline decoration-rule-2 underline-offset-4 not-disabled:not-aria-disabled:hover:decoration-ink disabled:no-underline aria-disabled:no-underline',
       },
     },
     defaultVariants: { rank: 'primary' },

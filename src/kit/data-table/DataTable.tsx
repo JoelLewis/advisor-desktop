@@ -195,8 +195,9 @@ export function DataTable<T>({
                       className={cn(header.index === 0 && STICKY_FIRST, 'whitespace-nowrap px-2 py-2 text-table font-semibold text-ink-2', col?.align === 'right' ? 'text-right' : 'text-left')}
                     >
                       {header.column.getCanSort() ? (
-                        <button type="button" onClick={header.column.getToggleSortingHandler()}>
-                          {label}
+                        <button type="button" onClick={header.column.getToggleSortingHandler()} className="inline-flex min-h-6 items-center coarse:min-h-11">
+                          {/* One flex item, so the space between the header and its unit survives. */}
+                          <span>{label}</span>
                         </button>
                       ) : label}
                     </th>
