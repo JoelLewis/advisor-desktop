@@ -55,7 +55,7 @@ export function NotesEditor({ meeting, directory, editable, onCite, onDirtyChang
       ))}
       {editable ? (
         <div className="flex flex-wrap items-center gap-3">
-          <Button rank="secondary" disabled={!dirty || save.isPending}
+          <Button rank="secondary" pending={save.isPending} disabled={!dirty}
             onClick={() => save.mutate(lines.map(({ id, section, text, cites, owner, due }) => ({ id, section, text, cites, ...(owner ? { owner } : {}), ...(due ? { due } : {}) })),
               { onSuccess: () => { setEditing(undefined); announce('Notes saved.') } })}>Save notes</Button>
           {dirty ? <span className="text-label text-ink-3">Unsaved edits</span> : null}

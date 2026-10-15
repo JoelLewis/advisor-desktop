@@ -5,6 +5,8 @@ import { delay, http, HttpResponse } from 'msw'
 import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
 import { server } from '@/test/server'
+import { runAgent } from '@/mocks/workspace/run-agent'
+import { viewerFrom } from '@/mocks/workspace/visibility'
 import { createDraft } from '@/services/workspace'
 import { store } from '@/mocks/data/workspace-store'
 
@@ -180,11 +182,22 @@ describe('thread context column', () => {
   })
 
   it('Ask Drift Monitor keeps focus through its request', async () => {
+    // Hold the request so the button is observed while it is in flight.
+    server.use(http.post('/api/workspace/threads/:id/agents/:agentId/run', async ({ request, params }) => {
+      await delay(150)
+      const viewer = viewerFrom(request)
+      if (!viewer) throw new Error('The run request carries a viewer')
+      const result = runAgent(viewer, String(params.id), 'drift-monitor')
+      if (!result.ok) throw new Error(result.message)
+      return HttpResponse.json(result.findings)
+    }))
     renderRoutes(routes, '/t/th-johnson-review')
     const ask = await screen.findByRole('button', { name: 'Ask Drift Monitor' })
     await userEvent.setup().click(ask)
+    expect(ask).toHaveAttribute('aria-disabled', 'true')
     expect(ask).toHaveFocus()
     await screen.findByText('Drift Monitor reported in the thread.')
+    expect(ask).not.toHaveAttribute('aria-disabled')
     expect(ask).toHaveFocus()
   })
 })

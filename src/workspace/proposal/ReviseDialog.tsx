@@ -75,7 +75,7 @@ export function ReviseDialog({ open, onOpenChange, detail }: ReviseDialogProps) 
         {code === 'NO_CHANGE' ? <p role="status" className="text-body text-ink-2">That changes nothing in the proposal.</p> : null}
         {revise.isError && code !== 'NO_CHANGE' && code !== 'NOT_EXCLUDABLE' ? <p role="alert" className="text-body">{revise.error.message}</p> : null}
         <div className="flex justify-end">
-          <Button type="submit" disabled={revise.isPending}>Ask Proposal Agent to revise</Button>
+          <Button type="submit" pending={revise.isPending}>Ask Proposal Agent to revise</Button>
         </div>
       </form>
     </Dialog>

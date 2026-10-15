@@ -23,7 +23,7 @@ export function TakeToTeamThread({ view, rowId, rowLabel, inline = false }: { vi
   }
   return (
     <span className="inline-flex flex-wrap items-baseline gap-2">
-      <Button rank={inline ? 'quiet' : 'secondary'} className={inline ? 'whitespace-normal text-left text-table-dense font-normal text-ink-3 not-disabled:hover:text-ink' : undefined} aria-label={`Take ${rowLabel} to a team thread`} disabled={take.isPending}
+      <Button rank={inline ? 'quiet' : 'secondary'} className={inline ? 'whitespace-normal text-left text-table-dense font-normal text-ink-3 not-disabled:not-aria-disabled:hover:text-ink' : undefined} aria-label={`Take ${rowLabel} to a team thread`} pending={take.isPending}
         onClick={() => take.mutate({ view, rowId }, { onSuccess: (result) => { setTaken(result); announce(`Taken to ${result.threadTitle}.`) } })}>
         Take to team thread
       </Button>

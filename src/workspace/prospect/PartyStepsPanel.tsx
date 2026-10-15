@@ -38,8 +38,8 @@ export function PartyStepsPanel({ prospectId, onRecorded }: Props) {
         <div className="flex flex-col gap-4">
           {take.isError ? <p role="alert" className="text-body">{take.error.message}</p> : null}
           <div className="flex justify-end gap-3">
-            <Button rank="secondary" disabled={take.isPending} onClick={() => setAccepting(false)}>Cancel</Button>
-            <Button disabled={take.isPending} onClick={() => run('accept')}>Accept</Button>
+            <Button rank="secondary" pending={take.isPending} onClick={() => setAccepting(false)}>Cancel</Button>
+            <Button pending={take.isPending} onClick={() => run('accept')}>Accept</Button>
           </div>
         </div>
       </Dialog>
@@ -54,7 +54,7 @@ function StepLine({ label, state, action, waiting, pending, onRun }: StepLinePro
     <li className="flex flex-col items-start gap-1">
       <span className="text-body">{label}</span>
       {state === 'done' ? <Tag tone="solid">Done</Tag>
-        : state === 'open' ? <Button rank="secondary" disabled={pending} onClick={onRun}>{action}</Button>
+        : state === 'open' ? <Button rank="secondary" pending={pending} onClick={onRun}>{action}</Button>
         : <span className="text-label text-ink-3">{waiting}</span>}
     </li>
   )

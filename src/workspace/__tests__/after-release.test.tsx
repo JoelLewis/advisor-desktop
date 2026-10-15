@@ -123,6 +123,7 @@ describe('the account view after the fills', () => {
     const user = userEvent.setup()
     await user.click(await screen.findByRole('button', { name: 'Demo · act as Mark Davis' }))
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirm' }))
+    expect(document.activeElement?.id ?? '').not.toMatch(/^act-/)
     const releaseAct = () => store().acts.find((a) => a.kind === 'release_orders')
     await waitFor(() => expect(releaseAct()).toBeDefined())
     await waitFor(() => expect(document.activeElement?.id).toBe(`act-${releaseAct()!.id}`))

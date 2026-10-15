@@ -97,7 +97,7 @@ function ProposalApproval({ detail, directory, onRecorded }: { detail: ProposalD
             describedBy={hasReading(latest) ? readingId : undefined}
             onChange={(checked) => setAttestedVersion(checked ? latest.n : undefined)} />
           <PretradeReading id={readingId} version={latest} />
-          <Button disabled={reason !== undefined || approve.isPending} aria-describedby={reason ? reasonId : undefined}
+          <Button pending={approve.isPending} disabled={reason !== undefined} aria-describedby={reason ? reasonId : undefined}
             onClick={() => record((callbacks) => approve.mutate({ proposalId: detail.id, version: latest.n, fingerprint: latest.fingerprint }, callbacks))}>
             {`Approve v${latest.n}`}
           </Button>
@@ -124,8 +124,8 @@ function ProposalApproval({ detail, directory, onRecorded }: { detail: ProposalD
         <div className="flex flex-col gap-4">
           {withdraw.isError ? <p role="alert" className="text-body">{withdraw.error.message}</p> : null}
           <div className="flex justify-end gap-3">
-            <Button rank="secondary" disabled={withdraw.isPending} onClick={closeWithdraw}>Cancel</Button>
-            <Button disabled={withdraw.isPending} onClick={confirmWithdraw}>Confirm</Button>
+            <Button rank="secondary" pending={withdraw.isPending} onClick={closeWithdraw}>Cancel</Button>
+            <Button pending={withdraw.isPending} onClick={confirmWithdraw}>Confirm</Button>
           </div>
         </div>
       </Dialog>

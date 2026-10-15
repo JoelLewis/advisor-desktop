@@ -41,14 +41,14 @@ export function ProspectClock({ view, canRecordCoffee, presents }: Props) {
           <TextInput label="Note" value={note} onChange={setNote} rows={6} />
           {coffee.isError ? <p role="alert" className="text-body">{coffee.error.message}</p> : null}
           <div className="flex justify-end gap-3">
-            <Button rank="secondary" disabled={coffee.isPending} onClick={() => setWriting(false)}>Cancel</Button>
-            <Button disabled={coffee.isPending || note.trim().length === 0} onClick={record}>Record</Button>
+            <Button rank="secondary" pending={coffee.isPending} onClick={() => setWriting(false)}>Cancel</Button>
+            <Button pending={coffee.isPending} disabled={note.trim().length === 0} onClick={record}>Record</Button>
           </div>
         </div>
       </Dialog>
       {jump ? (
         <div className="flex flex-col items-start gap-1.5">
-          <Button rank="secondary" disabled={advance.isPending || jump.blockedReason !== undefined} aria-describedby={jump.blockedReason ? reasonId : undefined} onClick={() => go(jump.to)}>
+          <Button rank="secondary" pending={advance.isPending} disabled={jump.blockedReason !== undefined} aria-describedby={jump.blockedReason ? reasonId : undefined} onClick={() => go(jump.to)}>
             <span>{`Advance to her ${jump.to} · `}<span className="whitespace-nowrap">{fmtEasternDayTime(jump.at)}</span></span>
           </Button>
           {jump.blockedReason ? <p id={reasonId} className="text-label text-ink-3">{jump.blockedReason}</p> : null}

@@ -207,8 +207,7 @@ export function useArchive(filters: ArchiveFilters) {
 /** A compliance act can move the book (a release fills): accounts, positions, drift and lots are stale too, not only the workspace. */
 function useInvalidateEverything() {
   const queryClient = useQueryClient()
-  // Not returned: the mutate callbacks (focus on the new record slip) must run before the refetch unmounts the control that asked.
-  return () => { void queryClient.invalidateQueries() }
+  return () => queryClient.invalidateQueries()
 }
 
 export function useRecordComplianceAct() {

@@ -107,7 +107,7 @@ function DraftView({ draft, directory, threadId, canEdit, staleReason, sendLabel
         <div className="flex flex-col gap-2">
           <TextInput label="Edit the letter" value={text} rows={14} onChange={setText} />
           <div className="flex gap-3">
-            <Button onClick={save} disabled={revise.isPending || text.trim() === ''}>Save edit</Button>
+            <Button onClick={save} pending={revise.isPending} disabled={text.trim() === ''}>Save edit</Button>
             <Button rank="secondary" onClick={() => setEditing(false)}>Cancel</Button>
           </div>
           {revise.isError ? <p role="alert" className="text-body">{revise.error.message}</p> : null}

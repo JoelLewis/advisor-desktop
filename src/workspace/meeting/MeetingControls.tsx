@@ -55,7 +55,7 @@ function BeforeTheMeeting({ meeting }: { meeting: MeetingView }) {
   return (
     <div className="flex flex-col items-start gap-3">
       <div className="flex flex-wrap gap-2">
-        <Button rank="secondary" disabled={prep.isPending} onClick={runPrep}>Run prep</Button>
+        <Button rank="secondary" pending={prep.isPending} onClick={runPrep}>Run prep</Button>
         <Button onClick={() => { hold.reset(); setConfirming(true) }}>Hold the meeting</Button>
       </div>
       {report ? <p className="text-body text-ink-2">{report}</p> : null}
@@ -65,8 +65,8 @@ function BeforeTheMeeting({ meeting }: { meeting: MeetingView }) {
         <div className="flex flex-col gap-4">
           {hold.isError ? <p role="alert" className="text-body">{hold.error.message}</p> : null}
           <div className="flex justify-end gap-3">
-            <Button rank="secondary" disabled={hold.isPending} onClick={() => setConfirming(false)}>Cancel</Button>
-            <Button disabled={hold.isPending} onClick={confirmHold}>Hold the meeting</Button>
+            <Button rank="secondary" pending={hold.isPending} onClick={() => setConfirming(false)}>Cancel</Button>
+            <Button pending={hold.isPending} onClick={confirmHold}>Hold the meeting</Button>
           </div>
         </div>
       </Dialog>
@@ -97,7 +97,7 @@ function AfterTheMeeting({ meeting, onRecorded, filingBlockedReason }: { meeting
   return (
     <div className="flex flex-col items-start gap-3">
       {fingerprint === undefined
-        ? <Button disabled={draft.isPending} onClick={askForNotes}>Draft notes</Button>
+        ? <Button pending={draft.isPending} onClick={askForNotes}>Draft notes</Button>
         : <Button onClick={() => { file.reset(); setConfirming(true) }}>File the record</Button>}
       {report ? <p className="text-body text-ink-2">{report}</p> : null}
       {draft.isError ? <p role="alert" className="text-body">{draft.error.message}</p> : null}

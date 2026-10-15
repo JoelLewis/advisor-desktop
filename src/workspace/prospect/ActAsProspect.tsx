@@ -47,8 +47,8 @@ export function ActAsProspect({ view, onRecorded }: Props) {
         <div className="flex flex-col gap-4">
           {shortcut.isError ? <p role="alert" className="text-body">{shortcut.error.message}</p> : null}
           <div className="flex justify-end gap-3">
-            <Button rank="secondary" disabled={shortcut.isPending} onClick={() => setConfirming(undefined)}>Cancel</Button>
-            <Button disabled={shortcut.isPending} onClick={confirm}>Confirm</Button>
+            <Button rank="secondary" pending={shortcut.isPending} onClick={() => setConfirming(undefined)}>Cancel</Button>
+            <Button pending={shortcut.isPending} onClick={confirm}>Confirm</Button>
           </div>
         </div>
       </Dialog>

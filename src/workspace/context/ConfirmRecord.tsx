@@ -63,7 +63,7 @@ export function ConfirmRecord<Variables>({ open, onClose, title, description, mu
         {blockedReason ? <p id={blockedId} className="text-body text-ink-2">{blockedReason}</p> : null}
         {!refusalShownByPage && mutation.isError && mutation.error ? <p role="alert" className="text-body">{mutation.error.message}</p> : null}
         <div className="flex justify-end gap-3">
-          <Button rank="secondary" disabled={mutation.isPending} onClick={close}>Cancel</Button>
+          <Button rank="secondary" pending={mutation.isPending} onClick={close}>Cancel</Button>
           <Button pending={mutation.isPending} disabled={blockedReason !== undefined} aria-describedby={blockedReason ? blockedId : undefined} onClick={confirm}>Confirm</Button>
         </div>
       </div>

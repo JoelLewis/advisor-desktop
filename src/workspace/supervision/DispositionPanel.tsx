@@ -44,7 +44,7 @@ export function DispositionPanel({ item, open, directory, onRecorded, record }: 
       <Select label="Disposition" layout="stacked" value={option.value} options={options.map(({ value, label }) => ({ value, label }))} onChange={setChoice} />
       <TextInput label="Rationale (required)" value={rationale} rows={4} onChange={setRationale} describedBy={blank ? reasonId : undefined} />
       <div className="flex flex-col items-start gap-2">
-        <Button disabled={blank || record.isPending} aria-describedby={blank ? reasonId : undefined}
+        <Button pending={record.isPending} disabled={blank} aria-describedby={blank ? reasonId : undefined}
           onClick={() => { record.reset(); setConfirming(true) }}>
           Record disposition
         </Button>

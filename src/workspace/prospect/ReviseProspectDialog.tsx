@@ -26,8 +26,8 @@ export function ReviseProspectDialog({ open, onOpenChange, prospectId, detail }:
         <Select label="Staged sale of the concentrated stock" layout="stacked" value={value} onChange={setValue} options={TRANCHE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))} />
         {revise.isError ? <p role="alert" className="text-body">{revise.error.message}</p> : null}
         <div className="flex justify-end gap-3">
-          <Button rank="secondary" disabled={revise.isPending} onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button disabled={revise.isPending} onClick={ask}>{`Ask for v${latest.n + 1}`}</Button>
+          <Button rank="secondary" pending={revise.isPending} onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button pending={revise.isPending} onClick={ask}>{`Ask for v${latest.n + 1}`}</Button>
         </div>
       </div>
     </Dialog>

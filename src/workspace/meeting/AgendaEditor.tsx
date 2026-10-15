@@ -93,7 +93,7 @@ export function AgendaEditor({ meeting, findings, editable }: AgendaEditorProps)
       {editable ? (
         <div className="flex flex-col items-start gap-2">
           <TextInput label="New agenda item" rows={1} value={title} onChange={setTitle} />
-          <Button rank="secondary" disabled={title.trim() === '' || revise.isPending}
+          <Button rank="secondary" pending={revise.isPending} disabled={title.trim() === ''}
             onClick={() => send([...items.map(asInput), { title, source: { kind: 'advisor' } }], { kind: 'add_text', priorIds: items.map((i) => i.id) }, () => setTitle(''))}>Add to agenda</Button>
         </div>
       ) : null}

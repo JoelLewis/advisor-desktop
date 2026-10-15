@@ -105,11 +105,11 @@ describe('approving a proposal', () => {
     await user.click(within(panel).getByRole('button', { name: 'Withdraw the approval of v1' }))
     const confirm = await screen.findByRole('dialog', { name: 'Withdraw the approval of v1?' })
     await user.click(within(confirm).getByRole('button', { name: 'Confirm' }))
-    await waitFor(() => expect(within(confirm).getByRole('button', { name: 'Confirm' })).toBeDisabled())
+    await waitFor(() => expect(within(confirm).getByRole('button', { name: 'Confirm' })).toHaveAttribute('aria-disabled', 'true'))
     await user.keyboard('{Escape}')
     await user.click(within(confirm).getByRole('button', { name: 'Close' }))
     expect(screen.getByRole('dialog', { name: 'Withdraw the approval of v1?' })).toBeInTheDocument()
-    expect(within(confirm).getByRole('button', { name: 'Cancel' })).toBeDisabled()
+    expect(within(confirm).getByRole('button', { name: 'Cancel' })).toHaveAttribute('aria-disabled', 'true')
     release()
     // The page behind a modal dialog is hidden from the accessibility tree, so the dialog closes first.
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
