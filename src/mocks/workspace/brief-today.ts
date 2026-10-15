@@ -4,13 +4,12 @@ import { calendarEvents } from '@/mocks/data/calendar'
 import { sessionNow, store } from '@/mocks/data/workspace-store'
 import { reconciliationView } from '@/mocks/reference/reconciliation'
 import { BRIEF_THREAD_ID } from './brief'
-import { meetingEvent, meetingTitle } from './meetings'
+import { meetingEvent, meetingTitle, toUtc } from './meetings'
 
 export const BRIEF_TODAY_ID = 'msg-btoday'
 
 type Timed = Exclude<TodayLine, { kind: 'reconciliation' }>
 const timeOf = (line: Timed) => (line.kind === 'release' ? line.at : line.start)
-const toUtc = (local: string) => new Date(local).toISOString()
 
 function releaseLines(): Timed[] {
   const s = store()

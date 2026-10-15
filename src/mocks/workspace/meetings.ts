@@ -20,7 +20,8 @@ export type MeetingResult = { ok: true; meeting: Meeting } | MeetingFailure
 export const refuseMeeting = (status: MeetingFailure['status'], code: string, message: string): MeetingFailure => ({ ok: false, status, code, message })
 const NO_MEETING = refuseMeeting(404, 'NO_MEETING', 'Meeting not found.')
 const TITLE_MAX = 300
-const toUtc = (local: string) => new Date(local).toISOString()
+/** A calendar time, stated with its offset, as the UTC instant the workspace stores. */
+export const toUtc = (local: string) => new Date(local).toISOString()
 
 /** A firm person's name from the directory, a client's from the CRM (Patricia is a client, not a viewer). */
 function nameOf(id: string): string {
