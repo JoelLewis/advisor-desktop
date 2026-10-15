@@ -23,9 +23,9 @@ type ReadingProps = {
 export function Reading({ label, value, unit, size = 'body', limit, status }: ReadingProps) {
   const negative = isNegative(value)
   return (
-    <div className="inline-flex flex-col gap-1">
+    <div className="inline-flex min-w-0 max-w-full flex-col gap-1">
       {label ? <span className="text-label tracking-normal text-ink-3">{label}</span> : null}
-      <span className="inline-flex items-baseline gap-2">
+      <span className="inline-flex min-w-0 flex-wrap items-baseline gap-x-2">
         <span data-negative={String(negative)} className={cn('tabular text-ink', SIZE[size], negative && 'font-semibold')}>
           {value}
         </span>

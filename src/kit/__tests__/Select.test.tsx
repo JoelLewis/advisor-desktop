@@ -14,6 +14,10 @@ it('is a native select named by its visible label', () => {
   expect(select.tagName).toBe('SELECT')
   expect(screen.getByText('View as').tagName).toBe('LABEL')
   expect(select).toHaveValue('user-001')
+  expect(select.className).toContain('min-h-9')
+  expect(select.className).not.toMatch(/(^|\s)h-9(\s|$)/)
+  expect(select.parentElement!.className).toContain('max-w-full')
+  expect(select.parentElement!.className).toContain('min-w-0')
   expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Adrian Hale · Advisor', 'Robert Johnson · Client'])
 })
 

@@ -37,6 +37,10 @@ it('draws separators in CSS before each part, clipped at the start of a line, ne
   const parts = [...item.querySelectorAll('[data-part="chip-part"]')]
   expect(parts.map((p) => p.textContent)).toEqual(['Rebalance preview', 'Robert Johnson Individual'])
   for (const part of parts) expect(part.className).toContain("before:content-['·'_/_'']")
+  for (const part of parts) {
+    expect(part.className).toContain('max-w-full')
+    expect(part.className).not.toContain('whitespace-nowrap')
+  }
   const row = parts[0]!.parentElement!
   expect(row.className).toContain('-ml-4')
   expect(row.parentElement!.className).toContain('overflow-hidden')

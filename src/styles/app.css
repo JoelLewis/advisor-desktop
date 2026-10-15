@@ -94,9 +94,9 @@
   --text-total--line-height: 1.1;
   --text-readout-sm: 36px;
   --text-readout-sm--line-height: 1;
-  --text-readout-md: 56px;
+  --text-readout-md: clamp(2.25rem, 9vw, 3.5rem);
   --text-readout-md--line-height: 1;
-  --text-readout-lg: 104px;
+  --text-readout-lg: clamp(3.5rem, 14vw, 6.5rem);
   --text-readout-lg--line-height: 1;
 
   --animate-gauge-in: gauge-in 520ms cubic-bezier(0.25, 1, 0.5, 1) both;

@@ -4,6 +4,11 @@ import { Reading } from '@/kit/reading/Reading'
 import { fmtDrift, fmtResult, fmtTolerance } from '@/kit/measure'
 
 describe('Reading', () => {
+  it('wraps its unit under the value rather than overflowing', () => {
+    render(<Reading value="91,320,824" unit="USD" size="readout-md" />)
+    expect(screen.getByText('91,320,824').parentElement!.className).toMatch(/flex-wrap/)
+    expect(screen.getByText('91,320,824').closest('div')!.className).toMatch(/min-w-0/)
+  })
   it('shows label, value, unit, limit and status', () => {
     render(<Reading label="Max drift · US equity" value={fmtDrift(0.132)} unit="pp" limit={`tol ${fmtTolerance(0.05)} pp`} status="OUT" />)
     expect(screen.getByText('Max drift · US equity')).toBeInTheDocument()

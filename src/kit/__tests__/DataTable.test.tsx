@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { DataTable } from '@/kit/data-table/DataTable'
+import { isOverflowing } from '@/kit/data-table/use-overflowing'
 import { Num } from '@/kit/data-table/Num'
 import type { Column } from '@/kit/data-table/types'
 import { MINUS, MeasureError, fmtMoney, fmtQuantity, fmtResult } from '@/kit/measure'
@@ -24,6 +25,44 @@ function renderTable(extra: Partial<Parameters<typeof DataTable<Row>>[0]> = {}) 
       noun={{ singular: 'position', plural: 'positions' }} {...extra} />,
   )
 }
+
+describe('DataTable scroll region', () => {
+  const wide = (el: HTMLElement, scroll: number, client: number) => {
+    Object.defineProperty(el, 'scrollWidth', { configurable: true, value: scroll })
+    Object.defineProperty(el, 'clientWidth', { configurable: true, value: client })
+  }
+  const legs = () => (
+    <DataTable caption="Legs" rows={[{ id: 'a' }]} columns={[{ id: 'id', header: 'Id', cell: (r: { id: string }) => r.id }]} getRowId={(r) => r.id} noun={{ singular: 'leg', plural: 'legs' }} />
+  )
+
+  it('contains its screen-reader text and, while it fits, is no region and takes no focus', () => {
+    const div = document.createElement('div')
+    wide(div, 600, 390)
+    expect(isOverflowing(div)).toBe(true)
+    wide(div, 390, 390)
+    expect(isOverflowing(div)).toBe(false)
+    const { container } = render(legs())
+    const wrapper = container.querySelector('[data-scroll="table"]')!
+    expect(wrapper.className).toContain('relative')
+    expect(wrapper).not.toHaveAttribute('role')
+    expect(wrapper).not.toHaveAttribute('tabindex')
+    expect(wrapper).not.toHaveAttribute('data-overflowing')
+  })
+
+  it('while it overflows sideways, is a labeled region that takes focus', () => {
+    const scrollWidth = vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(600)
+    const clientWidth = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(390)
+    try {
+      render(legs())
+      const region = screen.getByRole('region', { name: 'Legs, scrolls sideways' })
+      expect(region).toHaveAttribute('tabindex', '0')
+      expect(region).toHaveAttribute('data-overflowing', 'true')
+    } finally {
+      scrollWidth.mockRestore()
+      clientWidth.mockRestore()
+    }
+  })
+})
 
 describe('DataTable', () => {
   it('sets column headers in sentence case, at table size', () => {

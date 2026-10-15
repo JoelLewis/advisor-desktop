@@ -8,7 +8,7 @@ export type Source = { label: string; detail?: string; asOf?: string; confidence
 // Every part draws its "·" in a 1rem gutter to its left. The row is pulled left by that gutter inside a
 // clipping box, so the separator of whichever part starts a line falls outside and is clipped: separators
 // only ever appear between parts on the same line, never dangling at a wrap. Alt text '' keeps them silent.
-const PART = "whitespace-nowrap before:inline-block before:w-4 before:text-center before:text-ink-3 before:content-['·'_/_'']"
+const PART = "max-w-full before:inline-block before:w-4 before:text-center before:text-ink-3 before:content-['·'_/_'']"
 
 function chipParts(s: Source, shared: string | undefined): string[] {
   return [

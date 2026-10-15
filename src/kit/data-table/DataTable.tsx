@@ -4,6 +4,7 @@ import {
 } from '@tanstack/react-table'
 import { cn } from '@/lib/utils'
 import { MeasureError } from '@/kit/measure'
+import { useOverflowing } from './use-overflowing'
 import type { Column, Density, RowKey, Totals, TiesTo } from './types'
 
 const ROW_HEIGHT: Record<Density, string> = { dense: 'h-6 text-table-dense stretch-dense', regular: 'h-7 text-table stretch-table', narrative: 'h-[34px] text-table stretch-table' }
@@ -15,6 +16,8 @@ function assertTies(tiesTo: TiesTo | undefined): void {
     throw new MeasureError(`Totals do not tie to ${tiesTo.label}: off by ${Math.abs(tiesTo.expected - tiesTo.actual)}`)
   }
 }
+
+const STICKY_FIRST = 'max-narrow:sticky max-narrow:left-0 max-narrow:z-[1] max-narrow:bg-bg'
 
 const INTERACTIVE = 'button, a, input, select, textarea, [role="button"]'
 
@@ -75,8 +78,9 @@ function DataTableRowView<T>({
       {row.getVisibleCells().map((cell) => {
         const col = byId.get(cell.column.id)
         const p = col?.proportion?.(row.original)
+        const first = cell.column.id === columns[0]?.id
         return (
-          <td key={cell.id} role={interactive ? 'gridcell' : undefined} className={cn(col?.wrap ? 'min-w-32 whitespace-normal px-2 py-1' : 'whitespace-nowrap px-2', col?.align === 'right' ? 'text-right tabular' : 'text-left')}>
+          <td key={cell.id} role={interactive ? 'gridcell' : undefined} className={cn(first && STICKY_FIRST, col?.wrap ? 'min-w-32 whitespace-normal px-2 py-1' : 'whitespace-nowrap px-2', col?.align === 'right' ? 'text-right tabular' : 'text-left')}>
             {p !== undefined ? (
               <span className="inline-flex w-full items-center justify-end gap-2">
                 <span aria-hidden className="inline-block h-1.5 bg-ink-3" style={{ width: `${Math.round(Math.max(0, Math.min(1, p)) * 64)}px` }} />
@@ -99,6 +103,8 @@ export function DataTable<T>({
   const [sorting, setSorting] = useState<SortingState>(initialSort ? [initialSort] : [])
   const [activeId, setActiveId] = useState<string | null>(null)
   const rowRefs = useRef<(HTMLTableRowElement | null)[]>([])
+  const scroller = useRef<HTMLDivElement>(null)
+  const overflowing = useOverflowing(scroller)
 
   const defs = useMemo<ColumnDef<T>[]>(
     () => columns.map((c) => ({
@@ -164,7 +170,9 @@ export function DataTable<T>({
 
   return (
     <div className="flex min-w-0 flex-col gap-2">
-      <div className="min-w-0 overflow-x-auto" data-scroll="table">
+      <div ref={scroller} data-scroll="table" data-overflowing={overflowing ? 'true' : undefined}
+        {...(overflowing ? { role: 'region', 'aria-label': `${caption}, scrolls sideways`, tabIndex: 0 } : {})}
+        className="relative isolate min-w-0 overflow-x-auto data-[overflowing=true]:border-r data-[overflowing=true]:border-rule-2">
         <table role={interactive ? 'grid' : undefined} className="min-w-full border-collapse">
           <caption className="sr-only">{caption}</caption>
           <thead>
@@ -184,7 +192,7 @@ export function DataTable<T>({
                       key={header.id}
                       scope="col"
                       aria-sort={header.column.getCanSort() ? (sort === 'asc' ? 'ascending' : sort === 'desc' ? 'descending' : 'none') : undefined}
-                      className={cn('whitespace-nowrap px-2 py-2 text-table font-semibold text-ink-2', col?.align === 'right' ? 'text-right' : 'text-left')}
+                      className={cn(header.index === 0 && STICKY_FIRST, 'whitespace-nowrap px-2 py-2 text-table font-semibold text-ink-2', col?.align === 'right' ? 'text-right' : 'text-left')}
                     >
                       {header.column.getCanSort() ? (
                         <button type="button" onClick={header.column.getToggleSortingHandler()}>
@@ -222,7 +230,7 @@ export function DataTable<T>({
             <tfoot>
               <tr className="border-t-2 border-ink font-semibold">
                 {columns.map((c, i) => (
-                  <td key={c.id} className={cn('whitespace-nowrap px-2 py-2 text-table', c.align === 'right' ? 'text-right tabular' : 'text-left')}>
+                  <td key={c.id} className={cn(i === 0 && STICKY_FIRST, 'whitespace-nowrap px-2 py-2 text-table', c.align === 'right' ? 'text-right tabular' : 'text-left')}>
                     {i === 0 ? (
                       <span className="flex flex-col">
                         <span>{totals.label}</span>
