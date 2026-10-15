@@ -45,3 +45,14 @@ it('draws separators in CSS before each part, clipped at the start of a line, ne
   expect(row.className).toContain('-ml-4')
   expect(row.parentElement!.className).toContain('overflow-hidden')
 })
+
+it('says a date-only as-of as the date it states, never the evening before in ET', () => {
+  render(<SourceChips sources={[{ label: 'Held-away assets · Vanguard · as reported by the client', asOf: '2025-12-01' }, { label: 'Statement', asOf: '2026-01-31' }]} />)
+  const items = within(screen.getByRole('list', { name: 'Relies on' })).getAllByRole('listitem')
+  expect(items.map((i) => i.textContent)).toEqual(['Held-away assets · Vanguard · as reported by the clientas of 1 Dec 2025', 'Statementas of 31 Jan 2026'])
+})
+
+it('says a shared date-only as-of once, as a date', () => {
+  render(<SourceChips sources={[{ label: 'Financial plan', asOf: '2025-12-01' }]} />)
+  expect(screen.getByText('as of 1 Dec 2025')).toBeInTheDocument()
+})

@@ -100,6 +100,16 @@ export function fmtDate(iso: string): string {
   return parseIso(iso).toISOString().slice(0, 10)
 }
 
+const CALENDAR_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+/** A bare `YYYY-MM-DD`: a day, not a moment. It has no time and no zone, so it is never read as midnight UTC. */
+export const isCalendarDate = (iso: string): boolean => CALENDAR_DATE.test(iso)
+
+function parseInstant(iso: string): Date {
+  if (isCalendarDate(iso)) throw new MeasureError(`expected a moment with its offset, got the calendar date ${iso}; a date is formatted as a date`)
+  return parseIso(iso)
+}
+
 /** The record slip's books-and-records time, labeled UTC: "2026-02-25 12:00 UTC". Only the record slip shows it. */
 export function fmtUtcStamp(iso: string): string {
   const utc = parseIso(iso).toISOString()
@@ -110,7 +120,7 @@ const easternClock = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute:
 
 /** A time as the calendar states it, in New York: "14:00". The instant must state its offset. */
 export function fmtEasternTime(iso: string): string {
-  return easternClock.format(parseIso(iso))
+  return easternClock.format(parseInstant(iso))
 }
 
 const MONTH_ABBREVIATIONS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const
@@ -129,7 +139,7 @@ const partOf = (parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatPartT
 
 /** A moment on the story's clock as its control names it: "Thu 26 Feb 09:10 ET". */
 export function fmtEasternDayTime(iso: string): string {
-  const parts = easternDayParts.formatToParts(parseIso(iso))
+  const parts = easternDayParts.formatToParts(parseInstant(iso))
   return `${partOf(parts, 'weekday')} ${partOf(parts, 'day')} ${monthAbbreviation(Number(partOf(parts, 'month')))} ${fmtEasternTime(iso)} ET`
 }
 
@@ -137,15 +147,16 @@ const easternStampParts = new Intl.DateTimeFormat('en-US', {
   year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'America/New_York',
 })
 
-function easternParts(iso: string): { dayKey: string; day: string; month: number; time: string } {
-  const parts = easternStampParts.formatToParts(parseIso(iso))
+function easternParts(iso: string): { dayKey: string; year: string; day: string; month: number; time: string } {
+  const parts = easternStampParts.formatToParts(parseInstant(iso))
   const [year, month, day] = [partOf(parts, 'year'), Number(partOf(parts, 'month')), partOf(parts, 'day')]
-  return { dayKey: `${year}-${month}-${day}`, day, month, time: `${partOf(parts, 'hour')}:${partOf(parts, 'minute')}` }
+  return { dayKey: `${year}-${month}-${day}`, year, day, month, time: `${partOf(parts, 'hour')}:${partOf(parts, 'minute')}` }
 }
 
 /**
  * A moment as people here read it, in New York time with the zone: "25 Feb 07:00 ET". Given `sameDayAs`,
  * a moment on that New York day drops its date: "07:00 ET". Deterministic in any machine zone; DST from the IANA zone.
+ * A calendar date is refused: it has no time to state (`fmtDayMonthYear` or `fmtAsOf` say it as a date).
  */
 export function fmtEasternStamp(iso: string, sameDayAs?: string): string {
   const at = easternParts(iso)
@@ -188,8 +199,20 @@ export function clientRate(fraction: number): string {
   return `${unsigned(fraction, 2, 2, 2)}%`
 }
 
-/** A date as the proposal's price line states it: "25 Feb 2026". */
+/**
+ * A day as people here read it: "25 Feb 2026". A calendar date is that date in any machine zone; a moment is its
+ * New York day, the day its ET stamp names.
+ */
 export function fmtDayMonthYear(iso: string): string {
-  const d = parseIso(iso)
-  return `${d.getUTCDate()} ${monthAbbreviation(d.getUTCMonth() + 1)} ${d.getUTCFullYear()}`
+  if (isCalendarDate(iso)) {
+    const d = parseIso(iso)
+    return `${d.getUTCDate()} ${monthAbbreviation(d.getUTCMonth() + 1)} ${d.getUTCFullYear()}`
+  }
+  const at = easternParts(iso)
+  return `${at.day} ${monthAbbreviation(at.month)} ${at.year}`
+}
+
+/** When a source is as of: a calendar date as the date it states ("1 Dec 2025"), a moment as its ET stamp ("25 Feb 07:00 ET"). */
+export function fmtAsOf(iso: string): string {
+  return isCalendarDate(iso) ? fmtDayMonthYear(iso) : fmtEasternStamp(iso)
 }

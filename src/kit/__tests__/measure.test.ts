@@ -3,6 +3,7 @@ import {
   MINUS, MeasureError, isNegative, fmtMoney, fmtResult, fmtPrice, fmtWeight, fmtReturn, fmtDrift,
   fmtTolerance, fmtQuantity, splitFraction, fmtDays, fmtScore, fmtDate, fmtEasternStamp, fmtUtcStamp, clientMoney,
   clientPercent, clientWholePercent, clientDate, fmtEasternTime, fmtEasternDayTime, fmtEasternRange, fmtEasternWindow, clientRate, fmtDayMonthYear,
+  fmtAsOf, isCalendarDate,
 } from '@/kit/measure'
 
 describe('measure', () => {
@@ -153,6 +154,46 @@ describe('fmtEasternStamp', () => {
   })
   it('refuses a time with no offset', () => {
     expect(() => fmtEasternStamp('2026-02-25T12:00:00')).toThrow(MeasureError)
+  })
+  it('refuses a calendar date, which has no time to state', () => {
+    expect(() => fmtEasternStamp('2025-12-01')).toThrow(MeasureError)
+    expect(() => fmtEasternTime('2025-12-01')).toThrow(MeasureError)
+    expect(() => fmtEasternDayTime('2025-12-01')).toThrow(MeasureError)
+    expect(() => fmtEasternWindow('2025-12-01', '2025-12-01')).toThrow(MeasureError)
+  })
+})
+
+describe('date-only facts', () => {
+  const ZONES = ['America/Los_Angeles', 'America/New_York', 'UTC', 'Europe/London', 'Asia/Tokyo', 'Pacific/Kiritimati', 'Pacific/Pago_Pago']
+  const withZone = (zone: string, check: () => void) => {
+    const saved = process.env.TZ
+    process.env.TZ = zone
+    try {
+      check()
+    } finally {
+      if (saved === undefined) delete process.env.TZ
+      else process.env.TZ = saved
+    }
+  }
+  it('knows a calendar date from a moment', () => {
+    expect(isCalendarDate('2025-12-01')).toBe(true)
+    expect(isCalendarDate('2025-12-01T00:00:00Z')).toBe(false)
+  })
+  it('says 2025-12-01 as 1 Dec 2025 in every machine zone', () => {
+    const offsets = new Set<number>()
+    for (const zone of ZONES) {
+      withZone(zone, () => {
+        offsets.add(new Date('2025-12-01T00:00:00Z').getTimezoneOffset())
+        expect(fmtDayMonthYear('2025-12-01'), zone).toBe('1 Dec 2025')
+        expect(fmtAsOf('2025-12-01'), zone).toBe('1 Dec 2025')
+      })
+    }
+    expect(offsets.size, 'the machine zone really changed between checks').toBe(ZONES.length - 1)
+  })
+  it('says a moment as its ET stamp, and its day as the New York day', () => {
+    expect(fmtAsOf('2026-02-25T12:00:00Z')).toBe('25 Feb 07:00 ET')
+    expect(fmtDayMonthYear('2026-02-26T03:30:00Z')).toBe('25 Feb 2026')
+    expect(fmtDayMonthYear('2026-02-25T19:00:00.000Z')).toBe('25 Feb 2026')
   })
 })
 

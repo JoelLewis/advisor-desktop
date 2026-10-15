@@ -1,6 +1,6 @@
 import { useId } from 'react'
 import { cn } from '@/lib/utils'
-import { fmtScore, fmtEasternStamp } from '@/kit/measure'
+import { fmtAsOf, fmtScore } from '@/kit/measure'
 import { sharedAsOf } from './shared-as-of'
 
 export type Source = { label: string; detail?: string; asOf?: string; confidence?: number }
@@ -13,7 +13,7 @@ const PART = "max-w-full before:inline-block before:w-4 before:text-center befor
 function chipParts(s: Source, shared: string | undefined): string[] {
   return [
     ...(s.detail ? [s.detail] : []),
-    ...(s.asOf && s.asOf !== shared ? [`as of ${fmtEasternStamp(s.asOf)}`] : []),
+    ...(s.asOf && s.asOf !== shared ? [`as of ${fmtAsOf(s.asOf)}`] : []),
     ...(s.confidence !== undefined ? [`confidence ${fmtScore(s.confidence)}`] : []),
   ]
 }
@@ -25,7 +25,7 @@ export function SourceChips({ sources }: { sources: Source[] }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span id={labelId} className="text-label uppercase text-ink-3">Relies on</span>
-      {shared ? <span data-part="shared-as-of" className="text-label text-ink-3">{`as of ${fmtEasternStamp(shared)}`}</span> : null}
+      {shared ? <span data-part="shared-as-of" className="text-label text-ink-3">{`as of ${fmtAsOf(shared)}`}</span> : null}
       <ul aria-labelledby={labelId} className="m-0 flex min-w-0 list-none flex-wrap items-center gap-2 p-0">
         {sources.map((s, index) => (
           <li key={`${index}:${s.label}`} className="min-w-0 border border-rule-2 px-2 py-0.5 text-label normal-case text-ink-2">
