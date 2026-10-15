@@ -150,10 +150,15 @@ const partOf = (parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatPartT
   return part.value
 }
 
+/** A moment's New York day, with its weekday: "Thu 26 Feb". */
+export function fmtEasternDay(iso: string): string {
+  const parts = easternDayParts.formatToParts(parseInstant(iso))
+  return `${partOf(parts, 'weekday')} ${partOf(parts, 'day')} ${monthAbbreviation(Number(partOf(parts, 'month')))}`
+}
+
 /** A moment on the story's clock as its control names it: "Thu 26 Feb 09:10 ET". */
 export function fmtEasternDayTime(iso: string): string {
-  const parts = easternDayParts.formatToParts(parseInstant(iso))
-  return `${partOf(parts, 'weekday')} ${partOf(parts, 'day')} ${monthAbbreviation(Number(partOf(parts, 'month')))} ${fmtEasternTime(iso)} ET`
+  return `${fmtEasternDay(iso)} ${fmtEasternTime(iso)} ET`
 }
 
 const easternStampParts = new Intl.DateTimeFormat('en-US', {

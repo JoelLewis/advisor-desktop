@@ -3,7 +3,7 @@ import {
   MINUS, MeasureError, isNegative, fmtMoney, fmtResult, fmtPrice, fmtWeight, fmtReturn, fmtDrift,
   fmtTolerance, fmtQuantity, splitFraction, fmtDays, fmtScore, fmtDate, fmtEasternStamp, fmtUtcStamp, clientMoney,
   clientPercent, clientWholePercent, clientDate, fmtEasternTime, fmtEasternDayTime, fmtEasternRange, fmtEasternWindow, clientRate, fmtDayMonthYear,
-  fmtAsOf, isCalendarDate, driftChange,
+  fmtAsOf, isCalendarDate, driftChange, fmtEasternDay,
 } from '@/kit/measure'
 
 describe('measure', () => {
@@ -268,5 +268,12 @@ describe('driftChange', () => {
     expect(fmtDrift(driftChange(0.0125, 0.0105))).toBe('−0.2')
     expect(driftChange(0.132, 0.012)).toBe(-0.12)
     expect(driftChange(0.0004, -0.0004)).toBe(0)
+  })
+})
+
+describe('fmtEasternDay', () => {
+  it("names a moment's New York day with its weekday", () => {
+    expect(fmtEasternDay('2026-02-26T14:10:00.000Z')).toBe('Thu 26 Feb')
+    expect(fmtEasternDay('2026-02-26T03:30:00.000Z')).toBe('Wed 25 Feb')
   })
 })
