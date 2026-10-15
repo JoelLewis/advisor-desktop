@@ -30,9 +30,10 @@ function preloadServerAndFont(): Plugin {
 export default defineConfig({
   plugins: [react(), tailwindcss(), preloadServerAndFont()],
   build: {
-    // Two chunks pass Vite's 500 kB default, by design: the app (~700 kB, ~210 kB gzip), and the MSW worker
-    // with the engine (~630 kB, ~195 kB gzip), which is the demo's whole server running in the browser and
-    // already loads on its own. The limit sits just above them, so a chunk that grows past it still warns.
+    // Two chunks are large by design: the MSW worker with the engine (~635 kB, ~195 kB gzip), the demo's whole
+    // server running in the browser, which passes Vite's 500 kB default and loads beside the app; and the App chunk
+    // (~455 kB, ~135 kB gzip), with the secondary routes split off into their own lazy chunks. The limit sits
+    // above the worker, so a chunk that grows past it still warns.
     chunkSizeWarningLimit: 750,
   },
   resolve: {
