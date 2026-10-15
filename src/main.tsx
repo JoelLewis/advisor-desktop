@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { ServerUnavailable } from '@/app/ServerUnavailable'
+import { StartFailure } from '@/app/start-failure'
 import '@/styles/app.css'
 
 const RELOADED_AT_KEY = 'ws-preload-reloaded-at'
@@ -29,18 +30,19 @@ function rootElement(): HTMLElement {
   return root
 }
 
-// The app chunk and the worker load side by side; the page renders when both are ready.
-const app = import('@/app/App')
-const server = startServer()
+// The app chunk and the worker load side by side; the page renders when both are ready, and either failing
+// replaces the static first frame with a page that says which one failed.
+const app = import('@/app/App').catch((error: unknown) => { throw new StartFailure('app', error) })
+const server = startServer().catch((error: unknown) => { throw new StartFailure('server', error) })
 
-server.then(
-  async () => {
-    const { App } = await app
+Promise.all([app, server]).then(
+  ([{ App }]) => {
     ReactDOM.createRoot(rootElement()).render(<React.StrictMode><App /></React.StrictMode>)
   },
   (error: unknown) => {
-    console.error('The demo server (MSW service worker) did not start:', error)
-    const reason = error instanceof Error ? error.message : String(error)
-    ReactDOM.createRoot(rootElement()).render(<ServerUnavailable reason={reason} />)
+    // Both halves reject only with a StartFailure; the guard keeps the type honest without a cast.
+    const failure = error instanceof StartFailure ? error : new StartFailure('app', error)
+    console.error(failure.stage === 'server' ? 'The demo server (MSW service worker) did not start:' : 'The demo app did not load:', error)
+    ReactDOM.createRoot(rootElement()).render(<ServerUnavailable stage={failure.stage} reason={failure.message} />)
   },
 )

@@ -195,6 +195,15 @@ test.describe('a browser that blocks service workers', () => {
   })
 })
 
+test("a browser that cannot load the app's code gets a page that says so, never the static header alone", async ({ page }) => {
+  await page.route(/\/src\/app\/App\.tsx/, (route) => route.abort())
+  await page.goto('/')
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('The demo could not start', { timeout: 15_000 })
+  await expect(page.getByRole('main')).toContainText("The demo's code did not finish loading")
+  await expect(page.locator('#boot-theme-label')).toHaveCount(0)
+  await expectNoAxeViolations(page)
+})
+
 test('the key sheet with the single-key setting · baseline', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await visit(page, '/', 'light')

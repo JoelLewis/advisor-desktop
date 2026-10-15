@@ -2,9 +2,8 @@ import { Select } from '@/kit/select/Select'
 import { useViewAsDirectory } from '@/hooks/use-workspace'
 import { personWithRole } from '@/workspace/people/role-label'
 import { useViewer } from '@/workspace/viewer/use-viewer'
+import { WIDEST_OPTION } from './view-as-words'
 
-/** The widest option the loaded select holds, so the placeholder wraps and measures as the select will. */
-const WIDEST_OPTION = 'Sarah Mitchell · Client service'
 
 /** The View as control before its people arrive: the same label and box, empty, so the header does not move when they do. */
 function ViewAsPlaceholder() {
