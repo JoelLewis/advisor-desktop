@@ -10,11 +10,34 @@ export async function settle(page: Page) {
   await page.evaluate(() => (document.activeElement instanceof HTMLElement ? document.activeElement.blur() : undefined))
 }
 
-export async function visit(page: Page, path: string, theme: Theme) {
+async function load(page: Page, path: string, theme: Theme) {
   await page.emulateMedia({ colorScheme: theme })
   await page.goto(`${path}${path.includes('?') ? '&' : '?'}theme=${theme}`)
-  // Rendered, not necessarily shown: on a phone the home page opens on the thread list, and its h1 waits in the Thread pane.
+}
+
+export async function visit(page: Page, path: string, theme: Theme) {
+  await load(page, path, theme)
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 15_000 })
+}
+
+const PHONE_PANE_REGION = { Threads: '#thread-list', Thread: '#main', Context: '#context-column' } as const
+
+/** The pane a phone shows: the tab bar's current one, or the page itself where there is no tab bar. */
+async function shownPhonePane(page: Page): Promise<keyof typeof PHONE_PANE_REGION> {
+  const current = page.locator('nav[aria-label="Panes"] [aria-current="true"]')
+  if (await current.count() === 0) return 'Thread'
+  const word = (await current.textContent())?.trim()
+  if (word !== 'Threads' && word !== 'Thread' && word !== 'Context') throw new Error(`the pane bar shows an unknown pane "${word}"`)
+  return word
+}
+
+/** A visit below 768px: the page has rendered (its h1 may wait in a hidden pane) and the pane the shell opens on shows. */
+export async function visitPhone(page: Page, path: string, theme: Theme) {
+  await load(page, path, theme)
   await expect(page.getByRole('heading', { level: 1, includeHidden: true })).toBeAttached({ timeout: 15_000 })
+  const pane = await shownPhonePane(page)
+  await expect(page.locator(PHONE_PANE_REGION[pane])).toBeVisible()
+  if (pane === 'Thread') await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
 }
 
 export const heading = (page: Page) => page.getByRole('heading', { level: 1 })

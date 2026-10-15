@@ -50,9 +50,9 @@ export async function clippedLabels(page: Page): Promise<string[]> {
   }, LABEL_SELECTOR)
 }
 
-/** Visible controls shorter than `min` px: buttons, selects, summaries, options and navigation links. */
+/** Visible controls narrower or shorter than `min` px: buttons, selects, summaries, options and navigation links. */
 export async function smallTargets(page: Page, min: number): Promise<string[]> {
   return page.evaluate((least) => [...document.querySelectorAll<HTMLElement>('button, select, summary, [role="option"], nav a')]
-    .filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.height < least - 0.5 })
-    .map((el) => `${el.tagName.toLowerCase()} "${(el.textContent ?? '').trim().slice(0, 40)}" ${Math.round(el.getBoundingClientRect().height)}px`), min)
+    .filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && (r.width < least - 0.5 || r.height < least - 0.5) })
+    .map((el) => { const r = el.getBoundingClientRect(); return `${el.tagName.toLowerCase()} "${(el.textContent ?? '').trim().slice(0, 40)}" ${Math.round(r.width)}×${Math.round(r.height)}px` }), min)
 }

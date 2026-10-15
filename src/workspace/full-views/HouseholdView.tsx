@@ -51,7 +51,7 @@ function HouseholdPage({ view }: { view: HouseholdReadModel }) {
             </li>
           ))}
         </ul>
-        <nav aria-label="Reference" className="flex flex-wrap gap-x-6 gap-y-1">
+        <nav aria-label="Reference" className="flex flex-wrap gap-x-6 gap-y-1 *:inline-flex *:min-h-6 *:items-center coarse:*:min-h-11">
           <Link to={billingHref(view.id, from)} className={LINK}>Billing for this household</Link>
         </nav>
       </header>

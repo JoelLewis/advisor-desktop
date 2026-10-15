@@ -127,7 +127,7 @@ describe('routes', () => {
     const gauge = within(screen.getByRole('heading', { name: 'Drift against model' }).closest('section') as HTMLElement)
       .getByText(label, { selector: '[data-part="label"]' }).parentElement as HTMLElement
     expect(gauge.querySelector('[data-status]')!.getAttribute('data-status')).toBe(readingStatus)
-    const widths = [...container.querySelectorAll('svg[role="img"] > rect:not([data-part])')]
+    const widths = [...container.querySelectorAll('svg > rect:not([data-part])')]
       .filter((r) => r.closest('svg')!.getAttribute('width') === '200').map((r) => r.getAttribute('width'))
     expect(widths.length).toBeGreaterThan(1)
     expect(new Set(widths).size).toBe(1)

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { delay, http, HttpResponse } from 'msw'
@@ -10,6 +10,7 @@ import { server } from '@/test/server'
 import { WorkspaceShell } from '@/workspace/shell/WorkspaceShell'
 import { WorkspaceHome } from '@/workspace/shell/WorkspaceHome'
 import type { ShellHandle } from '@/workspace/shell/context-column'
+import { PHONE_LAYOUT_QUERY } from '@/workspace/shell/phone-panes'
 
 const threadNav = () => screen.getByRole('navigation', { name: 'Threads' })
 
@@ -179,5 +180,23 @@ describe('workspace shell', () => {
     expect(screen.getByRole('main').className).toContain('max-narrow:hidden')
     expect(document.getElementById('context-column')!.className).not.toContain('max-narrow:hidden')
     expect(document.getElementById('context-column')).toHaveFocus()
+  })
+
+  it('on a phone, a route that opens on the thread list focuses the list, not its hidden h1; the open thread tapped in the list shows it', async () => {
+    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({ matches: query === PHONE_LAYOUT_QUERY, media: query, onchange: null,
+      addListener: vi.fn(), removeListener: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn() }))
+    const user = userEvent.setup()
+    renderRoutes(routes, '/t/th-johnson-review')
+    await screen.findByRole('heading', { level: 1, name: 'Johnson Rebalance Review' })
+    await user.click(screen.getByRole('link', { name: 'Advisor Desktop' }))
+    const tabs = screen.getByRole('navigation', { name: 'Panes' })
+    await waitFor(() => expect(within(tabs).getByRole('button', { name: 'Threads' })).toHaveAttribute('aria-current', 'true'))
+    expect(threadNav()).toHaveFocus()
+    await user.click(within(threadNav()).getByRole('link', { name: 'Johnson Rebalance Review' }))
+    await screen.findByRole('heading', { level: 1, name: 'Johnson Rebalance Review' })
+    await user.click(within(tabs).getByRole('button', { name: 'Threads' }))
+    await user.click(within(threadNav()).getByRole('link', { name: 'Johnson Rebalance Review' }))
+    expect(within(tabs).getByRole('button', { name: 'Thread' })).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('main')).toHaveFocus()
   })
 })

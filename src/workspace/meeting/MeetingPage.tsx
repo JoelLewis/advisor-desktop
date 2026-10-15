@@ -74,7 +74,7 @@ function MeetingFullView({ meeting, directory }: { meeting: MeetingView; directo
         </div>
         <p className="tabular text-body text-ink-2"><Unbroken text={[fmtDate(meeting.start), fmtEasternRange(meeting.start, meeting.end), ...(meeting.event.location ? [meeting.event.location] : [])].join(' · ')} /></p>
         <p className="text-body text-ink-2">{`With ${joinWords(meeting.event.attendees.map((a) => a.name))}`}</p>
-        <nav aria-label="Full views" className="flex flex-wrap gap-x-4 gap-y-1 text-body">
+        <nav aria-label="Full views" className="flex flex-wrap gap-x-4 gap-y-1 text-body *:inline-flex *:min-h-6 *:items-center coarse:*:min-h-11">
           <Link to={householdFullViewHref(meeting.householdId, meeting.threadId)} className={LINK_CLASS}>Household</Link>
           {meeting.event.attendees.filter((a) => clientIds.has(a.id)).map((a) => (
             <Link key={a.id} to={clientFullViewHref(a.id, meeting.threadId)} className={LINK_CLASS}>{a.name}</Link>

@@ -39,7 +39,8 @@ export function Gauge({ label, drift, band, domain: sharedDomain, before, bare =
   const description = `${label}: drift ${drifts} percentage points against tolerance ${fmtTolerance(band)} percentage points, ${status}`
 
   const drawing = (
-      <svg role="img" aria-label={description} viewBox={`0 0 ${W} ${H}`} width={W} height={H} className="animate-gauge-in text-rule-2">
+      <svg {...(bare ? { role: 'img', 'aria-label': description } : { 'aria-hidden': true })} viewBox={`0 0 ${W} ${H}`} width={W} height={H}
+        className={cn('animate-gauge-in text-rule-2', !bare && 'max-narrow:hidden')}>
         <defs>
           <pattern id={patternId} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
             <line x1="0" y1="0" x2="0" y2="6" stroke="currentColor" strokeWidth="1" />
@@ -63,9 +64,10 @@ export function Gauge({ label, drift, band, domain: sharedDomain, before, bare =
   )
   if (bare) return drawing
 
+  // The row is the image and carries its description, so a phone, which drops the drawing (too narrow to read), keeps it.
   return (
-    <div className="inline-flex items-center gap-3">
-      <span aria-hidden data-part="label" className="w-40 shrink-0 text-table">{label}</span>
+    <div role="img" aria-label={description} className="inline-flex items-center gap-3 max-narrow:flex">
+      <span aria-hidden data-part="label" className="w-40 shrink-0 text-table max-narrow:w-auto max-narrow:min-w-0 max-narrow:flex-1">{label}</span>
       {drawing}
       <span aria-hidden className={cn('tabular text-table', out && 'font-semibold')}>{fmtDrift(drift)}</span>
       <span aria-hidden className="text-label text-ink-3">pp</span>

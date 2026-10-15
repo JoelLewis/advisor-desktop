@@ -104,6 +104,15 @@ describe('Gauge', () => {
     expect(Number(hatch.getAttribute('x'))).toBeCloseTo(scale(-0.05))
     expect(Number(hatch.getAttribute('width'))).toBeCloseTo(scale(0.05) - scale(-0.05))
   })
+  it('names the whole row, so a phone that drops the drawing keeps the reading', () => {
+    const { container } = render(<Gauge label="US Equity" drift={0.132} band={0.05} />)
+    const row = screen.getByRole('img')
+    expect(row.tagName).toBe('DIV')
+    expect(row).toHaveAccessibleName(/^US Equity: drift \+13\.2 percentage points/)
+    const drawing = container.querySelector('svg')!
+    expect(drawing).toHaveAttribute('aria-hidden', 'true')
+    expect(drawing.getAttribute('class')).toContain('max-narrow:hidden')
+  })
   it('hides the status code from assistive tech (the label already ends with it)', () => {
     render(<Gauge label="x" drift={0.132} band={0.05} />)
     expect(screen.getByText('OUT').closest('[aria-hidden="true"]')).not.toBeNull()

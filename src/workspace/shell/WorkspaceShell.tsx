@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type MouseEvent } from 'react'
 import { Link, Outlet, useLocation, useMatches } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Button } from '@/kit/button/Button'
@@ -9,7 +9,7 @@ import type { Binding } from '@/kit/keyboard/keys'
 import { MAIN_ID } from '@/kit/page/ids'
 import { contextColumnOf, threadListHidden } from './context-column'
 import { ContextAvailability } from './ContextAvailability'
-import { defaultPhonePane, PHONE_PANE_WORDS, phonePanes, type PhonePane } from './phone-panes'
+import { defaultPhonePane, PHONE_LAYOUT_QUERY, PHONE_PANE_WORDS, phonePanes, type PhonePane } from './phone-panes'
 import { CONTEXT_COLUMN_ID, THREAD_LIST_ID } from './shell-ids'
 import { ThemeToggle } from './ThemeToggle'
 import { ThreadList } from './ThreadList'
@@ -41,7 +41,12 @@ export function WorkspaceShell() {
     { key: '\\', label: 'Main', run: choose('thread') },
     ...(context ? [{ key: ']', label: 'Context column', run: choose('context') } satisfies Binding] : []),
   ])
-  useFocusOnRouteChange()
+  useFocusOnRouteChange(pane !== 'thread' && window.matchMedia(PHONE_LAYOUT_QUERY).matches ? PANE_REGION_ID[pane] : undefined)
+  // A link to the path already open changes no route, so on a phone it would leave the list showing: show the page.
+  const showPageForSamePath = (e: MouseEvent<HTMLElement>) => {
+    const link = e.target instanceof Element ? e.target.closest('a') : null
+    if (link && new URL(link.href).pathname === pathname) setChosen({ path: pathname, pane: 'thread' })
+  }
   return (
     <div className="flex-1 bg-bg text-ink">
       {provided ? <ContextAvailability key={provided.routeId} useAvailable={provided.column.useAvailable} onChange={setAvailable} /> : null}
@@ -68,7 +73,7 @@ export function WorkspaceShell() {
       ) : null}
       <div className="mx-auto grid max-w-(--breakpoint-wide) grid-cols-12 gap-x-6 gap-y-10 px-6 py-8">
         {listHidden ? null : (
-          <nav id={THREAD_LIST_ID} tabIndex={-1} aria-label="Threads" className={cn(hiddenOnPhone('threads'), 'col-span-12 min-w-0 narrow:col-span-4 narrow:row-span-2 split:col-span-3 split:row-span-1')}>
+          <nav id={THREAD_LIST_ID} tabIndex={-1} aria-label="Threads" onClick={showPageForSamePath} className={cn(hiddenOnPhone('threads'), 'col-span-12 min-w-0 narrow:col-span-4 narrow:row-span-2 split:col-span-3 split:row-span-1')}>
             <ThreadList />
           </nav>
         )}

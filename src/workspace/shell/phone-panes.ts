@@ -1,3 +1,6 @@
+/** The shell's phone layout, as Tailwind's `max-narrow:` variant states it. */
+export const PHONE_LAYOUT_QUERY = '(width < 768px)'
+
 export type PhonePane = 'threads' | 'thread' | 'context'
 
 export const PHONE_PANE_WORDS: Readonly<Record<PhonePane, string>> = { threads: 'Threads', thread: 'Thread', context: 'Context' }

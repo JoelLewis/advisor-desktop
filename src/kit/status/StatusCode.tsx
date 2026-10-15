@@ -13,7 +13,7 @@ export function StatusCode({ status, label }: { status: Status; label?: string }
     <span
       data-status={status}
       data-signal={String(signal)}
-      className={cn('relative inline-flex items-center gap-1.5 text-label uppercase', signal ? 'text-signal-ink' : 'text-ink')}
+      className={cn('relative inline-flex items-center gap-1.5 whitespace-nowrap text-label uppercase', signal ? 'text-signal-ink' : 'text-ink')}
     >
       <span aria-hidden className={GLYPH[glyphFor(status)]} />
       <span>{status}</span>

@@ -93,7 +93,7 @@ function ReferenceLinks({ account, from }: { account: Account; from: string | nu
   const model = models.data?.models.find((m) => m.id === modelId)
   const back = from ?? undefined
   return (
-    <nav aria-label="Reference" className="flex flex-wrap gap-x-6 gap-y-1">
+    <nav aria-label="Reference" className="flex flex-wrap gap-x-6 gap-y-1 *:inline-flex *:min-h-6 *:items-center coarse:*:min-h-11">
       <Link to={accountRiskHref(account.id, back)} className={LINK}>Risk</Link>
       <Link to={accountAttributionHref(account.id, back)} className={LINK}>Attribution</Link>
       {modelId
