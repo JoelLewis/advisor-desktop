@@ -20,6 +20,8 @@ export function RecapControl({ thread }: { thread: Thread }) {
   const recap = useDraftRecap(thread.id)
   const drafts = useDrafts(thread.id, true)
   const [asked, setAsked] = useState<Asked>()
+  // The latest report, read when a recap returns: the render's `asked` may be a request behind.
+  const lastAsked = useRef<Asked>()
   // A ref, not render state, so a double-click cannot send a second request before the first settles.
   const asking = useRef(false)
   const reasonId = useId()
@@ -33,7 +35,9 @@ export function RecapControl({ thread }: { thread: Thread }) {
     const held = new Set((drafts.data ?? []).map((d) => d.id))
     recap.mutate(meeting.eventId, {
       onSuccess: (draft) => {
-        const next = { draftId: draft.id, title: meeting.title, created: asked?.draftId === draft.id ? asked.created : !held.has(draft.id) }
+        const prev = lastAsked.current
+        const next = { draftId: draft.id, title: meeting.title, created: prev?.draftId === draft.id ? prev.created : !held.has(draft.id) }
+        lastAsked.current = next
         setAsked(next)
         announce(recapReport(next))
       },
