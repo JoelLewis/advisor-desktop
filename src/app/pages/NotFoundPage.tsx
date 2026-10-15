@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
 import { Page } from '@/kit/page/Page'
+import { LINK_TARGET } from '@/kit/link-target'
 
-const LINK = 'text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink'
+const LINK = `${LINK_TARGET} text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`
 
 /** Any path the router does not hold. The demo has two places to begin: the workspace and the advisor's Brief. */
 export function NotFoundPage() {

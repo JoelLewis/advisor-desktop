@@ -5,6 +5,7 @@ import { Button } from '@/kit/button/Button'
 import { cn } from '@/lib/utils'
 import { useTakeToTeamThread } from '@/hooks/use-reference'
 import type { ReferenceView, TakeResult } from '@/types/reference'
+import { LINK_TARGET } from '@/kit/link-target'
 
 /**
  * "Take to team thread": the row becomes a quoted card in the team thread about its subject, opened if there is none.
@@ -16,7 +17,7 @@ export function TakeToTeamThread({ view, rowId, rowLabel, inline = false }: { vi
   const [taken, setTaken] = useState<TakeResult>()
   if (taken) {
     return (
-      <Link to={`/t/${encodeURIComponent(taken.threadId)}`} className={cn(inline ? 'text-table-dense text-ink-3 hover:text-ink' : 'text-body', 'underline decoration-rule-2 underline-offset-4 hover:decoration-ink')}>
+      <Link to={`/t/${encodeURIComponent(taken.threadId)}`} className={cn(LINK_TARGET, inline ? 'text-table-dense text-ink-3 hover:text-ink' : 'text-body', 'underline decoration-rule-2 underline-offset-4 hover:decoration-ink')}>
         {`In ${taken.threadTitle}`}
       </Link>
     )

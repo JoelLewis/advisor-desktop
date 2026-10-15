@@ -4,6 +4,7 @@ import { useDirectory, useThread } from '@/hooks/use-workspace'
 import { threadParty } from '@/workspace/people/thread-party'
 import { Composer } from '@/workspace/thread/Composer'
 import { CompactMessage } from '@/workspace/workbench/CompactMessage'
+import { LINK_TARGET } from '@/kit/link-target'
 
 /** A team thread, live beside a full view: the same queries as the thread page, so both update together. */
 export function LiveThreadFeed({ threadId }: { threadId: string }) {
@@ -17,7 +18,7 @@ export function LiveThreadFeed({ threadId }: { threadId: string }) {
     <div className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <span className="text-body font-semibold">{t.title}</span>
-        <Link to={`/t/${encodeURIComponent(t.id)}`} className="text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink">Open the thread</Link>
+        <Link to={`/t/${encodeURIComponent(t.id)}`} className={`${LINK_TARGET} text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>Open the thread</Link>
       </div>
       <VisibilityBand visibility={t.visibility} scale="message" party={threadParty(t)} />
       <ol aria-label="Thread feed" className="flex min-w-0 flex-col">

@@ -23,6 +23,7 @@ import { ContextSection } from './ContextSection'
 import { approveBlocker } from './approve-blocker'
 import { PresenterRelease } from './PresenterRelease'
 import { supervisionHref } from '@/workspace/supervision/supervision-items'
+import { LINK_TARGET } from '@/kit/link-target'
 
 type OnRecorded = (actId: string) => void
 type ApprovalPanelProps = { thread: Thread; directory: Directory; onRecorded: OnRecorded }
@@ -107,7 +108,7 @@ function ProposalApproval({ detail, directory, onRecorded }: { detail: ProposalD
       ) : null}
       {pending.length > 0 ? <StagedOrders orders={pending} escalated={detail.escalation !== undefined} /> : null}
       {pending.length > 0 && permissions.includes('release_orders') ? (
-        <Link to={supervisionHref('orders', detail.id)} className="self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink">
+        <Link to={supervisionHref('orders', detail.id)} className={`${LINK_TARGET} self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>
           Review in Supervision <span aria-hidden="true">↗</span>
         </Link>
       ) : null}

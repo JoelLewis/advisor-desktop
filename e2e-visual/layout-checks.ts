@@ -50,9 +50,18 @@ export async function clippedLabels(page: Page): Promise<string[]> {
   }, LABEL_SELECTOR)
 }
 
-/** Visible controls narrower or shorter than `min` px: buttons, selects, summaries, options and navigation links. */
+/**
+ * Visible targets narrower or shorter than `min` px: buttons, selects, summaries, options and links. A link set in a
+ * run of text is exempt, as WCAG 2.5.8 exempts a target in a sentence: the line it sits on sets its size. A visually
+ * hidden target, such as the skip link before it takes focus, is not yet on screen to be hit.
+ */
 export async function smallTargets(page: Page, min: number): Promise<string[]> {
-  return page.evaluate((least) => [...document.querySelectorAll<HTMLElement>('button, select, summary, [role="option"], nav a')]
-    .filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && (r.width < least - 0.5 || r.height < least - 0.5) })
-    .map((el) => { const r = el.getBoundingClientRect(); return `${el.tagName.toLowerCase()} "${(el.textContent ?? '').trim().slice(0, 40)}" ${Math.round(r.width)}×${Math.round(r.height)}px` }), min)
+  return page.evaluate((least) => {
+    const inRunningText = (el: HTMLElement) => el.tagName === 'A' && getComputedStyle(el).display === 'inline'
+      && [...(el.parentNode?.childNodes ?? [])].some((n) => n.nodeType === Node.TEXT_NODE && (n.textContent ?? '').trim() !== '')
+    const visuallyHidden = (el: HTMLElement) => getComputedStyle(el).clipPath === 'inset(50%)'
+    return [...document.querySelectorAll<HTMLElement>('button, select, summary, [role="option"], a[href]')]
+      .filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && (r.width < least - 0.5 || r.height < least - 0.5) && !inRunningText(el) && !visuallyHidden(el) })
+      .map((el) => { const r = el.getBoundingClientRect(); return `${el.tagName.toLowerCase()} "${(el.textContent ?? '').trim().slice(0, 40)}" ${Math.round(r.width)}×${Math.round(r.height)}px` })
+  }, min)
 }

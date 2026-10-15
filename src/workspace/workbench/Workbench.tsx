@@ -20,6 +20,7 @@ import { legRows } from './leg-rows'
 import { isExcluded, lotsOf, quantityOf, type TypedQuantity } from './edit-draft'
 import { useDraftVersion } from './use-draft-version'
 import { useSaveShortcut } from './use-save-shortcut'
+import { LINK_TARGET } from '@/kit/link-target'
 
 export function Workbench({ detail, directory }: { detail: ProposalDetail; directory: Directory }) {
   const [params] = useSearchParams()
@@ -71,7 +72,7 @@ export function Workbench({ detail, directory }: { detail: ProposalDetail; direc
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <header className="flex flex-col gap-2">
-        <Link to={`/t/${encodeURIComponent(from)}`} className="self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink">Back to the thread</Link>
+        <Link to={`/t/${encodeURIComponent(from)}`} className={`${LINK_TARGET} self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>Back to the thread</Link>
         <span className="text-label uppercase text-ink-3">Proposal</span>
         <h1 id={PAGE_TITLE_ID} tabIndex={-1} className="text-title">{detail.title}</h1>
         <p className="tabular text-label text-ink-3">{`v${latest.n} latest · ${authorName(latest.author, directory)} · ${fmtEasternStamp(latest.createdAt)} · fingerprint ${latest.fingerprint}`}</p>

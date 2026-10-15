@@ -14,6 +14,7 @@ import { ReferencePage } from './ReferencePage'
 import { StackedCell } from './StackedCell'
 import { TakeToTeamThread } from './TakeToTeamThread'
 import { BLOTTER_STATUS_TAG, BLOTTER_STATUS_WORDS } from './reference-words'
+import { LINK_TARGET } from '@/kit/link-target'
 
 type FilterKey = 'status' | 'accountId' | 'since' | 'until'
 
@@ -76,7 +77,7 @@ function Blotter({ view }: { view: BlotterView }) {
             {
               id: 'source', header: 'Source · REC', wrap: true, cell: (r) => (
                 <StackedCell primary={r.source.kind === 'ticket' ? 'Ticket' : (
-                  <Link to={`/t/${encodeURIComponent(r.source.threadId)}`} className="underline decoration-rule-2 underline-offset-4 hover:decoration-ink">{`${r.source.title} v${r.source.version}`}</Link>
+                  <Link to={`/t/${encodeURIComponent(r.source.threadId)}`} className={`${LINK_TARGET} underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>{`${r.source.title} v${r.source.version}`}</Link>
                 )} secondary={r.recId} />
               ),
             },

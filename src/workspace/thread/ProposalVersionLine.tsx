@@ -3,6 +3,7 @@ import { fmtEasternStamp } from '@/kit/measure'
 import { authorName } from '@/workspace/proposal/author-name'
 import { proposalWorkbenchHref } from '@/workspace/proposal/proposal-href'
 import type { Directory, Message } from '@/types/workspace'
+import { LINK_TARGET } from '@/kit/link-target'
 
 type VersionMessage = Extract<Message, { kind: 'proposal_version' }>
 
@@ -17,7 +18,7 @@ export function ProposalVersionLine({ message, directory }: { message: VersionMe
         <span className="tabular ml-auto text-label text-ink-3">{fmtEasternStamp(message.at)}</span>
       </div>
       <p className="text-copy">{message.changeSummary}</p>
-      <Link to={proposalWorkbenchHref(message.proposalId, message.threadId)} className="self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink">
+      <Link to={proposalWorkbenchHref(message.proposalId, message.threadId)} className={`${LINK_TARGET} self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>
         Open in the workbench <span aria-hidden="true">↗</span>
       </Link>
     </article>

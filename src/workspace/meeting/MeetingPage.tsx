@@ -25,6 +25,7 @@ import { agendaFindings } from './agenda-findings'
 import { MEETING_STATE_TAG } from './meeting-words'
 import { FILED_RECORD_ID, SAVE_BEFORE_FILING } from './note-words'
 import { Unbroken } from '@/kit/unbroken/Unbroken'
+import { LINK_TARGET } from '@/kit/link-target'
 
 const LINK_CLASS = 'underline decoration-rule-2 underline-offset-4 hover:decoration-ink'
 
@@ -66,7 +67,7 @@ function MeetingFullView({ meeting, directory }: { meeting: MeetingView; directo
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <header className="flex flex-col gap-2">
-        {from ? <Link to={`/t/${encodeURIComponent(from)}`} className="self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink">Back to the thread</Link> : null}
+        {from ? <Link to={`/t/${encodeURIComponent(from)}`} className={`${LINK_TARGET} self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>Back to the thread</Link> : null}
         <VisibilityBand visibility="internal" scale="thread" />
         <div className="flex flex-wrap items-baseline gap-3">
           <h1 id={PAGE_TITLE_ID} tabIndex={-1} className="text-title">{meeting.title}</h1>

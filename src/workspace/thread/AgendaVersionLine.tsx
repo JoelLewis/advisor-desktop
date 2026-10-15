@@ -3,6 +3,7 @@ import { fmtEasternStamp } from '@/kit/measure'
 import { authorName } from '@/workspace/proposal/author-name'
 import { meetingFullViewHref } from '@/workspace/full-views/full-view-href'
 import type { Directory, Message } from '@/types/workspace'
+import { LINK_TARGET } from '@/kit/link-target'
 
 type AgendaMessage = Extract<Message, { kind: 'agenda_version' }>
 
@@ -17,7 +18,7 @@ export function AgendaVersionLine({ message, directory }: { message: AgendaMessa
         <span className="tabular ml-auto text-label text-ink-3">{fmtEasternStamp(message.at)}</span>
       </div>
       <p className="text-copy">{message.changeSummary}</p>
-      <Link to={meetingFullViewHref(message.eventId, message.threadId)} className="self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink">
+      <Link to={meetingFullViewHref(message.eventId, message.threadId)} className={`${LINK_TARGET} self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>
         Open the meeting view <span aria-hidden="true">↗</span>
       </Link>
     </article>

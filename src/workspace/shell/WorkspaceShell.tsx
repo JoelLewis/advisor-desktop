@@ -15,6 +15,7 @@ import { ThemeToggle } from './ThemeToggle'
 import { ThreadList } from './ThreadList'
 import { ViewAs } from './ViewAs'
 import { useFocusOnRouteChange } from './use-focus-on-route-change'
+import { LINK_TARGET } from '@/kit/link-target'
 
 const PANE_REGION_ID: Readonly<Record<PhonePane, string>> = { threads: THREAD_LIST_ID, thread: MAIN_ID, context: CONTEXT_COLUMN_ID }
 
@@ -54,7 +55,7 @@ export function WorkspaceShell() {
         Skip to content
       </a>
       <header className="mx-auto flex max-w-(--breakpoint-wide) flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-ink px-6 py-3">
-        <Link to="/" className="text-body font-semibold uppercase stretch-wide">Advisor Desktop</Link>
+        <Link to="/" className={`${LINK_TARGET} text-body font-semibold uppercase stretch-wide`}>Advisor Desktop</Link>
         <KeyLegend className="order-last w-full gap-x-3 split:order-none split:w-auto touch:hidden" />
         <div className="flex min-w-0 max-w-full flex-nowrap items-center gap-4">
           <ViewAs />

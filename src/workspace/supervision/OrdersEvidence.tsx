@@ -15,8 +15,9 @@ import { StagedOrderList } from '@/workspace/proposal/StagedOrderList'
 import { taxScope } from '@/workspace/proposal/tax-scope'
 import type { Directory } from '@/types/workspace'
 import type { OrdersItem } from '@/types/workspace-supervision'
+import { LINK_TARGET } from '@/kit/link-target'
 
-const LINK = 'self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink'
+const LINK = `${LINK_TARGET} self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`
 const TERM = 'text-label uppercase text-ink-3'
 
 /** The record of what was approved, as compliance reviews it. Nothing here re-runs a check. */

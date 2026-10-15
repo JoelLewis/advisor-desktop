@@ -12,8 +12,9 @@ import { isExternalViewerIn } from '@/workspace/people/directory-people'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import type { StoryProgress } from '@/types/workspace-story'
 import { HOME_STEPS } from './home-steps'
+import { LINK_TARGET } from '@/kit/link-target'
 
-const LINK = 'text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink'
+const LINK = `${LINK_TARGET} text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`
 
 export function WorkspaceHome() {
   const { viewerId } = useViewer()

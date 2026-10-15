@@ -13,6 +13,7 @@ import { proposalWorkbenchHref } from '@/workspace/proposal/proposal-href'
 import { taxScope } from '@/workspace/proposal/tax-scope'
 import type { Directory } from '@/types/workspace'
 import type { ProposalVersion } from '@/types/workspace-proposal'
+import { LINK_TARGET } from '@/kit/link-target'
 
 /** The agent that drafts versions already heads the embed; only a person's version names its author. */
 const versionByline = (version: ProposalVersion, directory: Directory) =>
@@ -48,7 +49,7 @@ export function ProposalEmbed({ proposalId, threadId, actions }: ProposalEmbedPr
       <DriftBeforeAfter before={latest.driftBefore} projected={latest.preview.projectedDrift} />
       <PretradeNotes pretrade={latest.pretrade} />
       <div className="flex flex-wrap items-center gap-4">
-        <Link to={proposalWorkbenchHref(p.id, threadId)} className="text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink">
+        <Link to={proposalWorkbenchHref(p.id, threadId)} className={`${LINK_TARGET} text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>
           Workbench <span aria-hidden="true">↗</span>
         </Link>
         {actions}

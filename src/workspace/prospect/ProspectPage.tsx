@@ -17,8 +17,9 @@ import type { Directory } from '@/types/workspace'
 import { DISCLOSURE_TITLES, type ProspectProposalDetail, type ProspectProposalVersion, type ProspectView } from '@/types/workspace-prospect'
 import { OnboardingChecklist } from './OnboardingChecklist'
 import { DISCLOSURE_TIMING, STAGE_WORDS } from './prospect-words'
+import { LINK_TARGET } from '@/kit/link-target'
 
-const LINK = 'self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink'
+const LINK = `${LINK_TARGET} self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`
 
 export function ProspectPage() {
   const { prospectId } = useParams()

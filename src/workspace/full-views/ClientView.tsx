@@ -12,8 +12,9 @@ import type { ClientView as ClientReadModel } from '@/types/workspace-household'
 import { FullViewNotFound } from './FullViewNotFound'
 import { householdFullViewHref } from './full-view-href'
 import { useGoHomeWhenHidden } from './use-go-home-when-hidden'
+import { LINK_TARGET } from '@/kit/link-target'
 
-const LINK = 'self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink'
+const LINK = `${LINK_TARGET} self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`
 
 export function ClientView() {
   const { clientId } = useParams()

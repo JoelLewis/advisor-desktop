@@ -7,8 +7,9 @@ import { PATH_NOTE } from '@/workspace/prospect/prospect-words'
 import { supervisionHref } from '@/workspace/supervision/supervision-items'
 import type { Directory } from '@/types/workspace'
 import type { ArchiveEntry } from '@/types/workspace-supervision'
+import { LINK_TARGET } from '@/kit/link-target'
 
-const LINK = 'underline decoration-rule-2 underline-offset-4 hover:decoration-ink'
+const LINK = `${LINK_TARGET} underline decoration-rule-2 underline-offset-4 hover:decoration-ink`
 
 function recordedBy(entry: ArchiveEntry, directory: Directory): string {
   if (entry.kind === 'sent_message') return personIn(directory, entry.message.authorId).name

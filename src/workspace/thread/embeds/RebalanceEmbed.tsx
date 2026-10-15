@@ -11,6 +11,7 @@ import { accountFullViewHref } from '@/workspace/full-views/full-view-href'
 import { preTradeCheckProposal, previewRebalance, type ProposalLegResult, type ProposedTrade } from '@/services/oms'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { accountIdOf, type EmbedProps } from './embed-props'
+import { LINK_TARGET } from '@/kit/link-target'
 
 const SEVERITY_STATUS: Readonly<Record<ProposalLegResult['severity'], Status>> = { block: 'BLOCK', warning: 'WARN', pass: 'CLEAR' }
 const SIDE: Readonly<Record<ProposedTrade['side'], string>> = { buy: 'Buy', sell: 'Sell' }
@@ -61,7 +62,7 @@ export function RebalanceEmbed({ subject, threadId }: EmbedProps) {
           { id: 'check', header: 'Pre-trade', cell: (l) => <StatusCode status={l.status} /> },
         ]}
         totals={{ label: 'Gross traded', cells: { value: fmtMoney(gross) } }} />
-      <Link to={accountFullViewHref(accountId, threadId)} className="self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink">Open full view</Link>
+      <Link to={accountFullViewHref(accountId, threadId)} className={`${LINK_TARGET} self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>Open full view</Link>
     </section>
   )
 }

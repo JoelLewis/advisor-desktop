@@ -6,6 +6,7 @@ import { DriftGauges } from '@/workspace/drift/DriftGauges'
 import { driftMeta } from '@/workspace/drift/drift-meta'
 import { accountFullViewHref } from '@/workspace/full-views/full-view-href'
 import { accountIdOf, type EmbedProps } from './embed-props'
+import { LINK_TARGET } from '@/kit/link-target'
 
 export function DriftEmbed({ subject, threadId }: EmbedProps) {
   const accountId = accountIdOf(subject, 'drift')
@@ -22,7 +23,7 @@ export function DriftEmbed({ subject, threadId }: EmbedProps) {
         <span className="tabular text-label text-ink-3">{driftMeta(drift.data)}</span>
       </div>
       <DriftGauges drift={drift.data} />
-      <Link to={accountFullViewHref(accountId, threadId)} className="self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink">Open full view</Link>
+      <Link to={accountFullViewHref(accountId, threadId)} className={`${LINK_TARGET} self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>Open full view</Link>
     </section>
   )
 }

@@ -5,8 +5,9 @@ import { useClientView, useHousehold } from '@/hooks/use-meetings'
 import { accountFullViewHref, clientFullViewHref, householdFullViewHref, meetingFullViewHref, prospectFullViewHref } from '@/workspace/full-views/full-view-href'
 import type { Subject } from '@/types/workspace'
 import { ContextSection } from './ContextSection'
+import { LINK_TARGET } from '@/kit/link-target'
 
-const LINK = 'self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink'
+const LINK = `${LINK_TARGET} self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`
 
 function FullViewLink({ to, children }: { to: string; children: string }) {
   return <Link to={to} className={LINK}>{`${children} `}<span aria-hidden="true">↗</span></Link>

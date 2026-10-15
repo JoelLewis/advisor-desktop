@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { fmtEasternStamp } from '@/kit/measure'
 import { meetingFullViewHref } from '@/workspace/full-views/full-view-href'
 import type { Directory, Message } from '@/types/workspace'
+import { LINK_TARGET } from '@/kit/link-target'
 
 type Drafted = Extract<Message, { kind: 'notes_drafted' }>
 
@@ -16,7 +17,7 @@ export function NotesDraftedLine({ message, directory }: { message: Drafted; dir
         <span className="tabular ml-auto text-label text-ink-3">{fmtEasternStamp(message.at)}</span>
       </div>
       <p className="text-copy">Drafted the notes from the transcript; every line cites the lines it records.</p>
-      <Link to={meetingFullViewHref(message.eventId, message.threadId)} className="self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink">
+      <Link to={meetingFullViewHref(message.eventId, message.threadId)} className={`${LINK_TARGET} self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>
         Open the notes beside the transcript <span aria-hidden="true">↗</span>
       </Link>
     </article>

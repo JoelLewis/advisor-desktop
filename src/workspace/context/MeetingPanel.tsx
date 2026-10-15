@@ -13,6 +13,7 @@ import { MEETING_STATE_TAG } from '@/workspace/meeting/meeting-words'
 import type { Directory, Thread } from '@/types/workspace'
 import { ContextSection } from './ContextSection'
 import { Unbroken } from '@/kit/unbroken/Unbroken'
+import { LINK_TARGET } from '@/kit/link-target'
 
 type MeetingPanelProps = { thread: Thread; directory: Directory; onRecorded: (actId: string) => void }
 
@@ -42,7 +43,7 @@ function MeetingSection({ eventId, thread, directory, onRecorded }: MeetingPanel
         </div>
         <span className="tabular text-body text-ink-2"><Unbroken text={[fmtDate(m.start), fmtEasternRange(m.start, m.end), ...(m.event.location ? [m.event.location] : [])].join(' · ')} /></span>
       </div>
-      <Link to={meetingFullViewHref(m.eventId, thread.id)} className="self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink">
+      <Link to={meetingFullViewHref(m.eventId, thread.id)} className={`${LINK_TARGET} self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>
         Open the meeting view <span aria-hidden="true">↗</span>
       </Link>
       <MeetingControls meeting={m} canPrepare={canPrepare} onRecorded={onRecorded} />

@@ -4,9 +4,10 @@ import { fmtEasternStamp, fmtEasternWindow, fmtQuantity } from '@/kit/measure'
 import { reconciliationHref } from '@/workspace/full-views/reference-href'
 import type { Message, TodayLine } from '@/types/workspace'
 import { TODAY_MEETING_STATE } from './brief-today-words'
+import { LINK_TARGET } from '@/kit/link-target'
 
 type Today = Extract<Message, { kind: 'brief_today' }>
-const LINK = 'shrink-0 text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink'
+const LINK = `${LINK_TARGET} shrink-0 text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`
 
 /** The day as it stands: one line per thing happening, in time order, each with its one action. */
 export function BriefTodayView({ today }: { today: Today }) {

@@ -13,6 +13,7 @@ import { ReferencePage } from './ReferencePage'
 import { StackedCell } from './StackedCell'
 import { TakeToTeamThread } from './TakeToTeamThread'
 import { FREQUENCY_WORDS, sleeveLabel, versionWords, wordFor } from './reference-words'
+import { LINK_TARGET } from '@/kit/link-target'
 
 export function ModelPage() {
   const { modelId } = useParams()
@@ -66,7 +67,7 @@ function Model({ view }: { view: ModelDetail }) {
       <Pane title="Accounts on this model">
         <DataTable caption="Accounts on this model" rows={view.accounts} getRowId={(a) => a.accountId} noun={{ singular: 'account', plural: 'accounts' }}
           columns={[
-            { id: 'account', header: 'Account', wrap: true, cell: (a) => <Link to={accountFullViewHref(a.accountId, from)} className="underline decoration-rule-2 underline-offset-4 hover:decoration-ink">{a.accountName}</Link> },
+            { id: 'account', header: 'Account', wrap: true, cell: (a) => <Link to={accountFullViewHref(a.accountId, from)} className={`${LINK_TARGET} underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>{a.accountName}</Link> },
             { id: 'client', header: 'Client', cell: (a) => a.clientName },
             { id: 'value', header: 'Value', unit: UNIT.usd, align: 'right', cell: (a) => <Num text={fmtMoney(a.value)} />, sortValue: (a) => a.value },
             { id: 'drift', header: 'Largest drift', unit: UNIT.pp, align: 'right', cell: (a) => <Num text={fmtWeight(a.maxAbsDrift)} /> },
