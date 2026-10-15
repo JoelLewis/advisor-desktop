@@ -38,7 +38,7 @@ describe('routes', () => {
     await waitFor(() => expect(document.title).toBe(title))
   })
 
-it('a route that throws shows the kit page with the way back, and the error only inside its details', async () => {
+  it('a route that throws shows the kit page with the way back, and the error only inside its details', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const swallow = (event: ErrorEvent) => event.preventDefault()
     window.addEventListener('error', swallow)
@@ -52,6 +52,7 @@ it('a route that throws shows the kit page with the way back, and the error only
       expect(details).not.toBeNull()
       expect(details).toHaveTextContent('What the app reported')
       expect(details).toHaveTextContent('The engine has no account acc-999')
+      expect(document.title).toBe('Something went wrong · Advisor Desktop')
     } finally {
       window.removeEventListener('error', swallow)
       consoleError.mockRestore()

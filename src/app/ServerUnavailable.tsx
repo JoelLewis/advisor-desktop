@@ -1,7 +1,9 @@
 import { Page } from '@/kit/page/Page'
+import { useDocumentTitle } from './use-document-title'
 
 /** What the page shows when the demo's in-browser server (an MSW service worker) could not start: never a blank page. */
 export function ServerUnavailable({ reason }: { reason: string }) {
+  useDocumentTitle()
   return (
     <Page title="The demo could not start" eyebrow="Advisor Desktop">
       <div className="flex max-w-prose flex-col gap-3">

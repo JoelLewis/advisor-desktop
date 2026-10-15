@@ -1,10 +1,12 @@
 import { isRouteErrorResponse, useRouteError } from 'react-router-dom'
 import { Page } from '@/kit/page/Page'
+import { useDocumentTitle } from './use-document-title'
 
 const LINK = 'text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink'
 
 /** A route that threw: say so plainly, offer the way back, and keep the error itself for whoever opens it. */
 export function RouteError() {
+  useDocumentTitle()
   const error = useRouteError()
   const message = isRouteErrorResponse(error)
     ? `${error.status} ${error.statusText}`

@@ -50,6 +50,21 @@ it('switching to Robert on Billing goes home and says why, on the page and in th
   await waitFor(() => expect(document.querySelector('[data-part="announcer"]')).toHaveTextContent("Robert Johnson can't see Billing; showing the workspace."))
 })
 
+it("switching to a client never leaves the firm page's name on the tab", async () => {
+  renderRoutes(routes, '/billing')
+  await screen.findByRole('heading', { level: 1, name: 'Billing' })
+  await waitFor(() => expect(document.title).toBe('Billing · Advisor Desktop'))
+  const user = userEvent.setup()
+  await screen.findByRole('option', { name: 'Robert Johnson · Client' })
+  const titles: string[] = []
+  const watch = new MutationObserver(() => titles.push(document.title))
+  watch.observe(document.head, { childList: true, subtree: true, characterData: true })
+  await user.selectOptions(screen.getByRole('combobox', { name: 'View as' }), 'Robert Johnson · Client')
+  await waitFor(() => expect(document.title).toBe('Workspace · Advisor Desktop'))
+  watch.disconnect()
+  expect(titles).not.toContain('Billing · Advisor Desktop')
+})
+
 const REDIRECT_NOTE = "Robert Johnson can't see Billing; showing the workspace."
 
 async function redirectedHomeFromBilling() {
