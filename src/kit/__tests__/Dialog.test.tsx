@@ -107,3 +107,10 @@ it('leaves focus where the page put it when the dialog was torn down with its pa
   await act(() => new Promise((resolve) => setTimeout(resolve, 20)))
   expect(slip).toHaveFocus()
 })
+
+it('never grows past the viewport: its content scrolls', () => {
+  render(<Dialog open onOpenChange={() => {}} title="Long"><p>Body</p></Dialog>)
+  const dialog = screen.getByRole('dialog', { name: 'Long' })
+  expect(dialog.className).toContain('max-h-[calc(100dvh-2rem)]')
+  expect(dialog.className).toContain('overflow-y-auto')
+})

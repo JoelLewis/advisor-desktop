@@ -31,6 +31,9 @@ class ResizeObserverMock {
 }
 window.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver
 
+// scrollIntoView — jsdom has none; the command line keeps its active option in view
+Element.prototype.scrollIntoView = vi.fn()
+
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 
 afterEach(() => {

@@ -300,4 +300,22 @@ describe('keyboard', () => {
     await userEvent.keyboard('{Control>}/{/Control}')
     expect(within(screen.getByRole('dialog', { name: 'Keyboard' })).getByRole('switch', { name: 'Single-key shortcuts' })).not.toBeChecked()
   })
+
+  it('a click on a destination goes there; pointing at one makes it active; the active one is kept in view', async () => {
+    const billing = vi.fn()
+    const destinations = [
+      { id: 'kit', label: 'Component kit', aliases: [], run: vi.fn() },
+      { id: 'billing', label: 'Billing', aliases: [], run: billing },
+    ]
+    render(<AnnouncerProvider><KeyboardProvider destinations={destinations}><p>x</p></KeyboardProvider></AnnouncerProvider>)
+    await userEvent.keyboard('/')
+    const option = screen.getByRole('option', { name: 'Billing' })
+    await userEvent.hover(option)
+    expect(option).toHaveAttribute('aria-selected', 'true')
+    await userEvent.keyboard('{ArrowUp}')
+    expect(Element.prototype.scrollIntoView).toHaveBeenLastCalledWith({ block: 'nearest' })
+    expect(screen.getByRole('listbox').className).toContain('overflow-y-auto')
+    await userEvent.click(screen.getByRole('option', { name: 'Billing' }))
+    expect(billing).toHaveBeenCalledOnce()
+  })
 })

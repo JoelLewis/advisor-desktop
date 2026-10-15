@@ -1,4 +1,4 @@
-import { useId, useState, type KeyboardEvent } from 'react'
+import { useEffect, useId, useState, type KeyboardEvent } from 'react'
 import { Dialog } from '@/kit/dialog/Dialog'
 import { cn } from '@/lib/utils'
 import { matchDestinations, type Destination } from './keys'
@@ -18,6 +18,11 @@ export function CommandLine({ open, onOpenChange, destinations }: CommandLinePro
   const focusAfter = useFocusAfter()
   const listId = useId()
   const matches = matchDestinations(query, destinations)
+
+  const activeId = matches[index] ? `${listId}-${matches[index].id}` : undefined
+  useEffect(() => {
+    if (activeId) document.getElementById(activeId)?.scrollIntoView({ block: 'nearest' })
+  }, [activeId])
 
   const close = () => { setQuery(''); setIndex(0); onOpenChange(false) }
   const go = (target: Destination) => {
@@ -43,7 +48,7 @@ export function CommandLine({ open, onOpenChange, destinations }: CommandLinePro
         aria-label="Go to"
         aria-expanded="true"
         aria-controls={listId}
-        aria-activedescendant={matches[index] ? `${listId}-${matches[index].id}` : undefined}
+        aria-activedescendant={activeId}
         aria-autocomplete="list"
         value={query}
         onChange={(e) => { setQuery(e.target.value); setIndex(0) }}
@@ -51,9 +56,10 @@ export function CommandLine({ open, onOpenChange, destinations }: CommandLinePro
         className="w-full border border-ink bg-bg px-3 py-2 text-body text-ink"
       />
       {matches.length === 0 ? <p role="status" className="mt-2 px-3 py-2 text-body text-ink-3">No destination matches.</p> : null}
-      <ul id={listId} role="listbox" aria-label="Destinations" className="mt-2 flex flex-col">
+      <ul id={listId} role="listbox" aria-label="Destinations" className="mt-2 flex max-h-[min(24rem,50dvh)] flex-col overflow-y-auto">
         {matches.map((d, i) => (
           <li key={d.id} id={`${listId}-${d.id}`} role="option" aria-selected={i === index}
+            onClick={() => go(d)} onPointerMove={() => setIndex(i)}
             className={cn('px-3 py-2 text-body', i === index && 'bg-band font-semibold')}>
             {d.label}
           </li>
