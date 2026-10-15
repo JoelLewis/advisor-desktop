@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import type { Draft, ThreadDetail } from '@/types/workspace'
+import type { Draft, ListedThread, ThreadDetail } from '@/types/workspace'
 import { nextAt, nextId, resetWorkspaceStore, store } from '@/mocks/data/workspace-store'
 import { canSeeThread, isExternalViewer, isFirmViewer, visibleThreads } from '../visibility'
 import { meetingSummaries, visibleMeeting } from '../meetings'
@@ -118,6 +118,12 @@ describe("an outsider's thread names only them", () => {
   it.each([['th-robert', ROBERT, 'Robert Johnson'], ['th-pell', PELL, 'Dr. Amanda Pell']] as const)(
     'GET %s as %s serves their own name as its audience', async (id, viewer, name) => {
       expect((await threadAs(id, viewer)).audience).toEqual({ kind: 'party', name })
+    })
+  it.each([[ROBERT, 'Robert Johnson'], [PELL, 'Dr. Amanda Pell']] as const)(
+    'the thread list as %s carries only their own thread, with only their own name as its audience', async (viewer, name) => {
+      const res = await fetch('/api/workspace/threads', { headers: { 'X-Viewer': viewer } })
+      const listed = (await res.json()) as ListedThread[]
+      expect(listed.map((t) => t.audience)).toEqual([{ kind: 'party', name }])
     })
 })
 

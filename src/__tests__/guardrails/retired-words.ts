@@ -46,7 +46,7 @@ export const RETIRED_WORDS: readonly RetiredWord[] = [
   {
     word: "Firm only · client can't see",
     pattern: new RegExp(`\\bfirm only\\b|\\b(?:client|prospect) can${APOS}t see\\b`, 'i'),
-    retired: false, // ProspectApproval.tsx still says "firm only".
+    retired: true,
   },
   { word: 'Only you', pattern: /\bonly you\b/i, retired: true },
   { word: 'binding', pattern: /\bbinding\b/i, retired: false },

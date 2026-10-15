@@ -7,13 +7,16 @@ import { useActs } from '@/hooks/use-workspace'
 import { useApproveProspectProposal } from '@/hooks/use-prospect-work'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { ConfirmRecord } from '@/workspace/context/ConfirmRecord'
+import { personIn } from '@/workspace/people/directory-people'
+import { teamWords } from '@/workspace/people/visibility-words'
+import { addressNameOf } from '@/lib/words'
 import type { Directory } from '@/types/workspace'
 import type { BestInterestDraft, BestInterestRecord, ProspectProposalDetail } from '@/types/workspace-prospect'
 import { RATIONALE_DRAFT } from './prospect-words'
 
 type Props = { detail: ProspectProposalDetail; directory: Directory; onRecorded: (actId: string) => void }
 
-/** Approval of one exact version, with the firm-only best-interest record the engine composes and the advisor's own reasons. */
+/** Approval of one exact version, with the best-interest record (the team's, never hers) the engine composes and the advisor's own reasons. */
 export function ProspectApproval({ detail, directory, onRecorded }: Props) {
   const { viewerId } = useViewer()
   const approve = useApproveProspectProposal()
@@ -26,6 +29,7 @@ export function ProspectApproval({ detail, directory, onRecorded }: Props) {
   if (!latest) throw new Error(`Proposal ${detail.id} has no versions`)
   const acts = useActs(detail.threadId)
   const draft = detail.bestInterestDraft
+  const prospectName = personIn(directory, detail.prospectId).name
   const filedAct = detail.approval ? acts.data?.find((a) => a.id === detail.approval?.actId) : undefined
   const filed = filedAct?.bestInterest
   const canApprove = (directory.permissions[viewerId] ?? []).includes('approve_proposal') && !detail.sent && detail.approval?.version !== latest.n
@@ -37,7 +41,7 @@ export function ProspectApproval({ detail, directory, onRecorded }: Props) {
       {detail.approval && detail.approval.version !== latest.n ? <p className="text-body">{`v${latest.n} is newer and not approved.`}</p> : null}
       {acts.isError ? <p role="alert" className="text-body">{acts.error.message}</p>
         : detail.approval && !filed ? <p role="status" className="text-body text-ink-3">Loading the filed best-interest record…</p>
-        : <BestInterestView record={filed ?? draft} heading={filed ? 'Best-interest record · filed with the approval · firm only' : 'Best-interest record · draft, not yet filed · firm only'} />}
+        : <BestInterestView record={filed ?? draft} heading={`Best-interest record · ${filed ? 'filed with the approval' : 'draft, not yet filed'} · ${teamWords([prospectName])}`} />}
       {canApprove ? (
         <>
           <TextInput label="Why this recommendation (your words)" value={rationale} onChange={setRationale} rows={4} />
@@ -49,7 +53,7 @@ export function ProspectApproval({ detail, directory, onRecorded }: Props) {
           <ConfirmRecord open={confirming} onClose={() => setConfirming(false)} mutation={approve}
             variables={{ proposalId: detail.id, version: latest.n, fingerprint: latest.fingerprint, rationale }}
             onRecorded={(actId) => { setAttestedVersion(undefined); onRecorded(actId) }}
-            title={`Approve v${latest.n} of the ${detail.title}?`} description="Approval is a binding act; the best-interest record is filed with it, firm only." />
+            title={`Approve v${latest.n} of the ${detail.title}?`} description={`Approval is a binding act; the best-interest record is filed with it, and ${addressNameOf(prospectName)} can't see the record.`} />
         </>
       ) : null}
     </section>

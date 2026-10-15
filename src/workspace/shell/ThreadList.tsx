@@ -6,10 +6,10 @@ import { VisibilityMark } from '@/kit/visibility/VisibilityMark'
 import { ThreadListSkeleton } from '@/workspace/shell/ThreadListSkeleton'
 import { useDirectory, useThreads } from '@/hooks/use-workspace'
 import { isExternalViewerIn } from '@/workspace/people/directory-people'
-import { THREAD_GROUP_TITLE, rowWordsOf } from '@/workspace/people/visibility-words'
+import { THREAD_GROUP_TITLE, bandWordsOf } from '@/workspace/people/visibility-words'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { AgentScope } from '@/workspace/people/AgentScope'
-import type { AgentProfile, Directory, Thread, Visibility } from '@/types/workspace'
+import type { AgentProfile, ListedThread, Thread, Visibility } from '@/types/workspace'
 
 const GROUPS: readonly { visibility: Visibility; title: string }[] =
   (['private', 'internal', 'client'] as const).map((visibility) => ({ visibility, title: THREAD_GROUP_TITLE[visibility] }))
@@ -21,7 +21,7 @@ export function ThreadList() {
   const threads = useThreads()
   const { viewerId } = useViewer()
   const directory = useDirectory()
-  // The rows' words name each client thread's party, so the list waits for the directory as well as the threads.
+  // Whether the viewer is an outsider decides the rows' words and the panes, so the list waits for the directory too.
   if (threads.isPending || directory.isPending) return <ThreadListSkeleton />
   if (threads.isError) return <p role="alert" className="text-body">{threads.error.message}</p>
   if (directory.isError) return <p role="alert" className="text-body">{directory.error.message}</p>
@@ -32,7 +32,7 @@ export function ThreadList() {
       {GROUPS.map(({ visibility, title }) => {
         const group = threads.data.filter((t) => t.visibility === visibility)
         return group.length > 0
-          ? <ThreadGroup key={visibility} title={external && visibility === 'client' ? EXTERNAL_GROUP_TITLE : title} threads={group} directory={directory.data} viewerIsExternal={external} />
+          ? <ThreadGroup key={visibility} title={external && visibility === 'client' ? EXTERNAL_GROUP_TITLE : title} threads={group} viewerIsExternal={external} />
           : null
       })}
       <DeskAgents threads={threads.data} agents={directory.data.agents} />
@@ -40,19 +40,17 @@ export function ThreadList() {
   )
 }
 
-type RowContext = { directory: Directory; viewerIsExternal: boolean }
-
-function ThreadGroup({ title, threads, directory, viewerIsExternal }: { title: string; threads: Thread[] } & RowContext) {
+function ThreadGroup({ title, threads, viewerIsExternal }: { title: string; threads: ListedThread[]; viewerIsExternal: boolean }) {
   return (
     <Pane title={title}>
       <ul className="flex flex-col">
-        {threads.map((t) => <ThreadRow key={t.id} thread={t} directory={directory} viewerIsExternal={viewerIsExternal} />)}
+        {threads.map((t) => <ThreadRow key={t.id} thread={t} viewerIsExternal={viewerIsExternal} />)}
       </ul>
     </Pane>
   )
 }
 
-function ThreadRow({ thread: t, directory, viewerIsExternal }: { thread: Thread } & RowContext) {
+function ThreadRow({ thread: t, viewerIsExternal }: { thread: ListedThread; viewerIsExternal: boolean }) {
   const noteId = useId()
   return (
     <li>
@@ -67,7 +65,7 @@ function ThreadRow({ thread: t, directory, viewerIsExternal }: { thread: Thread 
           </>
         )}
       </NavLink>
-      <span id={noteId} className="sr-only">{`Visibility: ${rowWordsOf(t, directory, viewerIsExternal)}`}</span>
+      <span id={noteId} className="sr-only">{`Visibility: ${bandWordsOf(t.audience, viewerIsExternal)}`}</span>
     </li>
   )
 }

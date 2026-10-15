@@ -23,6 +23,10 @@ describe('the reference frame', () => {
     expect(within(methods).getAllByText('MODELED')).toHaveLength(1)
     expect(methods).toHaveTextContent('Quarter-end valuesMODELED')
   })
+  it('names the clients a page is about, as a thread band does', () => {
+    renderWithProviders(<ReferencePage title="Risk" from={null} methods={[]} about={['Robert Johnson', 'Patricia Johnson']}><p>Readings</p></ReferencePage>)
+    expect(screen.getByRole('note', { name: "Visibility: Larkfield team · Robert and Patricia can't see this" })).toBeInTheDocument()
+  })
 })
 
 describe('the Desk pane', () => {

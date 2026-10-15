@@ -15,6 +15,8 @@ type AttributionRow = {
 }
 export type AttributionView = {
   asOf: string; accountId: string; accountName: string
+  /** The account's owner, by full name: the client the page is about. */
+  clientName: string
   /** The model's id, or null for a custom mandate. */
   modelId: string | null
   /** The model's name, or "Custom mandate". */

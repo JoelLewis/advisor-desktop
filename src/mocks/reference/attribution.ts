@@ -8,6 +8,7 @@ import { isFirmViewer } from '@/mocks/workspace/visibility'
 import { ASSET_CLASS_LABELS } from '@/lib/labels'
 import { MOCK_NOW_ISO } from '@/lib/clock'
 import { SLEEVE_INDEX, accountBenchmark, mandateNameOf } from './models'
+import { clientOf } from './risk'
 
 const METHODS: readonly MethodNote[] = [
   { label: 'Model', modeled: false, text: 'Brinson-Fachler: allocation is (wp − wb) × (Rb,i − Rb), selection is wb × (Rp,i − Rb,i), interaction is (wp − wb) × (Rp,i − Rb,i). The three effects sum exactly to the active return.' },
@@ -28,7 +29,7 @@ function build(account: Account, period: AttributionPeriod): AttributionView {
   const a = attributionFor(account, years)
   const r = periodReturnsFor(account, years)
   return {
-    asOf: MOCK_NOW_ISO, accountId: account.id, accountName: account.name, modelId: account.mandate === 'model' ? account.modelId : null, mandateName: mandateNameOf(account), benchmark: accountBenchmark(account),
+    asOf: MOCK_NOW_ISO, accountId: account.id, accountName: account.name, clientName: clientOf(account).fullName, modelId: account.mandate === 'model' ? account.modelId : null, mandateName: mandateNameOf(account), benchmark: accountBenchmark(account),
     period, periods: ATTRIBUTION_PERIODS.map((p) => ({ id: p.id, label: p.label })),
     portfolioReturn: r.portfolioReturn, benchmarkReturn: r.benchmarkReturn, activeReturn: r.activeReturn,
     multiYear: years > 1 ? { years, annualized: { portfolio: annualize(r.portfolioReturn, years), benchmark: annualize(r.benchmarkReturn, years) } } : null,

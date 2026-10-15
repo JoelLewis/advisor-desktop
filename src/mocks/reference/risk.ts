@@ -15,7 +15,8 @@ import { factorRows } from './factors'
 import { mandateNameOf, modelVolatility } from './models'
 import { riskScoreOf } from './risk-score'
 
-function clientOf(account: Account) {
+/** The account's owner, from the CRM. Every account names one. */
+export function clientOf(account: Account) {
   const client = clients.find((c) => c.id === account.clientId)
   if (!client) throw new Error(`${account.id} names no client`)
   return client

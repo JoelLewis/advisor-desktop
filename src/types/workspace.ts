@@ -111,6 +111,8 @@ export type Draft = { id: string; clientThreadId: string; authorId: string; body
 /** Who reads a thread besides the firm, as the band says it: its owner alone, the team (about these clients, by full name), or its party. */
 export type ThreadAudience = { kind: 'owner' } | { kind: 'team'; about: string[] } | { kind: 'party'; name: string }
 export type ThreadDetail = { thread: Thread; messages: Message[]; audience: ThreadAudience }
+/** A thread as the list serves it: with its audience, so a row can say who reads it in the band's words. */
+export type ListedThread = Thread & { audience: ThreadAudience }
 export type Act = BindingActKind | 'post_firm' | 'draft_for_client' | 'read_all_firm_threads' | 'prepare_meeting'
 /** permissions: personId → the acts that person may perform, computed by the engine's can(). The UI never derives permissions itself. */
 export type Directory = { people: Person[]; agents: AgentProfile[]; permissions: Record<string, Act[]> }

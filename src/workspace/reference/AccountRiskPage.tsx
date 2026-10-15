@@ -27,7 +27,7 @@ function AccountRisk({ view }: { view: AccountRiskView }) {
   const [params] = useSearchParams()
   const { posture } = view
   return (
-    <ReferencePage title={`Risk · ${view.accountName}`} from={params.get('from')} methods={view.methods}
+    <ReferencePage title={`Risk · ${view.accountName}`} from={params.get('from')} methods={view.methods} about={[view.clientName]}
       lead={(
         <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
           <p className="text-body text-ink-2">{`${view.clientName} · ${view.mandateName} · tracking the ${view.benchmarkName} · modeled, not realized · as of ${fmtEasternStamp(view.asOf)}`}</p>

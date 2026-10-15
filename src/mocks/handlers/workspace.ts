@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import { isBreakResolution } from '@/types/reference-reconciliation'
 import { isDisclosureDocument } from '@/types/workspace-prospect'
-import type { AgentId, BindingActKind, Directory, Draft, Message, ThreadDetail } from '@/types/workspace'
+import type { AgentId, BindingActKind, Directory, Draft, ListedThread, Message, ThreadDetail } from '@/types/workspace'
 import { AGENTS, PEOPLE, can, permissionsOf } from '../data/people'
 import { resolveBreak } from '../reference/reconciliation'
 import { nextAt, nextId, store } from '../data/workspace-store'
@@ -58,7 +58,8 @@ export const workspaceHandlers = [
   http.get('/api/workspace/threads', ({ request }) => {
     const viewer = viewerFrom(request)
     if (!viewer) return unauthorized()
-    return HttpResponse.json(visibleThreads(viewer))
+    const listed: ListedThread[] = visibleThreads(viewer).map((t) => ({ ...t, audience: audienceOf(t) }))
+    return HttpResponse.json(listed)
   }),
 
   http.get('/api/workspace/threads/:id', ({ request, params }) => {

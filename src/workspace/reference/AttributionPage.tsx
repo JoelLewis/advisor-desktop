@@ -43,7 +43,7 @@ function Attribution({ view }: { view: AttributionView }) {
   const cumulative = view.multiYear ? ', cumulative' : ''
   const last = view.series[view.series.length - 1]
   return (
-    <ReferencePage title={`Attribution · ${view.accountName}`} from={params.get('from')} methods={view.methods}
+    <ReferencePage title={`Attribution · ${view.accountName}`} from={params.get('from')} methods={view.methods} about={[view.clientName]}
       lead={<p className="text-body text-ink-2">{`${view.mandateName} · against the ${view.benchmark.name} · gross of fees · as of ${fmtEasternStamp(view.asOf)}`}</p>}>
       <Select label="Period" value={view.period} onChange={setPeriod} options={view.periods.map((p) => ({ value: p.id, label: p.label }))} />
       <div className="flex flex-wrap gap-x-10 gap-y-4">

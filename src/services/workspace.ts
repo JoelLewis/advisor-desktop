@@ -1,5 +1,5 @@
 import { get, post, put } from './api-client'
-import type { AgentId, BindingAct, Directory, Draft, Message, Thread, ThreadDetail } from '@/types/workspace'
+import type { AgentId, BindingAct, Directory, Draft, ListedThread, Message, ThreadDetail } from '@/types/workspace'
 import type { Archive, ArchiveFilters, ComplianceActRequest, PresenterItem, SupervisionQueue } from '@/types/workspace-supervision'
 import type { DraftPreview, LegEdit, ProposalConstraint, ProposalDetail } from '@/types/workspace-proposal'
 import type { AgendaItemInput, MeetingSummary, MeetingView, NoteLineInput } from '@/types/workspace-meeting'
@@ -14,7 +14,7 @@ const as = (viewer: string) => ({ 'X-Viewer': viewer })
 export const getDirectory = (viewer: string) =>
   get<Directory>('/workspace/people', undefined, as(viewer))
 export const getThreads = (viewer: string) =>
-  get<Thread[]>('/workspace/threads', undefined, as(viewer))
+  get<ListedThread[]>('/workspace/threads', undefined, as(viewer))
 export const getThread = (viewer: string, id: string) =>
   get<ThreadDetail>(`/workspace/threads/${id}`, undefined, as(viewer))
 export const postMessage = (viewer: string, threadId: string, body: string) =>

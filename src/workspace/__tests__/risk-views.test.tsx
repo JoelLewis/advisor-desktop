@@ -43,6 +43,7 @@ describe('account risk', () => {
     const engine = await getAccountRisk('user-001', 'acc-002')
     renderRoutes(routes, '/accounts/acc-002/risk?from=th-johnson-review')
     expect(await screen.findByRole('heading', { level: 1, name: 'Risk · Robert Johnson Individual' })).toBeInTheDocument()
+    expect(screen.getByRole('note', { name: "Visibility: Larkfield team · Robert can't see this" })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Back to the thread' })).toHaveAttribute('href', '/t/th-johnson-review')
     const main = screen.getByRole('main')
     expect(main).toHaveTextContent(fmtMoney(engine.var95.value))

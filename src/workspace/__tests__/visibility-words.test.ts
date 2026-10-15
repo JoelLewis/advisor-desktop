@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import type { Directory, Thread, Visibility } from '@/types/workspace'
-import { JUST_YOU, OUTSIDER_BAND, THREAD_GROUP_TITLE, bandWordsOf, rowWordsOf, teamWords } from '@/workspace/people/visibility-words'
+import { JUST_YOU, OUTSIDER_BAND, THREAD_GROUP_TITLE, bandWordsOf, teamWords } from '@/workspace/people/visibility-words'
 
 describe('visibility words', () => {
   it('the thread list groups name who reads them', () => {
@@ -19,13 +18,5 @@ describe('visibility words', () => {
     expect(bandWordsOf({ kind: 'party', name: 'Robert Johnson' }, true)).toBe(OUTSIDER_BAND)
   })
   it('a team band with nobody named never reads an empty name', () => expect(teamWords([])).not.toMatch(/·\s+can't/))
-  it("a row's words name a client thread's party from the directory, and never guess one", () => {
-    const directory: Directory = { people: [{ id: 'cli-001', name: 'Robert Johnson', role: 'client' }], agents: [], permissions: {} }
-    const thread = (visibility: Visibility, partyId?: string): Thread => ({ id: 'th-x', title: 'x', visibility, partyId, memberIds: [], agentIds: [] })
-    expect(rowWordsOf(thread('private'), directory, false)).toBe(JUST_YOU)
-    expect(rowWordsOf(thread('internal'), directory, false)).toBe('Larkfield team')
-    expect(rowWordsOf(thread('client', 'cli-001'), directory, false)).toBe('Robert Johnson can read this')
-    expect(rowWordsOf(thread('client', 'cli-001'), directory, true)).toBe(OUTSIDER_BAND)
-    expect(() => rowWordsOf(thread('client', 'cli-404'), directory, false)).toThrow('The party of thread "th-x" is not in the directory')
-  })
+  it('a private thread is its owner alone, in the band and in its row', () => expect(bandWordsOf({ kind: 'owner' }, false)).toBe(JUST_YOU))
 })

@@ -15,6 +15,7 @@ describe('the Attribution view', () => {
     const engine = await getReferenceAttribution('user-001', 'acc-002', 'ytd')
     renderRoutes(routes, '/accounts/acc-002/attribution?from=th-johnson-review')
     expect(await screen.findByRole('heading', { level: 1, name: 'Attribution · Robert Johnson Individual' })).toBeInTheDocument()
+    expect(screen.getByRole('note', { name: "Visibility: Larkfield team · Robert can't see this" })).toBeInTheDocument()
     const main = screen.getByRole('main')
     expect(main).toHaveTextContent(`Active return${fmtReturn(engine.activeReturn)}%`)
     expect(main).toHaveTextContent('Brinson-Fachler · single period, arithmetic, no linking · returns modeled, not realized')
