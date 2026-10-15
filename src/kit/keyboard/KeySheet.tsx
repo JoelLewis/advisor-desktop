@@ -23,7 +23,7 @@ export function KeySheet({ open, onOpenChange, bindings, singleKeys, onSingleKey
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
           <Checkbox role="switch" label="Single-key shortcuts" checked={singleKeys} onChange={onSingleKeys} describedBy={noteId} />
-          <p id={noteId} className="text-label text-ink-3">Off: single keys such as t, / and ? do nothing, for speech input. Ctrl/⌘ K and Ctrl/⌘ / always work; keys on a focused table row and ⌘S or Ctrl+S always work.</p>
+          <p id={noteId} className="text-label text-ink-3">Off: single keys such as t, / and ? do nothing, for speech input, and the list below shows only the chords. Ctrl/⌘ K and Ctrl/⌘ / always work; keys on a focused table row and ⌘S or Ctrl+S always work.</p>
         </div>
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-body">
           {[...global, ...(singleKeys ? bindings : [])].map((b, i) => (
