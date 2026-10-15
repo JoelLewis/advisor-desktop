@@ -67,7 +67,7 @@ function Blotter({ view }: { view: BlotterView }) {
             { id: 'account', header: 'Account', wrap: true, cell: (r) => r.accountName },
             {
               id: 'submitted', header: 'Submitted · filled', wrap: true, sortValue: (r) => r.submittedAt,
-              cell: (r) => <StackedCell primary={fmtEasternStamp(r.submittedAt)} secondary={r.filledAt ? `Filled ${fmtEasternStamp(r.filledAt)}` : undefined} />,
+              cell: (r) => <StackedCell primary={r.preMarket ? `${fmtEasternStamp(r.submittedAt)} · pre-market` : fmtEasternStamp(r.submittedAt)} secondary={r.filledAt ? `Filled ${fmtEasternStamp(r.filledAt)}` : undefined} />,
             },
             { id: 'side', header: 'Side', cell: (r) => SIDE_WORDS[r.side] },
             { id: 'symbol', header: 'Symbol', cell: (r) => r.symbol },

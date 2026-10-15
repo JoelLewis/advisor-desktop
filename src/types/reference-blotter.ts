@@ -16,6 +16,8 @@ export type BlotterRow = {
   /** The binding act that closed the order, else the approval it was staged from. Tickets have none. */
   recId?: string
   submittedAt: string; filledAt?: string
+  /** Submitted on a trading day before the 9:30 ET open, so queued for it. */
+  preMarket?: true
 }
 export type BlotterFilters = { status?: BlotterStatus; accountId?: string; since?: string; until?: string }
 export type BlotterView = { asOf: string; filters: BlotterFilters; rows: BlotterRow[]; accounts: { id: string; name: string }[]; days: string[]; methods: MethodNote[] }

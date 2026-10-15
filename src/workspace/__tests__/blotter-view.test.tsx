@@ -16,6 +16,8 @@ describe('the Blotter view', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Blotter' })).toBeInTheDocument()
     expect(within(orders()).getByRole('row', { name: /ord-003/ })).toHaveTextContent('WORKING')
     expect(within(orders()).getByRole('row', { name: /ord-003/ })).toHaveTextContent('785.00 USD limit')
+    expect(within(orders()).getByRole('row', { name: /ord-003/ })).toHaveTextContent('25 Feb 04:31 ET · pre-market')
+    expect(within(orders()).getByRole('row', { name: /ord-001/ })).not.toHaveTextContent('pre-market')
     expect(within(orders()).getByRole('row', { name: /ord-014/ })).toHaveTextContent('47,600')
     expect(screen.getByRole('region', { name: 'Methods & sources' })).toHaveTextContent('REC is the binding act')
   })

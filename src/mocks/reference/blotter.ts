@@ -9,6 +9,7 @@ import { store } from '@/mocks/data/workspace-store'
 import { currencyForAccount, orders } from '@/mocks/handlers/oms'
 import { isFirmViewer } from '@/mocks/workspace/visibility'
 import { MOCK_NOW_ISO } from '@/lib/clock'
+import { isTradingDay, nyseSessionUtc } from '@/lib/trading-calendar'
 
 const BUY_SIDES: ReadonlySet<string> = new Set(['buy', 'purchase', 'buy_to_open', 'buy_to_close', 'buy_to_cover'])
 const SELL_SIDES: ReadonlySet<string> = new Set(['sell', 'redemption', 'sell_short', 'sell_to_open', 'sell_to_close'])
@@ -53,6 +54,10 @@ function quantityOf(order: Order): Pick<BlotterRow, 'quantity' | 'quantityUnit'>
   return { quantity: order.quantity, quantityUnit: 'sh' }
 }
 
+/** Entered on a trading day before the regular session opened, so queued for the open: the blotter says so. */
+const enteredBeforeTheOpen = (at: string): boolean => isTradingDay(at) && Date.parse(at) < Date.parse(nyseSessionUtc(at).open)
+const preMarket = (at: string) => (enteredBeforeTheOpen(at) ? { preMarket: true as const } : {})
+
 function ticketRow(order: Order): BlotterRow {
   const status = TICKET_STATUS[order.status]
   const price = status === 'filled' ? order.filledPrice : order.limitPrice
@@ -61,7 +66,7 @@ function ticketRow(order: Order): BlotterRow {
     id: order.id, accountId: order.accountId, accountName: accountName(order.accountId), symbol: order.symbol, side: sideOf(order), ...quantityOf(order),
     ...(price !== undefined ? { price, priceKind: status === 'filled' ? 'fill' as const : 'limit' as const } : {}),
     ...(value !== undefined ? { value } : {}),
-    currency: currencyForAccount(order.accountId), status, source: { kind: 'ticket' }, submittedAt: order.submittedAt,
+    currency: currencyForAccount(order.accountId), status, source: { kind: 'ticket' }, submittedAt: order.submittedAt, ...preMarket(order.submittedAt),
     ...(order.filledAt ? { filledAt: order.filledAt } : {}),
   }
 }
@@ -76,7 +81,7 @@ function stagedRow(o: StagedOrder): BlotterRow {
     ...(fill ? { price: fill.price, priceKind: 'fill' as const, value: fill.value, filledAt: fill.at } : {}),
     currency: o.currency, status: STAGED_STATUS[o.status],
     source: { kind: 'proposal', proposalId: proposal.id, title: proposal.title, version: o.version, threadId: proposal.threadId },
-    recId: o.closedByActId ?? o.approvalActId, submittedAt: o.stagedAt,
+    recId: o.closedByActId ?? o.approvalActId, submittedAt: o.stagedAt, ...preMarket(o.stagedAt),
   }
 }
 
