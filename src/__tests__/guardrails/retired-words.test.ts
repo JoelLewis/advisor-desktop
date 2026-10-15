@@ -31,3 +31,21 @@ describe('retired words', () => {
     (_, entry) => expect(retiredWordHits(entry).length).toBeGreaterThan(0),
   )
 })
+
+describe('what each pattern reads', () => {
+  const entry = (word: string) => RETIRED_WORDS.find((w) => w.word === word)!.pattern
+  it.each([
+    ['binding', 'Binding acts', true],
+    ['Take to', 'Take … to a team thread', true],
+    ['Take to', 'Taken to the desk', false],
+    ['MAY NOT', 'MAY NOT edit', true],
+    ['MAY NOT', 'Reviewed in May 2026; you may proceed', false],
+    ['PRIVATE', 'PRIVATE', true],
+    ['PRIVATE', 'Private equity', false],
+    ['INTERNAL', 'Internal rate of return', false],
+    ["Firm only · client can't see", 'Firm only · client can\u2019t see', true],
+    ["Firm only · client can't see", "Robert can't see this", false],
+    ['CLIENT CAN SEE', 'CLIENT CAN SEE', true],
+    ['CLIENT CAN SEE', 'no client can see this', false],
+  ])('%s: "%s" -> %s', (word, text, hit) => expect(entry(word).test(text)).toBe(hit))
+})
