@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { useContext, useMemo, useState } from 'react'
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AnnouncerProvider } from '@/kit/announcer/AnnouncerProvider'
 import { KeyboardProvider } from '@/kit/keyboard/KeyboardProvider'
@@ -299,6 +299,21 @@ describe('keyboard', () => {
     render(<AnnouncerProvider><KeyboardProvider destinations={[]}><Jumps onT={onT} /></KeyboardProvider></AnnouncerProvider>)
     await userEvent.keyboard('{Control>}/{/Control}')
     expect(within(screen.getByRole('dialog', { name: 'Keyboard' })).getByRole('switch', { name: 'Single-key shortcuts' })).not.toBeChecked()
+  })
+
+  it('a pointer resting where the keyboard scrolled the list does not take the selection; a real move does', async () => {
+    const destinations = ['Billing', 'Blotter', 'Brief'].map((label) => ({ id: label.toLowerCase(), label, aliases: [], run: vi.fn() }))
+    render(<AnnouncerProvider><KeyboardProvider destinations={destinations}><p>x</p></KeyboardProvider></AnnouncerProvider>)
+    await userEvent.keyboard('/')
+    const option = (name: string) => screen.getByRole('option', { name })
+    fireEvent.pointerMove(option('Billing'), { clientX: 10, clientY: 10 })
+    expect(option('Billing')).toHaveAttribute('aria-selected', 'true')
+    await userEvent.keyboard('{ArrowDown}{ArrowDown}')
+    expect(option('Brief')).toHaveAttribute('aria-selected', 'true')
+    fireEvent.pointerMove(option('Billing'), { clientX: 10, clientY: 10 })
+    expect(option('Brief'), 'the list moved under a resting pointer').toHaveAttribute('aria-selected', 'true')
+    fireEvent.pointerMove(option('Blotter'), { clientX: 10, clientY: 40 })
+    expect(option('Blotter')).toHaveAttribute('aria-selected', 'true')
   })
 
   it('a click on a destination goes there; pointing at one makes it active; the active one is kept in view', async () => {

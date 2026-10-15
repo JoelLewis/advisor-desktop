@@ -19,14 +19,15 @@ test('the command line at 1440×600 shows its title, its field and Close · base
   await expectNoAxeViolations(page)
 })
 
-test('the Resolve dialog at 320 px reaches its title, its select and Confirm · baseline', async ({ page }) => {
-  await page.setViewportSize({ width: 320, height: 568 })
+test('the Resolve dialog at 320×400 scrolls to reach its title, its select and Confirm · baseline', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 400 })
   await visitPhone(page, '/', 'light')
   await openPhonePane(page, 'Threads')
   await deskLink(page, 'Reconciliation').click()
   await page.getByRole('button', { name: 'Resolve brk-002', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Resolve brk-002?' })
   await expect(dialog.getByRole('heading', { name: 'Resolve brk-002?' })).toBeInViewport()
+  expect(await dialog.evaluate((el) => el.scrollHeight > el.clientHeight), 'the dialog is taller than the viewport and scrolls').toBe(true)
   await dialog.getByLabel('Resolution').scrollIntoViewIfNeeded()
   await expect(dialog.getByLabel('Resolution')).toBeInViewport()
   await dialog.getByRole('button', { name: 'Confirm' }).scrollIntoViewIfNeeded()

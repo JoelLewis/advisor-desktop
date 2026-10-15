@@ -14,3 +14,8 @@ it('leaves text without an id or date as it is', () => {
   const { container } = render(<p><Unbroken text="Approve a proposal first." /></p>)
   expect(container.querySelector('p')!.innerHTML).toBe('Approve a proposal first.')
 })
+
+it('keeps a lowercase id such as a reconciliation break whole', () => {
+  const { container } = render(<p><Unbroken text="Resolve brk-002?" /></p>)
+  expect([...container.querySelectorAll('span.whitespace-nowrap')].map((s) => s.textContent)).toEqual(['brk-002'])
+})

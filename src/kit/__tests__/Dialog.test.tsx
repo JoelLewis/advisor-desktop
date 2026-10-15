@@ -111,6 +111,13 @@ it('leaves focus where the page put it when the dialog was torn down with its pa
 it('never grows past the viewport: its content scrolls', () => {
   render(<Dialog open onOpenChange={() => {}} title="Long"><p>Body</p></Dialog>)
   const dialog = screen.getByRole('dialog', { name: 'Long' })
-  expect(dialog.className).toContain('max-h-[calc(100dvh-2rem)]')
+  expect(dialog.className).toContain('supports-[height:100dvh]:max-h-[calc(100dvh-2rem)]')
+  expect(dialog.className).toContain('max-h-[calc(100vh-2rem)]')
   expect(dialog.className).toContain('overflow-y-auto')
+})
+
+it('never breaks an id in its title at the hyphen', () => {
+  render(<Dialog open onOpenChange={() => {}} title="Resolve brk-002?"><p>x</p></Dialog>)
+  const title = screen.getByRole('heading', { name: 'Resolve brk-002?' })
+  expect(title.querySelector('span.whitespace-nowrap')).toHaveTextContent(/^brk-002$/)
 })
