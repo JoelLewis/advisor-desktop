@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { useContext, useMemo, useState } from 'react'
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { AnnouncerProvider } from '@/kit/announcer/AnnouncerProvider'
 import { KeyboardProvider } from '@/kit/keyboard/KeyboardProvider'
 import { useJumpKeys } from '@/kit/keyboard/use-jump-keys'
 import { KeyboardContext } from '@/kit/keyboard/keyboard-context'
@@ -269,5 +270,34 @@ describe('keyboard', () => {
     await waitFor(() => expect(screen.getByRole('combobox', { name: 'Go to' })).toHaveFocus())
     await userEvent.keyboard('{Escape}')
     await waitFor(() => expect(opener).toHaveFocus())
+  })
+  it('with single-key shortcuts off: t, / and ? do nothing; Ctrl+K and Ctrl+/ still open the command line and the sheet', async () => {
+    localStorage.setItem('ws-single-keys', 'off')
+    const onT = vi.fn()
+    render(<AnnouncerProvider><KeyboardProvider destinations={[]}><Jumps onT={onT} /></KeyboardProvider></AnnouncerProvider>)
+    await userEvent.keyboard('t/?')
+    expect(onT).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog')).toBeNull()
+    await userEvent.keyboard('{Control>}k{/Control}')
+    expect(screen.getByRole('dialog', { name: 'Command line' })).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    await userEvent.keyboard('{Control>}/{/Control}')
+    expect(screen.getByRole('dialog', { name: 'Keyboard' })).toBeInTheDocument()
+  })
+  it('the sheet holds the switch; turning it off stops the single keys and is remembered', async () => {
+    const onT = vi.fn()
+    const view = render(<AnnouncerProvider><KeyboardProvider destinations={[]}><Jumps onT={onT} /></KeyboardProvider></AnnouncerProvider>)
+    await userEvent.keyboard('?')
+    const toggle = within(screen.getByRole('dialog', { name: 'Keyboard' })).getByRole('switch', { name: 'Single-key shortcuts' })
+    expect(toggle).toBeChecked()
+    await userEvent.click(toggle)
+    expect(toggle).not.toBeChecked()
+    expect(localStorage.getItem('ws-single-keys')).toBe('off')
+    await userEvent.keyboard('{Escape}t')
+    expect(onT).not.toHaveBeenCalled()
+    view.unmount()
+    render(<AnnouncerProvider><KeyboardProvider destinations={[]}><Jumps onT={onT} /></KeyboardProvider></AnnouncerProvider>)
+    await userEvent.keyboard('{Control>}/{/Control}')
+    expect(within(screen.getByRole('dialog', { name: 'Keyboard' })).getByRole('switch', { name: 'Single-key shortcuts' })).not.toBeChecked()
   })
 })

@@ -119,17 +119,31 @@ describe('keyboard in the shell', () => {
     else await within(screen.getByRole('main')).findByRole('alert')
     await waitFor(() => expect(screen.queryByRole('complementary')).toBeNull())
     expect(document.getElementById('context-column')).toBeNull()
-    const legend = within(screen.getByRole('banner')).getByRole('list', { name: 'Keys' })
-    expect(legend).not.toHaveTextContent('Context column')
+    await userEvent.keyboard('?')
+    expect(screen.getByRole('dialog', { name: 'Keyboard' })).not.toHaveTextContent('Context column')
   })
 
-  it('the top bar legend shows the shell jump keys; ] only where there is a context column', async () => {
+  it('the key sheet lists the shell jump keys; ] only where there is a context column', async () => {
     await renderAt('/')
-    const legend = within(screen.getByRole('banner')).getByRole('list', { name: 'Keys' })
-    expect(legend).toHaveTextContent('Thread list')
-    expect(legend).not.toHaveTextContent('Context column')
+    await userEvent.keyboard('?')
+    const sheet = screen.getByRole('dialog', { name: 'Keyboard' })
+    expect(sheet).toHaveTextContent('Thread list')
+    expect(sheet).not.toHaveTextContent('Context column')
+    await userEvent.keyboard('{Escape}')
     await userEvent.click(within(threadNav()).getByRole('link', { name: 'Brief' }))
-    await waitFor(() => expect(legend).toHaveTextContent('Context column'))
+    await waitFor(() => expect(document.getElementById('context-column')).not.toBeNull())
+    await userEvent.keyboard('?')
+    await waitFor(() => expect(screen.getByRole('dialog', { name: 'Keyboard' })).toHaveTextContent('Context column'))
+  })
+
+  it('shows only the two global keys in the header, and their modifier forms once single keys are off', async () => {
+    await renderAt('/')
+    const legend = screen.getByRole('list', { name: 'Keys' })
+    expect(within(legend).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['/command', '?keys'])
+    await userEvent.keyboard('?')
+    await userEvent.click(screen.getByRole('switch', { name: 'Single-key shortcuts' }))
+    await userEvent.keyboard('{Escape}')
+    expect(within(legend).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Ctrl/⌘ Kcommand', 'Ctrl/⌘ /keys'])
   })
 
   it('a route change focuses the new page heading', async () => {

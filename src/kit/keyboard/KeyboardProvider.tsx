@@ -3,6 +3,7 @@ import { KeyboardContext } from './keyboard-context'
 import { isEditableTarget, type Binding, type Destination } from './keys'
 import { CommandLine } from './CommandLine'
 import { KeySheet } from './KeySheet'
+import { isCommandChord, isSheetChord, readSingleKeys, saveSingleKeys } from './single-keys'
 
 const OPEN_DIALOG = '[role="dialog"][data-state="open"]'
 const RESERVED = ['/', '?']
@@ -24,6 +25,8 @@ export function KeyboardProvider({ destinations, children }: { destinations: Des
   const nextOrder = useRef(0)
   const [commandOpen, setCommandOpen] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [singleKeys, setSingleKeysState] = useState(readSingleKeys)
+  const setSingleKeys = useCallback((on: boolean) => { saveSingleKeys(on); setSingleKeysState(on) }, [])
 
   const commit = useCallback(() => setRegistrations(new Map(registrationsRef.current)), [])
 
@@ -54,8 +57,10 @@ export function KeyboardProvider({ destinations, children }: { destinations: Des
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.repeat || e.isComposing) return
-      if (e.ctrlKey || e.metaKey || e.altKey || isEditableTarget(e.target)) return
       if (commandOpen || sheetOpen || document.querySelector(OPEN_DIALOG)) return
+      if (isCommandChord(e)) { e.preventDefault(); setCommandOpen(true); return }
+      if (isSheetChord(e)) { e.preventDefault(); setSheetOpen(true); return }
+      if (!singleKeys || e.ctrlKey || e.metaKey || e.altKey || isEditableTarget(e.target)) return
       if (e.key === '/') { e.preventDefault(); setCommandOpen(true); return }
       if (e.key === '?') { e.preventDefault(); setSheetOpen(true); return }
       const match = bindings.find((b) => b.key === e.key)
@@ -63,15 +68,18 @@ export function KeyboardProvider({ destinations, children }: { destinations: Des
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [bindings, commandOpen, sheetOpen])
+  }, [bindings, commandOpen, sheetOpen, singleKeys])
 
-  const value = useMemo(() => ({ register, bindings, orderSize }), [register, bindings, orderSize])
+  const value = useMemo(
+    () => ({ register, bindings, orderSize, singleKeys, setSingleKeys }),
+    [register, bindings, orderSize, singleKeys, setSingleKeys],
+  )
 
   return (
     <KeyboardContext.Provider value={value}>
       {children}
       <CommandLine open={commandOpen} onOpenChange={setCommandOpen} destinations={destinations} />
-      <KeySheet open={sheetOpen} onOpenChange={setSheetOpen} bindings={bindings} />
+      <KeySheet open={sheetOpen} onOpenChange={setSheetOpen} bindings={bindings} singleKeys={singleKeys} onSingleKeys={setSingleKeys} />
     </KeyboardContext.Provider>
   )
 }

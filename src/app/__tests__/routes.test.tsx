@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { routes } from '@/app/routes'
 import { http, HttpResponse } from 'msw'
 import { renderRoutes } from '@/test/render'
@@ -119,11 +120,12 @@ describe('routes', () => {
     expect(losses.length).toBeGreaterThan(0)
     for (const loss of losses) expect(loss).toHaveClass('font-semibold')
   })
-  it('the key legend shows the gallery\'s own jump key', async () => {
+  it('the key sheet lists the gallery\'s own jump key', async () => {
     await renderKitReady()
-    const legend = screen.getByRole('contentinfo')
-    expect(within(legend).getByText('t')).toBeInTheDocument()
-    expect(within(legend).getByText('Cycle theme')).toBeInTheDocument()
+    await userEvent.keyboard('?')
+    const sheet = screen.getByRole('dialog', { name: 'Keyboard' })
+    expect(within(sheet).getByText('t')).toBeInTheDocument()
+    expect(within(sheet).getByText('Cycle theme')).toBeInTheDocument()
   })
   it('the kit shows the engine error message when its data fails to load', async () => {
     server.use(http.get('/api/workspace/people', () => HttpResponse.json({ message: 'Directory offline' }, { status: 500 })))

@@ -183,3 +183,13 @@ test.describe('a browser that blocks service workers', () => {
     await expectNoAxeViolations(page)
   })
 })
+
+test('the key sheet with the single-key setting · baseline', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await visit(page, '/', 'light')
+  await settle(page)
+  await page.keyboard.press('?')
+  await expect(page.getByRole('dialog', { name: 'Keyboard' }).getByRole('switch', { name: 'Single-key shortcuts' })).toBeChecked()
+  await expect(page).toHaveScreenshot('key-sheet-light.png', SCREENSHOT)
+  await expectNoAxeViolations(page)
+})

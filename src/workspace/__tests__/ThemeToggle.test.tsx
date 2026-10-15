@@ -1,10 +1,11 @@
 import { afterEach, describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ThemeToggle } from '@/workspace/shell/ThemeToggle'
+import { AnnouncerProvider } from '@/kit/announcer/AnnouncerProvider'
 import { KeyboardProvider } from '@/kit/keyboard/KeyboardProvider'
 
-const renderToggle = () => render(<KeyboardProvider destinations={[]}><ThemeToggle /></KeyboardProvider>)
+const renderToggle = () => render(<AnnouncerProvider><KeyboardProvider destinations={[]}><ThemeToggle /></KeyboardProvider></AnnouncerProvider>)
 
 afterEach(() => {
   document.documentElement.removeAttribute('data-theme')
@@ -46,5 +47,12 @@ describe('ThemeToggle', () => {
     expect(screen.getByRole('button', { name: 'Theme: light' })).toBeTruthy()
     await user.keyboard('?')
     expect(screen.getByRole('dialog', { name: 'Keyboard' })).toHaveTextContent('Cycle theme')
+  })
+  it('is a quiet text control, and a change made by key is announced', async () => {
+    renderToggle()
+    expect(screen.getByRole('button', { name: 'Theme: system' })).toHaveAttribute('data-rank', 'quiet')
+    await userEvent.keyboard('t')
+    await act(() => new Promise<void>((r) => requestAnimationFrame(() => r())))
+    expect(document.querySelector('[data-part="announcer"]')).toHaveTextContent('Theme: light')
   })
 })

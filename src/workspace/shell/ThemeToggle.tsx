@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useAnnounce } from '@/kit/announcer/use-announce'
 import { Button } from '@/kit/button/Button'
 import { useJumpKeys } from '@/kit/keyboard/use-jump-keys'
 import { applyTheme, readThemeChoice, saveThemeChoice, themeFromSearch, type ThemeChoice } from '@/kit/theme'
@@ -8,10 +9,12 @@ const LABEL: Record<ThemeChoice, string> = { system: 'Theme: system', light: 'Th
 
 export function ThemeToggle() {
   const [choice, setChoice] = useState<ThemeChoice>(() => themeFromSearch(window.location.search) ?? readThemeChoice())
+  const announce = useAnnounce()
   const next = () => {
     const c = NEXT[choice]
     applyTheme(c); saveThemeChoice(c); setChoice(c)
+    announce(LABEL[c])
   }
   useJumpKeys('theme', [{ key: 't', label: 'Cycle theme', run: next }])
-  return <Button rank="secondary" onClick={next}>{LABEL[choice]}</Button>
+  return <Button rank="quiet" onClick={next}>{LABEL[choice]}</Button>
 }
