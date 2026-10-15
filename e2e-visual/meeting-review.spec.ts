@@ -45,7 +45,7 @@ const meetingBefore = (theme: Theme) => async (page: Page) => {
   await toMeetingThread(page)
   await runPrep(page)
   await meetingView(page)
-  await expect(page.getByRole('table', { name: 'Household accounts' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Household reference' })).toBeVisible()
   await settle(page)
 }
 

@@ -41,9 +41,21 @@ describe('the meeting full view', () => {
     expect(await links.findByRole('link', { name: 'Robert Johnson' })).toHaveAttribute('href', '/clients/cli-001?from=th-johnson-meeting')
     expect(await links.findByRole('link', { name: 'Patricia Johnson' })).toHaveAttribute('href', '/clients/cli-002?from=th-johnson-meeting')
     expect(links.queryByRole('link', { name: 'Adrian Hale' })).toBeNull()
+    await userEvent.setup().click(within(within(main).getByRole('region', { name: 'Household reference' })).getByText('Household reference'))
     expect(await within(main).findByRole('table', { name: 'Household accounts' })).toBeInTheDocument()
     expect(within(main).queryByRole('list', { name: 'Transcript' })).toBeNull()
     expect(await within(liveThread()).findByRole('list', { name: 'Thread feed' })).toHaveTextContent('Agenda v1 · Proposed an agenda ordered by what needs attention first.')
+  })
+
+  it('reads in the order of the meeting: agenda, then transcript and notes, then the household reference, folded', async () => {
+    await heldWithNotes()
+    await openMeeting()
+    const agenda = screen.getByRole('heading', { level: 2, name: 'Agenda' })
+    const transcript = await screen.findByRole('heading', { level: 2, name: 'Transcript' })
+    const reference = screen.getByRole('region', { name: 'Household reference' })
+    expect(agenda.compareDocumentPosition(transcript) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(transcript.compareDocumentPosition(reference) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(reference.querySelector('details')).not.toHaveAttribute('open')
   })
 
   it('holding from here moves the meeting on; the transcript arrives beside the notes', async () => {

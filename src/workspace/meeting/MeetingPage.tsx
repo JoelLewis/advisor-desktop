@@ -83,16 +83,23 @@ function MeetingFullView({ meeting, directory }: { meeting: MeetingView; directo
       </header>
       <MeetingControls meeting={meeting} canPrepare={canPrepare} onRecorded={setRecordedActId}
         filingBlockedReason={dirty ? SAVE_BEFORE_FILING : undefined} />
+      <Pane title="Agenda" meta={current ? `v${current.n}` : undefined}>
+        <AgendaEditor meeting={meeting} findings={agendaFindings(thread.data?.messages ?? [])} editable={canPrepare && meeting.state === 'scheduled'} />
+      </Pane>
       {meeting.transcript ? <TranscriptNotes meeting={meeting} directory={directory} editable={canPrepare && meeting.state === 'held'} onDirtyChange={setDirty} /> : null}
       {meeting.state === 'filed' ? (
         <Pane title="Follow-up tasks"><TaskTable caption="Follow-up tasks" tasks={meeting.tasks} directory={directory} /></Pane>
       ) : null}
-      <Pane title="Agenda" meta={current ? `v${current.n}` : undefined}>
-        <AgendaEditor meeting={meeting} findings={agendaFindings(thread.data?.messages ?? [])} editable={canPrepare && meeting.state === 'scheduled'} />
-      </Pane>
-      {household.isPending ? <p role="status" className="text-body text-ink-3">Loading the household…</p>
-        : household.isError ? <p role="alert" className="text-body">{household.error.message}</p>
-        : <HouseholdSummaryPanes summary={household.data} />}
+      <section aria-label="Household reference" className="flex min-w-0 flex-col gap-3">
+        <details>
+          <summary className="cursor-pointer border-b border-ink pb-2 text-label uppercase text-ink-2">Household reference</summary>
+          <div className="mt-4">
+            {household.isPending ? <p role="status" className="text-body text-ink-3">Loading the household…</p>
+              : household.isError ? <p role="alert" className="text-body">{household.error.message}</p>
+              : <HouseholdSummaryPanes summary={household.data} />}
+          </div>
+        </details>
+      </section>
     </div>
   )
 }
