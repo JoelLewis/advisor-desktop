@@ -104,12 +104,12 @@ describe('DataTable', () => {
     expect(screen.getByText('No positions.')).toBeInTheDocument()
   })
   it('keeps exactly one tab stop after rows shrink past the cursor', async () => {
-    const view = renderTable()
+    const view = renderTable({ onActivate: () => {} })
     act(() => screen.getAllByRole('row')[1]!.focus())
     await userEvent.keyboard('{End}')
     await act(async () => {
       view.rerender(
-        <DataTable caption="Holdings" columns={columns} rows={rows.slice(0, 1)} getRowId={(r) => r.id}
+        <DataTable caption="Holdings" columns={columns} rows={rows.slice(0, 1)} getRowId={(r) => r.id} onActivate={() => {}}
           noun={{ singular: 'position', plural: 'positions' }} />,
       )
     })
@@ -117,7 +117,7 @@ describe('DataTable', () => {
     expect(body.filter((r) => r.tabIndex === 0)).toHaveLength(1)
   })
   it('keeps the cursor on the same row when a sort reorders rows', async () => {
-    renderTable()
+    renderTable({ onActivate: () => {} })
     act(() => screen.getAllByRole('row')[1]!.focus())
     await userEvent.click(within(screen.getByRole('columnheader', { name: /Value/ })).getByRole('button'))
     const body = screen.getAllByRole('row').slice(1)
@@ -125,7 +125,7 @@ describe('DataTable', () => {
     expect(within(body.find((r) => r.tabIndex === 0)!).getByText('SPY')).toBeInTheDocument()
   })
   it('jumps with Home and End', async () => {
-    renderTable()
+    renderTable({ onActivate: () => {} })
     const body = screen.getAllByRole('row').slice(1)
     act(() => body[0]!.focus())
     await userEvent.keyboard('{End}')
@@ -168,7 +168,7 @@ describe('DataTable', () => {
       ...columns,
       { id: 'note', header: 'Note', cell: (r) => <input aria-label={`note ${r.id}`} /> },
     ]
-    renderTable({ columns: withInput })
+    renderTable({ columns: withInput, onActivate: () => {} })
     const input = screen.getByLabelText('note b')
     await userEvent.type(input, 'j')
     expect(input).toHaveFocus()
@@ -177,14 +177,14 @@ describe('DataTable', () => {
     expect(body[1]!.tabIndex).toBe(0)
   })
   it('ignores modifier chords', async () => {
-    renderTable()
+    renderTable({ onActivate: () => {} })
     const body = screen.getAllByRole('row').slice(1)
     act(() => body[0]!.focus())
     await userEvent.keyboard('{Control>}j{/Control}')
     expect(body[0]).toHaveFocus()
   })
   it('accepts capital J and K', async () => {
-    renderTable()
+    renderTable({ onActivate: () => {} })
     const body = screen.getAllByRole('row').slice(1)
     act(() => body[0]!.focus())
     await userEvent.keyboard('J')
@@ -246,5 +246,39 @@ describe('DataTable row keys, muted rows, wrapping columns', () => {
     render(<DataTable caption="Names" rows={rows} getRowId={(r) => r.id} noun={{ singular: 'row', plural: 'rows' }}
       columns={[{ id: 'symbol', header: 'Symbol', cell: (r) => r.symbol, wrap: true }]} />)
     expect(screen.getByRole('cell', { name: 'SPY' })).toHaveClass('whitespace-normal')
+  })
+
+  describe('grid semantics', () => {
+    type Id = { id: string }
+    const idRows: Id[] = [{ id: 'a' }, { id: 'b' }]
+    const idColumns: Column<Id>[] = [{ id: 'id', header: 'Id', cell: (r) => r.id }]
+    const noun = { singular: 'row', plural: 'rows' }
+
+    it('a read-only table is a plain table with no Tab stop', () => {
+      render(<DataTable caption="Read" rows={idRows} columns={idColumns} getRowId={(r) => r.id} noun={noun} />)
+      expect(screen.getByRole('table', { name: 'Read' })).not.toHaveAttribute('role')
+      for (const row of screen.getAllByRole('row')) expect(row).not.toHaveAttribute('tabindex')
+    })
+
+    it('a table with row actions is a grid: one row in the Tab order, expanded state and keys stated', () => {
+      render(<DataTable caption="Legs" rows={idRows} columns={idColumns} getRowId={(r) => r.id} noun={noun}
+        onActivate={() => {}} expandedRowId="b" rowKeys={[{ key: 'x', run: () => {} }]} />)
+      const grid = screen.getByRole('grid', { name: 'Legs' })
+      const [a, b] = within(grid).getAllByRole('row').slice(1)
+      expect(a).toHaveAttribute('tabindex', '0')
+      expect(b).toHaveAttribute('tabindex', '-1')
+      expect(a).toHaveAttribute('aria-expanded', 'false')
+      expect(b).toHaveAttribute('aria-expanded', 'true')
+      expect(a).toHaveAttribute('aria-keyshortcuts', 'Enter x')
+    })
+
+    it('renders a row again only when its own data or state changes', () => {
+      const cell = vi.fn((r: Id) => r.id)
+      const memoColumns: Column<Id>[] = [{ id: 'id', header: 'Id', cell }]
+      const { rerender } = render(<DataTable caption="M" rows={idRows} columns={memoColumns} getRowId={(r) => r.id} noun={noun} />)
+      cell.mockClear()
+      rerender(<DataTable caption="M" rows={idRows} columns={memoColumns} getRowId={(r) => r.id} noun={noun} />)
+      expect(cell).not.toHaveBeenCalled()
+    })
   })
 })

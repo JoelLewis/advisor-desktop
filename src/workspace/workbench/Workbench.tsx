@@ -1,7 +1,8 @@
 import { useCallback, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Pane } from '@/kit/layout/Pane'
-import { fmtEasternStamp } from '@/kit/measure'
+import { useAnnounce } from '@/kit/announcer/use-announce'
+import { fmtEasternStamp, fmtQuantity } from '@/kit/measure'
 import { PAGE_TITLE_ID } from '@/kit/page/ids'
 import { useThread } from '@/hooks/use-workspace'
 import { useViewer } from '@/workspace/viewer/use-viewer'
@@ -15,6 +16,7 @@ import { DraftBar } from './DraftBar'
 import { LegDetail } from './LegDetail'
 import { WorkbenchLegs } from './WorkbenchLegs'
 import { WorkbenchSummary } from './WorkbenchSummary'
+import { legRows } from './leg-rows'
 import { isExcluded, lotsOf, quantityOf, type TypedQuantity } from './edit-draft'
 import { useDraftVersion } from './use-draft-version'
 import { useSaveShortcut } from './use-save-shortcut'
@@ -56,7 +58,16 @@ export function Workbench({ detail, directory }: { detail: ProposalDetail; direc
     quantity: (quantity: number | undefined) => draft.dispatch({ type: 'set_quantity', symbol, quantity }),
     lots: (lotIds: string[]) => draft.dispatch({ type: 'set_lots', symbol, lotIds }),
   })
-  const expandedEdit = expanded && canEdit ? edit(expanded) : undefined
+  const announce = useAnnounce()
+  const toggleWithAnnouncement = (symbol: string) => {
+    const rows = legRows(view)
+    const excludedNow = rows.filter((r) => isExcluded(draft.edits, r.symbol)).length
+    const nowExcluded = !isExcluded(draft.edits, symbol)
+    edit(symbol).toggleExclude()
+    const inDraft = rows.length - (nowExcluded ? excludedNow + 1 : excludedNow - 1)
+    announce(`${symbol} ${nowExcluded ? 'excluded' : 'included'} · ${fmtQuantity(inDraft)} of ${fmtQuantity(rows.length)} legs in the draft`)
+  }
+  const expandedEdit = expanded && canEdit ? { ...edit(expanded), toggleExclude: () => toggleWithAnnouncement(expanded) } : undefined
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <header className="flex flex-col gap-2">
@@ -73,9 +84,9 @@ export function Workbench({ detail, directory }: { detail: ProposalDetail; direc
       {canEdit ? <DraftBar draft={draft} latestVersion={latest.n} saveEnabled={saveEnabled} onBeforeSave={commitTyping} onSave={saveOnScreen} /> : null}
       {thread.data !== undefined && !canEdit && !closed ? <p className="text-body text-ink-3">You can read this proposal but not change it.</p> : null}
       <Pane title="Legs" meta={draft.dirty && !notPreviewed ? 'draft' : `v${latest.n}`}>
-        <WorkbenchLegs view={view} caption={caption}
+        <WorkbenchLegs view={view} caption={caption} expandedSymbol={expanded}
           onExpand={(s) => setExpanded((open) => (open === s ? undefined : s))}
-          onToggleExclude={canEdit ? (symbol) => edit(symbol).toggleExclude() : undefined} />
+          onToggleExclude={canEdit ? toggleWithAnnouncement : undefined} />
         {expanded ? (
           <LegDetail key={expanded} accountId={detail.accountId} view={view} symbol={expanded}
             excluded={isExcluded(draft.edits, expanded)}

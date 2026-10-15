@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { memo, useCallback, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import {
-  flexRender, getCoreRowModel, getSortedRowModel, useReactTable, type ColumnDef, type SortingState,
+  flexRender, getCoreRowModel, getSortedRowModel, useReactTable, type ColumnDef, type Row, type SortingState,
 } from '@tanstack/react-table'
 import { cn } from '@/lib/utils'
 import { MeasureError } from '@/kit/measure'
@@ -36,10 +36,64 @@ type DataTableProps<T> = {
   initialSort?: { id: string; desc: boolean }
   rowKeys?: readonly RowKey<T>[]
   mutedRow?: (row: T) => boolean
+  /** The id of the row whose detail is open; given, every row says whether it is the open one. */
+  expandedRowId?: string
 }
 
+type DataTableRowProps<T> = {
+  row: Row<T>
+  index: number
+  tabbable: boolean | undefined
+  expanded: boolean | undefined
+  muted: boolean
+  shortcuts: string | undefined
+  density: Density
+  columns: Column<T>[]
+  onRowKeyDown: (e: KeyboardEvent<HTMLTableRowElement>, index: number) => void
+  onRowFocus: (id: string) => void
+  onRowActivate: ((row: T) => void) | undefined
+  rowRef: (index: number, el: HTMLTableRowElement | null) => void
+}
+
+function DataTableRowView<T>({
+  row, index, tabbable, expanded, muted, shortcuts, density, columns, onRowKeyDown, onRowFocus, onRowActivate, rowRef,
+}: DataTableRowProps<T>) {
+  const interactive = tabbable !== undefined
+  const byId = new Map(columns.map((c) => [c.id, c]))
+  return (
+    <tr
+      ref={(el) => rowRef(index, el)}
+      tabIndex={tabbable === undefined ? undefined : tabbable ? 0 : -1}
+      aria-expanded={expanded}
+      aria-keyshortcuts={interactive ? shortcuts : undefined}
+      onFocus={interactive ? () => onRowFocus(row.id) : undefined}
+      onKeyDown={interactive ? (e) => onRowKeyDown(e, index) : undefined}
+      onClick={onRowActivate ? (e) => { if (!isInteractiveTarget(e.target)) onRowActivate(row.original) } : undefined}
+      data-muted={muted ? 'true' : undefined}
+      className={cn('border-b border-rule', interactive && 'focus-visible:bg-band', ROW_HEIGHT[density], muted && 'text-ink-3')}
+    >
+      {row.getVisibleCells().map((cell) => {
+        const col = byId.get(cell.column.id)
+        const p = col?.proportion?.(row.original)
+        return (
+          <td key={cell.id} role={interactive ? 'gridcell' : undefined} className={cn(col?.wrap ? 'min-w-32 whitespace-normal px-2 py-1' : 'whitespace-nowrap px-2', col?.align === 'right' ? 'text-right tabular' : 'text-left')}>
+            {p !== undefined ? (
+              <span className="inline-flex w-full items-center justify-end gap-2">
+                <span aria-hidden className="inline-block h-1.5 bg-ink-3" style={{ width: `${Math.round(Math.max(0, Math.min(1, p)) * 64)}px` }} />
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </span>
+            ) : flexRender(cell.column.columnDef.cell, cell.getContext())}
+          </td>
+        )
+      })}
+    </tr>
+  )
+}
+
+const DataTableRow = memo(DataTableRowView) as typeof DataTableRowView
+
 export function DataTable<T>({
-  caption, columns, rows, getRowId, noun, empty, total, density = 'regular', totals, onActivate, initialSort, rowKeys, mutedRow,
+  caption, columns, rows, getRowId, noun, empty, total, density = 'regular', totals, onActivate, initialSort, rowKeys, mutedRow, expandedRowId,
 }: DataTableProps<T>) {
   assertTies(totals?.tiesTo)
   const [sorting, setSorting] = useState<SortingState>(initialSort ? [initialSort] : [])
@@ -72,36 +126,46 @@ export function DataTable<T>({
   const shown = sorted.length
   const all = total ?? rows.length
   const byId = new Map(columns.map((c) => [c.id, c]))
+  const interactive = onActivate !== undefined || (rowKeys ?? []).length > 0
+  const shortcuts = [...(onActivate ? ['Enter'] : []), ...(rowKeys ?? []).map((k) => k.key)].join(' ')
 
   const foundIndex = sorted.findIndex((r) => r.id === activeId)
   const activeIndex = foundIndex === -1 ? 0 : foundIndex
 
-  const moveTo = (index: number) => {
-    const next = Math.max(0, Math.min(shown - 1, index))
-    const target = sorted[next]
-    if (!target) return
-    setActiveId(target.id)
-    rowRefs.current[next]?.focus()
-  }
+  const latest = useRef({ sorted, shown, onActivate, rowKeys })
+  latest.current = { sorted, shown, onActivate, rowKeys }
 
-  const onKeyDown = (e: KeyboardEvent<HTMLTableRowElement>, index: number) => {
+  const rowRef = useCallback((index: number, el: HTMLTableRowElement | null) => { rowRefs.current[index] = el }, [])
+  const onRowFocus = useCallback((id: string) => setActiveId(id), [])
+
+  const onRowKeyDown = useCallback((e: KeyboardEvent<HTMLTableRowElement>, index: number) => {
+    const { sorted: rowsNow, shown: count, onActivate: activate, rowKeys: keys } = latest.current
+    const moveTo = (to: number) => {
+      const next = Math.max(0, Math.min(count - 1, to))
+      const target = rowsNow[next]
+      if (!target) return
+      setActiveId(target.id)
+      rowRefs.current[next]?.focus()
+    }
     if (e.target !== e.currentTarget || e.metaKey || e.ctrlKey || e.altKey) return
     if (e.key === 'ArrowDown' || e.key === 'j' || e.key === 'J') { e.preventDefault(); moveTo(index + 1) }
     else if (e.key === 'ArrowUp' || e.key === 'k' || e.key === 'K') { e.preventDefault(); moveTo(index - 1) }
     else if (e.key === 'Home') { e.preventDefault(); moveTo(0) }
-    else if (e.key === 'End') { e.preventDefault(); moveTo(shown - 1) }
-    else if (e.key === 'Enter' && onActivate) { e.preventDefault(); const r = sorted[index]; if (r) onActivate(r.original) }
+    else if (e.key === 'End') { e.preventDefault(); moveTo(count - 1) }
+    else if (e.key === 'Enter' && activate) { e.preventDefault(); const r = rowsNow[index]; if (r) activate(r.original) }
     else {
-      const binding = rowKeys?.find((k) => k.key === e.key)
-      const r = sorted[index]
+      const binding = keys?.find((k) => k.key === e.key)
+      const r = rowsNow[index]
       if (binding && r) { e.preventDefault(); e.stopPropagation(); binding.run(r.original) }
     }
-  }
+  }, [])
+
+  const activateLatest = useCallback((row: T) => latest.current.onActivate?.(row), [])
 
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <div className="min-w-0 overflow-x-auto" data-scroll="table">
-        <table className="min-w-full border-collapse">
+        <table role={interactive ? 'grid' : undefined} className="min-w-full border-collapse">
           <caption className="sr-only">{caption}</caption>
           <thead>
             {table.getHeaderGroups().map((group) => (
@@ -136,36 +200,23 @@ export function DataTable<T>({
           <tbody>
             {shown === 0 ? (
               <tr><td colSpan={columns.length} className="px-2 py-3 text-body text-ink-3">{all === 0 ? (empty ?? `No ${noun.plural}.`) : `None of ${all} ${all === 1 ? noun.singular : noun.plural} shown.`}</td></tr>
-            ) : sorted.map((row, i) => {
-              const muted = mutedRow?.(row.original) === true
-              return (
-                <tr
-                  key={row.id}
-                  ref={(el) => { rowRefs.current[i] = el }}
-                  tabIndex={i === activeIndex ? 0 : -1}
-                  onFocus={() => setActiveId(row.id)}
-                  onKeyDown={(e) => onKeyDown(e, i)}
-                  onClick={onActivate ? (e) => { if (!isInteractiveTarget(e.target)) onActivate(row.original) } : undefined}
-                  data-muted={muted ? 'true' : undefined}
-                  className={cn('border-b border-rule focus-visible:bg-band', ROW_HEIGHT[density], muted && 'text-ink-3')}
-                >
-                  {row.getVisibleCells().map((cell) => {
-                    const col = byId.get(cell.column.id)
-                    const p = col?.proportion?.(row.original)
-                    return (
-                      <td key={cell.id} className={cn(col?.wrap ? 'min-w-32 whitespace-normal px-2 py-1' : 'whitespace-nowrap px-2', col?.align === 'right' ? 'text-right tabular' : 'text-left')}>
-                        {p !== undefined ? (
-                          <span className="inline-flex w-full items-center justify-end gap-2">
-                            <span aria-hidden className="inline-block h-1.5 bg-ink-3" style={{ width: `${Math.round(Math.max(0, Math.min(1, p)) * 64)}px` }} />
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </span>
-                        ) : flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    )
-                  })}
-                </tr>
-              )
-            })}
+            ) : sorted.map((row, i) => (
+              <DataTableRow
+                key={row.id}
+                row={row}
+                index={i}
+                tabbable={interactive ? i === activeIndex : undefined}
+                expanded={expandedRowId === undefined ? undefined : row.id === expandedRowId}
+                muted={mutedRow?.(row.original) === true}
+                shortcuts={shortcuts}
+                density={density}
+                columns={columns}
+                onRowKeyDown={onRowKeyDown}
+                onRowFocus={onRowFocus}
+                onRowActivate={onActivate ? activateLatest : undefined}
+                rowRef={rowRef}
+              />
+            ))}
           </tbody>
           {totals ? (
             <tfoot>

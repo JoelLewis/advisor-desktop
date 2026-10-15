@@ -32,7 +32,7 @@ test("the README's five-minute path, end to end", async ({ page }) => {
   await expect(embed.getByRole('table', { name: 'Proposal legs · v2' })).toBeVisible()
   await embed.getByRole('link', { name: 'Workbench' }).click()
   await expect(heading(page)).toHaveText('Johnson rebalance')
-  await page.getByRole('table', { name: 'Legs · v2' }).getByRole('row', { name: /^QAI/ }).focus()
+  await page.getByRole('grid', { name: 'Legs · v2' }).getByRole('row', { name: /^QAI/ }).focus()
   await page.keyboard.press('x')
   await page.keyboard.press('ControlOrMeta+s')
   await expect(page.getByRole('group', { name: 'Draft version' }).getByText('Saved as v3 · posted to the thread.')).toBeVisible()

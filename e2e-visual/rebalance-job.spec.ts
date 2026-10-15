@@ -24,7 +24,7 @@ const workbench = (theme: Theme) => async (page: Page) => {
   await askProposalAgent(page, theme)
   await embedOf(page).getByRole('link', { name: 'Workbench' }).click()
   await expect(heading(page)).toHaveText('Johnson rebalance')
-  await expect(page.getByRole('table', { name: 'Legs · v1' })).toBeVisible()
+  await expect(page.getByRole('grid', { name: 'Legs · v1' })).toBeVisible()
   await expect(page.getByRole('group', { name: 'Draft version' })).toContainText('Showing v1')
   await settle(page)
 }
@@ -133,11 +133,11 @@ test('one presenter runs Brief → proposal → revise → workbench → approve
   // 5. The workbench, by keyboard: open INTC's lots, exclude a leg, save v3 with ⌘S / Ctrl+S; the live thread shows v3.
   await embed.getByRole('link', { name: 'Workbench' }).click()
   await expect(heading(page)).toHaveText('Johnson rebalance')
-  const v2Legs = page.getByRole('table', { name: 'Legs · v2' })
+  const v2Legs = page.getByRole('grid', { name: 'Legs · v2' })
   await expect(v2Legs).toBeVisible()
   await v2Legs.getByRole('row', { name: /^QAI/ }).focus()
   await page.keyboard.press('x')
-  const draftLegs = page.getByRole('table', { name: 'Legs · draft' })
+  const draftLegs = page.getByRole('grid', { name: 'Legs · draft' })
   await expect(draftLegs.getByRole('row', { name: /^QAI/ })).toHaveAttribute('data-muted', 'true')
   await draftLegs.getByRole('row', { name: /^INTC/ }).focus()
   await page.keyboard.press('Enter')

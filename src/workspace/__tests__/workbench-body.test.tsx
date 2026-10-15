@@ -12,7 +12,7 @@ async function openWorkbench() {
   await createProposal('user-001', 'th-johnson-review', 'acc-002')
   renderRoutes(routes, '/proposals/prop-0001?from=th-johnson-review')
   await screen.findByRole('heading', { level: 1, name: 'Johnson rebalance' })
-  return screen.findByRole('table', { name: 'Legs · v1' })
+  return screen.findByRole('grid', { name: 'Legs · v1' })
 }
 
 describe('the workbench body', () => {

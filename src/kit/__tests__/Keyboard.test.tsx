@@ -85,7 +85,7 @@ describe('keyboard', () => {
       <KeyboardProvider destinations={[]}>
         <Jumps onT={onJ} keyName="j" />
         <DataTable caption="Rows" columns={[{ id: 'id', header: 'Id', cell: (r: { id: string }) => r.id }]} rows={rows}
-          getRowId={(r) => r.id} noun={{ singular: 'row', plural: 'rows' }} />
+          getRowId={(r) => r.id} noun={{ singular: 'row', plural: 'rows' }} onActivate={() => {}} />
       </KeyboardProvider>,
     )
     const body = screen.getAllByRole('row').slice(1)
