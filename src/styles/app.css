@@ -1,0 +1,152 @@
+@import "tailwindcss";
+@import "@fontsource-variable/archivo/wdth.css";
+@source not "../**/__tests__/**";
+@source not "../../docs";
+
+/* tokens:start — the only place color values may appear (guardrail 2) */
+:root {
+  --ws-bg: oklch(0.944 0.003 250);
+  --ws-face: oklch(0.986 0.0015 250);
+  --ws-ink: oklch(0.205 0.006 250);
+  --ws-ink-2: oklch(0.39 0.006 250);
+  --ws-ink-3: oklch(0.47 0.006 250);
+  --ws-rule: oklch(0.86 0.004 250);
+  --ws-rule-2: oklch(0.57 0.005 250);
+  --ws-band: oklch(0.9 0.004 250);
+  --ws-signal: oklch(0.6 0.2 41);
+  --ws-signal-ink: oklch(0.5 0.17 39);
+  --ws-scrim: var(--ws-ink);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ws-bg: oklch(0.172 0.004 250);
+    --ws-face: oklch(0.212 0.004 250);
+    --ws-ink: oklch(0.935 0.004 250);
+    --ws-ink-2: oklch(0.8 0.005 250);
+    --ws-ink-3: oklch(0.69 0.005 250);
+    --ws-rule: oklch(0.315 0.005 250);
+    --ws-rule-2: oklch(0.55 0.005 250);
+    --ws-band: oklch(0.26 0.005 250);
+    --ws-signal: oklch(0.72 0.17 47);
+    --ws-signal-ink: oklch(0.77 0.15 52);
+    --ws-scrim: oklch(0.08 0.004 250);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ws-bg: oklch(0.172 0.004 250);
+  --ws-face: oklch(0.212 0.004 250);
+  --ws-ink: oklch(0.935 0.004 250);
+  --ws-ink-2: oklch(0.8 0.005 250);
+  --ws-ink-3: oklch(0.69 0.005 250);
+  --ws-rule: oklch(0.315 0.005 250);
+  --ws-rule-2: oklch(0.55 0.005 250);
+  --ws-band: oklch(0.26 0.005 250);
+  --ws-signal: oklch(0.72 0.17 47);
+  --ws-signal-ink: oklch(0.77 0.15 52);
+  --ws-scrim: oklch(0.08 0.004 250);
+  color-scheme: dark;
+}
+/* tokens:end */
+
+@theme {
+  --color-*: initial;
+  --font-*: initial;
+  --shadow-*: initial;
+  --inset-shadow-*: initial;
+  --drop-shadow-*: initial;
+
+  --color-bg: var(--ws-bg);
+  --color-face: var(--ws-face);
+  --color-ink: var(--ws-ink);
+  --color-ink-2: var(--ws-ink-2);
+  --color-ink-3: var(--ws-ink-3);
+  --color-rule: var(--ws-rule);
+  --color-rule-2: var(--ws-rule-2);
+  --color-band: var(--ws-band);
+  --color-signal: var(--ws-signal);
+  --color-signal-ink: var(--ws-signal-ink);
+  --color-scrim: var(--ws-scrim);
+
+  --font-sans: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
+
+  --breakpoint-narrow: 768px;
+  --breakpoint-split: 960px;
+  --breakpoint-wide: 1440px;
+
+  --text-label: 0.65625rem;
+  --text-label--line-height: 1.2;
+  --text-label--letter-spacing: 0.07em;
+  --text-label--font-weight: 600;
+  --text-table-dense: 0.78125rem;
+  --text-table-dense--line-height: 1.3;
+  --text-table: 0.8125rem;
+  --text-table--line-height: 1.35;
+  --text-body: 0.875rem;
+  --text-body--line-height: 1.5;
+  --text-copy: 0.96875rem;
+  --text-copy--line-height: 1.6;
+  --text-title: 1.375rem;
+  --text-title--line-height: 1.2;
+  --text-title--font-weight: 600;
+  --text-total: 1.75rem;
+  --text-total--line-height: 1.1;
+  --text-readout-sm: 2.25rem;
+  --text-readout-sm--line-height: 1;
+  --text-readout-md: clamp(2.25rem, 9vw, 3.5rem);
+  --text-readout-md--line-height: 1;
+  --text-readout-lg: clamp(3.5rem, 14vw, 6.5rem);
+  --text-readout-lg--line-height: 1;
+
+  --animate-gauge-in: gauge-in 520ms cubic-bezier(0.25, 1, 0.5, 1) both;
+  @keyframes gauge-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+}
+
+@custom-variant touch (@media (hover: none));
+@custom-variant coarse (@media (pointer: coarse));
+
+@utility stretch-readout { font-stretch: 125%; }
+@utility stretch-wide { font-stretch: 118%; }
+@utility stretch-table { font-stretch: 92%; }
+@utility stretch-dense { font-stretch: 87.5%; }
+@utility tabular { font-variant-numeric: tabular-nums; }
+@utility hatch {
+  background-image: repeating-linear-gradient(135deg, var(--ws-rule-2) 0 1px, transparent 1px 6px);
+}
+
+@utility hatch-framed {
+  background-image: linear-gradient(var(--ws-face), var(--ws-face)), repeating-linear-gradient(135deg, var(--ws-rule-2) 0 1px, transparent 1px 6px);
+  background-clip: content-box, border-box;
+}
+
+@layer base {
+  html { background: var(--ws-bg); color: var(--ws-ink); }
+  /* Below 768px the sticky pane bar (44px and its rule) covers the top of the page: anything scrolled or focused into view stops below it. */
+  html {
+    @variant max-narrow {
+      scroll-padding-top: 3rem;
+    }
+  }
+  body { font-family: var(--font-sans); font-size: 0.875rem; line-height: 1.5; font-variant-numeric: tabular-nums; }
+  :focus-visible { outline: 2px solid var(--ws-ink); outline-offset: 2px; }
+  /* A finger needs 44px. A control with its own min-h-* utility outranks this and adds coarse:min-h-11 beside it. */
+  button, select, summary, [role="option"], nav a {
+    @variant coarse {
+      min-height: 44px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  }
+}
+
+/* Unlayered on purpose: layered utilities (text-body, text-copy) would outrank a base rule, and iOS zooms into controls under 16px. */
+input, select, textarea {
+  @variant max-narrow {
+    font-size: max(16px, 1rem);
+  }
+}

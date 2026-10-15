@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { MODEL_DEFINITIONS, modelImplementationSecurity, usdQuoteFor } from '@/mocks/handlers/pms'
+import { modelImplementationSecurity, usdQuoteFor } from '@/mocks/handlers/pms'
+import { MODEL_DEFINITIONS } from '@/mocks/data/model-definitions'
 import { accounts } from '@/mocks/data/accounts'
 import { getPositionsForAccount } from '@/mocks/data/positions'
 

@@ -3,7 +3,7 @@ import type { FinancialPlan } from '@/types/planning'
 export const plans: FinancialPlan[] = [
   {
     id: 'plan-001', clientId: 'cli-001', householdId: 'hh-001',
-    aggregateProbability: 0.87, lastUpdated: '2025-11-15', nextReviewDate: '2026-03-01',
+    aggregateProbability: 0.87, lastUpdated: '2025-11-14', nextReviewDate: '2026-02-25',
     goals: [
       { id: 'goal-001', name: 'Retirement Income', type: 'retirement', targetAmount: 15_000_000, currentFunding: 14_200_000, targetDate: '2023-03-22', probability: 0.92, status: 'on_track', shortfallDrivers: [] },
       { id: 'goal-002', name: 'Legacy / Estate', type: 'legacy', targetAmount: 10_000_000, currentFunding: 8_500_000, targetDate: '2040-01-01', probability: 0.78, status: 'at_risk', shortfallDrivers: ['inflation', 'longevity'] },
@@ -11,7 +11,7 @@ export const plans: FinancialPlan[] = [
   },
   {
     id: 'plan-002', clientId: 'cli-003', householdId: 'hh-002',
-    aggregateProbability: 0.91, lastUpdated: '2025-12-01', nextReviewDate: '2026-03-15',
+    aggregateProbability: 0.91, lastUpdated: '2025-12-01', nextReviewDate: '2026-03-13',
     goals: [
       { id: 'goal-003', name: 'Retirement Income', type: 'retirement', targetAmount: 20_000_000, currentFunding: 19_500_000, targetDate: '2030-11-03', probability: 0.94, status: 'on_track', shortfallDrivers: [] },
       { id: 'goal-004', name: 'Philanthropy Fund', type: 'legacy', targetAmount: 5_000_000, currentFunding: 4_200_000, targetDate: '2035-01-01', probability: 0.85, status: 'on_track', shortfallDrivers: [] },

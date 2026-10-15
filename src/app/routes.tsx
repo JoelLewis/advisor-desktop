@@ -1,106 +1,72 @@
-import { lazy, Suspense } from 'react'
-import { createBrowserRouter, Navigate } from 'react-router-dom'
-import { AppShell } from '@/components/layout/AppShell'
-import { PageSkeleton } from '@/components/layout/PageSkeleton'
-import { RouteErrorPage } from '@/components/RouteErrorPage'
+/* eslint-disable react-refresh/only-export-components -- route table module */
+import { createBrowserRouter, type RouteObject } from 'react-router-dom'
+import { WorkspaceShell } from '@/workspace/shell/WorkspaceShell'
+import { WorkspaceHome } from '@/workspace/shell/WorkspaceHome'
+import { AccountView } from '@/workspace/full-views/AccountView'
+import { HouseholdView } from '@/workspace/full-views/HouseholdView'
+import { ClientView } from '@/workspace/full-views/ClientView'
+import { ThreadPage } from '@/workspace/thread/ThreadPage'
+import { ContextColumn } from '@/workspace/context/ContextColumn'
+import { useThreadContextAvailable } from '@/workspace/context/use-thread-context-available'
+import { WorkbenchPage } from '@/workspace/workbench/WorkbenchPage'
+import { WorkbenchThreadColumn } from '@/workspace/workbench/WorkbenchThreadColumn'
+import { useWorkbenchThreadAvailable } from '@/workspace/workbench/use-workbench-thread-available'
+import { MeetingPage } from '@/workspace/meeting/MeetingPage'
+import { MeetingThreadColumn } from '@/workspace/meeting/MeetingThreadColumn'
+import { useMeetingThreadAvailable } from '@/workspace/meeting/use-meeting-thread-available'
+import type { ShellHandle } from '@/workspace/shell/context-column'
+import { RootLayout } from './RootLayout'
+import { PageLoading } from './PageLoading'
+import { RouteError } from './RouteError'
+import { NotFoundPage } from './pages/NotFoundPage'
+import { routerFuture } from './router-flags'
 
-// Lazy-loaded feature pages
-const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })))
-const ClientListPage = lazy(() => import('@/features/clients/ClientListPage').then((m) => ({ default: m.ClientListPage })))
-const ClientDetailPage = lazy(() => import('@/features/clients/ClientDetailPage').then((m) => ({ default: m.ClientDetailPage })))
-const HouseholdDetailPage = lazy(() => import('@/features/clients/HouseholdDetailPage').then((m) => ({ default: m.HouseholdDetailPage })))
-const PortfolioPage = lazy(() => import('@/features/portfolios/PortfolioPage').then((m) => ({ default: m.PortfolioPage })))
-const AccountDetailPage = lazy(() => import('@/features/portfolios/AccountDetailPage').then((m) => ({ default: m.AccountDetailPage })))
-const RebalancePage = lazy(() => import('@/features/portfolios/RebalancePage').then((m) => ({ default: m.RebalancePage })))
-const AttributionPage = lazy(() => import('@/features/portfolios/AttributionPage').then((m) => ({ default: m.AttributionPage })))
-const RiskAnalyticsPage = lazy(() => import('@/features/portfolios/RiskAnalyticsPage').then((m) => ({ default: m.RiskAnalyticsPage })))
-const TaxManagementPage = lazy(() => import('@/features/portfolios/TaxManagementPage').then((m) => ({ default: m.TaxManagementPage })))
-const ProspectsPage = lazy(() => import('@/features/growth/ProspectsPage').then((m) => ({ default: m.ProspectsPage })))
-const RevenuePage = lazy(() => import('@/features/growth/RevenuePage').then((m) => ({ default: m.RevenuePage })))
-const WorkflowCenterPage = lazy(() => import('@/features/workflows/WorkflowCenterPage').then((m) => ({ default: m.WorkflowCenterPage })))
-const SettingsPage = lazy(() => import('@/features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })))
-const OnboardingWizard = lazy(() => import('@/features/onboarding/OnboardingWizard').then((m) => ({ default: m.OnboardingWizard })))
-const ModelGovernancePage = lazy(() => import('@/features/portfolios/ModelGovernancePage').then((m) => ({ default: m.ModelGovernancePage })))
-const TradingPage = lazy(() => import('@/features/portfolios/TradingPage').then((m) => ({ default: m.TradingPage })))
-const ActionsPage = lazy(() => import('@/features/actions/ActionsPage').then((m) => ({ default: m.ActionsPage })))
-const HouseholdListPage = lazy(() => import('@/features/households/HouseholdListPage').then((m) => ({ default: m.HouseholdListPage })))
-const EngagePage = lazy(() => import('@/features/engage/EngagePage').then((m) => ({ default: m.EngagePage })))
-const ProposalWizard = lazy(() => import('@/features/proposals/ProposalWizard').then((m) => ({ default: m.ProposalWizard })))
-const BookOfBusinessPage = lazy(() => import('@/features/growth/BookOfBusinessPage').then((m) => ({ default: m.BookOfBusinessPage })))
-const BillingPage = lazy(() => import('@/features/billing/BillingPage').then((m) => ({ default: m.BillingPage })))
-const ReconciliationPage = lazy(() => import('@/features/reconciliation/ReconciliationPage').then((m) => ({ default: m.ReconciliationPage })))
-const ArchivePage = lazy(() => import('@/features/compliance/ArchivePage').then((m) => ({ default: m.ArchivePage })))
+const threadHandle: ShellHandle = { contextColumn: { label: 'Thread context', Content: ContextColumn, useAvailable: useThreadContextAvailable } }
+const workbenchHandle: ShellHandle = {
+  contextColumn: { label: 'Live thread', Content: WorkbenchThreadColumn, useAvailable: useWorkbenchThreadAvailable },
+  threadList: 'hidden',
+}
+const meetingHandle: ShellHandle = {
+  contextColumn: { label: 'Live thread', Content: MeetingThreadColumn, useAvailable: useMeetingThreadAvailable },
+  threadList: 'hidden',
+}
+const fullWidthHandle: ShellHandle = { threadList: 'hidden' }
 
-const suspense = (node: React.ReactNode) => <Suspense fallback={<PageSkeleton />}>{node}</Suspense>
-
-export const router = createBrowserRouter([
+export const routes: RouteObject[] = [
   {
     path: '/',
-    element: <AppShell />,
-    errorElement: <RouteErrorPage />,
+    element: <RootLayout />,
+    errorElement: <RouteError />,
     children: [
-      { index: true, element: <Navigate to="/dashboard" replace /> },
-      { path: 'dashboard', element: suspense(<DashboardPage />), handle: { breadcrumb: 'Dashboard' } },
-      { path: 'actions', element: suspense(<ActionsPage />), handle: { breadcrumb: 'Actions' } },
       {
-        path: 'clients',
-        handle: { breadcrumb: 'Clients' },
-        errorElement: <RouteErrorPage />,
+        element: <WorkspaceShell />,
         children: [
-          { index: true, element: suspense(<ClientListPage />) },
-          { path: ':clientId', element: suspense(<ClientDetailPage />), handle: { breadcrumb: 'Client' } },
-          { path: 'onboard/:prospectId?', element: suspense(<OnboardingWizard />), handle: { breadcrumb: 'Onboarding' } },
-          { path: ':clientId/proposal', element: suspense(<ProposalWizard />), handle: { breadcrumb: 'Proposal' } },
-          { path: 'prospect/proposal', element: suspense(<ProposalWizard />), handle: { breadcrumb: 'Proposal' } },
+          { index: true, element: <WorkspaceHome /> },
+          { path: 't/:threadId', element: <ThreadPage />, handle: threadHandle },
+          { path: 'accounts/:accountId', element: <AccountView /> },
+          { path: 'households/:householdId', element: <HouseholdView />, handle: fullWidthHandle },
+          { path: 'clients/:clientId', element: <ClientView />, handle: fullWidthHandle },
+          { path: 'archive', lazy: () => import('@/workspace/archive/ArchivePage').then((m) => ({ Component: m.ArchivePage })), HydrateFallback: PageLoading },
+          { path: 'billing', lazy: () => import('@/workspace/reference/BillingPage').then((m) => ({ Component: m.BillingPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
+          { path: 'risk', lazy: () => import('@/workspace/reference/BookRiskPage').then((m) => ({ Component: m.BookRiskPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
+          { path: 'accounts/:accountId/risk', lazy: () => import('@/workspace/reference/AccountRiskPage').then((m) => ({ Component: m.AccountRiskPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
+          { path: 'accounts/:accountId/attribution', lazy: () => import('@/workspace/reference/AttributionPage').then((m) => ({ Component: m.AttributionPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
+          { path: 'models', lazy: () => import('@/workspace/reference/ModelsPage').then((m) => ({ Component: m.ModelsPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
+          { path: 'models/:modelId', lazy: () => import('@/workspace/reference/ModelPage').then((m) => ({ Component: m.ModelPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
+          { path: 'blotter', lazy: () => import('@/workspace/reference/BlotterPage').then((m) => ({ Component: m.BlotterPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
+          { path: 'practice', lazy: () => import('@/workspace/reference/PracticePage').then((m) => ({ Component: m.PracticePage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
+          { path: 'reconciliation', lazy: () => import('@/workspace/reference/ReconciliationPage').then((m) => ({ Component: m.ReconciliationPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
+          { path: 'supervision', lazy: () => import('@/workspace/supervision/SupervisionPage').then((m) => ({ Component: m.SupervisionPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
+          { path: 'supervision/:kind/:id', lazy: () => import('@/workspace/supervision/SupervisionPage').then((m) => ({ Component: m.SupervisionPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
+          { path: 'proposals/:proposalId', element: <WorkbenchPage />, handle: workbenchHandle },
+          { path: 'meetings/:eventId', element: <MeetingPage />, handle: meetingHandle },
+          { path: 'prospects/:prospectId', lazy: () => import('@/workspace/prospect/ProspectPage').then((m) => ({ Component: m.ProspectPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
         ],
       },
-      {
-        path: 'households',
-        handle: { breadcrumb: 'Households' },
-        errorElement: <RouteErrorPage />,
-        children: [
-          { index: true, element: suspense(<HouseholdListPage />) },
-          { path: ':householdId', element: suspense(<HouseholdDetailPage />), handle: { breadcrumb: 'Household' } },
-        ],
-      },
-      {
-        path: 'portfolios',
-        handle: { breadcrumb: 'Portfolios' },
-        errorElement: <RouteErrorPage />,
-        children: [
-          { index: true, element: suspense(<PortfolioPage />) },
-          { path: 'accounts/:accountId', element: suspense(<AccountDetailPage />), handle: { breadcrumb: 'Account' } },
-          { path: 'accounts/:accountId/attribution', element: suspense(<AttributionPage />), handle: { breadcrumb: 'Attribution' } },
-          { path: 'accounts/:accountId/tax', element: suspense(<TaxManagementPage />), handle: { breadcrumb: 'Tax Management' } },
-          { path: 'rebalance', element: suspense(<RebalancePage />), handle: { breadcrumb: 'Rebalance' } },
-          { path: 'risk', element: suspense(<RiskAnalyticsPage />), handle: { breadcrumb: 'Risk Analytics' } },
-          { path: 'models', element: suspense(<ModelGovernancePage />), handle: { breadcrumb: 'Model Governance' } },
-          { path: 'trading', element: suspense(<TradingPage />), handle: { breadcrumb: 'Trading' } },
-        ],
-      },
-      {
-        path: 'growth',
-        handle: { breadcrumb: 'Growth' },
-        errorElement: <RouteErrorPage />,
-        children: [
-          { index: true, element: suspense(<ProspectsPage />) },
-          { path: 'revenue', element: suspense(<RevenuePage />), handle: { breadcrumb: 'Revenue' } },
-          { path: 'book', element: suspense(<BookOfBusinessPage />), handle: { breadcrumb: 'Book of Business' } },
-          { path: 'billing', element: suspense(<BillingPage />), handle: { breadcrumb: 'Billing' } },
-        ],
-      },
-      { path: 'engage', element: suspense(<EngagePage />), handle: { breadcrumb: 'Engage' } },
-      {
-        path: 'workflows',
-        handle: { breadcrumb: 'Workflows' },
-        errorElement: <RouteErrorPage />,
-        children: [
-          { index: true, element: suspense(<WorkflowCenterPage />) },
-          { path: 'reconciliation', element: suspense(<ReconciliationPage />), handle: { breadcrumb: 'Reconciliation' } },
-          { path: 'archive', element: suspense(<ArchivePage />), handle: { breadcrumb: 'Archive' } },
-        ],
-      },
-      { path: 'settings', element: suspense(<SettingsPage />), handle: { breadcrumb: 'Settings' } },
+      { path: 'kit', lazy: () => import('./pages/KitPage').then((m) => ({ Component: m.KitPage })), HydrateFallback: PageLoading },
+      { path: '*', element: <NotFoundPage /> },
     ],
   },
-])
+]
+
+export const router = createBrowserRouter(routes, { future: routerFuture })

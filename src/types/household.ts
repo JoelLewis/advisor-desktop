@@ -10,11 +10,6 @@ type HouseholdMember = {
   dateOfBirth: string;
 };
 
-type FamilyTreeNode = {
-  member: HouseholdMember;
-  children: FamilyTreeNode[];
-};
-
 type Household = {
   id: string;
   name: string;
@@ -34,15 +29,13 @@ type Household = {
 };
 
 /**
- * D1 · data-quality — the shape a household fixture is allowed to hold. `totalAUM` and `managedAUM`
+ * The shape a household fixture is allowed to hold. `totalAUM` and `managedAUM`
  * are derived from `accounts.ts` and must never appear in a literal.
  */
 type HouseholdFixture = Omit<Household, 'totalAUM' | 'managedAUM'>;
 
 export type {
   HouseholdRelationship,
-  HouseholdMember,
-  FamilyTreeNode,
   Household,
   HouseholdFixture,
 };

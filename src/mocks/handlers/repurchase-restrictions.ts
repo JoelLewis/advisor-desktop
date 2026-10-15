@@ -1,14 +1,14 @@
 import type { Account } from '@/types/account'
 import type { ProposedTrade, RepurchaseRestriction } from '@/services/oms'
 import { isSubjectToWashSale } from '@/lib/security-master'
-import { washSaleWindow } from '../data/realised-sales'
+import { washSaleWindow } from '../data/realized-sales'
 import { openWashSaleWindowsFor, sameWashSaleTaxpayer } from './tax-return'
 
 /** The legs of one account's proposal, as far as a restriction list needs them. */
 export type ProposalLegs = { accountId: string; legs: readonly Pick<ProposedTrade, 'symbol' | 'repurchaseBlockedUntil'>[] }
 
 /**
- * §0.2 · the IRC §1091 repurchase restrictions on `account`: every open window a recorded loss
+ * The IRC §1091 repurchase restrictions on `account`: every open window a recorded loss
  * sale by its wash-sale taxpayer opened, and every window a proposed loss leg in `proposals` by
  * that taxpayer would open if executed on `asOfISO`. The scope is the taxpayer, not the household
  * (`washSaleTaxpayer`): a purchase in the owner's or spouse's IRA washes the loss, while an

@@ -1,0 +1,21 @@
+import { it, expect } from 'vitest'
+import { render, screen, within } from '@testing-library/react'
+import { RecordTrail } from '@/kit/record-trail/RecordTrail'
+
+it('lists ordered steps with state and actor', () => {
+  render(<RecordTrail steps={[
+    { label: 'Plan signed', actor: 'Adrian Hale', state: 'DONE', at: '2026-02-25T12:03:00Z' },
+    { label: 'Exception review of SPY, EFA', actor: 'Mark Davis', state: 'PENDING' },
+    { label: 'Release to the custodian', actor: 'Trading', state: 'NOT STARTED' },
+  ]} />)
+  const items = within(screen.getByRole('list', { name: 'Record trail' })).getAllByRole('listitem')
+  expect(items).toHaveLength(3)
+  expect(within(items[1]!).getByText('PENDING')).toBeInTheDocument()
+  expect(items[1]).toHaveTextContent('Not yet recorded')
+  expect(within(items[0]!).getByText('25 Feb 07:03 ET')).toBeInTheDocument()
+})
+
+it('says so when a step has no named actor, rather than inventing one', () => {
+  render(<RecordTrail steps={[{ label: 'Review opened', state: 'DONE', at: '2026-02-21T14:00:00Z' }]} />)
+  expect(screen.getByRole('listitem')).toHaveTextContent('No named actor')
+})

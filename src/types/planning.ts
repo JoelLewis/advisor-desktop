@@ -31,7 +31,5 @@ type FinancialPlan = {
 
 export type {
   GoalStatus,
-  GoalType,
-  Goal,
   FinancialPlan,
 };

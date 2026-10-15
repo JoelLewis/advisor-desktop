@@ -1,16 +1,15 @@
-export type ActivityType =
+type ActivityType =
   | 'trade'
   | 'meeting'
   | 'email'
   | 'call'
   | 'document'
   | 'rebalance'
-  | 'nba'
   | 'ai_action'
   | 'compliance'
   | 'system'
 
-export type ActivitySource = 'pms' | 'crm' | 'oms' | 'compliance' | 'ai' | 'manual'
+type ActivitySource = 'pms' | 'crm' | 'oms' | 'compliance' | 'ai' | 'manual'
 
 export type ActivityItem = {
   id: string

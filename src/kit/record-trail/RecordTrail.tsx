@@ -1,0 +1,31 @@
+import { cn } from '@/lib/utils'
+import { fmtEasternStamp } from '@/kit/measure'
+
+type TrailState = 'DONE' | 'PENDING' | 'NOT STARTED'
+type TrailStep = { label: string; actor?: string; state: TrailState; at?: string }
+
+const STATE: Record<TrailState, string> = {
+  DONE: 'bg-ink text-face',
+  PENDING: 'border border-ink text-ink',
+  'NOT STARTED': 'border border-dashed border-ink-3 text-ink-3',
+}
+
+// The trail collapses on its own width (@container inline-size containment), so its parent must give it a block or stretched width.
+export function RecordTrail({ steps }: { steps: TrailStep[] }) {
+  return (
+    <ol aria-label="Record trail" className="@container border-t border-ink">
+      {steps.map((s, i) => (
+        <li key={`${i}-${s.label}`} className="grid grid-cols-[10rem_1fr_8rem_auto] items-center gap-3 border-b border-rule py-2 text-body @max-[34rem]:grid-cols-[1fr_auto] @max-[34rem]:gap-y-0.5">
+          <span className="tabular text-label text-ink-3">
+            {s.at ? fmtEasternStamp(s.at) : (<><span aria-hidden="true">—</span><span className="sr-only">Not yet recorded</span></>)}
+          </span>
+          <span className="@max-[34rem]:col-start-1">{s.label}</span>
+          <span className="text-ink-2 @max-[34rem]:col-start-1">
+            {s.actor ?? (<><span aria-hidden="true">—</span><span className="sr-only">No named actor</span></>)}
+          </span>
+          <span className={cn('justify-self-start px-1.5 text-label uppercase @max-[34rem]:col-start-2 @max-[34rem]:row-start-1', STATE[s.state])}>{s.state}</span>
+        </li>
+      ))}
+    </ol>
+  )
+}

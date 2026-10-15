@@ -9,9 +9,11 @@ dist
 test-results/
 *.png
 !public/og-image.png
+!e2e-visual/__baselines__/*.png
 .wrangler/
 CLAUDE.md
 .claude/
 .superpowers/
 PRD-AI-Advisor-Desktop.md
 Design-Spec-AI-Advisor-Desktop.md
+*.tsbuildinfo

@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
-import { get } from '@/services/api-client'
-import type { HeldAwayAsset } from '@/types/held-away'
+import { getHeldAway } from '@/services/crm'
+import { useViewer } from '@/workspace/viewer/use-viewer'
 
 export function useHeldAway(householdId: string) {
+  const { viewerId } = useViewer()
   return useQuery({
-    queryKey: ['held-away', householdId],
-    queryFn: () => get<HeldAwayAsset[]>(`/crm/households/${householdId}/held-away`),
+    queryKey: ['held-away', viewerId, householdId],
+    queryFn: () => getHeldAway(viewerId, householdId),
     enabled: !!householdId,
   })
 }

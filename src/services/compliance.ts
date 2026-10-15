@@ -1,18 +1,13 @@
-import { get, post } from './api-client'
-import type { ComplianceAlert, SupervisionRecord, TradeComplianceRequest, TradeComplianceResult } from '@/types/compliance'
+import { get } from './api-client'
+import type { ComplianceAlert, SupervisionRecord } from '@/types/compliance'
 
-export function getAlerts(params?: Record<string, string>) {
-  return get<ComplianceAlert[]>('/compliance/alerts', params)
+/** Compliance alerts and their records are the firm's: each read names its viewer, and an outsider is told they do not exist. */
+const as = (viewer: string) => ({ 'X-Viewer': viewer })
+
+export function getAlerts(viewer: string, params?: Record<string, string>) {
+  return get<ComplianceAlert[]>('/compliance/alerts', params, as(viewer))
 }
 
-export function getReviewQueue() {
-  return get<ComplianceAlert[]>('/compliance/review-queue')
-}
-
-export function getSupervisionRecords(alertId: string) {
-  return get<SupervisionRecord[]>(`/compliance/alerts/${alertId}/records`)
-}
-
-export function checkTradeCompliance(accounts: TradeComplianceRequest[]) {
-  return post<TradeComplianceResult[]>('/compliance/check-trades', { accounts })
+export function getSupervisionRecords(viewer: string, alertId: string) {
+  return get<SupervisionRecord[]>(`/compliance/alerts/${alertId}/records`, undefined, as(viewer))
 }

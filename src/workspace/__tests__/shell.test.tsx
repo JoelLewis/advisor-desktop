@@ -1,0 +1,202 @@
+import { describe, it, expect, vi } from 'vitest'
+import { screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { delay, http, HttpResponse } from 'msw'
+import type { RouteObject } from 'react-router-dom'
+import { routes } from '@/app/routes'
+import { RootLayout } from '@/app/RootLayout'
+import { renderRoutes } from '@/test/render'
+import { server } from '@/test/server'
+import { WorkspaceShell } from '@/workspace/shell/WorkspaceShell'
+import { WorkspaceHome } from '@/workspace/shell/WorkspaceHome'
+import type { ShellHandle } from '@/workspace/shell/context-column'
+import { PHONE_LAYOUT_QUERY } from '@/workspace/shell/phone-panes'
+
+const threadNav = () => screen.getByRole('navigation', { name: 'Threads' })
+
+async function renderHome() {
+  const view = renderRoutes(routes, '/')
+  await within(threadNav()).findByRole('link', { name: 'Brief' })
+  return view
+}
+
+async function viewAs(option: string) {
+  const user = userEvent.setup()
+  const select = await screen.findByRole('combobox', { name: 'View as' })
+  await screen.findByRole('option', { name: option })
+  await user.selectOptions(select, option)
+}
+
+const groupHeadings = () => within(threadNav()).getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
+const spokenText = (el: Element) => [...el.childNodes]
+  .filter((n) => !(n instanceof Element && n.getAttribute('aria-hidden') === 'true')).map((n) => n.textContent).join('')
+const threadLinks = () => within(threadNav()).getAllByRole('link').map(spokenText)
+
+describe('workspace shell', () => {
+  it('reserves the thread list while it loads: the panes, the legend and the rows the loaded list will have, and a status', async () => {
+    server.use(http.get('/api/workspace/threads', async () => { await delay(200); return HttpResponse.json([]) }))
+    renderRoutes(routes, '/')
+    expect(await screen.findByText('Loading threads…')).toBeInTheDocument()
+    const skeleton = document.querySelector('[data-part="thread-list-skeleton"]')!
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true')
+    expect(skeleton.querySelectorAll('[data-part="skeleton-row"]')).toHaveLength(14)
+    expect(skeleton.querySelectorAll('ul[aria-label="Visibility"] > li')).toHaveLength(3)
+  })
+  it('puts one visibility legend above the threads; each row is a bare mark with its visibility as a description', async () => {
+    await renderHome()
+    const legend = within(threadNav()).getByRole('list', { name: 'Visibility' })
+    expect(within(legend).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Only you', 'Firm only', 'Shared with the client or prospect'])
+    const review = within(threadNav()).getByRole('link', { name: 'Johnson Rebalance Review' })
+    expect(review).toHaveAccessibleDescription("Visibility: Firm only · client can't see")
+    expect(within(threadNav()).getByRole('link', { name: 'Pell · prospect work' })).toHaveAccessibleDescription("Visibility: Firm only · prospect can't see")
+    const spoken = within(threadNav()).queryAllByText(/client can't see/)
+    expect(spoken.length).toBeGreaterThan(0)
+    for (const note of spoken) expect(note).toHaveClass('sr-only')
+  })
+
+  it('as Adrian lists six threads under the three headings, with one h1', async () => {
+    const { container } = await renderHome()
+    await waitFor(() => expect(groupHeadings()).toEqual(['Desk', 'Reference', 'Private', 'Internal', 'Clients and prospects', 'Agents on this desk']))
+    expect(threadLinks()).toEqual(['Supervision', 'Archive', 'Billing', 'Reconciliation', 'Risk', 'Models', 'Practice', 'Blotter', 'Brief', 'Johnson Rebalance Review', 'Johnson annual review', 'Pell · prospect work', 'Robert Johnson', 'Dr. Amanda Pell'])
+    expect(within(threadNav()).getByRole('link', { name: 'Johnson Rebalance Review' })).toHaveAttribute('href', '/t/th-johnson-review')
+    expect(container.querySelectorAll('h1')).toHaveLength(1)
+    expect(screen.getByRole('heading', { level: 1, name: 'Workspace' })).toHaveAttribute('tabindex', '-1')
+    expect(screen.getByRole('main')).toHaveTextContent(/^Workspace.*One advisor's day at Larkfield Advisory/)
+  })
+
+  it('home says the firm and its people are fictional and the date is frozen, and links the Brief in the path', async () => {
+    await renderHome()
+    const main = screen.getByRole('main')
+    expect(main).toHaveTextContent('Larkfield Advisory and everyone in it are fictional, the date is frozen at 25 Feb 2026, and nothing here is investment, tax or legal advice.')
+    expect(within(main).getByRole('link', { name: 'Open the Brief' })).toHaveAttribute('href', '/t/th-brief')
+  })
+
+  it('lays out the frame: banner, thread nav, main, and no context column on home', async () => {
+    await renderHome()
+    const banner = screen.getByRole('banner')
+    expect(within(banner).getByRole('link', { name: 'Advisor Desktop' })).toHaveAttribute('href', '/')
+    expect(within(banner).getByRole('button', { name: /^Theme: / })).toBeInTheDocument()
+    expect(screen.getByRole('main')).toHaveAttribute('id', 'main')
+    expect(screen.queryByRole('complementary')).toBeNull()
+  })
+
+  it('lists the agents of the visible threads with their scopes', async () => {
+    await renderHome()
+    const agents = within(threadNav()).getByRole('heading', { name: 'Agents on this desk' }).closest('section') as HTMLElement
+    expect(within(agents).getByText('Drift Monitor')).toBeInTheDocument()
+    expect(within(agents).getByText('Pre-trade Check')).toBeInTheDocument()
+    expect(agents).toHaveTextContent('may measure and flag')
+    expect(agents).toHaveTextContent('may not clear a block')
+  })
+
+  it('the view-as control lists everyone in the directory with their role, defaulting to Adrian', async () => {
+    await renderHome()
+    const select = await screen.findByRole('combobox', { name: 'View as' })
+    await within(select).findByRole('option', { name: 'Mark Davis · Compliance' })
+    expect(within(select).getAllByRole('option').map((o) => o.textContent)).toEqual([
+      'Adrian Hale · Advisor', 'Sarah Mitchell · Client service', 'Mike Chen · Analyst', 'Mark Davis · Compliance', 'Robert Johnson · Client', 'Dr. Amanda Pell · Prospect',
+    ])
+    expect(select).toHaveValue('user-001')
+  })
+
+  it('shows a client a one-line legend for the one mark they see, with the visibility as a description', async () => {
+    await renderHome()
+    await viewAs('Robert Johnson · Client')
+    await waitFor(() => expect(threadLinks()).toEqual(['Robert Johnson']))
+    const legend = within(threadNav()).getByRole('list', { name: 'Visibility' })
+    expect(within(legend).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Shared with you and your advisor'])
+    expect(within(threadNav()).getByRole('link', { name: 'Robert Johnson' })).toHaveAccessibleDescription('Visibility: CLIENT CAN SEE')
+  })
+
+  it('viewing as Robert leaves only his thread and no agents', async () => {
+    await renderHome()
+    await viewAs('Robert Johnson · Client')
+    await waitFor(() => expect(threadLinks()).toEqual(['Robert Johnson']))
+    await waitFor(() => expect(groupHeadings()).toEqual(['Your conversation']))
+    expect(within(threadNav()).queryByText('Drift Monitor')).toBeNull()
+    expect(screen.getByRole('combobox', { name: 'View as' })).toHaveValue('cli-001')
+  })
+
+  it('the view-as list stays complete while viewing as the client', async () => {
+    await renderHome()
+    await viewAs('Robert Johnson · Client')
+    await waitFor(() => expect(threadLinks()).toEqual(['Robert Johnson']))
+    expect(within(screen.getByRole('combobox', { name: 'View as' })).getAllByRole('option')).toHaveLength(6)
+  })
+
+  it('viewing as Mark Davis shows the two firm threads, not the private brief', async () => {
+    await renderHome()
+    await viewAs('Mark Davis · Compliance')
+    await waitFor(() => expect(threadLinks()).toEqual(['Supervision', 'Archive', 'Billing', 'Reconciliation', 'Risk', 'Models', 'Practice', 'Blotter', 'Johnson Rebalance Review', 'Johnson annual review', 'Pell · prospect work', 'Robert Johnson', 'Dr. Amanda Pell']))
+    expect(groupHeadings()).toEqual(['Desk', 'Reference', 'Internal', 'Clients and prospects', 'Agents on this desk'])
+  })
+
+  it('shows a status while threads load', () => {
+    renderRoutes(routes, '/')
+    expect(within(threadNav()).getByRole('status')).toHaveTextContent('Loading threads…')
+  })
+
+  it('shows the error message when threads fail to load', async () => {
+    server.use(http.get('/api/workspace/threads', () => HttpResponse.json({ message: 'Engine offline' }, { status: 503 })))
+    renderRoutes(routes, '/')
+    const alert = await within(threadNav()).findByRole('alert')
+    expect(alert).toHaveTextContent('Engine offline')
+  })
+
+  it('marks the current thread and renders a route-provided context column outside main', async () => {
+    const handle: ShellHandle = { contextColumn: { label: 'Who can see', Content: () => <p>Adrian Hale · Advisor</p>, useAvailable: () => true } }
+    const table: RouteObject[] = [{
+      path: '/',
+      element: <RootLayout />,
+      children: [{
+        element: <WorkspaceShell />,
+        children: [
+          { index: true, element: <WorkspaceHome /> },
+          { path: 't/:threadId', handle, element: <h1>Thread</h1> },
+        ],
+      }],
+    }]
+    renderRoutes(table, '/t/th-brief')
+    const current = await within(threadNav()).findByRole('link', { name: 'Brief' })
+    expect(current).toHaveAttribute('aria-current', 'page')
+    expect(current).not.toHaveClass('font-semibold')
+    expect(within(current).getByText('Brief')).toHaveClass('font-semibold')
+    expect(within(threadNav()).getByRole('link', { name: 'Robert Johnson' })).not.toHaveAttribute('aria-current')
+    const aside = screen.getByRole('complementary', { name: 'Who can see' })
+    expect(aside).toHaveTextContent('Adrian Hale · Advisor')
+    expect(screen.getByRole('main')).not.toContainElement(aside)
+  })
+
+  it('on a phone shows one pane at a time, the thread first, and switches from the tab bar', async () => {
+    renderRoutes(routes, '/t/th-johnson-review')
+    await screen.findByRole('heading', { level: 1, name: 'Johnson Rebalance Review' })
+    const tabs = screen.getByRole('navigation', { name: 'Panes' })
+    expect(within(tabs).getAllByRole('button').map((b) => b.textContent)).toEqual(['Threads', 'Thread', 'Context'])
+    expect(within(tabs).getByRole('button', { name: 'Thread' })).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('navigation', { name: 'Threads' }).className).toContain('max-narrow:hidden')
+    expect(screen.getByRole('main').className).not.toContain('max-narrow:hidden')
+    await userEvent.setup().click(within(tabs).getByRole('button', { name: 'Context' }))
+    expect(within(tabs).getByRole('button', { name: 'Context' })).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('main').className).toContain('max-narrow:hidden')
+    expect(document.getElementById('context-column')!.className).not.toContain('max-narrow:hidden')
+    expect(document.getElementById('context-column')).toHaveFocus()
+  })
+
+  it('on a phone, a route that opens on the thread list focuses the list, not its hidden h1; the open thread tapped in the list shows it', async () => {
+    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({ matches: query === PHONE_LAYOUT_QUERY, media: query, onchange: null,
+      addListener: vi.fn(), removeListener: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn() }))
+    const user = userEvent.setup()
+    renderRoutes(routes, '/t/th-johnson-review')
+    await screen.findByRole('heading', { level: 1, name: 'Johnson Rebalance Review' })
+    await user.click(screen.getByRole('link', { name: 'Advisor Desktop' }))
+    const tabs = screen.getByRole('navigation', { name: 'Panes' })
+    await waitFor(() => expect(within(tabs).getByRole('button', { name: 'Threads' })).toHaveAttribute('aria-current', 'true'))
+    expect(threadNav()).toHaveFocus()
+    await user.click(within(threadNav()).getByRole('link', { name: 'Johnson Rebalance Review' }))
+    await screen.findByRole('heading', { level: 1, name: 'Johnson Rebalance Review' })
+    await user.click(within(tabs).getByRole('button', { name: 'Threads' }))
+    await user.click(within(threadNav()).getByRole('link', { name: 'Johnson Rebalance Review' }))
+    expect(within(tabs).getByRole('button', { name: 'Thread' })).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('main')).toHaveFocus()
+  })
+})

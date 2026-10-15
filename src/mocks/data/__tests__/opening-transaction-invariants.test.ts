@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { accounts } from '@/mocks/data/accounts'
 import { getPositionsForAccount } from '@/mocks/data/positions'
-import { realisedSales } from '@/mocks/data/realised-sales'
+import { realizedSales } from '@/mocks/data/realized-sales'
 import { generateTaxLots, generateTaxLotsWithSaleRisk, generateTransactions, holdingPeriodOn } from '@/mocks/handlers/custodian'
 import { generateRebalanceTrades } from '@/mocks/handlers/oms'
 
@@ -24,7 +24,7 @@ describe('§0.7 · an opening transaction matches the lots it opened', () => {
   })
 
   it('every recorded sale of a held position opens on the oldest lot date of that position', () => {
-    for (const sale of realisedSales) {
+    for (const sale of realizedSales) {
       const a = account(sale.accountId)
       const position = getPositionsForAccount(a.id, a.totalValue).find((p) => p.symbol === sale.symbol)
       if (!position) continue
@@ -34,7 +34,7 @@ describe('§0.7 · an opening transaction matches the lots it opened', () => {
   })
 
   it("every recorded sale's holding period agrees with its opening transaction", () => {
-    for (const sale of realisedSales) {
+    for (const sale of realizedSales) {
       const opened = openingFor(sale.accountId, sale.symbol).date.slice(0, 10)
       expect(holdingPeriodOn(opened, sale.saleDate), `${sale.id} opened ${opened}, sold ${sale.saleDate}`).toBe(sale.holdingPeriod)
     }

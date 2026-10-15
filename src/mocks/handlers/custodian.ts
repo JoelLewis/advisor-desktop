@@ -2,8 +2,10 @@ import { http, HttpResponse } from 'msw'
 import type { Transaction } from '@/services/custodian'
 import type { TaxLot } from '@/types/portfolio'
 import { accounts } from '../data/accounts'
-import { getPositionsForAccount } from '../data/positions'
-import { realisedSales } from '../data/realised-sales'
+import { cashBalanceOf, getPositionsForAccount, seedPositionsForAccount } from '../data/positions'
+import { bookOf, ledgerFills } from '../data/portfolio-ledger'
+import { refuseExternal } from './workspace-http'
+import { realizedSales } from '../data/realized-sales'
 import { openWashSaleWindowsFor, sameWashSaleTaxpayer } from './tax-return'
 import { isTaxableAccount } from '@/lib/tax-treatment'
 import { notFound } from './utils'
@@ -16,8 +18,8 @@ import type { Account } from '@/types/account'
 const DAY_MS = 1000 * 60 * 60 * 24
 
 /**
- * C12 · tax-loss-harvesting / data-quality — lots must partition their position, and transactions
- * (D33) must be deterministic and priced from the position they reference. The previous generators
+ * Lots must partition their position, and transactions
+ * must be deterministic and priced from the position they reference. The previous generators
  * called `Math.random()` directly: lot cost basis was unrelated to the position's own `costBasis`
  * and `gainLoss` so lots never summed to the position, transaction prices were drawn from a fresh
  * random range unrelated to any real holding, and both modules changed on every page load.
@@ -150,37 +152,35 @@ function heldOn(pos: { id: string }, dateISO: string): boolean {
 export function generateTransactions(accountId: string, totalValue: number): Transaction[] {
   const baseDate = startOfToday()
   const rand = seeded(`txn:${accountId}`)
-  const held = getPositionsForAccount(accountId, totalValue).filter((p) => p.symbol !== 'CASH')
+  const held = seedPositionsForAccount(accountId, totalValue).filter((p) => p.symbol !== 'CASH')
   const txns: Transaction[] = []
   const trades: TradeShell[] = []
 
-  // C14 · data-integrity — every realised sale in `realisedSales` must appear in its own account's
-  // transaction stream as a real sell (previously the two fixtures were unrelated: acc-002's
-  // stream held exactly one sell, SPY, never the INTC sale the tax page reports as having
-  // happened on 2026-02-20; acc-007's stream held zero sells at all). The PRNG below never draws
+  // Every realized sale in `realizedSales` appears in its own account's transaction stream as a
+  // real sell (acc-002's INTC sale of 2026-02-20 among them). The PRNG below never draws
   // these symbols for its own buy/sell trades (see `tradePool`), so the match is exact — the
   // fixture's sale, not a coincidentally similar random one.
-  const accountSales = realisedSales.filter((s) => s.accountId === accountId)
+  const accountSales = realizedSales.filter((s) => s.accountId === accountId)
   const soldSymbols = new Set(accountSales.map((s) => s.symbol))
   const heldBySymbol = new Map(held.map((p) => [p.symbol, p]))
-  // §0.7 · a position still held was opened when its oldest lot was bought: acc-002's INTC opening
+  // A position still held was opened when its oldest lot was bought: acc-002's INTC opening
   // was dated 2025-12-27 against a lot bought 2022-07-25, and a long-term sale (rs-001) cannot come
   // out of shares bought two months earlier.
   const oldestLotDate = new Map<string, string>()
-  for (const lot of soldSymbols.size > 0 ? generateTaxLots(accountId, totalValue) : []) {
+  for (const lot of soldSymbols.size > 0 ? seedTaxLots(accountId, totalValue) : []) {
     const known = oldestLotDate.get(lot.positionId)
     if (known === undefined || lot.purchaseDate < known) oldestLotDate.set(lot.positionId, lot.purchaseDate)
   }
 
-  // Task 13's running-balance model starts every symbol at zero 60 days ago — already unrealistic
+  // The running-balance model starts every symbol at zero 60 days ago — already unrealistic
   // (it implicitly claims the account held nothing two months ago), and it makes an injected sell
   // of an already-established position impossible without a preceding buy. Seed an opening balance
   // instead: `opening = current position quantity + total quantity sold in the window`. That's
   // self-consistent — the position existed before the window, the fixture sale(s) draw it down by
   // exactly the sold amount, and the running balance lands on today's real holding: 0 for
   // acc-007/acc-022 (sold out entirely) or the current quantity for acc-002/acc-015/acc-011 (sold
-  // only part). Modelled as a real 'buy' transaction dated before the earliest of this symbol's
-  // sales, so the existing per-symbol running-balance check (D33) — which recomputes balances from
+  // only part). Modeled as a real 'buy' transaction dated before the earliest of this symbol's
+  // sales, so the existing per-symbol running-balance check — which recomputes balances from
   // the transaction stream alone, starting at zero — verifies the same invariant it already
   // verifies for every other symbol, rather than needing a carve-out.
   for (const symbol of soldSymbols) {
@@ -223,7 +223,7 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
       date: new Date(`${sale.saleDate}T00:00:00Z`).toISOString(),
       type: 'sell',
       symbol: sale.symbol,
-      description: `Sold ${sale.quantity.toLocaleString()} shares ${sale.symbol}`,
+      description: `Sold ${sale.quantity.toLocaleString('en-US')} shares ${sale.symbol}`,
       amount: sale.proceeds,
       quantity: sale.quantity,
       price: sale.proceeds / sale.quantity,
@@ -241,7 +241,7 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
       date: new Date(`${openedOn}T00:00:00Z`).toISOString(),
       type: 'buy',
       symbol: pos.symbol,
-      description: `Bought ${pos.quantity.toLocaleString()} shares ${pos.symbol}`,
+      description: `Bought ${pos.quantity.toLocaleString('en-US')} shares ${pos.symbol}`,
       amount: -pos.costBasis,
       quantity: pos.quantity,
       price: pos.costBasis / pos.quantity,
@@ -258,7 +258,7 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
   for (let i = 0; i < 20; i++) {
     const daysAgo = Math.floor(rand() * 60)
     const date = new Date(baseDate)
-    date.setDate(date.getDate() - daysAgo)
+    date.setUTCDate(date.getUTCDate() - daysAgo)
     const dateStr = date.toISOString()
 
     const typeRoll = rand()
@@ -337,6 +337,15 @@ export function generateTransactions(accountId: string, totalValue: number): Tra
     })
   }
 
+  // The session's fills follow the fixture history, as the custodian would report them.
+  for (const fill of ledgerFills().filter((f) => f.accountId === accountId)) {
+    txns.push({
+      id: `txn-${fill.id}`, accountId, date: fill.at, type: fill.side, symbol: fill.symbol,
+      description: `${fill.side === 'buy' ? 'Bought' : 'Sold'} ${fill.quantity.toLocaleString('en-US')} shares ${fill.symbol}`,
+      amount: fill.side === 'buy' ? -fill.value : fill.value, quantity: fill.quantity, price: fill.price,
+    })
+  }
+
   return txns.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 }
 
@@ -369,11 +378,15 @@ export function washSaleAcquisitions(account: Account, lotsFor: (a: Account) => 
 
 /**
  * The account's lots, each with `saleWash`: how many of its shares would have their loss taken by
- * §1091 if the taxpayer harvested every loss lot today (`matchWashedShares`), split by whether
+ * §1091 if this account harvested every loss lot today (`matchWashedShares`), split by whether
  * that loss is deferred into a taxable replacement's basis or permanently disallowed by an IRA or
  * Roth replacement. A lot at a gain, and every lot in an account whose sales are not taxed, has
  * nothing to lose and reads 0/0; so does a coin held directly, which §1091 does not reach
  * (`matchWashedShares` skips it, `isSubjectToWashSale`).
+ *
+ * Each account is asked on its own, against every acquisition of its taxpayer. A total summed
+ * across accounts (the book-level reading in `ai.ts`) may therefore count one replacement share
+ * against two accounts' losses: it overstates what washes, the safe direction for a harvest.
  *
  * The rebalance engine reads the same acquisitions. Its generator's first `washSaleRisk` on a sell
  * leg judges the whole leg on its net result (`hasWashSaleRisk`); the preview then settles every
@@ -393,30 +406,36 @@ export function generateTaxLotsWithSaleRisk(accountId: string, totalValue: numbe
     if (symbol === undefined) throw new Error(`tax lot ${lotId} is missing from its taxpayer's acquisitions`)
     return symbol
   }
-  // Losses on lots in taxable accounts are the ones a harvest realises; they compete, across the
-  // taxpayer's accounts, for the same replacement shares.
-  const lossLots = sameWashSaleTaxpayer(account)
-    .filter((a) => isTaxableAccount(a.taxTreatment))
-    .flatMap((a) => lotsFor(a).filter((l) => l.gainLoss < 0).map((l) => ({
+  // Only this account's loss lots are sold in the question asked; replacements come from every
+  // account of the taxpayer. Matching other accounts' losses too would let an older lot elsewhere
+  // absorb the replacement shares and show this account's loss as clean.
+  const lossLots = isTaxableAccount(account.taxTreatment)
+    ? own.filter((l) => l.gainLoss < 0).map((l) => ({
       lotId: l.id, symbol: symbolOf(l.id), purchaseDate: l.purchaseDate, quantity: l.quantity,
-    })))
+    }))
+    : []
   const washed = matchWashedShares(lossLots, acquisitions, MOCK_TODAY_ISO)
   return own.map((lot) => ({ ...lot, saleWash: washed.get(lot.id) ?? { deferredShares: 0, disallowedShares: 0 } }))
 }
 
-export function generateTaxLots(accountId: string, totalValue: number): CustodianLot[] {
-  const positions = getPositionsForAccount(accountId, totalValue)
+/**
+ * The last day each symbol may not be bought back, for the account's
+ * wash-sale taxpayer (`openWashSaleWindowsFor`), IRAs and Roths included. Windows arrive sorted by
+ * `end`, so the last one written per symbol is the latest to close. An account that can't be
+ * resolved restricts nothing.
+ */
+function repurchaseBlocksFor(accountId: string): Map<string, string> {
+  const account = accounts.find((a) => a.id === accountId)
+  return new Map(account ? openWashSaleWindowsFor(account, MOCK_TODAY_ISO).map((w) => [w.symbol, w.end]) : [])
+}
+
+/** The fixtures' lots, partitioning each fixture position: the book before the session moved it. */
+export function seedTaxLots(accountId: string, totalValue: number): CustodianLot[] {
+  const positions = seedPositionsForAccount(accountId, totalValue)
   const anchor = startOfToday()
   const lots: CustodianLot[] = []
 
-  const account = accounts.find((a) => a.id === accountId)
-  // C12 · tax-loss-harvesting — scoped to the wash-sale taxpayer (`openWashSaleWindowsFor`), IRAs
-  // and Roths included, because a repurchase in any of them triggers §1091 (the "IRA wash-sale
-  // trap"). An account that can't be resolved must restrict nothing, not everything.
-  // Windows arrive sorted by `end`, so the last one written per symbol is the latest to close.
-  const repurchaseBlockedUntil = new Map(
-    account ? openWashSaleWindowsFor(account, MOCK_TODAY_ISO).map((w) => [w.symbol, w.end]) : [],
-  )
+  const repurchaseBlockedUntil = repurchaseBlocksFor(accountId)
 
   for (const pos of positions) {
     if (pos.symbol === 'CASH') continue
@@ -442,7 +461,7 @@ export function generateTaxLots(accountId: string, totalValue: number): Custodia
     // Older lots first, so FIFO and LIFO orderings are meaningful.
     const drawnAges = Array.from({ length: lotCount }, () => 3 + Math.floor(rand() * 45))
       .sort((a, b) => b - a)
-    // §0.7 · no lot predates its security: IBIT drew 2022 and 2023 dates for a fund launched in
+    // No lot predates its security: IBIT drew 2022 and 2023 dates for a fund launched in
     // January 2024. The draws are kept (the PRNG stream, and so every other lot, is unchanged)
     // and only capped at the inception.
     const inception = inceptionDate(pos.symbol)
@@ -456,9 +475,9 @@ export function generateTaxLots(accountId: string, totalValue: number): Custodia
       const share = shares[i]!
       const monthsAgo = new Date(anchor)
       // UTC, not local: `anchor` is UTC midnight, and local get/set-Month would bake in the
-      // host timezone's day-of-month, making the serialised date machine-dependent.
+      // host timezone's day-of-month, making the serialized date machine-dependent.
       monthsAgo.setUTCMonth(monthsAgo.getUTCMonth() - ages[i]!)
-      // Final review I2 · a whole-month age anchored on the 25th lands on a weekend or holiday
+      // A whole-month age anchored on the 25th lands on a weekend or holiday
       // about a third of the time, and a lot is bought on a day the market trades. The date rolls
       // back to the last trading day after the draws, so the PRNG stream is unchanged. A roll of a
       // few days never changes the holding period: the one lot near a year old (12 months,
@@ -495,48 +514,42 @@ export function generateTaxLots(accountId: string, totalValue: number): Custodia
   return lots
 }
 
+/** The account's lots as they stand: the ledger's once the session has moved the account, else the fixtures'. */
+export function generateTaxLots(accountId: string, totalValue: number): CustodianLot[] {
+  const moved = bookOf(accountId)
+  if (!moved) return seedTaxLots(accountId, totalValue)
+  const blocked = repurchaseBlocksFor(accountId)
+  const symbolOf = new Map(moved.positions.map((p) => [p.id, p.symbol]))
+  const symbolOfLot = (lot: { id: string; positionId: string }) => {
+    const symbol = symbolOf.get(lot.positionId)
+    if (symbol === undefined) throw new Error(`Lot ${lot.id} belongs to no position of account ${accountId}`)
+    return symbol
+  }
+  return moved.lots.map((lot) => ({ ...lot, repurchaseBlockedUntil: blocked.get(symbolOfLot(lot)) ?? null }))
+}
+
+const withBookCash = (a: Account): Account => ({ ...a, cashBalance: cashBalanceOf(a) })
+
 export const custodianHandlers = [
-  http.get('/api/custodian/accounts', ({ request }) => {
-    const url = new URL(request.url)
-    const clientId = url.searchParams.get('clientId')
-    const householdId = url.searchParams.get('householdId')
-
-    let filtered = [...accounts]
-    if (clientId) filtered = filtered.filter((a) => a.clientId === clientId)
-    if (householdId) filtered = filtered.filter((a) => a.householdId === householdId)
-
-    return HttpResponse.json(filtered)
-  }),
-
-  http.get('/api/custodian/accounts/:accountId', ({ params }) => {
+  http.get('/api/custodian/accounts/:accountId', ({ params, request }) => {
+    const refused = refuseExternal(request)
+    if (refused) return refused
     const account = accounts.find((a) => a.id === params.accountId)
     if (!account) return notFound()
-    return HttpResponse.json(account)
+    return HttpResponse.json(withBookCash(account))
   }),
 
-  http.get('/api/custodian/accounts/:accountId/balances', ({ params }) => {
-    const account = accounts.find((a) => a.id === params.accountId)
-    if (!account) return notFound()
-    return HttpResponse.json({
-      totalValue: account.totalValue,
-      cashBalance: account.cashBalance,
-      marginBalance: 0,
-    })
-  }),
-
-  http.get('/api/custodian/accounts/:accountId/transactions', ({ params }) => {
-    const account = accounts.find((a) => a.id === params.accountId)
-    if (!account) return notFound()
-    return HttpResponse.json(generateTransactions(account.id, account.totalValue))
-  }),
-
-  http.get('/api/custodian/accounts/:accountId/tax-lots', ({ params }) => {
+  http.get('/api/custodian/accounts/:accountId/tax-lots', ({ params, request }) => {
+    const refused = refuseExternal(request)
+    if (refused) return refused
     const account = accounts.find((a) => a.id === params.accountId)
     if (!account) return notFound()
     return HttpResponse.json(generateTaxLotsWithSaleRisk(account.id, account.totalValue))
   }),
 
-  http.get('/api/custodian/accounts/:accountId/realised-sales', ({ params }) => {
+  http.get('/api/custodian/accounts/:accountId/realized-sales', ({ params, request }) => {
+    const refused = refuseExternal(request)
+    if (refused) return refused
     const account = accounts.find((a) => a.id === params.accountId)
     if (!account) return notFound()
     return HttpResponse.json(openWashSaleWindowsFor(account, MOCK_TODAY_ISO))

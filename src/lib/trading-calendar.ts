@@ -73,3 +73,24 @@ export function isDuringNyseSession(timestamp: string): boolean {
   const at = new Date(timestamp).getTime()
   return at >= Date.parse(open) && at <= Date.parse(close)
 }
+
+/** The nth NYSE trading day after the date of `iso` (n ≥ 1): when something due "in n trading days" falls due. */
+export function tradingDaysAfter(iso: string, n: number): string {
+  if (!Number.isInteger(n) || n < 1) throw new Error(`tradingDaysAfter needs a whole number of days of at least one, not ${n}`)
+  let date = utcDate(iso)
+  let counted = 0
+  while (counted < n) {
+    date = new Date(date.getTime() + DAY_MS)
+    if (isTradingDay(date.toISOString())) counted += 1
+  }
+  return date.toISOString().slice(0, 10)
+}
+
+/** Whether `day` is a real `YYYY-MM-DD` date inside the years this calendar covers, on which the NYSE trades. Never throws. */
+export function isCoveredTradingDay(day: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return false
+  const date = new Date(`${day}T00:00:00Z`)
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== day) return false
+  const year = date.getUTCFullYear()
+  return year >= FIRST_YEAR && year <= LAST_YEAR && isTradingDay(day)
+}

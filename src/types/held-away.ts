@@ -1,7 +1,7 @@
 import type { Currency, Percentage } from './common'
 import type { AssetClass } from './portfolio'
 
-export type HeldAwayAssetClass = {
+type HeldAwayAssetClass = {
   assetClass: AssetClass
   percentage: Percentage
 }
@@ -16,16 +16,6 @@ export type HeldAwayAsset = {
   lastUpdated: string
   assetClasses: HeldAwayAssetClass[]
   consolidationOpportunity: boolean
-}
-
-export type ProposalStatus = 'draft' | 'presented' | 'accepted' | 'declined'
-
-export type ConsolidationProposal = {
-  id: string
-  householdId: string
-  heldAwayAssetIds: string[]
-  estimatedFeeSavings: Currency
-  estimatedTaxEfficiency: Percentage
-  proposalStatus: ProposalStatus
-  createdAt: string
+  /** Shares of a company that is not listed: never substantially identical to a listed security. */
+  isPrivateCompanyStock?: boolean
 }

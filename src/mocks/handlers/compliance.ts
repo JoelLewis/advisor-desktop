@@ -1,15 +1,16 @@
 import { http, HttpResponse } from 'msw'
-import type { ComplianceAlert, SupervisionRecord, TradeComplianceRequest, TradeComplianceCheck, TradeComplianceResult } from '@/types/compliance'
+import type { ComplianceAlert, SupervisionRecord } from '@/types/compliance'
 import { todayISO } from '@/lib/clock'
 import { securityKind, concentrationLimitFor } from '@/lib/security-master'
 import { accounts } from '../data/accounts'
-import { getPositionsForAccount } from '../data/positions'
+import { cashBalanceOf, getPositionsForAccount } from '../data/positions'
 import { personById } from '../data/people'
 import { openWashSaleWindowsFor } from './tax-return'
+import { refuseExternal } from './workspace-http'
 import type { ProposalTradeLeg, ProposalViolation, ProposalLegResult, PreTradeCheckProposalResult } from '@/services/oms'
 
 /**
- * D29 · pre-trade compliance / conflicts of interest — one list, used by both the trade ticket
+ * Pre-trade compliance / conflicts of interest — one list, used by both the trade ticket
  * (oms.ts) and the pre-trade engine below. They previously kept separate lists that disagreed:
  * this one omitted the ticket's BBBY, and the ticket omitted every name here except GME and AMC.
  *
@@ -19,21 +20,21 @@ import type { ProposalTradeLeg, ProposalViolation, ProposalLegResult, PreTradeCh
  * restrictions. BBBY is also gone: it was delisted in 2023, so no adviser's live restricted list
  * would still carry it.
  */
-export const RESTRICTED_SECURITIES = new Set([
+const RESTRICTED_SECURITIES = new Set([
   'META', 'GOOG', 'GOOGL', // Access person holds a reportable position
   'COIN',                  // Material non-public information — engagement in progress
   'GME', 'AMC',            // Firm-wide restriction — heightened volatility designation
 ])
 
 // ── Concentration limits ──
-// C23 · diversification — per-kind limits (single-issuer / fund / cash), imported from the one
+// Per-kind limits (single-issuer / fund / cash), imported from the one
 // place they are defined (`security-master.ts`), not a blanket 10% restated here.
 // Exported so `oms.ts`'s pre-check handler reads the same 2% floor, rather than a second literal.
-export const CASH_MINIMUM_PCT = 0.02       // 2% cash minimum
+const CASH_MINIMUM_PCT = 0.02       // 2% cash minimum
 
 /** Pooled/individual tech names used by the sector-concentration check. Shared with `oms.ts`'s single-order check. */
-export const TECH_SYMBOLS = ['AAPL', 'MSFT', 'NVDA', 'GOOGL', 'META', 'AMZN', 'TSLA']
-export const SECTOR_LIMIT = 0.40
+const TECH_SYMBOLS = ['AAPL', 'MSFT', 'NVDA', 'GOOGL', 'META', 'AMZN', 'TSLA']
+const SECTOR_LIMIT = 0.40
 /** Every weight rule warns at 80% of its limit and can block above the limit itself. */
 const WARN_AT = 0.8
 
@@ -84,7 +85,7 @@ export function evaluateProposal(accountId: string, trades: readonly ProposalTra
   const movers = (indexes: readonly number[], rose: boolean) =>
     indexes.filter((i) => (trades[i]!.side === 'buy') === rose)
 
-  // ── Restricted securities — D29: one list. Blocks any leg, buy or sell. ──
+  // ── Restricted securities — one list. Blocks any leg, buy or sell. ──
   trades.forEach((t, i) => {
     if (!RESTRICTED_SECURITIES.has(t.symbol)) return
     violations.push({
@@ -100,7 +101,7 @@ export function evaluateProposal(accountId: string, trades: readonly ProposalTra
     })
   })
 
-  // ── Concentration per security kind, over the whole end state (§9.2) ──
+  // ── Concentration per security kind, over the whole end state ──
   for (const symbol of projected.keys()) {
     const assetClass = held.get(symbol)?.assetClass ?? 'us_equity'
     const kind = securityKind(symbol, assetClass)
@@ -169,9 +170,10 @@ export function evaluateProposal(accountId: string, trades: readonly ProposalTra
   }
 
   // ── Cash: sells settle first, then buys draw down in proposal order ──
+  const startingCash = cashBalanceOf(account)
   const minimumCash = accountValue * CASH_MINIMUM_PCT
   const sellProceeds = trades.reduce((sum, t) => sum + (t.side === 'sell' ? t.estimatedValue : 0), 0)
-  let cash = account.cashBalance + sellProceeds
+  let cash = startingCash + sellProceeds
   const crossing: number[] = []
   trades.forEach((t, i) => {
     if (t.side !== 'buy') return
@@ -189,18 +191,18 @@ export function evaluateProposal(accountId: string, trades: readonly ProposalTra
       limit: pct(CASH_MINIMUM_PCT),
       message: `Cash after this proposal would be ${pct(projectedCashPct)} of the account, below the ${pct0(CASH_MINIMUM_PCT)} minimum reserve.`,
       legs: crossing,
-      preExisting: account.cashBalance < minimumCash,
-      currentWeight: account.cashBalance / accountValue,
+      preExisting: startingCash < minimumCash,
+      currentWeight: startingCash / accountValue,
       projectedWeight: projectedCashPct,
       limitWeight: CASH_MINIMUM_PCT,
     })
   }
-  // Cash's own concentration limit (C23 — 15%), on projected cash.
+  // Cash's own concentration limit (15%), on projected cash.
   const cashLimit = concentrationLimitFor('cash')
-  const cashNow = account.cashBalance / accountValue
+  const cashNow = startingCash / accountValue
   if (projectedCashPct > cashLimit * WARN_AT) {
-    const rose = projectedCash > account.cashBalance
-    const fell = projectedCash < account.cashBalance
+    const rose = projectedCash > startingCash
+    const fell = projectedCash < startingCash
     const overLimit = projectedCashPct > cashLimit
     violations.push({
       category: 'concentration_limit',
@@ -221,7 +223,7 @@ export function evaluateProposal(accountId: string, trades: readonly ProposalTra
     })
   }
 
-  // ── Wash sale — the wash-sale taxpayer's 61-day windows (Task 14 / C10). Buys only. ──
+  // ── Wash sale — the wash-sale taxpayer's 61-day windows. Buys only. ──
   const openWindows = openWashSaleWindowsFor(account, todayISO())
   trades.forEach((t, i) => {
     if (t.side !== 'buy') return
@@ -262,7 +264,7 @@ export function invalidProposal(trades: unknown): string | undefined {
   if (!Array.isArray(trades)) return 'trades must be an array of legs'
   for (const t of trades as ProposalTradeLeg[]) {
     if (t.side !== 'buy' && t.side !== 'sell') return `leg ${t.symbol}: side must be buy or sell`
-    // C28 — notional is required and positive on every leg, as on the single-order check.
+    // Notional is required and positive on every leg, as on the single-order check.
     if (typeof t.estimatedValue !== 'number' || !Number.isFinite(t.estimatedValue) || t.estimatedValue <= 0) {
       return `leg ${t.symbol}: estimatedValue (notional) must be a positive number`
     }
@@ -270,137 +272,34 @@ export function invalidProposal(trades: unknown): string | undefined {
   return undefined
 }
 
-const STATUS_FOR: Record<ProposalViolation['severity'], TradeComplianceCheck['status']> = {
-  block: 'fail',
-  warning: 'warning',
-}
-
-/**
- * The Rebalance flow's shape over `evaluateProposal`: one row per violation, plus an affirmative
- * pass row for each rule that found nothing. One engine, so the Rebalance step and
- * `preTradeCheckProposal` cannot disagree.
- */
-function checkTradesForAccount(req: TradeComplianceRequest): TradeComplianceResult {
-  const result = evaluateProposal(req.accountId, req.trades)
-  if (!result) {
-    return {
-      accountId: req.accountId,
-      checks: [{ rule: 'Account', category: 'position_limit', status: 'fail', message: `Unknown account ${req.accountId}.` }],
-      overallStatus: 'fail',
-    }
-  }
-  const of = (category: ProposalViolation['category']) => result.violations.filter((v) => v.category === category)
-  const checks: TradeComplianceCheck[] = []
-
-  // ── Rule 1: Restricted securities ──
-  const restricted = of('restricted_securities')
-  for (const v of restricted) {
-    checks.push({
-      rule: `Restricted security: ${v.symbol}`,
-      category: 'restricted_securities',
-      status: 'fail',
-      message: `${v.symbol} is on the firm restricted list. Trade cannot proceed without compliance override.`,
-      details: { symbol: v.symbol },
-    })
-  }
-  if (restricted.length === 0) {
-    checks.push({ rule: 'Restricted securities list', category: 'restricted_securities', status: 'pass', message: 'No proposed trades involve restricted securities.' })
-  }
-
-  // ── Rule 2: Concentration limits (per security kind) — any warning suppresses the affirmative pass ──
-  const concentration = of('concentration_limit')
-  for (const v of concentration) {
-    checks.push({
-      rule: `Concentration limit: ${v.symbol}`,
-      category: 'concentration_limit',
-      status: STATUS_FOR[v.severity],
-      message: v.message,
-      details: { symbol: v.symbol, currentWeight: v.currentWeight, postTradeWeight: v.projectedWeight, limit: v.limitWeight, preExisting: v.preExisting },
-    })
-  }
-  if (concentration.length === 0) {
-    checks.push({ rule: 'Concentration limit (per security kind)', category: 'concentration_limit', status: 'pass', message: 'All post-trade positions within their applicable concentration limits.' })
-  }
-
-  // ── Rule 3: Technology sector ──
-  for (const v of of('sector_limit')) {
-    checks.push({
-      rule: v.constraint,
-      category: 'sector_limit',
-      status: STATUS_FOR[v.severity],
-      message: v.message,
-      details: { currentWeight: v.currentWeight, postTradeWeight: v.projectedWeight, limit: v.limitWeight, preExisting: v.preExisting },
-    })
-  }
-
-  // ── Rule 4: Cash minimum (2% post-trade) ──
-  const cash = of('cash_minimum')[0]
-  checks.push({
-    rule: 'Cash reserve minimum (2%)',
-    category: 'cash_minimum',
-    status: cash ? STATUS_FOR[cash.severity] : 'pass',
-    message: cash
-      ? `Post-trade cash would be ${formatUSD(result.projectedCash)} (${pct(result.projectedCashPct)}), below the ${pct0(CASH_MINIMUM_PCT)} minimum of ${formatUSD(result.minimumCash)}.`
-      : `Post-trade cash balance of ${formatUSD(result.projectedCash)} (${pct(result.projectedCashPct)}) meets the 2% minimum reserve.`,
-    details: { cashBalance: result.projectedCash, minimumCash: result.minimumCash },
-  })
-
-  // ── Rule 5: Wash sale (household-scoped, 61-day window) ──
-  const washSales = of('wash_sale')
-  for (const v of washSales) {
-    checks.push({ rule: `Wash sale window: ${v.symbol}`, category: 'wash_sale', status: 'warning', message: v.message, details: { symbol: v.symbol } })
-  }
-  if (washSales.length === 0) {
-    checks.push({ rule: 'Wash sale window (61-day)', category: 'wash_sale', status: 'pass', message: "No proposed buys conflict with the household's recent loss sales within the 61-day wash sale window." })
-  }
-
-  let overallStatus: TradeComplianceResult['overallStatus'] = 'pass'
-  if (checks.some((c) => c.status === 'fail')) {
-    overallStatus = 'fail'
-  } else if (checks.some((c) => c.status === 'warning')) {
-    overallStatus = 'warning'
-  }
-
-  return { accountId: req.accountId, checks, overallStatus }
-}
-
-function formatUSD(value: number): string {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value)
-}
-
-// D21 — exported so the dashboard metrics derivation (`pms.ts`) reads the same alerts the
-// compliance surfaces do, rather than a second hardcoded count.
+// Exported so Supervision and the workspace alerts read these same records, never a second copy.
 export const complianceAlerts: ComplianceAlert[] = [
   { id: 'comp-001', type: 'Large Wire', severity: 'critical', title: 'Large wire deposit — source-of-funds required', description: '$250,000 incoming wire to Richard Anderson (acc-022). BSA/AML documentation required before funds release.', entityType: 'account', entityId: 'acc-022', reviewStatus: 'pending', createdAt: '2026-02-24T15:10:00Z' },
-  { id: 'comp-002', type: 'Concentration', severity: 'warning', title: 'Single-name concentration — AAPL in Johnson Trust', description: 'AAPL position at 7.6% of account value approaching 10% single-name guideline.', entityType: 'account', entityId: 'acc-001', reviewStatus: 'in_review', createdAt: '2026-02-23T08:00:00Z' },
-  { id: 'comp-003', type: 'Suitability', severity: 'warning', title: 'Suitability review — Foster account opening', description: 'New individual brokerage for William Foster. Risk tolerance assessment and investment experience verification needed.', entityType: 'client', entityId: 'cli-017', reviewStatus: 'in_review', createdAt: '2026-02-22T14:00:00Z' },
-  { id: 'comp-004', type: 'Trade Pre-clearance', severity: 'info', title: 'Pre-trade compliance check passed — Martinez rebalance', description: 'All proposed trades for Michael Martinez rebalance cleared compliance screening.', entityType: 'trade', entityId: 'acc-015', reviewStatus: 'approved', createdAt: '2026-02-22T09:30:00Z', resolvedAt: '2026-02-22T09:35:00Z' },
-  { id: 'comp-005', type: 'Document Expiry', severity: 'warning', title: 'IPS approaching annual review — Thompson', description: 'James Thompson IPS last reviewed Oct 2025. Annual review due by Oct 2026.', entityType: 'document', entityId: 'doc-014', reviewStatus: 'pending', createdAt: '2026-02-20T08:00:00Z' },
-  { id: 'comp-006', type: 'Wash Sale', severity: 'info', title: 'Potential wash sale cleared — Johnson INTC/SMH', description: 'INTC sold and replaced with SMH. Different ETF confirmed, no wash sale issue.', entityType: 'trade', entityId: 'acc-002', reviewStatus: 'approved', createdAt: '2026-02-20T16:00:00Z', resolvedAt: '2026-02-20T16:10:00Z' },
-  { id: 'comp-007', type: 'RMD', severity: 'warning', title: 'RMD calculation needed — Thompson Traditional IRA', description: 'James Thompson turns 73 this year. First RMD from Traditional IRA (acc-020) must be calculated.', entityType: 'account', entityId: 'acc-020', reviewStatus: 'pending', createdAt: '2026-02-01T08:00:00Z' },
+  { id: 'comp-002', type: 'Concentration', severity: 'warning', title: 'Single-name concentration — MSFT in Johnson Trust', description: 'MSFT position at 9.2% of account value, above the 9% watch level and approaching the 10% single-name guideline.', entityType: 'account', entityId: 'acc-001', reviewStatus: 'in_review', createdAt: '2026-02-23T13:00:00Z' },
+  { id: 'comp-003', type: 'Suitability', severity: 'warning', title: 'Suitability review — Foster profile update', description: 'William Foster updated his investor profile. Risk tolerance assessment and investment experience verification needed before the profile is filed.', entityType: 'client', entityId: 'cli-017', reviewStatus: 'in_review', createdAt: '2026-02-20T22:00:00Z' },
+  { id: 'comp-004', type: 'Trade Pre-clearance', severity: 'info', title: 'Pre-trade compliance check passed — Martinez rebalance', description: 'All proposed trades for Michael Martinez rebalance cleared compliance screening.', entityType: 'trade', entityId: 'acc-015', reviewStatus: 'approved', createdAt: '2026-02-20T19:30:00Z', resolvedAt: '2026-02-20T19:35:00Z' },
+  { id: 'comp-005', type: 'Document Expiry', severity: 'warning', title: 'IPS approaching annual review — Thompson', description: 'James Thompson IPS last reviewed Oct 2025. Annual review due by Oct 2026.', entityType: 'document', entityId: 'doc-014', reviewStatus: 'pending', createdAt: '2026-02-20T13:00:00Z' },
+  { id: 'comp-006', type: 'Wash Sale', severity: 'info', title: 'Potential wash sale cleared — Johnson INTC/SMH', description: 'INTC sold at a loss and replaced with SMH. SMH, a semiconductor ETF, is not substantially identical to INTC, a single stock: no wash sale.', entityType: 'trade', entityId: 'acc-002', reviewStatus: 'approved', createdAt: '2026-02-20T16:00:00Z', resolvedAt: '2026-02-20T16:10:00Z' },
+  { id: 'comp-007', type: 'RMD', severity: 'warning', title: 'RMD calculation needed — Thompson Traditional IRA', description: 'James Thompson turns 73 this year. First RMD from Traditional IRA (acc-020) must be calculated.', entityType: 'account', entityId: 'acc-020', reviewStatus: 'pending', createdAt: '2026-02-02T13:00:00Z' },
 ]
 
 /**
- * §0.3 · the chief compliance officer, the supervisory principal who disposes of these alerts.
+ * The chief compliance officer, the supervisory principal who disposes of these alerts.
  * Records carry his directory id; the display label is read from the directory, not re-typed.
  */
 const CCO_ID = 'cco-001'
 const ccoReviewer = { reviewerId: CCO_ID, reviewer: `${personById(CCO_ID)!.name} (CCO)` }
 
-const supervisionRecords: SupervisionRecord[] = [
-  { id: 'sr-001', alertId: 'comp-004', ...ccoReviewer, action: 'Approved', notes: 'All trades within portfolio guidelines. No restricted securities.', timestamp: '2026-02-22T09:35:00Z' },
-  { id: 'sr-002', alertId: 'comp-006', ...ccoReviewer, action: 'Approved', notes: 'SMH is a distinct ETF from INTC. No wash sale concern.', timestamp: '2026-02-20T16:10:00Z' },
-  { id: 'sr-003', alertId: 'comp-002', ...ccoReviewer, action: 'Under Review', notes: 'Reviewing client IPS for AAPL exception. Position is long-held with significant unrealized gain.', timestamp: '2026-02-23T10:00:00Z' },
+export const SUPERVISION_RECORDS: readonly SupervisionRecord[] = [
+  { id: 'sr-001', alertId: 'comp-004', ...ccoReviewer, action: 'Approved', notes: 'All trades within portfolio guidelines. No restricted securities.', timestamp: '2026-02-20T19:35:00Z' },
+  { id: 'sr-002', alertId: 'comp-006', ...ccoReviewer, action: 'Approved', notes: 'SMH, a semiconductor ETF, is not substantially identical to INTC. No wash sale concern.', timestamp: '2026-02-20T16:10:00Z' },
+  { id: 'sr-003', alertId: 'comp-002', ...ccoReviewer, action: 'Under Review', notes: 'Reviewing client IPS for MSFT exception. Position is long-held with significant unrealized gain.', timestamp: '2026-02-23T15:00:00Z' },
 ]
 
 export const complianceHandlers = [
-  http.post('/api/compliance/check-trades', async ({ request }) => {
-    const body = await request.json() as { accounts: TradeComplianceRequest[] }
-    const results = body.accounts.map((acct) => checkTradesForAccount(acct))
-    return HttpResponse.json(results)
-  }),
-
   http.get('/api/compliance/alerts', ({ request }) => {
+    const refused = refuseExternal(request)
+    if (refused) return refused
     const url = new URL(request.url)
     const severity = url.searchParams.get('severity')
     const status = url.searchParams.get('status')
@@ -410,12 +309,10 @@ export const complianceHandlers = [
     return HttpResponse.json(filtered)
   }),
 
-  http.get('/api/compliance/review-queue', () => {
-    return HttpResponse.json(complianceAlerts.filter((a) => a.reviewStatus === 'pending' || a.reviewStatus === 'in_review'))
-  }),
-
-  http.get('/api/compliance/alerts/:alertId/records', ({ params }) => {
-    const records = supervisionRecords.filter((r) => r.alertId === params.alertId)
+  http.get('/api/compliance/alerts/:alertId/records', ({ params, request }) => {
+    const refused = refuseExternal(request)
+    if (refused) return refused
+    const records = SUPERVISION_RECORDS.filter((r) => r.alertId === params.alertId)
     return HttpResponse.json(records)
   }),
 ]

@@ -17,7 +17,6 @@ export type Document = {
   type: DocumentType
   clientId: string
   accountId?: string
-  fileUrl: string
   signatureStatus: SignatureStatus
   createdAt: string
   updatedAt: string

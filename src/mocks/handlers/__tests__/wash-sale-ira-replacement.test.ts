@@ -21,29 +21,31 @@ const ROTH_SMH = 'pos-test-acc-004-smh'
 
 vi.mock('@/mocks/data/positions', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/mocks/data/positions')>()
+  // The planted holding is part of the book both ways the fixtures reach it: the live read and the seed the lots partition.
+  const withPlanted = (read: typeof original.getPositionsForAccount) => (accountId: string, totalValue: number) => {
+    const positions = read(accountId, totalValue)
+    if (accountId === 'acc-001') {
+      return [...positions, {
+        id: TRUST_SMH, accountId, symbol: 'SMH', name: 'VanEck Semiconductor ETF', assetClass: 'us_equity' as const,
+        quantity: 400, price: 245.20, costBasis: 120_000, marketValue: 98_080, gainLoss: -21_920, gainLossPercent: -18.27, weight: 0,
+      }]
+    }
+    if (accountId === 'acc-004') {
+      return [...positions, {
+        id: ROTH_SMH, accountId, symbol: 'SMH', name: 'VanEck Semiconductor ETF', assetClass: 'us_equity' as const,
+        quantity: 100, price: 245.20, costBasis: 24_520, marketValue: 24_520, gainLoss: 0, gainLossPercent: 0, weight: 0,
+      }]
+    }
+    return positions
+  }
   return {
     ...original,
-    getPositionsForAccount: (accountId: string, totalValue: number) => {
-      const positions = original.getPositionsForAccount(accountId, totalValue)
-      if (accountId === 'acc-001') {
-        return [...positions, {
-          id: TRUST_SMH, accountId, symbol: 'SMH', name: 'VanEck Semiconductor ETF', assetClass: 'us_equity' as const,
-          quantity: 400, price: 245.20, costBasis: 120_000, marketValue: 98_080, gainLoss: -21_920, gainLossPercent: -18.27, weight: 0,
-        }]
-      }
-      if (accountId === 'acc-004') {
-        return [...positions, {
-          id: ROTH_SMH, accountId, symbol: 'SMH', name: 'VanEck Semiconductor ETF', assetClass: 'us_equity' as const,
-          quantity: 100, price: 245.20, costBasis: 24_520, marketValue: 24_520, gainLoss: 0, gainLossPercent: 0, weight: 0,
-        }]
-      }
-      return positions
-    },
+    getPositionsForAccount: withPlanted(original.getPositionsForAccount),
+    seedPositionsForAccount: withPlanted(original.seedPositionsForAccount),
   }
 })
 
 let trustSmh: TaxLot[]
-let note: string
 beforeAll(async () => {
   // The test setup already loaded the handlers against the real modules; rebind them to the mock.
   vi.resetModules()
@@ -53,8 +55,6 @@ beforeAll(async () => {
   const openDates = custodian.KNOWN_OPEN_DATES as Map<string, string>
   openDates.set(ROTH_SMH, '2026-02-15')
   trustSmh = custodian.generateTaxLotsWithSaleRisk('acc-001', 8_200_000).filter((l) => l.positionId === TRUST_SMH)
-  const { harvestWashSaleNote } = await import('../ai')
-  note = harvestWashSaleNote(trustSmh)
 })
 
 describe('a loss washed by an IRA or Roth purchase is permanently disallowed, not deferred', () => {
@@ -64,14 +64,9 @@ describe('a loss washed by an IRA or Roth purchase is permanently disallowed, no
     expect(trustSmh.reduce((s, l) => s + l.saleWash.deferredShares, 0)).toBe(180)
   })
 
-  it('the loss splits by the rule: −5,480 disallowed, −9,864 deferred, −6,576 realised now', () => {
+  it('the loss splits by the rule: −5,480 disallowed, −9,864 deferred, −6,576 realized now', () => {
     expect(trustSmh.reduce((s, l) => s + lossDisallowed(l), 0)).toBeCloseTo(-5_480, 6)
     expect(trustSmh.reduce((s, l) => s + lossDeferred(l), 0)).toBeCloseTo(-9_864, 6)
     expect(trustSmh.reduce((s, l) => s + lossAllowedNow(l), 0)).toBeCloseTo(-6_576, 6)
-  })
-
-  it('the harvesting insight calls the Roth-washed part permanently disallowed and the taxable-washed part deferred', () => {
-    expect(note).toContain('bought in an IRA or Roth, that part of the loss is permanently disallowed')
-    expect(note).toContain('bought in a taxable account, that part is deferred into the replacement\'s basis')
   })
 })

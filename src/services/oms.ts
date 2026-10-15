@@ -1,8 +1,11 @@
-import { get, post } from './api-client'
-import type { TradableAssetClass, TradeSide, TradeOrderType, TimeInForce, BondPriceType, MutualFundAmountType } from '@/types/trading'
+import { post } from './api-client'
+import type { TradableAssetClass, TimeInForce, BondPriceType, MutualFundAmountType } from '@/types/trading'
 import type { CurrencyCode } from '@/types/currency'
 import type { AssetClass } from '@/types/portfolio'
 import type { WashedLoss } from '@/lib/wash-sale'
+
+/** Previews and checks read the firm's book: each request names its viewer, and an outsider is told they do not exist. */
+const as = (viewer: string) => ({ 'X-Viewer': viewer })
 
 export type Order = {
   id: string
@@ -13,7 +16,7 @@ export type Order = {
   orderType: string
   limitPrice?: number
   stopPrice?: number
-  status: 'pending' | 'submitted' | 'filled' | 'cancelled'
+  status: 'pending' | 'submitted' | 'filled' | 'canceled'
   filledQuantity: number
   filledPrice?: number
   submittedAt: string
@@ -42,46 +45,9 @@ export type Order = {
   commission?: number
 }
 
-export type TradeRequest = {
-  accountId: string
-  symbol: string
-  side: TradeSide | string
-  quantity: number
-  orderType: TradeOrderType | string
-  limitPrice?: number
-  stopPrice?: number
-  assetClass?: TradableAssetClass
-  timeInForce?: TimeInForce
-  extendedHours?: boolean
-  // Option fields
-  underlying?: string
-  optionType?: 'call' | 'put'
-  strikePrice?: number
-  expirationDate?: string
-  contractMultiplier?: number
-  // Mutual fund fields
-  amountType?: MutualFundAmountType
-  dollarAmount?: number
-  exchangeTargetSymbol?: string
-  // Fixed income fields
-  parAmount?: number
-  bondPriceType?: BondPriceType
-  priceOrYield?: number
-  // Digital asset
-  fractionalQuantity?: boolean
-  estimatedValue?: number
-  commission?: number
-}
-
-export type RebalanceRequest = {
-  accountIds: string[]
-  driftThreshold: number
-  taxAware: boolean
-}
-
 export type RebalancePreview = {
   accountId: string
-  // §9.3 · currencies-and-fx — the account's own base currency (`accounts.ts`'s `baseCurrency`,
+  // The account's own base currency (`accounts.ts`'s `baseCurrency`,
   // defaulting to USD). Every trade in `trades` carries the same tag, and every notional on this
   // preview (`estimatedTaxImpact`, each trade's `estimatedValue`/`taxImpact`) is denominated in it,
   // not USD — `oms.ts`'s trade generator derives everything from `account.totalValue`, which is
@@ -90,21 +56,21 @@ export type RebalancePreview = {
   trades: ProposedTrade[]
   /**
    * The tax this proposal adds to its owner's return: its legs netted under IRC §1222 with the
-   * return's year-to-date realised results and with earlier accounts in this batch on the same
+   * return's year-to-date realized results and with earlier accounts in this batch on the same
    * return (`nettedWithAccountIds`). Never another taxpayer's results. Signed, and not bounded by
    * `grossTaxOnGains` (`additionalCapitalGainsTax` has the reasoning):
-   * - negative when the proposal saves tax — its losses offset gains already realised this year —
+   * - negative when the proposal saves tax — its losses offset gains already realized this year —
    *   but never by more than the tax those results already owe;
    * - at most `grossTaxOnGains` (to rounding) when what it nets against is a gain or nil in each
    *   rate group: short-term, long-term collectibles and other long-term;
    * - above `grossTaxOnGains` when its gains use up a loss that was sheltering a gain of another
    *   group (including a collectibles gain sheltered by an ordinary long-term loss).
    * Capital-gains tax only: the §1211(b) ordinary-income offset and §1212 carryforwards are not
-   * modelled.
+   * modeled.
    */
   estimatedTaxImpact: number
-  /** Year-to-date realised results on this account's return; `null` when it is on none (an IRA, a Roth). */
-  ytdRealisedOnReturn: { shortTerm: number; longTerm: number; collectibleLongTerm: number } | null
+  /** Year-to-date realized results on this account's return; `null` when it is on none (an IRA, a Roth). */
+  ytdRealizedOnReturn: { shortTerm: number; longTerm: number; collectibleLongTerm: number } | null
   /** Accounts earlier in this batch, on the same return, whose proposals this estimate nets against. */
   nettedWithAccountIds: string[]
   /**
@@ -113,7 +79,7 @@ export type RebalancePreview = {
    * on `estimatedTaxImpact`, which can exceed it.
    */
   grossTaxOnGains: number
-  /** False for an IRA, Roth or other tax-advantaged account, where a sale realises nothing taxable. */
+  /** False for an IRA, Roth or other tax-advantaged account, where a sale realizes nothing taxable. */
   taxable: boolean
   /**
    * IRC §1091 repurchase restrictions on this account: windows opened by loss sales already
@@ -128,7 +94,7 @@ export type RebalancePreview = {
 
 /**
  * A window in which buying `symbol` back would wash a loss (IRC §1091): 30 days either side of the
- * loss sale, inclusive. `recorded` windows come from sales already made (`realisedSales`);
+ * loss sale, inclusive. `recorded` windows come from sales already made (`realizedSales`);
  * `projected` windows are the ones a proposal's own loss legs would open if executed today. The two
  * are never merged: a reviewer needs to see both that a window exists and that a proposal extends it.
  */
@@ -141,10 +107,15 @@ export type RepurchaseRestriction = {
     | { kind: 'projected'; accountId: string; saleDate: string }
 }
 
-/** Why an asset class is still away from target after the proposed trades. */
-export type ResidualDriftReason = 'not_market_tradable' | 'cash_capped' | 'replacement_hold' | 'below_lot_size'
+/**
+ * Why an asset class is still away from target after the proposed trades. The last four are a
+ * proposal constraint (or a workbench exclusion) holding the class back.
+ */
+export type ResidualDriftReason =
+  | 'not_market_tradable' | 'cash_capped' | 'replacement_hold' | 'below_lot_size'
+  | 'excluded_by_constraint' | 'harvest_only' | 'gains_capped' | 'wash_sale_avoided'
 
-export type ProjectedAssetClassDrift = {
+type ProjectedAssetClassDrift = {
   assetClass: AssetClass
   target: number
   actual: number
@@ -172,18 +143,18 @@ export type ProposedTrade = {
   quantity: number
   estimatedValue: number
   taxImpact: number
-  /** Realised result of this leg by holding period, signed (loss < 0), account currency. 0 for buys. */
-  realisedShortTerm: number
-  realisedLongTerm: number
-  /** The part of `realisedLongTerm` that is collectibles gain or loss (GLD and other physical-metal trusts), taxed at up to 28% + NIIT. */
-  realisedCollectibleLongTerm: number
+  /** Realized result of this leg by holding period, signed (loss < 0), account currency. 0 for buys. */
+  realizedShortTerm: number
+  realizedLongTerm: number
+  /** The part of `realizedLongTerm` that is collectibles gain or loss (GLD and other physical-metal trusts), taxed at up to 28% + NIIT. */
+  realizedCollectibleLongTerm: number
   washSaleRisk: boolean
   /**
    * Sell legs that sell any loss lot, judged per lot (so a leg that nets to a gain can carry it):
    * the part of those lots' loss IRC §1091 washes because the taxpayer bought the symbol in the
    * last 30 days or this batch buys it today in any of the taxpayer's accounts (Treas. Reg.
    * §1.1091-1(c), pro rata to the replaced shares; `settleBatchWashSales`).
-   * Signed like the loss (≤ 0), account currency; `realisedShortTerm`/`realisedLongTerm` still
+   * Signed like the loss (≤ 0), account currency; `realizedShortTerm`/`realizedLongTerm` still
    * include it. The tax estimate nets only the rest. Absent when nothing washes.
    */
   washedLoss?: WashedLoss & { collectibleLongTerm: number }
@@ -200,68 +171,22 @@ export type ProposedTrade = {
   currency: CurrencyCode
 }
 
-export type RebalanceExecution = {
-  accountId: string
-  status: 'submitted' | 'completed' | 'failed'
-  ordersCreated: number
-  estimatedCompletion: string
-}
-
-export function submitTrade(request: TradeRequest) {
-  return post<Order>('/oms/orders', request)
-}
-
-export function getOrders(params?: Record<string, string>) {
-  return get<Order[]>('/oms/orders', params)
-}
-
 /**
  * Preview a rebalance without executing it. `submitRebalance` is the same request — one
  * endpoint, one function underneath both names.
  */
-export function previewRebalance(request: { accountIds: string[]; taxAware: boolean; driftThreshold?: number }) {
-  return post<RebalancePreview[]>('/oms/rebalance', request)
-}
-
-export function submitRebalance(request: RebalanceRequest) {
-  return previewRebalance(request)
-}
-
-export function getExecutionStatus(orderId: string) {
-  return get<Order>(`/oms/orders/${orderId}`)
-}
-
-export function executeRebalance(request: { accountIds: string[]; taxAware: boolean }) {
-  return post<RebalanceExecution[]>('/oms/rebalance/execute', request)
+export function previewRebalance(viewer: string, request: { accountIds: string[]; taxAware: boolean; driftThreshold?: number; modelId?: string }) {
+  return post<RebalancePreview[]>('/oms/rebalance', request, as(viewer))
 }
 
 // Pre-trade compliance
 
-export type PreTradeViolation = {
+type PreTradeViolation = {
   constraint: string
   severity: 'block' | 'warning'
   currentValue: string
   limit: string
   message: string
-}
-
-export type PreTradeCheckResult = {
-  passed: boolean
-  violations: PreTradeViolation[]
-}
-
-export type PreTradeCheckRequest = {
-  accountId: string
-  symbol: string
-  side: string
-  quantity: number
-  // C28 · pre-trade-compliance — required, not inferred. A missing notional previously fell back
-  // to `quantity * 100`, making concentration limits evadable by trading high-priced securities.
-  estimatedValue: number
-}
-
-export function preTradeCheck(request: PreTradeCheckRequest) {
-  return post<PreTradeCheckResult>('/oms/orders/pre-check', request)
 }
 
 // Proposal-level pre-trade compliance — every leg of a multi-leg proposal (a rebalance) applied
@@ -274,7 +199,7 @@ export type ProposalTradeLeg = {
   symbol: string
   side: 'buy' | 'sell'
   quantity: number
-  /** Required and positive, as on `PreTradeCheckRequest` (C28). Account currency. */
+  /** Required and positive, as on `PreTradeCheckRequest`. Account currency. */
   estimatedValue: number
 }
 
@@ -283,7 +208,7 @@ export type PreTradeCheckProposalRequest = {
   trades: ProposalTradeLeg[]
 }
 
-export type ProposalConstraint =
+type ProposalConstraint =
   | 'restricted_securities'
   | 'concentration_limit'
   | 'sector_limit'
@@ -323,6 +248,6 @@ export type PreTradeCheckProposalResult = {
   minimumCash: number
 }
 
-export function preTradeCheckProposal(request: PreTradeCheckProposalRequest) {
-  return post<PreTradeCheckProposalResult>('/oms/orders/pre-check-proposal', request)
+export function preTradeCheckProposal(viewer: string, request: PreTradeCheckProposalRequest) {
+  return post<PreTradeCheckProposalResult>('/oms/orders/pre-check-proposal', request, as(viewer))
 }

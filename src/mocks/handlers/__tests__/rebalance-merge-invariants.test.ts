@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { previewRebalance } from '@/services/oms'
 import { getPositions, getDrift } from '@/services/pms'
 import { modelImplementationSecurity } from '@/mocks/handlers/pms'
-import { getAccounts } from '@/services/custodian'
+import { accounts as accountFixture } from '@/mocks/data/accounts'
+import { isModelManaged } from '@/lib/mandate'
 
 /**
  * Merge integration · Task 21 x Task 22 — these two tasks were built on parallel branches and each
@@ -19,7 +20,7 @@ import { getAccounts } from '@/services/custodian'
 describe('rebalance consumes signed drift correctly (Task 21 x Task 22 merge boundary)', () => {
   it('an account underweight a class it already holds proposes a BUY, not only sells', async () => {
     // acc-001 is overweight us_equity (VTI) and underweight intl_equity (EFA), and holds both.
-    const [preview] = await previewRebalance({ accountIds: ['acc-001'], taxAware: true })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-001'], taxAware: true })
     expect(preview).toBeDefined()
     const sides = new Set(preview!.trades.map((t) => t.side))
     expect(sides.has('buy'), 'acc-001 must propose at least one buy').toBe(true)
@@ -28,11 +29,11 @@ describe('rebalance consumes signed drift correctly (Task 21 x Task 22 merge bou
 
   it('across the whole book, buys are not a rounding error against sells', async () => {
     // Under the unsigned-drift bug this ratio was 0.00 — every buy in the book disappeared.
-    const accounts = await getAccounts()
+    const accounts = accountFixture.filter(isModelManaged)
     let totalBuy = 0
     let totalSell = 0
     for (const account of accounts) {
-      const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
+      const [preview] = await previewRebalance('user-001', { accountIds: [account.id], taxAware: true })
       for (const trade of preview?.trades ?? []) {
         if (trade.side === 'buy') totalBuy += trade.estimatedValue
         else totalSell += trade.estimatedValue
@@ -43,14 +44,14 @@ describe('rebalance consumes signed drift correctly (Task 21 x Task 22 merge bou
   })
 
   it('every proposed trade sizes to the magnitude of its own drift, in the direction of its sign', async () => {
-    const accounts = await getAccounts()
+    const accounts = accountFixture.filter(isModelManaged)
     const mismatches: string[] = []
     let tradesChecked = 0
     for (const account of accounts) {
-      const [preview] = await previewRebalance({ accountIds: [account.id], taxAware: true })
+      const [preview] = await previewRebalance('user-001', { accountIds: [account.id], taxAware: true })
       if (!preview?.trades.length) continue
-      const drift = await getDrift(account.id)
-      const positions = await getPositions(account.id)
+      const drift = await getDrift('user-001', account.id)
+      const positions = await getPositions('user-001', account.id)
       for (const trade of preview.trades) {
         tradesChecked++
         // §9.7 · a buy may now be in a security the account holds nothing of — that is the whole

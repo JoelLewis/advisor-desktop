@@ -26,4 +26,4 @@ type Prospect = {
   notes?: string
 }
 
-export type { Prospect, ProspectStage, ProspectActivity }
+export type { Prospect }

@@ -1,9 +1,15 @@
 import { describe, it, expect } from 'vitest'
-import { getDriftSummary, getDrift, getModels } from '@/services/pms'
+import { getDrift } from '@/services/pms'
+import { isModelManaged } from '@/lib/mandate'
+import { accounts } from '@/mocks/data/accounts'
+import { MODEL_DEFINITIONS } from '@/mocks/data/model-definitions'
+import { computeDriftForAccount } from '@/mocks/handlers/pms'
+
+const driftOfEveryModelManagedAccount = () => accounts.filter(isModelManaged).map((a) => computeDriftForAccount(a))
 
 describe('drift calculation invariants', () => {
   it('drift signed: |drift| === |actual - target| within rounding tolerance', async () => {
-    const drifts = await getDriftSummary()
+    const drifts = driftOfEveryModelManagedAccount()
     for (const d of drifts) {
       for (const ac of d.assetClassDrifts) {
         const expected = Math.abs(ac.actual - ac.target)
@@ -17,7 +23,7 @@ describe('drift calculation invariants', () => {
   // elsewhere, so |drift| double-counts the imbalance and must be halved. This is a different
   // quantity from the per-class breach that drives needsRebalance (see below).
   it('totalDrift === sum(|drift|) / 2 within rounding tolerance', async () => {
-    const drifts = await getDriftSummary()
+    const drifts = driftOfEveryModelManagedAccount()
     for (const d of drifts) {
       const sumAbsDrifts = d.assetClassDrifts.reduce((s, ac) => s + Math.abs(ac.drift), 0)
       const expected = sumAbsDrifts / 2
@@ -43,7 +49,7 @@ describe('drift calculation invariants', () => {
   }
 
   it("needsRebalance === (max asset-class |drift|) > the account's own model band, not a hardcoded 0.03", async () => {
-    const drifts = await getDriftSummary()
+    const drifts = driftOfEveryModelManagedAccount()
     for (const d of drifts) {
       const expectedBand = EXPECTED_MODEL_BANDS[d.modelId]
       if (expectedBand === undefined) throw new Error(`no expected band for model ${d.modelId}`)
@@ -54,7 +60,7 @@ describe('drift calculation invariants', () => {
   })
 
   it('C24: models with different bands are not treated identically', async () => {
-    const drifts = await getDriftSummary()
+    const drifts = driftOfEveryModelManagedAccount()
     const tolerances = new Set(drifts.map((d) => d.driftTolerance))
     expect(tolerances.size).toBeGreaterThan(1)
     expect(tolerances).toContain(0.03)
@@ -62,7 +68,7 @@ describe('drift calculation invariants', () => {
   })
 
   it('C24: drift keeps its sign, so overweight and underweight are distinguishable', async () => {
-    const drift = await getDrift('acc-001')
+    const drift = await getDrift('user-001', 'acc-001')
     expect(drift.assetClassDrifts.some((a) => a.drift > 0)).toBe(true)
     expect(drift.assetClassDrifts.some((a) => a.drift < 0)).toBe(true)
     for (const a of drift.assetClassDrifts) {
@@ -72,7 +78,7 @@ describe('drift calculation invariants', () => {
   })
 
   it('signed drifts sum to approximately zero — every overweight is someone else underweight', async () => {
-    const drift = await getDrift('acc-001')
+    const drift = await getDrift('user-001', 'acc-001')
     expect(drift.assetClassDrifts.reduce((s, a) => s + a.drift, 0)).toBeCloseTo(0, 2)
   })
 
@@ -81,7 +87,7 @@ describe('drift calculation invariants', () => {
   // sum to 0.999–1.001 across the fixture set (e.g. acc-045) — inside the old ±0.05 tolerance this
   // test used to have, so removing the normalization passed silently. ±0.0005 catches it.
   it('actual weights sum to 1.0 for each account (normalized, not just close)', async () => {
-    const drifts = await getDriftSummary()
+    const drifts = driftOfEveryModelManagedAccount()
     for (const d of drifts) {
       const sumActual = d.assetClassDrifts.reduce((s, ac) => s + ac.actual, 0)
       expect(Math.abs(sumActual - 1.0)).toBeLessThan(0.0005)
@@ -93,7 +99,7 @@ describe('drift calculation invariants', () => {
   // `Math.max(...|drift|)` independently. Pin the published field against the same computation
   // performed on the account's own assetClassDrifts, independent of needsRebalance.
   it('maxAbsDrift === max(|drift|) across the account\'s own asset classes', async () => {
-    const drifts = await getDriftSummary()
+    const drifts = driftOfEveryModelManagedAccount()
     for (const d of drifts) {
       const expected = Math.max(...d.assetClassDrifts.map((ac) => Math.abs(ac.drift)), 0)
       expect(Math.abs(d.maxAbsDrift - expected)).toBeLessThan(0.0001)
@@ -101,7 +107,7 @@ describe('drift calculation invariants', () => {
   })
 
   it('all 7 models have target weights that sum to 1.0', async () => {
-    const models = await getModels()
+    const models = MODEL_DEFINITIONS
     expect(models).toHaveLength(7)
     for (const model of models) {
       const sumTargets = (model as unknown as { assetClasses: { targetWeight: number }[] })
@@ -110,13 +116,14 @@ describe('drift calculation invariants', () => {
     }
   })
 
-  it('returns drift data for all 47 accounts', async () => {
-    const drifts = await getDriftSummary()
-    expect(drifts).toHaveLength(47)
+  it('returns drift data for the 44 model-managed accounts, none for the three custom mandates', async () => {
+    const drifts = driftOfEveryModelManagedAccount()
+    expect(drifts).toHaveLength(44)
+    expect(drifts.map((d) => d.accountId)).not.toContain('acc-041')
   })
 
   it('acc-001 has drift data with valid structure', async () => {
-    const drifts = await getDriftSummary()
+    const drifts = driftOfEveryModelManagedAccount()
     const acc001 = drifts.find((d) => d.accountId === 'acc-001')
     expect(acc001).toBeDefined()
     expect(acc001!.assetClassDrifts.length).toBeGreaterThan(0)

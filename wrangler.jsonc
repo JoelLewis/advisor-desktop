@@ -9,5 +9,6 @@
   "routes": [
     { "pattern": "advisor.joelelewis.com", "custom_domain": true }
   ],
-  "workers_dev": true
+  "workers_dev": true,
+  "preview_urls": true
 }

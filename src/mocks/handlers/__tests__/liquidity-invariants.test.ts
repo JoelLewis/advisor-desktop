@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { accounts } from '@/mocks/data/accounts'
 import { generateRebalanceTrades, computeDriftForAccountById } from './liquidity-helpers'
+import { isModelManaged } from '@/lib/mandate'
 
 describe('a rebalance never proposes a market sale of a periodic-liquidity fund', () => {
   it('no account in the book proposes a BXPE leg, tax-aware or not', () => {
-    for (const a of accounts) {
+    for (const a of accounts.filter(isModelManaged)) {
       for (const taxAware of [true, false]) {
         const legs = generateRebalanceTrades(a.id, taxAware)
         expect(legs.filter((l) => l.symbol === 'BXPE'), `${a.id} taxAware=${taxAware}`).toEqual([])
