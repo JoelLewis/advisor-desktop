@@ -109,3 +109,13 @@ describe('Gauge', () => {
     expect(screen.getByText('OUT').closest('[aria-hidden="true"]')).not.toBeNull()
   })
 })
+
+describe('gauge ghost', () => {
+  it('draws a ghost tick at before and a solid mark at after, and says both', () => {
+    render(<Gauge label="US Equity" drift={0.012} before={0.132} band={0.05} bare />)
+    const img = screen.getByRole('img')
+    expect(img).toHaveAccessibleName('US Equity: drift +13.2 before, +1.2 after, percentage points against tolerance ±5.0 percentage points, IN')
+    expect(img.querySelector('[data-part="ghost"]')).not.toBeNull()
+    expect(screen.queryByText('US Equity')).toBeNull()
+  })
+})

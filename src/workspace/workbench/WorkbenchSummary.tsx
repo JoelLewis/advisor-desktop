@@ -6,7 +6,7 @@ import { RATE_DISCLOSURE } from '@/lib/tax-rules'
 import { PretradeNotes } from '@/workspace/proposal/PretradeNotes'
 import { taxScope } from '@/workspace/proposal/tax-scope'
 import type { DraftPreview, ProposalDetail } from '@/types/workspace-proposal'
-import { DriftComparison } from './DriftComparison'
+import { DriftTable } from './DriftTable'
 import { HeldAwayList } from './HeldAwayList'
 import { RestrictionRulers } from './RestrictionRulers'
 
@@ -37,7 +37,7 @@ export function WorkbenchSummary({ detail, view, notPreviewed = false }: Workben
         </>}
       </Pane>
       <Pane title="Drift before and after">
-        {notPreviewed ? <NotPreviewed /> : <DriftComparison driftBefore={view.driftBefore} projected={view.preview.projectedDrift} />}
+        {notPreviewed ? <NotPreviewed /> : <DriftTable before={view.driftBefore} projected={view.preview.projectedDrift} />}
       </Pane>
       <Pane title="Wash-sale taxpayer">
         {notPreviewed ? <NotPreviewed /> : <RestrictionRulers restrictions={view.preview.repurchaseRestrictions} />}
