@@ -27,7 +27,18 @@ describe('routes', () => {
     expect(links.map((l) => [l.textContent, l.getAttribute('href')])).toEqual([['The workspace', '/'], ['The Brief', '/t/th-brief']])
     expect(within(main).getByRole('list', { name: 'Starting points' })).toBeInTheDocument()
   })
-  it('a route that throws shows the kit page with the way back, and the error only inside its details', async () => {
+  it.each([
+    ['/', 'Workspace · Advisor Desktop'],
+    ['/t/th-brief', 'Brief · Advisor Desktop'],
+    ['/t/th-pell', 'Dr. Amanda Pell · Advisor Desktop'],
+    ['/billing', 'Billing · Advisor Desktop'],
+    ['/no-such-page', 'Page not found · Advisor Desktop'],
+  ])('%s is titled "%s"', async (path, title) => {
+    renderAt(path)
+    await waitFor(() => expect(document.title).toBe(title))
+  })
+
+it('a route that throws shows the kit page with the way back, and the error only inside its details', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const swallow = (event: ErrorEvent) => event.preventDefault()
     window.addEventListener('error', swallow)

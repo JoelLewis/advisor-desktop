@@ -10,4 +10,5 @@ it('renders exactly one h1, a focusable title and a skip link to main', () => {
   expect(screen.getByRole('heading', { level: 1 })).toHaveAttribute('id', PAGE_TITLE_ID)
   expect(screen.getByRole('link', { name: 'Skip to content' })).toHaveAttribute('href', '#main')
   expect(screen.getByRole('main')).toHaveAttribute('id', 'main')
+  expect(screen.getByRole('main')).toContainElement(screen.getByRole('heading', { level: 1 }))
 })
