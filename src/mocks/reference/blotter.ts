@@ -91,7 +91,7 @@ function allRows(): BlotterRow[] {
 
 const METHODS: readonly MethodNote[] = [
   { label: 'Orders', modeled: false, text: "Tickets are the order management system's orders. Proposal orders are those staged from an approved version in this session, released by compliance and filled at the day's prices." },
-  { label: 'Status', modeled: false, text: 'Working: with the market, not yet filled. Pending compliance: staged from an approval, waiting for release. Withdrawn, returned and canceled orders closed without a fill.' },
+  { label: 'Status', modeled: false, text: 'Working: with the market, not yet filled. Pending compliance: staged from an approval, waiting for release. Withdrawn, returned and canceled orders closed without a fill. Pre-market: entered on a trading day before the 9:30 ET open, and queued for it.' },
   { label: 'Record', modeled: false, text: 'REC is the binding act that closed the order (the release, the return or the withdrawal) or, while it waits, the approval it was staged from.' },
   { label: 'Value', modeled: false, text: "A fill's value is quantity times fill price, in the account's currency; a bond's is par times price; an option's is contracts times price times its multiplier. Quantities are shares, option contracts, or a bond's par. A working order's price is its limit. A day filter runs through the day it names." },
 ]
