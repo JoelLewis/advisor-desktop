@@ -24,8 +24,8 @@ export function ArchivePage() {
   const viewerIsExternal = directory.data !== undefined && isExternalViewerIn(directory.data, viewerId)
   const switchedToClient = viewerIsExternal && viewerId !== openedAs
   useEffect(() => {
-    if (switchedToClient) navigate('/', { replace: true, state: { hiddenSubject: 'the Archive' } satisfies HiddenRedirect })
-  }, [switchedToClient, navigate])
+    if (switchedToClient) navigate('/', { replace: true, state: { hiddenSubject: 'the Archive', hiddenFrom: viewerId } satisfies HiddenRedirect })
+  }, [switchedToClient, navigate, viewerId])
   if (switchedToClient || directory.isPending) return <p role="status" className="text-body text-ink-3">Loading the archive…</p>
   if (directory.isError) return <p role="alert" className="text-body">{directory.error.message}</p>
   if (viewerIsExternal) return <FullViewNotFound subject="Archive" />

@@ -15,7 +15,7 @@ export function useGoHomeWhenHidden(query: { isError: boolean; error: Error | nu
   const navigate = useNavigate()
   const hiddenFromNewViewer = viewerId !== openedAs && query.isError && query.error !== null && isNotFound(query.error)
   useEffect(() => {
-    if (hiddenFromNewViewer) navigate('/', { replace: true, state: { hiddenSubject: subject } satisfies HiddenRedirect })
-  }, [hiddenFromNewViewer, navigate, subject])
+    if (hiddenFromNewViewer) navigate('/', { replace: true, state: { hiddenSubject: subject, hiddenFrom: viewerId } satisfies HiddenRedirect })
+  }, [hiddenFromNewViewer, navigate, subject, viewerId])
   return hiddenFromNewViewer
 }

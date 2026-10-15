@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAnnounce } from '@/kit/announcer/use-announce'
 import { PAGE_TITLE_ID } from '@/kit/page/ids'
 import { Tag } from '@/kit/tag/Tag'
@@ -57,22 +57,27 @@ function FiveMinutePath({ progress }: { progress: StoryProgress | undefined }) {
   )
 }
 
-/** After View-as sent the viewer home from a page the new viewer cannot see: says why, on the page and to the announcer. */
+/**
+ * After View-as sent the viewer home from a page they cannot see: says why, on the page and to the announcer.
+ * The redirect is read once from the router state (which names who it was for), announced, then cleared from history,
+ * so a reload or Back never repeats it; it stays on screen only while that same viewer is still the one viewing.
+ */
 function RedirectNote() {
   const location = useLocation()
-  const redirect = hiddenRedirectOf(location.state)
+  const navigate = useNavigate()
+  const [redirect] = useState(() => hiddenRedirectOf(location.state))
   const { viewerId } = useViewer()
   const people = useViewAsDirectory(redirect !== undefined)
   const announce = useAnnounce()
-  const name = people.data?.people.find((p) => p.id === viewerId)?.name
+  const name = people.data?.people.find((p) => p.id === redirect?.hiddenFrom)?.name
   const sentence = redirect && name ? `${name} can't see ${redirect.hiddenSubject}; showing the workspace.` : undefined
-  const said = useRef<string>()
+  const current = redirect !== undefined && redirect.hiddenFrom === viewerId
+  const said = useRef(false)
   useEffect(() => {
-    // Once per redirect (the location key), so a re-render or StrictMode's second effect does not say it twice.
-    if (sentence && said.current !== location.key) {
-      said.current = location.key
-      announce(sentence)
-    }
-  }, [sentence, location.key, announce])
-  return sentence ? <p className="text-body text-ink-2">{sentence}</p> : null
+    if (!sentence || !current || said.current) return
+    said.current = true
+    announce(sentence)
+    navigate(location.pathname, { replace: true, state: null })
+  }, [sentence, current, announce, navigate, location.pathname])
+  return sentence && current ? <p className="text-body text-ink-2">{sentence}</p> : null
 }

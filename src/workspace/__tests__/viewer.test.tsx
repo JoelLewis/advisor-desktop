@@ -1,5 +1,5 @@
 import { it, expect } from 'vitest'
-import { renderHook, act, waitFor, screen } from '@testing-library/react'
+import { renderHook, act, waitFor, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { routes } from '@/app/routes'
 import type { ReactNode } from 'react'
@@ -48,4 +48,32 @@ it('switching to Robert on Billing goes home and says why, on the page and in th
   await waitFor(() => expect(router.state.location.pathname).toBe('/'))
   expect(await screen.findByText("Robert Johnson can't see Billing; showing the workspace.")).toBeInTheDocument()
   await waitFor(() => expect(document.querySelector('[data-part="announcer"]')).toHaveTextContent("Robert Johnson can't see Billing; showing the workspace."))
+})
+
+const REDIRECT_NOTE = "Robert Johnson can't see Billing; showing the workspace."
+
+async function redirectedHomeFromBilling() {
+  const harness = renderRoutes(routes, '/billing')
+  await screen.findByRole('heading', { level: 1, name: 'Billing' })
+  const user = userEvent.setup()
+  await screen.findByRole('option', { name: 'Robert Johnson · Client' })
+  await user.selectOptions(screen.getByRole('combobox', { name: 'View as' }), 'Robert Johnson · Client')
+  expect(await screen.findByText(REDIRECT_NOTE)).toBeInTheDocument()
+  return { ...harness, user }
+}
+
+it('a second switch while on home does not rename the note to a viewer who never left the page', async () => {
+  const { user } = await redirectedHomeFromBilling()
+  await user.selectOptions(screen.getByRole('combobox', { name: 'View as' }), 'Mark Davis · Compliance')
+  await waitFor(() => expect(screen.queryByText(REDIRECT_NOTE)).toBeNull())
+  expect(screen.queryByText(/can't see Billing/)).toBeNull()
+})
+
+it('a reload or Back does not show or announce the redirect again', async () => {
+  const { router } = await redirectedHomeFromBilling()
+  await waitFor(() => expect(router.state.location.state).toBeNull())
+  await act(() => router.navigate('/t/th-brief'))
+  await act(() => router.navigate(-1))
+  await screen.findByRole('heading', { level: 1, name: 'Workspace' })
+  expect(within(screen.getByRole('main')).queryByText(REDIRECT_NOTE)).toBeNull()
 })

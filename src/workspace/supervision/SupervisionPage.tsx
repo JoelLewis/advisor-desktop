@@ -22,8 +22,8 @@ export function SupervisionPage() {
   const viewerIsExternal = directory.data !== undefined && isExternalViewerIn(directory.data, viewerId)
   const switchedToClient = viewerIsExternal && viewerId !== openedAs
   useEffect(() => {
-    if (switchedToClient) navigate('/', { replace: true, state: { hiddenSubject: 'Supervision' } satisfies HiddenRedirect })
-  }, [switchedToClient, navigate])
+    if (switchedToClient) navigate('/', { replace: true, state: { hiddenSubject: 'Supervision', hiddenFrom: viewerId } satisfies HiddenRedirect })
+  }, [switchedToClient, navigate, viewerId])
   if (switchedToClient || directory.isPending) return <p role="status" className="text-body text-ink-3">Loading supervision…</p>
   if (directory.isError) return <p role="alert" className="text-body">{directory.error.message}</p>
   if (viewerIsExternal) return <FullViewNotFound subject="Supervision" />

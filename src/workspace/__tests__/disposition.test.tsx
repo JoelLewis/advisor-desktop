@@ -43,7 +43,7 @@ describe('recording a disposition', () => {
     expect(slip).toHaveTextContent('Rationale · Legs, tax effect and pre-trade reading reviewed.')
     await waitFor(() => expect(document.activeElement).toBe(document.getElementById('act-REC-0002')))
     expect(store().acts.filter((a) => a.kind === 'release_orders')).toHaveLength(1)
-    expect(queue().getByText(/^Orders appear here once an advisor approves/)).toBeInTheDocument()
+    expect(queue().getByText("No orders are waiting. Today's are under Disposed today.")).toBeInTheDocument()
     expect(queue().getByRole('link', { name: /^Release orders · Johnson rebalance · v1/ })).toBeInTheDocument()
     expect(item).toHaveTextContent('FILLED')
     expect(within(item).queryByRole('region', { name: 'Record a disposition' })).toBeNull()
