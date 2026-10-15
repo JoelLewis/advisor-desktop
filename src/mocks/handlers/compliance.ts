@@ -275,12 +275,12 @@ export function invalidProposal(trades: unknown): string | undefined {
 // Exported so Supervision and the workspace alerts read these same records, never a second copy.
 export const complianceAlerts: ComplianceAlert[] = [
   { id: 'comp-001', type: 'Large Wire', severity: 'critical', title: 'Large wire deposit — source-of-funds required', description: '$250,000 incoming wire to Richard Anderson (acc-022). BSA/AML documentation required before funds release.', entityType: 'account', entityId: 'acc-022', reviewStatus: 'pending', createdAt: '2026-02-24T15:10:00Z' },
-  { id: 'comp-002', type: 'Concentration', severity: 'warning', title: 'Single-name concentration — MSFT in Johnson Trust', description: 'MSFT position at 9.2% of account value, above the 9% watch level and approaching the 10% single-name guideline.', entityType: 'account', entityId: 'acc-001', reviewStatus: 'in_review', createdAt: '2026-02-23T08:00:00Z' },
-  { id: 'comp-003', type: 'Suitability', severity: 'warning', title: 'Suitability review — Foster profile update', description: 'William Foster updated his investor profile. Risk tolerance assessment and investment experience verification needed before the profile is filed.', entityType: 'client', entityId: 'cli-017', reviewStatus: 'in_review', createdAt: '2026-02-22T14:00:00Z' },
-  { id: 'comp-004', type: 'Trade Pre-clearance', severity: 'info', title: 'Pre-trade compliance check passed — Martinez rebalance', description: 'All proposed trades for Michael Martinez rebalance cleared compliance screening.', entityType: 'trade', entityId: 'acc-015', reviewStatus: 'approved', createdAt: '2026-02-22T09:30:00Z', resolvedAt: '2026-02-22T09:35:00Z' },
-  { id: 'comp-005', type: 'Document Expiry', severity: 'warning', title: 'IPS approaching annual review — Thompson', description: 'James Thompson IPS last reviewed Oct 2025. Annual review due by Oct 2026.', entityType: 'document', entityId: 'doc-014', reviewStatus: 'pending', createdAt: '2026-02-20T08:00:00Z' },
+  { id: 'comp-002', type: 'Concentration', severity: 'warning', title: 'Single-name concentration — MSFT in Johnson Trust', description: 'MSFT position at 9.2% of account value, above the 9% watch level and approaching the 10% single-name guideline.', entityType: 'account', entityId: 'acc-001', reviewStatus: 'in_review', createdAt: '2026-02-23T13:00:00Z' },
+  { id: 'comp-003', type: 'Suitability', severity: 'warning', title: 'Suitability review — Foster profile update', description: 'William Foster updated his investor profile. Risk tolerance assessment and investment experience verification needed before the profile is filed.', entityType: 'client', entityId: 'cli-017', reviewStatus: 'in_review', createdAt: '2026-02-20T22:00:00Z' },
+  { id: 'comp-004', type: 'Trade Pre-clearance', severity: 'info', title: 'Pre-trade compliance check passed — Martinez rebalance', description: 'All proposed trades for Michael Martinez rebalance cleared compliance screening.', entityType: 'trade', entityId: 'acc-015', reviewStatus: 'approved', createdAt: '2026-02-20T19:30:00Z', resolvedAt: '2026-02-20T19:35:00Z' },
+  { id: 'comp-005', type: 'Document Expiry', severity: 'warning', title: 'IPS approaching annual review — Thompson', description: 'James Thompson IPS last reviewed Oct 2025. Annual review due by Oct 2026.', entityType: 'document', entityId: 'doc-014', reviewStatus: 'pending', createdAt: '2026-02-20T13:00:00Z' },
   { id: 'comp-006', type: 'Wash Sale', severity: 'info', title: 'Potential wash sale cleared — Johnson INTC/SMH', description: 'INTC sold at a loss and replaced with SMH. SMH, a semiconductor ETF, is not substantially identical to INTC, a single stock: no wash sale.', entityType: 'trade', entityId: 'acc-002', reviewStatus: 'approved', createdAt: '2026-02-20T16:00:00Z', resolvedAt: '2026-02-20T16:10:00Z' },
-  { id: 'comp-007', type: 'RMD', severity: 'warning', title: 'RMD calculation needed — Thompson Traditional IRA', description: 'James Thompson turns 73 this year. First RMD from Traditional IRA (acc-020) must be calculated.', entityType: 'account', entityId: 'acc-020', reviewStatus: 'pending', createdAt: '2026-02-01T08:00:00Z' },
+  { id: 'comp-007', type: 'RMD', severity: 'warning', title: 'RMD calculation needed — Thompson Traditional IRA', description: 'James Thompson turns 73 this year. First RMD from Traditional IRA (acc-020) must be calculated.', entityType: 'account', entityId: 'acc-020', reviewStatus: 'pending', createdAt: '2026-02-02T13:00:00Z' },
 ]
 
 /**
@@ -291,9 +291,9 @@ const CCO_ID = 'cco-001'
 const ccoReviewer = { reviewerId: CCO_ID, reviewer: `${personById(CCO_ID)!.name} (CCO)` }
 
 export const SUPERVISION_RECORDS: readonly SupervisionRecord[] = [
-  { id: 'sr-001', alertId: 'comp-004', ...ccoReviewer, action: 'Approved', notes: 'All trades within portfolio guidelines. No restricted securities.', timestamp: '2026-02-22T09:35:00Z' },
+  { id: 'sr-001', alertId: 'comp-004', ...ccoReviewer, action: 'Approved', notes: 'All trades within portfolio guidelines. No restricted securities.', timestamp: '2026-02-20T19:35:00Z' },
   { id: 'sr-002', alertId: 'comp-006', ...ccoReviewer, action: 'Approved', notes: 'SMH, a semiconductor ETF, is not substantially identical to INTC. No wash sale concern.', timestamp: '2026-02-20T16:10:00Z' },
-  { id: 'sr-003', alertId: 'comp-002', ...ccoReviewer, action: 'Under Review', notes: 'Reviewing client IPS for MSFT exception. Position is long-held with significant unrealized gain.', timestamp: '2026-02-23T10:00:00Z' },
+  { id: 'sr-003', alertId: 'comp-002', ...ccoReviewer, action: 'Under Review', notes: 'Reviewing client IPS for MSFT exception. Position is long-held with significant unrealized gain.', timestamp: '2026-02-23T15:00:00Z' },
 ]
 
 export const complianceHandlers = [

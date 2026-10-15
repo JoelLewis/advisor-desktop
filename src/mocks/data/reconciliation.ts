@@ -12,9 +12,9 @@ export const RECON_BREAKS: readonly ReconBreakRecord[] = [
   { id: 'brk-103', accountId: 'acc-029', field: 'market_value', custodianDelta: -880, severity: 'low', detectedAt: '2026-02-09T07:00:00Z', resolvedBeforeSession: '2026-02-11T15:00:00Z' },
   { id: 'brk-104', accountId: 'acc-022', field: 'cash_balance', custodianDelta: 1_000, severity: 'medium', detectedAt: '2026-02-12T07:00:00Z', resolvedBeforeSession: '2026-02-12T18:30:00Z' },
   { id: 'brk-105', accountId: 'acc-045', field: 'market_value', custodianDelta: -1_150, severity: 'low', detectedAt: '2026-02-18T07:00:00Z', resolvedBeforeSession: '2026-02-19T15:40:00Z' },
-  { id: 'brk-005', accountId: 'acc-014', field: 'market_value', custodianDelta: -1_250, severity: 'low', detectedAt: '2026-02-23T07:00:00Z', resolvedBeforeSession: '2026-02-23T08:20:00Z' },
-  { id: 'brk-003', accountId: 'acc-006', field: 'position_quantity', symbol: 'EFA', custodianDelta: -20, severity: 'medium', detectedAt: '2026-02-24T07:00:00Z', resolvedBeforeSession: '2026-02-24T09:00:00Z' },
-  { id: 'brk-004', accountId: 'acc-003', field: 'transaction_count', custodianDelta: -1, severity: 'low', detectedAt: '2026-02-24T07:00:00Z', resolvedBeforeSession: '2026-02-24T07:45:00Z' },
+  { id: 'brk-005', accountId: 'acc-014', field: 'market_value', custodianDelta: -1_250, severity: 'low', detectedAt: '2026-02-23T07:00:00Z', resolvedBeforeSession: '2026-02-23T13:20:00Z' },
+  { id: 'brk-003', accountId: 'acc-006', field: 'position_quantity', symbol: 'EFA', custodianDelta: -20, severity: 'medium', detectedAt: '2026-02-24T07:00:00Z', resolvedBeforeSession: '2026-02-24T14:00:00Z' },
+  { id: 'brk-004', accountId: 'acc-003', field: 'transaction_count', custodianDelta: -1, severity: 'low', detectedAt: '2026-02-24T07:00:00Z', resolvedBeforeSession: '2026-02-24T12:45:00Z' },
   { id: 'brk-002', accountId: 'acc-001', field: 'cash_balance', custodianDelta: -150, severity: 'medium', detectedAt: '2026-02-25T07:00:00Z' },
 ]
 

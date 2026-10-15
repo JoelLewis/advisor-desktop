@@ -20,7 +20,7 @@ export const clientComms: ClientComm[] = [
     direction: 'inbound',
     subject: 'Tax planning question',
     summary: 'Client called about capital gains implications of selling concentrated AAPL position. Discussed phased liquidation over 3-4 months to manage tax impact. Will follow up with written plan.',
-    timestamp: '2026-02-24T10:15:00Z',
+    timestamp: '2026-02-24T15:15:00Z',
     duration: 18,
   },
   {
@@ -31,7 +31,7 @@ export const clientComms: ClientComm[] = [
     direction: 'outbound',
     subject: 'Annual Review Meeting',
     summary: 'Conducted annual review. Discussed estate planning updates, college funding timeline for eldest child (2028). Client requested IPS update to include education goal.',
-    timestamp: '2026-02-22T15:00:00Z',
+    timestamp: '2026-02-20T20:00:00Z',
     duration: 45,
   },
   {
@@ -42,7 +42,7 @@ export const clientComms: ClientComm[] = [
     direction: 'outbound',
     subject: 'Rebalancing Proposal — Williams Joint Account',
     summary: 'Sent rebalancing proposal addressing 3.1% drift in US equity allocation. Proposed 4 trades with estimated tax impact of $2,100. Awaiting client approval.',
-    timestamp: '2026-02-21T09:45:00Z',
+    timestamp: '2026-02-20T18:00:00Z',
     aiGenerated: true,
   },
   {
@@ -53,7 +53,7 @@ export const clientComms: ClientComm[] = [
     direction: 'inbound',
     subject: 'RMD distribution timing',
     summary: 'Client inquired about optimal timing for required minimum distribution. Discussed tax bracket management and splitting distribution across Q3/Q4. Will model both scenarios.',
-    timestamp: '2026-02-20T11:30:00Z',
+    timestamp: '2026-02-20T16:30:00Z',
     duration: 22,
   },
   {
@@ -86,7 +86,7 @@ export const clientComms: ClientComm[] = [
     direction: 'outbound',
     subject: 'Account opening follow-up',
     summary: 'Met at client office to review new trust account setup. Discussed beneficiary designations and funding schedule. ACAT transfer initiated for Schwab rollover IRA.',
-    timestamp: '2026-02-17T10:00:00Z',
+    timestamp: '2026-02-17T15:00:00Z',
     duration: 60,
   },
   {
@@ -119,7 +119,7 @@ export const clientComms: ClientComm[] = [
     direction: 'outbound',
     subject: 'Quarterly Check-in',
     summary: 'Reviewed portfolio performance (+8.7% QTD). Discussed retirement timeline acceleration — client considering early retirement at 58 instead of 62. Need to model updated cash flow.',
-    timestamp: '2026-02-10T09:30:00Z',
+    timestamp: '2026-02-10T14:30:00Z',
     duration: 35,
   },
   {
@@ -130,7 +130,7 @@ export const clientComms: ClientComm[] = [
     direction: 'outbound',
     subject: 'Compliance Review — Anderson Trust',
     summary: 'Sent annual compliance review questionnaire for trust account. Includes suitability confirmation, beneficiary verification, and investment objective reaffirmation.',
-    timestamp: '2026-02-08T08:30:00Z',
+    timestamp: '2026-02-09T13:30:00Z',
   },
   {
     id: 'comm-013',
@@ -162,7 +162,7 @@ export const clientComms: ClientComm[] = [
     direction: 'outbound',
     subject: 'Annual Fee Disclosure',
     summary: 'Mailed annual advisory fee disclosure and performance report as required. Includes fee schedule, billing methodology, and year-end account summary.',
-    timestamp: '2026-01-28T09:00:00Z',
+    timestamp: '2026-01-28T14:00:00Z',
   },
   {
     id: 'comm-016',
@@ -172,7 +172,7 @@ export const clientComms: ClientComm[] = [
     direction: 'inbound',
     subject: 'New contribution — 529 Plan',
     summary: 'Client transferring $15,000 to 529 plan for youngest child. Requested age-based allocation model. Will process contribution and update allocation by EOW.',
-    timestamp: '2026-01-25T10:30:00Z',
+    timestamp: '2026-01-26T15:30:00Z',
   },
   {
     id: 'comm-017',

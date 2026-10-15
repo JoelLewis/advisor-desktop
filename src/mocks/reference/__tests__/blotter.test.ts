@@ -23,10 +23,15 @@ describe('tickets', () => {
     expect(row('ord-001')?.recId).toBeUndefined()
   })
 
-  it('says which tickets were entered before the 9:30 ET open, queued for it, and no others', () => {
-    const early = view().rows.filter((r) => r.source.kind === 'ticket' && r.preMarket).map((r) => r.id).sort()
-    expect(early).toEqual(['ord-003', 'ord-005', 'ord-008', 'ord-010', 'ord-016'])
+  it('says which orders were entered before the 9:30 ET open, queued for it, and no others', () => {
+    const early = view().rows.filter((r) => r.source.kind === 'ticket' && r.preMarket).map((r) => r.id)
+    expect(early, "the working tickets were entered after Tuesday's close, not before an open").toEqual([])
+    expect(row('ord-008')).toMatchObject({ status: 'working', submittedAt: '2026-02-24T22:00:00Z' })
     expect(row('ord-001')?.preMarket).toBeUndefined()
+    approvedV1()
+    const staged = view().rows.filter((r) => r.source.kind === 'proposal')
+    expect(staged.length).toBeGreaterThan(0)
+    for (const r of staged) expect(r.preMarket, `${r.id} staged at ${r.submittedAt}, before Wednesday's open`).toBe(true)
     expect(row('ord-015')?.preMarket, 'a coin bought on a Saturday is not queued for an open').toBeUndefined()
   })
 

@@ -30,32 +30,33 @@ import { refuseExternal } from './workspace-http'
 //
 // Every timestamp is real UTC, as `clock.ts` reads it (12:00Z is 7:00 ET). Fills
 // were written as New York time with a Z, so several read as pre-market fills; they now fall in the
-// regular session, 14:30–21:00Z before daylight time starts on 2026-03-08. Pending orders submitted
-// before 12:00Z today are pre-market submissions still waiting for the open. ord-014, which filled on
+// regular session, 14:30–21:00Z before daylight time starts on 2026-03-08. The working orders were
+// entered after Tuesday's close (16:31–18:00 ET) and wait for Wednesday's open; none has met a session
+// since, so the market order (ord-008) is still unfilled. ord-014, which filled on
 // Sunday 2026-02-22, filled on Friday 2026-02-20. BTC (ord-015) trades every day.
 export const orders: Order[] = [
   // ── Recent orders for Johnson Family Trust (acc-001) ──
   { id: 'ord-001', accountId: 'acc-001', symbol: 'VTI', side: 'buy', quantity: 150, orderType: 'market', status: 'filled', filledQuantity: 150, filledPrice: 268.35, submittedAt: '2026-02-24T14:30:00Z', filledAt: '2026-02-24T14:30:02Z', assetClass: 'equity' },
   { id: 'ord-002', accountId: 'acc-001', symbol: 'AGG', side: 'buy', quantity: 500, orderType: 'market', status: 'filled', filledQuantity: 500, filledPrice: 98.42, submittedAt: '2026-02-24T14:30:00Z', filledAt: '2026-02-24T14:30:01Z', assetClass: 'equity' },
-  { id: 'ord-003', accountId: 'acc-001', symbol: 'NVDA', side: 'sell', quantity: 25, orderType: 'limit', limitPrice: 785.00, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-25T09:31:00Z', assetClass: 'equity' },
+  { id: 'ord-003', accountId: 'acc-001', symbol: 'NVDA', side: 'sell', quantity: 25, orderType: 'limit', limitPrice: 785.00, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-24T21:31:00Z', assetClass: 'equity' },
 
   // ── Robert Johnson Individual (acc-002) ──
   // This fill is the same event as rs-001, so it prices at rs-001's $142,250 / 5,000 shares
   // and acc-002's INTC position now shows the 7,000 shares left after it. It
   // filled Friday 2026-02-20 at 10:15 ET (15:15Z).
   { id: 'ord-004', accountId: 'acc-002', symbol: 'INTC', side: 'sell', quantity: 5000, orderType: 'market', status: 'filled', filledQuantity: 5000, filledPrice: 28.45, submittedAt: '2026-02-20T15:15:00Z', filledAt: '2026-02-20T15:15:03Z', assetClass: 'equity' },
-  { id: 'ord-005', accountId: 'acc-002', symbol: 'QQQ', side: 'buy', quantity: 200, orderType: 'limit', limitPrice: 480.00, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-25T09:35:00Z', assetClass: 'equity' },
+  { id: 'ord-005', accountId: 'acc-002', symbol: 'QQQ', side: 'buy', quantity: 200, orderType: 'limit', limitPrice: 480.00, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-24T21:35:00Z', assetClass: 'equity' },
 
   // ── Chen Irrevocable Trust (acc-006) ──
   { id: 'ord-006', accountId: 'acc-006', symbol: 'VTI', side: 'buy', quantity: 800, orderType: 'market', status: 'filled', filledQuantity: 800, filledPrice: 268.40, submittedAt: '2026-02-20T16:00:00Z', filledAt: '2026-02-20T16:00:04Z', assetClass: 'equity' },
   { id: 'ord-007', accountId: 'acc-006', symbol: 'TLT', side: 'sell', quantity: 300, orderType: 'market', status: 'filled', filledQuantity: 300, filledPrice: 95.65, submittedAt: '2026-02-20T16:00:00Z', filledAt: '2026-02-20T16:00:02Z', assetClass: 'equity' },
 
   // ── David Williams Individual (acc-011) ──
-  { id: 'ord-008', accountId: 'acc-011', symbol: 'SPY', side: 'buy', quantity: 100, orderType: 'market', status: 'submitted', filledQuantity: 0, submittedAt: '2026-02-25T10:00:00Z', assetClass: 'equity' },
+  { id: 'ord-008', accountId: 'acc-011', symbol: 'SPY', side: 'buy', quantity: 100, orderType: 'market', status: 'submitted', filledQuantity: 0, submittedAt: '2026-02-24T22:00:00Z', assetClass: 'equity' },
   { id: 'ord-009', accountId: 'acc-011', symbol: 'BND', side: 'sell', quantity: 200, orderType: 'market', status: 'canceled', filledQuantity: 0, submittedAt: '2026-02-24T15:45:00Z', assetClass: 'equity' },
 
   // ── Michael Martinez Individual (acc-015) ──
-  { id: 'ord-010', accountId: 'acc-015', symbol: 'EFA', side: 'buy', quantity: 350, orderType: 'limit', limitPrice: 81.50, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-25T09:45:00Z', assetClass: 'equity' },
+  { id: 'ord-010', accountId: 'acc-015', symbol: 'EFA', side: 'buy', quantity: 350, orderType: 'limit', limitPrice: 81.50, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-24T21:45:00Z', assetClass: 'equity' },
   { id: 'ord-011', accountId: 'acc-015', symbol: 'GLD', side: 'sell', quantity: 50, orderType: 'market', status: 'filled', filledQuantity: 50, filledPrice: 215.80, submittedAt: '2026-02-24T18:20:00Z', filledAt: '2026-02-24T18:20:01Z', assetClass: 'equity' },
   { id: 'ord-012', accountId: 'acc-015', symbol: 'VNQ', side: 'buy', quantity: 200, orderType: 'market', status: 'filled', filledQuantity: 200, filledPrice: 89.15, submittedAt: '2026-02-24T18:20:00Z', filledAt: '2026-02-24T18:20:02Z', assetClass: 'equity' },
 
@@ -75,7 +76,7 @@ export const orders: Order[] = [
   // ETFs. It belongs in acc-045, the Coinbase account that actually custodies coins, and at the one
   // BTC price the app knows.
   { id: 'ord-015', accountId: 'acc-045', symbol: 'BTC', side: 'buy', quantity: 0.25, orderType: 'market', status: 'filled', filledQuantity: 0.25, filledPrice: 87_450.00, submittedAt: '2026-02-21T14:15:00Z', filledAt: '2026-02-21T14:15:01Z', assetClass: 'digital_asset', fractionalQuantity: true },
-  { id: 'ord-016', accountId: 'acc-006', symbol: 'AAPLC185', side: 'buy_to_open', quantity: 5, orderType: 'limit', limitPrice: 8.50, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-25T11:00:00Z', assetClass: 'option', underlying: 'AAPL', optionType: 'call', strikePrice: 185, expirationDate: '2026-03-21', contractMultiplier: 100 },
+  { id: 'ord-016', accountId: 'acc-006', symbol: 'AAPLC185', side: 'buy_to_open', quantity: 5, orderType: 'limit', limitPrice: 8.50, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-24T23:00:00Z', assetClass: 'option', underlying: 'AAPL', optionType: 'call', strikePrice: 185, expirationDate: '2026-03-21', contractMultiplier: 100 },
 ]
 
 /**

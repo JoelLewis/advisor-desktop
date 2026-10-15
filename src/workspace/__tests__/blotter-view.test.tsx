@@ -16,7 +16,8 @@ describe('the Blotter view', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Blotter' })).toBeInTheDocument()
     expect(within(orders()).getByRole('row', { name: /ord-003/ })).toHaveTextContent('WORKING')
     expect(within(orders()).getByRole('row', { name: /ord-003/ })).toHaveTextContent('785.00 USD limit')
-    expect(within(orders()).getByRole('row', { name: /ord-003/ })).toHaveTextContent('25 Feb 04:31 ET · pre-market')
+    expect(within(orders()).getByRole('row', { name: /ord-003/ })).toHaveTextContent('24 Feb 16:31 ET')
+    expect(within(orders()).getByRole('row', { name: /ord-003/ })).not.toHaveTextContent('pre-market')
     expect(within(orders()).getByRole('row', { name: /ord-001/ })).not.toHaveTextContent('pre-market')
     expect(within(orders()).getByRole('row', { name: /ord-014/ })).toHaveTextContent('47,600')
     expect(screen.getByRole('region', { name: 'Methods & sources' })).toHaveTextContent('REC is the binding act')
@@ -38,6 +39,7 @@ describe('the Blotter view', () => {
     expect(rows.length).toBeGreaterThan(0)
     for (const row of rows) {
       expect(row).toHaveTextContent('FILLED')
+      expect(row, 'staged before the open on the event clock').toHaveTextContent('· pre-market')
       expect(row).toHaveTextContent(releaseAct.id)
       expect(within(row).getByRole('link', { name: 'Johnson rebalance v1' })).toHaveAttribute('href', '/t/th-johnson-review')
     }
