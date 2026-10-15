@@ -40,6 +40,15 @@ export async function visitPhone(page: Page, path: string, theme: Theme) {
   if (pane === 'Thread') await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
 }
 
+/** A check run while a step's dialog is open, before the step confirms it (the README path runs axe here). */
+export type AtDialog = (page: Page) => Promise<void>
+
+async function checkOpenDialog(dialog: Locator, atDialog: AtDialog | undefined) {
+  if (!atDialog) return
+  await expect(dialog).toBeVisible()
+  await atDialog(dialog.page())
+}
+
 export const heading = (page: Page) => page.getByRole('heading', { level: 1 })
 export const conversation = (page: Page) => page.getByRole('list', { name: 'Messages' })
 export const context = (page: Page) => page.getByRole('complementary', { name: 'Thread context' })
@@ -85,10 +94,12 @@ export const deskLink = (page: Page, name: 'Supervision' | 'Archive' | 'Billing'
   page.getByRole('navigation', { name: 'Threads' }).getByRole('link', { name, exact: true })
 
 /** The presenter's shortcut beside pending staged orders: Mark's default release, confirmed. */
-export async function releaseByShortcut(page: Page) {
+export async function releaseByShortcut(page: Page, atDialog?: AtDialog) {
   const panel = approvalOf(page)
   await panel.getByRole('button', { name: 'Demo · act as Mark Davis' }).click()
-  await page.getByRole('dialog', { name: /^Release v\d+ as Mark Davis\?$/ }).getByRole('button', { name: 'Confirm' }).click()
+  const dialog = page.getByRole('dialog', { name: /^Release v\d+ as Mark Davis\?$/ })
+  await checkOpenDialog(dialog, atDialog)
+  await dialog.getByRole('button', { name: 'Confirm' }).click()
   await expect(panel).toContainText('Released by compliance; filled at the day\'s prices.')
 }
 
@@ -101,9 +112,11 @@ export async function runPrep(page: Page) {
   await expect(page.getByRole('list', { name: 'Agenda · v1' })).toBeVisible()
 }
 
-export async function holdTheMeeting(page: Page) {
+export async function holdTheMeeting(page: Page, atDialog?: AtDialog) {
   await page.getByRole('button', { name: 'Hold the meeting', exact: true }).click()
-  await page.getByRole('dialog', { name: 'Hold the meeting?' }).getByRole('button', { name: 'Hold the meeting', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Hold the meeting?' })
+  await checkOpenDialog(dialog, atDialog)
+  await dialog.getByRole('button', { name: 'Hold the meeting', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Draft notes', exact: true })).toBeVisible()
 }
 
@@ -112,9 +125,11 @@ export async function draftNotes(page: Page) {
   await expect(page.getByRole('button', { name: 'File the record', exact: true })).toBeVisible()
 }
 
-export async function fileRecord(page: Page) {
+export async function fileRecord(page: Page, atDialog?: AtDialog) {
   await page.getByRole('button', { name: 'File the record', exact: true }).click()
-  await page.getByRole('dialog', { name: /^File the record of the .+\?$/ }).getByRole('button', { name: 'Confirm', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: /^File the record of the .+\?$/ })
+  await checkOpenDialog(dialog, atDialog)
+  await dialog.getByRole('button', { name: 'Confirm', exact: true }).click()
   await expect(page.getByText(/^Filed · REC-\d{4}/).first()).toBeVisible()
 }
 
@@ -136,16 +151,20 @@ export const PELL_ACCEPTANCE_TEXT = "I've read the proposal and I'd like to go a
 const JUMP_LABEL = { reply: 'Advance to her reply · Thu 26 Feb 09:10 ET', acceptance: 'Advance to her acceptance · Mon 2 Mar 10:00 ET' } as const
 
 /** A disclosure from her thread's timeline (or the onboarding checklist), confirmed as a binding act. */
-export async function deliver(page: Page, short: 'Form CRS' | 'ADV Part 2A' | 'ADV Part 2B' | 'privacy notice') {
+export async function deliver(page: Page, short: 'Form CRS' | 'ADV Part 2A' | 'ADV Part 2B' | 'privacy notice', atDialog?: AtDialog) {
   await context(page).getByRole('button', { name: `Deliver ${short}`, exact: true }).click()
-  await page.getByRole('dialog', { name: `Deliver ${short} to Dr. Amanda Pell?` }).getByRole('button', { name: 'Confirm' }).click()
+  const dialog = page.getByRole('dialog', { name: `Deliver ${short} to Dr. Amanda Pell?` })
+  await checkOpenDialog(dialog, atDialog)
+  await dialog.getByRole('button', { name: 'Confirm' }).click()
   await expect(context(page).getByRole('button', { name: `Deliver ${short}`, exact: true })).toHaveCount(0)
 }
 
-export async function recordTheCoffee(page: Page) {
+export async function recordTheCoffee(page: Page, atDialog?: AtDialog) {
   const clock = context(page).getByRole('region', { name: 'Clock' })
   await clock.getByRole('button', { name: 'Record the coffee' }).click()
-  await page.getByRole('dialog', { name: 'Record the coffee' }).getByRole('button', { name: 'Record', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Record the coffee' })
+  await checkOpenDialog(dialog, atDialog)
+  await dialog.getByRole('button', { name: 'Record', exact: true }).click()
   await expect(clock).toContainText('Coffee recorded')
 }
 
@@ -158,33 +177,39 @@ export async function askAgentNamed(page: Page, name: string) {
   await context(page).getByRole('region', { name: 'Ask an agent' }).getByRole('button', { name: `Ask ${name}`, exact: true }).click()
 }
 
-export async function reviseToTwoTaxYears(page: Page) {
+export async function reviseToTwoTaxYears(page: Page, atDialog?: AtDialog) {
   const proposal = page.getByRole('region', { name: 'Proposal · Pell proposal' })
   await proposal.getByRole('button', { name: 'Revise' }).click()
   const dialog = page.getByRole('dialog', { name: 'Revise the Pell proposal' })
+  await checkOpenDialog(dialog, atDialog)
   await dialog.getByLabel('Staged sale of the concentrated stock').selectOption('2')
   await dialog.getByRole('button', { name: 'Ask for v2' }).click()
   await expect(proposal.getByRole('table', { name: 'Staged sale option · v2' })).toBeVisible()
 }
 
-export async function approveProspect(page: Page, version: number) {
+export async function approveProspect(page: Page, version: number, atDialog?: AtDialog) {
   const approval = context(page).getByRole('region', { name: 'Approval · Pell proposal' })
   await approval.getByRole('checkbox', { name: `I reviewed v${version}: its model, its transfer plan, its fees and the best-interest record.` }).check()
   await approval.getByRole('button', { name: `Approve v${version}` }).click()
-  await page.getByRole('dialog', { name: `Approve v${version} of the Pell proposal?` }).getByRole('button', { name: 'Confirm' }).click()
+  const dialog = page.getByRole('dialog', { name: `Approve v${version} of the Pell proposal?` })
+  await checkOpenDialog(dialog, atDialog)
+  await dialog.getByRole('button', { name: 'Confirm' }).click()
   await expect(approval).toContainText(`v${version} is approved`)
 }
 
-export async function sendToHer(page: Page, version: number) {
+export async function sendToHer(page: Page, version: number, atDialog?: AtDialog) {
   await context(page).getByRole('region', { name: 'Proposal' }).getByRole('button', { name: `Send v${version} to Dr. Pell` }).click()
-  await page.getByRole('dialog', { name: `Send v${version} to Dr. Pell?` }).getByRole('button', { name: 'Confirm' }).click()
+  const dialog = page.getByRole('dialog', { name: `Send v${version} to Dr. Pell?` })
+  await checkOpenDialog(dialog, atDialog)
+  await dialog.getByRole('button', { name: 'Confirm' }).click()
   await expect(conversation(page)).toContainText('Dear Dr. Pell,')
 }
 
 /** Resolve a reconciliation break as a binding act, from the reconciliation view. */
-export async function resolveBreakNamed(page: Page, breakId: string, resolution: string, rationale: string) {
+export async function resolveBreakNamed(page: Page, breakId: string, resolution: string, rationale: string, atDialog?: AtDialog) {
   await page.getByRole('button', { name: `Resolve ${breakId}`, exact: true }).click()
   const dialog = page.getByRole('dialog', { name: `Resolve ${breakId}?` })
+  await checkOpenDialog(dialog, atDialog)
   await dialog.getByLabel('Resolution').selectOption({ label: resolution })
   await dialog.getByLabel('Rationale').fill(rationale)
   await dialog.getByRole('button', { name: 'Confirm' }).click()

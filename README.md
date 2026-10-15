@@ -6,15 +6,15 @@ A multiplayer workspace for the advisors of Larkfield Advisory, a fictional SEC-
 
 **Live:** https://advisor.joelelewis.com
 
-![The Brief: a ranked summary, then each agent's finding with its sources](e2e-visual/__baselines__/brief-light.png)
+![The Brief: today's calendar, what needs a decision with its figures, the context folded, then each agent's finding with its sources](e2e-visual/__baselines__/brief-light.png)
 
 ## Five minutes, click by click
 
-You are Adrian Hale, the advisor. Nobody else acts live: colleagues' history is seeded, agents do the analysis, and **View as** shows what each person can see. Follow the steps in order: the clock only moves forward, and a reload starts the demo over.
+You are Adrian Hale, the advisor. Nobody else acts live: colleagues' history is seeded, agents do the analysis, and **View as** shows what each person can see. The home page lists these eight steps and marks each one done as you go. Follow them in order: the clock only moves forward, and a reload starts the demo over. Single-key shortcuts (`/`, `?`, `t`) can be turned off in the key sheet (**Ctrl/⌘ /**); **Ctrl/⌘ K** always opens the command line.
 
-1. **The Brief.** Choose **Brief** in the thread list. The ranked summary leads with what needs attention.
+1. **The Brief.** Choose **Brief** in the thread list. **Today** lists the day in Eastern Time: the 14:00 annual review, the 15:30 coffee with Dr. Pell (Form CRS due before it, firm policy) and the open reconciliation break. **Needs a decision** ranks what would change a trade, each with its figure; **Context** holds the rest, folded.
 2. **The Johnson rebalance and harvest.**
-   - On the Harvest Scanner's Intel finding, choose **Take to team thread**, then open **Johnson Rebalance Review**.
+   - On the Harvest Scanner's finding about the remaining Intel shares, choose **Take to**, then **Johnson Rebalance Review**, and open **Johnson Rebalance Review**.
    - In the context column choose **Ask Proposal Agent**: v1 appears in the thread.
    - On the proposal choose **Revise**, tick **Harvest only: sell only lots at a loss** and choose **Ask Proposal Agent to revise**: v2.
    - Choose **Workbench**. In **Legs · v2** move to the QAI row and press **x** to exclude it; press **⌘S** (Ctrl+S) to save v3. Choose **Back to the thread**.
@@ -27,15 +27,15 @@ You are Adrian Hale, the advisor. Nobody else acts live: colleagues' history is 
 
    ![The thread after the release: the approval and release records, and the fills](e2e-visual/__baselines__/thread-after-release-light.png)
 
-4. **The blotter and the moved book.** On the fills choose **Open in the blotter**: each order filled, under the release's record. Choose **Back to the thread**, then **Robert Johnson Individual** in the context column: Intel is gone from the holdings. Choose **Back to the thread** and open the **Brief**: the Intel harvest has left the summary.
+4. **The blotter and the moved book.** On the fills choose **Open in the blotter**: each order filled, under the release's record. Choose **Back to the thread**, then **Robert Johnson Individual** in the context column: Intel is gone from the holdings. Choose **Back to the thread** and open the **Brief**: Intel has left **Needs a decision**, and its two realized losses sit under **Context**.
 
    ![The blotter: every order across accounts, with its status and record](e2e-visual/__baselines__/blotter-light.png)
 
-5. **The Johnson annual review.** In the Brief, on the meeting line, choose **Open the meeting thread**. Choose **Run prep**, add an item with **New agenda item** and **Add to agenda**, then **Open the meeting view**, choose **Hold the meeting** and **Hold the meeting** again in its dialog. Choose **Draft notes** (hover a citation to light its transcript line), then **File the record** and **Confirm**. Choose **Back to the thread**, open **Robert Johnson**, choose **Ask Client Letter Agent for the recap** and **Send to Robert**.
+5. **The Johnson annual review.** In the Brief, under **Today**, on the annual review's line choose **Open the meeting thread**. Choose **Run prep**, add an item with **New agenda item** and **Add to agenda**, then **Open the meeting view**, choose **Hold the meeting** and **Hold the meeting** again in its dialog. Choose **Draft notes** (hover a citation to light its transcript line), then **File the record** and **Confirm**. Choose **Back to the thread**, open **Robert Johnson**, choose **Ask Client Letter Agent for the recap** and **Send to Robert**.
 
    ![The filed notes beside the transcript, every line citing it](e2e-visual/__baselines__/meeting-after-light.png)
 
-6. **Dr. Amanda Pell, first contact to onboarding.** In the Brief, on the referral, choose **Open her thread**. Choose **Deliver Form CRS** and **Confirm**, then **Record the coffee** and **Record** in its dialog, then **Advance to her reply · Thu 26 Feb 09:10 ET**. In **Pell · prospect work** choose **Ask Prospect Profile**, **Ask Transfer-In** and **Ask Proposal Agent**. Transfer-In weighs moving each holding in kind against selling it, with the gain and a tax estimate; her 403(b) rollover is only asked about, comparison to follow. On the proposal choose **Revise**, set **Staged sale of the concentrated stock** to **Over two tax years** and choose **Ask for v2**; tick the review, choose **Approve v2** and **Confirm**. In **Dr. Amanda Pell** choose **Send v2 to Dr. Pell** (Form ADV Part 2A goes with it) and **Confirm**, then **Advance to her acceptance · Mon 2 Mar 10:00 ET**. Her onboarding checklist opens in **Pell · prospect work**.
+6. **Dr. Amanda Pell, first contact to onboarding.** In the Brief, under **Today**, on the coffee's line choose **Open her thread**. Choose **Deliver Form CRS** and **Confirm**, then **Record the coffee** and **Record** in its dialog, then **Advance to her reply · Thu 26 Feb 09:10 ET**. In **Pell · prospect work** choose **Ask Prospect Profile**, **Ask Transfer-In** and **Ask Proposal Agent**. Transfer-In weighs moving each holding in kind against selling it, with the gain and a tax estimate; her 403(b) rollover is only asked about, comparison to follow. On the proposal choose **Revise**, set **Staged sale of the concentrated stock** to **Over two tax years** and choose **Ask for v2**; tick the review, choose **Approve v2** and **Confirm**. In **Dr. Amanda Pell** choose **Send v2 to Dr. Pell** (Form ADV Part 2A goes with it) and **Confirm**, then **Advance to her acceptance · Mon 2 Mar 10:00 ET**. Her onboarding checklist opens in **Pell · prospect work**.
 
    ![Her thread: Form CRS delivered, her reply, and the proposal sent with Form ADV Part 2A](e2e-visual/__baselines__/pell-thread-light.png)
    ![The prospect work thread with her onboarding opened](e2e-visual/__baselines__/pell-onboarding-light.png)
@@ -60,6 +60,7 @@ An end-to-end test performs these clicks in this order (`e2e-visual/readme-path.
 - **Wash sales scoped to the taxpayer.** IRC §1091 is applied lot by lot to the taxpayer, looking thirty days back and forward: the owner and spouse, their IRAs and Roths included, while an irrevocable trust is its own taxpayer. A loss washed by a purchase in an IRA or Roth is disallowed for good, not deferred; coins held directly are outside the rule (`src/lib/wash-sale.ts`, `src/mocks/handlers/tax-return.ts`). Every tax figure is an estimate at top federal rates, and the app says to consult your tax professional.
 - **Disclosure timing as firm policy.** Form CRS comes before or with the first recommendation, so a proposal cannot be sent until it is delivered. Form ADV Part 2A goes with the proposal if it has not gone before. Both rules are labeled firm policy (`src/mocks/workspace/prospect-acts.ts`, `src/workspace/prospect/prospect-words.ts`).
 - **Agents' claims carry no digits.** An agent's sentence names things in words; every figure travels as a figure with its source and is formatted by the kit, so no number is typed twice (`src/mocks/agents/__tests__/agents.test.ts`).
+- **One clock.** Every time people read is Eastern Time with its zone ("25 Feb 07:00 ET"); UTC appears only in a record slip, labeled, beside its fingerprint (`src/kit/measure.ts`, `src/__tests__/guardrails/one-clock.test.ts`).
 - **Modeled or derived, and labeled.** Each reference view ends with Methods & sources. A figure from a model (volatility, factor exposure, a quarter-end value) is tagged MODELED with its method; everything else is derived from the book.
 
 ## How it is built
@@ -67,7 +68,7 @@ An end-to-end test performs these clicks in this order (`e2e-visual/readme-path.
 - **React 18, TypeScript (strict), Vite 6, Tailwind v4** with the instrument palette as theme tokens, **TanStack Query** for server state, **React Router**.
 - **MSW is the server.** Every `/api` request is answered in the browser by a service worker. The engine behind it lives in `src/mocks`: the book, the session portfolio ledger every read goes through, the event clock that stamps each record, the agents and the acts. The UI reads the engine only through the API, a rule a guard test enforces.
 - **The kit** (`src/kit`): buttons, tables, dialogs, readings, record slips and formatters, with guardrail tests for palette, contrast, headings, the mocks boundary, routes and API routes (`src/__tests__/guardrails`). The kit's gallery is at `/kit`.
-- **Tests:** Vitest and Testing Library for the engine and the UI; Playwright for exact visual baselines and the end-to-end stories (`e2e-visual`). CI runs lint, type-check, the unit suite and the build on every pull request and on `main`.
+- **Tests:** Vitest and Testing Library for the engine and the UI; Playwright for exact visual baselines, axe on every scene, and the end-to-end stories (`e2e-visual`). CI runs lint, type-check, the unit suite and the build on every pull request and on `main`.
 
 ## Run it
 
