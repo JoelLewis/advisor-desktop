@@ -204,3 +204,13 @@ test('the key sheet with the single-key setting · baseline', async ({ page }) =
   await expect(page).toHaveScreenshot('key-sheet-light.png', SCREENSHOT)
   await expectNoAxeViolations(page)
 })
+
+test('opening a thread from the list focuses its title and leaves the shell header in view', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await visit(page, '/t/th-brief', 'light')
+  await settle(page)
+  await page.getByRole('navigation', { name: 'Threads' }).getByRole('link', { name: 'Johnson Rebalance Review', exact: true }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Johnson Rebalance Review' })).toBeFocused()
+  expect(await page.evaluate(() => window.scrollY)).toBe(0)
+  await expect(page.getByRole('link', { name: 'Advisor Desktop', exact: true })).toBeInViewport()
+})
