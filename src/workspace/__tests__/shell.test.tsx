@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { http, HttpResponse } from 'msw'
+import { delay, http, HttpResponse } from 'msw'
 import type { RouteObject } from 'react-router-dom'
 import { routes } from '@/app/routes'
 import { RootLayout } from '@/app/RootLayout'
@@ -32,6 +32,15 @@ const spokenText = (el: Element) => [...el.childNodes]
 const threadLinks = () => within(threadNav()).getAllByRole('link').map(spokenText)
 
 describe('workspace shell', () => {
+  it('reserves the thread list while it loads: the panes, the legend and the rows the loaded list will have, and a status', async () => {
+    server.use(http.get('/api/workspace/threads', async () => { await delay(200); return HttpResponse.json([]) }))
+    renderRoutes(routes, '/')
+    expect(await screen.findByText('Loading threads…')).toBeInTheDocument()
+    const skeleton = document.querySelector('[data-part="thread-list-skeleton"]')!
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true')
+    expect(skeleton.querySelectorAll('[data-part="skeleton-row"]')).toHaveLength(14)
+    expect(skeleton.querySelectorAll('ul[aria-label="Visibility"] > li')).toHaveLength(3)
+  })
   it('puts one visibility legend above the threads; each row is a bare mark with its visibility as a description', async () => {
     await renderHome()
     const legend = within(threadNav()).getByRole('list', { name: 'Visibility' })

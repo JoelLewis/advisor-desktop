@@ -12,24 +12,12 @@ import { WorkbenchPage } from '@/workspace/workbench/WorkbenchPage'
 import { WorkbenchThreadColumn } from '@/workspace/workbench/WorkbenchThreadColumn'
 import { useWorkbenchThreadAvailable } from '@/workspace/workbench/use-workbench-thread-available'
 import { MeetingPage } from '@/workspace/meeting/MeetingPage'
-import { ProspectPage } from '@/workspace/prospect/ProspectPage'
 import { MeetingThreadColumn } from '@/workspace/meeting/MeetingThreadColumn'
 import { useMeetingThreadAvailable } from '@/workspace/meeting/use-meeting-thread-available'
-import { ArchivePage } from '@/workspace/archive/ArchivePage'
-import { BillingPage } from '@/workspace/reference/BillingPage'
-import { ReconciliationPage } from '@/workspace/reference/ReconciliationPage'
-import { BookRiskPage } from '@/workspace/reference/BookRiskPage'
-import { BlotterPage } from '@/workspace/reference/BlotterPage'
-import { AttributionPage } from '@/workspace/reference/AttributionPage'
-import { ModelsPage } from '@/workspace/reference/ModelsPage'
-import { ModelPage } from '@/workspace/reference/ModelPage'
-import { AccountRiskPage } from '@/workspace/reference/AccountRiskPage'
-import { PracticePage } from '@/workspace/reference/PracticePage'
-import { SupervisionPage } from '@/workspace/supervision/SupervisionPage'
 import type { ShellHandle } from '@/workspace/shell/context-column'
 import { RootLayout } from './RootLayout'
+import { PageLoading } from './PageLoading'
 import { RouteError } from './RouteError'
-import { KitPage } from './pages/KitPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { routerFuture } from './router-flags'
 
@@ -58,24 +46,24 @@ export const routes: RouteObject[] = [
           { path: 'accounts/:accountId', element: <AccountView /> },
           { path: 'households/:householdId', element: <HouseholdView />, handle: fullWidthHandle },
           { path: 'clients/:clientId', element: <ClientView />, handle: fullWidthHandle },
-          { path: 'archive', element: <ArchivePage /> },
-          { path: 'billing', element: <BillingPage />, handle: fullWidthHandle },
-          { path: 'risk', element: <BookRiskPage />, handle: fullWidthHandle },
-          { path: 'accounts/:accountId/risk', element: <AccountRiskPage />, handle: fullWidthHandle },
-          { path: 'accounts/:accountId/attribution', element: <AttributionPage />, handle: fullWidthHandle },
-          { path: 'models', element: <ModelsPage />, handle: fullWidthHandle },
-          { path: 'models/:modelId', element: <ModelPage />, handle: fullWidthHandle },
-          { path: 'blotter', element: <BlotterPage />, handle: fullWidthHandle },
-          { path: 'practice', element: <PracticePage />, handle: fullWidthHandle },
-          { path: 'reconciliation', element: <ReconciliationPage />, handle: fullWidthHandle },
-          { path: 'supervision', element: <SupervisionPage />, handle: fullWidthHandle },
-          { path: 'supervision/:kind/:id', element: <SupervisionPage />, handle: fullWidthHandle },
+          { path: 'archive', lazy: () => import('@/workspace/archive/ArchivePage').then((m) => ({ Component: m.ArchivePage })), HydrateFallback: PageLoading },
+          { path: 'billing', lazy: () => import('@/workspace/reference/BillingPage').then((m) => ({ Component: m.BillingPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
+          { path: 'risk', lazy: () => import('@/workspace/reference/BookRiskPage').then((m) => ({ Component: m.BookRiskPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
+          { path: 'accounts/:accountId/risk', lazy: () => import('@/workspace/reference/AccountRiskPage').then((m) => ({ Component: m.AccountRiskPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
+          { path: 'accounts/:accountId/attribution', lazy: () => import('@/workspace/reference/AttributionPage').then((m) => ({ Component: m.AttributionPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
+          { path: 'models', lazy: () => import('@/workspace/reference/ModelsPage').then((m) => ({ Component: m.ModelsPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
+          { path: 'models/:modelId', lazy: () => import('@/workspace/reference/ModelPage').then((m) => ({ Component: m.ModelPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
+          { path: 'blotter', lazy: () => import('@/workspace/reference/BlotterPage').then((m) => ({ Component: m.BlotterPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
+          { path: 'practice', lazy: () => import('@/workspace/reference/PracticePage').then((m) => ({ Component: m.PracticePage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
+          { path: 'reconciliation', lazy: () => import('@/workspace/reference/ReconciliationPage').then((m) => ({ Component: m.ReconciliationPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
+          { path: 'supervision', lazy: () => import('@/workspace/supervision/SupervisionPage').then((m) => ({ Component: m.SupervisionPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
+          { path: 'supervision/:kind/:id', lazy: () => import('@/workspace/supervision/SupervisionPage').then((m) => ({ Component: m.SupervisionPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
           { path: 'proposals/:proposalId', element: <WorkbenchPage />, handle: workbenchHandle },
           { path: 'meetings/:eventId', element: <MeetingPage />, handle: meetingHandle },
-          { path: 'prospects/:prospectId', element: <ProspectPage />, handle: fullWidthHandle },
+          { path: 'prospects/:prospectId', lazy: () => import('@/workspace/prospect/ProspectPage').then((m) => ({ Component: m.ProspectPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
         ],
       },
-      { path: 'kit', element: <KitPage /> },
+      { path: 'kit', lazy: () => import('./pages/KitPage').then((m) => ({ Component: m.KitPage })), HydrateFallback: PageLoading },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

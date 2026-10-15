@@ -1,13 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { QueryClientProvider } from '@tanstack/react-query'
-import { RouterProvider } from 'react-router-dom'
-import { router } from '@/app/routes'
-import { providerFuture } from '@/app/router-flags'
-import { createAppQueryClient } from '@/app/query-client'
 import { ServerUnavailable } from '@/app/ServerUnavailable'
 import '@/styles/app.css'
-import { ViewerProvider } from '@/workspace/viewer/ViewerProvider'
 
 const RELOADED_AT_KEY = 'ws-preload-reloaded-at'
 const RELOAD_GAP_MS = 10_000
@@ -22,8 +16,6 @@ window.addEventListener('vite:preloadError', (event) => {
   window.location.reload()
 })
 
-const queryClient = createAppQueryClient()
-
 async function startServer() {
   const { worker } = await import('@/mocks/browser')
   await worker.start({ onUnhandledRequest: 'bypass', quiet: import.meta.env.PROD })
@@ -37,17 +29,14 @@ function rootElement(): HTMLElement {
   return root
 }
 
-startServer().then(
-  () => {
-    ReactDOM.createRoot(rootElement()).render(
-      <React.StrictMode>
-        <QueryClientProvider client={queryClient}>
-          <ViewerProvider>
-            <RouterProvider router={router} future={providerFuture} />
-          </ViewerProvider>
-        </QueryClientProvider>
-      </React.StrictMode>,
-    )
+// The app chunk and the worker load side by side; the page renders when both are ready.
+const app = import('@/app/App')
+const server = startServer()
+
+server.then(
+  async () => {
+    const { App } = await app
+    ReactDOM.createRoot(rootElement()).render(<React.StrictMode><App /></React.StrictMode>)
   },
   (error: unknown) => {
     console.error('The demo server (MSW service worker) did not start:', error)

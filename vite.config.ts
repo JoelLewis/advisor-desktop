@@ -1,11 +1,34 @@
 /// <reference types="vitest/config" />
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin, type Rollup } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 
+/** Build only: the mock server's chunk and the Archivo latin face are preloaded, so they load beside the app instead of after it. */
+function preloadServerAndFont(): Plugin {
+  return {
+    name: 'preload-server-and-font',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'post',
+      handler(_html, ctx) {
+        if (!ctx.bundle) throw new Error('preload-server-and-font runs at build, with a bundle')
+        const files = Object.values(ctx.bundle)
+        const server = files.find((f): f is Rollup.OutputChunk => f.type === 'chunk' && (f.facadeModuleId ?? '').endsWith('/src/mocks/browser.ts'))
+        const font = files.find((f): f is Rollup.OutputAsset => f.type === 'asset' && /archivo-latin-wdth-normal-[\w-]+\.woff2$/.test(f.fileName))
+        if (!server) throw new Error('preload-server-and-font: no mock-server chunk in the bundle')
+        if (!font) throw new Error('preload-server-and-font: no Archivo latin face in the bundle')
+        return [
+          { tag: 'link', attrs: { rel: 'modulepreload', href: `/${server.fileName}` }, injectTo: 'head' },
+          { tag: 'link', attrs: { rel: 'preload', as: 'font', type: 'font/woff2', href: `/${font.fileName}`, crossorigin: '' }, injectTo: 'head' },
+        ]
+      },
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), preloadServerAndFont()],
   build: {
     // Two chunks pass Vite's 500 kB default, by design: the app (~700 kB, ~210 kB gzip), and the MSW worker
     // with the engine (~630 kB, ~195 kB gzip), which is the demo's whole server running in the browser and

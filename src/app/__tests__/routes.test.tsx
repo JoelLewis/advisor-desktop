@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { matchRoutes } from 'react-router-dom'
 import { routes } from '@/app/routes'
 import { http, HttpResponse } from 'msw'
 import { renderRoutes } from '@/test/render'
@@ -19,6 +20,11 @@ async function renderKitReady() {
 }
 
 describe('routes', () => {
+  it.each(['/kit', '/supervision', '/archive', '/prospects/prsp-011', '/billing', '/risk', '/models', '/models/mod-005', '/blotter', '/practice', '/reconciliation'])('%s loads its page lazily', (path) => {
+    const [match] = matchRoutes(routes, path)!.slice(-1)
+    expect(match!.route.lazy).toBeTypeOf('function')
+    expect(match!.route.element).toBeUndefined()
+  })
   it("an unknown path shows the not-found page with the demo's two starting points, and nothing else", async () => {
     renderAt('/portfolios/trading')
     expect(await screen.findByRole('heading', { level: 1, name: 'Page not found' })).toBeInTheDocument()
@@ -58,10 +64,10 @@ describe('routes', () => {
       consoleError.mockRestore()
     }
   })
-  it('the kit is not ready while loading', () => {
+  it('the kit is not ready while loading', async () => {
     const { container } = renderAt('/kit')
     expect(container.querySelector('[data-kit-ready="true"]')).toBeNull()
-    expect(within(screen.getByRole('main')).getByRole('status')).toHaveTextContent('Loading the account from the engine…')
+    expect(await within(await screen.findByRole('main')).findByRole('status')).toHaveTextContent('Loading the account from the engine…')
   })
   it('the kit becomes ready on acc-002 data', async () => {
     await renderKitReady()

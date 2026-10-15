@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { Pane } from '@/kit/layout/Pane'
 import { VisibilityMark } from '@/kit/visibility/VisibilityMark'
 import { visibilityWords } from '@/kit/visibility/visibility'
+import { ThreadListSkeleton } from '@/workspace/shell/ThreadListSkeleton'
 import { ExternalVisibilityLegend, VisibilityLegend } from '@/workspace/shell/VisibilityLegend'
 import { useDirectory, useThreads } from '@/hooks/use-workspace'
 import { isExternalViewerIn } from '@/workspace/people/directory-people'
@@ -26,7 +27,7 @@ export function ThreadList() {
   const { viewerId } = useViewer()
   const directory = useDirectory()
   const external = directory.data !== undefined && isExternalViewerIn(directory.data, viewerId)
-  if (threads.isPending) return <p role="status" className="text-body text-ink-3">Loading threads…</p>
+  if (threads.isPending) return <ThreadListSkeleton />
   if (threads.isError) return <p role="alert" className="text-body">{threads.error.message}</p>
   return (
     <div className="flex flex-col gap-8">
