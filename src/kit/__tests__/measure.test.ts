@@ -3,7 +3,7 @@ import {
   MINUS, MeasureError, isNegative, fmtMoney, fmtResult, fmtPrice, fmtWeight, fmtReturn, fmtDrift,
   fmtTolerance, fmtQuantity, splitFraction, fmtDays, fmtScore, fmtDate, fmtEasternStamp, fmtUtcStamp, clientMoney,
   clientPercent, clientWholePercent, clientDate, fmtEasternTime, fmtEasternDayTime, fmtEasternRange, fmtEasternWindow, clientRate, fmtDayMonthYear,
-  fmtAsOf, isCalendarDate,
+  fmtAsOf, isCalendarDate, driftChange,
 } from '@/kit/measure'
 
 describe('measure', () => {
@@ -255,5 +255,18 @@ describe('fmtEasternWindow', () => {
   it('drops the date on the compared day, states it otherwise', () => {
     expect(fmtEasternWindow('2026-02-25T19:00:00.000Z', '2026-02-25T20:15:00.000Z', '2026-02-25T12:00:00Z')).toBe('14:00–15:15 ET')
     expect(fmtEasternWindow('2026-02-25T19:00:00.000Z', '2026-02-25T20:15:00.000Z', '2026-02-26T14:10:00Z')).toBe('25 Feb 14:00–15:15 ET')
+  })
+})
+describe('driftChange', () => {
+  it('is the change between the drifts as fmtDrift shows them', () => {
+    expect(fmtDrift(driftChange(-0.07449, -0.05351))).toBe('+2.0')
+    expect(fmtDrift(-0.05351 - -0.07449), 'the unrounded change, which disagrees with the figures').toBe('+2.1')
+  })
+  it('rounds each side half away from zero first, as the figures do', () => {
+    expect([fmtDrift(-0.07405), fmtDrift(-0.05355)]).toEqual(['−7.4', '−5.4'])
+    expect(fmtDrift(driftChange(-0.07405, -0.05355))).toBe('+2.0')
+    expect(fmtDrift(driftChange(0.0125, 0.0105))).toBe('−0.2')
+    expect(driftChange(0.132, 0.012)).toBe(-0.12)
+    expect(driftChange(0.0004, -0.0004)).toBe(0)
   })
 })

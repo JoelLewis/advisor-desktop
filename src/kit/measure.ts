@@ -57,6 +57,19 @@ export const fmtPrice = (v: number) => unsigned(v, 2, 2)
 export const fmtWeight = (fraction: number) => unsigned(fraction, 1, 1, 2)
 export const fmtReturn = (fraction: number) => signed(fraction, 1, 1, 2)
 export const fmtDrift = (fraction: number) => signed(fraction, 1, 1, 2)
+
+/** A drift in the tenths of a point `fmtDrift` shows: −0.07449 → −74. */
+function driftTenths(fraction: number): number {
+  assertFinite(fraction)
+  const tenths = Number(numberFormat(1, 1).format(shift(Math.abs(fraction), 2)).replace(/[,.]/g, ''))
+  return fraction < 0 ? -tenths : tenths
+}
+
+/** The change between two drifts as they are shown, so before, after and the change agree on screen: −7.4 → −5.4 is +2.0. */
+export function driftChange(before: number, after: number): number {
+  return shift(driftTenths(after) - driftTenths(before), -3)
+}
+
 export const fmtTolerance = (fraction: number) => `±${unsigned(Math.abs(fraction), 1, 1, 2)}`
 export const fmtQuantity = (v: number) => unsigned(v, 0, 3)
 export const fmtDays = (n: number) => unsigned(n, 0, 0)

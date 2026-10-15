@@ -22,6 +22,15 @@ describe('workbench drift, before and after on one row', () => {
     ])
     expect(workbenchDriftRows(before, projected)[0]!.delta).toBeCloseTo(-0.12)
   })
+  it('takes the change between the figures as shown, so before, after and Δ add up on screen', () => {
+    const intl = { driftTolerance: 0.05, assetClassDrifts: [{ assetClass: 'intl_equity', drift: -0.07449, actual: 0.1255, target: 0.2 }] } as unknown as DriftStatus
+    const after = { driftTolerance: 0.05, assetClassDrifts: [{ assetClass: 'intl_equity', drift: -0.05351 }] } as unknown as ProjectedDrift
+    render(<DriftTable before={intl} projected={after} />)
+    const row = screen.getByRole('row', { name: /International Equity/ })
+    const cells = within(row).getAllByRole('cell').map((c) => c.textContent)
+    expect(cells).toEqual(expect.arrayContaining(['−7.4', '−5.4', '+2.0']))
+    expect(cells).not.toContain('+2.1')
+  })
   it('refuses a class drawn after that was not measured before', () => {
     const extra = { ...projected, assetClassDrifts: [...projected.assetClassDrifts, { assetClass: 'commodities', drift: 0.01 }] } as unknown as ProjectedDrift
     expect(() => workbenchDriftRows(before, extra)).toThrow('Drift before has no commodities')
