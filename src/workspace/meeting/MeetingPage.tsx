@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Pane } from '@/kit/layout/Pane'
 import { Tag } from '@/kit/tag/Tag'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
+import { THREAD_GROUP_TITLE, teamWords } from '@/workspace/people/visibility-words'
 import { PAGE_TITLE_ID } from '@/kit/page/ids'
 import { useFocusAfter } from '@/kit/keyboard/use-focus-after'
 import { fmtEasternRange, fmtDayMonthYear } from '@/kit/measure'
@@ -68,7 +69,7 @@ function MeetingFullView({ meeting, directory }: { meeting: MeetingView; directo
     <div className="flex min-w-0 flex-col gap-6">
       <header className="flex flex-col gap-2">
         {from ? <Link to={`/t/${encodeURIComponent(from)}`} className={`${LINK_TARGET} self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>Back to the thread</Link> : null}
-        <VisibilityBand visibility="internal" scale="thread" />
+        <VisibilityBand visibility="internal" scale="thread" words={household.data ? teamWords(household.data.members.map((m) => m.name)) : THREAD_GROUP_TITLE.internal} />
         <div className="flex flex-wrap items-baseline gap-3">
           <h1 id={PAGE_TITLE_ID} tabIndex={-1} className="text-title">{meeting.title}</h1>
           <Tag tone={meeting.state === 'filed' ? 'solid' : 'outline'}>{MEETING_STATE_TAG[meeting.state]}</Tag>

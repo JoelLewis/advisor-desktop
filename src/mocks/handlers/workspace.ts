@@ -20,6 +20,7 @@ import { draftLetter, draftsFor, reviseDraft } from '../workspace/letters'
 import { approveProposal, visibleProposal, withdrawApproval } from '../workspace/proposal-acts'
 import { previewAgent, runAgent } from '../workspace/run-agent'
 import { canSeeThread, isExternalViewer, viewerFrom, visibleThreads } from '../workspace/visibility'
+import { audienceOf } from '../workspace/party'
 import { notFound } from './utils'
 import { badRequest, firmViewer, nonEmptyString, readJson, refusal, unauthorized, withoutProvenance } from './workspace-http'
 import { workspaceMeetingHandlers } from './workspace-meetings'
@@ -70,7 +71,7 @@ export const workspaceHandlers = [
     const messages = thread.id === BRIEF_THREAD_ID
       ? [briefToday(viewer), ...briefOrder(inThread)]
       : inThread.sort((a, b) => a.at.localeCompare(b.at))
-    const detail: ThreadDetail = { thread, messages }
+    const detail: ThreadDetail = { thread, messages, audience: audienceOf(thread) }
     return HttpResponse.json(detail)
   }),
 

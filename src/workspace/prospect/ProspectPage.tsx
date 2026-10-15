@@ -4,6 +4,7 @@ import { Num } from '@/kit/data-table/Num'
 import { Pane } from '@/kit/layout/Pane'
 import { Tag } from '@/kit/tag/Tag'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
+import { teamWords } from '@/workspace/people/visibility-words'
 import { PAGE_TITLE_ID } from '@/kit/page/ids'
 import { fmtDayMonthYear, fmtEasternDayTime, fmtMoney, fmtPoints, fmtQuantity, fmtResult } from '@/kit/measure'
 import { useDirectory } from '@/hooks/use-workspace'
@@ -52,7 +53,7 @@ function ProspectRecordPage({ view, directory }: { view: ProspectView; directory
     <div className="flex min-w-0 flex-col gap-6">
       <header className="flex flex-col gap-2">
         {from ? <Link to={`/t/${encodeURIComponent(from)}`} className={LINK}>Back to the thread</Link> : null}
-        <VisibilityBand visibility="internal" scale="thread" party="prospect" />
+        <VisibilityBand visibility="internal" scale="thread" words={teamWords([view.name])} />
         <h1 id={PAGE_TITLE_ID} tabIndex={-1} className="text-title">{view.name}</h1>
         <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
           <Tag tone="solid">{STAGE_WORDS[view.stage]}</Tag>

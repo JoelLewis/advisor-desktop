@@ -13,6 +13,7 @@
   --ws-rule: oklch(0.86 0.004 250);
   --ws-rule-2: oklch(0.57 0.005 250);
   --ws-band: oklch(0.9 0.004 250);
+  --ws-shared: oklch(0.915 0.03 230);
   --ws-signal: oklch(0.6 0.2 41);
   --ws-signal-ink: oklch(0.5 0.17 39);
   --ws-scrim: var(--ws-ink);
@@ -28,6 +29,7 @@
     --ws-rule: oklch(0.315 0.005 250);
     --ws-rule-2: oklch(0.55 0.005 250);
     --ws-band: oklch(0.26 0.005 250);
+    --ws-shared: oklch(0.255 0.03 230);
     --ws-signal: oklch(0.72 0.17 47);
     --ws-signal-ink: oklch(0.77 0.15 52);
     --ws-scrim: oklch(0.08 0.004 250);
@@ -43,6 +45,7 @@
   --ws-rule: oklch(0.315 0.005 250);
   --ws-rule-2: oklch(0.55 0.005 250);
   --ws-band: oklch(0.26 0.005 250);
+  --ws-shared: oklch(0.255 0.03 230);
   --ws-signal: oklch(0.72 0.17 47);
   --ws-signal-ink: oklch(0.77 0.15 52);
   --ws-scrim: oklch(0.08 0.004 250);
@@ -65,6 +68,7 @@
   --color-rule: var(--ws-rule);
   --color-rule-2: var(--ws-rule-2);
   --color-band: var(--ws-band);
+  --color-shared: var(--ws-shared);
   --color-signal: var(--ws-signal);
   --color-signal-ink: var(--ws-signal-ink);
   --color-scrim: var(--ws-scrim);

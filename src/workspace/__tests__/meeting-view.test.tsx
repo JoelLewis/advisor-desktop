@@ -34,7 +34,7 @@ describe('the meeting full view', () => {
     expect(main).toHaveTextContent('25 Feb 2026 · 14:00–15:15 ET · Office — Main')
     expect(main).toHaveTextContent('With Robert Johnson, Patricia Johnson and Adrian Hale')
     expect(main).toHaveTextContent('SCHEDULED')
-    expect(main).toHaveTextContent("Firm only · client can't see")
+    await waitFor(() => expect(main).toHaveTextContent("Larkfield team · Robert and Patricia can't see this"))
     expect(within(main).getByRole('list', { name: 'Agenda · v1' })).toBeInTheDocument()
     const links = within(within(main).getByRole('navigation', { name: 'Full views' }))
     expect(links.getByRole('link', { name: 'Household' })).toHaveAttribute('href', '/households/hh-001?from=th-johnson-meeting')

@@ -17,7 +17,7 @@ describe('the reference frame', () => {
       </ReferencePage>,
     )
     expect(screen.getByRole('link', { name: 'Back to the thread' })).toHaveAttribute('href', '/t/th-johnson-meeting')
-    expect(screen.getByRole('note', { name: "Visibility: Firm only · client can't see" })).toBeInTheDocument()
+    expect(screen.getByRole('note', { name: `Visibility: Larkfield team · no client can see this` })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 1, name: 'Billing' })).toBeInTheDocument()
     const methods = screen.getByRole('region', { name: 'Methods & sources' })
     expect(within(methods).getAllByText('MODELED')).toHaveLength(1)

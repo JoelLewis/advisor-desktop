@@ -1,6 +1,7 @@
 import { Pane } from '@/kit/layout/Pane'
 import { Tag } from '@/kit/tag/Tag'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
+import { partyWords, teamWords } from '@/workspace/people/visibility-words'
 import { fmtEasternStamp } from '@/kit/measure'
 import { sentLetterOrigin } from '@/workspace/context/draft-origin'
 import { personIn } from '@/workspace/people/directory-people'
@@ -14,12 +15,12 @@ export function CorrespondenceEvidence({ item, directory }: { item: Corresponden
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <Pane title={`As ${item.partyName} saw it`}>
-        <VisibilityBand visibility="client" scale="message" audience={item.partyName} party={item.partyKind} />
+        <VisibilityBand visibility="client" scale="message" words={partyWords(item.partyName)} />
         <p className="tabular text-label text-ink-3">{`Sent by ${sender.name} · ${fmtEasternStamp(item.message.at)}`}</p>
         <p className="whitespace-pre-line text-copy">{item.message.body}</p>
       </Pane>
       <Pane title="Provenance">
-        <VisibilityBand visibility="internal" scale="message" party={item.partyKind} />
+        <VisibilityBand visibility="internal" scale="message" words={teamWords([item.partyName])} />
         <p className="text-body">{origin}</p>
         <p className="tabular text-label text-ink-3">{`Record ${item.sendAct.id} · fingerprint ${item.sendAct.fingerprint}`}</p>
       </Pane>

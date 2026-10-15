@@ -77,7 +77,7 @@ describe('routes', () => {
   })
   it('shows all three visibility bands', async () => {
     await renderKitReady()
-    for (const w of ['Only you', "Firm only · client can't see", 'CLIENT CAN SEE']) {
+    for (const w of ['Just you', "Larkfield team · Robert can't see this", 'Robert Johnson Individual can read this']) {
       expect(screen.getAllByText(w).length).toBeGreaterThanOrEqual(2)
     }
   })

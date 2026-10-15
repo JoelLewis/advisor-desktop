@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { contrast, luminance, darkPalette, lightPalette, mediaDarkPalette, readAppCss, type Palette } from './contrast'
 
-const SURFACES = ['bg', 'face', 'band'] as const
+const SURFACES = ['bg', 'face', 'band', 'shared'] as const
 const TEXT = ['ink', 'ink-2', 'ink-3', 'signal-ink'] as const
 const MARKS = ['signal', 'rule-2', 'ink'] as const // signal marks, meaningful rules, focus ring
 
@@ -30,7 +30,7 @@ describe('token blocks', () => {
   it('every token is defined in light and dark', () => {
     const keys = [...lightPalette(css).keys()].sort()
     expect(keys).toEqual([...darkPalette(css).keys()].sort())
-    expect(keys).toEqual(expect.arrayContaining([...SURFACES, ...TEXT, 'signal', 'rule', 'rule-2', 'band', 'scrim']))
+    expect(keys).toEqual(expect.arrayContaining([...SURFACES, ...TEXT, 'signal', 'rule', 'rule-2', 'band', 'shared', 'scrim']))
   })
   it('the prefers-color-scheme dark block matches the explicit dark block', () => {
     expect(Object.fromEntries(mediaDarkPalette(css))).toEqual(Object.fromEntries(darkPalette(css)))

@@ -35,7 +35,7 @@ describe('prospect messages', () => {
     expect(link.closest('li')).toHaveTextContent('15:30 ETCoffee with Dr. Amanda Pell · Form CRS due before it (firm policy)')
     await user.click(link)
     await waitFor(() => expect(router.state.location.pathname).toBe('/t/th-pell'))
-    expect(await screen.findByRole('note', { name: 'Visibility: PROSPECT CAN SEE' })).toHaveTextContent('Dr. Amanda Pell')
+    expect(await screen.findByRole('note', { name: 'Visibility: Dr. Amanda Pell can read this' })).toHaveTextContent('Dr. Amanda Pell')
     expect(conversation().getByText('James Thompson suggested I get in touch. Looking forward to coffee this afternoon.')).toBeInTheDocument()
   })
 
@@ -55,7 +55,7 @@ describe('prospect messages', () => {
   it('the internal thread shows the coffee note, a version line and the onboarding items', async () => {
     store().messages.push(...WORK)
     renderRoutes(routes, '/t/th-pell-work')
-    expect(await screen.findByRole('note', { name: "Visibility: Firm only · prospect can't see" })).toBeInTheDocument()
+    expect(await screen.findByRole('note', { name: `Visibility: Larkfield team · Dr. Pell can't see this` })).toBeInTheDocument()
     expect(await conversation().findByRole('article', { name: 'Note · Coffee with Dr. Amanda Pell' })).toHaveTextContent('15:30–16:30 ET')
     expect(conversation().getByRole('article', { name: 'v2 · Proposal Agent' })).toHaveTextContent('nothing sold')
     const onboarding = conversation().getByRole('article', { name: 'Onboarding opened' })

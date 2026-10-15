@@ -9,6 +9,7 @@ import { renderRoutes } from '@/test/render'
 import { server } from '@/test/server'
 import { WorkspaceShell } from '@/workspace/shell/WorkspaceShell'
 import { WorkspaceHome } from '@/workspace/shell/WorkspaceHome'
+import { OUTSIDER_BAND } from '@/workspace/people/visibility-words'
 import type { ShellHandle } from '@/workspace/shell/context-column'
 import { PHONE_LAYOUT_QUERY } from '@/workspace/shell/phone-panes'
 
@@ -33,30 +34,47 @@ const spokenText = (el: Element) => [...el.childNodes]
 const threadLinks = () => within(threadNav()).getAllByRole('link').map(spokenText)
 
 describe('workspace shell', () => {
-  it('reserves the thread list while it loads: the panes, the legend and the rows the loaded list will have, and a status', async () => {
+  it('reserves the thread list while it loads: the panes and the rows the loaded list will have, and a status', async () => {
     server.use(http.get('/api/workspace/threads', async () => { await delay(200); return HttpResponse.json([]) }))
     renderRoutes(routes, '/')
     expect(await screen.findByText('Loading threads…')).toBeInTheDocument()
     const skeleton = document.querySelector('[data-part="thread-list-skeleton"]')!
     expect(skeleton).toHaveAttribute('aria-hidden', 'true')
     expect(skeleton.querySelectorAll('[data-part="skeleton-row"]')).toHaveLength(14)
-    expect(skeleton.querySelectorAll('ul[aria-label="Visibility"] > li')).toHaveLength(3)
+    expect(skeleton.querySelector('ul[aria-label="Visibility"]')).toBeNull()
+    expect([...skeleton.querySelectorAll('h2')].map((h) => h.textContent)).toEqual(['Desk', 'Reference', 'Just me', 'Larkfield team', 'Client conversations'])
   })
-  it('puts one visibility legend above the threads; each row is a bare mark with its visibility as a description', async () => {
+  it('keeps the skeleton until the directory arrives, so no row is described before its party is known', async () => {
+    server.use(http.get('/api/workspace/people', async () => { await delay('infinite'); return HttpResponse.json({}) }))
+    let threadsServed = false
+    const onResponse = ({ request }: { request: Request }) => { if (new URL(request.url).pathname === '/api/workspace/threads') threadsServed = true }
+    server.events.on('response:mocked', onResponse)
+    try {
+      renderRoutes(routes, '/')
+      await waitFor(() => expect(threadsServed).toBe(true))
+      await delay(50)
+      expect(screen.getByText('Loading threads…')).toBeInTheDocument()
+      expect(document.querySelector('[data-part="thread-list-skeleton"]')).not.toBeNull()
+      expect(within(threadNav()).queryAllByRole('link')).toHaveLength(0)
+    } finally {
+      server.events.removeListener('response:mocked', onResponse)
+    }
+  })
+  it('needs no legend: the groups name who reads them, and each row is a mark with its readers as a description', async () => {
     await renderHome()
-    const legend = within(threadNav()).getByRole('list', { name: 'Visibility' })
-    expect(within(legend).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Only you', 'Firm only', 'Shared with the client or prospect'])
-    const review = within(threadNav()).getByRole('link', { name: 'Johnson Rebalance Review' })
-    expect(review).toHaveAccessibleDescription("Visibility: Firm only · client can't see")
-    expect(within(threadNav()).getByRole('link', { name: 'Pell · prospect work' })).toHaveAccessibleDescription("Visibility: Firm only · prospect can't see")
-    const spoken = within(threadNav()).queryAllByText(/client can't see/)
-    expect(spoken.length).toBeGreaterThan(0)
+    expect(within(threadNav()).queryByRole('list', { name: 'Visibility' })).toBeNull()
+    expect(within(threadNav()).getByRole('link', { name: 'Brief' })).toHaveAccessibleDescription('Visibility: Just you')
+    expect(within(threadNav()).getByRole('link', { name: 'Johnson Rebalance Review' })).toHaveAccessibleDescription('Visibility: Larkfield team')
+    expect(within(threadNav()).getByRole('link', { name: 'Robert Johnson' })).toHaveAccessibleDescription('Visibility: Robert Johnson can read this')
+    expect(within(threadNav()).getByRole('link', { name: 'Dr. Amanda Pell' })).toHaveAccessibleDescription('Visibility: Dr. Amanda Pell can read this')
+    const spoken = within(threadNav()).queryAllByText(/^Visibility: /)
+    expect(spoken.length).toBe(6)
     for (const note of spoken) expect(note).toHaveClass('sr-only')
   })
 
   it('as Adrian lists six threads under the three headings, with one h1', async () => {
     const { container } = await renderHome()
-    await waitFor(() => expect(groupHeadings()).toEqual(['Desk', 'Reference', 'Private', 'Internal', 'Clients and prospects', 'Agents on this desk']))
+    await waitFor(() => expect(groupHeadings()).toEqual(['Desk', 'Reference', 'Just me', 'Larkfield team', 'Client conversations', 'Agents on this desk']))
     expect(threadLinks()).toEqual(['Supervision', 'Archive', 'Billing', 'Reconciliation', 'Risk', 'Models', 'Practice', 'Blotter', 'Brief', 'Johnson Rebalance Review', 'Johnson annual review', 'Pell · prospect work', 'Robert Johnson', 'Dr. Amanda Pell'])
     expect(within(threadNav()).getByRole('link', { name: 'Johnson Rebalance Review' })).toHaveAttribute('href', '/t/th-johnson-review')
     expect(container.querySelectorAll('h1')).toHaveLength(1)
@@ -99,13 +117,12 @@ describe('workspace shell', () => {
     expect(select).toHaveValue('user-001')
   })
 
-  it('shows a client a one-line legend for the one mark they see, with the visibility as a description', async () => {
+  it('tells a client who reads their one conversation, compliance included, as the description of its row', async () => {
     await renderHome()
     await viewAs('Robert Johnson · Client')
     await waitFor(() => expect(threadLinks()).toEqual(['Robert Johnson']))
-    const legend = within(threadNav()).getByRole('list', { name: 'Visibility' })
-    expect(within(legend).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Shared with you and your advisor'])
-    expect(within(threadNav()).getByRole('link', { name: 'Robert Johnson' })).toHaveAccessibleDescription('Visibility: CLIENT CAN SEE')
+    expect(within(threadNav()).queryByRole('list', { name: 'Visibility' })).toBeNull()
+    expect(within(threadNav()).getByRole('link', { name: 'Robert Johnson' })).toHaveAccessibleDescription(`Visibility: ${OUTSIDER_BAND}`)
   })
 
   it('viewing as Robert leaves only his thread and no agents', async () => {
@@ -128,7 +145,7 @@ describe('workspace shell', () => {
     await renderHome()
     await viewAs('Mark Davis · Compliance')
     await waitFor(() => expect(threadLinks()).toEqual(['Supervision', 'Archive', 'Billing', 'Reconciliation', 'Risk', 'Models', 'Practice', 'Blotter', 'Johnson Rebalance Review', 'Johnson annual review', 'Pell · prospect work', 'Robert Johnson', 'Dr. Amanda Pell']))
-    expect(groupHeadings()).toEqual(['Desk', 'Reference', 'Internal', 'Clients and prospects', 'Agents on this desk'])
+    expect(groupHeadings()).toEqual(['Desk', 'Reference', 'Larkfield team', 'Client conversations', 'Agents on this desk'])
   })
 
   it('shows a status while threads load', () => {

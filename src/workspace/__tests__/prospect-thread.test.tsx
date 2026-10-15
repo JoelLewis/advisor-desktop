@@ -3,6 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
+import { OUTSIDER_BAND } from '@/workspace/people/visibility-words'
 import { store } from '@/mocks/data/workspace-store'
 import { PELL_REPLY } from '@/mocks/data/prospect-script'
 import {
@@ -153,7 +154,7 @@ describe('her thread, as she sees it', () => {
     await deliverDisclosure(ADRIAN, PELL, 'form_crs')
     viewAsOnLoad(PELL)
     await openHerThread()
-    expect(screen.getByRole('note', { name: 'Visibility: PROSPECT CAN SEE' })).toBeInTheDocument()
+    expect(screen.getByRole('note', { name: `Visibility: ${OUTSIDER_BAND}` })).toBeInTheDocument()
     const links = within(screen.getByRole('navigation', { name: 'Threads' })).getAllByRole('link')
     expect(links).toHaveLength(1)
     expect(links[0]).toHaveAccessibleName('Dr. Amanda Pell')

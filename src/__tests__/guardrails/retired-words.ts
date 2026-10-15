@@ -14,7 +14,7 @@ export const RETIRED_WORDS: readonly RetiredWord[] = [
   {
     word: 'the old visibility words',
     pattern: /\bOnly you\b|\bFirm only\b|CAN SEE|\b(?:client|prospect) can't see\b|\bClients and prospects\b|CLIENTS AND PROSPECTS|^(?:Private|Internal)$|\bShared with (?:you|the client)\b/,
-    retired: false,
+    retired: true,
     // A sleeve's manager is "Internal" in the book's data: a name, not a visibility word.
     skip: (file) => file.startsWith('src/mocks/data/'),
   },

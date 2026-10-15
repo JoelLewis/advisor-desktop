@@ -69,7 +69,7 @@ describe('Supervision', () => {
     await open(`/supervision/correspondence/${act.messageId}`)
     const item = await screen.findByRole('region', { name: 'Correspondence · Message to Robert Johnson' })
     expect(item).toHaveTextContent('Dear Robert,')
-    expect(within(item).getByRole('note', { name: "Visibility: Firm only · client can't see" })).toBeInTheDocument()
+    expect(within(item).getByRole('note', { name: `Visibility: Larkfield team · Robert can't see this` })).toBeInTheDocument()
     expect(item).toHaveTextContent(/from v1 · fingerprint .* · agent draft, unedited/)
   })
 

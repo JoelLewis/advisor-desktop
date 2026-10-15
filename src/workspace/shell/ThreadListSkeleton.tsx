@@ -1,14 +1,14 @@
 import { Pane } from '@/kit/layout/Pane'
 import { VisibilityMark } from '@/kit/visibility/VisibilityMark'
 import type { Visibility } from '@/kit/visibility/visibility'
-import { VisibilityLegend } from './VisibilityLegend'
+import { THREAD_GROUP_TITLE } from '@/workspace/people/visibility-words'
 
-/** The advisor's list before it arrives, in the loaded list's order: the same panes, legend and row heights, so nothing below moves when it lands. */
+/** The advisor's list before it arrives, in the loaded list's order: the same panes and row heights, so nothing below moves when it lands. */
 const LINK_PANES: readonly { title: string; rows: number }[] = [{ title: 'Desk', rows: 2 }, { title: 'Reference', rows: 6 }]
 const THREAD_PANES: readonly { visibility: Visibility; title: string; rows: number }[] = [
-  { visibility: 'private', title: 'Private', rows: 1 },
-  { visibility: 'internal', title: 'Internal', rows: 3 },
-  { visibility: 'client', title: 'Clients and prospects', rows: 2 },
+  { visibility: 'private', title: THREAD_GROUP_TITLE.private, rows: 1 },
+  { visibility: 'internal', title: THREAD_GROUP_TITLE.internal, rows: 3 },
+  { visibility: 'client', title: THREAD_GROUP_TITLE.client, rows: 2 },
 ]
 
 const BLANK_LINE = ' '
@@ -32,12 +32,7 @@ export function ThreadListSkeleton() {
       <p role="status" className="sr-only">Loading threads…</p>
       <div aria-hidden="true" data-part="thread-list-skeleton" className="flex flex-col gap-8">
         {LINK_PANES.map(({ title, rows }) => <Pane key={title} title={title}><SkeletonRows rows={rows} /></Pane>)}
-        <div className="flex flex-col gap-3">
-          <VisibilityLegend />
-          <div className="flex flex-col gap-8">
-            {THREAD_PANES.map(({ visibility, title, rows }) => <Pane key={title} title={title}><SkeletonRows rows={rows} visibility={visibility} /></Pane>)}
-          </div>
-        </div>
+        {THREAD_PANES.map(({ visibility, title, rows }) => <Pane key={title} title={title}><SkeletonRows rows={rows} visibility={visibility} /></Pane>)}
       </div>
     </>
   )

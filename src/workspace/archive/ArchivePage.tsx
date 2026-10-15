@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PAGE_TITLE_ID } from '@/kit/page/ids'
 import { Select } from '@/kit/select/Select'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
+import { teamWords } from '@/workspace/people/visibility-words'
 import { fmtDayMonthYear } from '@/kit/measure'
 import { useArchive, useDirectory } from '@/hooks/use-workspace'
 import { FullViewNotFound } from '@/workspace/full-views/FullViewNotFound'
@@ -45,7 +46,7 @@ function Archive({ directory }: { directory: Directory }) {
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <header className="flex flex-col gap-3">
-        <VisibilityBand visibility="internal" scale="message" />
+        <VisibilityBand visibility="internal" scale="message" words={teamWords([])} />
         <h1 id={PAGE_TITLE_ID} tabIndex={-1} className="text-title">Archive</h1>
         <p className="text-body text-ink-2">Every recorded act and every message sent to a client or prospect, in the order they happened.</p>
       </header>

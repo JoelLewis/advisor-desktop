@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Pane } from '@/kit/layout/Pane'
 import { cn } from '@/lib/utils'
+import { THREAD_GROUP_TITLE } from '@/workspace/people/visibility-words'
 import type { Directory } from '@/types/workspace'
 import type { MeetingView, TranscriptSpeaker } from '@/types/workspace-meeting'
 import { NotesEditor } from './NotesEditor'
@@ -18,7 +19,7 @@ export function TranscriptNotes({ meeting, directory, editable, onDirtyChange }:
   }
   return (
     <div className="grid min-w-0 gap-6 split:grid-cols-2">
-      <Pane title="Transcript" meta="Firm only">
+      <Pane title="Transcript" meta={THREAD_GROUP_TITLE.internal}>
         <ol aria-label="Transcript" className="flex min-w-0 flex-col">
           {transcript.map((line) => (
             <li key={line.id} id={`transcript-${line.id}`} data-highlighted={highlighted === line.id ? 'true' : undefined}

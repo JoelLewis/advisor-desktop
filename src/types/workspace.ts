@@ -108,7 +108,9 @@ export type LetterBasis = { proposalId: string; version: number; fingerprint: st
 /** A recap's basis: the filing it was written from and the Intel window end it states. It is stale once either no longer matches. */
 export type RecordBasis = { eventId: string; actId: string; fingerprint: string; windowEnd?: string }
 export type Draft = { id: string; clientThreadId: string; authorId: string; body: string; createdAt: string; agentId?: AgentId; basis?: LetterBasis; recordBasis?: RecordBasis; figures?: Figure[]; supersedes?: string; editorIds?: string[]; stale?: boolean; staleReason?: string }
-export type ThreadDetail = { thread: Thread; messages: Message[] }
+/** Who reads a thread besides the firm, as the band says it: its owner alone, the team (about these clients, by full name), or its party. */
+export type ThreadAudience = { kind: 'owner' } | { kind: 'team'; about: string[] } | { kind: 'party'; name: string }
+export type ThreadDetail = { thread: Thread; messages: Message[]; audience: ThreadAudience }
 export type Act = BindingActKind | 'post_firm' | 'draft_for_client' | 'read_all_firm_threads' | 'prepare_meeting'
 /** permissions: personId → the acts that person may perform, computed by the engine's can(). The UI never derives permissions itself. */
 export type Directory = { people: Person[]; agents: AgentProfile[]; permissions: Record<string, Act[]> }

@@ -6,7 +6,9 @@ import { isNotFound } from '@/workspace/is-not-found'
 import { FullViewNotFound } from '@/workspace/full-views/FullViewNotFound'
 import { useGoHomeWhenHidden } from '@/workspace/full-views/use-go-home-when-hidden'
 import type { Directory, ThreadDetail } from '@/types/workspace'
-import { threadParty } from '@/workspace/people/thread-party'
+import { isExternalViewerIn } from '@/workspace/people/directory-people'
+import { bandWordsOf } from '@/workspace/people/visibility-words'
+import { useViewer } from '@/workspace/viewer/use-viewer'
 import { Composer } from './Composer'
 import { MessageView } from './MessageView'
 
@@ -29,13 +31,12 @@ function ThreadView({ threadId }: { threadId: string }) {
   return <Thread detail={thread.data} directory={directory.data} />
 }
 
-function Thread({ detail: { thread, messages }, directory }: { detail: ThreadDetail; directory: Directory }) {
-  const audience = thread.visibility === 'client' ? directory.people.find((p) => p.id === thread.partyId)?.name : undefined
-  if (thread.visibility === 'client' && !audience) throw new Error(`The party of thread "${thread.id}" is not in the directory`)
+function Thread({ detail: { thread, messages, audience }, directory }: { detail: ThreadDetail; directory: Directory }) {
+  const { viewerId } = useViewer()
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <header className="flex flex-col gap-3">
-        <VisibilityBand visibility={thread.visibility} scale="thread" audience={audience} party={threadParty(thread)} />
+        <VisibilityBand visibility={thread.visibility} scale="thread" words={bandWordsOf(audience, isExternalViewerIn(directory, viewerId))} />
         <h1 id={PAGE_TITLE_ID} tabIndex={-1} className="text-title">{thread.title}</h1>
       </header>
       {messages.length === 0 ? <p className="text-body text-ink-3">No messages yet.</p> : (

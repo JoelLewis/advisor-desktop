@@ -3,21 +3,16 @@ import { NavLink } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Pane } from '@/kit/layout/Pane'
 import { VisibilityMark } from '@/kit/visibility/VisibilityMark'
-import { visibilityWords } from '@/kit/visibility/visibility'
 import { ThreadListSkeleton } from '@/workspace/shell/ThreadListSkeleton'
-import { ExternalVisibilityLegend, VisibilityLegend } from '@/workspace/shell/VisibilityLegend'
 import { useDirectory, useThreads } from '@/hooks/use-workspace'
 import { isExternalViewerIn } from '@/workspace/people/directory-people'
-import { threadParty } from '@/workspace/people/thread-party'
+import { THREAD_GROUP_TITLE, rowWordsOf } from '@/workspace/people/visibility-words'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { AgentScope } from '@/workspace/people/AgentScope'
-import type { Thread, Visibility } from '@/types/workspace'
+import type { AgentProfile, Directory, Thread, Visibility } from '@/types/workspace'
 
-const GROUPS: readonly { visibility: Visibility; title: string }[] = [
-  { visibility: 'private', title: 'Private' },
-  { visibility: 'internal', title: 'Internal' },
-  { visibility: 'client', title: 'Clients and prospects' },
-]
+const GROUPS: readonly { visibility: Visibility; title: string }[] =
+  (['private', 'internal', 'client'] as const).map((visibility) => ({ visibility, title: THREAD_GROUP_TITLE[visibility] }))
 
 /** An outsider sees only their own conversation with the firm, titled as theirs. */
 const EXTERNAL_GROUP_TITLE = 'Your conversation'
@@ -26,37 +21,38 @@ export function ThreadList() {
   const threads = useThreads()
   const { viewerId } = useViewer()
   const directory = useDirectory()
-  const external = directory.data !== undefined && isExternalViewerIn(directory.data, viewerId)
-  if (threads.isPending) return <ThreadListSkeleton />
+  // The rows' words name each client thread's party, so the list waits for the directory as well as the threads.
+  if (threads.isPending || directory.isPending) return <ThreadListSkeleton />
   if (threads.isError) return <p role="alert" className="text-body">{threads.error.message}</p>
+  if (directory.isError) return <p role="alert" className="text-body">{directory.error.message}</p>
+  const external = isExternalViewerIn(directory.data, viewerId)
   return (
     <div className="flex flex-col gap-8">
-      <DeskLinks />
-      <div className="flex flex-col gap-3">
-        {external ? <ExternalVisibilityLegend party={threads.data[0] ? threadParty(threads.data[0]) : 'client'} /> : <VisibilityLegend />}
-        <div className="flex flex-col gap-8">
-          {GROUPS.map(({ visibility, title }) => {
-            const group = threads.data.filter((t) => t.visibility === visibility)
-            return group.length > 0 ? <ThreadGroup key={visibility} title={external && visibility === 'client' ? EXTERNAL_GROUP_TITLE : title} threads={group} /> : null
-          })}
-        </div>
-      </div>
-      <DeskAgents threads={threads.data} />
+      {external ? null : <DeskLinks />}
+      {GROUPS.map(({ visibility, title }) => {
+        const group = threads.data.filter((t) => t.visibility === visibility)
+        return group.length > 0
+          ? <ThreadGroup key={visibility} title={external && visibility === 'client' ? EXTERNAL_GROUP_TITLE : title} threads={group} directory={directory.data} viewerIsExternal={external} />
+          : null
+      })}
+      <DeskAgents threads={threads.data} agents={directory.data.agents} />
     </div>
   )
 }
 
-function ThreadGroup({ title, threads }: { title: string; threads: Thread[] }) {
+type RowContext = { directory: Directory; viewerIsExternal: boolean }
+
+function ThreadGroup({ title, threads, directory, viewerIsExternal }: { title: string; threads: Thread[] } & RowContext) {
   return (
     <Pane title={title}>
       <ul className="flex flex-col">
-        {threads.map((t) => <ThreadRow key={t.id} thread={t} />)}
+        {threads.map((t) => <ThreadRow key={t.id} thread={t} directory={directory} viewerIsExternal={viewerIsExternal} />)}
       </ul>
     </Pane>
   )
 }
 
-function ThreadRow({ thread: t }: { thread: Thread }) {
+function ThreadRow({ thread: t, directory, viewerIsExternal }: { thread: Thread } & RowContext) {
   const noteId = useId()
   return (
     <li>
@@ -71,17 +67,14 @@ function ThreadRow({ thread: t }: { thread: Thread }) {
           </>
         )}
       </NavLink>
-      <span id={noteId} className="sr-only">{`Visibility: ${visibilityWords(t.visibility, threadParty(t))}`}</span>
+      <span id={noteId} className="sr-only">{`Visibility: ${rowWordsOf(t, directory, viewerIsExternal)}`}</span>
     </li>
   )
 }
 
-function DeskAgents({ threads }: { threads: Thread[] }) {
-  const directory = useDirectory()
-  if (directory.isPending) return <p role="status" className="text-body text-ink-3">Loading agents…</p>
-  if (directory.isError) return <p role="alert" className="text-body">{directory.error.message}</p>
+function DeskAgents({ threads, agents: everyAgent }: { threads: Thread[]; agents: AgentProfile[] }) {
   const onDesk = new Set(threads.flatMap((t) => t.agentIds))
-  const agents = directory.data.agents.filter((a) => onDesk.has(a.id))
+  const agents = everyAgent.filter((a) => onDesk.has(a.id))
   if (agents.length === 0) return null
   return (
     <Pane title="Agents on this desk">
@@ -102,9 +95,6 @@ const REFERENCE: readonly { to: string; label: string }[] = [
 ]
 
 function DeskLinks() {
-  const { viewerId } = useViewer()
-  const directory = useDirectory()
-  if (!directory.data || isExternalViewerIn(directory.data, viewerId)) return null
   return (
     <>
       <LinkPane title="Desk" links={DESK} />

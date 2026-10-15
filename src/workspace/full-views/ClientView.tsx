@@ -1,6 +1,7 @@
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Pane } from '@/kit/layout/Pane'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
+import { teamWords } from '@/workspace/people/visibility-words'
 import { PAGE_TITLE_ID } from '@/kit/page/ids'
 import { UNIT, fmtDayMonthYear, fmtMoney, fmtScore } from '@/kit/measure'
 import { useClientView } from '@/hooks/use-meetings'
@@ -38,7 +39,7 @@ function ClientPage({ view }: { view: ClientReadModel }) {
     <div className="flex min-w-0 flex-col gap-6">
       <header className="flex flex-col gap-2">
         {from ? <Link to={`/t/${encodeURIComponent(from)}`} className={LINK}>Back to the thread</Link> : null}
-        <VisibilityBand visibility="internal" scale="thread" />
+        <VisibilityBand visibility="internal" scale="thread" words={teamWords([view.name])} />
         <h1 id={PAGE_TITLE_ID} tabIndex={-1} className="text-title">{view.name}</h1>
         <Link to={householdFullViewHref(view.householdId, from)} className={LINK}>{view.householdName}</Link>
       </header>

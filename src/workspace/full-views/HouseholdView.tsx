@@ -3,6 +3,7 @@ import { Pane } from '@/kit/layout/Pane'
 import { Tag } from '@/kit/tag/Tag'
 import { DataTable } from '@/kit/data-table/DataTable'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
+import { teamWords } from '@/workspace/people/visibility-words'
 import { PAGE_TITLE_ID } from '@/kit/page/ids'
 import { fmtEasternRange, fmtEasternStamp, fmtDayMonthYear } from '@/kit/measure'
 import { useHousehold } from '@/hooks/use-meetings'
@@ -42,7 +43,7 @@ function HouseholdPage({ view }: { view: HouseholdReadModel }) {
     <div className="flex min-w-0 flex-col gap-6">
       <header className="flex flex-col gap-2">
         {from ? <Link to={`/t/${encodeURIComponent(from)}`} className={LINK}>Back to the thread</Link> : null}
-        <VisibilityBand visibility="internal" scale="thread" />
+        <VisibilityBand visibility="internal" scale="thread" words={teamWords(view.members.map((m) => m.name))} />
         <h1 id={PAGE_TITLE_ID} tabIndex={-1} className="text-title">{view.name}</h1>
         <ul className="flex flex-wrap gap-x-6 gap-y-1">
           {view.members.map((m) => (

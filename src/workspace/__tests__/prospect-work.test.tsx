@@ -33,7 +33,7 @@ describe('the prospect work thread', () => {
     const user = userEvent.setup()
     await replied()
     await openWork()
-    expect(screen.getByRole('note', { name: "Visibility: Firm only · prospect can't see" })).toBeInTheDocument()
+    expect(screen.getByRole('note', { name: `Visibility: Larkfield team · Dr. Pell can't see this` })).toBeInTheDocument()
     const ask = await inContext().findByRole('region', { name: 'Ask an agent' })
     await user.click(within(ask).getByRole('button', { name: 'Ask Prospect Profile' }))
     expect(await conversation().findByRole('article', { name: "Prospect Profile: Dr. Amanda Pell's answers average to a score in the moderate aggressive band." })).toHaveTextContent('66')

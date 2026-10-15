@@ -55,7 +55,7 @@ describe('thread view', () => {
   it('shows the thread-scale band and the title as the one h1', async () => {
     const { container } = await openThread('/t/th-johnson-review', 'Johnson Rebalance Review')
     const main = screen.getByRole('main')
-    expect(within(main).getByRole('note', { name: "Visibility: Firm only · client can't see" })).toHaveAttribute('data-scale', 'thread')
+    expect(within(main).getByRole('note', { name: `Visibility: Larkfield team · Robert can't see this` })).toHaveAttribute('data-scale', 'thread')
     expect(container.querySelectorAll('h1')).toHaveLength(1)
     expect(screen.getByRole('heading', { level: 1 })).toHaveAttribute('id', 'page-title')
   })
@@ -139,7 +139,7 @@ describe('thread view', () => {
 
   it("as Adrian in Robert's thread the composer writes a draft and posts nothing to the conversation", async () => {
     await openThread('/t/th-robert', 'Robert Johnson')
-    expect(screen.getByRole('note', { name: 'Visibility: CLIENT CAN SEE' })).toHaveTextContent('Robert Johnson')
+    expect(screen.getByRole('note', { name: 'Visibility: Robert Johnson can read this' })).toHaveClass('bg-shared')
     const box = composerBox()
     expect(box).toHaveAttribute('placeholder', 'Write a draft for Robert (not sent until you send it)')
     const user = userEvent.setup()

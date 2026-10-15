@@ -4,7 +4,7 @@ import { extendTailwindMerge } from 'tailwind-merge'
 // The instrument's type scale and color tokens are not Tailwind defaults, so tailwind-merge
 // would otherwise read `text-label` as a color and drop it beside `text-ink`.
 export const FONT_SIZE_TOKENS = ['label', 'table-dense', 'table', 'body', 'copy', 'title', 'total', 'readout-sm', 'readout-md', 'readout-lg'] as const
-export const COLOR_TOKENS = ['bg', 'face', 'ink', 'ink-2', 'ink-3', 'rule', 'rule-2', 'band', 'signal', 'signal-ink', 'scrim'] as const
+export const COLOR_TOKENS = ['bg', 'face', 'ink', 'ink-2', 'ink-3', 'rule', 'rule-2', 'band', 'shared', 'signal', 'signal-ink', 'scrim'] as const
 
 const twMerge = extendTailwindMerge({
   extend: {

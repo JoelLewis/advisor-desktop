@@ -89,10 +89,10 @@ export function KitSections({ data }: { data: KitData }) {
           </Pane>
         ) : null}
         <Pane title="Visibility indicator test view">
-          {(['private', 'internal', 'client'] as const).map((v) => (
+          {([['private', 'Just you'], ['internal', "Larkfield team · Robert can't see this"], ['client', `${account.name} can read this`]] as const).map(([v, words]) => (
             <Fragment key={v}>
-              <VisibilityBand visibility={v} scale="thread" audience={v === 'client' ? account.name : undefined} />
-              <div className="pl-6"><VisibilityBand visibility={v} scale="message" /></div>
+              <VisibilityBand visibility={v} scale="thread" words={words} />
+              <div className="pl-6"><VisibilityBand visibility={v} scale="message" words={words} /></div>
             </Fragment>
           ))}
         </Pane>

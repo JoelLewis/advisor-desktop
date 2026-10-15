@@ -14,7 +14,7 @@ describe('the household full view', () => {
     renderRoutes(routes, '/households/hh-001?from=th-johnson-meeting')
     expect(await screen.findByRole('heading', { level: 1, name: 'Johnson Household' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Back to the thread' })).toHaveAttribute('href', '/t/th-johnson-meeting')
-    expect(screen.getByRole('main')).toHaveTextContent("Firm only · client can't see")
+    expect(screen.getByRole('main')).toHaveTextContent("Larkfield team · Robert and Patricia can't see this")
     expect(screen.getByRole('link', { name: 'Patricia Johnson' })).toHaveAttribute('href', '/clients/cli-002?from=th-johnson-meeting')
     expect(screen.getByRole('table', { name: 'Household accounts' })).toBeInTheDocument()
     const upcoming = screen.getByRole('list', { name: 'Upcoming meetings' })

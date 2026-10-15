@@ -113,7 +113,7 @@ test('one presenter takes Dr. Pell from first contact to an onboarding opened; s
   await visit(page, '/t/th-brief', 'light')
   await page.getByRole('region', { name: 'Today' }).getByRole('link', { name: 'Open her thread' }).click()
   await expect(heading(page)).toHaveText('Dr. Amanda Pell')
-  await expect(page.getByRole('note', { name: 'Visibility: PROSPECT CAN SEE' })).toBeVisible()
+  await expect(page.getByRole('note', { name: 'Visibility: Dr. Amanda Pell can read this' })).toBeVisible()
 
   // 2. Form CRS at first contact; the coffee; her reply on Thursday's jump.
   await deliver(page, 'Form CRS')

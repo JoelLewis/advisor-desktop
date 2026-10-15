@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import type { Draft } from '@/types/workspace'
+import type { Draft, ThreadDetail } from '@/types/workspace'
 import { nextAt, nextId, resetWorkspaceStore, store } from '@/mocks/data/workspace-store'
 import { canSeeThread, isExternalViewer, isFirmViewer, visibleThreads } from '../visibility'
 import { meetingSummaries, visibleMeeting } from '../meetings'
@@ -107,6 +107,18 @@ describe('every firm gate answers an external viewer as if nothing were there', 
     for (const viewer of EXTERNAL) expect(visibleProposal(viewer, r.detail.id)).toBeUndefined()
     expect(visibleProposal(ADRIAN, r.detail.id)).toBeDefined()
   })
+})
+
+describe("an outsider's thread names only them", () => {
+  const threadAs = async (id: string, viewer: string) => {
+    const res = await fetch(`/api/workspace/threads/${id}`, { headers: { 'X-Viewer': viewer } })
+    if (res.status !== 200) throw new Error(`GET ${id} as ${viewer} answered ${res.status}`)
+    return (await res.json()) as ThreadDetail
+  }
+  it.each([['th-robert', ROBERT, 'Robert Johnson'], ['th-pell', PELL, 'Dr. Amanda Pell']] as const)(
+    'GET %s as %s serves their own name as its audience', async (id, viewer, name) => {
+      expect((await threadAs(id, viewer)).audience).toEqual({ kind: 'party', name })
+    })
 })
 
 describe('the audit: one predicate', () => {

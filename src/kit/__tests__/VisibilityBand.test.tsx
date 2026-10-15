@@ -1,45 +1,31 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
-import { visibilityWords } from '@/kit/visibility/visibility'
+
+const WORDS = { private: 'Just you', internal: "Larkfield team · Robert can't see this", client: 'Robert Johnson can read this' } as const
 
 describe('VisibilityBand', () => {
-  it('uses the exact words', () => {
-    expect(['private', 'internal', 'client'].map((v) => visibilityWords(v as 'private' | 'internal' | 'client'))).toEqual(['Only you', "Firm only · client can't see", 'CLIENT CAN SEE'])
-  })
-  it.each(['private', 'internal', 'client'] as const)('%s announces who can see it at both scales', (v) => {
-    const { unmount } = render(<VisibilityBand visibility={v} scale="thread" audience="Robert Johnson" />)
-    expect(screen.getByRole('note', { name: `Visibility: ${visibilityWords(v)}` })).toHaveAttribute('data-visibility', v)
-    expect(screen.getByText(visibilityWords(v))).toBeInTheDocument()
+  it.each(['private', 'internal', 'client'] as const)('%s announces the words it is given at both scales', (v) => {
+    const { unmount } = render(<VisibilityBand visibility={v} words={WORDS[v]} scale="thread" />)
+    expect(screen.getByRole('note', { name: `Visibility: ${WORDS[v]}` })).toHaveAttribute('data-visibility', v)
+    expect(screen.getByText(WORDS[v])).toBeInTheDocument()
     unmount()
-    render(<VisibilityBand visibility={v} scale="message" />)
-    expect(screen.getByText(visibilityWords(v))).toBeInTheDocument()
+    render(<VisibilityBand visibility={v} words={WORDS[v]} scale="message" />)
+    expect(screen.getByRole('note', { name: `Visibility: ${WORDS[v]}` })).toHaveAttribute('data-scale', 'message')
   })
   it('internal rule keeps a double-rule fallback when the hatch background is dropped', () => {
-    const { container } = render(<VisibilityBand visibility="internal" />)
+    const { container } = render(<VisibilityBand visibility="internal" words={WORDS.internal} />)
     const rule = container.querySelector('[aria-hidden]')
     expect(rule).toHaveClass('hatch', 'border-y')
   })
-  it('hides the visible word from assistive tech while the note name holds it', () => {
-    render(<VisibilityBand visibility="client" />)
-    expect(screen.getByText(visibilityWords('client'))).toHaveAttribute('aria-hidden', 'true')
-    expect(screen.getByRole('note')).toHaveAccessibleName(`Visibility: ${visibilityWords('client')}`)
+  it('hides the visible words from assistive tech while the note name holds them', () => {
+    render(<VisibilityBand visibility="client" words={WORDS.client} />)
+    expect(screen.getByText(WORDS.client)).toHaveAttribute('aria-hidden', 'true')
+    expect(screen.getByRole('note')).toHaveAccessibleName(`Visibility: ${WORDS.client}`)
   })
-  it('names the client audience on client threads', () => {
-    render(<VisibilityBand visibility="client" audience="Robert Johnson" />)
-    expect(screen.getByText('Robert Johnson')).toBeInTheDocument()
-  })
-})
-
-describe('the band names the party', () => {
-  it('reads the client words by default and the prospect words for prospect work', () => {
-    expect(visibilityWords('client')).toBe('CLIENT CAN SEE')
-    expect(visibilityWords('client', 'prospect')).toBe('PROSPECT CAN SEE')
-    expect(visibilityWords('internal', 'prospect')).toBe("Firm only · prospect can't see")
-    expect(visibilityWords('private', 'prospect')).toBe('Only you')
-  })
-  it('renders the prospect band with its accessible name', () => {
-    render(<VisibilityBand visibility="client" party="prospect" audience="Dr. Amanda Pell" />)
-    expect(screen.getByRole('note', { name: 'Visibility: PROSPECT CAN SEE' })).toHaveTextContent('Dr. Amanda Pell')
+  it.each(['private', 'internal', 'client'] as const)('only a client-visible band is filled (%s)', (v) => {
+    render(<VisibilityBand visibility={v} words={WORDS[v]} />)
+    if (v === 'client') expect(screen.getByRole('note')).toHaveClass('bg-shared')
+    else expect(screen.getByRole('note')).not.toHaveClass('bg-shared')
   })
 })

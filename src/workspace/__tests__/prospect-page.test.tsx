@@ -24,7 +24,7 @@ describe('the prospect page', () => {
     renderRoutes(routes, '/prospects/prsp-011?from=th-pell')
     expect(await screen.findByRole('heading', { level: 1, name: 'Dr. Amanda Pell' })).toBeInTheDocument()
     const main = screen.getByRole('main')
-    expect(within(main).getByRole('note', { name: "Visibility: Firm only · prospect can't see" })).toBeInTheDocument()
+    expect(within(main).getByRole('note', { name: `Visibility: Larkfield team · Dr. Pell can't see this` })).toBeInTheDocument()
     expect(within(main).getByRole('link', { name: 'Back to the thread' })).toHaveAttribute('href', '/t/th-pell')
     expect(within(main).getByRole('list', { name: 'Stage history' })).toHaveTextContent('Discovery')
     expect(within(main).getByRole('table', { name: 'Disclosures delivered' })).toHaveTextContent('REC-0001')
