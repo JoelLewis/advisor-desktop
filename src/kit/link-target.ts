@@ -4,9 +4,11 @@
  */
 export const LINK_TARGET = 'inline-flex min-h-6 items-center gap-1 coarse:min-h-11'
 
+/** The invisible box, 4px past the element on every side, that is a dense table cell's 24px target without lengthening its row. */
+export const TABLE_HIT_AREA = "relative before:absolute before:-inset-1 before:content-['']"
+
 /**
- * The same floor inside a dense table cell, where a 24px box would lengthen every row. The link keeps the height of its
- * text; an invisible box 4px wider on every side is the target, so the 24px is met without moving the row. Still 44px
- * under a finger, where phone tables keep their larger rows.
+ * The same floor for a link inside a dense table cell, where a 24px box would lengthen every row. The link keeps the
+ * height of its text and the hit area is the target. Still 44px under a finger, where phone tables keep their larger rows.
  */
-export const TABLE_LINK_TARGET = 'relative inline-flex items-center gap-1 before:absolute before:-inset-1 before:content-[\'\'] coarse:min-h-11'
+export const TABLE_LINK_TARGET = `${TABLE_HIT_AREA} inline-flex items-center gap-1 coarse:min-h-11`

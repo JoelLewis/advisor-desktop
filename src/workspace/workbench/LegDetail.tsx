@@ -2,7 +2,7 @@ import { useEffect, useId, useState, type MutableRefObject } from 'react'
 import { Button } from '@/kit/button/Button'
 import { Checkbox } from '@/kit/checkbox/Checkbox'
 import { NumberInput } from '@/kit/number-input/NumberInput'
-import { fmtDate, fmtQuantity, fmtResult } from '@/kit/measure'
+import { fmtDayMonthYear, fmtQuantity, fmtResult } from '@/kit/measure'
 import { useTaxLots } from '@/hooks/use-accounts'
 import { usePositions } from '@/hooks/use-portfolio'
 import { ApiClientError } from '@/services/api-client'
@@ -42,7 +42,7 @@ function refusalPlace(refusal: Error | null | undefined, symbol: string): 'quant
 
 /** A lot as this version sells it: what the sale takes against what the lot holds, or the whole lot when it is not sold. */
 function lotLabel(lot: TaxLot, take: LotTake | undefined, takesUnknown: boolean): string {
-  const head = `${lot.id} · bought ${fmtDate(lot.purchaseDate)} · ${lot.holdingPeriod === 'long' ? 'long-term' : 'short-term'}`
+  const head = `${lot.id} · bought ${fmtDayMonthYear(lot.purchaseDate)} · ${lot.holdingPeriod === 'long' ? 'long-term' : 'short-term'}`
   if (takesUnknown) return `${head} · ${fmtQuantity(lot.quantity)} sh · ${fmtResult(lot.gainLoss)} USD · sold —`
   if (!take) return `${head} · ${fmtQuantity(lot.quantity)} sh · ${fmtResult(lot.gainLoss)} USD · not sold`
   return `${head} · ${fmtQuantity(take.shares)} of ${fmtQuantity(lot.quantity)} sh · ${fmtResult(take.realized)} of ${fmtResult(lot.gainLoss)} USD`

@@ -3,7 +3,7 @@ import { Pane } from '@/kit/layout/Pane'
 import { DataTable } from '@/kit/data-table/DataTable'
 import { Num } from '@/kit/data-table/Num'
 import { Tag } from '@/kit/tag/Tag'
-import { UNIT, fmtDate, fmtMoney, fmtResult, fmtWeight } from '@/kit/measure'
+import { UNIT, fmtDayMonthYear, fmtMoney, fmtResult, fmtWeight } from '@/kit/measure'
 import type { HouseholdSummary } from '@/types/workspace-household'
 import { AccountsTable } from './AccountsTable'
 import { GOAL_STATUS_TAG, heldAwayPolicy, ipsLine } from './household-words'
@@ -25,7 +25,7 @@ export function HouseholdSummaryPanes({ summary }: { summary: HouseholdSummary }
             { id: 'institution', header: 'Institution', cell: (h) => h.institution },
             { id: 'plan', header: 'Plan', cell: (h) => h.accountType },
             { id: 'value', header: 'Value', unit: UNIT.usd, align: 'right', cell: (h) => <Num text={fmtMoney(h.value)} />, sortValue: (h) => h.value },
-            { id: 'reported', header: 'Reported', cell: (h) => fmtDate(h.reportedOn) },
+            { id: 'reported', header: 'Reported', cell: (h) => fmtDayMonthYear(h.reportedOn) },
           ]} />
       </Pane>
       <Pane title="Plan goals" meta={summary.planProbability !== undefined ? `Plan probability ${fmtWeight(summary.planProbability)} ${UNIT.pct}` : undefined}>
@@ -44,9 +44,9 @@ export function HouseholdSummaryPanes({ summary }: { summary: HouseholdSummary }
             columns={[
               { id: 'symbol', header: 'Symbol', cell: (w) => w.symbol },
               { id: 'account', header: 'Sold in', cell: (w) => w.accountName },
-              { id: 'sold', header: 'Sold', cell: (w) => fmtDate(w.saleDate) },
+              { id: 'sold', header: 'Sold', cell: (w) => fmtDayMonthYear(w.saleDate) },
               { id: 'loss', header: 'Loss', unit: UNIT.usd, align: 'right', cell: (w) => <Num text={fmtResult(w.loss)} /> },
-              { id: 'through', header: 'Through', cell: (w) => fmtDate(w.through) },
+              { id: 'through', header: 'Through', cell: (w) => fmtDayMonthYear(w.through) },
             ]} />
         )}
       </Pane>

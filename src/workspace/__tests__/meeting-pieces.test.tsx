@@ -202,8 +202,8 @@ describe('the household summary', () => {
     const goals = screen.getByRole('table', { name: 'Plan goals' })
     expect(within(goals).getByRole('row', { name: /Legacy \/ Estate/ })).toHaveTextContent(/78\.0.*85\.0.*AT RISK/)
     const windows = screen.getByRole('table', { name: 'Open wash-sale windows' })
-    expect(within(windows).getByRole('row', { name: /INTC/ })).toHaveTextContent(/2026-02-20.*−32,750.*2026-03-22/)
-    expect(screen.getByRole('region', { name: 'IPS and open items' })).toHaveTextContent('Johnson Family Trust — IPS · signed 2025-11-14')
+    expect(within(windows).getByRole('row', { name: /INTC/ })).toHaveTextContent(/20 Feb 2026.*−32,750.*22 Mar 2026/)
+    expect(screen.getByRole('region', { name: 'IPS and open items' })).toHaveTextContent('Johnson Family Trust — IPS · signed 14 Nov 2025')
     expect(screen.getByRole('region', { name: 'IPS and open items' })).not.toHaveTextContent('Awaiting signature')
   })
 

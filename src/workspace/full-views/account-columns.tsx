@@ -1,7 +1,7 @@
 import { DataTable } from '@/kit/data-table/DataTable'
 import { Num } from '@/kit/data-table/Num'
 import { NotApplicable } from '@/kit/data-table/NotApplicable'
-import { MeasureError, fmtDate, fmtMoney, fmtPrice, fmtQuantity, fmtResult, fmtWeight } from '@/kit/measure'
+import { MeasureError, fmtDayMonthYear, fmtMoney, fmtPrice, fmtQuantity, fmtResult, fmtWeight } from '@/kit/measure'
 import type { Position, TaxLot } from '@/types/portfolio'
 
 const isCash = (p: Position) => p.assetClass === 'cash'
@@ -40,7 +40,7 @@ export function TaxLotsTable({ lots, positions }: TaxLotsTableProps) {
       noun={{ singular: 'lot', plural: 'lots' }}
       columns={[
         { id: 'symbol', header: 'Symbol', cell: symbolFor, sortValue: symbolFor },
-        { id: 'acquired', header: 'Acquired', cell: (l) => fmtDate(l.purchaseDate), sortValue: (l) => l.purchaseDate },
+        { id: 'acquired', header: 'Acquired', cell: (l) => fmtDayMonthYear(l.purchaseDate), sortValue: (l) => l.purchaseDate },
         { id: 'term', header: 'Term', cell: (l) => (l.holdingPeriod === 'long' ? 'Long-term' : 'Short-term'), sortValue: (l) => l.holdingPeriod },
         { id: 'qty', header: 'Qty', unit: 'sh', align: 'right', cell: (l) => <Num text={fmtQuantity(l.quantity)} />, sortValue: (l) => l.quantity },
         { id: 'gain', header: 'Unrealized', unit: 'USD', align: 'right', cell: (l) => <Num text={fmtResult(l.gainLoss)} />, sortValue: (l) => l.gainLoss },

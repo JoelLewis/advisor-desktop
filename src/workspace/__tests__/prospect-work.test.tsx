@@ -113,6 +113,8 @@ describe('the prospect work thread', () => {
     const table = within(onboarding).getByRole('table', { name: 'Onboarding checklist' })
     expect(table).toHaveTextContent('CIP identity verification')
     expect(table).toHaveTextContent('Trusted contact (custodian account form, FINRA Rule 4512)')
+    const acceptance = await within(onboarding).findByRole('article', { name: /accepted v1 of the Pell proposal/ })
+    expect(acceptance).toHaveTextContent('Dr. Amanda Pell')
     expect(table).toHaveTextContent('Awaiting her signature')
     expect(table).toHaveTextContent('9 Mar 2026')
     expect(table).toHaveTextContent('Not started')

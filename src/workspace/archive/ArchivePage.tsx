@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PAGE_TITLE_ID } from '@/kit/page/ids'
 import { Select } from '@/kit/select/Select'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
-import { fmtDate } from '@/kit/measure'
+import { fmtDayMonthYear } from '@/kit/measure'
 import { useArchive, useDirectory } from '@/hooks/use-workspace'
 import { FullViewNotFound } from '@/workspace/full-views/FullViewNotFound'
 import type { HiddenRedirect } from '@/workspace/full-views/hidden-redirect'
@@ -41,7 +41,7 @@ function Archive({ directory }: { directory: Directory }) {
   const data = archive.data
   // A date the URL names stays selectable even when no record falls on it, so the select shows the filter in force.
   const knownDates = [...new Set([...(data?.dates ?? []), ...(filters.from ? [filters.from] : []), ...(filters.to ? [filters.to] : [])])].sort()
-  const dates = [{ value: '', label: 'Any date' }, ...knownDates.map((d) => ({ value: d, label: fmtDate(d) }))]
+  const dates = [{ value: '', label: 'Any date' }, ...knownDates.map((d) => ({ value: d, label: fmtDayMonthYear(d) }))]
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <header className="flex flex-col gap-3">

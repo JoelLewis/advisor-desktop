@@ -2,7 +2,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Pane } from '@/kit/layout/Pane'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
 import { PAGE_TITLE_ID } from '@/kit/page/ids'
-import { UNIT, fmtDate, fmtMoney, fmtScore } from '@/kit/measure'
+import { UNIT, fmtDayMonthYear, fmtMoney, fmtScore } from '@/kit/measure'
 import { useClientView } from '@/hooks/use-meetings'
 import { isNotFound } from '@/workspace/is-not-found'
 import { AccountsTable } from '@/workspace/household/AccountsTable'
@@ -44,13 +44,13 @@ function ClientPage({ view }: { view: ClientReadModel }) {
       </header>
       <Pane title="Profile">
         <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-body">
-          <dt className="text-ink-3">Date of birth</dt><dd className="tabular">{fmtDate(view.dateOfBirth)}</dd>
+          <dt className="text-ink-3">Date of birth</dt><dd className="tabular">{fmtDayMonthYear(view.dateOfBirth)}</dd>
           <dt className="text-ink-3">Occupation</dt><dd>{view.occupation}</dd>
           {view.preferredContact ? <><dt className="text-ink-3">Preferred contact</dt><dd>{view.preferredContact}</dd></> : null}
         </dl>
       </Pane>
       <Pane title="Risk assessment">
-        <p className="tabular text-body">{`${view.risk.tolerance} · score ${fmtScore(view.risk.scoreFraction)} of 100 · assessed ${fmtDate(view.risk.assessedOn)}`}</p>
+        <p className="tabular text-body">{`${view.risk.tolerance} · score ${fmtScore(view.risk.scoreFraction)} of 100 · assessed ${fmtDayMonthYear(view.risk.assessedOn)}`}</p>
       </Pane>
       <Pane title="Accounts owned" meta={`${fmtMoney(view.accountsValue)} ${UNIT.usd}`}>
         <AccountsTable caption="Accounts owned" accounts={view.accounts} totalValue={view.accountsValue} totalLabel="Owned" />

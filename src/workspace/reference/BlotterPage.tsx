@@ -5,7 +5,7 @@ import { Pane } from '@/kit/layout/Pane'
 import { Reading } from '@/kit/reading/Reading'
 import { Select } from '@/kit/select/Select'
 import { Tag } from '@/kit/tag/Tag'
-import { UNIT, fmtDate, fmtMoney, fmtPrice, fmtQuantity, fmtEasternStamp } from '@/kit/measure'
+import { UNIT, fmtDayMonthYear, fmtMoney, fmtPrice, fmtQuantity, fmtEasternStamp } from '@/kit/measure'
 import { useBlotter } from '@/hooks/use-reference'
 import { SIDE_WORDS } from '@/workspace/proposal/leg-status'
 import { BLOTTER_STATUSES, isBlotterStatus, type BlotterFilters, type BlotterRow, type BlotterView } from '@/types/reference-blotter'
@@ -46,7 +46,7 @@ function Blotter({ view }: { view: BlotterView }) {
     else next.delete(key)
     setParams(next, { replace: true })
   }
-  const dayOptions = (none: string) => [{ value: '', label: none }, ...view.days.map((d) => ({ value: d, label: fmtDate(d) }))]
+  const dayOptions = (none: string) => [{ value: '', label: none }, ...view.days.map((d) => ({ value: d, label: fmtDayMonthYear(d) }))]
   return (
     <ReferencePage title="Blotter" from={params.get('from')} methods={view.methods}
       lead={<p className="text-body text-ink-2">{`Every order across accounts · as of ${fmtEasternStamp(view.asOf)}`}</p>}>

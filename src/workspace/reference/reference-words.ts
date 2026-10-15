@@ -3,7 +3,7 @@ import type { BlotterStatus } from '@/types/reference-blotter'
 import type { ModelBenchmark, ModelSummary } from '@/types/reference-models'
 import type { IntegrationStatus, MatchKind } from '@/types/reference-reconciliation'
 import type { RiskPosture, ToleranceStatus } from '@/types/reference-risk'
-import { fmtDate, fmtPoints } from '@/kit/measure'
+import { fmtDayMonthYear, fmtPoints } from '@/kit/measure'
 import { assetClassLabel } from '@/workspace/asset-class-label'
 
 export const BILLING_METHOD_WORDS: Readonly<Record<BillingMethod, string>> = { advance: 'In advance', arrears: 'In arrears' }
@@ -47,11 +47,11 @@ export function wordFor(map: Readonly<Record<string, string>>, key: string): str
 
 /** A model's pending version, if any, as the line beneath its current one. */
 export const pendingVersionWords = (m: Pick<ModelSummary, 'pendingVersion'>) =>
-  m.pendingVersion ? `v${m.pendingVersion.version} pending from ${fmtDate(m.pendingVersion.effectiveDate)}` : undefined
+  m.pendingVersion ? `v${m.pendingVersion.version} pending from ${fmtDayMonthYear(m.pendingVersion.effectiveDate)}` : undefined
 
 /** "v2", or "v2 · v3 pending from 2026-04-01". */
 export const versionWords = (m: Pick<ModelSummary, 'currentVersion' | 'pendingVersion'>) =>
-  m.pendingVersion ? `v${m.currentVersion} · v${m.pendingVersion.version} pending from ${fmtDate(m.pendingVersion.effectiveDate)}` : `v${m.currentVersion}`
+  m.pendingVersion ? `v${m.currentVersion} · v${m.pendingVersion.version} pending from ${fmtDayMonthYear(m.pendingVersion.effectiveDate)}` : `v${m.currentVersion}`
 
 /** A sleeve's name on the reference views: the commodities sleeve holds GLD and is measured by the LBMA gold price, so it is Gold. */
 export const sleeveLabel = (assetClass: string) => (assetClass === 'commodities' ? 'Gold' : assetClassLabel(assetClass))

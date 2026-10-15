@@ -5,7 +5,7 @@ import { Num } from '@/kit/data-table/Num'
 import { Pane } from '@/kit/layout/Pane'
 import { Reading } from '@/kit/reading/Reading'
 import { Tag } from '@/kit/tag/Tag'
-import { UNIT, fmtDate, fmtMoney, fmtQuantity, fmtResult, fmtEasternStamp, fmtWeight } from '@/kit/measure'
+import { UNIT, fmtDayMonthYear, fmtMoney, fmtQuantity, fmtResult, fmtEasternStamp, fmtWeight } from '@/kit/measure'
 import { useDirectory } from '@/hooks/use-workspace'
 import { useReconciliation } from '@/hooks/use-reference'
 import { useViewer } from '@/workspace/viewer/use-viewer'
@@ -100,7 +100,7 @@ function Reconciliation({ view }: { view: ReconciliationView }) {
       <Pane title={`Trend · last ${fmtQuantity(view.trend.length)} trading days`} meta="End of day; today as it stands">
         <DataTable caption={`Trend · last ${fmtQuantity(view.trend.length)} trading days`} rows={[...view.trend].reverse()} getRowId={(p) => p.date} noun={{ singular: 'trading day', plural: 'trading days' }} density="dense"
           columns={[
-            { id: 'date', header: 'Trading day', cell: (p) => fmtDate(p.date) },
+            { id: 'date', header: 'Trading day', cell: (p) => fmtDayMonthYear(p.date) },
             { id: 'open', header: 'Open breaks', align: 'right', cell: (p) => <Num text={fmtQuantity(p.openBreaks)} /> },
             { id: 'positions', header: 'Positions', unit: UNIT.pct, align: 'right', cell: (p) => <Num text={fmtWeight(p.positions)} /> },
             { id: 'valuations', header: 'Valuations', unit: UNIT.pct, align: 'right', cell: (p) => <Num text={fmtWeight(p.valuations)} /> },

@@ -4,7 +4,7 @@ import { Tag } from '@/kit/tag/Tag'
 import { DataTable } from '@/kit/data-table/DataTable'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
 import { PAGE_TITLE_ID } from '@/kit/page/ids'
-import { fmtDate, fmtEasternRange, fmtEasternStamp, fmtDayMonthYear } from '@/kit/measure'
+import { fmtEasternRange, fmtEasternStamp, fmtDayMonthYear } from '@/kit/measure'
 import { useHousehold } from '@/hooks/use-meetings'
 import { isNotFound } from '@/workspace/is-not-found'
 import { HouseholdSummaryPanes } from '@/workspace/household/HouseholdSummaryPanes'
@@ -48,7 +48,7 @@ function HouseholdPage({ view }: { view: HouseholdReadModel }) {
           {view.members.map((m) => (
             <li key={m.clientId} className="text-body text-ink-2">
               <Link to={clientFullViewHref(m.clientId, from)} className={LINK}>{m.name}</Link>
-              <span className="tabular">{` · born ${fmtDate(m.dateOfBirth)}`}</span>
+              <span className="tabular">{` · born ${fmtDayMonthYear(m.dateOfBirth)}`}</span>
             </li>
           ))}
         </ul>
@@ -68,7 +68,7 @@ function HouseholdPage({ view }: { view: HouseholdReadModel }) {
             { id: 'client', header: 'Client', cell: (d) => d.clientName },
             { id: 'type', header: 'Type', cell: (d) => DOCUMENT_TYPE_WORDS[d.type] },
             { id: 'signature', header: 'Signature', cell: (d) => SIGNATURE_WORDS[d.signatureStatus] },
-            { id: 'updated', header: 'Updated', cell: (d) => fmtDate(d.updatedOn), sortValue: (d) => d.updatedOn },
+            { id: 'updated', header: 'Updated', cell: (d) => fmtDayMonthYear(d.updatedOn), sortValue: (d) => d.updatedOn },
           ]} />
       </Pane>
       <Pane title="Communications"><CommunicationsList communications={view.communications} /></Pane>

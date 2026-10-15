@@ -26,7 +26,7 @@ describe('the Billing view', () => {
     expect(tiers).toHaveTextContent('8,750,000')
     expect(tiers).toHaveTextContent('124,250')
     expect(screen.getByRole('table', { name: 'Billing runs' })).toHaveTextContent('Q1 2026')
-    expect(screen.getByRole('table', { name: 'Run of 2026-01-02' })).toHaveTextContent('Q4 2025')
+    expect(screen.getByRole('table', { name: 'Run of 2 Jan 2026' })).toHaveTextContent('Q4 2025')
     expect(screen.getByRole('list', { name: 'Billing exceptions' })).toHaveTextContent('agreement bills in arrears')
     const methods = screen.getByRole('region', { name: 'Methods & sources' })
     expect(methods).toHaveTextContent('Quarter-end valuesMODELED')

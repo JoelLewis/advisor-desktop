@@ -22,7 +22,7 @@ describe('the workbench body', () => {
     const intc = within(legs).getByRole('row', { name: /^INTC/ })
     expect(intc).toHaveTextContent('Intel Corp.')
     expect(intc).toHaveTextContent('7,000')
-    expect(intc).toHaveTextContent('2026-03-27')
+    expect(intc).toHaveTextContent('27 Mar 2026')
     expect(intc).toHaveTextContent('CLEAR')
   })
 
@@ -38,7 +38,7 @@ describe('the workbench body', () => {
     expect(within(detail).getByRole('heading', { level: 3, name: 'Leg · SPY' })).toBeInTheDocument()
     // What the leg takes from the lot, against what the lot holds: it ties to the leg's 758 sh and +69,411 LT.
     expect(within(detail).getByRole('checkbox', { name: /^lot-pos-020-0/ })).toHaveAccessibleName(
-      'lot-pos-020-0 · bought 2024-08-23 · long-term · 758 of 1,515.332 sh · +69,411 of +138,761 USD')
+      'lot-pos-020-0 · bought 23 Aug 2024 · long-term · 758 of 1,515.332 sh · +69,411 of +138,761 USD')
     expect(within(detail).getByRole('checkbox', { name: /^lot-pos-020-1/ })).toHaveAccessibleName(/2,363\.668 sh · \+216,446 USD · not sold$/)
   })
 

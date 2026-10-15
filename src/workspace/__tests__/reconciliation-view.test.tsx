@@ -28,9 +28,9 @@ describe('the Reconciliation view', () => {
     expect(within(screen.getByRole('table', { name: 'Integrations' })).getByRole('row', { name: /MoneyGuidePro/ })).toHaveTextContent('PENDING')
     expect(screen.getByRole('list', { name: 'Integration log' })).toHaveTextContent('has not returned it')
     const trend = screen.getByRole('table', { name: 'Trend · last 30 trading days' })
-    expect(trend).toHaveTextContent('2026-01-13')
-    expect(trend).not.toHaveTextContent('2026-02-16')
-    expect(trend).toHaveTextContent('2026-02-25')
+    expect(trend).toHaveTextContent('13 Jan 2026')
+    expect(trend).not.toHaveTextContent('16 Feb 2026')
+    expect(trend).toHaveTextContent('25 Feb 2026')
     expect(screen.getByRole('region', { name: 'Methods & sources' })).toHaveTextContent('Resolving a break is a binding act')
   })
 

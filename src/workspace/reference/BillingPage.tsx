@@ -5,7 +5,7 @@ import { Pane } from '@/kit/layout/Pane'
 import { Reading } from '@/kit/reading/Reading'
 import { Select } from '@/kit/select/Select'
 import { Tag } from '@/kit/tag/Tag'
-import { UNIT, fmtBasisPoints, fmtDate, fmtMoney, fmtRate, fmtEasternStamp } from '@/kit/measure'
+import { UNIT, fmtBasisPoints, fmtDayMonthYear, fmtMoney, fmtRate, fmtEasternStamp } from '@/kit/measure'
 import { useBilling } from '@/hooks/use-reference'
 import type { BillingView, HouseholdBilling } from '@/types/reference-billing'
 import { ReferenceGate } from './ReferenceGate'
@@ -69,8 +69,8 @@ function Billing({ view }: { view: BillingView }) {
       <Pane title="Billing runs" meta={<span className="inline-flex items-baseline gap-2">Modeled, not realized <Tag>MODELED</Tag></span>}>
         <DataTable caption="Billing runs" rows={view.runs} getRowId={(r) => r.id} noun={{ singular: 'run', plural: 'runs' }} density="dense"
           columns={[
-            { id: 'run', header: 'Run', cell: (r) => fmtDate(r.runDate) },
-            { id: 'valued', header: 'Valued at', cell: (r) => fmtDate(r.valuationDate) },
+            { id: 'run', header: 'Run', cell: (r) => fmtDayMonthYear(r.runDate) },
+            { id: 'valued', header: 'Valued at', cell: (r) => fmtDayMonthYear(r.valuationDate) },
             { id: 'advance', header: 'In advance', cell: (r) => r.advanceQuarter },
             { id: 'arrears', header: 'In arrears', cell: (r) => r.arrearsQuarter },
             { id: 'total', header: 'Total', unit: UNIT.usd, align: 'right', cell: (r) => usd(r.total) },
@@ -78,8 +78,8 @@ function Billing({ view }: { view: BillingView }) {
           ]} />
         {run ? (
           <>
-            <Select label="Run" value={run.id} onChange={set('run')} options={view.runs.map((r) => ({ value: r.id, label: `Run of ${fmtDate(r.runDate)}` }))} />
-            <DataTable caption={`Run of ${fmtDate(run.runDate)}`} rows={run.households} getRowId={(h) => h.householdId} noun={{ singular: 'household', plural: 'households' }} density="dense"
+            <Select label="Run" value={run.id} onChange={set('run')} options={view.runs.map((r) => ({ value: r.id, label: `Run of ${fmtDayMonthYear(r.runDate)}` }))} />
+            <DataTable caption={`Run of ${fmtDayMonthYear(run.runDate)}`} rows={run.households} getRowId={(h) => h.householdId} noun={{ singular: 'household', plural: 'households' }} density="dense"
               totals={{ label: 'Run total', tiesTo: { label: 'Σ household fees', expected: run.total, actual: run.households.reduce((s, h) => s + h.fee, 0) }, cells: { fee: usd(run.total) } }}
               columns={[
                 { id: 'name', header: 'Household', cell: (h) => h.householdName },

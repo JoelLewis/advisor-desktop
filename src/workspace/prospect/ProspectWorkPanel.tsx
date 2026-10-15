@@ -4,6 +4,7 @@ import { useViewer } from '@/workspace/viewer/use-viewer'
 import { personIn } from '@/workspace/people/directory-people'
 import { ContextSection } from '@/workspace/context/ContextSection'
 import type { Directory } from '@/types/workspace'
+import { AcceptanceSlip } from './AcceptanceSlip'
 import { OnboardingChecklist } from './OnboardingChecklist'
 import { ProspectApproval } from './ProspectApproval'
 
@@ -29,6 +30,7 @@ export function ProspectWorkPanel({ prospectId, directory, onRecorded }: Props) 
       ) : null}
       {view.onboarding ? (
         <ContextSection title="Onboarding">
+          <AcceptanceSlip threadId={view.threadId} actId={view.onboarding.acceptanceActId} directory={directory} />
           <OnboardingChecklist view={view} directory={directory} canDeliver={canDeliver} onRecorded={onRecorded} />
         </ContextSection>
       ) : null}

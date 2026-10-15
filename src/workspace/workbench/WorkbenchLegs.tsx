@@ -5,7 +5,7 @@ import { NotApplicable } from '@/kit/data-table/NotApplicable'
 import { StatusCode } from '@/kit/status/StatusCode'
 import { Tag } from '@/kit/tag/Tag'
 import type { Column } from '@/kit/data-table/types'
-import { fmtDate, fmtMoney, fmtQuantity, fmtResult } from '@/kit/measure'
+import { fmtDayMonthYear, fmtMoney, fmtQuantity, fmtResult } from '@/kit/measure'
 import { SIDE_WORDS } from '@/workspace/proposal/leg-status'
 import type { DraftPreview } from '@/types/workspace-proposal'
 import { legRows, type LegRow } from './leg-rows'
@@ -32,7 +32,7 @@ export function WorkbenchLegs({ view, caption, expandedSymbol, onExpand, onToggl
     { id: 'st', header: 'ST', unit: currency, align: 'right', cell: (r) => result(r.shortTerm) },
     { id: 'lt', header: 'LT', unit: currency, align: 'right', cell: (r) => result(r.longTerm) },
     { id: 'washed', header: 'Washed', unit: currency, align: 'right', cell: (r) => result(r.washed) },
-    { id: 'restricted', header: 'No buy-back to', cell: (r) => (r.restrictedTo ? fmtDate(r.restrictedTo) : '') },
+    { id: 'restricted', header: 'No buy-back to', cell: (r) => (r.restrictedTo ? fmtDayMonthYear(r.restrictedTo) : '') },
     { id: 'check', header: 'Pre-trade', cell: (r) => (r.excluded ? <Tag>EXCLUDED</Tag> : <StatusCode status={r.status} />) },
   ], [currency])
 

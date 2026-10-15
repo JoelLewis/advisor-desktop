@@ -5,7 +5,7 @@ import { Button } from '@/kit/button/Button'
 import { cn } from '@/lib/utils'
 import { useTakeToTeamThread } from '@/hooks/use-reference'
 import type { ReferenceView, TakeResult } from '@/types/reference'
-import { LINK_TARGET, TABLE_LINK_TARGET } from '@/kit/link-target'
+import { LINK_TARGET, TABLE_HIT_AREA, TABLE_LINK_TARGET } from '@/kit/link-target'
 
 /**
  * "Take to team thread": the row becomes a quoted card in the team thread about its subject, opened if there is none.
@@ -24,7 +24,7 @@ export function TakeToTeamThread({ view, rowId, rowLabel, inline = false }: { vi
   }
   return (
     <span className="inline-flex flex-wrap items-baseline gap-2">
-      <Button rank={inline ? 'quiet' : 'secondary'} className={inline ? 'relative min-h-0 whitespace-normal text-left text-table-dense font-normal text-ink-3 before:absolute before:-inset-1 before:content-[\'\'] not-disabled:not-aria-disabled:hover:text-ink' : undefined} aria-label={`Take ${rowLabel} to a team thread`} pending={take.isPending}
+      <Button rank={inline ? 'quiet' : 'secondary'} className={inline ? `${TABLE_HIT_AREA} min-h-0 whitespace-normal text-left text-table-dense font-normal text-ink-3 not-disabled:not-aria-disabled:hover:text-ink` : undefined} aria-label={`Take ${rowLabel} to a team thread`} pending={take.isPending}
         onClick={() => take.mutate({ view, rowId }, { onSuccess: (result) => { setTaken(result); announce(`Taken to ${result.threadTitle}.`) } })}>
         Take to team thread
       </Button>

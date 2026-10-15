@@ -4,7 +4,7 @@ import { Num } from '@/kit/data-table/Num'
 import { Pane } from '@/kit/layout/Pane'
 import { Tag } from '@/kit/tag/Tag'
 import { Reading } from '@/kit/reading/Reading'
-import { UNIT, fmtBasisPoints, fmtDate, fmtMoney, fmtQuantity, fmtRatio, fmtEasternStamp, fmtWeight } from '@/kit/measure'
+import { UNIT, fmtBasisPoints, fmtDayMonthYear, fmtMoney, fmtQuantity, fmtRatio, fmtEasternStamp, fmtWeight } from '@/kit/measure'
 import { usePractice } from '@/hooks/use-reference'
 import type { PracticeView } from '@/types/reference-practice'
 import { ReferenceGate } from './ReferenceGate'
@@ -34,7 +34,7 @@ function Practice({ view }: { view: PracticeView }) {
         <Reading label="Accounts" value={fmtQuantity(view.book.accounts)} size="readout-md" />
       </div>
       <p className="tabular flex flex-wrap items-baseline gap-x-3 text-body text-ink-2">
-        <span>{`Latest billing run, ${fmtDate(view.revenue.lastRun.runDate)}: ${fmtMoney(view.revenue.lastRun.total)} ${UNIT.usd}, on quarter-end values.`}</span>
+        <span>{`Latest billing run, ${fmtDayMonthYear(view.revenue.lastRun.runDate)}: ${fmtMoney(view.revenue.lastRun.total)} ${UNIT.usd}, on quarter-end values.`}</span>
         <Tag>MODELED</Tag>
       </p>
       <Pane title="Households">
@@ -42,7 +42,7 @@ function Practice({ view }: { view: PracticeView }) {
           columns={[
             { id: 'name', header: 'Household', wrap: true, cell: (h) => <StackedCell primary={h.name} action={<TakeToTeamThread inline view="practice" rowId={h.householdId} rowLabel={h.name} />} /> },
             { id: 'segment', header: 'Segment', cell: (h) => wordFor(SEGMENT_WORDS, h.segment) },
-            { id: 'since', header: 'Client since', cell: (h) => fmtDate(h.since), sortValue: (h) => h.since },
+            { id: 'since', header: 'Client since', cell: (h) => fmtDayMonthYear(h.since), sortValue: (h) => h.since },
             { id: 'value', header: 'Value', unit: UNIT.usd, align: 'right', cell: (h) => usd(h.value), sortValue: (h) => h.value },
             { id: 'fee', header: 'Annual fee', unit: UNIT.usd, align: 'right', cell: (h) => usd(h.annualFee), sortValue: (h) => h.annualFee },
             { id: 'rate', header: 'Effective', unit: UNIT.bps, align: 'right', cell: (h) => <Num text={fmtBasisPoints(h.effectiveRate)} /> },

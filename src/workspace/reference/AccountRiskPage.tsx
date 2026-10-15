@@ -4,7 +4,7 @@ import { Num } from '@/kit/data-table/Num'
 import { Pane } from '@/kit/layout/Pane'
 import { Reading } from '@/kit/reading/Reading'
 import { Tag } from '@/kit/tag/Tag'
-import { UNIT, fmtDate, fmtExposure, fmtMoney, fmtPoints, fmtQuantity, fmtRatio, fmtResult, fmtReturn, fmtEasternStamp, fmtWeight } from '@/kit/measure'
+import { UNIT, fmtDayMonthYear, fmtExposure, fmtMoney, fmtPoints, fmtQuantity, fmtRatio, fmtResult, fmtReturn, fmtEasternStamp, fmtWeight } from '@/kit/measure'
 import { useAccountRisk } from '@/hooks/use-reference'
 import type { AccountRiskView } from '@/types/reference-risk'
 import { ReferenceGate } from './ReferenceGate'
@@ -40,7 +40,7 @@ function AccountRisk({ view }: { view: AccountRiskView }) {
         <Reading label="VaR" value={fmtMoney(view.var95.value)} unit={UNIT.usd} size="readout-md" limit={`${fmtWeight(view.var95.percent)}% of value · one month, 95%, parametric normal`} />
         <Reading label="Tracking error, ex-ante" value={fmtWeight(view.trackingError)} unit={UNIT.pct} size="readout-md" />
         <Reading label="Risk score" value={fmtPoints(posture.score)} unit={UNIT.points} size="readout-md"
-          limit={`${posture.band} · questionnaire ${fmtPoints(posture.tolerance.score)}, ${toleranceBandWords(posture)}, assessed ${fmtDate(posture.tolerance.assessedOn)}`} />
+          limit={`${posture.band} · questionnaire ${fmtPoints(posture.tolerance.score)}, ${toleranceBandWords(posture)}, assessed ${fmtDayMonthYear(posture.tolerance.assessedOn)}`} />
       </div>
       <p className="flex flex-wrap items-baseline gap-2 text-body">
         <Tag tone={posture.status === 'above' ? 'solid' : 'outline'}>{TOLERANCE_TAG[posture.status]}</Tag>

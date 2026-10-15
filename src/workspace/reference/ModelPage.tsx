@@ -4,7 +4,7 @@ import { Num } from '@/kit/data-table/Num'
 import { Pane } from '@/kit/layout/Pane'
 import { Reading } from '@/kit/reading/Reading'
 import { Tag } from '@/kit/tag/Tag'
-import { UNIT, fmtDate, fmtMoney, fmtQuantity, fmtEasternStamp, fmtTolerance, fmtWeight } from '@/kit/measure'
+import { UNIT, fmtDayMonthYear, fmtMoney, fmtQuantity, fmtEasternStamp, fmtTolerance, fmtWeight } from '@/kit/measure'
 import { useReferenceModel } from '@/hooks/use-reference'
 import { accountFullViewHref } from '@/workspace/full-views/full-view-href'
 import type { ModelDetail } from '@/types/reference-models'
@@ -59,8 +59,8 @@ function Model({ view }: { view: ModelDetail }) {
             { id: 'version', header: 'Version', wrap: true, cell: (v) => <StackedCell primary={`v${v.version}`} action={<TakeToTeamThread inline view="models" rowId={`${view.id}:v${v.version}`} rowLabel={`${view.name} v${v.version}`} />} /> },
             { id: 'status', header: 'Status', cell: (v) => <Tag tone={v.status === 'approved' ? 'outline' : 'solid'}>{v.status === 'approved' ? 'APPROVED' : 'PENDING APPROVAL'}</Tag> },
             { id: 'proposed', header: 'Proposed by', cell: (v) => v.proposedByName },
-            { id: 'approved', header: 'Approved', cell: (v) => (v.approvedBy && v.approvedOn ? `${v.approvedBy}, ${fmtDate(v.approvedOn)}` : 'Not yet') },
-            { id: 'effective', header: 'Effective', cell: (v) => fmtDate(v.effectiveDate) },
+            { id: 'approved', header: 'Approved', cell: (v) => (v.approvedBy && v.approvedOn ? `${v.approvedBy}, ${fmtDayMonthYear(v.approvedOn)}` : 'Not yet') },
+            { id: 'effective', header: 'Effective', cell: (v) => fmtDayMonthYear(v.effectiveDate) },
             { id: 'changes', header: 'Changes', wrap: true, cell: (v) => v.changes.map((c) => c.description).join('; ') },
           ]} />
       </Pane>
@@ -73,7 +73,7 @@ function Model({ view }: { view: ModelDetail }) {
             { id: 'drift', header: 'Largest drift', unit: UNIT.pp, align: 'right', cell: (a) => <Num text={fmtWeight(a.maxAbsDrift)} /> },
             { id: 'band', header: 'Band', cell: (a) => (a.withinBand ? <Tag>WITHIN BAND</Tag>
               : <StackedCell primary={<Tag tone="solid">OUTSIDE BAND</Tag>}
-                  secondary={a.transition ? <span title={a.transition.note}>in transition since {fmtDate(a.transition.since)}</span> : undefined} />) },
+                  secondary={a.transition ? <span title={a.transition.note}>in transition since {fmtDayMonthYear(a.transition.since)}</span> : undefined} />) },
           ]} />
       </Pane>
     </ReferencePage>
