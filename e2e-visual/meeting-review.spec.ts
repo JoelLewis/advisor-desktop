@@ -215,7 +215,7 @@ test('one presenter runs the Johnson annual review end to end; Robert sees only 
   const [, filedId, filedFingerprint] = /^Filed · (REC-\d{4}) · fingerprint ([0-9A-F]{8})$/.exec(filedLine ?? '') ?? []
   if (!filedId || !filedFingerprint) throw new Error(`the filed record names its id and fingerprint: ${filedLine}`)
   await expect(page.getByRole('table', { name: 'Follow-up tasks' })).toContainText('Sarah Mitchell')
-  await expect(page.getByRole('table', { name: 'Follow-up tasks' })).toContainText('2026-03-02')
+  await expect(page.getByRole('table', { name: 'Follow-up tasks' })).toContainText('2 Mar 2026')
 
   // 7. The thread: the slip and the task list.
   await page.getByRole('link', { name: 'Back to the thread' }).click()

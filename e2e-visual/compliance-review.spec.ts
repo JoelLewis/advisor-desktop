@@ -185,7 +185,7 @@ test('one presenter closes the supervisory loop; the book moves; Robert sees not
   await page.getByRole('link', { name: 'Back to the thread' }).click()
   await threadLink(page, 'Brief').click()
   await expect(page.getByRole('region', { name: 'Needs a decision' })).not.toContainText('Intel Corp.')
-  await expect(conversation(page)).toContainText('INTC loss sale of 2026-02-25, open through 2026-03-27')
+  await expect(conversation(page)).toContainText('INTC loss sale of 25 Feb 2026, open through 27 Mar 2026')
 
   // 8. Robert: exactly what he saw before.
   await threadLink(page, 'Robert Johnson').click()

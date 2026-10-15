@@ -158,7 +158,7 @@ test('one presenter takes Dr. Pell from first contact to an onboarding opened; s
   await expect(checklist).toContainText('CIP identity verification')
   await expect(checklist).toContainText('OFAC screen')
   await expect(checklist).toContainText('Trusted contact (custodian account form, FINRA Rule 4512)')
-  await expect(checklist).toContainText('2026-03-09')
+  await expect(checklist).toContainText('9 Mar 2026')
   await deliver(page, 'ADV Part 2B')
   await deliver(page, 'privacy notice')
 
