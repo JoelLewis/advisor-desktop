@@ -53,7 +53,7 @@ describe('Harvest Scanner on acc-002', () => {
     expect(figure(findings, 'Loss allowed now · INTC')?.value).toBe(-45_850)
     expect(figure(findings, 'Washed · INTC')?.value).toBe(0)
     expect(figure(findings, 'Shares · INTC')?.value).toBe(7_000)
-    expect(findings[0]!.citations.map((c) => c.source)).toContain('Wash-sale window · a sale of INTC on 2026-02-25 restricts buying it back through 2026-03-27')
+    expect(findings[0]!.citations.map((c) => c.source)).toContain('Wash-sale window · a sale of INTC on 25 Feb 2026 restricts buying it back through 27 Mar 2026')
   })
 
   it("states the taxpayer's open INTC restriction from rs-001", () => {
@@ -61,7 +61,7 @@ describe('Harvest Scanner on acc-002', () => {
     expect(restriction.claim).toBe('Intel Corp. was sold at a loss recently; buying it back in any account of the same taxpayer, IRAs and Roths included, would wash that loss until its window closes.')
     expect(figure([restriction], 'Days until the INTC window closes')?.value).toBe(25)
     expect(figure([restriction], 'Loss realized · INTC')?.value).toBe(-32_750)
-    expect(restriction.citations[0]!.source).toBe('Wash-sale window · rs-001 · INTC loss sale of 2026-02-20, open through 2026-03-22')
+    expect(restriction.citations[0]!.source).toBe('Wash-sale window · rs-001 · INTC loss sale of 20 Feb 2026, open through 22 Mar 2026')
   })
 
   it('flags the held-away accounts as not visible to wash-sale checks', () => {

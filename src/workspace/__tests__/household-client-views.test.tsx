@@ -18,7 +18,7 @@ describe('the household full view', () => {
     expect(screen.getByRole('link', { name: 'Patricia Johnson' })).toHaveAttribute('href', '/clients/cli-002?from=th-johnson-meeting')
     expect(screen.getByRole('table', { name: 'Household accounts' })).toBeInTheDocument()
     const upcoming = screen.getByRole('list', { name: 'Upcoming meetings' })
-    expect(upcoming).toHaveTextContent('Johnson annual review · 2026-02-25 · 14:00–15:15 ET')
+    expect(upcoming).toHaveTextContent('Johnson annual review · 25 Feb 2026 · 14:00–15:15 ET')
     expect(within(upcoming).getByRole('link', { name: /Open the meeting view/ })).toHaveAttribute('href', '/meetings/evt-010?from=th-johnson-meeting')
     expect(screen.getByRole('table', { name: 'Documents' })).toHaveTextContent('Johnson Family Trust — IPS')
     expect(screen.getByRole('list', { name: 'Communications' })).toHaveTextContent('Estate Planning Review')

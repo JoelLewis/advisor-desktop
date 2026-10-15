@@ -82,7 +82,7 @@ describe('the prospect work thread', () => {
     expect(store().acts.filter((a) => a.kind === 'approve_proposal')).toHaveLength(1)
     expect(store().acts[0]?.bestInterest?.rationale).toMatch(/^Growth/)
     // Approved on Thu 26 Feb (after her reply): five trading days later is Thu 5 Mar.
-    expect(await inContext().findByRole('region', { name: 'Follow-up' })).toHaveTextContent('due 2026-03-05')
+    expect(await inContext().findByRole('region', { name: 'Follow-up' })).toHaveTextContent('due 5 Mar 2026')
   })
 
   it('an approval of content that moved is refused, and says so', async () => {
@@ -114,7 +114,7 @@ describe('the prospect work thread', () => {
     expect(table).toHaveTextContent('CIP identity verification')
     expect(table).toHaveTextContent('Trusted contact (custodian account form, FINRA Rule 4512)')
     expect(table).toHaveTextContent('Awaiting her signature')
-    expect(table).toHaveTextContent('2026-03-09')
+    expect(table).toHaveTextContent('9 Mar 2026')
     expect(table).toHaveTextContent('Not started')
     await user.click(within(onboarding).getByRole('button', { name: 'Deliver ADV Part 2B' }))
     await user.click(within(await screen.findByRole('dialog', { name: 'Deliver ADV Part 2B to Dr. Amanda Pell?' })).getByRole('button', { name: 'Confirm' }))

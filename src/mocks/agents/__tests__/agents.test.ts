@@ -120,7 +120,7 @@ describe('drift monitor replacement holds', () => {
       { label: 'SMH weight', value: smh.weight, unit: '%', source: 'positions.weight' },
       { label: 'Days until the INTC window closes', value: daysToClose, unit: 'd', source: 'openWashSaleWindows.daysRemaining' },
     ])
-    expect(hold!.citations).toEqual([{ source: `Wash-sale window · rs-001 · INTC loss sale of ${sale.saleDate}, open through ${end}`, asOf: MOCK_NOW_ISO }])
+    expect(hold!.citations).toEqual([{ source: 'Wash-sale window · rs-001 · INTC loss sale of 20 Feb 2026, open through 22 Mar 2026', asOf: MOCK_NOW_ISO }])
   })
 
   it('the replacement link lives on the loss sale, not in the agent', () => {

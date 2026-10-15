@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Tag } from '@/kit/tag/Tag'
-import { fmtDate, fmtEasternRange } from '@/kit/measure'
+import { fmtEasternRange, fmtDayMonthYear } from '@/kit/measure'
 import { useMeeting, useMeetings } from '@/hooks/use-meetings'
 import { useThread } from '@/hooks/use-workspace'
 import { useViewer } from '@/workspace/viewer/use-viewer'
@@ -41,7 +41,7 @@ function MeetingSection({ eventId, thread, directory, onRecorded }: MeetingPanel
           <span className="text-body font-semibold">{m.event.title}</span>
           <Tag tone={m.state === 'filed' ? 'solid' : 'outline'}>{MEETING_STATE_TAG[m.state]}</Tag>
         </div>
-        <span className="tabular text-body text-ink-2"><Unbroken text={[fmtDate(m.start), fmtEasternRange(m.start, m.end), ...(m.event.location ? [m.event.location] : [])].join(' · ')} /></span>
+        <span className="tabular text-body text-ink-2"><Unbroken text={[fmtDayMonthYear(m.start), fmtEasternRange(m.start, m.end), ...(m.event.location ? [m.event.location] : [])].join(' · ')} /></span>
       </div>
       <Link to={meetingFullViewHref(m.eventId, thread.id)} className={`${LINK_TARGET} self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>
         Open the meeting view <span aria-hidden="true">↗</span>

@@ -4,7 +4,7 @@ import { Tag } from '@/kit/tag/Tag'
 import { DataTable } from '@/kit/data-table/DataTable'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
 import { PAGE_TITLE_ID } from '@/kit/page/ids'
-import { fmtDate, fmtEasternRange, fmtEasternStamp } from '@/kit/measure'
+import { fmtDate, fmtEasternRange, fmtEasternStamp, fmtDayMonthYear } from '@/kit/measure'
 import { useHousehold } from '@/hooks/use-meetings'
 import { isNotFound } from '@/workspace/is-not-found'
 import { HouseholdSummaryPanes } from '@/workspace/household/HouseholdSummaryPanes'
@@ -97,7 +97,7 @@ function MeetingList({ label, meetings, from }: { label: string; meetings: Meeti
     <ul aria-label={label} className="flex flex-col gap-2">
       {meetings.map((m) => (
         <li key={m.eventId} className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <span className="tabular text-body">{`${m.title} · ${fmtDate(m.start)} · ${fmtEasternRange(m.start, m.end)}`}</span>
+          <span className="tabular text-body">{`${m.title} · ${fmtDayMonthYear(m.start)} · ${fmtEasternRange(m.start, m.end)}`}</span>
           {m.state !== 'calendar' ? <Tag>{MEETING_STATE_TAG[m.state]}</Tag> : null}
           {m.threadId ? <Link to={meetingFullViewHref(m.eventId, from ?? m.threadId)} className={LINK}>Open the meeting view <span aria-hidden="true">↗</span></Link> : null}
         </li>

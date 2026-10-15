@@ -14,7 +14,7 @@ You are Adrian Hale, the advisor. Nobody else acts live: colleagues' history is 
 
 1. **The Brief.** Choose **Brief** in the thread list. **Today** lists the day in Eastern Time: the 14:00 annual review, the 15:30 coffee with Dr. Pell (Form CRS due before it, firm policy) and the open reconciliation break. **Needs a decision** ranks what would change a trade, each with its figure; **Context** holds the rest, folded.
 2. **The Johnson rebalance and harvest.**
-   - On the Harvest Scanner's finding about the remaining Intel shares, choose **Take to**, then **Johnson Rebalance Review**, and open **Johnson Rebalance Review**.
+   - On the Harvest Scanner's finding about the remaining Intel shares, choose **Take to** › **Johnson Rebalance Review**, then open that thread in the thread list.
    - In the context column choose **Ask Proposal Agent**: v1 appears in the thread.
    - On the proposal choose **Revise**, tick **Harvest only: sell only lots at a loss** and choose **Ask Proposal Agent to revise**: v2.
    - Choose **Workbench**. In **Legs · v2** move to the QAI row and press **x** to exclude it; press **⌘S** (Ctrl+S) to save v3. Choose **Back to the thread**.
@@ -60,7 +60,7 @@ An end-to-end test performs these clicks in this order (`e2e-visual/readme-path.
 - **Wash sales scoped to the taxpayer.** IRC §1091 is applied lot by lot to the taxpayer, looking thirty days back and forward: the owner and spouse, their IRAs and Roths included, while an irrevocable trust is its own taxpayer. A loss washed by a purchase in an IRA or Roth is disallowed for good, not deferred; coins held directly are outside the rule (`src/lib/wash-sale.ts`, `src/mocks/handlers/tax-return.ts`). Every tax figure is an estimate at top federal rates, and the app says to consult your tax professional.
 - **Disclosure timing as firm policy.** Form CRS comes before or with the first recommendation, so a proposal cannot be sent until it is delivered. Form ADV Part 2A goes with the proposal if it has not gone before. Both rules are labeled firm policy (`src/mocks/workspace/prospect-acts.ts`, `src/workspace/prospect/prospect-words.ts`).
 - **Agents' claims carry no digits.** An agent's sentence names things in words; every figure travels as a figure with its source and is formatted by the kit, so no number is typed twice (`src/mocks/agents/__tests__/agents.test.ts`).
-- **One clock.** Every time people read is Eastern Time with its zone ("25 Feb 07:00 ET"); UTC appears only in a record slip, labeled, beside its fingerprint (`src/kit/measure.ts`, `src/__tests__/guardrails/one-clock.test.ts`).
+- **One clock.** Every time people read is Eastern Time with its zone ("25 Feb 07:00 ET"). A date beside those times reads "1 Dec 2025", and a date-only fact, such as a client-reported value, is never shifted into a time. UTC appears only in a record slip, labeled, beside its fingerprint (`src/kit/measure.ts`, `src/__tests__/guardrails/one-clock.test.ts`).
 - **Modeled or derived, and labeled.** Each reference view ends with Methods & sources. A figure from a model (volatility, factor exposure, a quarter-end value) is tagged MODELED with its method; everything else is derived from the book.
 
 ## How it is built

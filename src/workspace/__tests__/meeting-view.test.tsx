@@ -31,7 +31,7 @@ describe('the meeting full view', () => {
     expect(screen.queryByRole('navigation', { name: 'Threads' })).toBeNull()
     expect(screen.getByRole('link', { name: 'Back to the thread' })).toHaveAttribute('href', '/t/th-johnson-meeting')
     const main = screen.getByRole('main')
-    expect(main).toHaveTextContent('2026-02-25 · 14:00–15:15 ET · Office — Main')
+    expect(main).toHaveTextContent('25 Feb 2026 · 14:00–15:15 ET · Office — Main')
     expect(main).toHaveTextContent('With Robert Johnson, Patricia Johnson and Adrian Hale')
     expect(main).toHaveTextContent('SCHEDULED')
     expect(main).toHaveTextContent("Firm only · client can't see")
@@ -174,8 +174,8 @@ describe('the meeting full view', () => {
     await heldWithNotes()
     await openMeeting()
     const followUps = await screen.findByRole('list', { name: 'Follow-ups' })
-    expect(followUps).toHaveTextContent('Mike Chen · due 2026-03-02')
-    expect(followUps).toHaveTextContent('Sarah Mitchell · due 2026-02-26')
+    expect(followUps).toHaveTextContent('Mike Chen · due 2 Mar 2026')
+    expect(followUps).toHaveTextContent('Sarah Mitchell · due 26 Feb 2026')
   })
 
   it("is read-only for Mark, and not found for Robert; switching to Robert goes home", async () => {

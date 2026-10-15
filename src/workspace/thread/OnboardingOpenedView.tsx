@@ -1,5 +1,5 @@
 import { Tag } from '@/kit/tag/Tag'
-import { fmtDate } from '@/kit/measure'
+import { fmtDayMonthYear } from '@/kit/measure'
 import { personIn } from '@/workspace/people/directory-people'
 import { ONBOARDING_STATUS_WORDS } from '@/workspace/prospect/prospect-words'
 import type { Directory, Message } from '@/types/workspace'
@@ -17,7 +17,7 @@ export function OnboardingOpenedView({ message, directory }: { message: Opened; 
             <span>{item.label}</span>
             <Tag>{ONBOARDING_STATUS_WORDS[item.status]}</Tag>
             <span className="text-ink-2">{personIn(directory, item.ownerId).name}</span>
-            {item.due ? <span className="tabular ml-auto text-ink-3">{`due ${fmtDate(item.due)}`}</span> : null}
+            {item.due ? <span className="tabular ml-auto text-ink-3">{`due ${fmtDayMonthYear(item.due)}`}</span> : null}
           </li>
         ))}
       </ul>

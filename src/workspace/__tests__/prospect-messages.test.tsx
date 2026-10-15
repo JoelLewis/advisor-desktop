@@ -61,7 +61,7 @@ describe('prospect messages', () => {
     const onboarding = conversation().getByRole('article', { name: 'Onboarding opened' })
     expect(within(onboarding).getByRole('list', { name: 'Onboarding items' })).toHaveTextContent('OFAC screen')
     expect(onboarding).toHaveTextContent('Sarah Mitchell')
-    expect(onboarding).toHaveTextContent('due 2026-03-03')
+    expect(onboarding).toHaveTextContent('due 3 Mar 2026')
     expect(onboarding).toHaveTextContent('Not started')
   })
 })

@@ -45,7 +45,7 @@ describe('meeting messages', () => {
     const table = within(tasks).getByRole('table', { name: 'Tasks from the filed record' })
     expect(table).toHaveTextContent('Send the beneficiary checklist.')
     expect(table).toHaveTextContent('Sarah Mitchell')
-    expect(table).toHaveTextContent('2026-02-26')
+    expect(table).toHaveTextContent('26 Feb 2026')
     expect(tasks).toHaveTextContent('From REC-0001. Tracked here; nobody works them in this demo.')
   })
 

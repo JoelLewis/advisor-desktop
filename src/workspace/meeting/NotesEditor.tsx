@@ -4,7 +4,7 @@ import { useAnnounce } from '@/kit/announcer/use-announce'
 import { Button } from '@/kit/button/Button'
 import { Pane } from '@/kit/layout/Pane'
 import { TextInput } from '@/kit/text-input/TextInput'
-import { fmtDate } from '@/kit/measure'
+import { fmtDayMonthYear } from '@/kit/measure'
 import { useSaveMeetingNotes } from '@/hooks/use-meetings'
 import { authorName } from '@/workspace/proposal/author-name'
 import { NOTE_SECTIONS, type MeetingView, type NoteLine, type NoteSection, type TranscriptSpeaker } from '@/types/workspace-meeting'
@@ -86,7 +86,7 @@ function NoteSectionList({ section, lines, saved, clientName, directory, editabl
               ? <TextInput label={`Edit ${line.id}`} value={line.text} rows={3} onChange={(text) => onText(line.id, text)} />
               : <p className="text-copy">{line.text}</p>}
             {line.toClient ? <ClientWordingLine line={line} saved={saved.get(line.id)} name={clientName(line.toClient.clientId)} /> : null}
-            {line.owner && line.due ? <p className="text-label text-ink-2"><Unbroken text={`${authorName(line.owner, directory)} · due ${fmtDate(line.due)}`} /></p> : null}
+            {line.owner && line.due ? <p className="text-label text-ink-2"><Unbroken text={`${authorName(line.owner, directory)} · due ${fmtDayMonthYear(line.due)}`} /></p> : null}
             <div className="flex flex-wrap items-center gap-1">
               <span className="text-label uppercase text-ink-3">Cites</span>
               {line.cites.map((cite) => (

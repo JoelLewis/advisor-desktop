@@ -5,7 +5,7 @@ import { Pane } from '@/kit/layout/Pane'
 import { Tag } from '@/kit/tag/Tag'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
 import { PAGE_TITLE_ID } from '@/kit/page/ids'
-import { fmtDate, fmtDayMonthYear, fmtEasternDayTime, fmtMoney, fmtPoints, fmtQuantity, fmtResult } from '@/kit/measure'
+import { fmtDayMonthYear, fmtEasternDayTime, fmtMoney, fmtPoints, fmtQuantity, fmtResult } from '@/kit/measure'
 import { useDirectory } from '@/hooks/use-workspace'
 import { useProspect } from '@/hooks/use-prospect-work'
 import { isNotFound } from '@/workspace/is-not-found'
@@ -112,7 +112,7 @@ function ProspectRecordPage({ view, directory }: { view: ProspectView; directory
       </Pane>
       {view.tasks.length > 0 ? (
         <Pane title="Follow-up">
-          <ul className="flex flex-col gap-1">{view.tasks.map((t) => <li key={t.id} className="tabular text-body">{`${t.text} · ${personIn(directory, t.ownerId).name} · due ${fmtDate(t.due)}`}</li>)}</ul>
+          <ul className="flex flex-col gap-1">{view.tasks.map((t) => <li key={t.id} className="tabular text-body">{`${t.text} · ${personIn(directory, t.ownerId).name} · due ${fmtDayMonthYear(t.due)}`}</li>)}</ul>
         </Pane>
       ) : null}
       {view.onboarding ? (

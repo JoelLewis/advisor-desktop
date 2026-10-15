@@ -1,4 +1,4 @@
-import { fmtDate } from '@/kit/measure'
+import { fmtDayMonthYear } from '@/kit/measure'
 import { useProspect } from '@/hooks/use-prospect-work'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { personIn } from '@/workspace/people/directory-people'
@@ -23,7 +23,7 @@ export function ProspectWorkPanel({ prospectId, directory, onRecorded }: Props) 
       {view.tasks.length > 0 ? (
         <ContextSection title="Follow-up">
           <ul className="flex flex-col gap-1.5">
-            {view.tasks.map((t) => <li key={t.id} className="tabular text-body">{`${t.text} · ${personIn(directory, t.ownerId).name} · due ${fmtDate(t.due)}`}</li>)}
+            {view.tasks.map((t) => <li key={t.id} className="tabular text-body">{`${t.text} · ${personIn(directory, t.ownerId).name} · due ${fmtDayMonthYear(t.due)}`}</li>)}
           </ul>
         </ContextSection>
       ) : null}

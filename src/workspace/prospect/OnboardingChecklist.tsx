@@ -3,7 +3,7 @@ import { Button } from '@/kit/button/Button'
 import { DataTable } from '@/kit/data-table/DataTable'
 import { NotApplicable } from '@/kit/data-table/NotApplicable'
 import { Tag } from '@/kit/tag/Tag'
-import { fmtDate } from '@/kit/measure'
+import { fmtDayMonthYear } from '@/kit/measure'
 import { useDeliverDisclosure } from '@/hooks/use-prospect-work'
 import { personIn } from '@/workspace/people/directory-people'
 import { ConfirmRecord } from '@/workspace/context/ConfirmRecord'
@@ -31,7 +31,7 @@ export function OnboardingChecklist({ view, directory, canDeliver, onRecorded }:
             </span>
           ) },
           { id: 'status', header: 'State', wrap: true, cell: (i) => <Tag wrap tone={i.status === 'delivered' ? 'solid' : 'outline'}>{ONBOARDING_STATUS_WORDS[i.status]}</Tag> },
-          { id: 'due', header: 'Due', cell: (i) => (i.due ? <span className="tabular">{fmtDate(i.due)}</span> : <NotApplicable />), sortValue: (i) => i.due ?? '' },
+          { id: 'due', header: 'Due', cell: (i) => (i.due ? <span className="tabular">{fmtDayMonthYear(i.due)}</span> : <NotApplicable />), sortValue: (i) => i.due ?? '' },
         ]} />
       {deliverable.length > 0 ? (
         <div className="flex flex-wrap gap-2">

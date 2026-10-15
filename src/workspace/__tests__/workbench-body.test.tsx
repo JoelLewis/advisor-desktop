@@ -53,7 +53,7 @@ describe('the workbench body', () => {
     expect(drift).toHaveTextContent('no market to sell into')
     expect(within(drift).getAllByRole('row')).toHaveLength(10)
     const restrictions = screen.getByRole('region', { name: 'Repurchase restrictions' })
-    expect(restrictions).toHaveTextContent('recorded · sale rs-001 of 2026-02-20 in acc-002')
+    expect(restrictions).toHaveTextContent('recorded · sale rs-001 of 20 Feb 2026 in acc-002')
     expect(restrictions).toHaveTextContent("projected · this proposal's sale in acc-002")
     const away = await screen.findByRole('region', { name: 'Held-away accounts' })
     expect(away).toHaveTextContent('Robert Johnson · Vanguard')

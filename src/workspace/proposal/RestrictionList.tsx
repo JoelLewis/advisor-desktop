@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import { fmtDate } from '@/kit/measure'
+import { fmtDayMonthYear } from '@/kit/measure'
 import type { RepurchaseRestriction } from '@/services/oms'
 import { restrictionSource } from './restriction-words'
 
@@ -13,7 +13,7 @@ export function RestrictionList({ restrictions }: { restrictions: RepurchaseRest
         {restrictions.map((r) => (
           <li key={`${r.symbol}:${r.source.kind}:${r.until}`} className="flex flex-wrap items-baseline gap-x-2">
             <span className="font-semibold">{r.symbol}</span>
-            <span className="tabular">{`no repurchase through ${fmtDate(r.until)}`}</span>
+            <span className="tabular">{`no repurchase through ${fmtDayMonthYear(r.until)}`}</span>
             <span className="text-ink-3">{restrictionSource(r)}</span>
           </li>
         ))}

@@ -12,9 +12,9 @@ describe('WindowRuler', () => {
   it('states the window, today and days left', () => {
     render(<WindowRuler label="INTC repurchase window" start="2026-01-22" end="2026-03-23" today="2026-02-25"
       events={[{ date: '2026-02-21', label: 'Loss sale' }]} />)
-    expect(screen.getByRole('img', { name: /INTC repurchase window: 2026-01-22 to 2026-03-23, today 2026-02-25, 26 d left, Loss sale 2026-02-21/ })).toBeInTheDocument()
-    expect(screen.getByText('26 d left · ends 2026-03-23')).toBeInTheDocument()
-    expect(screen.getByText('Loss sale 2026-02-21')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: /INTC repurchase window: 22 Jan 2026 to 23 Mar 2026, today 25 Feb 2026, 26 d left, Loss sale 21 Feb 2026/ })).toBeInTheDocument()
+    expect(screen.getByText('26 d left · ends 23 Mar 2026')).toBeInTheDocument()
+    expect(screen.getByText('Loss sale 21 Feb 2026')).toBeInTheDocument()
   })
   it('routes dates through measure: offsets convert to UTC, garbage throws', () => {
     expect(daysBetween('2026-02-25T23:30:00-05:00', '2026-03-23')).toBe(25)
@@ -25,7 +25,7 @@ describe('WindowRuler', () => {
   )
   it('says the window is closed once today is past the end', () => {
     render(ruler({ today: '2026-04-01' }))
-    expect(screen.getByText('Window closed · ended 2026-03-23')).toBeInTheDocument()
+    expect(screen.getByText('Window closed · ended 23 Mar 2026')).toBeInTheDocument()
     expect(screen.queryByText(/0 d left/)).toBeNull()
   })
   it('clamps today before the start and an outside event inside the drawing', () => {
@@ -59,9 +59,9 @@ describe('WindowRuler', () => {
     expect(label('today').style.left).toBe(`${(lineX('today') / 480) * 100}%`)
     expect(label('start')).toHaveAttribute('data-anchor', 'start')
     expect(label('end')).toHaveAttribute('data-anchor', 'end')
-    expect(label('start')).toHaveTextContent('2026-01-22')
-    expect(label('end')).toHaveTextContent('2026-03-23')
-    expect(label('today')).toHaveTextContent('Today 2026-02-25')
+    expect(label('start')).toHaveTextContent('22 Jan 2026')
+    expect(label('end')).toHaveTextContent('23 Mar 2026')
+    expect(label('today')).toHaveTextContent('Today 25 Feb 2026')
   })
   it('anchors a label at the edge so it does not run off the drawing', () => {
     const { container } = render(ruler({ today: '2026-03-23' }))

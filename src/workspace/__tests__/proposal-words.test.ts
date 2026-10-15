@@ -29,7 +29,7 @@ describe('proposal wording', () => {
   })
   it('keeps recorded and projected restrictions apart, with their sources', () => {
     expect(restrictionSource({ symbol: 'INTC', start: '2026-01-21', until: '2026-03-22', source: { kind: 'recorded', saleId: 'rs-001', accountId: 'acc-002', saleDate: '2026-02-20' } }))
-      .toBe('recorded · sale rs-001 of 2026-02-20 in acc-002')
+      .toBe('recorded · sale rs-001 of 20 Feb 2026 in acc-002')
     expect(restrictionSource({ symbol: 'INTC', start: '2026-01-26', until: '2026-03-27', source: { kind: 'projected', accountId: 'acc-002', saleDate: '2026-02-25' } }))
       .toBe("projected · this proposal's sale in acc-002")
   })

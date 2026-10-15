@@ -1,6 +1,6 @@
 import { useId } from 'react'
 import { cn } from '@/lib/utils'
-import { fmtDate, fmtDays, MeasureError } from '@/kit/measure'
+import { fmtDate, fmtDays, MeasureError, fmtDayMonthYear } from '@/kit/measure'
 import { daysBetween } from './window'
 
 type WindowRulerProps = { label: string; start: string; end: string; today: string; events: { date: string; label: string }[] }
@@ -32,17 +32,17 @@ export function WindowRuler({ label, start, end, today, events }: WindowRulerPro
   const px = (days: number) => INSET + Math.max(0, Math.min(1, days / span)) * (W - 2 * INSET)
   const x = (iso: string) => px(daysBetween(start, iso))
   const remaining = daysBetween(today, end)
-  const summary = remaining < 0 ? `Window closed · ended ${fmtDate(end)}` : `${fmtDays(remaining)} d left · ends ${fmtDate(end)}`
-  const stated = events.map((e) => ({ ...e, text: `${e.label} ${fmtDate(e.date)}` }))
+  const summary = remaining < 0 ? `Window closed · ended ${fmtDayMonthYear(end)}` : `${fmtDays(remaining)} d left · ends ${fmtDayMonthYear(end)}`
+  const stated = events.map((e) => ({ ...e, text: `${e.label} ${fmtDayMonthYear(e.date)}` }))
   const eventsLabel = stated.length ? `, ${stated.map((e) => e.text).join(', ')}` : ''
   const status = remaining < 0 ? 'window closed' : `${fmtDays(remaining)} d left`
   return (
     <figure className="flex max-w-[480px] flex-col gap-1">
       <figcaption className="mb-1 text-label uppercase text-ink-2">{label}</figcaption>
       <div aria-hidden="true" className="relative h-4 text-label text-ink-2">
-        <MarkLabel mark="today" x={x(today)} strong>{`Today ${fmtDate(today)}`}</MarkLabel>
+        <MarkLabel mark="today" x={x(today)} strong>{`Today ${fmtDayMonthYear(today)}`}</MarkLabel>
       </div>
-      <svg role="img" aria-label={`${label}: ${fmtDate(start)} to ${fmtDate(end)}, today ${fmtDate(today)}, ${status}${eventsLabel}`}
+      <svg role="img" aria-label={`${label}: ${fmtDayMonthYear(start)} to ${fmtDayMonthYear(end)}, today ${fmtDayMonthYear(today)}, ${status}${eventsLabel}`}
         viewBox={`0 0 ${W} ${H}`} width="100%" className="text-rule-2">
         <defs>
           <pattern id={patternId} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
@@ -60,9 +60,9 @@ export function WindowRuler({ label, start, end, today, events }: WindowRulerPro
         <line data-part="today" x1={x(today)} x2={x(today)} y1={0} y2={H} className="stroke-ink" strokeWidth={2} />
       </svg>
       <div aria-hidden="true" className="relative h-4 text-label text-ink-3">
-        <MarkLabel mark="start" x={x(start)} anchor="start">{fmtDate(start)}</MarkLabel>
+        <MarkLabel mark="start" x={x(start)} anchor="start">{fmtDayMonthYear(start)}</MarkLabel>
         {stated.map((e) => <MarkLabel key={e.text} mark="event" x={x(e.date)}>{e.text}</MarkLabel>)}
-        <MarkLabel mark="end" x={x(end)} anchor="end">{fmtDate(end)}</MarkLabel>
+        <MarkLabel mark="end" x={x(end)} anchor="end">{fmtDayMonthYear(end)}</MarkLabel>
       </div>
       <p className="mt-1 text-label text-ink-2">{summary}</p>
     </figure>

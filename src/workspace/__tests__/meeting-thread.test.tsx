@@ -36,7 +36,7 @@ describe('the meeting thread', () => {
   it('states the meeting and runs prep: findings in the thread, agenda v1 in the panel', async () => {
     const panel = await openMeetingThread()
     expect(panel).toHaveTextContent('Annual Review — Johnson Household')
-    expect(panel).toHaveTextContent('2026-02-25 · 14:00–15:15 ET · Office — Main')
+    expect(panel).toHaveTextContent('25 Feb 2026 · 14:00–15:15 ET · Office — Main')
     expect(panel).toHaveTextContent('SCHEDULED')
     expect(within(panel).getByRole('link', { name: /Open the meeting view/ })).toHaveAttribute('href', '/meetings/evt-010?from=th-johnson-meeting')
     expect(within(panel).getByText('No agenda yet. Run prep, or add the first item.')).toBeInTheDocument()

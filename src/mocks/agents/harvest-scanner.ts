@@ -17,6 +17,7 @@ import { isTaxableAccount } from '@/lib/tax-treatment'
 import { convertToBase } from '@/lib/currency'
 import { canHoldSecurities } from '@/lib/held-away'
 import { claimNameOf } from './claim-name'
+import { fmtDayMonthYear } from '@/kit/measure'
 
 export type PositionLosses = { allowed: number; deferred: number; disallowed: number }
 
@@ -92,7 +93,7 @@ export function runHarvestScanner({ asOf, subject }: AgentContext): TopicFinding
         { label: `Shares · ${p.symbol}`, value: p.quantity, unit: 'sh', source: 'positions.quantity' },
       ]
       const citations = isSubjectToWashSale(p.symbol)
-        ? [...lotsCite, { source: `Wash-sale window · a sale of ${p.symbol} on ${today} restricts buying it back through ${window.end}`, asOf }]
+        ? [...lotsCite, { source: `Wash-sale window · a sale of ${p.symbol} on ${fmtDayMonthYear(today)} restricts buying it back through ${fmtDayMonthYear(window.end)}`, asOf }]
         : lotsCite
       findings.push({
         claim: harvestClaim(harvestName(p.symbol, p.name), p.symbol, losses), attention: 'attention', figures, citations,
@@ -110,7 +111,7 @@ export function runHarvestScanner({ asOf, subject }: AgentContext): TopicFinding
         { label: `Loss realized · ${w.symbol}`, value: w.realizedGainLoss, unit: 'USD', source: 'realizedSales.realizedGainLoss' },
         { label: `Days until the ${w.symbol} window closes`, value: w.daysRemaining, unit: 'd', source: 'openWashSaleWindows.daysRemaining' },
       ],
-      citations: [{ source: `Wash-sale window · ${w.id} · ${w.symbol} loss sale of ${w.saleDate}, open through ${w.end}`, asOf }],
+      citations: [{ source: `Wash-sale window · ${w.id} · ${w.symbol} loss sale of ${fmtDayMonthYear(w.saleDate)}, open through ${fmtDayMonthYear(w.end)}`, asOf }],
     })
   }
 

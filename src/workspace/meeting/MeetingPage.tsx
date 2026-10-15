@@ -5,7 +5,7 @@ import { Tag } from '@/kit/tag/Tag'
 import { VisibilityBand } from '@/kit/visibility/VisibilityBand'
 import { PAGE_TITLE_ID } from '@/kit/page/ids'
 import { useFocusAfter } from '@/kit/keyboard/use-focus-after'
-import { fmtDate, fmtEasternRange } from '@/kit/measure'
+import { fmtEasternRange, fmtDayMonthYear } from '@/kit/measure'
 import { useHousehold, useMeeting } from '@/hooks/use-meetings'
 import { useDirectory, useThread } from '@/hooks/use-workspace'
 import { isNotFound } from '@/workspace/is-not-found'
@@ -73,7 +73,7 @@ function MeetingFullView({ meeting, directory }: { meeting: MeetingView; directo
           <h1 id={PAGE_TITLE_ID} tabIndex={-1} className="text-title">{meeting.title}</h1>
           <Tag tone={meeting.state === 'filed' ? 'solid' : 'outline'}>{MEETING_STATE_TAG[meeting.state]}</Tag>
         </div>
-        <p className="tabular text-body text-ink-2"><Unbroken text={[fmtDate(meeting.start), fmtEasternRange(meeting.start, meeting.end), ...(meeting.event.location ? [meeting.event.location] : [])].join(' · ')} /></p>
+        <p className="tabular text-body text-ink-2"><Unbroken text={[fmtDayMonthYear(meeting.start), fmtEasternRange(meeting.start, meeting.end), ...(meeting.event.location ? [meeting.event.location] : [])].join(' · ')} /></p>
         <p className="text-body text-ink-2">{`With ${joinWords(meeting.event.attendees.map((a) => a.name))}`}</p>
         <nav aria-label="Full views" className="flex flex-wrap gap-x-4 gap-y-1 text-body *:inline-flex *:min-h-6 *:items-center coarse:*:min-h-11">
           <Link to={householdFullViewHref(meeting.householdId, meeting.threadId)} className={LINK_CLASS}>Household</Link>
