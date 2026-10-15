@@ -8,7 +8,8 @@ type Props = { threadId: string; actId: string; directory: Directory }
 export function AcceptanceSlip({ threadId, actId, directory }: Props) {
   const acts = useActs(threadId)
   if (acts.isError) return <p role="alert" className="text-body">{acts.error.message}</p>
-  const act = acts.data?.find((a) => a.id === actId)
-  if (!act) return <p role="status" className="text-body text-ink-3">Loading her acceptance…</p>
+  if (!acts.data) return <p role="status" className="text-body text-ink-3">Loading her acceptance…</p>
+  const act = acts.data.find((a) => a.id === actId)
+  if (!act) throw new Error(`Onboarding names acceptance ${actId}, but her thread ${threadId} holds no such act`)
   return <ActRecordSlip act={act} directory={directory} />
 }
