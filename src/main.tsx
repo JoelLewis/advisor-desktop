@@ -8,9 +8,6 @@ import { createAppQueryClient } from '@/app/query-client'
 import { ServerUnavailable } from '@/app/ServerUnavailable'
 import '@/styles/app.css'
 import { ViewerProvider } from '@/workspace/viewer/ViewerProvider'
-import { applyTheme, readThemeChoice, themeFromSearch } from '@/kit/theme'
-
-applyTheme(themeFromSearch(window.location.search) ?? readThemeChoice())
 
 const RELOADED_AT_KEY = 'ws-preload-reloaded-at'
 const RELOAD_GAP_MS = 10_000

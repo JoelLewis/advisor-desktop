@@ -44,3 +44,5 @@ describe('token blocks', () => {
     expect(contrast(p.get('rule')!, p.get('face')!)).toBeLessThan(2)
   })
 })
+
+it('the light scrim is the ink', () => expect(readAppCss()).toMatch(/:root \{[^}]*--ws-scrim:\s*var\(--ws-ink\);/))

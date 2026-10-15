@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { readdirSync } from 'node:fs'
 import {
   ENGINE_ROOTS, uiRoots, listSourceFiles, findPaletteViolations, findColorLiterals, findFormatterBypass, findRawElements, findRawTokenVars, findBreakpointLiterals,
   colorLiteralsOutsideTokens,
@@ -45,4 +44,11 @@ describe('UI source guardrails', () => {
   it('app.css has color values only inside the token block', () => {
     expect(colorLiteralsOutsideTokens(read('src/styles/app.css'))).toEqual([])
   })
+})
+
+describe('public/ uses no color outside the favicon', () => {
+  const dir = join(process.cwd(), 'public')
+  const text = readdirSync(dir).filter((f) => /\.(svg|html|css|js|txt)$/.test(f) && f !== 'favicon.svg')
+  it.each(text)('public/%s has no color literal', (f) => expect(findColorLiterals(readFileSync(join(dir, f), 'utf8'))).toEqual([]))
+  it('the favicon draws a dark style of its own', () => expect(readFileSync(join(dir, 'favicon.svg'), 'utf8')).toContain('prefers-color-scheme: dark'))
 })

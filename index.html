@@ -2,6 +2,18 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      // Before first paint, as src/kit/theme.ts's initialThemeAttribute decides (a test runs this text against it):
+      // ?theme=light|dark wins, then the stored choice; "system" leaves the attribute off.
+      (() => {
+        let stored = null
+        try { stored = localStorage.getItem('ws-theme') } catch { /* storage blocked: follow the system theme */ }
+        const fromUrl = new URLSearchParams(location.search).get('theme')
+        const theme = fromUrl === 'light' || fromUrl === 'dark' ? fromUrl : stored === 'light' || stored === 'dark' ? stored : null
+        if (theme) document.documentElement.setAttribute('data-theme', theme)
+      })()
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Advisor Desktop · Larkfield Advisory workspace (demo)</title>

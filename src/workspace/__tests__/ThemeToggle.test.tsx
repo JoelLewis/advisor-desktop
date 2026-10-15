@@ -17,7 +17,7 @@ async function cycle() {
   const user = userEvent.setup()
   renderToggle()
   const seen: (string | undefined)[] = []
-  for (const label of ['Theme: system', 'Theme: light', 'Theme: dark']) {
+  for (const label of ['Theme: system (light)', 'Theme: light', 'Theme: dark']) {
     await user.click(screen.getByRole('button', { name: label }))
     seen.push(document.documentElement.dataset.theme)
   }
@@ -33,7 +33,7 @@ describe('ThemeToggle', () => {
   })
   it('cycles system, light, dark, system and sets data-theme', async () => {
     expect(await cycle()).toEqual(['light', 'dark', undefined])
-    expect(screen.getByRole('button', { name: 'Theme: system' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Theme: system (light)' })).toBeTruthy()
   })
   it('still works when localStorage throws', async () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked') })
@@ -50,9 +50,19 @@ describe('ThemeToggle', () => {
   })
   it('is a quiet text control, and a change made by key is announced', async () => {
     renderToggle()
-    expect(screen.getByRole('button', { name: 'Theme: system' })).toHaveAttribute('data-rank', 'quiet')
+    expect(screen.getByRole('button', { name: 'Theme: system (light)' })).toHaveAttribute('data-rank', 'quiet')
     await userEvent.keyboard('t')
     await act(() => new Promise<void>((r) => requestAnimationFrame(() => r())))
     expect(document.querySelector('[data-part="announcer"]')).toHaveTextContent('Theme: light')
+  })
+  it('says what system resolved to, and follows a choice made in another tab', async () => {
+    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({ matches: query === '(prefers-color-scheme: dark)', media: query, onchange: null,
+      addListener: vi.fn(), removeListener: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn() }))
+    renderToggle()
+    expect(screen.getByRole('button', { name: 'Theme: system (dark)' })).toBeInTheDocument()
+    localStorage.setItem('ws-theme', 'light')
+    act(() => { window.dispatchEvent(new StorageEvent('storage', { key: 'ws-theme', newValue: 'light' })) })
+    expect(screen.getByRole('button', { name: 'Theme: light' })).toBeInTheDocument()
+    expect(document.documentElement.dataset.theme).toBe('light')
   })
 })

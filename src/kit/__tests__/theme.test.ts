@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { applyTheme, readThemeChoice, saveThemeChoice, themeFromSearch } from '@/kit/theme'
+import { applyTheme, readThemeChoice, saveThemeChoice, themeFromSearch, themeLabel } from '@/kit/theme'
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -32,5 +32,9 @@ describe('theme', () => {
     expect(themeFromSearch('?theme=dark')).toBe('dark')
     expect(themeFromSearch('?theme=nope')).toBeNull()
     expect(themeFromSearch('')).toBeNull()
+  })
+  it('labels system with what it resolved to', () => {
+    expect(['light', 'dark', 'system'].map((c) => themeLabel(c as 'light' | 'dark' | 'system', true))).toEqual(['Theme: light', 'Theme: dark', 'Theme: system (dark)'])
+    expect(themeLabel('system', false)).toBe('Theme: system (light)')
   })
 })

@@ -27,6 +27,11 @@ function parsePalette(body: string): Palette {
   for (const m of body.matchAll(/--ws-([a-z0-9-]+):\s*oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\)/g)) {
     palette.set(m[1]!, { l: Number(m[2]), c: Number(m[3]), h: Number(m[4]) })
   }
+  for (const m of body.matchAll(/--ws-([a-z0-9-]+):\s*var\(--ws-([a-z0-9-]+)\)/g)) {
+    const target = palette.get(m[2]!)
+    if (!target) throw new Error(`--ws-${m[1]} aliases --ws-${m[2]}, which this block does not define`)
+    palette.set(m[1]!, target)
+  }
   return palette
 }
 

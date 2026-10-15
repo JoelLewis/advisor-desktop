@@ -1,5 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6" fill="#15171a"/>
-  <path d="M7 9h18v2H7zM7 15h18v2H7zM7 21h11v2H7z" fill="#fafafb"/>
-  <path d="M21 20h4v4h-4z" fill="#dc4500"/>
+  <style>
+    .face { fill: #15171a } .rule { fill: #fafafb } .signal { fill: #dc4500 }
+    @media (prefers-color-scheme: dark) { .face { fill: #eef0f2 } .rule { fill: #15171a } .signal { fill: #f06a1f } }
+  </style>
+  <rect class="face" width="32" height="32" rx="6"/>
+  <path class="rule" d="M7 9h18v2H7zM7 15h18v2H7zM7 21h11v2H7z"/>
+  <path class="signal" d="M21 20h4v4h-4z"/>
 </svg>
