@@ -51,7 +51,7 @@ export function LetterControl({ thread }: { thread: Thread }) {
     <div className="flex flex-col items-start gap-2">
       {approved.map(({ p, version }) => (
         <div key={p.id} className="flex flex-col items-start gap-1">
-          <Button rank="secondary" disabled={letter.isPending} onClick={() => ask(p.id, p.title)}>
+          <Button rank="secondary" pending={letter.isPending} onClick={() => ask(p.id, p.title)}>
             Ask Client Letter Agent
           </Button>
           <span className="text-label text-ink-3">{`From v${version} of the ${p.title}, approved`}</span>

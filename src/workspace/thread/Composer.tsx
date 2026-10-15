@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useId, useState, type FormEvent } from 'react'
 import { useAnnounce } from '@/kit/announcer/use-announce'
 import { Button } from '@/kit/button/Button'
 import { TextInput } from '@/kit/text-input/TextInput'
@@ -45,21 +45,22 @@ type ComposerFormProps = {
 
 function ComposerForm({ label, action, pending, error, placeholder, savedNote, submit }: ComposerFormProps) {
   const announce = useAnnounce()
+  const fieldId = useId()
   const [body, setBody] = useState('')
   const [saved, setSaved] = useState(false)
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
     if (body.trim() === '') return
-    submit(body, () => { setBody(''); setSaved(true); announce(savedNote ?? 'Posted.') })
+    submit(body, () => { setBody(''); setSaved(true); announce(savedNote ?? 'Posted.'); requestAnimationFrame(() => document.getElementById(fieldId)?.focus()) })
   }
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3 border-t border-ink pt-4">
-      <TextInput label={label} value={body} placeholder={placeholder} disabled={pending}
+      <TextInput label={label} value={body} id={fieldId} placeholder={placeholder} readOnly={pending}
         onChange={(v) => { setBody(v); setSaved(false) }} />
       <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
         {error ? <p role="alert" className="mr-auto text-body">{error.message}</p> : null}
         {saved && savedNote ? <p className="mr-auto text-body text-ink-2">{savedNote}</p> : null}
-        <Button type="submit" disabled={pending || body.trim() === ''}>{action}</Button>
+        <Button type="submit" pending={pending} disabled={body.trim() === ''}>{action}</Button>
       </div>
     </form>
   )

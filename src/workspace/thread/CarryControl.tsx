@@ -84,7 +84,7 @@ export function CarryControl({ thread, findingId }: { thread: Thread; findingId:
         <ul ref={menuRef} id={menuId} role="menu" aria-label="Take to" onKeyDown={onMenuKeyDown} className="m-0 flex list-none flex-col items-start gap-1 border-l border-rule-2 p-0 pl-3">
           {targets.map((target) => (
             <li key={target.id} role="none">
-              <Button role="menuitem" rank="quiet" disabled={carry.isPending}
+              <Button role="menuitem" rank="quiet" pending={carry.isPending}
                 onClick={() => carry.mutate({ messageId: findingId, toThreadId: target.id }, { onSuccess: () => { setTaken(target.title); announce(`Taken to ${target.title}.`); close() } })}>
                 {target.title}
               </Button>

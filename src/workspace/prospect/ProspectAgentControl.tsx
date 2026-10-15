@@ -21,7 +21,7 @@ export function ProspectAgentControl({ prospectId, agent }: { prospectId: string
   }
   return (
     <div className="flex flex-col items-start gap-2">
-      <Button rank="secondary" disabled={create.isPending} onClick={ask}>{`Ask ${agent.name}`}</Button>
+      <Button rank="secondary" pending={create.isPending} onClick={ask}>{`Ask ${agent.name}`}</Button>
       {create.isError ? <p role="alert" className="text-body">{create.error.message}</p> : null}
       {report ? <p className="text-body text-ink-2">{report}</p> : null}
     </div>

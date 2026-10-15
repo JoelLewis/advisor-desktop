@@ -40,4 +40,18 @@ describe('Button', () => {
       }
     }
   })
+
+  it('a pending button keeps focus, says it is unavailable, and ignores activation', async () => {
+    const onClick = vi.fn()
+    const { rerender } = render(<Button onClick={onClick}>Ask</Button>)
+    const button = screen.getByRole('button', { name: 'Ask' })
+    button.focus()
+    rerender(<Button onClick={onClick} pending>Ask</Button>)
+    expect(button).toHaveFocus()
+    expect(button).toHaveAttribute('aria-disabled', 'true')
+    expect(button).not.toBeDisabled()
+    await userEvent.click(button)
+    await userEvent.keyboard('{Enter}')
+    expect(onClick).not.toHaveBeenCalled()
+  })
 })

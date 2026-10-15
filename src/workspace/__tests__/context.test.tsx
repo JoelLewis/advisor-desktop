@@ -178,4 +178,13 @@ describe('thread context column', () => {
     const draft = await inContext().findByRole('article', { name: 'Draft · not sent' })
     expect(within(draft).queryByRole('button')).toBeNull()
   })
+
+  it('Ask Drift Monitor keeps focus through its request', async () => {
+    renderRoutes(routes, '/t/th-johnson-review')
+    const ask = await screen.findByRole('button', { name: 'Ask Drift Monitor' })
+    await userEvent.setup().click(ask)
+    expect(ask).toHaveFocus()
+    await screen.findByText('Drift Monitor reported in the thread.')
+    expect(ask).toHaveFocus()
+  })
 })

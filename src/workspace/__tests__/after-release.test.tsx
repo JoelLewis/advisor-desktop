@@ -116,4 +116,15 @@ describe('the account view after the fills', () => {
     expect(symbols).not.toContain('INTC')
     expect(symbols).toContain('VWO')
   })
+
+  it("the presenter's release lands focus on the release's record slip", async () => {
+    approvedStoryV3()
+    renderRoutes(routes, '/t/th-johnson-review')
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: 'Demo · act as Mark Davis' }))
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirm' }))
+    const releaseAct = () => store().acts.find((a) => a.kind === 'release_orders')
+    await waitFor(() => expect(releaseAct()).toBeDefined())
+    await waitFor(() => expect(document.activeElement?.id).toBe(`act-${releaseAct()!.id}`))
+  })
 })

@@ -46,7 +46,7 @@ export function RecapControl({ thread }: { thread: Thread }) {
     <div className="flex flex-col items-start gap-2">
       {withClient.map((m) => (m.filedActId ? (
         <div key={m.eventId} className="flex flex-col items-start gap-1">
-          <Button rank="secondary" disabled={recap.isPending} onClick={() => ask(m)}>Ask Client Letter Agent for the recap</Button>
+          <Button rank="secondary" pending={recap.isPending} onClick={() => ask(m)}>Ask Client Letter Agent for the recap</Button>
           <span className="text-label text-ink-3"><Unbroken text={`From the filed record of the ${m.title} (${m.filedActId})`} /></span>
         </div>
       ) : (

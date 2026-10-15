@@ -244,4 +244,14 @@ describe('embed registry', () => {
   it('an unknown embed kind is an explicit error', () => {
     expect(() => embedFor('pie_chart')).toThrow(/pie_chart/)
   })
+
+  it('the composer returns focus to its field after a post', async () => {
+    renderRoutes(routes, '/t/th-johnson-review')
+    const field = await screen.findByRole('textbox', { name: 'Message' })
+    const user = userEvent.setup()
+    await user.type(field, 'Looks right to me.')
+    await user.click(screen.getByRole('button', { name: 'Post' }))
+    await waitFor(() => expect(screen.getByRole('list', { name: 'Messages' })).toHaveTextContent('Looks right to me.'))
+    await waitFor(() => expect(field).toHaveFocus())
+  })
 })

@@ -44,7 +44,7 @@ export function AskAgents({ thread, agents, canPost }: { thread: Thread; agents:
         <div className="flex flex-col items-start gap-2">
           <div className="flex flex-wrap gap-2">
             {runnable.map((a) => (
-              <Button key={a.id} rank="secondary" disabled={run.isPending} onClick={() => ask(a)}>{`Ask ${a.name}`}</Button>
+              <Button key={a.id} rank="secondary" pending={run.isPending} onClick={() => ask(a)}>{`Ask ${a.name}`}</Button>
             ))}
           </div>
           {run.isError ? <p role="alert" className="text-body">{run.error.message}</p> : null}
