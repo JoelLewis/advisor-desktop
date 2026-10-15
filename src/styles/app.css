@@ -72,27 +72,27 @@
   --font-sans: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
 
   --breakpoint-narrow: 768px;
-  --breakpoint-split: 1100px;
+  --breakpoint-split: 960px;
   --breakpoint-wide: 1440px;
 
-  --text-label: 10.5px;
+  --text-label: 0.65625rem;
   --text-label--line-height: 1.2;
   --text-label--letter-spacing: 0.07em;
   --text-label--font-weight: 600;
-  --text-table-dense: 12.5px;
+  --text-table-dense: 0.78125rem;
   --text-table-dense--line-height: 1.3;
-  --text-table: 13px;
+  --text-table: 0.8125rem;
   --text-table--line-height: 1.35;
-  --text-body: 14px;
+  --text-body: 0.875rem;
   --text-body--line-height: 1.5;
-  --text-copy: 15.5px;
+  --text-copy: 0.96875rem;
   --text-copy--line-height: 1.6;
-  --text-title: 22px;
+  --text-title: 1.375rem;
   --text-title--line-height: 1.2;
   --text-title--font-weight: 600;
-  --text-total: 28px;
+  --text-total: 1.75rem;
   --text-total--line-height: 1.1;
-  --text-readout-sm: 36px;
+  --text-readout-sm: 2.25rem;
   --text-readout-sm--line-height: 1;
   --text-readout-md: clamp(2.25rem, 9vw, 3.5rem);
   --text-readout-md--line-height: 1;
@@ -122,9 +122,16 @@
 
 @layer base {
   html { background: var(--ws-bg); color: var(--ws-ink); }
-  body { font-family: var(--font-sans); font-size: 14px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+  body { font-family: var(--font-sans); font-size: 0.875rem; line-height: 1.5; font-variant-numeric: tabular-nums; }
   :focus-visible { outline: 2px solid var(--ws-ink); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) {
     *, ::before, ::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  }
+}
+
+/* Unlayered on purpose: layered utilities (text-body, text-copy) would outrank a base rule, and iOS zooms into controls under 16px. */
+input, select, textarea {
+  @variant max-narrow {
+    font-size: max(16px, 1rem);
   }
 }

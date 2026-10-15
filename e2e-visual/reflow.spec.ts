@@ -30,3 +30,13 @@ test('the wash-sale dates on the source chips are not clipped at 320px', async (
     .map((el) => el.textContent))
   expect(clipped).toEqual([])
 })
+
+test('form controls are at least 16px at 390px, so iOS does not zoom into them', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await visit(page, '/', 'light')
+  await settle(page)
+  const sizes = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>('input, select, textarea')]
+    .map((el) => Number.parseFloat(getComputedStyle(el).fontSize)))
+  expect(sizes.length).toBeGreaterThan(0)
+  expect(sizes.filter((size) => size < 16)).toEqual([])
+})

@@ -53,7 +53,7 @@ describe('raw token variable detector', () => {
 })
 
 describe('breakpoint literal detector', () => {
-  it.each(['className="min-[1100px]:col-span-8"', 'className="max-[1100px]:hidden"', 'className="max-w-[1440px]"'])(
+  it.each(['className="min-[960px]:col-span-8"', 'className="max-[960px]:hidden"', 'className="max-w-[1440px]"'])(
     'catches %s', (src) => expect(findBreakpointLiterals(src)).not.toEqual([]))
   it.each(['className="split:col-span-8"', 'className="max-w-(--breakpoint-wide)"', 'className="max-w-[65ch] w-[64px]"', 'className="max-[700px]:grid-cols-1"'])(
     'allows %s', (src) => expect(findBreakpointLiterals(src)).toEqual([]))

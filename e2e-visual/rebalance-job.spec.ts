@@ -72,7 +72,7 @@ for (const scene of SCENES) {
       })
     }
 
-    test('panes side by side at 1440px; the context column drops below main at 1024px', async ({ page }) => {
+    test('panes side by side at 1440px; the context column drops below main at 900px', async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 900 })
       await scene.open(page)
       const [main, column] = await Promise.all([boxOf(page.getByRole('main')), boxOf(page.locator('#context-column'))])
@@ -84,7 +84,7 @@ for (const scene of SCENES) {
       } else {
         await expect(page.getByRole('navigation', { name: 'Threads' })).toHaveCount(0)
       }
-      await page.setViewportSize({ width: 1024, height: 900 })
+      await page.setViewportSize({ width: 900, height: 900 })
       const [narrowMain, narrowColumn] = await Promise.all([boxOf(page.getByRole('main')), boxOf(page.locator('#context-column'))])
       expect(narrowColumn.y).toBeGreaterThanOrEqual(narrowMain.y + narrowMain.height)
     })

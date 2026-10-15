@@ -39,7 +39,7 @@ describe('UI source guardrails', () => {
     expect(findBreakpointLiterals(read(f))).toEqual([])
   })
   it('app.css defines the breakpoint tokens', () => {
-    expect(read('src/styles/app.css')).toMatch(/--breakpoint-narrow:\s*768px;[\s\S]*--breakpoint-split:\s*1100px;[\s\S]*--breakpoint-wide:\s*1440px;/)
+    expect(read('src/styles/app.css')).toMatch(/--breakpoint-narrow:\s*768px;[\s\S]*--breakpoint-split:\s*960px;[\s\S]*--breakpoint-wide:\s*1440px;/)
   })
   it('app.css has color values only inside the token block', () => {
     expect(colorLiteralsOutsideTokens(read('src/styles/app.css'))).toEqual([])

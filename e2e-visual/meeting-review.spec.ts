@@ -157,14 +157,14 @@ for (const scene of SCENES) {
     }
 
     if (scene.held) {
-      test('the transcript sits beside the notes at 1440px and above them at 1024px', async ({ page }) => {
+      test('the transcript sits beside the notes at 1440px and above them at 900px', async ({ page }) => {
         await page.setViewportSize({ width: 1440, height: 900 })
         await scene.open(page)
         const transcript = page.getByRole('list', { name: 'Transcript' })
         const notes = page.getByRole('list', { name: 'Discussion' })
         const [t, n] = await Promise.all([boxOf(transcript), boxOf(notes)])
         expect(n.x).toBeGreaterThanOrEqual(t.x + t.width)
-        await page.setViewportSize({ width: 1024, height: 900 })
+        await page.setViewportSize({ width: 900, height: 900 })
         const [narrowT, narrowN] = await Promise.all([boxOf(transcript), boxOf(notes)])
         expect(narrowN.y).toBeGreaterThanOrEqual(narrowT.y + narrowT.height)
       })

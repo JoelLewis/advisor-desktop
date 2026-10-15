@@ -38,7 +38,10 @@ export async function clippedLabels(page: Page): Promise<string[]> {
       const text = visibleTextExtent(el)
       if (text.width === 0) continue
       const own = el.getBoundingClientRect()
-      const ancestor = clipper(el)?.getBoundingClientRect()
+      const clippingElement = clipper(el)
+      // A table that overflows is a labeled, keyboard-scrollable region (DataTable): text past its edge is reachable, not lost.
+      const scrollsSideways = clippingElement?.matches('[role="region"][tabindex="0"]') ?? false
+      const ancestor = scrollsSideways ? undefined : clippingElement?.getBoundingClientRect()
       const beyondOwn = text.right > own.right + 1 || text.left < own.left - 1
       const beyondAncestor = ancestor !== undefined && (text.right > ancestor.right + 1 || text.left < ancestor.left - 1)
       if (beyondOwn || beyondAncestor) out.push(el.textContent ?? '')

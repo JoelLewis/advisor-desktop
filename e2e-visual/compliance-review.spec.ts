@@ -83,14 +83,14 @@ for (const scene of SCENES) {
     }
 
     if (scene.layout === 'supervision') {
-      test('the item sits beside the queue at 1440px and drops below it at 1024px; no thread list', async ({ page }) => {
+      test('the item sits beside the queue at 1440px and drops below it at 900px; no thread list', async ({ page }) => {
         await page.setViewportSize({ width: 1440, height: 900 })
         await scene.open(page)
         await expect(page.getByRole('navigation', { name: 'Threads' })).toHaveCount(0)
         const [queue, item] = await Promise.all([boxOf(queueOf(page)), boxOf(ordersItem(page, 1))])
         expect(item.x).toBeGreaterThanOrEqual(queue.x + queue.width)
         expect(Math.abs(item.y - queue.y)).toBeLessThanOrEqual(1)
-        await page.setViewportSize({ width: 1024, height: 900 })
+        await page.setViewportSize({ width: 900, height: 900 })
         const [narrowQueue, narrowItem] = await Promise.all([boxOf(queueOf(page)), boxOf(ordersItem(page, 1))])
         expect(narrowItem.y).toBeGreaterThanOrEqual(narrowQueue.y + narrowQueue.height)
       })

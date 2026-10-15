@@ -112,8 +112,19 @@ for (const scene of SCENES) {
         expect(Math.abs(context.y - main.y)).toBeLessThanOrEqual(1)
       })
 
-      test('thread list beside main, context column under the thread at 1024px', async ({ page }) => {
+      test('three panes side by side at 1024px', async ({ page }) => {
         await page.setViewportSize({ width: 1024, height: 900 })
+        await scene.open(page)
+        const [threads, main, context] = await Promise.all([
+          boxOf(page.getByRole('navigation', { name: 'Threads' })), boxOf(page.getByRole('main')), boxOf(page.locator('#context-column')),
+        ])
+        expect(main.x).toBeGreaterThanOrEqual(threads.x + threads.width)
+        expect(context.x).toBeGreaterThanOrEqual(main.x + main.width)
+        expect(Math.abs(context.y - main.y)).toBeLessThanOrEqual(1)
+      })
+
+      test('thread list beside main, context column under the thread at 900px', async ({ page }) => {
+        await page.setViewportSize({ width: 900, height: 900 })
         await scene.open(page)
         const [threads, main, context] = await Promise.all([
           boxOf(page.getByRole('navigation', { name: 'Threads' })), boxOf(page.getByRole('main')), boxOf(page.locator('#context-column')),
