@@ -181,10 +181,10 @@ describe('the Brief', () => {
     expect(order[0]!.compareDocumentPosition(order[1]!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  it('dates a line that is not on the session\'s day', async () => {
+  it('names the day once the clock moves, and dates a line that is not on it', async () => {
     advanceClockTo(minuteOf('2026-02-26T14:10:00Z'))
     renderRoutes(routes, '/t/th-brief')
-    const today = await screen.findByRole('region', { name: 'Today' })
+    const today = await screen.findByRole('region', { name: 'Today · Thu 26 Feb' })
     expect(today).toHaveTextContent('25 Feb 14:00–15:15 ET')
   })
 })

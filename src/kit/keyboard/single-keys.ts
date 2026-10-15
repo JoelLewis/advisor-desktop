@@ -24,7 +24,7 @@ export function saveSingleKeys(on: boolean): void {
 const withModifier = (e: KeyboardEvent) => (e.ctrlKey || e.metaKey) && !e.altKey
 
 /** A Mac, where Ctrl+K in a text field is the system's kill-line, not ours. */
-export const onMac = (): boolean => /Mac|iPhone|iPad|iPod/.test(navigator.platform)
+const onMac = (): boolean => /Mac|iPhone|iPad|iPod/.test(navigator.platform)
 
 /**
  * Ctrl/⌘+K: the command line, whatever the setting (WCAG 2.1.4 covers only single character keys). Not with Shift,
