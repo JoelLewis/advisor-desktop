@@ -7,7 +7,7 @@ import { FullViewNotFound } from '@/workspace/full-views/FullViewNotFound'
 import { useGoHomeWhenHidden } from '@/workspace/full-views/use-go-home-when-hidden'
 import type { Directory, ThreadDetail } from '@/types/workspace'
 import { isExternalViewerIn } from '@/workspace/people/directory-people'
-import { rosterOf, threadTitleFor } from '@/workspace/people/roster'
+import { threadTitleFor } from '@/workspace/people/roster'
 import { bandWordsOf } from '@/workspace/people/visibility-words'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { Composer } from './Composer'
@@ -32,7 +32,7 @@ function ThreadView({ threadId }: { threadId: string }) {
   return <Thread detail={thread.data} directory={directory.data} />
 }
 
-function Thread({ detail: { thread, messages, audience }, directory }: { detail: ThreadDetail; directory: Directory }) {
+function Thread({ detail: { thread, messages, audience, roster }, directory }: { detail: ThreadDetail; directory: Directory }) {
   const { viewerId } = useViewer()
   const viewerIsExternal = isExternalViewerIn(directory, viewerId)
   return (
@@ -41,7 +41,7 @@ function Thread({ detail: { thread, messages, audience }, directory }: { detail:
         <VisibilityBand visibility={thread.visibility} scale="thread" words={bandWordsOf(audience, viewerIsExternal)} />
         <h1 id={PAGE_TITLE_ID} tabIndex={-1} className="text-title">{threadTitleFor(thread, viewerIsExternal)}</h1>
         <p role="note" aria-label="Who can see" className="text-body text-ink-2">
-          <span aria-hidden="true" className="text-ink-3">Who can see: </span>{rosterOf(thread, directory, viewerIsExternal).join(', ')}
+          <span aria-hidden="true" className="text-ink-3">Who can see: </span>{roster.join(', ')}
         </p>
       </header>
       {messages.length === 0 ? <p className="text-body text-ink-3">No messages yet.</p> : (

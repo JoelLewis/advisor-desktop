@@ -1,5 +1,6 @@
 import { Page } from '@/kit/page/Page'
 import type { StartStage } from './start-failure'
+import { APP_NAME } from './document-title'
 import { useDocumentTitle } from './use-document-title'
 
 /**
@@ -7,9 +8,10 @@ import { useDocumentTitle } from './use-document-title'
  * or its code did not finish loading. Never a blank page, and never the static header left standing.
  */
 export function ServerUnavailable({ stage, reason }: { stage: StartStage; reason: string }) {
-  useDocumentTitle()
+  // Before the demo starts there is no viewer: the page names the app.
+  useDocumentTitle(APP_NAME)
   return (
-    <Page title="The demo could not start" eyebrow="Advisor Desktop">
+    <Page title="The demo could not start" eyebrow={APP_NAME}>
       <div className="flex max-w-prose flex-col gap-3">
         {stage === 'server' ? (
           <>

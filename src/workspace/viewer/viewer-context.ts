@@ -1,5 +1,6 @@
 import { createContext } from 'react'
 import type { Directory } from '@/types/workspace'
+import type { Brand } from '@/workspace/shell/brand-words'
 
 /** The advisor, Adrian Hale: the workspace opens as him. */
 export const DEFAULT_VIEWER_ID = 'user-001'
@@ -7,6 +8,8 @@ export const DEFAULT_VIEWER_ID = 'user-001'
 export type ViewerContextValue = {
   viewerId: string
   setViewerId: (id: string) => void
+  /** The header's and the tab's name for this viewer, known as soon as the viewer is. */
+  brand: Brand
 }
 
 export const ViewerContext = createContext<ViewerContextValue | null>(null)

@@ -60,9 +60,10 @@ it("switching to a client never leaves the firm page's name on the tab", async (
   const watch = new MutationObserver(() => titles.push(document.title))
   watch.observe(document.head, { childList: true, subtree: true, characterData: true })
   await user.selectOptions(screen.getByRole('combobox', { name: 'View as' }), 'Robert Johnson · Client')
-  await waitFor(() => expect(document.title).toBe('Workspace · Advisor Desktop'))
+  // Robert's tab names the firm he deals with, never the firm's page.
+  await waitFor(() => expect(document.title).toBe('Workspace · Larkfield Advisory'))
   watch.disconnect()
-  expect(titles).not.toContain('Billing · Advisor Desktop')
+  expect(titles.filter((t) => t.startsWith('Billing'))).toEqual([])
 })
 
 const REDIRECT_NOTE = "Robert Johnson can't see Billing; showing the workspace."

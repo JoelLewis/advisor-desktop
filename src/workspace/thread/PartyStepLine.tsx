@@ -1,6 +1,6 @@
 import { fmtEasternStamp } from '@/kit/measure'
 import { personIn } from '@/workspace/people/directory-people'
-import { ROLE_LABEL } from '@/workspace/people/role-label'
+import { ROLE_LABEL } from '@/lib/role-label'
 import type { Directory, Message } from '@/types/workspace'
 
 type Step = Extract<Message, { kind: 'party_step' }>

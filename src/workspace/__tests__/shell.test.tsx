@@ -109,6 +109,32 @@ describe('workspace shell', () => {
     expect(within(banner).queryByRole('link', { name: 'Advisor Desktop' })).toBeNull()
   })
 
+  it("never shows an outsider the product's name, even while their own directory loads", async () => {
+    sessionStorage.setItem('ws-viewer', 'cli-001')
+    server.use(http.get('/api/workspace/people', async ({ request }) => {
+      // Hold Robert's own directory; returning nothing hands the request on to the engine's handler.
+      if (request.headers.get('X-Viewer') === 'cli-001') await delay(300)
+    }))
+    renderRoutes(routes, '/')
+    const banner = await screen.findByRole('banner')
+    // His directory is still on its way: the thread list waits for it.
+    expect(within(threadNav()).getByRole('status')).toHaveTextContent('Loading threads…')
+    expect(within(banner).getByRole('link', { name: 'Larkfield Advisory' })).toBeInTheDocument()
+    expect(banner).toHaveTextContent('Robert Johnson')
+    expect(document.title).toMatch(/(^| · )Larkfield Advisory$/)
+    expect(document.body).not.toHaveTextContent('Advisor Desktop')
+  })
+
+  it("titles an outsider's tab with the firm, and a firm viewer's with the product", async () => {
+    sessionStorage.setItem('ws-viewer', 'cli-001')
+    renderRoutes(routes, '/t/th-robert')
+    await screen.findByRole('heading', { level: 1, name: 'Your conversation with Larkfield' })
+    await waitFor(() => expect(document.title).toBe('Your conversation with Larkfield · Larkfield Advisory'))
+    await viewAs('Adrian Hale · Advisor')
+    await screen.findByRole('heading', { level: 1, name: 'Robert Johnson' })
+    await waitFor(() => expect(document.title).toBe('Robert Johnson · Advisor Desktop'))
+  })
+
   it('lists the agents of the visible threads with their scopes', async () => {
     await renderHome()
     const agents = within(threadNav()).getByRole('heading', { name: 'Agents on this desk' }).closest('section') as HTMLElement

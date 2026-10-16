@@ -1,7 +1,7 @@
 import { RecordSlip } from '@/kit/record-slip/RecordSlip'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { isExternalViewerIn, personIn } from '@/workspace/people/directory-people'
-import { ROLE_LABEL } from '@/workspace/people/role-label'
+import { ROLE_LABEL } from '@/lib/role-label'
 import { sentLetterOrigin } from '@/workspace/context/draft-origin'
 import type { BindingAct, Directory } from '@/types/workspace'
 import { actProvenance } from './act-provenance'

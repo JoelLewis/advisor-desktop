@@ -1,7 +1,7 @@
 import { it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { PEOPLE } from '@/mocks/data/people'
-import { personWithRole } from '@/workspace/people/role-label'
+import { personWithRole } from '@/lib/role-label'
 import { WIDEST_OPTION } from '@/workspace/shell/view-as-words'
 
 it("holds the View as placeholder to the directory's longest label, and the static first frame to the same", () => {

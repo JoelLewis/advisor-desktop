@@ -6,8 +6,8 @@ import { useDestinations } from './use-destinations'
 import { useDocumentTitle } from './use-document-title'
 
 export function RootLayout() {
-  const { viewerId } = useViewer()
-  useDocumentTitle()
+  const { viewerId, brand } = useViewer()
+  useDocumentTitle(brand.name)
   return (
     <AnnouncerProvider resetKey={viewerId}>
       <KeyboardProvider destinations={useDestinations()}>

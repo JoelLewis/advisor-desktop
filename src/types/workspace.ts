@@ -110,7 +110,8 @@ export type RecordBasis = { eventId: string; actId: string; fingerprint: string;
 export type Draft = { id: string; clientThreadId: string; authorId: string; body: string; createdAt: string; agentId?: AgentId; basis?: LetterBasis; recordBasis?: RecordBasis; figures?: Figure[]; supersedes?: string; editorIds?: string[]; stale?: boolean; staleReason?: string }
 /** Who reads a thread besides the firm, as the band says it: its owner alone, the team (about these clients, by full name), or its party. */
 export type ThreadAudience = { kind: 'owner' } | { kind: 'team'; about: string[] } | { kind: 'party'; name: string }
-export type ThreadDetail = { thread: Thread; messages: Message[]; audience: ThreadAudience }
+/** The thread, its messages, who reads it as the band says it, and everyone who reads it by name, as its viewer may be told. */
+export type ThreadDetail = { thread: Thread; messages: Message[]; audience: ThreadAudience; roster: string[] }
 /** A thread as the list serves it: with its audience, so a row can say who reads it in the band's words. */
 export type ListedThread = Thread & { audience: ThreadAudience }
 export type Act = BindingActKind | 'post_firm' | 'draft_for_client' | 'read_all_firm_threads' | 'prepare_meeting'

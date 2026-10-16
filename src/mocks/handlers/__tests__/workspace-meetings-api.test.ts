@@ -120,6 +120,9 @@ describe('a client probing the meeting', () => {
     expect(acts).toHaveLength(1)
     expect(acts[0]).not.toHaveProperty('recordBasis')
     expect(acts[0]).not.toHaveProperty('editedBy')
-    expect(JSON.stringify((await call('GET', '/threads/th-robert', ROBERT)).body)).not.toMatch(/transcript|REC-0001|task-|Mike|Sarah Mitchell/)
+    // His roster names the members of his own thread (as his directory does); nothing else in the thread names a colleague.
+    const { roster, ...detail } = (await call('GET', '/threads/th-robert', ROBERT)).body as Record<string, unknown>
+    expect(roster).toEqual(['Robert Johnson · Client', 'Adrian Hale · Advisor', 'Sarah Mitchell · Client service', 'Larkfield compliance (review)'])
+    expect(JSON.stringify(detail)).not.toMatch(/transcript|REC-0001|task-|Mike|Sarah Mitchell/)
   })
 })

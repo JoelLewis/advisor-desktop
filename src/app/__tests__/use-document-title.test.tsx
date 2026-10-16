@@ -4,7 +4,7 @@ import { useDocumentTitle } from '@/app/use-document-title'
 import { PAGE_TITLE_ID } from '@/kit/page/ids'
 
 function Probe() {
-  useDocumentTitle()
+  useDocumentTitle('Advisor Desktop')
   return null
 }
 

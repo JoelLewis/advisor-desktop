@@ -1,6 +1,6 @@
 import { Select } from '@/kit/select/Select'
 import { useViewAsDirectory } from '@/hooks/use-workspace'
-import { personWithRole } from '@/workspace/people/role-label'
+import { personWithRole } from '@/lib/role-label'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { WIDEST_OPTION } from './view-as-words'
 
