@@ -85,6 +85,17 @@ An advisor sitting down cold should be able to tell in ten seconds who will read
 
 **Separation of duties.** Agents flag; only the advisor approves with a reason; compliance sees the reason.
 
+**Household view (amended 16 Oct 2026, from `docs/audits/2026-10-16-advisor-perspective-review.md`).** An advisor judges suitability household by household. An IRA held more conservatively than a taxable account is asset location, not unsuitability.
+- **The household figure.** The engine computes a household risk score as the value-weighted average of its managed accounts' scores, using the same model as the account scores. It is judged against the client's tolerance band.
+- **What the check states.** The check reports both the account and the household. Example: "Growth sits above Robert Johnson's Moderate tolerance for this account; the household as a whole is within it." The figures come from the kit.
+- **The reason when the household is within its band.** Approval still requires a reason, because the account is outside the client's band. The reason "Part of a household plan that is within tolerance overall" is pre-selected and states the household figure.
+- **When the household is also outside its band.** No reason is pre-selected, and the line reads as the stronger warning.
+- **Book risk.**
+  - Each client gets a household row (household score against tolerance, with status).
+  - An account row outside its band is marked "asset location" when its household is within the band.
+  - Methods says that account-level status is a screening signal, and that suitability is judged per household.
+- **The Brief.** Its decide line uses the same words.
+
 ## 4. Client letters
 
 **The recap.**
