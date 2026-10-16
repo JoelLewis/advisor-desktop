@@ -2,10 +2,12 @@ import { useId, useState, type FormEvent } from 'react'
 import { useAnnounce } from '@/kit/announcer/use-announce'
 import { Button } from '@/kit/button/Button'
 import { TextInput } from '@/kit/text-input/TextInput'
-import { useCreateDraft, usePostMessage } from '@/hooks/use-workspace'
+import { useCreateDraft, usePostMessage, useSaveAndSend } from '@/hooks/use-workspace'
+import { NotSentError } from '@/hooks/not-sent-error'
+import { cn } from '@/lib/utils'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import type { Directory, Thread } from '@/types/workspace'
-import { composerModeOf } from './composer-mode'
+import { composerModeOf, type ComposerMode } from './composer-mode'
 
 export function Composer({ thread, directory }: { thread: Thread; directory: Directory }) {
   const { viewerId } = useViewer()
@@ -16,50 +18,81 @@ export function Composer({ thread, directory }: { thread: Thread; directory: Dir
     case 'post':
       return <PostComposer threadId={thread.id} action={mode.action} />
     case 'draft':
-      return <DraftComposer threadId={thread.id} addressName={mode.addressName} />
+      return <ClientComposer threadId={thread.id} mode={mode} />
   }
 }
 
+const DRAFT_SAVED = 'Draft saved — not sent.'
+
 function PostComposer({ threadId, action }: { threadId: string; action: string }) {
   const post = usePostMessage(threadId)
+  const announce = useAnnounce()
   return <ComposerForm label="Message" action={action} pending={post.isPending} error={post.error}
-    submit={(body, onSaved) => post.mutate(body, { onSuccess: onSaved })} />
+    submit={(body, done) => post.mutate(body, { onSuccess: () => { done(); announce('Posted.') } })} />
 }
 
-function DraftComposer({ threadId, addressName }: { threadId: string; addressName: string }) {
+/** The riskiest moment: writing something the client will read. The frame is tinted and every word names the client. */
+function ClientComposer({ threadId, mode }: { threadId: string; mode: Extract<ComposerMode, { kind: 'draft' }> }) {
   const draft = useCreateDraft(threadId)
-  return <ComposerForm label="Draft" action="Save draft" pending={draft.isPending} error={draft.error}
-    placeholder={`Write a draft for ${addressName} (not sent until you send it)`} savedNote="Draft saved — not sent."
-    submit={(body, onSaved) => draft.mutate(body, { onSuccess: onSaved })} />
+  const send = useSaveAndSend(threadId)
+  const announce = useAnnounce()
+  // Each act clears the other's error, so the alert always speaks of the last thing tried.
+  const saveDraft: Submit = (body, done) => {
+    send.reset()
+    draft.mutate(body, { onSuccess: () => { done(DRAFT_SAVED); announce(DRAFT_SAVED) } })
+  }
+  const sendNow: Submit = (body, done) => {
+    draft.reset()
+    send.mutate(body, {
+      onSuccess: ({ act }) => { done(); announce(`Sent to ${mode.addressName} · ${act.id}`) },
+      // The text is already kept as a draft; leaving it in the field too would invite saving it twice.
+      onError: (error) => { if (error instanceof NotSentError) done() },
+    })
+  }
+  return (
+    <ComposerForm label={`Message to ${mode.partyName}`} tinted
+      action={mode.canSend ? `Send to ${mode.addressName}` : 'Save draft'}
+      secondary={mode.canSend ? { label: 'Save draft', pending: draft.isPending, run: saveDraft } : undefined}
+      pending={draft.isPending || send.isPending} error={send.error ?? draft.error}
+      submit={mode.canSend ? sendNow : saveDraft} />
+  )
 }
+
+/** `done` clears the field and returns focus to it; a note, when given, stays under the field until the next edit. */
+type Submit = (body: string, done: (note?: string) => void) => void
 
 type ComposerFormProps = {
   label: string
   action: string
   pending: boolean
   error: Error | null
-  placeholder?: string
-  savedNote?: string
-  submit: (body: string, onSaved: () => void) => void
+  tinted?: boolean
+  secondary?: { label: string; pending: boolean; run: Submit }
+  submit: Submit
 }
 
-function ComposerForm({ label, action, pending, error, placeholder, savedNote, submit }: ComposerFormProps) {
-  const announce = useAnnounce()
+function ComposerForm({ label, action, pending, error, tinted = false, secondary, submit }: ComposerFormProps) {
   const fieldId = useId()
   const [body, setBody] = useState('')
-  const [saved, setSaved] = useState(false)
-  const onSubmit = (e: FormEvent) => {
-    e.preventDefault()
-    if (body.trim() === '') return
-    submit(body, () => { setBody(''); setSaved(true); announce(savedNote ?? 'Posted.'); requestAnimationFrame(() => document.getElementById(fieldId)?.focus()) })
+  const [note, setNote] = useState<string | undefined>(undefined)
+  const done = (saved?: string) => {
+    setBody('')
+    setNote(saved)
+    requestAnimationFrame(() => document.getElementById(fieldId)?.focus())
   }
+  const run = (act: Submit) => { if (body.trim() !== '') act(body, done) }
+  const onSubmit = (e: FormEvent) => { e.preventDefault(); run(submit) }
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-3 border-t border-ink pt-4">
-      <TextInput label={label} value={body} id={fieldId} placeholder={placeholder} readOnly={pending}
-        onChange={(v) => { setBody(v); setSaved(false) }} />
+    <form onSubmit={onSubmit} className={cn('flex flex-col gap-3 border-t border-ink', tinted ? 'bg-shared p-4' : 'pt-4')}>
+      <TextInput label={label} value={body} id={fieldId} readOnly={pending}
+        onChange={(v) => { setBody(v); setNote(undefined) }} />
       <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
         {error ? <p role="alert" className="mr-auto text-body">{error.message}</p> : null}
-        {saved && savedNote ? <p className="mr-auto text-body text-ink-2">{savedNote}</p> : null}
+        {note ? <p className="mr-auto text-body text-ink-2">{note}</p> : null}
+        {secondary ? (
+          <Button rank="secondary" pending={secondary.pending} disabled={body.trim() === '' || (pending && !secondary.pending)}
+            onClick={() => run(secondary.run)}>{secondary.label}</Button>
+        ) : null}
         <Button type="submit" pending={pending} disabled={body.trim() === ''}>{action}</Button>
       </div>
     </form>

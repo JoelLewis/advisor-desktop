@@ -2,8 +2,8 @@ import type { Directory, Thread } from '@/types/workspace'
 import { addressNameOf } from '@/lib/words'
 
 export type ComposerMode =
-  | { kind: 'post'; action: 'Post' | 'Send' }
-  | { kind: 'draft'; addressName: string }
+  | { kind: 'post'; action: 'Post to the team' | 'Post' | 'Send' }
+  | { kind: 'draft'; partyName: string; addressName: string; canSend: boolean }
   | { kind: 'read-only' }
 
 /**
@@ -17,8 +17,9 @@ export function composerModeOf(thread: Thread, viewerId: string, directory: Dire
     if (!acts.includes('draft_for_client')) return { kind: 'read-only' }
     const party = directory.people.find((p) => p.id === thread.partyId)
     if (!party) throw new Error(`The party of thread "${thread.id}" is not in the directory`)
-    return { kind: 'draft', addressName: addressNameOf(party.name) }
+    return { kind: 'draft', partyName: party.name, addressName: addressNameOf(party.name), canSend: acts.includes('send_to_party') }
   }
   const belongs = thread.memberIds.includes(viewerId) || thread.ownerId === viewerId
-  return belongs && acts.includes('post_firm') ? { kind: 'post', action: 'Post' } : { kind: 'read-only' }
+  if (!belongs || !acts.includes('post_firm')) return { kind: 'read-only' }
+  return { kind: 'post', action: thread.visibility === 'internal' ? 'Post to the team' : 'Post' }
 }

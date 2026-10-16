@@ -22,7 +22,7 @@ async function filed() {
 async function openRobert() {
   renderRoutes(routes, '/t/th-robert')
   await screen.findByRole('heading', { level: 1, name: 'Robert Johnson' })
-  return inContext().findByRole('region', { name: 'Drafts for Robert' })
+  return inContext().findByRole('region', { name: 'Drafts · message to Robert Johnson' })
 }
 
 describe("Robert's recap", () => {

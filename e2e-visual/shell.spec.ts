@@ -69,6 +69,7 @@ const SCENES: Scene[] = [
   { name: 'robert-thread-light', hasContext: true, open: robertOnHisThread('light') },
   { name: 'robert-thread-dark', hasContext: true, open: robertOnHisThread('dark') },
   { name: 'account-full-view-light', hasContext: false, open: accountFullView },
+  { name: 'adrian-robert-thread-light', hasContext: true, open: async (page) => { await visit(page, '/t/th-robert', 'light'); await settle(page) } },
   { name: 'not-found-light', hasContext: false, open: async (page) => { await visit(page, '/portfolios/trading', 'light'); await settle(page) } },
 ]
 
@@ -163,9 +164,9 @@ test('the success path on the real app: ask, full view and back, draft, send, an
   const message = 'Your annual review is booked for next month.'
   await threadLink('Robert Johnson').click()
   await expect(heading).toHaveText('Robert Johnson')
-  await page.getByRole('textbox', { name: 'Draft' }).fill(message)
+  await page.getByRole('textbox', { name: 'Message to Robert Johnson' }).fill(message)
   await page.getByRole('button', { name: 'Save draft' }).click()
-  await page.getByRole('button', { name: 'Send to Robert' }).click()
+  await page.getByRole('article', { name: 'Draft · not sent' }).getByRole('button', { name: 'Send to Robert' }).click()
   await expect(conversation).toContainText(message)
   await expect(page.getByRole('article', { name: 'Message sent to the client' }).first()).toBeVisible()
 

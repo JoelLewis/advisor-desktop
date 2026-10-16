@@ -1,5 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as api from '@/services/workspace'
+import { NotSentError } from '@/hooks/not-sent-error'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { DEFAULT_VIEWER_ID } from '@/workspace/viewer/viewer-context'
 import type { AgentId } from '@/types/workspace'
@@ -84,6 +85,23 @@ export function useCreateDraft(threadId: string) {
   return useMutation({
     mutationFn: (body: string) => api.createDraft(viewerId, threadId, body),
     onSuccess: invalidate,
+  })
+}
+
+/** Saves the text as a draft and sends it. A refused send leaves the draft saved and throws `NotSentError`. */
+export function useSaveAndSend(threadId: string) {
+  const { viewerId } = useViewer()
+  const invalidate = useInvalidateWorkspace()
+  return useMutation({
+    mutationFn: async (body: string) => {
+      const draft = await api.createDraft(viewerId, threadId, body)
+      try {
+        return { draftId: draft.id, act: await api.sendToParty(viewerId, draft.id) }
+      } catch (error) {
+        throw new NotSentError(draft.id, error instanceof Error ? error.message : String(error))
+      }
+    },
+    onSettled: invalidate,
   })
 }
 

@@ -27,7 +27,7 @@ describe('the workbench layout', () => {
     expect(feed).toHaveTextContent('Drafted the proposal (v1).')
     const user = userEvent.setup()
     await user.type(within(liveThread()).getByRole('textbox', { name: 'Message' }), 'Looking at the lots now.')
-    await user.click(within(liveThread()).getByRole('button', { name: 'Post' }))
+    await user.click(within(liveThread()).getByRole('button', { name: 'Post to the team' }))
     await waitFor(() => expect(feed).toHaveTextContent('Looking at the lots now.'))
   })
 

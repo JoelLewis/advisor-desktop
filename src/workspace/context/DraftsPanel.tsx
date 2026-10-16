@@ -48,7 +48,7 @@ export function DraftsPanel({ thread, directory, onSent }: DraftsPanelProps) {
   if (!canDraft && drafts.data.length === 0 && !send.error) return null
   const name = addressNameOf(party.name)
   return (
-    <ContextSection title={`Drafts for ${name}`}>
+    <ContextSection title={`Drafts · message to ${party.name}`}>
       {canDraft && threadParty(thread) === 'client' ? <LetterControl thread={thread} /> : null}
       {canDraft && threadParty(thread) === 'client' ? <RecapControl thread={thread} /> : null}
       {drafts.data.map((d) => (

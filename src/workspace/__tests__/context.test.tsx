@@ -43,7 +43,7 @@ describe('thread context column', () => {
     const user = userEvent.setup()
     expect(inContext().getByText('None in this thread')).toBeInTheDocument()
 
-    await user.type(screen.getByRole('textbox', { name: 'Draft' }), 'Sarah will be in touch this week.')
+    await user.type(screen.getByRole('textbox', { name: 'Message to Robert Johnson' }), 'Sarah will be in touch this week.')
     await user.click(screen.getByRole('button', { name: 'Save draft' }))
     const draft = await inContext().findByRole('article', { name: 'Draft · not sent' })
     expect(draft).toHaveTextContent('Sarah will be in touch this week.')
@@ -81,7 +81,7 @@ describe('thread context column', () => {
     expect(contextColumn()).not.toHaveTextContent('Drift Monitor')
 
     await viewAs('Sarah Mitchell · Client service')
-    const sarahsView = await within(await inContext().findByRole('region', { name: 'Drafts for Robert' })).findByRole('article', { name: 'Draft · not sent' })
+    const sarahsView = await within(await inContext().findByRole('region', { name: 'Drafts · message to Robert Johnson' })).findByRole('article', { name: 'Draft · not sent' })
     expect(sarahsView).toHaveTextContent('Your statement is ready.')
     expect(sarahsView).toHaveTextContent('Only the advisor of record can send this. Sending is recorded as a binding act.')
     expect(within(sarahsView).queryByRole('button', { name: 'Send to Robert' })).toBeNull()

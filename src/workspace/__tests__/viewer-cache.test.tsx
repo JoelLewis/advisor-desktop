@@ -28,7 +28,7 @@ describe('switching viewer with the production cache', () => {
 
     await viewAs('Adrian Hale · Advisor')
     const user = userEvent.setup()
-    await user.type(await screen.findByRole('textbox', { name: 'Draft' }), 'Your review is booked for next month.')
+    await user.type(await screen.findByRole('textbox', { name: 'Message to Robert Johnson' }), 'Your review is booked for next month.')
     await user.click(screen.getByRole('button', { name: 'Save draft' }))
     const draft = await context().findByRole('article', { name: 'Draft · not sent' })
     await user.click(within(draft).getByRole('button', { name: 'Send to Robert' }))
