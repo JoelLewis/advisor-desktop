@@ -79,11 +79,21 @@ export function usePostMessage(threadId: string) {
   })
 }
 
-export function useCreateDraft(threadId: string) {
+/** A draft the composer already saved for its current text: a refused send leaves one behind. */
+export type KeptDraft = { draftId: string; body: string }
+
+/** Saves the composer's text as a draft: the kept draft as it is, revised when the text changed, or a new one. Returns its id. */
+async function saveDraftText(viewerId: string, threadId: string, body: string, kept: KeptDraft | undefined): Promise<string> {
+  if (!kept) return (await api.createDraft(viewerId, threadId, body)).id
+  if (kept.body === body) return kept.draftId
+  return (await api.reviseDraft(viewerId, threadId, kept.draftId, body)).id
+}
+
+export function useSaveDraft(threadId: string) {
   const { viewerId } = useViewer()
   const invalidate = useInvalidateWorkspace()
   return useMutation({
-    mutationFn: (body: string) => api.createDraft(viewerId, threadId, body),
+    mutationFn: ({ body, kept }: { body: string; kept?: KeptDraft }) => saveDraftText(viewerId, threadId, body, kept),
     onSuccess: invalidate,
   })
 }
@@ -93,12 +103,12 @@ export function useSaveAndSend(threadId: string) {
   const { viewerId } = useViewer()
   const invalidate = useInvalidateWorkspace()
   return useMutation({
-    mutationFn: async (body: string) => {
-      const draft = await api.createDraft(viewerId, threadId, body)
+    mutationFn: async ({ body, kept }: { body: string; kept?: KeptDraft }) => {
+      const draftId = await saveDraftText(viewerId, threadId, body, kept)
       try {
-        return { draftId: draft.id, act: await api.sendToParty(viewerId, draft.id) }
+        return { draftId, act: await api.sendToParty(viewerId, draftId) }
       } catch (error) {
-        throw new NotSentError(draft.id, error instanceof Error ? error.message : String(error))
+        throw new NotSentError(draftId, error instanceof Error ? error.message : String(error))
       }
     },
     onSettled: invalidate,

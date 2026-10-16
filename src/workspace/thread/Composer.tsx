@@ -2,7 +2,7 @@ import { useId, useState, type FormEvent } from 'react'
 import { useAnnounce } from '@/kit/announcer/use-announce'
 import { Button } from '@/kit/button/Button'
 import { TextInput } from '@/kit/text-input/TextInput'
-import { useCreateDraft, usePostMessage, useSaveAndSend } from '@/hooks/use-workspace'
+import { useDrafts, usePostMessage, useSaveAndSend, useSaveDraft, type KeptDraft } from '@/hooks/use-workspace'
 import { NotSentError } from '@/hooks/not-sent-error'
 import { cn } from '@/lib/utils'
 import { useViewer } from '@/workspace/viewer/use-viewer'
@@ -33,26 +33,30 @@ function PostComposer({ threadId, action }: { threadId: string; action: string }
 
 /** The riskiest moment: writing something the client will read. The frame is tinted and every word names the client. */
 function ClientComposer({ threadId, mode }: { threadId: string; mode: Extract<ComposerMode, { kind: 'draft' }> }) {
-  const draft = useCreateDraft(threadId)
+  const draft = useSaveDraft(threadId)
   const send = useSaveAndSend(threadId)
+  const drafts = useDrafts(threadId, true)
   const announce = useAnnounce()
+  // A refused send leaves the text both in the field and in Drafts. The next save or send reuses that draft
+  // (revised if the text changed) instead of saving a second copy — while the draft is still there to reuse.
+  const [kept, setKept] = useState<KeptDraft | undefined>(undefined)
+  const keptDraft = kept && drafts.data?.some((d) => d.id === kept.draftId) ? kept : undefined
   // Each act clears the other's error, so the alert always speaks of the last thing tried.
   const saveDraft: Submit = (body, done) => {
     send.reset()
-    draft.mutate(body, { onSuccess: () => { done(DRAFT_SAVED); announce(DRAFT_SAVED) } })
+    draft.mutate({ body, kept: keptDraft }, { onSuccess: () => { setKept(undefined); done(DRAFT_SAVED); announce(DRAFT_SAVED) } })
   }
   const sendNow: Submit = (body, done) => {
     draft.reset()
-    send.mutate(body, {
-      onSuccess: ({ act }) => { done(); announce(`Sent to ${mode.addressName} · ${act.id}`) },
-      // The text is already kept as a draft; leaving it in the field too would invite saving it twice.
-      onError: (error) => { if (error instanceof NotSentError) done() },
+    send.mutate({ body, kept: keptDraft }, {
+      onSuccess: ({ act }) => { setKept(undefined); done(); announce(`Sent to ${mode.addressName} · ${act.id}`) },
+      onError: (error) => { if (error instanceof NotSentError) setKept({ draftId: error.draftId, body }) },
     })
   }
   return (
     <ComposerForm label={`Message to ${mode.partyName}`} tinted
       action={mode.canSend ? `Send to ${mode.addressName}` : 'Save draft'}
-      secondary={mode.canSend ? { label: 'Save draft', pending: draft.isPending, run: saveDraft } : undefined}
+      secondary={mode.canSend ? { label: 'Save draft', pending: draft.isPending || send.isPending, run: saveDraft } : undefined}
       pending={draft.isPending || send.isPending} error={send.error ?? draft.error}
       submit={mode.canSend ? sendNow : saveDraft} />
   )
@@ -90,7 +94,7 @@ function ComposerForm({ label, action, pending, error, tinted = false, secondary
         {error ? <p role="alert" className="mr-auto text-body">{error.message}</p> : null}
         {note ? <p className="mr-auto text-body text-ink-2">{note}</p> : null}
         {secondary ? (
-          <Button rank="secondary" pending={secondary.pending} disabled={body.trim() === '' || (pending && !secondary.pending)}
+          <Button rank="secondary" pending={secondary.pending} disabled={body.trim() === ''}
             onClick={() => run(secondary.run)}>{secondary.label}</Button>
         ) : null}
         <Button type="submit" pending={pending} disabled={body.trim() === ''}>{action}</Button>
