@@ -111,7 +111,7 @@ describe('asking and revising', () => {
     const embed = await screen.findByRole('region', { name: 'Proposal · Johnson rebalance' })
     expect(await within(embed).findByRole('table', { name: 'Proposal legs · v1' })).toBeInTheDocument()
     expect(within(embed).queryByRole('button', { name: 'Revise' })).toBeNull()
-    await contextColumn().findByRole('region', { name: 'Who can see' })
+    await contextColumn().findByRole('region', { name: 'Agents' })
     expect(contextColumn().queryByRole('button', { name: 'Ask Proposal Agent' })).toBeNull()
   })
 })

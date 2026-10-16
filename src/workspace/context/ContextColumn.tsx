@@ -16,7 +16,7 @@ import { AskAgents } from './AskAgents'
 import { DraftsPanel } from './DraftsPanel'
 import { FullViews } from './FullViews'
 import { MeetingPanel } from './MeetingPanel'
-import { WhoCanSee } from './WhoCanSee'
+import { ThreadAgents } from './ThreadAgents'
 
 export function ContextColumn() {
   const { threadId } = useParams()
@@ -49,7 +49,7 @@ function ThreadContext({ threadId }: { threadId: string }) {
   const subject = t.subject
   return (
     <div className="flex min-w-0 flex-col divide-y divide-rule">
-      <WhoCanSee thread={t} directory={dir} viewerIsExternal={viewerIsExternal} />
+      {viewerIsExternal ? null : <ThreadAgents thread={t} directory={dir} />}
       {t.visibility === 'client' && threadParty(t) === 'prospect' && t.partyId !== undefined && !viewerIsExternal
         ? <ProspectPanel prospectId={t.partyId} directory={dir} onRecorded={setSentActId} /> : null}
       {t.visibility === 'client' && threadParty(t) === 'prospect' && t.partyId !== undefined && viewerIsExternal

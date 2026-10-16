@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { routes } from '@/app/routes'
 import { createAppQueryClient } from '@/app/query-client'
 import { renderRoutes } from '@/test/render'
+import { OUTSIDER_THREAD_TITLE } from '@/workspace/people/roster'
 
 // The production query client (five-minute staleTime): a cached read for one viewer must not
 // outlive another viewer's write once the first viewer is switched back to.
@@ -22,7 +23,7 @@ describe('switching viewer with the production cache', () => {
   it("Robert sees the message Adrian sent while Robert's thread was cached", async () => {
     viewAsOnLoad('cli-001')
     renderRoutes(routes, '/t/th-robert', createAppQueryClient())
-    await screen.findByRole('heading', { level: 1, name: 'Robert Johnson' })
+    await screen.findByRole('heading', { level: 1, name: OUTSIDER_THREAD_TITLE })
     await waitFor(() => expect(conversation()).toHaveTextContent('When is my annual review this year?'))
 
     await viewAs('Adrian Hale · Advisor')

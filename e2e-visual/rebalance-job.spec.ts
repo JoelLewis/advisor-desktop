@@ -35,6 +35,7 @@ const robertLetter = (theme: Theme) => async (page: Page) => {
   await askForLetter(page)
   await sendLetter(page)
   await page.getByLabel('View as').selectOption({ label: 'Robert Johnson · Client' })
+  await expect(heading(page)).toHaveText('Your conversation with Larkfield')
   await expect(page.getByRole('navigation', { name: 'Threads' }).getByRole('link')).toHaveCount(1)
   await expect(conversation(page)).toContainText('Dear Robert,')
   await settle(page)
@@ -181,7 +182,7 @@ test('one presenter runs Brief → proposal → revise → workbench → approve
   await viewAs.selectOption({ label: 'Robert Johnson · Client' })
   const threadLinks = page.getByRole('navigation', { name: 'Threads' }).getByRole('link')
   await expect(threadLinks).toHaveCount(1)
-  await expect(threadLinks).toHaveAccessibleName('Robert Johnson')
+  await expect(threadLinks).toHaveAccessibleName('Your conversation with Larkfield')
   await expect(conversation(page)).toContainText('Dear Robert,')
   await expect(conversation(page)).toContainText('I will call you on Friday to walk through it.')
   // His conversation is his question, the letter and its record: nothing else from the firm.

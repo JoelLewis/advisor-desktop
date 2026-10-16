@@ -33,10 +33,10 @@ const robertOnHisThread = (theme: Theme) => async (page: Page) => {
   await visit(page, '/', theme)
   await page.getByLabel('View as').selectOption({ label: 'Robert Johnson · Client' })
   await visit(page, '/t/th-robert', theme)
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Robert Johnson')
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Your conversation with Larkfield')
   const threadLinks = page.getByRole('navigation', { name: 'Threads' }).getByRole('link')
   await expect(threadLinks).toHaveCount(1)
-  await expect(threadLinks).toHaveAccessibleName('Robert Johnson')
+  await expect(threadLinks).toHaveAccessibleName('Your conversation with Larkfield')
   await settle(page)
 }
 
@@ -172,7 +172,7 @@ test('the success path on the real app: ask, full view and back, draft, send, an
   // Robert sees only his thread, with the message.
   await viewAs.selectOption({ label: 'Robert Johnson · Client' })
   await expect(threadLinks).toHaveCount(1)
-  await expect(heading).toHaveText('Robert Johnson')
+  await expect(heading).toHaveText('Your conversation with Larkfield')
   await expect(conversation).toContainText(message)
 
   // Mark sees the firm threads and the finding, not Adrian's private brief.

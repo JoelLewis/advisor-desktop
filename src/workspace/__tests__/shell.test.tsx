@@ -100,6 +100,15 @@ describe('workspace shell', () => {
     expect(screen.queryByRole('complementary')).toBeNull()
   })
 
+  it("names the firm and the viewer in an outsider's banner; the product to the firm", async () => {
+    sessionStorage.setItem('ws-viewer', 'cli-001')
+    renderRoutes(routes, '/')
+    const banner = await screen.findByRole('banner')
+    expect(await within(banner).findByRole('link', { name: 'Larkfield Advisory' })).toHaveAttribute('href', '/')
+    expect(banner).toHaveTextContent('Robert Johnson')
+    expect(within(banner).queryByRole('link', { name: 'Advisor Desktop' })).toBeNull()
+  })
+
   it('lists the agents of the visible threads with their scopes', async () => {
     await renderHome()
     const agents = within(threadNav()).getByRole('heading', { name: 'Agents on this desk' }).closest('section') as HTMLElement
@@ -122,16 +131,16 @@ describe('workspace shell', () => {
   it('tells a client who reads their one conversation, compliance included, as the description of its row', async () => {
     await renderHome()
     await viewAs('Robert Johnson · Client')
-    await waitFor(() => expect(threadLinks()).toEqual(['Robert Johnson']))
+    await waitFor(() => expect(threadLinks()).toEqual(['Your conversation with Larkfield']))
     expect(within(threadNav()).queryByRole('list', { name: 'Visibility' })).toBeNull()
-    expect(within(threadNav()).getByRole('link', { name: 'Robert Johnson' })).toHaveAccessibleDescription(`Visibility: ${OUTSIDER_BAND}`)
+    expect(within(threadNav()).getByRole('link', { name: 'Your conversation with Larkfield' })).toHaveAccessibleDescription(`Visibility: ${OUTSIDER_BAND}`)
   })
 
   it('viewing as Robert leaves only his thread and no agents', async () => {
     await renderHome()
     await viewAs('Robert Johnson · Client')
-    await waitFor(() => expect(threadLinks()).toEqual(['Robert Johnson']))
-    await waitFor(() => expect(groupHeadings()).toEqual(['Your conversation']))
+    await waitFor(() => expect(threadLinks()).toEqual(['Your conversation with Larkfield']))
+    await waitFor(() => expect(groupHeadings()).toEqual(['Larkfield Advisory']))
     expect(within(threadNav()).queryByText('Drift Monitor')).toBeNull()
     expect(screen.getByRole('combobox', { name: 'View as' })).toHaveValue('cli-001')
   })
@@ -139,7 +148,7 @@ describe('workspace shell', () => {
   it('the view-as list stays complete while viewing as the client', async () => {
     await renderHome()
     await viewAs('Robert Johnson · Client')
-    await waitFor(() => expect(threadLinks()).toEqual(['Robert Johnson']))
+    await waitFor(() => expect(threadLinks()).toEqual(['Your conversation with Larkfield']))
     expect(within(screen.getByRole('combobox', { name: 'View as' })).getAllByRole('option')).toHaveLength(6)
   })
 

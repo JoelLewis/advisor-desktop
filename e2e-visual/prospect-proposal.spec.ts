@@ -48,6 +48,7 @@ const pellThread = async (page: Page) => { await sent(page, 'light'); await sett
 const pellThreadAsHer = async (page: Page) => {
   await sent(page, 'light')
   await viewAs(page, 'Dr. Amanda Pell · Prospect')
+  await expect(heading(page)).toHaveText('Your conversation with Larkfield')
   await expect(context(page).getByRole('region', { name: 'Your steps' })).toBeVisible()
   await settle(page)
 }

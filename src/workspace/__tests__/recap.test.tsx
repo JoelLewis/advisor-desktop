@@ -5,6 +5,7 @@ import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
 import { draftMeetingNotes, draftRecap, fileMeetingRecord, getMeeting, holdMeeting, sendToParty } from '@/services/workspace'
 import { store } from '@/mocks/data/workspace-store'
+import { OUTSIDER_THREAD_TITLE } from '@/workspace/people/roster'
 
 const ADRIAN = 'user-001'
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
@@ -58,7 +59,7 @@ describe("Robert's recap", () => {
     await sendToParty(ADRIAN, draft.id)
     viewAsOnLoad('cli-001')
     renderRoutes(routes, '/t/th-robert')
-    await screen.findByRole('heading', { level: 1, name: 'Robert Johnson' })
+    await screen.findByRole('heading', { level: 1, name: OUTSIDER_THREAD_TITLE })
     await waitFor(() => expect(conversation().getAllByRole('listitem')).toHaveLength(3))
     const texts = store().messages.filter((m) => m.threadId === 'th-robert' && m.kind === 'text')
     expect(texts).toHaveLength(2)

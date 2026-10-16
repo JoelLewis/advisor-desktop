@@ -122,7 +122,7 @@ test("the README's five-minute path, end to end", async ({ page }) => {
   await viewAs(page, 'Robert Johnson · Client')
   const threads = page.getByRole('navigation', { name: 'Threads' }).getByRole('link')
   await expect(threads).toHaveCount(1)
-  await expect(threads).toHaveAccessibleName('Robert Johnson')
+  await expect(threads).toHaveAccessibleName('Your conversation with Larkfield')
   await threads.click()
   await expect(conversation(page).getByRole('listitem')).toHaveCount(3)
   await expect(conversation(page)).toContainText('What we decided:')

@@ -1,11 +1,13 @@
 import { useId } from 'react'
 import { NavLink } from 'react-router-dom'
+import { FIRM_NAME } from '@/lib/firm'
 import { cn } from '@/lib/utils'
 import { Pane } from '@/kit/layout/Pane'
 import { VisibilityMark } from '@/kit/visibility/VisibilityMark'
 import { ThreadListSkeleton } from '@/workspace/shell/ThreadListSkeleton'
 import { useDirectory, useThreads } from '@/hooks/use-workspace'
 import { isExternalViewerIn } from '@/workspace/people/directory-people'
+import { threadTitleFor } from '@/workspace/people/roster'
 import { THREAD_GROUP_TITLE, bandWordsOf } from '@/workspace/people/visibility-words'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { AgentScope } from '@/workspace/people/AgentScope'
@@ -13,9 +15,6 @@ import type { AgentProfile, ListedThread, Thread, Visibility } from '@/types/wor
 
 const GROUPS: readonly { visibility: Visibility; title: string }[] =
   (['private', 'internal', 'client'] as const).map((visibility) => ({ visibility, title: THREAD_GROUP_TITLE[visibility] }))
-
-/** An outsider sees only their own conversation with the firm, titled as theirs. */
-const EXTERNAL_GROUP_TITLE = 'Your conversation'
 
 export function ThreadList() {
   const threads = useThreads()
@@ -31,8 +30,9 @@ export function ThreadList() {
       {external ? null : <DeskLinks />}
       {GROUPS.map(({ visibility, title }) => {
         const group = threads.data.filter((t) => t.visibility === visibility)
+        // An outsider sees only their own conversation, under the firm they deal with.
         return group.length > 0
-          ? <ThreadGroup key={visibility} title={external && visibility === 'client' ? EXTERNAL_GROUP_TITLE : title} threads={group} viewerIsExternal={external} />
+          ? <ThreadGroup key={visibility} title={external && visibility === 'client' ? FIRM_NAME : title} threads={group} viewerIsExternal={external} />
           : null
       })}
       <DeskAgents threads={threads.data} agents={directory.data.agents} />
@@ -61,7 +61,7 @@ function ThreadRow({ thread: t, viewerIsExternal }: { thread: ListedThread; view
         {({ isActive }) => (
           <>
             <VisibilityMark visibility={t.visibility} />
-            <span className={cn('text-body', isActive && 'font-semibold')}>{t.title}</span>
+            <span className={cn('text-body', isActive && 'font-semibold')}>{threadTitleFor(t, viewerIsExternal)}</span>
           </>
         )}
       </NavLink>

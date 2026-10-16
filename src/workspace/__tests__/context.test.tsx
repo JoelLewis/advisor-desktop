@@ -16,9 +16,12 @@ const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
 async function openThread(path: string, title: string) {
   const view = renderRoutes(routes, path)
   await screen.findByRole('heading', { level: 1, name: title })
-  await screen.findByRole('heading', { level: 2, name: 'Who can see' })
+  await inContext().findByRole('region', { name: /^(Binding acts|Records)$/ })
   return view
 }
+
+/** The roster under the thread's title, without its visual "Who can see:" prefix. */
+const roster = () => screen.getByRole('note', { name: 'Who can see' }).textContent?.replace(/^Who can see: /, '')
 
 const contextColumn = () => screen.getByRole('complementary', { name: 'Thread context' })
 const inContext = () => within(contextColumn())
@@ -72,10 +75,8 @@ describe('thread context column', () => {
     expect(document.body).toHaveTextContent('Retained as a record')
     expect(inContext().queryByRole('region', { name: 'Ask an agent' })).toBeNull()
     expect(inContext().queryByRole('button')).toBeNull()
-    const seenBy = within(section('Who can see'))
-    expect(seenBy.getAllByRole('listitem').map((li) => li.textContent)).toEqual([
-      'Robert Johnson · Client', 'Adrian Hale · Advisor', 'Sarah Mitchell · Client service',
-    ])
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Your conversation with Larkfield')
+    expect(roster()).toBe('Robert Johnson · Client, Adrian Hale · Advisor, Sarah Mitchell · Client service, Larkfield compliance (review)')
     expect(contextColumn()).not.toHaveTextContent('Mark Davis')
     expect(contextColumn()).not.toHaveTextContent('Drift Monitor')
 
@@ -142,26 +143,28 @@ describe('thread context column', () => {
 
   it('lists the members, compliance supervision and the agents with their scopes', async () => {
     await openThread('/t/th-johnson-review', 'Johnson Rebalance Review')
-    const seenBy = within(section('Who can see'))
-    expect(seenBy.getAllByRole('listitem').map((li) => li.textContent)).toEqual([
-      'Adrian Hale · Advisor', 'Sarah Mitchell · Client service', 'Mike Chen · Analyst', 'Mark Davis · Compliance (supervision)',
+    expect(roster()).toBe('Adrian Hale · Advisor, Sarah Mitchell · Client service, Mike Chen · Analyst, Mark Davis · Compliance (supervision)')
+    const agents = within(section('Agents'))
+    expect(agents.getAllByRole('listitem').map((li) => li.textContent)).toEqual([
       expect.stringMatching(/^Drift Monitor/), expect.stringMatching(/^Pre-trade Check/), expect.stringMatching(/^Proposal Agent/),
     ])
-    const drift = seenBy.getByText('Drift Monitor').closest('li') as HTMLElement
+    const drift = agents.getByText('Drift Monitor').closest('li') as HTMLElement
     expect(drift).toHaveTextContent('may measure and flag')
     expect(drift).toHaveTextContent('may not stage or release trades · post in a client thread')
   })
 
-  it("lists compliance supervision on a client thread for firm viewers, and not on a private one", async () => {
+  it("lists compliance supervision under a client thread's title for firm viewers, and leaves it out of the context column", async () => {
     await openThread('/t/th-robert', 'Robert Johnson')
-    expect(section('Who can see')).toHaveTextContent('Mark Davis · Compliance (supervision)')
+    expect(roster()).toContain('Mark Davis · Compliance (supervision)')
+    expect(inContext().queryByRole('heading', { name: 'Who can see' })).toBeNull()
     expect(inContext().queryByRole('region', { name: 'Ask an agent' })).toBeNull()
   })
 
   it('a private thread is seen by its owner alone', async () => {
     await openThread('/t/th-brief', 'Brief')
-    expect(within(section('Who can see')).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
-      'Adrian Hale · Advisor', expect.stringMatching(/^Drift Monitor/), expect.stringMatching(/^Harvest Scanner/),
+    expect(roster()).toBe('Adrian Hale · Advisor')
+    expect(within(section('Agents')).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
+      expect.stringMatching(/^Drift Monitor/), expect.stringMatching(/^Harvest Scanner/),
     ])
     expect(contextColumn()).not.toHaveTextContent('Mark Davis')
   })
@@ -171,6 +174,16 @@ describe('thread context column', () => {
     const link = await within(section('Full views')).findByRole('link', { name: /^Robert Johnson Individual/ })
     expect(link).toHaveAttribute('href', '/accounts/acc-002?from=th-johnson-review')
     expect(link).toHaveTextContent('Robert Johnson Individual ↗')
+  })
+
+  it("tells Robert, on his own thread, that compliance reviews it, without naming anyone in compliance", async () => {
+    viewAsOnLoad('cli-001')
+    renderRoutes(routes, '/t/th-robert')
+    await screen.findByRole('heading', { level: 1, name: 'Your conversation with Larkfield' })
+    expect(roster()).toContain('Larkfield compliance (review)')
+    expect(roster()).not.toContain('Mark Davis')
+    await inContext().findByRole('region', { name: 'Records' })
+    expect(inContext().queryByRole('region', { name: 'Agents' })).toBeNull()
   })
 
   it('a firm viewer without the send permission sees the draft but no Send button', async () => {

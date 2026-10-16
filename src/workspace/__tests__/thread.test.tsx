@@ -13,6 +13,7 @@ import { fmtDrift, fmtEasternStamp, fmtTolerance, UNIT } from '@/kit/measure'
 import { assetClassLabel } from '@/workspace/asset-class-label'
 import { embedFor } from '@/workspace/thread/embeds/embed-registry'
 import { requireModelManaged } from '@/lib/mandate'
+import { OUTSIDER_THREAD_TITLE } from '@/workspace/people/roster'
 
 const ADRIAN = 'user-001'
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
@@ -155,7 +156,7 @@ describe('thread view', () => {
 
   it('as Robert the composer posts to his own thread', async () => {
     viewAsOnLoad('cli-001')
-    await openThread('/t/th-robert', 'Robert Johnson')
+    await openThread('/t/th-robert', OUTSIDER_THREAD_TITLE)
     const box = composerBox()
     expect(box).not.toHaveAttribute('placeholder', expect.stringContaining('draft'))
     const user = userEvent.setup()
@@ -194,7 +195,7 @@ describe('thread view', () => {
     const draft = await createDraft(ADRIAN, 'th-robert', 'Sarah will be in touch this week.')
     const act = await sendToParty(ADRIAN, draft.id)
     viewAsOnLoad('cli-001')
-    await openThread('/t/th-robert', 'Robert Johnson')
+    await openThread('/t/th-robert', OUTSIDER_THREAD_TITLE)
     const slip = await within(conversation()).findByRole('article', { name: 'Sent to you' })
     const s = within(slip)
     expect(s.getByText('Message from Adrian Hale')).toBeInTheDocument()

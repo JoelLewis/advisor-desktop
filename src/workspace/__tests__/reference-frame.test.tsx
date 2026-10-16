@@ -5,6 +5,7 @@ import { routes } from '@/app/routes'
 import { renderRoutes, renderWithProviders } from '@/test/render'
 import { resolveBreak, getReconciliation } from '@/services/reference'
 import { ReferencePage } from '@/workspace/reference/ReferencePage'
+import { OUTSIDER_THREAD_TITLE } from '@/workspace/people/roster'
 
 const threadNav = () => screen.getByRole('navigation', { name: 'Threads' })
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
@@ -45,7 +46,7 @@ describe('the Desk pane', () => {
     viewAsOnLoad('cli-001')
     renderRoutes(routes, '/')
     const nav = await screen.findByRole('navigation', { name: 'Threads' })
-    await within(nav).findByRole('link', { name: 'Robert Johnson' })
+    await within(nav).findByRole('link', { name: OUTSIDER_THREAD_TITLE })
     expect(within(nav).queryByRole('heading', { name: 'Reference' })).toBeNull()
   })
 })

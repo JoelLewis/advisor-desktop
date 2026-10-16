@@ -95,6 +95,7 @@ const robertRecapClient = async (page: Page) => {
   await letterDraft(page).getByRole('button', { name: 'Send to Robert' }).click()
   await expect(conversation(page)).toContainText('What we decided:')
   await viewAs(page, 'Robert Johnson · Client')
+  await expect(heading(page)).toHaveText('Your conversation with Larkfield')
   await expect(conversation(page).getByRole('listitem')).toHaveCount(3)
   await settle(page)
 }
@@ -233,13 +234,15 @@ test('one presenter runs the Johnson annual review end to end; Robert sees only 
   await viewAs(page, 'Robert Johnson · Client')
   await expect(conversation(page).getByRole('listitem')).toHaveCount(3)
   await expect(conversation(page)).toContainText('When is my annual review this year?')
-  // Not the whole body: the presenter's "View as" select names every person, and "Who can see" names Sarah, a member of Robert's thread.
+  // Not the whole body: the presenter's "View as" select names every person. Not the whole main area either: the roster
+  // under his title names Sarah, a member of Robert's thread; the messages must not.
   // Robert's own send slip carries its own record id and fingerprint (the send act's), so the check names the filing's.
   const firmRecord = new RegExp(`transcript|agenda|Meeting Notes|follow-up|filed record|${filedId}|${filedFingerprint}|fingerprint [0-9A-F]{8}`, 'i')
   await expect(conversation(page).getByRole('listitem').last()).toContainText(/REC-\d{4}/)
   await expect(conversation(page).getByRole('listitem').last()).not.toContainText(filedId)
   await expect(page.getByRole('main')).not.toContainText(firmRecord)
-  await expect(page.getByRole('main')).not.toContainText(/Sarah Mitchell|Mike Chen/)
+  await expect(conversation(page)).not.toContainText(/Sarah Mitchell|Mike Chen/)
+  await expect(page.getByLabel('Who can see')).not.toContainText(/Mike Chen|Mark Davis/)
   await expect(context(page)).not.toContainText(firmRecord)
   await expect(context(page).getByRole('region', { name: 'Records' })).not.toContainText(/Sarah Mitchell|Mike Chen/)
   await expect(page.getByRole('navigation', { name: 'Threads' }).getByRole('link')).toHaveCount(1)

@@ -6,6 +6,7 @@ import { renderRoutes } from '@/test/render'
 import { OUTSIDER_BAND } from '@/workspace/people/visibility-words'
 import { store } from '@/mocks/data/workspace-store'
 import { PELL_REPLY } from '@/mocks/data/prospect-script'
+import { OUTSIDER_THREAD_TITLE } from '@/workspace/people/roster'
 import {
   advanceProspect, approveProspectProposal, createProspectProposal, deliverDisclosure, recordCoffee, reviseProspectProposal, sendProspectProposal,
 } from '@/services/workspace'
@@ -17,9 +18,9 @@ const inContext = () => within(screen.getByRole('complementary', { name: 'Thread
 const conversation = () => within(screen.getByRole('list', { name: 'Messages' }))
 const section = (name: string) => inContext().findByRole('region', { name })
 
-async function openHerThread() {
+async function openHerThread(title = 'Dr. Amanda Pell') {
   renderRoutes(routes, '/t/th-pell')
-  await screen.findByRole('heading', { level: 1, name: 'Dr. Amanda Pell' })
+  await screen.findByRole('heading', { level: 1, name: title })
 }
 async function approvedV1() {
   await recordCoffee(ADRIAN, PELL, 'Coffee after the introduction.')
@@ -153,11 +154,11 @@ describe('her thread, as she sees it', () => {
     await recordCoffee(ADRIAN, PELL, 'Coffee.')
     await deliverDisclosure(ADRIAN, PELL, 'form_crs')
     viewAsOnLoad(PELL)
-    await openHerThread()
+    await openHerThread(OUTSIDER_THREAD_TITLE)
     expect(screen.getByRole('note', { name: `Visibility: ${OUTSIDER_BAND}` })).toBeInTheDocument()
     const links = within(screen.getByRole('navigation', { name: 'Threads' })).getAllByRole('link')
     expect(links).toHaveLength(1)
-    expect(links[0]).toHaveAccessibleName('Dr. Amanda Pell')
+    expect(links[0]).toHaveAccessibleName(OUTSIDER_THREAD_TITLE)
     const steps = await section('Your steps')
     await user.click(within(steps).getByRole('button', { name: 'Answer the questionnaire' }))
     expect(await conversation().findByRole('article', { name: 'Dr. Amanda Pell · Answered the risk questionnaire.' })).toBeInTheDocument()
@@ -170,8 +171,8 @@ describe('her thread, as she sees it', () => {
     const user = userEvent.setup()
     await sentV1()
     viewAsOnLoad(PELL)
-    await openHerThread()
-    expect(within(screen.getByRole('navigation', { name: 'Threads' })).getByRole('heading', { name: 'Your conversation' })).toBeInTheDocument()
+    await openHerThread(OUTSIDER_THREAD_TITLE)
+    expect(within(screen.getByRole('navigation', { name: 'Threads' })).getByRole('heading', { name: 'Larkfield Advisory' })).toBeInTheDocument()
     const steps = await section('Your steps')
     await user.click(within(steps).getByRole('button', { name: 'Accept the proposal' }))
     const dialog = await screen.findByRole('dialog', { name: 'Accept the proposal?' })
