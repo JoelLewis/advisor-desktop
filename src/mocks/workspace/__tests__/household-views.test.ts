@@ -61,7 +61,7 @@ describe('the household view', () => {
   })
 
   it("lists the taxpayer's open wash-sale windows, and the one the morning's fills open", () => {
-    expect(johnson().windows).toEqual([{ saleId: 'rs-001', accountName: 'Robert Johnson Individual', symbol: 'INTC', name: 'Intel Corp.', saleDate: '2026-02-20', through: '2026-03-22', loss: -32_750 }])
+    expect(johnson().windows).toEqual([{ saleId: 'rs-001', accountName: 'Robert Johnson · Individual (…3847)', symbol: 'INTC', name: 'Intel Corp.', saleDate: '2026-02-20', through: '2026-03-22', loss: -32_750 }])
     release(approvedV1())
     expect(johnson().windows.map((w) => [w.saleId, w.through])).toEqual([['rs-001', '2026-03-22'], ['rs-006', '2026-03-27']])
     expect(johnson().accounts[1]!.value).toBe(valueOf('acc-002'))

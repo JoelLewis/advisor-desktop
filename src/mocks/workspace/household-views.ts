@@ -71,7 +71,11 @@ function summaryOf(household: HouseholdFixture): HouseholdSummary {
     id: h.id, ownerName: clientName(h.clientId), institution: h.institutionName, accountType: h.accountType, value: h.estimatedValue, reportedOn: h.lastUpdated,
   }))
   const plan = plans.find((p) => p.householdId === household.id)
-  const accountName = (id: string) => accounts.find((a) => a.id === id)?.name ?? id
+  const accountNameOf = (id: string) => {
+    const account = accounts.find((a) => a.id === id)
+    if (!account) throw new Error(`A wash-sale window names no account ${id}`)
+    return accountDisplayName(account)
+  }
   const pending = documents.filter((d) => memberIds.has(d.clientId) && d.signatureStatus === 'pending')
   const ips = ipsOf(memberIds)
   return {
@@ -82,7 +86,7 @@ function summaryOf(household: HouseholdFixture): HouseholdSummary {
     goals: (plan?.goals ?? []).map((g) => ({ id: g.id, name: g.name, probability: g.probability, funded: g.currentFunding / g.targetAmount, status: g.status })),
     ...(plan ? { planProbability: plan.aggregateProbability } : {}),
     windows: openWashSaleWindows(MOCK_TODAY_ISO, household.id).map((w) => ({
-      saleId: w.id, accountName: accountName(w.accountId), symbol: w.symbol, name: w.name, saleDate: w.saleDate, through: w.end, loss: w.realizedGainLoss,
+      saleId: w.id, accountName: accountNameOf(w.accountId), symbol: w.symbol, name: w.name, saleDate: w.saleDate, through: w.end, loss: w.realizedGainLoss,
     })),
     ...(ips ? { ips } : {}),
     openItems: [

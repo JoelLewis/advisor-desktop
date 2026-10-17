@@ -10,6 +10,10 @@ describe('accountDisplayName', () => {
   it('a named account keeps its name', () => {
     expect(accountDisplayName({ name: 'Johnson Family Trust', type: 'trust_revocable', accountNumber: 'TRU-847291' })).toBe('Johnson Family Trust (…7291)')
   })
+  it('a trust keeps its full legal name, revocable or irrevocable', () => {
+    expect(accountDisplayName({ name: 'Chen Family Irrevocable Trust', type: 'trust_irrevocable', accountNumber: 'TRU-880182' })).toBe('Chen Family Irrevocable Trust (…0182)')
+    expect(accountDisplayName({ name: 'Smith Family Revocable Trust', type: 'trust_revocable', accountNumber: 'TRU-880555' })).toBe('Smith Family Revocable Trust (…0555)')
+  })
   it('every account in the book has a display name', () => {
     for (const a of accounts) expect(accountDisplayName(a), a.id).toMatch(/ \(…\d{4}\)$/)
   })
