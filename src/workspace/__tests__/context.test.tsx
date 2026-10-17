@@ -62,7 +62,7 @@ describe('thread context column', () => {
 
     await createDraft(ADRIAN, 'th-robert', 'Your statement is ready.')
     await viewAs('Robert Johnson · Client')
-    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Message' })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Message to the Larkfield team' })).toBeInTheDocument())
     const record = await within(section('Records')).findByRole('article', { name: 'Sent to you' })
     expect(record).toHaveTextContent('Message from Adrian Hale')
     expect(record).not.toHaveTextContent('REC-0001')

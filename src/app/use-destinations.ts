@@ -11,6 +11,7 @@ import { proposalWorkbenchHref } from '@/workspace/proposal/proposal-href'
 import { accountAttributionHref, accountRiskHref, billingHref, blotterHref, bookRiskHref, modelHref, modelsHref, practiceHref, reconciliationHref } from '@/workspace/full-views/reference-href'
 import { clientFullViewHref, householdFullViewHref, meetingFullViewHref, prospectFullViewHref } from '@/workspace/full-views/full-view-href'
 import { isExternalViewerIn } from '@/workspace/people/directory-people'
+import { threadTitleFor } from '@/workspace/people/roster'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import type { Destination } from '@/kit/keyboard/keys'
 
@@ -45,7 +46,8 @@ export function useDestinations(): Destination[] {
 
   return [
     { id: 'home', label: 'Workspace home', aliases: ['home'], run: () => navigate('/') },
-    ...threads.map((t) => ({ id: `thread-${t.id}`, label: `Thread · ${t.title}`, aliases: [], run: () => navigate(`/t/${t.id}`) })),
+    // An outsider's conversation is titled for them, as in the list; until the directory says who the viewer is, no thread is offered.
+    ...(directory ? threads.map((t) => ({ id: `thread-${t.id}`, label: `Thread · ${threadTitleFor(t, !firmViewer)}`, aliases: [], run: () => navigate(`/t/${t.id}`) })) : []),
     ...accounts.flatMap(({ data }) => (data
       ? [{ id: `account-${data.id}`, label: `Account · ${accountDisplayName(data)}`, aliases: [], run: () => navigate(`/accounts/${data.id}`) }]
       : [])),

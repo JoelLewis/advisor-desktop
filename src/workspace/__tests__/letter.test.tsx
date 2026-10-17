@@ -69,7 +69,7 @@ describe('the client letter', () => {
     expect(within(drafts).queryByText(/^The Client Letter Agent('s letter| drafted a letter)/)).toBeNull()
 
     await viewAs('Robert Johnson · Client')
-    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Message' })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Message to the Larkfield team' })).toBeInTheDocument())
     expect(conversation()).toHaveTextContent('Dear Robert,')
     const page = document.body
     expect(page).not.toHaveTextContent('Client Letter Agent')

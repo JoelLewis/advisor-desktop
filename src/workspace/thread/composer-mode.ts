@@ -1,8 +1,9 @@
 import type { Directory, Thread } from '@/types/workspace'
 import { addressNameOf } from '@/lib/words'
+import { FIRM_SHORT_NAME } from '@/lib/firm'
 
 export type ComposerMode =
-  | { kind: 'post'; action: 'Post to the team' | 'Post' | 'Send' }
+  | { kind: 'post'; label: string; action: string }
   | { kind: 'draft'; partyName: string; addressName: string; canSend: boolean }
   | { kind: 'read-only' }
 
@@ -13,7 +14,8 @@ export type ComposerMode =
 export function composerModeOf(thread: Thread, viewerId: string, directory: Directory): ComposerMode {
   const acts = directory.permissions[viewerId] ?? []
   if (thread.visibility === 'client') {
-    if (thread.partyId === viewerId) return { kind: 'post', action: 'Send' }
+    // The client or prospect writes to the firm, and the composer says so.
+    if (thread.partyId === viewerId) return { kind: 'post', label: `Message to the ${FIRM_SHORT_NAME} team`, action: `Send to ${FIRM_SHORT_NAME}` }
     if (!acts.includes('draft_for_client')) return { kind: 'read-only' }
     const party = directory.people.find((p) => p.id === thread.partyId)
     if (!party) throw new Error(`The party of thread "${thread.id}" is not in the directory`)
@@ -21,5 +23,5 @@ export function composerModeOf(thread: Thread, viewerId: string, directory: Dire
   }
   const belongs = thread.memberIds.includes(viewerId) || thread.ownerId === viewerId
   if (!belongs || !acts.includes('post_firm')) return { kind: 'read-only' }
-  return { kind: 'post', action: thread.visibility === 'internal' ? 'Post to the team' : 'Post' }
+  return { kind: 'post', label: 'Message', action: thread.visibility === 'internal' ? 'Post to the team' : 'Post' }
 }

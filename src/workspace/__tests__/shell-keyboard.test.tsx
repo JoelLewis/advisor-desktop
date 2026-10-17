@@ -84,7 +84,7 @@ describe('keyboard in the shell', () => {
     ])
   })
 
-  it('after a switch to Robert, offers only his thread plus home: no kit for a client', async () => {
+  it('after a switch to Robert, offers only his conversation, titled for him, plus home: no kit for a client', async () => {
     await renderAt('/')
     const user = userEvent.setup()
     const select = await screen.findByRole('combobox', { name: 'View as' })
@@ -93,7 +93,7 @@ describe('keyboard in the shell', () => {
     await waitFor(() => expect(within(threadNav()).queryByRole('link', { name: 'Brief' })).toBeNull())
     act(() => (document.activeElement as HTMLElement).blur())
     await openCommandLine()
-    expect(destinationNames()).toEqual(['Workspace home', 'Thread · Robert Johnson'])
+    expect(destinationNames()).toEqual(['Workspace home', 'Thread · Your conversation with Larkfield'])
   })
 
   it('[ focuses the thread list, \\ the main region, ] the context column when there is one', async () => {

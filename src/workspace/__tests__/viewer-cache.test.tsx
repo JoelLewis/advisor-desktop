@@ -35,7 +35,7 @@ describe('switching viewer with the production cache', () => {
     await waitFor(() => expect(conversation()).toHaveTextContent('Your review is booked for next month.'))
 
     await viewAs('Robert Johnson · Client')
-    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Message' })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Message to the Larkfield team' })).toBeInTheDocument())
     await waitFor(() => expect(conversation()).toHaveTextContent('Your review is booked for next month.'))
   })
 

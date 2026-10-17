@@ -16,7 +16,7 @@ export function Composer({ thread, directory }: { thread: Thread; directory: Dir
     case 'read-only':
       return <p className="border-t border-rule pt-4 text-body text-ink-3">You can read this thread but not post in it.</p>
     case 'post':
-      return <PostComposer threadId={thread.id} action={mode.action} />
+      return <PostComposer threadId={thread.id} label={mode.label} action={mode.action} />
     case 'draft':
       return <ClientComposer threadId={thread.id} mode={mode} />
   }
@@ -24,10 +24,10 @@ export function Composer({ thread, directory }: { thread: Thread; directory: Dir
 
 const DRAFT_SAVED = 'Draft saved — not sent.'
 
-function PostComposer({ threadId, action }: { threadId: string; action: string }) {
+function PostComposer({ threadId, label, action }: { threadId: string; label: string; action: string }) {
   const post = usePostMessage(threadId)
   const announce = useAnnounce()
-  return <ComposerForm label="Message" action={action} pending={post.isPending} error={post.error}
+  return <ComposerForm label={label} action={action} pending={post.isPending} error={post.error}
     submit={(body, done) => post.mutate(body, { onSuccess: () => { done(); announce('Posted.') } })} />
 }
 

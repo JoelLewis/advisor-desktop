@@ -29,9 +29,15 @@ describe('routes', () => {
     renderAt('/portfolios/trading')
     expect(await screen.findByRole('heading', { level: 1, name: 'Page not found' })).toBeInTheDocument()
     const main = screen.getByRole('main')
-    const links = within(main).getAllByRole('link')
-    expect(links.map((l) => [l.textContent, l.getAttribute('href')])).toEqual([['The workspace', '/'], ['The Brief', '/t/th-brief']])
+    await waitFor(() => expect(within(main).getAllByRole('link').map((l) => [l.textContent, l.getAttribute('href')])).toEqual([['The workspace', '/'], ['The Brief', '/t/th-brief']]))
     expect(within(main).getByRole('list', { name: 'Starting points' })).toBeInTheDocument()
+  })
+  it('an outsider lost at an unknown path is offered only their own conversation', async () => {
+    sessionStorage.setItem('ws-viewer', 'cli-001')
+    renderAt('/portfolios/trading')
+    const main = await screen.findByRole('main')
+    await waitFor(() => expect(within(main).getAllByRole('link').map((l) => [l.textContent, l.getAttribute('href')])).toEqual([['Your conversation with Larkfield', '/t/th-robert']]))
+    expect(main).not.toHaveTextContent('Brief')
   })
   it.each([
     ['/', 'Workspace · Advisor Desktop'],

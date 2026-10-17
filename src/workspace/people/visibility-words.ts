@@ -10,7 +10,7 @@ export const THREAD_GROUP_TITLE: Readonly<Record<Visibility, string>> = {
 export const JUST_YOU = 'Just you'
 
 /** What a client or a prospect is told about who reads their conversation: the whole truth, compliance included. */
-export const OUTSIDER_BAND = `You and the ${FIRM_SHORT_NAME} team. Messages are kept and reviewed by compliance, as the law requires.`
+export const OUTSIDER_BAND = `You and the ${FIRM_SHORT_NAME} team. Messages are kept, as the law requires, and reviewed by compliance.`
 
 /** A team band, naming the clients who cannot read it as a button would address them. */
 export const teamWords = (about: readonly string[]): string =>

@@ -14,7 +14,7 @@ describe('visibility words', () => {
     expect(bandWordsOf({ kind: 'party', name: 'Robert Johnson' }, false)).toBe('Robert Johnson can read this')
   })
   it('an outsider is told the truth: the team, and compliance review', () => {
-    expect(OUTSIDER_BAND).toBe('You and the Larkfield team. Messages are kept and reviewed by compliance, as the law requires.')
+    expect(OUTSIDER_BAND).toBe('You and the Larkfield team. Messages are kept, as the law requires, and reviewed by compliance.')
     expect(bandWordsOf({ kind: 'party', name: 'Robert Johnson' }, true)).toBe(OUTSIDER_BAND)
   })
   it('a team band with nobody named never reads an empty name', () => expect(teamWords([])).not.toMatch(/·\s+can't/))
