@@ -108,7 +108,7 @@ test('one presenter runs Brief → proposal → revise → workbench → approve
   // 1. The Brief, ready on load.
   await visit(page, '/t/th-brief', 'light')
   await expect(page.getByRole('region', { name: 'Needs a decision' }).getByRole('listitem').first()).toContainText('US Equity is outside its tolerance band')
-  await expect(page.getByRole('region', { name: 'Needs a decision' })).toContainText("Growth sits above Robert Johnson's Moderate tolerance for this account; the household as a whole is within it")
+  await expect(page.getByRole('region', { name: 'Needs a decision' })).toContainText("Growth sits above Robert Johnson's Moderate tolerance for this account; after a rebalance to the model, Robert Johnson's accounts as a whole would sit within it")
 
   // 2. The INTC finding goes to the team thread.
   const intc = conversation(page).getByRole('article', { name: /^Harvest Scanner: The remaining Intel Corp\. shares can be sold at a loss today/ })

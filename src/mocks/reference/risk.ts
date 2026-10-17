@@ -1,14 +1,15 @@
 import type { Account } from '@/types/account'
 import type { MethodNote, RowQuote } from '@/types/reference'
 import type { Client } from '@/types/client'
-import type { AccountRiskView, BookRiskView, HouseholdRisk, RiskPosture, ToleranceStatus } from '@/types/reference-risk'
+import type { AccountRiskView, BookRiskView, ClientRisk, RiskPosture, ToleranceStatus } from '@/types/reference-risk'
 import { accounts } from '@/mocks/data/accounts'
 import { clients } from '@/mocks/data/clients'
 import { households } from '@/mocks/data/households'
-import { concentrationFor, riskProfileFor, stressScenariosFor } from '@/mocks/handlers/pms'
+import { concentrationFor, riskProfileFor, stressScenariosFor, type DriftHolding } from '@/mocks/handlers/pms'
+import { roundTo } from '@/mocks/handlers/utils'
 import { MODEL_DEFINITIONS } from '@/mocks/data/model-definitions'
 import { isFirmViewer } from '@/mocks/workspace/visibility'
-import { correlationAssumptionsText, parametricVaR } from '@/lib/risk-model'
+import { assetClassWeights, correlationAssumptionsText, parametricVaR, portfolioVolatility } from '@/lib/risk-model'
 import { RISK_PROFILE_TABLE, bandFor } from '@/lib/risk-profile'
 import { MOCK_NOW_ISO } from '@/lib/clock'
 import { GLIDE_PATH_MODELS } from '@/mocks/data/model-governance'
@@ -55,23 +56,56 @@ const householdNameOf = (householdId: string) => {
   return household.name
 }
 
+/** A mix's score: σ of its asset-class weights, rounded as `riskProfileFor` rounds it, on the questionnaire's scale. */
+export const scoreOfHoldings = (holdings: readonly DriftHolding[]): number =>
+  riskScoreOf(roundTo(portfolioVolatility(assetClassWeights(holdings)), 4))
+
+/** The score of the account's model, or undefined when there is none to measure: a custom mandate or a glide path. */
+export function modelScoreOf(account: Account): number | undefined {
+  if (account.mandate !== 'model' || followsGlidePath(account)) return undefined
+  return riskScoreOf(modelVolatility(account.modelId))
+}
+
 /**
- * Suitability is judged per household: the client's accounts in the household (a glide path aside, as it
- * is aside from the tolerance), each account's score weighted by its value, on the same scale and against
- * the same band. A spouse's accounts are measured against the spouse's own questionnaire. Undefined when
- * the client holds no measured account.
+ * Suitability is judged per client, against the client's own questionnaire: the client's accounts as a
+ * whole (a glide path aside, as it is aside from the tolerance). The figure is an average of the
+ * accounts' scores weighted by value, not the risk of the combined portfolio. A spouse's accounts are
+ * the spouse's own whole. `replaced` scores an account as it would hold after a proposal; trades leave
+ * its value unchanged. Undefined when the client holds no measured account.
  */
-export function householdRiskOf(clientId: string): HouseholdRisk | undefined {
+export function clientRiskOf(clientId: string, replaced: ReadonlyMap<string, number> = new Map()): ClientRisk | undefined {
   const client = clients.find((c) => c.id === clientId)
   if (!client) throw new Error(`No client ${clientId}`)
-  const measured = accounts.filter((a) => a.clientId === clientId && !followsGlidePath(a)).map((a) => ({ id: a.id, ...riskProfileFor(a) }))
+  const measured = accounts.filter((a) => a.clientId === clientId && !followsGlidePath(a)).map((a) => {
+    const p = riskProfileFor(a)
+    return { id: a.id, value: p.value, score: replaced.get(a.id) ?? riskScoreOf(p.vol) }
+  })
+  for (const id of replaced.keys()) if (!measured.some((m) => m.id === id)) throw new Error(`${id} is not one of ${clientId}'s measured accounts`)
   if (measured.length === 0) return undefined
   const value = measured.reduce((s, p) => s + p.value, 0)
-  const score = Math.round(measured.reduce((s, p) => s + riskScoreOf(p.vol) * p.value, 0) / value)
+  const score = Math.round(measured.reduce((s, p) => s + p.score * p.value, 0) / value)
   return {
     clientId, clientName: client.fullName, householdName: householdNameOf(client.householdId),
     accountIds: measured.map((p) => p.id), value, posture: postureAt(score, client, false),
   }
+}
+
+/** The direction asset location allows: a taxable account or a Roth may run above the client's band, a tax-deferred account below it. */
+const LOCATION_ALLOWS: Readonly<Record<Account['taxTreatment'], 'above' | 'below'>> = {
+  taxable: 'above', trust_taxable: 'above', tax_free: 'above', tax_deferred: 'below',
+}
+
+/**
+ * Asset location, not a flag: the account's model sits outside the client's band in the direction its
+ * tax treatment allows, the client's accounts as a whole sit within the band, and the account's own
+ * holdings sit within its model's band (an account outside because it drifted is still a flag).
+ */
+function isAssetLocation(account: Account, holdingsScore: number, wholeWithin: boolean): boolean {
+  const modelScore = modelScoreOf(account)
+  if (modelScore === undefined || !wholeWithin) return false
+  const tolerance = bandFor(clientOf(account).riskProfile.score)
+  const modelSide = modelScore > tolerance.ceiling ? 'above' : modelScore < tolerance.floor ? 'below' : undefined
+  return modelSide !== undefined && modelSide === LOCATION_ALLOWS[account.taxTreatment] && bandFor(holdingsScore).profile === bandFor(modelScore).profile
 }
 
 const modelName = (modelId: string) => {
@@ -104,7 +138,7 @@ const methods = (): MethodNote[] => [
   { label: 'Concentration', modeled: false, text: 'The Herfindahl-Hirschman index of position weights (0 to 10,000) and its effective number of positions; limits are the IPS limits for a single issuer, a pooled vehicle and cash.' },
   { label: 'Stress tests', modeled: true, text: "Each scenario's asset-class returns replayed on today's holdings." },
   { label: 'Risk score and tolerance', modeled: true, text: `Modeled, not realized: the account's σ placed on the questionnaire's 0 to 100 scale through the model each band of the firm's risk-profile table names. Tolerance is the band the client's questionnaire score falls in, not the score itself: an account is above or below when its score falls outside that band, by the points shown, and the book is read above first, then below, each by how far outside; accounts within are ordered by how close they sit to the top of the band. ${scaleText()}` },
-  { label: 'Screening, not suitability', modeled: false, text: "An account's status is a screening signal, not a suitability finding: suitability is judged per household. Each client's household score is the value-weighted average of the scores of that client's accounts in the household, glide paths aside, on the same scale and against the same band; a spouse's accounts are measured against the spouse's own questionnaire. Asset location can rightly hold an IRA more conservatively and a taxable account more aggressively, so an account outside the band whose household is within it is marked asset location." },
+  { label: 'Screening, not suitability', modeled: false, text: "An account's status is a screening signal, not a suitability finding: suitability is judged per client, against the client's own questionnaire, on the client's accounts as a whole. That whole is an average of the accounts' scores weighted by their value, glide paths aside, read against the same band; it is not the risk of the combined portfolio, which diversification would put lower. A spouse's accounts are the spouse's own whole, measured against the spouse's questionnaire. An account is marked asset location, not flagged, when its model sits outside the band in the direction its tax treatment allows (a taxable account or a Roth above, a tax-deferred account below), the client's accounts as a whole sit within the band, and the account's own holdings sit within its model's band; an account outside because it drifted from its model stays flagged. A client below the band calls for a review of whether the client is taking too little risk, not an unsuitability finding. An account whose model sits above the client's band needs a recorded suitability reason before a rebalance to it is approved." },
   { label: 'Glide paths', modeled: false, text: "A 529 on the education model follows its beneficiary's time horizon, not the owner's questionnaire, so it carries the status glide path and no comparison with the owner's tolerance; it is listed last." },
 ]
 
@@ -136,22 +170,26 @@ export function accountRiskView(viewerId: string, accountId: string): AccountRis
 
 export function bookRiskView(viewerId: string): BookRiskView | undefined {
   if (!isFirmViewer(viewerId)) return undefined
-  const householdRows = clients.flatMap((c) => householdRiskOf(c.id) ?? [])
+  const clientRows = clients.flatMap((c) => clientRiskOf(c.id) ?? [])
     .sort((a, b) => b.posture.sortKey - a.posture.sortKey || a.clientId.localeCompare(b.clientId))
-  const householdWithin = new Set(householdRows.filter((h) => h.posture.status === 'within').map((h) => h.clientId))
+  const wholeWithin = new Set(clientRows.filter((c) => c.posture.status === 'within').map((c) => c.clientId))
   const rows = accounts.map((a) => {
     const p = riskProfileFor(a)
     const posture = postureOf(a, p.vol)
-    const outside = posture.status === 'above' || posture.status === 'below'
     return {
       accountId: a.id, accountName: a.name, householdName: householdNameOf(a.householdId), clientName: clientOf(a).fullName, mandateName: mandateNameOf(a),
       value: p.value, volatility: p.vol, var95: Math.round(parametricVaR(p.value, p.vol)), posture,
-      assetLocation: outside && householdWithin.has(a.clientId),
+      assetLocation: isAssetLocation(a, posture.score, wholeWithin.has(a.clientId)),
     }
   }).sort((a, b) => b.posture.sortKey - a.posture.sortKey || a.accountId.localeCompare(b.accountId))
   const count = (status: ToleranceStatus) => rows.filter((r) => r.posture.status === status).length
+  const clientCount = (status: ToleranceStatus) => clientRows.filter((c) => c.posture.status === status).length
+  const needingReason = accounts.filter((a) => {
+    const modelScore = modelScoreOf(a)
+    return modelScore !== undefined && modelScore > bandFor(clientOf(a).riskProfile.score).ceiling
+  }).length
   return {
-    asOf: MOCK_NOW_ISO, households: householdRows, householdsOutside: householdRows.length - householdWithin.size,
+    asOf: MOCK_NOW_ISO, clients: clientRows, clientsAbove: clientCount('above'), clientsBelow: clientCount('below'), needingReason,
     rows, aboveTolerance: count('above'), belowTolerance: count('below'), methods: methods(),
   }
 }

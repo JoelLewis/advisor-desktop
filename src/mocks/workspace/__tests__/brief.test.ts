@@ -16,7 +16,7 @@ describe('the Brief, ready on load', () => {
     const [summary] = briefMessages()
     if (summary?.kind !== 'brief_summary') throw new Error('The Brief must open with its summary')
     expect(summary.decide[0]).toMatchObject({ agentId: 'drift-monitor', attention: 'attention', readings: [{ line: 'US Equity is outside its tolerance band' }] })
-    expect(summary.decide[1]).toMatchObject({ agentId: 'drift-monitor', attention: 'attention', readings: [{ line: "Growth sits above Robert Johnson's Moderate tolerance for this account; the household as a whole is within it" }] })
+    expect(summary.decide[1]).toMatchObject({ agentId: 'drift-monitor', attention: 'attention', readings: [{ line: "Growth sits above Robert Johnson's Moderate tolerance for this account; after a rebalance to the model, Robert Johnson's accounts as a whole would sit within it" }] })
     expect(summary.decide[2]).toMatchObject({ agentId: 'harvest-scanner', title: 'Intel Corp.' })
     const attention = [...summary.decide, ...summary.context].map((i) => i.attention)
     expect(attention).toEqual([...attention].sort((a, b) => Number(b === 'attention') - Number(a === 'attention')))

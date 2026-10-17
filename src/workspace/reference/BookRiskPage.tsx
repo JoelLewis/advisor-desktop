@@ -12,7 +12,7 @@ import { ReferenceGate } from './ReferenceGate'
 import { ReferencePage } from './ReferencePage'
 import { StackedCell } from './StackedCell'
 import { TakeToTeamThread } from './TakeToTeamThread'
-import { ASSET_LOCATION_TAG, TOLERANCE_TAG, beyondWords } from './reference-words'
+import { ASSET_LOCATION_TAG, TOLERANCE_TAG, beyondWords, wholeWords } from './reference-words'
 import { TABLE_LINK_TARGET } from '@/kit/link-target'
 
 export function BookRiskPage() {
@@ -25,27 +25,29 @@ function BookRisk({ view }: { view: BookRiskView }) {
   const from = params.get('from') ?? undefined
   return (
     <ReferencePage title="Risk" from={params.get('from')} methods={view.methods}
-      lead={<p className="text-body text-ink-2">{`Each client's household, then every account, against the client's tolerance · modeled, not realized · as of ${fmtEasternStamp(view.asOf)}`}</p>}>
+      lead={<p className="text-body text-ink-2">{`Each client's accounts as a whole, then every account, against the client's own tolerance · modeled, not realized · as of ${fmtEasternStamp(view.asOf)}`}</p>}>
       <div className="flex flex-wrap gap-x-10 gap-y-4">
-        <Reading label="Households outside tolerance" value={fmtQuantity(view.householdsOutside)} size="readout-sm" limit={`of ${fmtQuantity(view.households.length)} clients' households`} />
+        <Reading label="Clients above tolerance" value={fmtQuantity(view.clientsAbove)} size="readout-sm" limit={`of ${fmtQuantity(view.clients.length)} clients, accounts as a whole`} />
+        <Reading label="Clients below tolerance" value={fmtQuantity(view.clientsBelow)} size="readout-sm" limit="to review whether they take too little risk" />
+        <Reading label="Accounts needing a recorded reason" value={fmtQuantity(view.needingReason)} size="readout-sm" limit="model above the client's tolerance" />
         <Reading label="Accounts above tolerance" value={fmtQuantity(view.aboveTolerance)} size="readout-sm" limit={`of ${fmtQuantity(view.rows.length)} accounts`} />
         <Reading label="Accounts below tolerance" value={fmtQuantity(view.belowTolerance)} size="readout-sm" limit={`of ${fmtQuantity(view.rows.length)} accounts`} />
       </div>
-      <Pane title="Households">
-        <DataTable caption="Households against tolerance" rows={view.households} getRowId={(h) => h.clientId} noun={{ singular: 'household', plural: 'households' }}
-          mutedRow={(h) => h.posture.status === 'within'}
+      <Pane title="Clients">
+        <DataTable caption="Clients against tolerance" rows={view.clients} getRowId={(c) => c.clientId} noun={{ singular: 'client', plural: 'clients' }}
+          mutedRow={(c) => c.posture.status === 'within'}
           columns={[
             {
-              id: 'household', header: 'Household · client', wrap: true,
-              cell: (h) => <StackedCell primary={h.householdName} secondary={`${h.clientName} · ${fmtQuantity(h.accountIds.length)} ${h.accountIds.length === 1 ? 'account' : 'accounts'}`} />,
+              id: 'client', header: 'Client · accounts as a whole', wrap: true,
+              cell: (c) => <StackedCell primary={`${c.clientName} · all accounts`} secondary={`${c.householdName} · ${fmtQuantity(c.accountIds.length)} ${c.accountIds.length === 1 ? 'account' : 'accounts'}`} />,
             },
             {
-              id: 'status', header: 'Against tolerance · by how far', wrap: true, sortValue: (h) => h.posture.sortKey,
-              cell: (h) => <StackedCell primary={<Tag tone={h.posture.status === 'above' ? 'solid' : 'outline'}>{TOLERANCE_TAG[h.posture.status]}</Tag>} secondary={beyondWords(h.posture)} />,
+              id: 'status', header: 'Against tolerance · by how far', wrap: true, sortValue: (c) => c.posture.sortKey,
+              cell: (c) => <StackedCell primary={<Tag tone={c.posture.status === 'above' ? 'solid' : 'outline'}>{TOLERANCE_TAG[c.posture.status]}</Tag>} secondary={wholeWords(c.posture)} />,
             },
-            { id: 'score', header: 'Score', unit: UNIT.points, align: 'right', cell: (h) => <Num text={fmtPoints(h.posture.score)} />, sortValue: (h) => h.posture.score },
-            { id: 'tolerance', header: 'Questionnaire', unit: UNIT.points, align: 'right', cell: (h) => <Num text={fmtPoints(h.posture.tolerance.score)} />, sortValue: (h) => h.posture.tolerance.score },
-            { id: 'value', header: 'Value', unit: UNIT.usd, align: 'right', cell: (h) => <Num text={fmtMoney(h.value)} />, sortValue: (h) => h.value },
+            { id: 'score', header: 'Score', unit: UNIT.points, align: 'right', cell: (c) => <Num text={fmtPoints(c.posture.score)} />, sortValue: (c) => c.posture.score },
+            { id: 'tolerance', header: 'Questionnaire', unit: UNIT.points, align: 'right', cell: (c) => <Num text={fmtPoints(c.posture.tolerance.score)} />, sortValue: (c) => c.posture.tolerance.score },
+            { id: 'value', header: 'Value', unit: UNIT.usd, align: 'right', cell: (c) => <Num text={fmtMoney(c.value)} />, sortValue: (c) => c.value },
           ]} />
       </Pane>
       <Pane title="Accounts">
@@ -61,7 +63,7 @@ function BookRisk({ view }: { view: BookRiskView }) {
             {
               id: 'status', header: 'Against tolerance · by how far', wrap: true, sortValue: (r) => r.posture.sortKey,
               cell: (r) => r.assetLocation
-                ? <StackedCell primary={<Tag tone="outline">{ASSET_LOCATION_TAG}</Tag>} secondary={`${beyondWords(r.posture)}; household within`} />
+                ? <StackedCell primary={<Tag tone="outline">{ASSET_LOCATION_TAG}</Tag>} secondary={`${beyondWords(r.posture)}; ${r.posture.tolerance.clientName}'s accounts as a whole within`} />
                 : <StackedCell primary={<Tag tone={r.posture.status === 'above' ? 'solid' : 'outline'}>{TOLERANCE_TAG[r.posture.status]}</Tag>} secondary={beyondWords(r.posture)} />,
             },
             { id: 'score', header: 'Score', unit: UNIT.points, align: 'right', cell: (r) => <Num text={fmtPoints(r.posture.score)} />, sortValue: (r) => r.posture.score },

@@ -22,19 +22,20 @@ describe('book risk', () => {
     expect(screen.getByRole('region', { name: 'Methods & sources' })).toHaveTextContent('Value at riskMODELED')
   })
 
-  it("reads each client's household first, and marks an account outside its band asset location when the household is within it", async () => {
+  it("reads each client's accounts as a whole first, and marks the IRA asset location while the drifted taxable account stays flagged", async () => {
     renderRoutes(routes, '/risk')
     await screen.findByRole('heading', { level: 1, name: 'Risk' })
-    const households = within(screen.getByRole('table', { name: 'Households against tolerance' })).getAllByRole('row')
-    const robert = households.find((r) => r.textContent?.includes('Robert Johnson'))
-    expect(robert).toHaveTextContent('Johnson Household')
+    const clientRows = within(screen.getByRole('table', { name: 'Clients against tolerance' })).getAllByRole('row')
+    const robert = clientRows.find((r) => r.textContent?.includes('Robert Johnson · all accounts'))
     expect(robert).toHaveTextContent('WITHIN TOLERANCE')
-    const accounts = within(screen.getByRole('table', { name: 'Accounts against tolerance' })).getAllByRole('row')
-    const ira = accounts.find((r) => r.textContent?.includes('Robert Johnson Traditional IRA'))
+    expect(clientRows.find((r) => r.textContent?.includes('Thomas Kim · all accounts'))).toHaveTextContent('review whether too little risk')
+    const rows = within(screen.getByRole('table', { name: 'Accounts against tolerance' })).getAllByRole('row')
+    const ira = rows.find((r) => r.textContent?.includes('Robert Johnson Traditional IRA'))
     expect(ira).toHaveTextContent('ASSET LOCATION')
-    expect(ira).toHaveTextContent('below Moderate (41–55); household within')
-    expect(accounts.find((r) => r.textContent?.includes('Patel Digital Assets Account'))).toHaveTextContent('ABOVE TOLERANCE')
-    expect(screen.getByRole('region', { name: 'Methods & sources' })).toHaveTextContent('suitability is judged per household')
+    expect(ira).toHaveTextContent("below Moderate (41–55); Robert Johnson's accounts as a whole within")
+    expect(rows.find((r) => r.textContent?.includes('Robert Johnson Individual'))).toHaveTextContent('ABOVE TOLERANCE')
+    expect(screen.getByText('Accounts needing a recorded reason')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Methods & sources' })).toHaveTextContent('not the risk of the combined portfolio')
   })
 
   it('takes an account above tolerance to a team thread', async () => {

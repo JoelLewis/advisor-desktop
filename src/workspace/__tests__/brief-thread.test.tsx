@@ -27,7 +27,7 @@ describe('the Brief', () => {
     expect(items[0]).toHaveTextContent('US Equity is outside its tolerance band')
     expect(items[0]).toHaveTextContent('+13.2')
     expect(items[0]!.querySelector('[data-status="OUT"]')).not.toBeNull()
-    expect(items[1]).toHaveTextContent("Growth sits above Robert Johnson's Moderate tolerance for this account; the household as a whole is within it")
+    expect(items[1]).toHaveTextContent("Growth sits above Robert Johnson's Moderate tolerance for this account; after a rebalance to the model, Robert Johnson's accounts as a whole would sit within it")
     expect(items[1]).toHaveTextContent('66')
     expect(items[2]).toHaveTextContent('Intel Corp.')
     expect(items[2]).toHaveTextContent('−45,850')

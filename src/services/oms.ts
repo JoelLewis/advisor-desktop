@@ -3,7 +3,7 @@ import type { TradableAssetClass, TimeInForce, BondPriceType, MutualFundAmountTy
 import type { CurrencyCode } from '@/types/currency'
 import type { AssetClass } from '@/types/portfolio'
 import type { WashedLoss } from '@/lib/wash-sale'
-import type { HouseholdStatus } from '@/types/reference-risk'
+import type { WholeStatus } from '@/types/reference-risk'
 
 /** Previews and checks read the firm's book: each request names its viewer, and an outsider is told they do not exist. */
 const as = (viewer: string) => ({ 'X-Viewer': viewer })
@@ -228,10 +228,10 @@ export type ProposalViolation = PreTradeViolation & {
   currentWeight?: number
   projectedWeight?: number
   limitWeight?: number
-  /** The model-above-tolerance check: the model, the client's tolerance it was measured against, and the client's household against the same band. */
+  /** The model-above-tolerance check: the model, the client's tolerance it was measured against, and the client's accounts as a whole after the proposal against the same band. */
   tolerance?: {
     modelName: string; modelBand: string; modelScore: number; clientName: string; toleranceBand: string; floor: number; ceiling: number
-    householdScore: number; householdStatus: HouseholdStatus
+    wholeAfterScore: number; wholeAfterStatus: WholeStatus
   }
 }
 

@@ -9,7 +9,6 @@ import { getPositionsForAccount } from '@/mocks/data/positions'
 import { openWashSaleWindows, realizedSales, washSaleWindow } from '@/mocks/data/realized-sales'
 import { claimNameOf } from '../claim-name'
 import { isModelManaged, requireModelManaged } from '@/lib/mandate'
-import { householdRiskOf } from '@/mocks/reference/risk'
 
 const drift = AGENT_DEFINITIONS.get('drift-monitor')!
 const pretrade = AGENT_DEFINITIONS.get('pretrade-check')!
@@ -85,17 +84,20 @@ describe('agents over the whole book', () => {
     }
     expect(named).toBeGreaterThan(0)
   })
-  it("Pre-trade Check reports Growth above Robert Johnson's Moderate tolerance with the household within it, digit-free, with the scores as figures", () => {
-    const gap = pretrade.run(ctx('acc-002')).find((f) => f.claim === "Warning: Growth sits above Robert Johnson's Moderate tolerance for this account; the household as a whole is within it.")
-    expect(gap?.figures.map((f) => [f.label, f.unit])).toEqual([['Growth risk score', 'pts'], ["Robert Johnson's tolerance ceiling", 'pts'], ["Robert Johnson's household risk score", 'pts']])
-    expect(gap?.figures.map((f) => f.value)).toEqual([66, 55, householdRiskOf('cli-001')?.posture.score])
+  it("Pre-trade Check reports Growth above Robert Johnson's Moderate tolerance with his accounts as a whole after the proposal, digit-free, with the scores as figures", () => {
+    const gap = pretrade.run(ctx('acc-002')).find((f) => f.claim.startsWith('Warning: Growth'))
+    expect(gap?.claim).toBe("Warning: Growth sits above Robert Johnson's Moderate tolerance for this account; after this proposal, Robert Johnson's accounts as a whole would sit within it.")
+    expect(gap?.figures.map((f) => [f.label, f.unit, f.value])).toEqual([
+      ['Growth risk score', 'pts', 66], ["Robert Johnson's tolerance ceiling", 'pts', 55], ["Robert Johnson's accounts as a whole, after this proposal", 'pts', 46],
+    ])
   })
-  it('Drift Monitor flags the model above the tolerance for the advisor to decide, and says where the household sits', () => {
+  it('Drift Monitor flags the model above the tolerance for the advisor to decide, and says where the accounts as a whole would sit', () => {
     const gap = drift.run(ctx('acc-002')).find((f) => f.claim.startsWith('Growth sits above'))
-    expect(gap?.claim).toBe("Growth sits above Robert Johnson's Moderate tolerance for this account; the household as a whole is within it. A rebalance to it needs a recorded suitability reason.")
+    expect(gap?.claim).toBe("Growth sits above Robert Johnson's Moderate tolerance for this account; after a rebalance to the model, Robert Johnson's accounts as a whole would sit within it. Approving a rebalance to it needs a recorded suitability reason.")
     expect(gap?.attention).toBe('attention')
+    expect(gap?.figures.map((f) => f.value)).toEqual([66, 55, 46])
     expect(drift.run(ctx('acc-017')).map((f) => f.claim)).toContain(
-      "Growth sits above Jennifer Martinez's Moderate tolerance for this account, and the household as a whole is above it too. A rebalance to it needs a recorded suitability reason.",
+      "Growth sits above Jennifer Martinez's Moderate tolerance for this account, and after a rebalance to the model Jennifer Martinez's accounts as a whole would sit above it too. Approving a rebalance to it needs a recorded suitability reason.",
     )
     expect(drift.run(ctx('acc-003')).some((f) => f.claim.includes('tolerance for this account'))).toBe(false)
   })

@@ -14,7 +14,7 @@ export const BLOTTER_STATUS_TAG: Readonly<Record<BlotterStatus, string>> = {
   working: 'WORKING', pending_compliance: 'PENDING COMPLIANCE', filled: 'FILLED', canceled: 'CANCELED', withdrawn: 'WITHDRAWN', returned: 'RETURNED',
 }
 export const TOLERANCE_TAG: Readonly<Record<ToleranceStatus, string>> = { above: 'ABOVE TOLERANCE', within: 'WITHIN TOLERANCE', below: 'BELOW TOLERANCE', glide_path: 'GLIDE PATH' }
-/** An account outside its client's band whose household is within it: a screening signal, not a suitability flag. */
+/** An account whose model sits outside the client's band where its tax treatment allows, with the client's accounts as a whole within it: not a suitability flag. */
 export const ASSET_LOCATION_TAG = 'ASSET LOCATION'
 
 const pointsWords = (n: number) => `${fmtPoints(n)} ${n === 1 ? 'pt' : 'pts'}`
@@ -29,6 +29,8 @@ export function beyondWords(p: RiskPosture): string {
     case 'glide_path': return "the beneficiary's horizon, not the owner's questionnaire"
   }
 }
+/** A client's accounts as a whole against the band; below the band is a review of whether the client takes too little risk, not an unsuitability finding. */
+export const wholeWords = (p: RiskPosture): string => (p.status === 'below' ? `${beyondWords(p)} · review whether too little risk` : beyondWords(p))
 export const INTEGRATION_STATUS_TAG: Readonly<Record<IntegrationStatus, string>> = { synced: 'SYNCED', pending: 'PENDING', failed: 'FAILED' }
 export const SEVERITY_WORDS: Readonly<Record<'low' | 'medium' | 'high', string>> = { low: 'Low', medium: 'Medium', high: 'High' }
 export const MATCH_KIND_WORDS: Readonly<Record<MatchKind, string>> = { positions: 'Positions', valuations: 'Valuations', cash: 'Cash', transactions: 'Transaction streams' }

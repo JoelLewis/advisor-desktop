@@ -31,7 +31,7 @@ export function briefLine({ topic, claim }: Pick<MeasuredFinding, 'topic' | 'cla
     case 'realized_loss':
       return grouped ? `Sold at a loss ${topic.when}; a buyback would wash the loss` : `${topic.name} was sold at a loss ${topic.when}`
     case 'held_away': return 'Held-away accounts are outside the wash-sale checks'
-    case 'model_above_tolerance': return toleranceLine(topic.model, topic.clientName, topic.tolerance, topic.household)
+    case 'model_above_tolerance': return toleranceLine(topic.model, topic.clientName, topic.tolerance, topic.whole, 'rebalance')
     case 'not_measured': return claim.replace(/\.$/, '')
   }
 }

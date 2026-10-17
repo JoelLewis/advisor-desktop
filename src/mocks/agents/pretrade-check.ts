@@ -43,7 +43,7 @@ function describe(v: ProposalViolation, names: Names): { who: string; label: str
       const t = v.tolerance
       if (!t) throw new Error('A model_above_tolerance violation carries no tolerance facts')
       const model = hasDigit(t.modelName) ? 'The model' : t.modelName
-      return { who: model, label: t.modelName, phrase: tolerancePhrase(t.clientName, t.toleranceBand, t.householdStatus) }
+      return { who: model, label: t.modelName, phrase: tolerancePhrase(t.clientName, t.toleranceBand, t.wholeAfterStatus, 'proposal') }
     }
   }
 }
@@ -59,7 +59,7 @@ export function runPretradeCheck({ asOf, subject }: AgentContext): AgentFinding[
   if (legs.length === 0) return info('There is no rebalance proposal to check.')
   const evaluated = evaluateProposal(account.id, legs.map((l) => ({ symbol: l.symbol, side: l.side, quantity: l.quantity, estimatedValue: l.estimatedValue })))
   if (!evaluated) return info('The pre-trade check could not evaluate this account.')
-  const result = withSuitability(evaluated, account)
+  const result = withSuitability(evaluated, account, legs)
   if (result.violations.length === 0) return info('No pre-trade check flagged the proposal.')
   const names: Names = new Map([...getPositionsForAccount(account.id, account.totalValue).map((p) => [p.symbol, p.name] as const), ...legs.map((l) => [l.symbol, l.name] as const)])
   return result.violations.map((v) => {
@@ -72,7 +72,7 @@ export function runPretradeCheck({ asOf, subject }: AgentContext): AgentFinding[
     } else if (v.category === 'model_above_tolerance' && v.tolerance) {
       figures.push({ label: `${v.tolerance.modelName} risk score`, value: v.tolerance.modelScore, unit: 'pts', source: 'riskScoreOf(modelVolatility)' })
       figures.push({ label: `${v.tolerance.clientName}'s tolerance ceiling`, value: v.tolerance.ceiling, unit: 'pts', source: 'clients.riskProfile.score · RISK_PROFILE_TABLE' })
-      figures.push({ label: `${v.tolerance.clientName}'s household risk score`, value: v.tolerance.householdScore, unit: 'pts', source: 'householdRiskOf' })
+      figures.push({ label: `${v.tolerance.clientName}'s accounts as a whole, after this proposal`, value: v.tolerance.wholeAfterScore, unit: 'pts', source: 'clientRiskOf after the legs' })
     } else {
       if (v.projectedWeight !== undefined) figures.push({ label: `${label} after the proposal`, value: v.projectedWeight, unit: '%', source: 'evaluateProposal.violations.projectedWeight' })
       if (v.limitWeight !== undefined) figures.push({ label: `${label} limit`, value: v.limitWeight, unit: '%', source: 'evaluateProposal.violations.limitWeight' })

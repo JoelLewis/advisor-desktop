@@ -3,6 +3,7 @@ import type { TopicFinding } from './brief-topic'
 import { accounts } from '@/mocks/data/accounts'
 import { getPositionsForAccount } from '@/mocks/data/positions'
 import { computeDriftForAccount } from '@/mocks/handlers/pms'
+import { generateRebalanceTrades } from '@/mocks/handlers/oms'
 import { ASSET_CLASS_LABELS } from '@/lib/labels'
 import { isMarketTradable } from '@/lib/security-master'
 import { openWashSaleWindows } from '@/mocks/data/realized-sales'
@@ -40,18 +41,18 @@ export function runDriftMonitor({ asOf, subject }: AgentContext): TopicFinding[]
       ...outside.filter((d) => d !== worst).map((d) => ({ label: label(d.assetClass), value: d.drift, unit: 'pp' as const, source: 'drift.assetClassDrifts' })),
     ],
   }]
-  const gap = modelAboveTolerance(account)
+  const gap = modelAboveTolerance(account, generateRebalanceTrades(account.id, true))
   if (gap) {
     const model = /\d/.test(gap.modelName) ? 'The model' : gap.modelName
     findings.push({
-      claim: `${toleranceLine(model, gap.clientName, gap.tolerance.label, gap.household.status)}. A rebalance to it needs a recorded suitability reason.`,
+      claim: `${toleranceLine(model, gap.clientName, gap.tolerance.label, gap.wholeAfter.status, 'rebalance')}. Approving a rebalance to it needs a recorded suitability reason.`,
       attention: 'attention',
-      citations: [{ source: `Risk tolerance · ${gap.clientName}'s questionnaire against ${gap.modelName}'s risk score and the household's`, asOf }],
-      topic: { kind: 'model_above_tolerance', accountId: account.id, model, clientName: gap.clientName, tolerance: gap.tolerance.label, household: gap.household.status },
+      citations: [{ source: `Risk tolerance · ${gap.clientName}'s questionnaire against ${gap.modelName}'s risk score`, asOf }],
+      topic: { kind: 'model_above_tolerance', accountId: account.id, model, clientName: gap.clientName, tolerance: gap.tolerance.label, whole: gap.wholeAfter.status },
       figures: [
         { label: `${gap.modelName} risk score`, value: gap.modelScore, unit: 'pts', source: 'riskScoreOf(modelVolatility)' },
         { label: `${gap.clientName}'s tolerance ceiling`, value: gap.tolerance.ceiling, unit: 'pts', source: 'clients.riskProfile.score · RISK_PROFILE_TABLE' },
-        { label: `${gap.clientName}'s household risk score`, value: gap.household.score, unit: 'pts', source: 'householdRiskOf' },
+        { label: `${gap.clientName}'s accounts as a whole, after a rebalance`, value: gap.wholeAfter.score, unit: 'pts', source: 'clientRiskOf after the rebalance legs' },
       ],
     })
   }

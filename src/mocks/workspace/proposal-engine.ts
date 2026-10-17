@@ -220,7 +220,7 @@ export function buildVersion(accountId: string, constraints: readonly ProposalCo
   if (!preview) throw new Error(`No preview for ${accountId}`)
   const evaluated = evaluateProposal(accountId, preview.trades.map(({ symbol, side, quantity, estimatedValue }) => ({ symbol, side, quantity, estimatedValue })))
   if (!evaluated) throw new Error(`No pre-trade result for ${accountId}`)
-  const pretrade = withSuitability(evaluated, account)
+  const pretrade = withSuitability(evaluated, account, edited.proposal.legs)
   const legFacts: LegFacts[] = edited.proposal.legs.flatMap((leg, i) => {
     const settled = preview.trades[i]
     if (leg.side !== 'sell' || !settled) return []
