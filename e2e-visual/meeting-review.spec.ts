@@ -81,7 +81,7 @@ async function recapDrafted(page: Page) {
   await threadLink(page, 'Robert Johnson').click()
   await expect(heading(page)).toHaveText('Robert Johnson')
   await askForRecap(page)
-  await expect(letterDraft(page)).toContainText('The wash-sale window on the Intel sales runs through March 27, 2026.')
+  await expect(letterDraft(page)).toContainText("Please don't buy Intel shares in any of your accounts through March 27, 2026.")
 }
 
 const robertRecap = async (page: Page) => {

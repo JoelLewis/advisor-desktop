@@ -12,6 +12,8 @@ import { supervisionQueue } from '../supervision'
 import { archiveFor } from '../archive'
 import { approvedV1, ok, release } from './story-fixture'
 import type { NoteLine } from '@/types/workspace-meeting'
+import { latestIntelWindowEnd } from '../draft-staleness'
+import { clientDate } from '@/kit/measure'
 
 const ADRIAN = 'user-001'
 const meeting = () => store().meetings[0]!
@@ -24,6 +26,17 @@ function file() {
 }
 const edit = (id: string, text: string): NoteLine[] => meeting().notesDraft!.map((l) => (l.id === id ? { ...l, text } : l))
 const robertsTexts = () => store().messages.filter((m) => m.threadId === 'th-robert' && m.kind === 'text')
+const recapBody = () => {
+  heldAndDrafted()
+  file()
+  return ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft.body
+}
+/** The last day Robert's latest open Intel window covers, as the letter writes it. */
+const lastWashDay = () => {
+  const end = latestIntelWindowEnd('cli-001')
+  if (end === undefined) throw new Error('Robert has no open Intel window')
+  return clientDate(end)
+}
 
 describe('the recap', () => {
   it('is drafted by the Client Letter Agent from the filed record, tied to the filing', () => {
@@ -35,7 +48,7 @@ describe('the recap', () => {
       clientThreadId: 'th-robert', authorId: ADRIAN, agentId: 'client-letter', figures: [],
       recordBasis: { eventId: 'evt-010', actId: 'REC-0001', fingerprint: meeting().filed!.fingerprint },
     })
-    expect(draft.body.startsWith('Dear Robert,\n\nThank you both for meeting with me today. Here is what we agreed.')).toBe(true)
+    expect(draft.body.startsWith('Dear Robert and Patricia,\n\nThank you both for meeting with me today. Here is what we agreed.')).toBe(true)
     expect(draft.body.endsWith('If anything here is not as you remember it, please tell me.\n\nAdrian Hale\nLarkfield Advisory')).toBe(true)
   })
 
@@ -50,9 +63,8 @@ describe('the recap', () => {
     for (const l of lines.filter((x) => x.toClient)) expect(body, l.id).not.toContain(l.text)
     for (const l of lines.filter((x) => x.section === 'discussion' || x.section === 'follow_ups')) expect(body, l.id).not.toContain(l.text)
     expect(body.indexOf('What you asked us:')).toBeLessThan(body.indexOf('What we decided:'))
-    expect(body).toContain('asked about; comparison to follow')
-    expect(body).toContain("A rollover of your Vanguard 401(k) and Patricia's TIAA 403(b) was asked about; comparison to follow.")
-    expect(body).toContain('estimate; consult your tax professional')
+    expect(body).toContain("You asked about moving your Vanguard 401(k) and Patricia's TIAA 403(b). We'll compare the options and come back to you.")
+    expect(body).toContain('The amounts will be estimates; please check them with your tax professional.')
   })
 
   it('contains no transcript text, no internal note and no colleague', () => {
@@ -63,20 +75,19 @@ describe('the recap', () => {
     expect(body).not.toMatch(/Sarah|Mike|Mitchell|Chen|task/i)
   })
 
-  it('states the Intel window from the engine beneath the decision, as firm policy for the employer plan', () => {
+  it('asks plainly, with the date from the engine, above the Intel decision; the employer plan as firm policy', () => {
     heldAndDrafted()
     file()
     const { body } = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft
-    expect(body).toContain('As firm policy, your held-away Vanguard 401(k) counts too: the rule for employer plans is unsettled.')
-    expect(body).toContain('Reinvested dividends count as buying.\n- The wash-sale window on the Intel sale runs through March 22, 2026.')
-    expect(body).toContain('estimate; consult your tax professional')
+    expect(body).toContain("- Please don't buy Intel shares in any of your accounts through March 22, 2026.\n- The Intel restriction covers Patricia's accounts")
+    expect(body).toContain('as firm policy, your held-away Vanguard 401(k), because the rule for employer plans is unsettled.')
   })
 
   it('after the morning release, the latest Intel window is the release sale\'s', () => {
     release(approvedV1())
     heldAndDrafted()
     file()
-    expect(ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft.body).toContain('The wash-sale window on the Intel sales runs through March 27, 2026.')
+    expect(ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft.body).toContain("Please don't buy Intel shares in any of your accounts through March 27, 2026.")
   })
 
   it("reads Adrian's edits, because it is written from the filed lines", () => {
@@ -94,11 +105,10 @@ describe('the recap', () => {
     file()
     const { body } = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft
     const [greeting, ...rest] = body.split('\n\n')
-    expect(greeting).toBe('Dear Robert,')
+    expect(greeting).toBe('Dear Robert and Patricia,')
     expect(rest.join('\n\n')).not.toMatch(/\bRobert\b/)
-    expect(body).toContain("- You will not buy Intel in any of your or Patricia's accounts, including the IRAs, until the wash-sale window closes.")
-    expect(body).toContain('- You will contact the Vanguard plan administrator to correct the beneficiary; we will send our beneficiary checklist.')
-    expect(body).toContain("- Model Roth conversion amounts for the years before your required distributions begin. This is an estimate; consult your tax professional.")
+    expect(body).toContain("- The Intel restriction covers Patricia's accounts and the IRAs too")
+    expect(body).toContain("- You'll contact the Vanguard plan administrator to correct the beneficiary, and we'll send you our beneficiary checklist.")
     expect(body).toContain("- No trades in Patricia's accounts until her risk profile and models are reviewed.")
   })
 
@@ -109,7 +119,7 @@ describe('the recap', () => {
     const filed = meeting().filed!
     expect(filed.lines).toEqual(draft)
     expect(filed.lines.find((l) => l.id === 'n-09')).toMatchObject({
-      text: expect.stringMatching(/^Robert will not buy Intel/), toClient: { clientId: 'cli-001', text: expect.stringMatching(/^You will not buy Intel/) },
+      text: expect.stringMatching(/^Robert will not buy Intel/), toClient: { clientId: 'cli-001', text: expect.stringMatching(/^The Intel restriction covers/) },
     })
     expect(filed.fingerprint).toBe(notesFingerprint(draft))
     const reworded = draft.map((l) => (l.id === 'n-09' ? { ...l, toClient: { clientId: 'cli-001', text: 'You will not buy Intel until the window closes.' } } : l))
@@ -125,7 +135,7 @@ describe('the recap', () => {
     expect(lines.find((l) => l.id === 'n-09')!.toClient?.clientId).toBe('cli-001')
     const { body } = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft
     expect(body).toContain('- Robert will ask Vanguard to correct the beneficiary; we will send our checklist.')
-    expect(body).toContain('- You will not buy Intel')
+    expect(body).toContain('- The Intel restriction covers')
   })
 
   it('takes new client wording named in an edit, only on a line the client reads, only for a client of the meeting', () => {
@@ -141,9 +151,9 @@ describe('the recap', () => {
   it('reads a line worded for another client as filed', () => {
     heldAndDrafted()
     file()
-    const { body } = writeMeetingRecap({ addresseeId: 'cli-002', greetingName: 'Patricia', withOthers: true, filing: meeting().filed!, signerName: 'Adrian Hale' })
+    const { body } = writeMeetingRecap({ addresseeId: 'cli-002', greetingNames: ['Patricia', 'Robert'], filing: meeting().filed!, signerName: 'Adrian Hale' })
     expect(body).toContain("- Robert will not buy Intel in any of his or Patricia's accounts")
-    expect(body).not.toContain('You will not buy Intel')
+    expect(body).not.toContain('The Intel restriction covers')
   })
 
   it('asking again returns the same draft', () => {
@@ -175,13 +185,39 @@ describe('the recap', () => {
   })
 })
 
+describe('the recap reads like a person wrote it', () => {
+  it('greets both spouses who attended, and thanks them both', () => {
+    expect(recapBody()).toMatch(/^Dear Robert and Patricia,\n\nThank you both for meeting with me today\./)
+  })
+  it('greets and thanks one client who attended alone', () => {
+    heldAndDrafted()
+    file()
+    const { body } = writeMeetingRecap({ addresseeId: 'cli-001', greetingNames: ['Robert'], filing: meeting().filed!, signerName: 'Adrian Hale' })
+    expect(body).toMatch(/^Dear Robert,\n\nThank you for meeting with me today\./)
+  })
+  it('asks plainly, and promises in the first person', () => {
+    const body = recapBody()
+    expect(body).toContain(`- Please don't buy Intel shares in any of your accounts through ${lastWashDay()}.`)
+    expect(body).toContain("- We'll model Roth conversion amounts for the years before your required distributions begin and share them with your CPA. The amounts will be estimates; please check them with your tax professional.")
+    expect(body).toContain("- You asked about moving your Vanguard 401(k) and Patricia's TIAA 403(b). We'll compare the options and come back to you.")
+    expect(body).not.toMatch(/You will not|comparison to follow|consult your tax professional|\buntil the wash-sale/)
+  })
+  it('puts the Intel date before the Intel line it governs', () => {
+    const body = recapBody()
+    expect(body.indexOf("Please don't buy Intel shares")).toBeLessThan(body.indexOf('The Intel restriction covers'))
+  })
+  it('still carries only decisions and requests: no transcript, no note, no colleague', () => {
+    expect(recapBody()).not.toMatch(/Sarah Mitchell|Mike Chen|transcript|t-\d\d|n-\d\d/)
+  })
+})
+
 describe('the Intel window sentence', () => {
-  it('follows the Intel decision wherever it moved, and ends the decisions when no decision mentions Intel', () => {
+  it('precedes the Intel decision wherever it moved, and ends the decisions when no decision mentions Intel', () => {
     heldAndDrafted()
     ok(saveNotes(ADRIAN, 'evt-010', edit('n-09', 'Robert will not buy the stock back in any account until the window closes.')))
     file()
     const { body } = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft
-    expect(body).toContain('- The investment policy statement stays as signed; an ESG change would need a signed amendment.\n- The wash-sale window on the Intel sale runs through March 22, 2026.')
+    expect(body).toContain("- The investment policy statement stays as signed; an ESG change would need a signed amendment.\n- Please don't buy Intel shares in any of your accounts through March 22, 2026.")
   })
 })
 

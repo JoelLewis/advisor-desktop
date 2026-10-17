@@ -129,7 +129,7 @@ export function writeClientLetter(proposal: Proposal, version: ProposalVersion, 
   } else {
     paragraphs.push('This account is tax-advantaged, so these sales create no taxable gain or loss.')
   }
-  paragraphs.push(buildClientRateDisclosure(TAX_RATE_BASIS))
+  paragraphs.push(buildClientRateDisclosure(TAX_RATE_BASIS, { collectibles: true }))
   paragraphs.push('The orders are with our compliance team for review before any is placed.')
   paragraphs.push(`${signer.name}\n${FIRM_NAME}`)
   return { body: paragraphs.join('\n\n'), figures }

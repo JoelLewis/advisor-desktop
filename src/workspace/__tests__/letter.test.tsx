@@ -61,7 +61,7 @@ describe('the client letter', () => {
     await waitFor(() => expect(edited).toHaveTextContent("Client Letter Agent's draft, edited by Adrian Hale"))
     await user.click(within(edited).getByRole('button', { name: 'Send to Robert' }))
     await waitFor(() => expect(conversation()).toHaveTextContent('I will call you on Friday to walk through it.'))
-    expect(conversation()).toHaveTextContent(buildClientRateDisclosure(TAX_RATE_BASIS))
+    expect(conversation()).toHaveTextContent(buildClientRateDisclosure(TAX_RATE_BASIS, { collectibles: true }))
     const acts = inContext().getByRole('region', { name: 'Audit trail' })
     expect(within(acts).getByRole('list', { name: 'Record trail' })).toHaveTextContent('Message sent')
     const fingerprint = store().acts.find((a) => a.kind === 'approve_proposal')!.fingerprint

@@ -5,15 +5,14 @@ import { nextAt, nextId, store } from '@/mocks/data/workspace-store'
 import { writeMeetingRecap } from '@/mocks/agents/meeting-recap'
 import { firstNameOf } from '@/lib/words'
 import { draftingClientThread, type LetterFailure } from './letters'
-import { isRecapStale, latestIntelWindowEnd, openIntelWindows } from './draft-staleness'
+import { isRecapStale, latestIntelWindowEnd } from './draft-staleness'
 import { clientDate } from '@/kit/measure'
 import { meetingEvent, meetingTitle, visibleMeeting } from './meetings'
 
 const refuse = (status: LetterFailure['status'], code: string, message: string): LetterFailure => ({ ok: false, status, code, message })
 
-/** The window the recap states, in the client's words: the latest end among the client's open Intel sales. */
-const intelWindowSentence = (sales: number, end: string) =>
-  `The wash-sale window on the Intel ${sales === 1 ? 'sale' : 'sales'} runs through ${clientDate(end)}.`
+/** The Intel instruction, in the client's words: no purchase through the last day of the latest open Intel window (the house rule writes windows "through <date>"). */
+const intelWindowSentence = (end: string) => `Please don't buy Intel shares in any of your accounts through ${clientDate(end)}.`
 
 /** The Client Letter Agent's recap of a filed meeting, drafted in the client thread of a member of the meeting's household. */
 export function draftRecap(viewerId: string, clientThreadId: string, eventId: string): { ok: true; draft: Draft; created: boolean } | LetterFailure {
@@ -36,10 +35,10 @@ export function draftRecap(viewerId: string, clientThreadId: string, eventId: st
   const filedBy = s.acts.find((a) => a.id === recordBasis.actId)?.actorId
   const signer = filedBy === undefined ? undefined : personById(filedBy)
   if (!signer) throw new Error(`The filing ${recordBasis.actId} names no recorded actor`)
-  const withOthers = event.attendees.some((a) => a.id !== client.id && clients.some((c) => c.id === a.id))
+  const attending = [client, ...clients.filter((c) => c.id !== client.id && c.householdId === meeting.householdId && event.attendees.some((a) => a.id === c.id))]
   const letter = writeMeetingRecap({
-    addresseeId: client.id, greetingName: firstNameOf(client.fullName), withOthers, filing: meeting.filed, signerName: signer.name,
-    windowSentence: windowEnd === undefined ? undefined : intelWindowSentence(openIntelWindows(client.id).length, windowEnd),
+    addresseeId: client.id, greetingNames: attending.map((c) => firstNameOf(c.fullName)), filing: meeting.filed, signerName: signer.name,
+    windowSentence: windowEnd === undefined ? undefined : intelWindowSentence(windowEnd),
   })
   const draft: Draft = {
     id: nextId('draft'), clientThreadId: thread.id, authorId: viewerId, body: letter.body, createdAt: nextAt(),

@@ -14,6 +14,13 @@ const created = () => {
   if (!r.ok) throw new Error(r.message)
   return r.detail
 }
+/** The letter she reads with v1. */
+const letter = () => {
+  withHerReply()
+  const summary = created().versions[0]?.clientSummary
+  if (summary === undefined) throw new Error('v1 has no letter')
+  return summary
+}
 const digitFree = (text: string) => expect(text.replace(/403\(b\)|401\(k\)/g, ''), text).not.toMatch(/\d/)
 
 describe('drafting her proposal', () => {
@@ -54,18 +61,39 @@ describe('drafting her proposal', () => {
   })
 
   it('writes what she will read: plain figures, the rollover asked about, the estimates hedged, the close named, no recommendation to roll over', () => {
-    withHerReply()
-    const summary = created().versions[0]?.clientSummary ?? ''
+    const summary = letter()
     expect(summary).toContain('Dear Dr. Pell,')
-    expect(summary).toContain('Portfolio: Growth, our model for your answers: about 75% in stocks and 25% in bonds, alternatives, commodities and cash.')
+    expect(summary).toContain('We propose our Growth model, the one your answers point to: about 75% in stocks and 25% in bonds, alternatives, commodities and cash.')
     expect(summary).toContain('Stryker Corp. (SYK): 1,390 shares, $542,378, about 18% of your total assets across both accounts.')
-    expect(summary).toContain('a long-term gain of about $481,400, with an estimated federal tax of about $114,600 (estimate; consult your tax professional)')
-    expect(summary).toContain('Your TIAA 403(b): a rollover was asked about; comparison to follow.')
+    expect(summary).toContain('a long-term gain of about $481,400, with an estimated federal tax of about $114,600 (an estimate; please check with your tax professional)')
+    expect(summary).toContain("You asked about moving your TIAA 403(b). We'll compare the options and come back to you.")
     expect(summary).toContain("Fees: an estimated $20,850 a year on today's value of $2,100,000 (a blended 0.99%), from our tiered schedule; the fee moves with the account's value.")
     expect(summary).toContain('State tax is not modeled.')
     expect(summary).toContain('Prices as of 25 Feb 2026 close.')
     expect(summary).toContain('Adrian Hale\nLarkfield Advisory')
     expect(summary).not.toMatch(/recommend|cleared|would exceed|the firm's model|US Equity/i)
+  })
+
+  it('opens with her goals and her Stryker concern, then the proposal', () => {
+    const summary = letter()
+    const [greeting, , opening, , proposal] = summary.split('\n')
+    expect(greeting).toBe('Dear Dr. Pell,')
+    expect(opening).toBe(
+      'Thank you for your questionnaire and your statements. You told us your goal is to maximize long-term growth over a horizon of more than 20 years, '
+      + 'and you asked us what to do about your large, low-basis Stryker Corp. position. Here is what we propose.')
+    expect(proposal).toMatch(/^We propose our Growth model/)
+    expect(summary).not.toContain('This is our proposal.')
+  })
+
+  it('drops the collectibles sentence; tax lines are estimates to check with her tax professional', () => {
+    const summary = letter()
+    expect(summary).not.toMatch(/collectible|precious-metal/i)
+    expect(summary).toContain('(an estimate; please check with your tax professional)')
+    expect(summary).not.toMatch(/consult your tax professional|comparison to follow/)
+  })
+
+  it('says the rollover was asked about and a comparison follows', () => {
+    expect(letter()).toContain("You asked about moving your TIAA 403(b). We'll compare the options and come back to you.")
   })
 
   it('states what she would hold if everything moves in kind against the model, and that reaching it takes sales', () => {
@@ -99,7 +127,7 @@ describe('revising it', () => {
       'One option to decide with your CPA: selling Stryker Corp. in two parts, one in each tax year:',
       '- 2026: 695 shares, a gain of about $240,700, an estimated federal tax of about $57,300.',
       '- 2027: 695 shares, a gain of about $240,700, an estimated federal tax of about $57,300 at today\'s rates.',
-      'Figures are at the 25 Feb 2026 close; gains in later years depend on the price when sold (estimate; consult your tax professional). Nothing is sold unless you decide to.',
+      'Figures are at the 25 Feb 2026 close; gains in later years depend on the price when sold (an estimate; please check with your tax professional). Nothing is sold unless you decide to.',
     ].join('\n'))
     expect(v2?.fingerprint).not.toBe(r.detail.versions[0]?.fingerprint)
     expect(store().messages.filter((m) => m.kind === 'prospect_proposal_version').map((m) => m.kind === 'prospect_proposal_version' && m.version)).toEqual([2])

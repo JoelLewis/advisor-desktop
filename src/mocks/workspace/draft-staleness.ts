@@ -8,7 +8,7 @@ import { todayISO } from '@/lib/clock'
 import { clientDate } from '@/kit/measure'
 
 /** The client's open INTC loss-sale windows (their own wash-sale taxpayer's), from the engine, each sale once. */
-export function openIntelWindows(clientId: string): readonly OpenWashSaleWindow[] {
+function openIntelWindows(clientId: string): readonly OpenWashSaleWindow[] {
   const bySale = new Map(accounts.filter((a) => a.clientId === clientId)
     .flatMap((a) => openWashSaleWindowsFor(a, todayISO()))
     .filter((w) => w.symbol === 'INTC')

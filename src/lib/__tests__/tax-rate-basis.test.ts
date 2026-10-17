@@ -41,13 +41,18 @@ describe('§0.6 · physically backed precious-metal ETFs are taxed as collectibl
 describe('the client letter states the same basis in US spelling', () => {
   it('is templated from the basis it is given', () => {
     const basis = { shortTerm: 0.4, longTerm: 0.25, collectibleLongTerm: 0.33, includes: ['federal', 'niit'], excludes: ['state'] } as const
-    expect(buildClientRateDisclosure(basis)).toBe(
+    expect(buildClientRateDisclosure(basis, { collectibles: true })).toBe(
       'These estimates use top federal rates, including the 3.8% net investment income tax: 40% on short-term gains and 25% on long-term gains '
       + '(33% on collectibles, including physically backed precious-metal funds). State tax is not modeled. They are estimates, not tax advice.')
-    expect(buildClientRateDisclosure({ ...basis, includes: ['federal'], excludes: [] })).not.toMatch(/investment income|State tax/)
+    expect(buildClientRateDisclosure({ ...basis, includes: ['federal'], excludes: [] }, { collectibles: true })).not.toMatch(/investment income|State tax/)
+  })
+  it('names the collectibles rate only to a reader who holds collectibles', () => {
+    expect(buildClientRateDisclosure(TAX_RATE_BASIS, { collectibles: false })).toBe(
+      'These estimates use top federal rates, including the 3.8% net investment income tax: 40.8% on short-term gains and 23.8% on long-term gains. '
+      + 'State tax is not modeled. They are estimates, not tax advice.')
   })
   it('quotes the rates applied, and leaves the firm disclosure as it was', () => {
-    const client = buildClientRateDisclosure(TAX_RATE_BASIS)
+    const client = buildClientRateDisclosure(TAX_RATE_BASIS, { collectibles: true })
     expect(client).toContain('40.8% on short-term gains and 23.8% on long-term gains (31.8% on collectibles')
     expect(client).not.toMatch(/modell|realis/)
     expect(RATE_DISCLOSURE).toContain('State tax is not modeled.')

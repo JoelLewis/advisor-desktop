@@ -44,7 +44,7 @@ describe("Robert's recap", () => {
     await user.dblClick(await within(panel).findByRole('button', { name: RECAP }))
     expect(await within(panel).findByText('The Client Letter Agent drafted the recap of the Johnson annual review.')).toBeInTheDocument()
     const draft = await within(panel).findByRole('article', { name: 'Draft · not sent' })
-    expect(draft).toHaveTextContent('Dear Robert,')
+    expect(draft).toHaveTextContent('Dear Robert and Patricia,')
     expect(draft).toHaveTextContent('What you asked us:')
     expect(draft).toHaveTextContent(/from the filed record REC-0001 · fingerprint [0-9A-F]{8}/)
     expect(store().drafts).toHaveLength(1)
@@ -64,7 +64,7 @@ describe("Robert's recap", () => {
     const texts = store().messages.filter((m) => m.threadId === 'th-robert' && m.kind === 'text')
     expect(texts).toHaveLength(2)
     expect(screen.getByRole('list', { name: 'Messages' })).toHaveTextContent('When is my annual review this year?')
-    expect(screen.getByRole('list', { name: 'Messages' })).toHaveTextContent('Dear Robert,')
+    expect(screen.getByRole('list', { name: 'Messages' })).toHaveTextContent('Dear Robert and Patricia,')
     // The View-as menu lists the firm's people for the demo, so the check reads Robert's thread and its context, not the whole page.
     expect(screen.getByRole('list', { name: 'Messages' })).not.toHaveTextContent(/transcript|Meeting Notes|agenda|REC-0001|Sarah Mitchell|Mike Chen|follow-up|filed record/i)
     expect(screen.getByRole('complementary', { name: 'Details' })).not.toHaveTextContent(/transcript|Meeting Notes|agenda|REC-0001|Mike Chen|follow-up|filed record|fingerprint [0-9A-F]{8} · agent draft/i)
