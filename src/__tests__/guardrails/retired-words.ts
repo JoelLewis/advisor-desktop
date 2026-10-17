@@ -65,9 +65,6 @@ export const RETIRED_WORDS: readonly RetiredWord[] = [
 
 const TEXT_FILES = ['index.html', 'README.md'] as const
 
-/** The one README line that names the retired words in order to say they are guarded. */
-const GUARD_BULLET = '- **Plain words, guarded.**'
-
 const isErrorConstruction = (node: ts.Node): boolean =>
   ts.isNewExpression(node) && /Error$/.test(node.expression.getText())
 
@@ -110,6 +107,6 @@ export function retiredWordHits(entry: RetiredWord): string[] {
   const inText = TEXT_FILES.flatMap((f) =>
     readFileSync(join(process.cwd(), f), 'utf8')
       .split('\n')
-      .flatMap((line, i) => (prose.test(line) && !line.startsWith(GUARD_BULLET) && !entry.skip?.(f, line) ? [`${f}:${i + 1}: ${line.trim()}`] : [])))
+      .flatMap((line, i) => (prose.test(line) && !entry.skip?.(f, line) ? [`${f}:${i + 1}: ${line.trim()}`] : [])))
   return [...inCode, ...inText]
 }
