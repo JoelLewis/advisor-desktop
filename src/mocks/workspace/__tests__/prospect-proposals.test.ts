@@ -124,7 +124,7 @@ describe('revising it', () => {
       { n: 1, taxYear: 2026, shares: 695, proceeds: 271_189, gain: 240_689, tax: 57_283.98 },
       { n: 2, taxYear: 2027, shares: 695, proceeds: 271_189, gain: 240_689, tax: 57_283.98 },
     ])
-    expect(v2?.changeSummary).toBe('Documented a staged sale of Stryker Corp. over two tax years, to decide with her CPA; nothing sold.')
+    expect(v2?.changeSummary).toBe('Documented a phased sale of Stryker Corp. over two tax years, to decide with her CPA; nothing sold.')
     expect(v2?.clientSummary).toContain([
       'One option to decide with your CPA: selling Stryker Corp. in two parts, one in each tax year:',
       '- 2026: 695 shares, a gain of about $240,700, an estimated federal tax of about $57,300.',
@@ -145,7 +145,7 @@ describe('revising it', () => {
     expect(reviseProspectProposal(ADRIAN, id, [{ kind: 'stage_diversification', tranches: 3 }])).toEqual({ ok: false, status: 409, code: 'NO_CHANGE', message: 'v2 already says that.' })
     const back = reviseProspectProposal(ADRIAN, id, [])
     if (!back.ok) throw new Error(back.message)
-    expect(back.detail.versions[2]?.changeSummary).toBe('Removed the staged sale; everything transferred in kind, nothing sold.')
+    expect(back.detail.versions[2]?.changeSummary).toBe('Removed the phased sale; everything transferred in kind, nothing sold.')
     expect(back.detail.versions[2]?.fingerprint).toBe(back.detail.versions[0]?.fingerprint)
   })
 

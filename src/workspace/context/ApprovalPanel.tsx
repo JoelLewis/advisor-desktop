@@ -209,8 +209,7 @@ function StagedOrders({ orders, escalated }: { orders: StagedOrder[]; escalated:
   return (
     <div className="flex flex-col gap-2 border-t border-rule pt-3">
       <p className="flex flex-wrap items-baseline gap-2 text-body">
-        <Tag tone="hatch">PENDING COMPLIANCE REVIEW</Tag>
-        <span className="text-ink-2">Staged, not released.</span>
+        <Tag tone="hatch">PENDING COMPLIANCE RELEASE</Tag>
       </p>
       {escalated ? (
         <p className="flex flex-wrap items-baseline gap-2 text-body">
@@ -218,7 +217,7 @@ function StagedOrders({ orders, escalated }: { orders: StagedOrder[]; escalated:
           <span className="text-ink-2">Held by compliance for further review.</span>
         </p>
       ) : null}
-      {source ? <p className="text-label text-ink-2">{`Staged from v${source.version} · ${source.approvalActId}`}</p> : null}
+      {source ? <p className="text-label text-ink-2">{`From v${source.version} · approval ${source.approvalActId}`}</p> : null}
       <StagedOrderList orders={orders} />
       {source ? <BlotterLink accountId={source.accountId} /> : null}
     </div>

@@ -50,7 +50,7 @@ describe('the prospect work thread', () => {
     expect(proposal).toHaveTextContent('Not approved')
   })
 
-  it('a revision documents the staged sale; the embed shows v2 with its tranches', async () => {
+  it('a revision documents the phased sale; the embed shows v2 with its tranches', async () => {
     const user = userEvent.setup()
     await replied()
     await createProspectProposal(ADRIAN, PELL)
@@ -58,9 +58,9 @@ describe('the prospect work thread', () => {
     const proposal = await embed()
     await user.click(within(proposal).getByRole('button', { name: 'Revise' }))
     const dialog = await screen.findByRole('dialog', { name: 'Revise the Pell proposal' })
-    await user.selectOptions(within(dialog).getByLabelText('Staged sale of the concentrated stock'), '2')
+    await user.selectOptions(within(dialog).getByLabelText('Phased sale of the concentrated stock'), '2')
     await user.click(within(dialog).getByRole('button', { name: 'Ask for v2' }))
-    expect(await within(proposal).findByRole('table', { name: 'Staged sale option · v2' })).toHaveTextContent('2027')
+    expect(await within(proposal).findByRole('table', { name: 'Phased sale over two tax years · v2' })).toHaveTextContent('2027')
     expect(conversation().getByRole('article', { name: 'v2 · Proposal Agent' })).toHaveTextContent('over two tax years')
   })
 

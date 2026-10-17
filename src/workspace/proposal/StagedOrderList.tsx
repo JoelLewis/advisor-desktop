@@ -5,7 +5,7 @@ import { SIDE_WORDS } from './leg-status'
 /** The orders staged for compliance, one line each. */
 export function StagedOrderList({ orders }: { orders: StagedOrder[] }) {
   return (
-    <ul aria-label="Staged orders" className="flex flex-col gap-1 text-body">
+    <ul aria-label="Orders pending compliance release" className="flex flex-col gap-1 text-body">
       {orders.map((o) => (
         <li key={o.id} className="flex flex-wrap items-baseline justify-between gap-x-3">
           <span>{`${SIDE_WORDS[o.side]} ${fmtQuantity(o.quantity)} ${o.symbol}`}</span>

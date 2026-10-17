@@ -113,7 +113,7 @@ export function evaluateProposal(accountId: string, trades: readonly ProposalTra
     const fell = after(symbol) < before(symbol)
     const overLimit = projectedWeight > limit
     const preExisting = currentWeight > limit
-    const kindLabel = kind === 'single_name' ? 'single-issuer' : 'pooled-vehicle'
+    const kindLabel = kind === 'single_name' ? 'single-issuer' : 'single-fund'
     let message: string
     if (overLimit && rose && preExisting) {
       message = `${symbol} is already ${pct(currentWeight)} of this account, over the ${pct0(limit)} ${kindLabel} limit; this proposal adds to it, taking it to ${pct(projectedWeight)}.`
@@ -128,7 +128,7 @@ export function evaluateProposal(accountId: string, trades: readonly ProposalTra
     }
     violations.push({
       category: 'concentration_limit',
-      constraint: kind === 'single_name' ? 'Single-issuer concentration limit' : 'Pooled-vehicle concentration limit',
+      constraint: kind === 'single_name' ? 'Single-issuer concentration limit' : 'Single-fund concentration limit',
       severity: overLimit && rose ? 'block' : 'warning',
       currentValue: pct(projectedWeight),
       limit: pct(limit),

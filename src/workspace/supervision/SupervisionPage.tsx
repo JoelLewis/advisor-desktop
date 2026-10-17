@@ -49,7 +49,7 @@ function Supervision({ directory }: { directory: Directory }) {
         <h1 id={PAGE_TITLE_ID} tabIndex={-1} className="text-title">Supervision</h1>
         <p className="text-body text-ink-2">
           {disposes
-            ? 'Staged orders wait here: nothing executes until compliance releases them. Each disposition is recorded with your rationale.'
+            ? 'Orders pending compliance release wait here: nothing executes until compliance releases them. Each disposition is recorded with your rationale.'
             : 'You can read the queue; only compliance records a disposition.'}
         </p>
       </header>

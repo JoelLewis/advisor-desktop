@@ -22,7 +22,7 @@ async function openItem(path: string, name: string) {
 }
 
 describe('recording a disposition', () => {
-  it('Mark releases with a rationale, once, after confirming; focus goes to the new slip; the item moves to Disposed today', async () => {
+  it('Mark releases with a rationale, once, after confirming; focus goes to the new slip; the item moves to Closed today', async () => {
     await approved()
     viewAsOnLoad('cco-001')
     const { item, panel } = await openItem('/supervision/orders/prop-0001', 'Orders · Johnson rebalance · v1')
@@ -44,7 +44,7 @@ describe('recording a disposition', () => {
     expect(slip).toHaveTextContent('Rationale · Legs, tax effect and pre-trade reading reviewed.')
     await waitFor(() => expect(document.activeElement).toBe(document.getElementById('act-REC-0002')))
     expect(store().acts.filter((a) => a.kind === 'release_orders')).toHaveLength(1)
-    expect(queue().getByText("No orders are waiting. Today's are under Disposed today.")).toBeInTheDocument()
+    expect(queue().getByText("No orders are waiting. Today's are under Closed today.")).toBeInTheDocument()
     expect(queue().getByRole('link', { name: /^Release · Johnson rebalance · v1/ })).toBeInTheDocument()
     expect(item).toHaveTextContent('FILLED')
     expect(within(item).queryByRole('region', { name: 'Record a disposition' })).toBeNull()

@@ -20,7 +20,7 @@ const WORK: Message[] = [
   { kind: 'prospect_note', id: 'msg-t4', threadId: 'th-pell-work', at: '2026-02-25T21:30:00.000Z', authorId: 'user-001', prospectId: 'prsp-011', eventId: 'evt-004',
     title: 'Coffee with Dr. Amanda Pell', start: '2026-02-25T20:30:00.000Z', end: '2026-02-25T21:30:00.000Z', body: 'She asked about the old 403(b).' },
   { kind: 'prospect_proposal_version', id: 'msg-t5', threadId: 'th-pell-work', at: '2026-02-26T14:20:00.000Z', proposalId: 'pprop-0001', version: 2,
-    author: { kind: 'agent', agentId: 'proposal' }, changeSummary: 'Documented a staged sale of Stryker Corp. over two tax years; nothing sold.' },
+    author: { kind: 'agent', agentId: 'proposal' }, changeSummary: 'Documented a phased sale of Stryker Corp. over two tax years; nothing sold.' },
   { kind: 'onboarding_opened', id: 'msg-t6', threadId: 'th-pell-work', at: '2026-03-02T15:02:00.000Z', prospectId: 'prsp-011', acceptanceActId: 'REC-0009',
     items: [{ id: 'ofac', label: 'OFAC screen', status: 'open', ownerId: 'user-002', due: '2026-03-03' }, { id: 'acat', label: 'ACAT transfer', status: 'not_started', ownerId: 'user-002' }] },
 ]

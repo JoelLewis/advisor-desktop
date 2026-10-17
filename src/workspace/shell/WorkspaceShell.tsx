@@ -39,7 +39,7 @@ export function WorkspaceShell() {
   }, [chosen])
   useJumpKeys('shell', [
     ...(listHidden ? [] : [{ key: '[', label: 'Thread list', run: choose('threads') } satisfies Binding]),
-    { key: '\\', label: 'Main', run: choose('thread') },
+    { key: '\\', label: 'Conversation', run: choose('thread') },
     ...(context ? [{ key: ']', label: 'Context column', run: choose('context') } satisfies Binding] : []),
   ])
   useFocusOnRouteChange(pane !== 'thread' && window.matchMedia(PHONE_LAYOUT_QUERY).matches ? PANE_REGION_ID[pane] : undefined)

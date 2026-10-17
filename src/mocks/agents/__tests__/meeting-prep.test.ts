@@ -38,7 +38,7 @@ describe('Meeting Prep', () => {
     expect(windows.claim).toContain("in any of the taxpayer's accounts, including IRAs and Roths")
     expect(windows.claim).not.toMatch(/household/i)
     expect(windows.figures).toContainEqual({ label: 'INTC loss · rs-001', value: -32_750, unit: 'USD', source: 'realizedSales.realizedGainLoss' })
-    expect(windows.citations.map((c) => c.source)).toContain('Wash-sale window · rs-001 · INTC loss sale of 20 Feb 2026, open through 22 Mar 2026')
+    expect(windows.citations.map((c) => c.source)).toContain('Wash-sale window · rs-001 · INTC loss sale of 20 Feb 2026 · Don\'t repurchase through 22 Mar 2026')
   })
 
   it('reads drift for every Johnson account from the drift engine', () => {
@@ -92,6 +92,6 @@ describe('Meeting Prep', () => {
     expect(changes.claim).toBe("Orders released today were filled in Robert Johnson Individual; the figures below include today's trades.")
     expect(changes.figures.map((f) => f.label)).toEqual(['Sold today', 'Bought today'])
     expect(titled(after, 'Wash-sale windows: what not to buy back').citations.map((c) => c.source))
-      .toContain('Wash-sale window · rs-006 · INTC loss sale of 25 Feb 2026, open through 27 Mar 2026')
+      .toContain('Wash-sale window · rs-006 · INTC loss sale of 25 Feb 2026 · Don\'t repurchase through 27 Mar 2026')
   })
 })

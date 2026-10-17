@@ -15,6 +15,7 @@ import { isModelManaged } from '@/lib/mandate'
 import { firstNameOf, joinWords } from '@/lib/words'
 import { firstRmdYear, requiredBeginningAge } from '@/lib/rmd'
 import { fmtDayMonthYear } from '@/kit/measure'
+import { dontRepurchaseThrough } from '@/kit/repurchase'
 import { figureText } from '@/kit/figure-text'
 import type { Figure } from '@/types/workspace'
 
@@ -76,7 +77,7 @@ function windows(householdId: string, asOf: string): PrepFinding {
       { label: `${w.symbol} loss · ${w.id}`, value: w.realizedGainLoss, unit: 'USD' as const, source: 'realizedSales.realizedGainLoss' },
       { label: `Days until the ${w.symbol} window closes · ${w.id}`, value: w.daysRemaining, unit: 'd' as const, source: 'openWashSaleWindows.daysRemaining' },
     ]),
-    citations: open.map((w) => ({ source: `Wash-sale window · ${w.id} · ${w.symbol} loss sale of ${fmtDayMonthYear(w.saleDate)}, open through ${fmtDayMonthYear(w.end)}`, asOf })),
+    citations: open.map((w) => ({ source: `Wash-sale window · ${w.id} · ${w.symbol} loss sale of ${fmtDayMonthYear(w.saleDate)} · ${dontRepurchaseThrough(w.end)}`, asOf })),
     agendaTitle: 'Wash-sale windows: what not to buy back',
   }
 }

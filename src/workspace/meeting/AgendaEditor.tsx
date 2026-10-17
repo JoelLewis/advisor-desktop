@@ -77,9 +77,9 @@ export function AgendaEditor({ meeting, findings, editable }: AgendaEditorProps)
                       <Button data-agenda-control={controlKey(item.id, 'down')} rank="quiet" aria-label={`Move “${item.title}” down`} disabled={isLast}
                         title={isLast ? 'Already last on the agenda' : undefined}
                         onClick={() => send(swap(items, i, i + 1).map(asInput), { kind: 'move', itemId: item.id, control: 'down' })}>Move down</Button>
-                      <Button data-agenda-control={controlKey(item.id, 'drop')} rank="quiet" aria-label={`Drop “${item.title}”`} disabled={isOnly}
+                      <Button data-agenda-control={controlKey(item.id, 'drop')} rank="quiet" aria-label={`Remove “${item.title}”`} disabled={isOnly}
                         title={isOnly ? 'The agenda keeps at least one item' : undefined}
-                        onClick={() => send(items.filter((x) => x.id !== item.id).map(asInput), { kind: 'drop', index: i })}>Drop</Button>
+                        onClick={() => send(items.filter((x) => x.id !== item.id).map(asInput), { kind: 'drop', index: i })}>Remove</Button>
                     </span>
                   ) : null}
                 </div>

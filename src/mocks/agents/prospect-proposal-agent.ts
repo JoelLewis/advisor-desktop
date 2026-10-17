@@ -25,9 +25,9 @@ export function prospectDraftSummary(content: ProspectVersionContent): string {
 export function prospectChangeSummary(constraints: readonly ProspectConstraint[], content: ProspectVersionContent): string {
   const staged = constraints.find((c) => c.kind === 'stage_diversification')
   if (staged && content.concentration) {
-    return `Documented a staged sale of ${claimNameOf(content.concentration.symbol, content.concentration.name)} over ${TRANCHE_WORDS[staged.tranches]} tax years, to decide with her CPA; nothing sold.`
+    return `Documented a phased sale of ${claimNameOf(content.concentration.symbol, content.concentration.name)} over ${TRANCHE_WORDS[staged.tranches]} tax years, to decide with her CPA; nothing sold.`
   }
-  return 'Removed the staged sale; everything transferred in kind, nothing sold.'
+  return 'Removed the phased sale; everything transferred in kind, nothing sold.'
 }
 
 /** Moved in kind, where she would stand against the model: the sleeve furthest over its target, and that reaching the model takes sales. */

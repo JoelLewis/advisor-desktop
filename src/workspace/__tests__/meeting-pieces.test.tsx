@@ -118,7 +118,7 @@ describe('the agenda editor', () => {
     await user.click(screen.getByRole('button', { name: `Add to agenda: ${dropped.title}` }))
     const v5 = await screen.findByRole('list', { name: 'Agenda · v5' })
     expect(v5).toHaveTextContent(dropped.title)
-    await user.click(within(v5).getByRole('button', { name: 'Drop “ESG alternatives for the trust”' }))
+    await user.click(within(v5).getByRole('button', { name: 'Remove “ESG alternatives for the trust”' }))
     await screen.findByRole('list', { name: 'Agenda · v6' })
     expect(meeting().agenda.map((v) => v.n)).toEqual([1, 2, 3, 4, 5, 6])
   })
@@ -146,9 +146,9 @@ describe('the agenda editor', () => {
     expect(within(v3).getByRole('button', { name: `Move “${v1[2]!.title}” down` })).toHaveFocus()
     expect(editorStatus()).toHaveTextContent(`Agenda v3: ${summary(3)}`)
 
-    await user.click(within(v3).getByRole('button', { name: `Drop “${v1[2]!.title}”` }))
+    await user.click(within(v3).getByRole('button', { name: `Remove “${v1[2]!.title}”` }))
     const v4 = await screen.findByRole('list', { name: 'Agenda · v4' })
-    expect(within(v4).getByRole('button', { name: `Drop “${v1[0]!.title}”` })).toHaveFocus()
+    expect(within(v4).getByRole('button', { name: `Remove “${v1[0]!.title}”` })).toHaveFocus()
   })
 
   it('holds its change line from the start, empty and not a live region until the first change', async () => {

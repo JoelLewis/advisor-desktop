@@ -160,7 +160,7 @@ test('one presenter runs Brief → proposal → revise → workbench → approve
 
   // 6. Approve v3: the act is recorded and the orders are staged from it, pending compliance review.
   await approve(page, 3)
-  await expect(approvalOf(page)).toContainText(/Staged from v3 · REC-/)
+  await expect(approvalOf(page)).toContainText(/From v3 · approval REC-/)
 
   // 7. The letter: drafted by the Client Letter Agent from v3, edited, sent.
   await askForLetter(page)
@@ -202,7 +202,7 @@ test('one presenter runs Brief → proposal → revise → workbench → approve
   await threadLink(page, 'Johnson Rebalance Review').click()
   await expect(heading(page)).toHaveText('Johnson Rebalance Review')
   const markApproval = approvalOf(page)
-  await expect(markApproval).toContainText('PENDING COMPLIANCE REVIEW')
-  await expect(markApproval).toContainText(/Staged from v3 · REC-/)
+  await expect(markApproval).toContainText('PENDING COMPLIANCE RELEASE')
+  await expect(markApproval).toContainText(/From v3 · approval REC-/)
   await expect(markApproval.getByRole('button')).toHaveCount(0)
 })

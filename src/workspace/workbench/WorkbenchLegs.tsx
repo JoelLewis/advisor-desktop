@@ -32,7 +32,7 @@ export function WorkbenchLegs({ view, caption, expandedSymbol, onExpand, onToggl
     { id: 'st', header: 'ST', unit: currency, align: 'right', cell: (r) => result(r.shortTerm) },
     { id: 'lt', header: 'LT', unit: currency, align: 'right', cell: (r) => result(r.longTerm) },
     { id: 'washed', header: 'Washed', unit: currency, align: 'right', cell: (r) => result(r.washed) },
-    { id: 'restricted', header: 'No buy-back to', cell: (r) => (r.restrictedTo ? fmtDayMonthYear(r.restrictedTo) : '') },
+    { id: 'restricted', header: "Don't repurchase through", cell: (r) => (r.restrictedTo ? fmtDayMonthYear(r.restrictedTo) : '') },
     { id: 'check', header: 'Pre-trade', cell: (r) => (r.excluded ? <Tag>EXCLUDED</Tag> : <StatusCode status={r.status} />) },
   ], [currency])
 

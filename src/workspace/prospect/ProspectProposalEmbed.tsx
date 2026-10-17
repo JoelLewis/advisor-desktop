@@ -5,6 +5,7 @@ import { Tag } from '@/kit/tag/Tag'
 import { clientRate, fmtDayMonthYear, fmtMoney, fmtPoints, fmtQuantity, fmtResult, fmtWeight } from '@/kit/measure'
 import { useProspectProposals } from '@/hooks/use-prospect-work'
 import { assetClassLabel } from '@/workspace/asset-class-label'
+import { trancheWordsOf } from './prospect-words'
 import type { ProspectProposalDetail, ProspectProposalVersion } from '@/types/workspace-prospect'
 
 type Props = { prospectId: string; proposalId: string; actions?: ReactNode }
@@ -85,7 +86,7 @@ function TransferTable({ version }: { version: ProspectProposalVersion }) {
 function TranchesTable({ version }: { version: ProspectProposalVersion }) {
   return (
     <div className="flex flex-col gap-2">
-      <DataTable caption={`Staged sale option · v${version.n}`} rows={version.tranches} getRowId={(t) => String(t.n)} noun={{ singular: 'tranche', plural: 'tranches' }} density="dense"
+      <DataTable caption={`Phased sale over ${trancheWordsOf(version.tranches.length)} tax years · v${version.n}`} rows={version.tranches} getRowId={(t) => String(t.n)} noun={{ singular: 'tranche', plural: 'tranches' }} density="dense"
         columns={[
           { id: 'year', header: 'Tax year', cell: (t) => String(t.taxYear) },
           { id: 'shares', header: 'Shares', unit: 'sh', align: 'right', cell: (t) => <Num text={fmtQuantity(t.shares)} /> },

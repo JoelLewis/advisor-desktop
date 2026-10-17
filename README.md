@@ -18,7 +18,7 @@ You are Adrian Hale, the advisor. Nobody else acts live: colleagues' history is 
    - In the context column choose **Ask Proposal Agent**: v1 appears in the thread.
    - On the proposal choose **Revise**, tick **Harvest only: sell only lots at a loss** and choose **Ask Proposal Agent to revise**: v2.
    - Choose **Workbench**. In **Legs · v2** move to the QAI row and press **x** to exclude it; press **⌘S** (Ctrl+S) to save v3. Choose **Back to the thread**.
-   - In the approval panel tick **I reviewed every leg of v3 and its pre-trade reading.** and choose **Approve v3**. The orders are staged, pending compliance review.
+   - In the approval panel tick **I reviewed every leg of v3 and its pre-trade reading.** and choose **Approve v3**. The orders are pending compliance release.
 
    ![A proposal in its thread: legs, tax effect, repurchase restrictions and drift before and after](e2e-visual/__baselines__/proposal-thread-light.png)
    ![The workbench: legs with their washed losses, the return-level tax estimate, and the wash-sale windows](e2e-visual/__baselines__/workbench-light.png)
@@ -35,7 +35,7 @@ You are Adrian Hale, the advisor. Nobody else acts live: colleagues' history is 
 
    ![The filed notes beside the transcript, every line citing it](e2e-visual/__baselines__/meeting-after-light.png)
 
-6. **Dr. Amanda Pell, first contact to onboarding.** In the Brief, under **Today**, on the coffee's line choose **Open her thread**. Choose **Deliver Form CRS** and **Confirm**, then **Record the coffee** and **Record** in its dialog, then **Advance to her reply · Thu 26 Feb 09:10 ET**. In **Pell · prospect work** choose **Ask Prospect Profile**, **Ask Transfer-In** and **Ask Proposal Agent**. Transfer-In weighs moving each holding in kind against selling it, with the gain and a tax estimate; her 403(b) rollover is only asked about, comparison to follow. On the proposal choose **Revise**, set **Staged sale of the concentrated stock** to **Over two tax years** and choose **Ask for v2**; tick the review, choose **Approve v2** and **Confirm**. In **Dr. Amanda Pell** choose **Send v2 to Dr. Pell** (Form ADV Part 2A goes with it) and **Confirm**, then **Advance to her acceptance · Mon 2 Mar 10:00 ET**. Her onboarding checklist opens in **Pell · prospect work**.
+6. **Dr. Amanda Pell, first contact to onboarding.** In the Brief, under **Today**, on the coffee's line choose **Open her thread**. Choose **Deliver Form CRS** and **Confirm**, then **Record the coffee** and **Record** in its dialog, then **Advance to her reply · Thu 26 Feb 09:10 ET**. In **Pell · prospect work** choose **Ask Prospect Profile**, **Ask Transfer-In** and **Ask Proposal Agent**. Transfer-In weighs moving each holding in kind against selling it, with the gain and a tax estimate; her 403(b) rollover is only asked about, comparison to follow. On the proposal choose **Revise**, set **Phased sale of the concentrated stock** to **Over two tax years** and choose **Ask for v2**; tick the review, choose **Approve v2** and **Confirm**. In **Dr. Amanda Pell** choose **Send v2 to Dr. Pell** (Form ADV Part 2A goes with it) and **Confirm**, then **Advance to her acceptance · Mon 2 Mar 10:00 ET**. Her onboarding checklist opens in **Pell · prospect work**.
 
    ![Her thread: Form CRS delivered, her reply, and the proposal sent with Form ADV Part 2A](e2e-visual/__baselines__/pell-thread-light.png)
    ![The prospect work thread with her onboarding opened](e2e-visual/__baselines__/pell-onboarding-light.png)

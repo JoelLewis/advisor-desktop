@@ -74,7 +74,7 @@ export async function approve(page: Page, version: number) {
   await reason.check()
   await approval.getByRole('button', { name: `Approve v${version}` }).click()
   await expect(approval).toContainText(`v${version} is approved`)
-  await expect(approval).toContainText('PENDING COMPLIANCE REVIEW')
+  await expect(approval).toContainText('PENDING COMPLIANCE RELEASE')
 }
 
 export async function askForLetter(page: Page) {
@@ -188,9 +188,9 @@ export async function reviseToTwoTaxYears(page: Page, atDialog?: AtDialog) {
   await proposal.getByRole('button', { name: 'Revise' }).click()
   const dialog = page.getByRole('dialog', { name: 'Revise the Pell proposal' })
   await checkOpenDialog(dialog, atDialog)
-  await dialog.getByLabel('Staged sale of the concentrated stock').selectOption('2')
+  await dialog.getByLabel('Phased sale of the concentrated stock').selectOption('2')
   await dialog.getByRole('button', { name: 'Ask for v2' }).click()
-  await expect(proposal.getByRole('table', { name: 'Staged sale option · v2' })).toBeVisible()
+  await expect(proposal.getByRole('table', { name: 'Phased sale over two tax years · v2' })).toBeVisible()
 }
 
 export async function approveProspect(page: Page, version: number, atDialog?: AtDialog) {

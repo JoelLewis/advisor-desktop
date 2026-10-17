@@ -25,14 +25,14 @@ describe('Supervision', () => {
     const fingerprint = await approved()
     viewAsOnLoad('cco-001')
     const queue = await open('/supervision')
-    for (const group of ['Orders awaiting release', 'Open alerts', 'Correspondence to review', 'Disposed today']) {
+    for (const group of ['Pending compliance release', 'Open alerts', 'Correspondence to review', 'Closed today']) {
       expect(queue.getByRole('heading', { name: group })).toBeInTheDocument()
     }
     expect(screen.getByText(/^Choose an item from the queue: its evidence/)).toBeInTheDocument()
     expect(screen.queryByRole('navigation', { name: 'Threads' })).toBeNull()
     await userEvent.setup().click(queue.getByRole('link', { name: /^Johnson rebalance · v1/ }))
     const item = await screen.findByRole('region', { name: 'Orders · Johnson rebalance · v1' })
-    for (const text of [fingerprint, 'Adrian Hale, Advisor', 'REC-0001', 'This is the record of what was approved. The checks are not run again here.', 'PENDING COMPLIANCE REVIEW']) {
+    for (const text of [fingerprint, 'Adrian Hale, Advisor', 'REC-0001', 'This is the record of what was approved. The checks are not run again here.', 'PENDING COMPLIANCE RELEASE']) {
       expect(item).toHaveTextContent(text)
     }
     const reason = within(item).getByText('Suitability reason', { selector: 'dt' })

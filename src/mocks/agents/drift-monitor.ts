@@ -10,6 +10,7 @@ import { openWashSaleWindows } from '@/mocks/data/realized-sales'
 import type { AssetClass, Position } from '@/types/portfolio'
 import { claimNameOf } from './claim-name'
 import { fmtDayMonthYear } from '@/kit/measure'
+import { dontRepurchaseThrough } from '@/kit/repurchase'
 import { modelAboveTolerance, toleranceLine } from '@/mocks/workspace/suitability'
 
 const label = (key: AssetClass): string => ASSET_CLASS_LABELS[key]
@@ -96,7 +97,7 @@ function replacementHolds(accountId: string, positions: readonly Position[], asO
         claim: `${held} was bought in place of the ${sold} shares sold at a loss, keeping related exposure while the wash-sale window is open. `
           + `A ${label(replacement.assetClass)} trim should leave it in place, and ${sold} should not be bought back in any account of the same taxpayer before the window closes: a buyback in a taxable account would defer the harvested loss into the new shares, and one in an IRA or Roth would disallow it permanently.`,
         attention: 'info' as const,
-        citations: [{ source: `Wash-sale window · ${w.id} · ${w.symbol} loss sale of ${fmtDayMonthYear(w.saleDate)}, open through ${fmtDayMonthYear(w.end)}`, asOf }],
+        citations: [{ source: `Wash-sale window · ${w.id} · ${w.symbol} loss sale of ${fmtDayMonthYear(w.saleDate)} · ${dontRepurchaseThrough(w.end)}`, asOf }],
         figures: [
           { label: `${replacement.symbol} weight`, value: replacement.weight, unit: '%' as const, source: 'positions.weight' },
           { label: `Days until the ${w.symbol} window closes`, value: w.daysRemaining, unit: 'd' as const, source: 'openWashSaleWindows.daysRemaining' },

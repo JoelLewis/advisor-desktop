@@ -14,7 +14,7 @@ export function RestrictionRulers({ restrictions }: { restrictions: RepurchaseRe
   const titleId = useId()
   return (
     <section aria-labelledby={titleId} className="flex min-w-0 flex-col gap-4">
-      <h3 id={titleId} className="text-label uppercase text-ink-2">Repurchase restrictions</h3>
+      <h3 id={titleId} className="text-label uppercase text-ink-2">Wash-sale restrictions</h3>
       {restrictions.length === 0 ? <p className="text-body text-ink-3">None for this taxpayer.</p> : GROUPS.map((group) => {
         const shown = restrictions.filter((r) => r.source.kind === group.kind)
         if (shown.length === 0) return null

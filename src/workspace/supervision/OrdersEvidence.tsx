@@ -73,9 +73,9 @@ function OrdersStatus({ item }: { item: OrdersItem }) {
   }
   const pending = item.staged.filter((o) => o.status === 'pending_compliance')
   return (
-    <Pane title="Staged orders">
+    <Pane title="Pending compliance release">
       <p className="flex flex-wrap items-baseline gap-2 text-body">
-        <Tag tone="hatch">PENDING COMPLIANCE REVIEW</Tag>
+        <Tag tone="hatch">PENDING COMPLIANCE RELEASE</Tag>
         {item.escalation ? <Tag tone="solid">ESCALATED</Tag> : null}
       </p>
       <StagedOrderList orders={pending} />

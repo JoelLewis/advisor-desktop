@@ -37,8 +37,17 @@ export const COFFEE_NOTE_DRAFT =
 
 /** What the presenter starts from when approving; it is Adrian's own reasoning and he may change any of it. */
 export const RATIONALE_DRAFT =
-  'Growth matches her questionnaire and her long horizon. Her Stryker position moves in kind; any sale is staged with her CPA. The 403(b) stays where it is until the comparison.'
+  'Growth matches her questionnaire and her long horizon. Her Stryker position moves in kind; any sale is phased over tax years with her CPA. The 403(b) stays where it is until the comparison.'
 
 export const TRANCHE_OPTIONS: readonly { value: '' | '2' | '3'; label: string }[] = [
-  { value: '', label: 'Not staged' }, { value: '2', label: 'Over two tax years' }, { value: '3', label: 'Over three tax years' },
+  { value: '', label: 'Not phased' }, { value: '2', label: 'Over two tax years' }, { value: '3', label: 'Over three tax years' },
 ]
+
+const TRANCHE_WORDS: ReadonlyMap<number, string> = new Map([[2, 'two'], [3, 'three']])
+
+/** A phased sale's length in words; a count the sale cannot have is a broken invariant. */
+export function trancheWordsOf(count: number): string {
+  const words = TRANCHE_WORDS.get(count)
+  if (words === undefined) throw new Error(`A phased sale runs over two or three tax years, not ${count}`)
+  return words
+}

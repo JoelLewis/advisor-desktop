@@ -24,7 +24,6 @@ import { clientDate, clientMoney, clientPercent } from '@/kit/measure'
 export type ClientLetter = { body: string; figures: Figure[] }
 
 const capitalise = (text: string) => `${text.charAt(0).toUpperCase()}${text.slice(1)}`
-const dayAfter = (iso: string) => new Date(Date.parse(`${iso}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10)
 const security = (t: Pick<ProposedTrade, 'name' | 'symbol'>) => `${t.name} (${t.symbol})`
 /** A leg's result this year: realized less any §1091-washed part, both characters (collectibles are within long-term). */
 const recognized = (t: ProposedTrade) => {
@@ -104,7 +103,7 @@ export function writeClientLetter(proposal: Proposal, version: ProposalVersion, 
     figures.push({ label: `${t.symbol} loss`, value: recognized(t), unit: 'USD', source: `version.preview.trades.${t.symbol} realized, less any washed part` })
     paragraphs.push(
       `Selling ${security(t)} is expected to realize a loss of about ${aboutMoney(-recognized(t))} at today's prices, which can offset capital gains, now or in later years. `
-      + `To avoid postponing or losing that loss, if the sale is made on ${clientDate(saleDate)}, please don't buy ${t.name} back ${where}, on or before ${clientDate(until)}; from ${clientDate(dayAfter(until))} you may buy it again. ${consequence} `
+      + `To avoid postponing or losing that loss, if the sale is made on ${clientDate(saleDate)}, please don't repurchase ${t.name} ${where} through ${clientDate(until)}. ${consequence} `
       + `If the sale is made on ${clientDate(saleDate)}, please also tell us before the sale if ${buyers} bought ${t.name} in any account on or after ${clientDate(window.start)}, because that can affect the loss.`,
     )
   }

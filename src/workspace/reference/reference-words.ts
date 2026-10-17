@@ -8,10 +8,10 @@ import { assetClassLabel } from '@/workspace/asset-class-label'
 
 export const BILLING_METHOD_WORDS: Readonly<Record<BillingMethod, string>> = { advance: 'In advance', arrears: 'In arrears' }
 export const BLOTTER_STATUS_WORDS: Readonly<Record<BlotterStatus, string>> = {
-  working: 'Working', pending_compliance: 'Pending compliance', filled: 'Filled', canceled: 'Canceled', withdrawn: 'Withdrawn', returned: 'Returned',
+  working: 'Working', pending_compliance: 'Pending compliance release', filled: 'Filled', canceled: 'Canceled', withdrawn: 'Withdrawn', returned: 'Returned',
 }
 export const BLOTTER_STATUS_TAG: Readonly<Record<BlotterStatus, string>> = {
-  working: 'WORKING', pending_compliance: 'PENDING COMPLIANCE', filled: 'FILLED', canceled: 'CANCELED', withdrawn: 'WITHDRAWN', returned: 'RETURNED',
+  working: 'WORKING', pending_compliance: 'PENDING COMPLIANCE RELEASE', filled: 'FILLED', canceled: 'CANCELED', withdrawn: 'WITHDRAWN', returned: 'RETURNED',
 }
 export const TOLERANCE_TAG: Readonly<Record<ToleranceStatus, string>> = { above: 'ABOVE TOLERANCE', within: 'WITHIN TOLERANCE', below: 'BELOW TOLERANCE', glide_path: 'GLIDE PATH' }
 /** An account whose model sits outside the client's band where its tax treatment allows, with the client's accounts as a whole within it: not a suitability flag. */

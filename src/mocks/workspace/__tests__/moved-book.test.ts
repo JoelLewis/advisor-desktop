@@ -21,7 +21,7 @@ describe("after the story's v3 fills, every engine read sees the moved book", ()
     release(approvedStoryV3())
     const findings = runHarvestScanner(ctx)
     expect(findings.some((f) => f.claim.startsWith('The remaining Intel Corp. shares can be sold at a loss today'))).toBe(false)
-    const recorded = findings.find((f) => f.citations.some((c) => c.source === 'Wash-sale window · rs-006 · INTC loss sale of 25 Feb 2026, open through 27 Mar 2026'))
+    const recorded = findings.find((f) => f.citations.some((c) => c.source === 'Wash-sale window · rs-006 · INTC loss sale of 25 Feb 2026 · Don\'t repurchase through 27 Mar 2026'))
     expect(recorded?.figures).toContainEqual({ label: 'Loss realized · INTC', value: -45_850, unit: 'USD', source: 'realizedSales.realizedGainLoss' })
   })
 
