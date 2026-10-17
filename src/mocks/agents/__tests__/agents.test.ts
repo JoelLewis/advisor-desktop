@@ -85,20 +85,20 @@ describe('agents over the whole book', () => {
     }
     expect(named).toBeGreaterThan(0)
   })
-  it("Pre-trade Check reports Growth above Robert Johnson's Moderate tolerance with his accounts as a whole after the proposal, digit-free, with the scores as figures", () => {
+  it("Pre-trade Check reports Growth above Robert Johnson's Moderate tolerance with his accounts as a whole after a full rebalance to the model, digit-free, with the scores as figures", () => {
     const gap = pretrade.run(ctx('acc-002')).find((f) => f.claim.startsWith('Warning: Growth'))
-    expect(gap?.claim).toBe("Warning: Growth sits above Robert Johnson's Moderate tolerance for this account; after this proposal, Robert Johnson's accounts as a whole would sit within it.")
+    expect(gap?.claim).toBe("Warning: Growth sits above Robert Johnson's Moderate tolerance for this account; after a full rebalance to the model, Robert Johnson's accounts as a whole would sit within it.")
     expect(gap?.figures.map((f) => [f.label, f.unit, f.value])).toEqual([
-      ['Growth risk score', 'pts', 66], ["Robert Johnson's tolerance ceiling", 'pts', 55], ["Robert Johnson's accounts as a whole, after this proposal", 'pts', 46],
+      ['Growth risk score', 'pts', 66], ["Robert Johnson's tolerance ceiling", 'pts', 55], ["Robert Johnson's accounts as a whole, after a full rebalance to the model", 'pts', 46],
     ])
   })
   it('Drift Monitor flags the model above the tolerance for the advisor to decide, and says where the accounts as a whole would sit', () => {
     const gap = drift.run(ctx('acc-002')).find((f) => f.claim.startsWith('Growth sits above'))
-    expect(gap?.claim).toBe("Growth sits above Robert Johnson's Moderate tolerance for this account; after a rebalance to the model, Robert Johnson's accounts as a whole would sit within it. Approving a rebalance to it needs a recorded suitability reason.")
+    expect(gap?.claim).toBe("Growth sits above Robert Johnson's Moderate tolerance for this account; after a full rebalance to the model, Robert Johnson's accounts as a whole would sit within it. Approving a rebalance to it needs a recorded suitability reason.")
     expect(gap?.attention).toBe('attention')
     expect(gap?.figures.map((f) => f.value)).toEqual([66, 55, 46])
     expect(drift.run(ctx('acc-017')).map((f) => f.claim)).toContain(
-      "Growth sits above Jennifer Martinez's Moderate tolerance for this account, and after a rebalance to the model Jennifer Martinez's accounts as a whole would sit above it too. Approving a rebalance to it needs a recorded suitability reason.",
+      "Growth sits above Jennifer Martinez's Moderate tolerance for this account, and after a full rebalance to the model Jennifer Martinez's accounts as a whole would sit above it too. Approving a rebalance to it needs a recorded suitability reason.",
     )
     expect(drift.run(ctx('acc-003')).some((f) => f.claim.includes('tolerance for this account'))).toBe(false)
   })

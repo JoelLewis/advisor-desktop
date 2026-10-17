@@ -6,8 +6,8 @@ export const SUITABILITY_REASONS = ['ips_permits_growth', 'client_acknowledged_r
 export type SuitabilityReasonId = (typeof SUITABILITY_REASONS)[number]
 /** What the advisor sends: the reason chosen and, if written, a note. */
 export type SuitabilityReason = { reason: SuitabilityReasonId; note?: string }
-/** Where the client's accounts as a whole sit after the proposal, against the client's tolerance band. */
-export type WholeFigure = { score: number; toleranceBand: string; floor: number; ceiling: number }
+/** Where the client's accounts as a whole sit after the proposal (`score`) and today (`today`), against the client's tolerance band. */
+export type WholeFigure = { score: number; today: number; toleranceBand: string; floor: number; ceiling: number }
 /**
  * The reason as the engine records it: the client it was judged for, and, with the accounts-as-a-whole reason,
  * the figure that reason rests on, taken from the version's pre-trade check rather than from the request.
@@ -28,10 +28,17 @@ export function reasonLabel(reason: SuitabilityReasonId, clientName: string): st
 
 const pts = (n: number) => `${fmtPoints(n)} pts`
 /** The band as the pre-trade check writes it: "Moderate, 41–55 pts". */
-export const bandText = ({ toleranceBand, floor, ceiling }: Omit<WholeFigure, 'score'>): string => `${toleranceBand}, ${fmtPoints(floor)}–${pts(ceiling)}`
+export const bandText = ({ toleranceBand, floor, ceiling }: Pick<WholeFigure, 'toleranceBand' | 'floor' | 'ceiling'>): string => `${toleranceBand}, ${fmtPoints(floor)}–${pts(ceiling)}`
 
-/** The figure the accounts-as-a-whole reason rests on: "46 pts after this proposal, within Moderate, 41–55 pts". */
-const wholeFigureText = (whole: WholeFigure): string => `${pts(whole.score)} after this proposal, within ${bandText(whole)}`
+/**
+ * The whole after this proposal beside today's: "46 pts after this proposal, from 51 pts today", or, where the
+ * proposal leaves it where it is, "51 pts, unchanged by this proposal".
+ */
+export const wholeAfterText = (after: number, today: number): string =>
+  fmtPoints(after) === fmtPoints(today) ? `${pts(after)}, unchanged by this proposal` : `${pts(after)} after this proposal, from ${pts(today)} today`
+
+/** The figure the accounts-as-a-whole reason rests on: "46 pts after this proposal, from 51 pts today, within Moderate, 41–55 pts". */
+const wholeFigureText = (whole: WholeFigure): string => `${wholeAfterText(whole.score, whole.today)}, within ${bandText(whole)}`
 
 /** The reason with its figure and note: "<reason>[ · <figure>][ · <note>]". */
 export function suitabilityText({ reason, note, clientName, whole }: RecordedSuitability): string {

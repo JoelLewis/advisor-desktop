@@ -43,7 +43,7 @@ function describe(v: ProposalViolation, names: Names): { who: string; label: str
       const t = v.tolerance
       if (!t) throw new Error('A model_above_tolerance violation carries no tolerance facts')
       const model = hasDigit(t.modelName) ? 'The model' : t.modelName
-      return { who: model, label: t.modelName, phrase: tolerancePhrase(t.clientName, t.toleranceBand, t.wholeAfterStatus, 'proposal') }
+      return { who: model, label: t.modelName, phrase: tolerancePhrase(t.clientName, t.toleranceBand, t.wholeAfterStatus, 'rebalance') }
     }
   }
 }
@@ -72,7 +72,7 @@ export function runPretradeCheck({ asOf, subject }: AgentContext): AgentFinding[
     } else if (v.category === 'model_above_tolerance' && v.tolerance) {
       figures.push({ label: `${v.tolerance.modelName} risk score`, value: v.tolerance.modelScore, unit: 'pts', source: 'riskScoreOf(modelVolatility)' })
       figures.push({ label: `${v.tolerance.clientName}'s tolerance ceiling`, value: v.tolerance.ceiling, unit: 'pts', source: 'clients.riskProfile.score · RISK_PROFILE_TABLE' })
-      figures.push({ label: `${v.tolerance.clientName}'s accounts as a whole, after this proposal`, value: v.tolerance.wholeAfterScore, unit: 'pts', source: 'clientRiskOf after the legs' })
+      figures.push({ label: `${v.tolerance.clientName}'s accounts as a whole, after a full rebalance to the model`, value: v.tolerance.wholeAfterScore, unit: 'pts', source: 'clientRiskOf after the rebalance legs' })
     } else {
       if (v.projectedWeight !== undefined) figures.push({ label: `${label} after the proposal`, value: v.projectedWeight, unit: '%', source: 'evaluateProposal.violations.projectedWeight' })
       if (v.limitWeight !== undefined) figures.push({ label: `${label} limit`, value: v.limitWeight, unit: '%', source: 'evaluateProposal.violations.limitWeight' })

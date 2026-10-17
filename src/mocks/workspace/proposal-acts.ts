@@ -63,7 +63,7 @@ function recordedSuitability(v: ProposalVersion, suitability: SuitabilityReason 
   if (gap.wholeAfterStatus !== 'within') {
     return { ok: false, status: 409, code: 'REASON_DOES_NOT_HOLD', message: `After v${v.n}, ${gap.clientName}'s accounts as a whole sit ${gap.wholeAfterStatus} the tolerance; choose another reason.` }
   }
-  const whole = { score: gap.wholeAfterScore, toleranceBand: gap.toleranceBand, floor: gap.floor, ceiling: gap.ceiling }
+  const whole = { score: gap.wholeAfterScore, today: gap.wholeTodayScore, toleranceBand: gap.toleranceBand, floor: gap.floor, ceiling: gap.ceiling }
   return { ok: true, value: { ...suitability, clientName: gap.clientName, whole } }
 }
 

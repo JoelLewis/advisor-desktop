@@ -5,6 +5,7 @@ import { approveProposal, withdrawApproval } from '../proposal-acts'
 import { sendToParty } from '../acts'
 import { AGENT_CONSTRAINTS, seedJohnsonProposal, versionOf } from './proposal-fixture'
 import { JOHNSON_REASON } from '@/test/suitability-fixture'
+import { suitabilityText } from '@/lib/suitability'
 
 describe('approve_proposal', () => {
   beforeEach(() => resetWorkspaceStore())
@@ -149,8 +150,20 @@ describe('the suitability reason', () => {
     if (!r.ok) throw new Error(r.message)
     expect(r.act.suitability).toEqual({
       reason: 'accounts_within_tolerance', clientName: 'Robert Johnson',
-      whole: { score: 46, toleranceBand: 'Moderate', floor: 41, ceiling: 55 },
+      whole: { score: 46, today: 51, toleranceBand: 'Moderate', floor: 41, ceiling: 55 },
     })
+    if (!r.act.suitability) throw new Error('no suitability recorded')
+    expect(suitabilityText(r.act.suitability)).toContain('46 pts after this proposal, from 51 pts today, within Moderate, 41–55 pts')
+  })
+  it("records v3's own figure: harvest only without QAI leaves the whole unchanged at 51, and the record says so", () => {
+    const p = seedJohnsonProposal()
+    const v3 = versionOf(3, [...AGENT_CONSTRAINTS, { kind: 'harvest_only' }], [{ kind: 'exclude', symbol: 'QAI' }])
+    p.versions.push(v3)
+    const r = approveProposal('user-001', p.id, 3, v3.fingerprint, { reason: 'accounts_within_tolerance' })
+    if (!r.ok) throw new Error(r.message)
+    expect(r.act.suitability?.whole).toEqual({ score: 51, today: 51, toleranceBand: 'Moderate', floor: 41, ceiling: 55 })
+    if (!r.act.suitability) throw new Error('no suitability recorded')
+    expect(suitabilityText(r.act.suitability)).toContain('51 pts, unchanged by this proposal, within Moderate, 41–55 pts')
   })
   it("refuses the accounts-as-a-whole reason when the client's accounts as a whole sit outside the tolerance", () => {
     const p = seedJohnsonProposal()

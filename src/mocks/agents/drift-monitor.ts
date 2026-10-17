@@ -53,7 +53,7 @@ export function runDriftMonitor({ asOf, subject }: AgentContext): TopicFinding[]
       figures: [
         { label: `${gap.modelName} risk score`, value: gap.modelScore, unit: 'pts', source: 'riskScoreOf(modelVolatility)' },
         { label: `${gap.clientName}'s tolerance ceiling`, value: gap.tolerance.ceiling, unit: 'pts', source: 'clients.riskProfile.score · RISK_PROFILE_TABLE' },
-        { label: `${gap.clientName}'s accounts as a whole, after a rebalance`, value: gap.wholeAfter.score, unit: 'pts', source: 'clientRiskOf after the rebalance legs' },
+        { label: `${gap.clientName}'s accounts as a whole, after a full rebalance to the model`, value: gap.wholeAfter.score, unit: 'pts', source: 'clientRiskOf after the rebalance legs' },
       ],
     })
   }

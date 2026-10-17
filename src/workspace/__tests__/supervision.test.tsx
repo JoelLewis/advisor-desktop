@@ -36,7 +36,7 @@ describe('Supervision', () => {
       expect(item).toHaveTextContent(text)
     }
     const reason = within(item).getByText('Suitability reason', { selector: 'dt' })
-    expect(reason.nextElementSibling).toHaveTextContent("Robert Johnson's accounts as a whole stay within tolerance (asset location) · 46 pts after this proposal, within Moderate, 41–55 pts")
+    expect(reason.nextElementSibling).toHaveTextContent("Robert Johnson's accounts as a whole stay within tolerance (asset location) · 46 pts after this proposal, from 51 pts today, within Moderate, 41–55 pts")
     expect(within(item).getByRole('table', { name: 'Approved legs · v1' })).toBeInTheDocument()
     expect(within(item).getByRole('link', { name: /Team thread/ })).toHaveAttribute('href', '/t/th-johnson-review')
     expect(within(item).getByRole('link', { name: /Workbench/ })).toHaveAttribute('href', '/proposals/prop-0001?from=th-johnson-review')

@@ -14,7 +14,7 @@ export type BriefTopic =
   | { kind: 'harvest_allowed'; symbol: string; name: string; remaining: boolean }
   | { kind: 'realized_loss'; symbol: string; name: string; when: 'today' | 'recently' }
   | { kind: 'held_away' }
-  /** The account's model sits above the client's tolerance; `model` is digit-free, and `whole` is where the client's accounts as a whole would sit after a rebalance to the model. */
+  /** The account's model sits above the client's tolerance; `model` is digit-free, and `whole` is where the client's accounts as a whole would sit after a full rebalance to the model. */
   | { kind: 'model_above_tolerance'; accountId: string; model: string; clientName: string; tolerance: string; whole: WholeStatus }
   /** Nothing to measure here: a custom mandate, no holdings, an untaxed account, or no loss to harvest. */
   | { kind: 'not_measured' }

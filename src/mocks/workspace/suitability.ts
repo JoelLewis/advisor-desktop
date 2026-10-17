@@ -7,12 +7,15 @@ import { modelDisplayName } from '@/mocks/handlers/pms'
 import { clientOf, clientRiskOf, modelScoreOf, scoreOfHoldings } from '@/mocks/reference/risk'
 import { bandFor, type ProfileBand } from '@/lib/risk-profile'
 import { fmtPoints } from '@/kit/measure'
+import { wholeAfterText } from '@/lib/suitability'
 import { store } from '@/mocks/data/workspace-store'
 
 export type ToleranceGap = {
   modelName: string; modelBand: ProfileBand; modelScore: number; clientName: string; tolerance: ProfileBand
   /** The client's accounts as a whole (`clientRiskOf`) as they would stand after the legs, against the same band. */
   wholeAfter: { score: number; status: WholeStatus }
+  /** The same whole as it stands today, before any leg. */
+  wholeToday: number
 }
 
 /**
@@ -30,15 +33,19 @@ export function modelAboveTolerance(account: Account, legs: readonly ProposedTra
   if (modelScore <= tolerance.ceiling) return undefined
   const after = scoreOfHoldings(holdingsAfterTrades(account, getPositionsForAccount(account.id, account.totalValue), legs))
   const whole = clientRiskOf(client.id, new Map([[account.id, after]]))
-  if (!whole) throw new Error(`${account.id} is measured, yet ${client.id} has no accounts as a whole`)
+  const today = clientRiskOf(client.id)
+  if (!whole || !today) throw new Error(`${account.id} is measured, yet ${client.id} has no accounts as a whole`)
   const { score, status } = whole.posture
   if (status === 'glide_path') throw new Error(`${client.id}'s accounts as a whole carry a glide-path status`)
-  return { modelName: modelDisplayName(account.modelId), modelBand: bandFor(modelScore), modelScore, clientName: client.fullName, tolerance, wholeAfter: { score, status } }
+  return {
+    modelName: modelDisplayName(account.modelId), modelBand: bandFor(modelScore), modelScore, clientName: client.fullName, tolerance,
+    wholeAfter: { score, status }, wholeToday: today.posture.score,
+  }
 }
 
-/** When the whole is read: after the proposal on a version, after a rebalance to the model where no proposal exists yet. */
+/** When the whole is read: after a version's own legs, or after the agents' full rebalance to the model. */
 export type WholeMoment = 'proposal' | 'rebalance'
-const MOMENT_WORDS: Readonly<Record<WholeMoment, string>> = { proposal: 'after this proposal', rebalance: 'after a rebalance to the model' }
+const MOMENT_WORDS: Readonly<Record<WholeMoment, string>> = { proposal: 'after this proposal', rebalance: 'after a full rebalance to the model' }
 
 /** What the check says of the model: "sits above Robert Johnson's Moderate tolerance for this account; after this proposal, Robert Johnson's accounts as a whole would sit within it". */
 export function tolerancePhrase(clientName: string, tolerance: string, whole: WholeStatus, moment: WholeMoment): string {
@@ -66,14 +73,14 @@ function toleranceViolation(gap: ToleranceGap): ProposalViolation {
     currentValue: `${gap.modelBand.label}, ${pts(gap.modelScore)}`,
     limit: `${gap.tolerance.label}, ${band}`,
     message: `${toleranceLine(gap.modelName, gap.clientName, gap.tolerance.label, gap.wholeAfter.status, 'proposal')}. `
-      + `The model scores ${pts(gap.modelScore)} against a ${gap.tolerance.label} band of ${band}, and the accounts as a whole would sit at ${pts(gap.wholeAfter.score)}. `
+      + `The model scores ${pts(gap.modelScore)} against a ${gap.tolerance.label} band of ${band}; the accounts as a whole read ${wholeAfterText(gap.wholeAfter.score, gap.wholeToday)}. `
       + 'Approving it needs a suitability reason.',
     legs: [],
     preExisting: true,
     tolerance: {
       modelName: gap.modelName, modelBand: gap.modelBand.label, modelScore: gap.modelScore, clientName: gap.clientName,
       toleranceBand: gap.tolerance.label, floor: gap.tolerance.floor, ceiling: gap.tolerance.ceiling,
-      wholeAfterScore: gap.wholeAfter.score, wholeAfterStatus: gap.wholeAfter.status,
+      wholeAfterScore: gap.wholeAfter.score, wholeAfterStatus: gap.wholeAfter.status, wholeTodayScore: gap.wholeToday,
     },
   }
 }

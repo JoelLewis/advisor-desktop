@@ -228,10 +228,10 @@ export type ProposalViolation = PreTradeViolation & {
   currentWeight?: number
   projectedWeight?: number
   limitWeight?: number
-  /** The model-above-tolerance check: the model, the client's tolerance it was measured against, and the client's accounts as a whole after the proposal against the same band. */
+  /** The model-above-tolerance check: the model, the client's tolerance it was measured against, and the client's accounts as a whole after the proposal (and today) against the same band. */
   tolerance?: {
     modelName: string; modelBand: string; modelScore: number; clientName: string; toleranceBand: string; floor: number; ceiling: number
-    wholeAfterScore: number; wholeAfterStatus: WholeStatus
+    wholeAfterScore: number; wholeAfterStatus: WholeStatus; wholeTodayScore: number
   }
 }
 

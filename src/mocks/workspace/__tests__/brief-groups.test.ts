@@ -39,7 +39,7 @@ describe('the Brief groups its findings', () => {
     const { decide, context } = summaryOf()
     expect(lines(decide)).toEqual([
       { title: undefined, lines: ['US Equity is outside its tolerance band'] },
-      { title: undefined, lines: ["Growth sits above Robert Johnson's Moderate tolerance for this account; after a rebalance to the model, Robert Johnson's accounts as a whole would sit within it"] },
+      { title: undefined, lines: ["Growth sits above Robert Johnson's Moderate tolerance for this account; after a full rebalance to the model, Robert Johnson's accounts as a whole would sit within it"] },
       { title: 'Intel Corp.', lines: ['The remaining shares can be sold at a loss today', 'Sold at a loss recently; a buyback would wash the loss'] },
       { title: undefined, lines: ['iShares Core US Aggregate Bond ETF can be sold at a loss today'] },
     ])
@@ -54,7 +54,7 @@ describe('the Brief groups its findings', () => {
   it("the morning's Needs a decision: the drift, then Growth above Robert's tolerance with his accounts as a whole within it, then Intel", () => {
     const { decide } = summaryOf()
     expect(decide.map((i) => i.title ?? i.readings[0]!.line).slice(0, 3)).toEqual([
-      'US Equity is outside its tolerance band', "Growth sits above Robert Johnson's Moderate tolerance for this account; after a rebalance to the model, Robert Johnson's accounts as a whole would sit within it", 'Intel Corp.',
+      'US Equity is outside its tolerance band', "Growth sits above Robert Johnson's Moderate tolerance for this account; after a full rebalance to the model, Robert Johnson's accounts as a whole would sit within it", 'Intel Corp.',
     ])
     expect(decide[1]).toMatchObject({ agentId: 'drift-monitor', attention: 'attention', awaitsApprovalOf: 'acc-002' })
     expect(decide.filter((i) => i.awaitsApprovalOf !== undefined)).toHaveLength(1)

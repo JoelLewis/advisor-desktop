@@ -11,6 +11,7 @@ import { isModelManaged } from '@/lib/mandate'
 import { GLIDE_PATH_MODELS } from '@/mocks/data/model-governance'
 import { modelAboveTolerance, needsSuitabilityReason, toleranceLine, withSuitability } from '../suitability'
 import { AGENT_CONSTRAINTS, versionOf } from './proposal-fixture'
+import { wholeAfterText } from '@/lib/suitability'
 
 const account = (id: string) => {
   const a = accounts.find((x) => x.id === id)
@@ -87,9 +88,9 @@ describe('asset location', () => {
 describe('model above tolerance', () => {
   beforeEach(() => resetWorkspaceStore())
 
-  it("Growth sits above Robert Johnson's Moderate tolerance; after a rebalance his accounts as a whole would score 46, within it", () => {
+  it("Growth sits above Robert Johnson's Moderate tolerance; after a full rebalance his accounts as a whole would score 46, from 51 today, within it", () => {
     const gap = rebalance('acc-002')
-    expect(gap).toMatchObject({ modelName: 'Growth', modelScore: 66, clientName: 'Robert Johnson', wholeAfter: { score: 46, status: 'within' } })
+    expect(gap).toMatchObject({ modelName: 'Growth', modelScore: 66, clientName: 'Robert Johnson', wholeAfter: { score: 46, status: 'within' }, wholeToday: 51 })
     expect(gap?.modelBand.label).toBe('Moderate Aggressive')
     expect(gap?.tolerance.label).toBe('Moderate')
     expect(toleranceLine('Growth', 'Robert Johnson', 'Moderate', 'within', 'proposal')).toBe(
@@ -100,7 +101,7 @@ describe('model above tolerance', () => {
   it('accounts as a whole outside the band too read as the stronger warning', () => {
     expect(rebalance('acc-017')).toMatchObject({ clientName: 'Jennifer Martinez', wholeAfter: { status: 'above' } })
     expect(toleranceLine('Growth', 'Jennifer Martinez', 'Moderate', 'above', 'rebalance')).toBe(
-      "Growth sits above Jennifer Martinez's Moderate tolerance for this account, and after a rebalance to the model Jennifer Martinez's accounts as a whole would sit above it too",
+      "Growth sits above Jennifer Martinez's Moderate tolerance for this account, and after a full rebalance to the model Jennifer Martinez's accounts as a whole would sit above it too",
     )
   })
 
@@ -109,15 +110,25 @@ describe('model above tolerance', () => {
     const check = v1.pretrade.violations.find((v) => v.category === 'model_above_tolerance')
     expect(check).toMatchObject({
       severity: 'warning', legs: [],
-      tolerance: { modelName: 'Growth', modelScore: 66, clientName: 'Robert Johnson', toleranceBand: 'Moderate', wholeAfterStatus: 'within', wholeAfterScore: 46 },
+      tolerance: { modelName: 'Growth', modelScore: 66, clientName: 'Robert Johnson', toleranceBand: 'Moderate', wholeAfterStatus: 'within', wholeAfterScore: 46, wholeTodayScore: 51 },
     })
     expect(check?.message).toBe(
       "Growth sits above Robert Johnson's Moderate tolerance for this account; after this proposal, Robert Johnson's accounts as a whole would sit within it. "
-      + 'The model scores 66 pts against a Moderate band of 41–55 pts, and the accounts as a whole would sit at 46 pts. Approving it needs a suitability reason.',
+      + 'The model scores 66 pts against a Moderate band of 41–55 pts; the accounts as a whole read 46 pts after this proposal, from 51 pts today. Approving it needs a suitability reason.',
     )
     expect(needsSuitabilityReason(v1.pretrade)).toBe(true)
     const others = v1.pretrade.violations.filter((v) => v.category !== 'model_above_tolerance')
     expect(v1.pretrade.passed).toBe(others.every((v) => v.severity !== 'block'))
+  })
+
+  it("each version's figure comes from its own legs: v1, the full rebalance, moves the whole to 46; v3, harvest only without QAI, leaves it at 51", () => {
+    const wholeOf = (v: ReturnType<typeof versionOf>) => v.pretrade.violations.find((x) => x.category === 'model_above_tolerance')?.tolerance
+    const v1 = wholeOf(versionOf(1, AGENT_CONSTRAINTS))
+    const v3 = wholeOf(versionOf(3, [...AGENT_CONSTRAINTS, { kind: 'harvest_only' }], [{ kind: 'exclude', symbol: 'QAI' }]))
+    expect(v1).toMatchObject({ wholeAfterScore: 46, wholeTodayScore: 51, wholeAfterStatus: 'within' })
+    expect(v3).toMatchObject({ wholeAfterScore: 51, wholeTodayScore: 51, wholeAfterStatus: 'within' })
+    expect(wholeAfterText(46, 51)).toBe('46 pts after this proposal, from 51 pts today')
+    expect(wholeAfterText(51, 51)).toBe('51 pts, unchanged by this proposal')
   })
 
   it('a model within the tolerance adds nothing', () => {
