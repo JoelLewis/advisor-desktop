@@ -1,5 +1,5 @@
 import { get, post, put } from './api-client'
-import type { AgentId, BindingAct, Directory, Draft, ListedThread, Message, ThreadDetail } from '@/types/workspace'
+import type { AgentId, BindingAct, Directory, ServedAct, Draft, ListedThread, Message, ThreadDetail } from '@/types/workspace'
 import type { Archive, ArchiveFilters, ComplianceActRequest, PresenterItem, SupervisionQueue } from '@/types/workspace-supervision'
 import type { DraftPreview, LegEdit, ProposalConstraint, ProposalDetail } from '@/types/workspace-proposal'
 import type { AgendaItemInput, MeetingSummary, MeetingView, NoteLineInput } from '@/types/workspace-meeting'
@@ -25,7 +25,7 @@ export const getDrafts = (viewer: string, threadId: string) =>
 export const createDraft = (viewer: string, threadId: string, body: string) =>
   post<Draft>(`/workspace/threads/${threadId}/drafts`, { body }, as(viewer))
 export const getActs = (viewer: string, threadId: string) =>
-  get<BindingAct[]>('/workspace/acts', { threadId }, as(viewer))
+  get<ServedAct[]>('/workspace/acts', { threadId }, as(viewer))
 export const sendToParty = (viewer: string, draftId: string) =>
   post<BindingAct>('/workspace/acts', { kind: 'send_to_party', draftId }, as(viewer))
 export const runAgent = (viewer: string, threadId: string, agentId: AgentId) =>

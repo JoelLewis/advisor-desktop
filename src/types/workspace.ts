@@ -111,6 +111,9 @@ export type BindingAct = {
   /** Why the advisor approved a model above the client's tolerance. */
   suitability?: RecordedSuitability
 }
+
+/** An act as the thread's acts endpoint serves it: a firm viewer is served its fingerprint, a client or a prospect never is. */
+export type ServedAct = Omit<BindingAct, 'fingerprint'> & { fingerprint?: string }
 export type LetterBasis = { proposalId: string; version: number; fingerprint: string }
 /** A recap's basis: the filing it was written from and the Intel window end it states. It is stale once either no longer matches. */
 export type RecordBasis = { eventId: string; actId: string; fingerprint: string; windowEnd?: string }

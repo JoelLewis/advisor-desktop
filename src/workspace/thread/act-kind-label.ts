@@ -1,4 +1,4 @@
-import type { BindingAct, BindingActKind, Person } from '@/types/workspace'
+import type { BindingActKind, Person, ServedAct } from '@/types/workspace'
 import { DISCLOSURE_TITLES } from '@/types/workspace-prospect'
 
 export const RECORD_KIND_LABEL: Readonly<Record<BindingActKind, string>> = {
@@ -25,7 +25,7 @@ export type ActWording = { kind: string; title: string; archive: string; trailLa
  * How a recorded act reads to its viewer. The firm sees the record and its supervisory archive; an
  * outside party sees what reached them, kept as a record, in their own terms.
  */
-export function actWording(act: BindingAct, actor: Person, forParty: boolean): ActWording {
+export function actWording(act: ServedAct, actor: Person, forParty: boolean): ActWording {
   if (!forParty) {
     const label = RECORD_KIND_LABEL[act.kind]
     return { kind: `${label} · ${SIGN_OFFS.has(act.kind) ? 'sign-off' : 'record'}`, title: act.summary, archive: 'Supervisory review', trailLabel: label }

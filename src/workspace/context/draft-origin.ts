@@ -1,4 +1,4 @@
-import type { BindingAct, Directory, Draft, LetterBasis, RecordBasis } from '@/types/workspace'
+import type { Directory, Draft, LetterBasis, RecordBasis, ServedAct } from '@/types/workspace'
 import { DISCLOSURE_TITLES } from '@/types/workspace-prospect'
 import { personIn } from '@/workspace/people/directory-people'
 
@@ -19,7 +19,7 @@ export function draftOrigin(draft: Draft, directory: Directory): string {
 }
 
 /** Where a sent agent letter came from, for the firm's record: what it was written from and who edited it. Undefined for other acts. */
-export function sentLetterOrigin(act: BindingAct, directory: Directory): string | undefined {
+export function sentLetterOrigin(act: ServedAct, directory: Directory): string | undefined {
   if (act.kind !== 'send_to_party') return undefined
   if (act.subject?.type === 'prospect_proposal' && act.basis) {
     const delivered = (act.delivers ?? []).map((d) => DISCLOSURE_TITLES[d])

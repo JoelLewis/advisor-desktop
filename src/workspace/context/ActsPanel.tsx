@@ -2,11 +2,11 @@ import { RecordTrail } from '@/kit/record-trail/RecordTrail'
 import { ActRecordSlip } from '@/workspace/thread/ActRecordSlip'
 import { actWording } from '@/workspace/thread/act-kind-label'
 import { personIn } from '@/workspace/people/directory-people'
-import type { BindingAct, Directory } from '@/types/workspace'
+import type { Directory, ServedAct } from '@/types/workspace'
 import { actAnchorId } from './act-anchor'
 import { ContextSection } from './ContextSection'
 
-type ActsPanelProps = { acts: BindingAct[]; directory: Directory; viewerIsExternal: boolean }
+type ActsPanelProps = { acts: ServedAct[]; directory: Directory; viewerIsExternal: boolean }
 
 export function ActsPanel({ acts, directory, viewerIsExternal }: ActsPanelProps) {
   const steps = acts.map((a) => {

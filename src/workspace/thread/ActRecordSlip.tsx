@@ -3,11 +3,11 @@ import { useViewer } from '@/workspace/viewer/use-viewer'
 import { isExternalViewerIn, personIn } from '@/workspace/people/directory-people'
 import { ROLE_LABEL } from '@/lib/role-label'
 import { sentLetterOrigin } from '@/workspace/context/draft-origin'
-import type { BindingAct, Directory } from '@/types/workspace'
+import type { Directory, ServedAct } from '@/types/workspace'
 import { actProvenance } from './act-provenance'
 import { actWording } from './act-kind-label'
 
-export function ActRecordSlip({ act, directory }: { act: BindingAct; directory: Directory }) {
+export function ActRecordSlip({ act, directory }: { act: ServedAct; directory: Directory }) {
   const { viewerId } = useViewer()
   const actor = personIn(directory, act.actorId)
   const viewerIsExternal = isExternalViewerIn(directory, viewerId)
