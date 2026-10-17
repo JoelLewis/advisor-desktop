@@ -54,7 +54,7 @@ function ClientPage({ view }: { view: ClientReadModel }) {
         <p className="tabular text-body">{`${view.risk.tolerance} · score ${fmtScore(view.risk.scoreFraction)} of 100 · assessed ${fmtDayMonthYear(view.risk.assessedOn)}`}</p>
       </Pane>
       <Pane title="Accounts owned" meta={`${fmtMoney(view.accountsValue)} ${UNIT.usd}`}>
-        <AccountsTable caption="Accounts owned" accounts={view.accounts} totalValue={view.accountsValue} totalLabel="Owned" tiesTo={`${view.name}'s accounts`} />
+        <AccountsTable caption="Accounts owned" accounts={view.accounts} totalValue={view.accountsValue} totalLabel="Owned" />
       </Pane>
       <Pane title="Investment policy statement"><p className="text-body">{ipsLine(view.ips)}</p></Pane>
       <Pane title="Communications"><CommunicationsList communications={view.communications} /></Pane>

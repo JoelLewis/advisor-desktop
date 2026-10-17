@@ -15,6 +15,8 @@ import { isModelManaged } from '@/lib/mandate'
 import { firstNameOf, joinWords } from '@/lib/words'
 import { firstRmdYear, requiredBeginningAge } from '@/lib/rmd'
 import { fmtDayMonthYear } from '@/kit/measure'
+import { figureText } from '@/kit/figure-text'
+import type { Figure } from '@/types/workspace'
 
 /** A finding, and the agenda title it proposes. */
 export type PrepFinding = AgentFinding & { agendaTitle: string }
@@ -168,12 +170,18 @@ function rmd(household: HouseholdFixture, own: readonly Account[], asOf: string)
   const owners = iras.map((account) => ({ account, member: household.members.find((m) => m.clientId === account.clientId) }))
     .flatMap(({ account, member }) => (member ? [{ account, member }] : []))
   if (owners.length === 0) return undefined
+  const timing = owners.map(({ member }) => {
+    const first = firstNameOf(member.name)
+    const year: Figure = { label: `First required distribution · ${first}`, value: firstRmdYear(member.dateOfBirth), unit: 'year', source: 'firstRmdYear(dateOfBirth)' }
+    const age: Figure = { label: `Age at the first required distribution · ${first}`, value: requiredBeginningAge(member.dateOfBirth), unit: 'count', source: 'requiredBeginningAge(dateOfBirth)' }
+    return { phrase: `${first}'s traditional IRA begin in ${figureText(year)}, at age ${figureText(age)}`, figures: [year, age] }
+  })
   return {
-    claim: `Required distributions from ${joinWords(owners.map(({ member }) => `${firstNameOf(member.name)}'s traditional IRA`))} begin in the year the citation states; the years before then are when Roth conversions can be modeled, as an estimate for the clients' tax professional to confirm.`,
+    claim: `Required distributions from ${joinWords(timing.map((t) => t.phrase))}; the years before then are when Roth conversions can be modeled, as an estimate for the clients' tax professional to confirm.`,
     attention: 'info',
-    figures: owners.map(({ account }) => ({ label: account.name, value: valueOf(account), unit: 'USD' as const, source: 'positions.marketValue' })),
+    figures: [...timing.flatMap((t) => t.figures), ...owners.map(({ account }) => ({ label: account.name, value: valueOf(account), unit: 'USD' as const, source: 'positions.marketValue' }))],
     citations: owners.map(({ member }) => ({
-      source: `Required beginning · ${member.name}, born ${member.dateOfBirth} · first required distribution for ${firstRmdYear(member.dateOfBirth)} (age ${requiredBeginningAge(member.dateOfBirth)}, SECURE 2.0)`,
+      source: `Required beginning · ${member.name}, born ${fmtDayMonthYear(member.dateOfBirth)} · first required distribution for ${firstRmdYear(member.dateOfBirth)} (age ${requiredBeginningAge(member.dateOfBirth)}, SECURE 2.0)`,
       asOf,
     })),
     agendaTitle: 'Roth conversions before required distributions',

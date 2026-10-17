@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { findingStatus, formatFigure, marksBreach } from '@/workspace/thread/figure-format'
+import { findingStatus, marksBreach } from '@/workspace/thread/figure-format'
+import { formatFigure } from '@/kit/figure-text'
 import type { AgentId } from '@/types/workspace'
 import type { Figure } from '@/types/workspace'
 

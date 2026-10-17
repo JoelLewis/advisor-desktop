@@ -1,30 +1,5 @@
-import { UNIT, fmtDays, fmtDrift, fmtMoney, fmtPoints, fmtQuantity, fmtTolerance, fmtWeight } from '@/kit/measure'
 import type { Status } from '@/kit/status/status'
-import type { AgentId, Attention, Figure, FigureUnit } from '@/types/workspace'
-
-export type FormattedFigure = { value: string; unit: string }
-
-const BY_UNIT: Readonly<Record<FigureUnit, { format: (v: number) => string; unit: string }>> = {
-  pp: { format: fmtDrift, unit: UNIT.pp },
-  '%': { format: fmtWeight, unit: UNIT.pct },
-  USD: { format: fmtMoney, unit: UNIT.usd },
-  sh: { format: fmtQuantity, unit: UNIT.shares },
-  contracts: { format: fmtQuantity, unit: UNIT.contracts },
-  par: { format: fmtMoney, unit: `${UNIT.usd} ${UNIT.par}` },
-  d: { format: fmtDays, unit: UNIT.days },
-  pts: { format: fmtPoints, unit: UNIT.points },
-  count: { format: fmtQuantity, unit: '' },
-}
-
-/** Engine fields whose pp value is a tolerance band, read as ± rather than as a signed drift. */
-const TOLERANCE_SOURCES: ReadonlySet<string> = new Set(['drift.driftTolerance'])
-
-/** An agent figure as display text. pp and % values arrive as fractions (0.132). */
-export function formatFigure(fig: Figure): FormattedFigure {
-  if (fig.unit === 'pp' && TOLERANCE_SOURCES.has(fig.source)) return { value: fmtTolerance(fig.value), unit: UNIT.pp }
-  const { format, unit } = BY_UNIT[fig.unit]
-  return { value: format(fig.value), unit }
-}
+import type { AgentId, Attention } from '@/types/workspace'
 
 /** A finding's status code, or 'none' for an informational finding that carries no code. */
 export type FindingStatus = Extract<Status, 'BLOCK' | 'WARN' | 'OUT'> | 'none'

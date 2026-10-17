@@ -10,10 +10,10 @@ type ModelRow = Extract<HouseholdAccount, { mandate: 'model' }>
 const outsideWords = (a: ModelRow) => a.outside
   .map((o) => `${assetClassLabel(o.assetClass)} ${fmtDrift(o.drift)}\u00a0${UNIT.pp}${o.residual ? ` · ${RESIDUAL_WORDS[o.residual]}` : ''}`).join('; ')
 
-type AccountsTableProps = { caption: string; accounts: HouseholdAccount[]; totalValue: number; totalLabel: string; tiesTo: string }
+type AccountsTableProps = { caption: string; accounts: HouseholdAccount[]; totalValue: number; totalLabel: string }
 
 /** Managed accounts against their models: value, largest drift against the band, and what sits outside it and why. */
-export function AccountsTable({ caption, accounts, totalValue, totalLabel, tiesTo }: AccountsTableProps) {
+export function AccountsTable({ caption, accounts, totalValue, totalLabel }: AccountsTableProps) {
   const rowsTotal = accounts.reduce((s, a) => s + a.value, 0)
   return (
     <DataTable caption={caption} rows={accounts} getRowId={(a) => a.accountId} total={accounts.length}
@@ -28,6 +28,6 @@ export function AccountsTable({ caption, accounts, totalValue, totalLabel, tiesT
         { id: 'status', header: 'Status', cell: (a) => (a.mandate === 'model' ? <StatusCode status={a.withinBand ? 'IN' : 'OUT'} label={a.withinBand ? 'inside its band' : 'outside its band'} /> : null) },
         { id: 'outside', header: 'Outside its band', wrap: true, cell: (a) => (a.mandate === 'model' ? outsideWords(a) : a.mandateSummary) },
       ]}
-      totals={{ label: totalLabel, tiesTo: { label: tiesTo, expected: totalValue, actual: rowsTotal }, cells: { value: fmtMoney(totalValue) } }} />
+      totals={{ label: totalLabel, tiesTo: { label: `the total on record, ${fmtMoney(totalValue)} ${UNIT.usd}`, expected: totalValue, actual: rowsTotal }, cells: { value: fmtMoney(totalValue) } }} />
   )
 }

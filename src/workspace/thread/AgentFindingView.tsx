@@ -4,7 +4,8 @@ import { Reading } from '@/kit/reading/Reading'
 import { SourceChips } from '@/kit/source-chips/SourceChips'
 import { StatusCode } from '@/kit/status/StatusCode'
 import type { AgentProfile, Message } from '@/types/workspace'
-import { findingStatus, formatFigure } from './figure-format'
+import { findingStatus } from './figure-format'
+import { formatFigure } from '@/kit/figure-text'
 
 /** A finding as posted, or as carried into another thread (a `CarriedFinding` fits). */
 type AgentFinding = Pick<Extract<Message, { kind: 'agent_finding' }>, 'at' | 'claim' | 'figures' | 'citations' | 'attention'>

@@ -6,7 +6,8 @@ import { fmtQuantity } from '@/kit/measure'
 import { useFocusAfter } from '@/kit/keyboard/use-focus-after'
 import type { BriefItem, BriefReading, Directory, Message } from '@/types/workspace'
 import { findingAnchorId } from './finding-anchor'
-import { formatFigure, marksBreach } from './figure-format'
+import { marksBreach } from './figure-format'
+import { formatFigure } from '@/kit/figure-text'
 
 type Summary = Extract<Message, { kind: 'brief_summary' }>
 

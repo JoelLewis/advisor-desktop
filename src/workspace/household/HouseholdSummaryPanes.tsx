@@ -14,7 +14,7 @@ export function HouseholdSummaryPanes({ summary }: { summary: HouseholdSummary }
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <Pane title="Managed accounts" meta={`${fmtMoney(summary.managedValue)} ${UNIT.usd}`}>
-        <AccountsTable caption="Household accounts" accounts={summary.accounts} totalValue={summary.managedValue} totalLabel="Managed" tiesTo="the household total" />
+        <AccountsTable caption="Household accounts" accounts={summary.accounts} totalValue={summary.managedValue} totalLabel="Managed" />
       </Pane>
       <Pane title="Held away · outside the firm's view" meta={`${fmtMoney(summary.heldAwayValue)} ${UNIT.usd}`}>
         <p className="text-body text-ink-2">{heldAwayPolicy(summary.heldAway)}</p>

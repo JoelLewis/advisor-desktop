@@ -5,6 +5,7 @@ import { getPositionsForAccount } from '@/mocks/data/positions'
 import { computeDriftForAccount } from '@/mocks/handlers/pms'
 import { MOCK_NOW_ISO } from '@/lib/clock'
 import { approvedV1, release } from '@/mocks/workspace/__tests__/story-fixture'
+import { handTypedDigits } from '@/test/claim-digits'
 import { isModelManaged } from '@/lib/mandate'
 
 const PLAN_NAMES = /401\(k\)|403\(b\)/g
@@ -21,7 +22,7 @@ describe('Meeting Prep', () => {
   it('reports seven findings, each with a digit-free claim and agenda title, a citation and its as-of', () => {
     expect(findings).toHaveLength(7)
     for (const f of findings) {
-      expect(f.claim.replace(PLAN_NAMES, ''), f.claim).not.toMatch(/\d/)
+      expect(handTypedDigits(f.claim.replace(PLAN_NAMES, ''), f.figures), f.claim).toEqual([])
       expect(f.agendaTitle, f.agendaTitle).not.toMatch(/\d/)
       expect(f.citations.length, f.claim).toBeGreaterThan(0)
     }
@@ -70,11 +71,18 @@ describe('Meeting Prep', () => {
 
   it("times the Roth-conversion window to Robert's first required distribution, from his date of birth", () => {
     const rmd = titled(findings, 'Roth conversions before required distributions')
-    expect(rmd.citations.map((c) => c.source)).toEqual(['Required beginning · Robert Johnson, born 1958-03-22 · first required distribution for 2031 (age 73, SECURE 2.0)'])
+    expect(rmd.citations.map((c) => c.source)).toEqual(['Required beginning · Robert Johnson, born 22 Mar 1958 · first required distribution for 2031 (age 73, SECURE 2.0)'])
     const ira = accounts.find((a) => a.id === 'acc-003')!
     const value = getPositionsForAccount(ira.id, ira.totalValue).reduce((s, p) => s + p.marketValue, 0)
-    expect(rmd.figures).toEqual([{ label: 'Robert Johnson Traditional IRA', value, unit: 'USD', source: 'positions.marketValue' }])
+    expect(rmd.figures.filter((f) => f.unit === 'USD')).toEqual([{ label: 'Robert Johnson Traditional IRA', value, unit: 'USD', source: 'positions.marketValue' }])
     expect(rmd.claim).toMatch(/estimate/)
+  })
+
+  it("says when Robert's required distributions begin, with the year and the age as figures", () => {
+    const rmd = titled(findings, 'Roth conversions before required distributions')
+    expect(rmd.claim).toBe("Required distributions from Robert's traditional IRA begin in 2031, at age 73; the years before then are when Roth conversions can be modeled, as an estimate for the clients' tax professional to confirm.")
+    expect(handTypedDigits(rmd.claim, rmd.figures)).toEqual([])
+    expect(rmd.citations[0]?.source).toContain('born 22 Mar 1958')
   })
 
   it('after the morning fills: the changes name the moved account, and the new window is open', () => {

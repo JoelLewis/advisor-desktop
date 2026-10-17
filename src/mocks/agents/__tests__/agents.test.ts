@@ -7,6 +7,7 @@ import { generateRebalanceTrades } from '@/mocks/handlers/oms'
 import { MOCK_NOW_ISO, MOCK_TODAY_ISO } from '@/lib/clock'
 import { getPositionsForAccount } from '@/mocks/data/positions'
 import { openWashSaleWindows, realizedSales, washSaleWindow } from '@/mocks/data/realized-sales'
+import { handTypedDigits } from '@/test/claim-digits'
 import { claimNameOf } from '../claim-name'
 import { isModelManaged, requireModelManaged } from '@/lib/mandate'
 
@@ -18,7 +19,7 @@ describe('agents over the whole book', () => {
   it.each(accounts.map((a) => a.id))('%s: claims have no digits; every figure has a source and finite value', (id) => {
     for (const agent of [drift, pretrade]) {
       for (const f of agent.run(ctx(id))) {
-        expect(f.claim).not.toMatch(/\d/)
+        expect(handTypedDigits(f.claim, f.figures)).toEqual([])
         expect(f.citations.length).toBeGreaterThan(0)
         for (const fig of f.figures) {
           expect(Number.isFinite(fig.value)).toBe(true)

@@ -3,7 +3,7 @@ import {
   MINUS, MeasureError, isNegative, fmtMoney, fmtResult, fmtPrice, fmtWeight, fmtReturn, fmtDrift,
   fmtTolerance, fmtQuantity, splitFraction, fmtDays, fmtScore, fmtDate, fmtEasternStamp, fmtUtcStamp, clientMoney,
   clientPercent, clientWholePercent, clientDate, fmtEasternTime, fmtEasternDayTime, fmtEasternRange, fmtEasternWindow, clientRate, fmtDayMonthYear,
-  fmtAsOf, isCalendarDate, driftChange, fmtEasternDay,
+  fmtYear, fmtAsOf, isCalendarDate, driftChange, fmtEasternDay,
 } from '@/kit/measure'
 
 describe('measure', () => {
@@ -275,5 +275,13 @@ describe('fmtEasternDay', () => {
   it("names a moment's New York day with its weekday", () => {
     expect(fmtEasternDay('2026-02-26T14:10:00.000Z')).toBe('Thu 26 Feb')
     expect(fmtEasternDay('2026-02-26T03:30:00.000Z')).toBe('Wed 25 Feb')
+  })
+})
+
+describe('fmtYear', () => {
+  it('writes a calendar year with no separator, and refuses anything else', () => {
+    expect(fmtYear(2031)).toBe('2031')
+    expect(() => fmtYear(2031.5)).toThrow('not a calendar year: 2031.5')
+    expect(() => fmtYear(31)).toThrow('not a calendar year: 31')
   })
 })

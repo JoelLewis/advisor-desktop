@@ -8,6 +8,7 @@ import { convertToBase } from '@/lib/currency'
 import { MOCK_NOW_ISO } from '@/lib/clock'
 import { heldAwayAssets } from '@/mocks/data/held-away'
 import { harvestClaim, runHarvestScanner, taxpayerHeldAway } from '../harvest-scanner'
+import { handTypedDigits } from '@/test/claim-digits'
 import { canHoldSecurities } from '@/lib/held-away'
 
 const ctx = (id: string) => ({ asOf: MOCK_NOW_ISO, subject: { type: 'account' as const, id } })
@@ -16,7 +17,7 @@ const figure = (findings: ReturnType<typeof runHarvestScanner>, label: string) =
 describe('Harvest Scanner over the whole book', () => {
   it.each(accounts.map((a) => a.id))('%s: digit-free claims, finite sourced figures, cited', (id) => {
     for (const f of runHarvestScanner(ctx(id))) {
-      expect(f.claim).not.toMatch(/\d/)
+      expect(handTypedDigits(f.claim, f.figures)).toEqual([])
       expect(f.claim.toLowerCase()).not.toContain('cleared')
       expect(f.claim.toLowerCase()).not.toContain('household')
       expect(f.citations.length).toBeGreaterThan(0)

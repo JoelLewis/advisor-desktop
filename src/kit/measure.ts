@@ -234,3 +234,9 @@ export function fmtDayMonthYear(iso: string): string {
 export function fmtAsOf(iso: string): string {
   return isCalendarDate(iso) ? fmtDayMonthYear(iso) : fmtEasternStamp(iso)
 }
+
+/** A calendar year, as a year reads: "2031", never "2,031". */
+export function fmtYear(year: number): string {
+  if (!Number.isInteger(year) || year < 1000 || year > 9999) throw new MeasureError(`not a calendar year: ${year}`)
+  return String(year)
+}

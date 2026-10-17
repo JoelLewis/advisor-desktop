@@ -5,7 +5,7 @@ import { SourceChips } from '@/kit/source-chips/SourceChips'
 import { personIn } from '@/workspace/people/directory-people'
 import { REFERENCE_VIEW_TITLE, referenceRowHref } from '@/workspace/full-views/reference-href'
 import type { Directory, Message } from '@/types/workspace'
-import { formatFigure } from './figure-format'
+import { formatFigure } from '@/kit/figure-text'
 
 type ReferenceRow = Extract<Message, { kind: 'reference_row' }>
 
