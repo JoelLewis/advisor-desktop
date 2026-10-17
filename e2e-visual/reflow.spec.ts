@@ -36,6 +36,22 @@ test('the wash-sale dates on the source chips are not clipped at 320px', async (
   expect(clipped).toEqual([])
 })
 
+test('a citation that wraps inside its chip keeps every line inside the chip at 320px', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 844 })
+  await visitPhone(page, '/t/th-brief', 'light')
+  await settle(page)
+  const cut = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>('[data-part="chip-part"]')].flatMap((el) => {
+    const clip = el.closest('.overflow-hidden')
+    if (!clip) return [`${el.textContent}: no clipping box`]
+    const range = document.createRange()
+    range.selectNodeContents(el)
+    const lines = [...range.getClientRects()]
+    const left = clip.getBoundingClientRect().left
+    return lines.some((r) => r.width > 0 && r.left < left - 0.5) ? [el.textContent] : []
+  }))
+  expect(cut).toEqual([])
+})
+
 test('form controls are at least 16px at 390px, so iOS does not zoom into them', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await visitPhone(page, '/', 'light')

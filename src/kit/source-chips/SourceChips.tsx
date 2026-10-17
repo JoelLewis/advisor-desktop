@@ -5,10 +5,12 @@ import { sharedAsOf } from './shared-as-of'
 
 export type Source = { label: string; detail?: string; asOf?: string; confidence?: number }
 
-// Every part draws its "·" in a 1rem gutter to its left. The row is pulled left by that gutter inside a
-// clipping box, so the separator of whichever part starts a line falls outside and is clipped: separators
-// only ever appear between parts on the same line, never dangling at a wrap. Alt text '' keeps them silent.
-const PART = "max-w-full before:inline-block before:w-4 before:text-center before:text-ink-3 before:content-['·'_/_'']"
+// Every part draws its "·" in a 1rem gutter to its left: padding, so every line of a part that wraps is
+// indented past it, and the separator sits in it on the first line. The row is pulled left by that gutter
+// inside a clipping box, so the separator of whichever part starts a line falls outside and is clipped
+// (separators only ever appear between parts on the same line, never dangling at a wrap), while the part's
+// own text, on every line, stays inside. Alt text '' keeps the separators silent.
+const PART = "relative max-w-full pl-4 before:absolute before:left-0 before:top-0 before:w-4 before:text-center before:text-ink-3 before:content-['·'_/_'']"
 
 function chipParts(s: Source, shared: string | undefined): string[] {
   return [
