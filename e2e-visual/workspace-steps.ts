@@ -51,7 +51,7 @@ async function checkOpenDialog(dialog: Locator, atDialog: AtDialog | undefined) 
 
 export const heading = (page: Page) => page.getByRole('heading', { level: 1 })
 export const conversation = (page: Page) => page.getByRole('list', { name: 'Messages' })
-export const context = (page: Page) => page.getByRole('complementary', { name: 'Thread context' })
+export const context = (page: Page) => page.getByRole('complementary', { name: 'Details' })
 export const threadLink = (page: Page, name: string) => page.getByRole('navigation', { name: 'Threads' }).getByRole('link', { name, exact: true })
 export const embedOf = (page: Page) => page.getByRole('region', { name: 'Proposal · Johnson rebalance' })
 export const approvalOf = (page: Page) => context(page).getByRole('region', { name: 'Approval · Johnson rebalance' })
@@ -65,7 +65,7 @@ export async function askProposalAgent(page: Page, theme: Theme) {
 
 export async function approve(page: Page, version: number) {
   const approval = approvalOf(page)
-  await approval.getByRole('checkbox', { name: `I reviewed every leg of v${version} and its pre-trade reading.` }).check()
+  await approval.getByRole('checkbox', { name: `I reviewed every leg of v${version} and its pre-trade check results.` }).check()
   await approval.getByRole('button', { name: `Approve v${version}` }).click()
   await expect(approval).toContainText(`v${version} is approved`)
   await expect(approval).toContainText('PENDING COMPLIANCE REVIEW')
@@ -89,7 +89,7 @@ export const openPhonePane = (page: Page, name: 'Threads' | 'Thread' | 'Context'
   page.getByRole('navigation', { name: 'Panes' }).getByRole('button', { name, exact: true }).click()
 
 export const viewAs = (page: Page, label: string) => page.getByLabel('View as').selectOption({ label })
-/** A firm surface from the Desk pane at the top of the thread list. */
+/** A firm surface from the Firm pane at the top of the thread list. */
 export const deskLink = (page: Page, name: 'Supervision' | 'Archive' | 'Billing' | 'Reconciliation' | 'Risk' | 'Models' | 'Practice' | 'Blotter') =>
   page.getByRole('navigation', { name: 'Threads' }).getByRole('link', { name, exact: true })
 
@@ -216,15 +216,15 @@ export async function resolveBreakNamed(page: Page, breakId: string, resolution:
   await expect(page.getByRole('main')).toContainText(/Resolved · REC-\d{4}/)
 }
 
-/** A row of a reference view, taken to its team thread; returns once the link to the thread shows. */
-export async function takeToTeamThread(page: Page, rowLabel: string) {
-  await page.getByRole('button', { name: `Take ${rowLabel} to a team thread`, exact: true }).click()
+/** A row of a reference view, shared to its team thread; returns once the link to the thread shows. */
+export async function shareToTeamThread(page: Page, rowLabel: string) {
+  await page.getByRole('button', { name: `Share ${rowLabel} to a team thread`, exact: true }).click()
   await expect(page.getByRole('link', { name: /^In / }).first()).toBeVisible()
 }
 
-/** A finding taken to a thread through its "Take to" menu. */
-export async function takeFindingTo(finding: Locator, threadTitle: string) {
-  await finding.getByRole('button', { name: 'Take to', exact: true }).click()
-  await finding.getByRole('menu', { name: 'Take to' }).getByRole('menuitem', { name: threadTitle, exact: true }).click()
-  await expect(finding.getByText(`Taken to ${threadTitle}.`)).toBeVisible()
+/** A finding shared to a thread through its "Share to" menu. */
+export async function shareFindingTo(finding: Locator, threadTitle: string) {
+  await finding.getByRole('button', { name: 'Share to', exact: true }).click()
+  await finding.getByRole('menu', { name: 'Share to' }).getByRole('menuitem', { name: threadTitle, exact: true }).click()
+  await expect(finding.getByText(`Shared to ${threadTitle}.`)).toBeVisible()
 }

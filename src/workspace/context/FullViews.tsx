@@ -27,7 +27,7 @@ export function FullViews({ subject, threadId }: { subject: Subject; threadId: s
 function AccountViews({ accountId, threadId }: { accountId: string; threadId: string }) {
   const account = useAccount(accountId)
   return (
-    <ContextSection title="Full views">
+    <ContextSection title="Related records">
       {account.isPending ? <p role="status" className="text-body text-ink-3">Loading the account…</p>
         : account.isError ? <p role="alert" className="text-body">{account.error.message}</p>
         : <FullViewLink to={accountFullViewHref(accountId, threadId)}>{account.data.name}</FullViewLink>}
@@ -38,7 +38,7 @@ function AccountViews({ accountId, threadId }: { accountId: string; threadId: st
 function HouseholdViews({ householdId, threadId }: { householdId: string; threadId: string }) {
   const household = useHousehold(householdId)
   return (
-    <ContextSection title="Full views">
+    <ContextSection title="Related records">
       {household.isPending ? <p role="status" className="text-body text-ink-3">Loading the household…</p>
         : household.isError ? <p role="alert" className="text-body">{household.error.message}</p>
         : (
@@ -57,7 +57,7 @@ function HouseholdViews({ householdId, threadId }: { householdId: string; thread
 function ClientViews({ clientId, threadId }: { clientId: string; threadId: string }) {
   const client = useClientView(clientId)
   return (
-    <ContextSection title="Full views">
+    <ContextSection title="Related records">
       {client.isPending ? <p role="status" className="text-body text-ink-3">Loading the client…</p>
         : client.isError ? <p role="alert" className="text-body">{client.error.message}</p>
         : (
@@ -73,7 +73,7 @@ function ClientViews({ clientId, threadId }: { clientId: string; threadId: strin
 function ProspectViews({ prospectId, threadId }: { prospectId: string; threadId: string }) {
   const prospect = useProspect(prospectId)
   return (
-    <ContextSection title="Full views">
+    <ContextSection title="Related records">
       {prospect.isPending ? <p role="status" className="text-body text-ink-3">Loading the prospect…</p>
         : prospect.isError ? <p role="alert" className="text-body">{prospect.error.message}</p>
         : <FullViewLink to={prospectFullViewHref(prospectId, threadId)}>{prospect.data.name}</FullViewLink>}

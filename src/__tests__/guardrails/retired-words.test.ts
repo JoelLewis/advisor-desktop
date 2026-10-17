@@ -37,7 +37,7 @@ describe('what each pattern reads', () => {
   it.each([
     ['binding', 'Binding acts', true],
     ['Take to', 'Take … to a team thread', true],
-    ['Take to', 'Taken to the desk', false],
+    ['Take to', 'Shared to the desk', false],
     ['MAY NOT', 'MAY NOT edit', true],
     ['MAY NOT', 'Reviewed in May 2026; you may proceed', false],
     ['PRIVATE', 'PRIVATE', true],

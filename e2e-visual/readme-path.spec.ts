@@ -3,7 +3,7 @@ import { expectNoAxeViolations } from './axe'
 import {
   PELL_ACCEPTANCE_TEXT, advanceTo, approve, approveProspect, askAgentNamed, askForRecap, context, conversation, deliver, deskLink,
   draftNotes, embedOf, fileRecord, heading, holdTheMeeting, letterDraft, meetingPanel, recordTheCoffee, releaseByShortcut,
-  resolveBreakNamed, reviseToTwoTaxYears, runPrep, sendToHer, takeFindingTo, takeToTeamThread, threadLink, viewAs, visit,
+  resolveBreakNamed, reviseToTwoTaxYears, runPrep, sendToHer, shareFindingTo, shareToTeamThread, threadLink, viewAs, visit,
 } from './workspace-steps'
 
 /** The README's guided path, click for click and in its order, from a fresh session as Adrian Hale; axe runs at every dialog. */
@@ -30,7 +30,7 @@ test("the README's five-minute path, end to end", async ({ page }) => {
 
   // 2. The Johnson rebalance and harvest: the finding to the team thread, v1, v2 "harvest only", v3 in the workbench, approved.
   const intc = conversation(page).getByRole('article', { name: /^Harvest Scanner: The remaining Intel Corp\. shares can be sold at a loss today/ })
-  await takeFindingTo(intc, 'Johnson Rebalance Review')
+  await shareFindingTo(intc, 'Johnson Rebalance Review')
   await threadLink(page, 'Johnson Rebalance Review').click()
   await context(page).getByRole('button', { name: 'Ask Proposal Agent', exact: true }).click()
   const embed = embedOf(page)
@@ -54,7 +54,7 @@ test("the README's five-minute path, end to end", async ({ page }) => {
   // 3. The compliance release as Mark Davis, through the presenter's shortcut.
   await releaseByShortcut(page, axe)
 
-  // 4. The blotter and the moved book.
+  // 4. The blotter and the updated holdings.
   await page.getByRole('link', { name: 'Open in the blotter' }).first().click()
   await expect(heading(page)).toHaveText('Blotter')
   await expect(page.getByRole('table', { name: 'Orders' })).toContainText('FILLED')
@@ -103,7 +103,7 @@ test("the README's five-minute path, end to end", async ({ page }) => {
   await threadLink(page, 'Pell · prospect work').click()
   await expect(context(page).getByRole('table', { name: 'Onboarding checklist' })).toBeVisible()
 
-  // 7. The reference views, under Reference in the thread list; each returns through the header's Advisor Desktop link.
+  // 7. The reference views, under Reports in the thread list; each returns through the header's Advisor Desktop link.
   for (const view of ['Billing', 'Models', 'Practice', 'Blotter'] as const) {
     await deskLink(page, view).click()
     await expect(heading(page)).toHaveText(view)
@@ -114,7 +114,7 @@ test("the README's five-minute path, end to end", async ({ page }) => {
   await resolveBreakNamed(page, 'brk-002', 'Timing difference', 'Schwab confirmed the 24 Feb cash sweep posted after the file was cut.', axe)
   await home()
   await deskLink(page, 'Risk').click()
-  await takeToTeamThread(page, 'Patel Digital Assets Account')
+  await shareToTeamThread(page, 'Patel Digital Assets Account')
   await home()
   await expect(path.nth(7)).toContainText('NEXT')
 

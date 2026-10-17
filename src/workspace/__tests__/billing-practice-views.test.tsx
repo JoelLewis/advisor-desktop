@@ -43,7 +43,7 @@ describe('the Billing view', () => {
   it('takes a household to its team thread', async () => {
     renderRoutes(routes, '/billing')
     await screen.findByRole('heading', { level: 1, name: 'Billing' })
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Take Johnson Household to a team thread' }))
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Share Johnson Household to a team thread' }))
     expect(await screen.findByRole('link', { name: 'In Johnson annual review' })).toHaveAttribute('href', '/t/th-johnson-meeting')
   })
 
@@ -82,7 +82,7 @@ describe('the Practice view', () => {
   it('takes a household to a new team thread', async () => {
     renderRoutes(routes, '/practice')
     await screen.findByRole('heading', { level: 1, name: 'Practice' })
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Take Chen-Wong Household to a team thread' }))
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Share Chen-Wong Household to a team thread' }))
     expect(await screen.findByRole('link', { name: 'In Practice · Chen-Wong Household' })).toBeInTheDocument()
   })
 

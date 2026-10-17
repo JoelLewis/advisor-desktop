@@ -36,7 +36,7 @@ describe('the meeting full view', () => {
     expect(main).toHaveTextContent('SCHEDULED')
     await waitFor(() => expect(main).toHaveTextContent("Larkfield team · Robert and Patricia can't see this"))
     expect(within(main).getByRole('list', { name: 'Agenda · v1' })).toBeInTheDocument()
-    const links = within(within(main).getByRole('navigation', { name: 'Full views' }))
+    const links = within(within(main).getByRole('navigation', { name: 'Related records' }))
     expect(links.getByRole('link', { name: 'Household' })).toHaveAttribute('href', '/households/hh-001?from=th-johnson-meeting')
     expect(await links.findByRole('link', { name: 'Robert Johnson' })).toHaveAttribute('href', '/clients/cli-001?from=th-johnson-meeting')
     expect(await links.findByRole('link', { name: 'Patricia Johnson' })).toHaveAttribute('href', '/clients/cli-002?from=th-johnson-meeting')

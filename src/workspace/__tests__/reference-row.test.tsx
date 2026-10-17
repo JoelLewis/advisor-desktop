@@ -18,10 +18,10 @@ describe('a quoted row in a team thread', () => {
   })
 })
 
-describe('the Take to team thread button', () => {
+describe('the Share to team thread button', () => {
   it('takes the row once and then links to the thread', async () => {
     renderWithProviders(<TakeToTeamThread view="risk" rowId="acc-045" rowLabel="Patel Digital Assets Account" />)
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Take Patel Digital Assets Account to a team thread' }))
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Share Patel Digital Assets Account to a team thread' }))
     expect(await screen.findByRole('link', { name: 'In Risk · Patel Digital Assets Account' })).toHaveAttribute('href', '/t/th-ref-0001')
     expect(screen.queryByRole('button')).toBeNull()
   })

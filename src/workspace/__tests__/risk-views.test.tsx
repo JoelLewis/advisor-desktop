@@ -25,7 +25,7 @@ describe('book risk', () => {
   it('takes an account above tolerance to a team thread', async () => {
     renderRoutes(routes, '/risk')
     await screen.findByRole('heading', { level: 1, name: 'Risk' })
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Take Patel Digital Assets Account to a team thread' }))
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Share Patel Digital Assets Account to a team thread' }))
     expect(await screen.findByRole('link', { name: 'In Risk · Patel Digital Assets Account' })).toHaveAttribute('href', '/t/th-ref-0001')
   })
 

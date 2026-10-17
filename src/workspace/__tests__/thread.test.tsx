@@ -82,14 +82,14 @@ describe('thread view', () => {
     expect(gauges).toHaveLength(drift.assetClassDrifts.length)
     expect(within(embed).getByRole('img', { name: new RegExp(`^${assetClassLabel(worst.assetClass)}: drift \\${fmtDrift(worst.drift)} percentage points`) })).toBeInTheDocument()
     expect(embed).toHaveTextContent(`${fmtTolerance(drift.driftTolerance)} pp`)
-    expect(within(embed).getByRole('link', { name: 'Open full view' })).toHaveAttribute('href', '/accounts/acc-002?from=th-johnson-review')
+    expect(within(embed).getByRole('link', { name: 'Open account' })).toHaveAttribute('href', '/accounts/acc-002?from=th-johnson-review')
   })
 
   it("the embed's full view leads back to the thread it was opened from", async () => {
     const { router } = await openThread('/t/th-johnson-review', 'Johnson Rebalance Review')
     const user = userEvent.setup()
     const embed = await within(conversation()).findByRole('region', { name: /^Drift against model/ })
-    await user.click(within(embed).getByRole('link', { name: 'Open full view' }))
+    await user.click(within(embed).getByRole('link', { name: 'Open account' }))
     await screen.findByRole('heading', { level: 1, name: 'Robert Johnson Individual' })
     await user.click(screen.getByRole('link', { name: 'Back to the thread' }))
     await screen.findByRole('heading', { level: 1, name: 'Johnson Rebalance Review' })
@@ -188,7 +188,7 @@ describe('thread view', () => {
     expect(s.getByText(act.fingerprint)).toBeInTheDocument()
     expect(slip.closest('[id^="act-"]')).toBeNull()
     expect(container.querySelectorAll(`[id="act-${act.id}"]`)).toHaveLength(1)
-    expect(screen.getByRole('complementary', { name: 'Thread context' })).toContainElement(container.querySelector(`[id="act-${act.id}"]`))
+    expect(screen.getByRole('complementary', { name: 'Details' })).toContainElement(container.querySelector(`[id="act-${act.id}"]`))
     expect(conversation()).toHaveTextContent('Sarah will be in touch this week.')
   })
 

@@ -67,7 +67,7 @@ describe('routes', () => {
   it('the kit is not ready while loading', async () => {
     const { container } = renderAt('/kit')
     expect(container.querySelector('[data-kit-ready="true"]')).toBeNull()
-    expect(await within(await screen.findByRole('main')).findByRole('status')).toHaveTextContent('Loading the account from the engine…')
+    expect(await within(await screen.findByRole('main')).findByRole('status')).toHaveTextContent('Loading the account…')
   })
   it('the kit becomes ready on acc-002 data', async () => {
     await renderKitReady()

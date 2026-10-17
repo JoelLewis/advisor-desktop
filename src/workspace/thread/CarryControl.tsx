@@ -10,7 +10,7 @@ import { carryTargets } from './carry-targets'
 type Move = 1 | -1 | 'first' | 'last'
 const MOVES = new Map<string, Move>([['ArrowDown', 1], ['ArrowUp', -1], ['Home', 'first'], ['End', 'last']])
 
-/** "Take to ▾": the brief's owner sends a finding to the team thread about its subject, or to its household's meeting thread. */
+/** "Share to ▾": the brief's owner sends a finding to the team thread about its subject, or to its household's meeting thread. */
 export function CarryControl({ thread, findingId }: { thread: Thread; findingId: string }) {
   const announce = useAnnounce()
   const { viewerId } = useViewer()
@@ -78,21 +78,21 @@ export function CarryControl({ thread, findingId }: { thread: Thread; findingId:
   return (
     <div ref={containerRef} className="flex flex-col items-start gap-2" onKeyDown={onKeyDown} onBlur={onBlur}>
       <Button id={toggleId} rank="secondary" aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined} onClick={() => setOpen((o) => !o)} onKeyDown={onToggleKeyDown}>
-        Take to <span aria-hidden="true">▾</span>
+        Share to <span aria-hidden="true">▾</span>
       </Button>
       {open ? (
-        <ul ref={menuRef} id={menuId} role="menu" aria-label="Take to" onKeyDown={onMenuKeyDown} className="m-0 flex list-none flex-col items-start gap-1 border-l border-rule-2 p-0 pl-3">
+        <ul ref={menuRef} id={menuId} role="menu" aria-label="Share to" onKeyDown={onMenuKeyDown} className="m-0 flex list-none flex-col items-start gap-1 border-l border-rule-2 p-0 pl-3">
           {targets.map((target) => (
             <li key={target.id} role="none">
               <Button role="menuitem" rank="quiet" pending={carry.isPending}
-                onClick={() => carry.mutate({ messageId: findingId, toThreadId: target.id }, { onSuccess: () => { setTaken(target.title); announce(`Taken to ${target.title}.`); close() } })}>
+                onClick={() => carry.mutate({ messageId: findingId, toThreadId: target.id }, { onSuccess: () => { setTaken(target.title); announce(`Shared to ${target.title}.`); close() } })}>
                 {target.title}
               </Button>
             </li>
           ))}
         </ul>
       ) : null}
-      {taken ? <p className="text-body text-ink-2">{`Taken to ${taken}.`}</p> : null}
+      {taken ? <p className="text-body text-ink-2">{`Shared to ${taken}.`}</p> : null}
       {carry.isError ? <p role="alert" className="text-body">{carry.error.message}</p> : null}
     </div>
   )

@@ -13,7 +13,7 @@ export function DriftEmbed({ subject, threadId }: EmbedProps) {
   const titleId = useId()
   const drift = useDrift(accountId)
   const account = useAccount(accountId)
-  if (drift.isPending || account.isPending) return <p role="status" className="text-body text-ink-3">Loading the drift reading…</p>
+  if (drift.isPending || account.isPending) return <p role="status" className="text-body text-ink-3">Loading the drift…</p>
   if (drift.isError) return <p role="alert" className="text-body">{drift.error.message}</p>
   if (account.isError) return <p role="alert" className="text-body">{account.error.message}</p>
   return (
@@ -23,7 +23,7 @@ export function DriftEmbed({ subject, threadId }: EmbedProps) {
         <span className="tabular text-label text-ink-3">{driftMeta(drift.data)}</span>
       </div>
       <DriftGauges drift={drift.data} />
-      <Link to={accountFullViewHref(accountId, threadId)} className={`${LINK_TARGET} self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>Open full view</Link>
+      <Link to={accountFullViewHref(accountId, threadId)} className={`${LINK_TARGET} self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>Open account</Link>
     </section>
   )
 }

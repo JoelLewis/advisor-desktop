@@ -21,7 +21,7 @@ import { RouteError } from './RouteError'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { routerFuture } from './router-flags'
 
-const threadHandle: ShellHandle = { contextColumn: { label: 'Thread context', Content: ContextColumn, useAvailable: useThreadContextAvailable } }
+const threadHandle: ShellHandle = { contextColumn: { label: 'Details', Content: ContextColumn, useAvailable: useThreadContextAvailable } }
 const workbenchHandle: ShellHandle = {
   contextColumn: { label: 'Live thread', Content: WorkbenchThreadColumn, useAvailable: useWorkbenchThreadAvailable },
   threadList: 'hidden',

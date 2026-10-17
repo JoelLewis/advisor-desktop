@@ -69,7 +69,7 @@ describe('the presenter shortcut', () => {
     const r = await call('POST', '/presenter/act-as-cco', 'user-001', { item: { kind: 'orders', id: 'prop-0001' } })
     expect(r).toMatchObject({ status: 201, body: {
       kind: 'release_orders', actorId: 'cco-001', viaPresenter: { presenterId: 'user-001' },
-      rationale: 'Reviewed the approved version, its legs, tax effect, pre-trade reading and repurchase restrictions. Released for execution.',
+      rationale: 'Reviewed the approved version, its legs, tax effect, pre-trade check results and repurchase restrictions. Released for execution.',
     } })
     const again = await call('POST', '/presenter/act-as-cco', 'user-001', { item: { kind: 'orders', id: 'prop-0001' } })
     expect(again).toMatchObject({ status: 409, body: { code: 'ALREADY_RELEASED' } })

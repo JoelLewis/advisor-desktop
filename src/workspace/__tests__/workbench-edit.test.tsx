@@ -289,11 +289,11 @@ describe('editing a draft version', () => {
     await user.type(quantity, '5000{Enter}')
     const bar = screen.getByRole('group', { name: 'Draft version' })
     expect(await within(bar).findByRole('alert')).toHaveTextContent('SPY: the account holds fewer shares than that.')
-    expect(await screen.findByRole('grid', { name: 'Legs · v1 · the engine refused the draft' })).toBeInTheDocument()
+    expect(await screen.findByRole('grid', { name: 'Legs · v1 · the draft was refused' })).toBeInTheDocument()
     expect(screen.queryByRole('grid', { name: 'Legs · draft' })).toBeNull()
     for (const lot of within(detail).getAllByRole('checkbox')) expect(lot).not.toHaveAccessibleName(/ of /)
     expect(screen.queryByRole('region', { name: 'Tax effect estimate' })).toBeNull()
-    expect(screen.getAllByText('Shown once the engine previews the draft.').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Shown once the draft is previewed.').length).toBeGreaterThan(0)
   })
 
   it('a draft that changes nothing is refused on save (NO_CHANGE), and Save stays disabled until the next edit', async () => {

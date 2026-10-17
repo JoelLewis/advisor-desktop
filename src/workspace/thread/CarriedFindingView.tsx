@@ -20,12 +20,12 @@ export function CarriedFindingView({ message, directory }: { message: Carried; d
   const ownBrief = message.carriedBy === viewerId
   const from = ownBrief ? 'the Brief' : `${carrier}'s brief`
   return (
-    <article aria-label={`Carried from ${from}: ${message.finding.claim}`} className="flex min-w-0 flex-col gap-3">
+    <article aria-label={`Shared from ${from}: ${message.finding.claim}`} className="flex min-w-0 flex-col gap-3">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="text-label text-ink-3">
           {'From '}
           {ownBrief
-            ? <><Link to={`/t/${encodeURIComponent(message.fromThreadId)}`} className="underline decoration-rule-2 underline-offset-4 hover:decoration-ink">{from}</Link>{` · carried by ${carrier}`}</>
+            ? <><Link to={`/t/${encodeURIComponent(message.fromThreadId)}`} className="underline decoration-rule-2 underline-offset-4 hover:decoration-ink">{from}</Link>{` · shared by ${carrier}`}</>
             : from}
         </span>
         <span className="tabular ml-auto text-label text-ink-3">{fmtEasternStamp(message.at)}</span>

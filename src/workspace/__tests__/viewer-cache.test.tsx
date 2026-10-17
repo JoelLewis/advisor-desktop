@@ -10,7 +10,7 @@ import { OUTSIDER_THREAD_TITLE } from '@/workspace/people/roster'
 // outlive another viewer's write once the first viewer is switched back to.
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
 const conversation = () => screen.getByRole('list', { name: 'Messages' })
-const context = () => within(screen.getByRole('complementary', { name: 'Thread context' }))
+const context = () => within(screen.getByRole('complementary', { name: 'Details' }))
 
 async function viewAs(option: string) {
   const user = userEvent.setup()

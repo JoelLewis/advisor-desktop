@@ -35,7 +35,7 @@ it("lists the preview's legs with each leg's pre-trade status, and the gross tra
   expect(totals).not.toHaveTextContent('ties to')
   expect(totals).toHaveTextContent(fmtMoney(gross))
   expect(within(table).getByRole('columnheader', { name: `Value ${preview.currency}` })).toBeInTheDocument()
-  expect(within(embed).getByRole('link', { name: 'Open full view' })).toHaveAttribute('href', '/accounts/acc-002')
+  expect(within(embed).getByRole('link', { name: 'Open account' })).toHaveAttribute('href', '/accounts/acc-002')
 })
 
 it('a non-account subject is an explicit error', () => {
@@ -45,5 +45,5 @@ it('a non-account subject is an explicit error', () => {
 it('its full-view link remembers the thread it sits in', async () => {
   renderRoutes([{ path: '/', element: <RebalanceEmbed subject={{ type: 'account', id: 'acc-002' }} threadId="th-johnson-review" /> }], '/')
   const embed = await screen.findByRole('region', { name: 'Rebalance preview · Robert Johnson Individual' })
-  expect(within(embed).getByRole('link', { name: 'Open full view' })).toHaveAttribute('href', '/accounts/acc-002?from=th-johnson-review')
+  expect(within(embed).getByRole('link', { name: 'Open account' })).toHaveAttribute('href', '/accounts/acc-002?from=th-johnson-review')
 })

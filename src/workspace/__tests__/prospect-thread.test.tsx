@@ -14,7 +14,7 @@ import {
 const ADRIAN = 'user-001'
 const PELL = 'prsp-011'
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
-const inContext = () => within(screen.getByRole('complementary', { name: 'Thread context' }))
+const inContext = () => within(screen.getByRole('complementary', { name: 'Details' }))
 const conversation = () => within(screen.getByRole('list', { name: 'Messages' }))
 const section = (name: string) => inContext().findByRole('region', { name })
 

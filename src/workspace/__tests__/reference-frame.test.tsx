@@ -30,12 +30,12 @@ describe('the reference frame', () => {
   })
 })
 
-describe('the Desk pane', () => {
+describe('the Firm pane', () => {
   afterEach(() => sessionStorage.clear())
 
-  it("offers the firm the Reference group, beneath the Desk's own links", async () => {
+  it("offers the firm the Reports group, beneath the Firm's own links", async () => {
     renderRoutes(routes, '/')
-    const reference = await within(threadNav()).findByRole('heading', { level: 2, name: 'Reference' })
+    const reference = await within(threadNav()).findByRole('heading', { level: 2, name: 'Reports' })
     const pane = reference.closest('section') as HTMLElement
     expect(within(pane).getAllByRole('link').map((l) => [l.textContent, l.getAttribute('href')])).toEqual([
       ['Billing', '/billing'], ['Reconciliation', '/reconciliation'], ['Risk', '/risk'], ['Models', '/models'], ['Practice', '/practice'], ['Blotter', '/blotter'],
@@ -47,7 +47,7 @@ describe('the Desk pane', () => {
     renderRoutes(routes, '/')
     const nav = await screen.findByRole('navigation', { name: 'Threads' })
     await within(nav).findByRole('link', { name: OUTSIDER_THREAD_TITLE })
-    expect(within(nav).queryByRole('heading', { name: 'Reference' })).toBeNull()
+    expect(within(nav).queryByRole('heading', { name: 'Reports' })).toBeNull()
   })
 })
 

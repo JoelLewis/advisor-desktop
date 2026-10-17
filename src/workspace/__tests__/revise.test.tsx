@@ -8,7 +8,7 @@ import { accounts } from '@/mocks/data/accounts'
 import { getPositionsForAccount } from '@/mocks/data/positions'
 import { createProposal, saveProposalVersion } from '@/services/workspace'
 
-const contextColumn = () => within(screen.getByRole('complementary', { name: 'Thread context' }))
+const contextColumn = () => within(screen.getByRole('complementary', { name: 'Details' }))
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
 
 async function openJohnson() {

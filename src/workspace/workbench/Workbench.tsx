@@ -53,7 +53,7 @@ export function Workbench({ detail, directory }: { detail: ProposalDetail; direc
   const notPreviewed = draft.dirty && draft.viewSource === 'latest'
   const caption = !draft.dirty ? `Legs · v${latest.n}`
     : !notPreviewed ? 'Legs · draft'
-    : draft.previewError ? `Legs · v${latest.n} · the engine refused the draft` : `Legs · v${latest.n} · previewing the draft`
+    : draft.previewError ? `Legs · v${latest.n} · the draft was refused` : `Legs · v${latest.n} · previewing the draft`
   const edit = (symbol: string) => ({
     toggleExclude: () => draft.dispatch({ type: 'toggle_exclude', symbol }),
     quantity: (quantity: number | undefined) => draft.dispatch({ type: 'set_quantity', symbol, quantity }),
@@ -80,7 +80,7 @@ export function Workbench({ detail, directory }: { detail: ProposalDetail; direc
         <p className="text-body text-ink-2">The workbench never approves. Approval is a recorded act in the thread.</p>
       </header>
       {detail.approval.kind === 'released'
-        ? <p className="text-body text-ink-2">{`The orders from v${detail.approval.version} were filled. This proposal is closed; ask the Proposal Agent for a new one from the moved book.`}</p>
+        ? <p className="text-body text-ink-2">{`The orders from v${detail.approval.version} were filled. This proposal is closed; ask the Proposal Agent for a new one from the updated holdings.`}</p>
         : null}
       {canEdit ? <DraftBar draft={draft} latestVersion={latest.n} saveEnabled={saveEnabled} onBeforeSave={commitTyping} onSave={saveOnScreen} /> : null}
       {thread.data !== undefined && !canEdit && !closed ? <p className="text-body text-ink-3">You can read this proposal but not change it.</p> : null}

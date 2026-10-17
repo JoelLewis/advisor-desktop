@@ -61,7 +61,7 @@ describe('phase 4 · separation of duties', () => {
 describe('phase 5 · meeting agents', () => {
   it('Meeting Prep measures and proposes; it files nothing and contacts no one', () => {
     expect(AGENTS.find((a) => a.id === 'meeting-prep')).toMatchObject({
-      name: 'Meeting Prep', scope: { may: ['measure the household', 'propose an agenda'], mayNot: ['file notes', 'contact the client', 'post in a client thread'] },
+      name: 'Meeting Prep', scope: { may: ["measure the household's accounts", 'propose an agenda'], mayNot: ['file notes', 'contact the client', 'post in a client thread'] },
     })
   })
   it('Meeting Notes drafts with citations; it never files, assigns or recommends', () => {

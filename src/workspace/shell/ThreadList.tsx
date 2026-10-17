@@ -75,7 +75,7 @@ function DeskAgents({ threads, agents: everyAgent }: { threads: Thread[]; agents
   const agents = everyAgent.filter((a) => onDesk.has(a.id))
   if (agents.length === 0) return null
   return (
-    <Pane title="Agents on this desk">
+    <Pane title="Agents">
       <ul className="flex flex-col gap-4">
         {agents.map((a) => <li key={a.id}><AgentScope agent={a} /></li>)}
       </ul>
@@ -95,8 +95,8 @@ const REFERENCE: readonly { to: string; label: string }[] = [
 function DeskLinks() {
   return (
     <>
-      <LinkPane title="Desk" links={DESK} />
-      <LinkPane title="Reference" links={REFERENCE} />
+      <LinkPane title="Firm" links={DESK} />
+      <LinkPane title="Reports" links={REFERENCE} />
     </>
   )
 }

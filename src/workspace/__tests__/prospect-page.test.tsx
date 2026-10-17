@@ -45,9 +45,9 @@ describe('the prospect page', () => {
     }
   })
 
-  it('both her threads open it from Full views', async () => {
+  it('both her threads open it from Related records', async () => {
     renderRoutes(routes, '/t/th-pell-work')
-    const views = await screen.findByRole('region', { name: 'Full views' })
+    const views = await screen.findByRole('region', { name: 'Related records' })
     expect(await within(views).findByRole('link', { name: /Dr\. Amanda Pell/ })).toHaveAttribute('href', '/prospects/prsp-011?from=th-pell-work')
   })
 })

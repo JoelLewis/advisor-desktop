@@ -14,7 +14,7 @@ You are Adrian Hale, the advisor. Nobody else acts live: colleagues' history is 
 
 1. **The Brief.** Choose **Brief** in the thread list. **Today** lists the day in Eastern Time: the 14:00 annual review, the 15:30 coffee with Dr. Pell (Form CRS due before it, firm policy) and the open reconciliation break. **Needs a decision** ranks what would change a trade, each with its figure; **Context** holds the rest, folded.
 2. **The Johnson rebalance and harvest.**
-   - On the Harvest Scanner's finding about the remaining Intel shares, choose **Take to** › **Johnson Rebalance Review**, then open that thread in the thread list.
+   - On the Harvest Scanner's finding about the remaining Intel shares, choose **Share to** › **Johnson Rebalance Review**, then open that thread in the thread list.
    - In the context column choose **Ask Proposal Agent**: v1 appears in the thread.
    - On the proposal choose **Revise**, tick **Harvest only: sell only lots at a loss** and choose **Ask Proposal Agent to revise**: v2.
    - Choose **Workbench**. In **Legs · v2** move to the QAI row and press **x** to exclude it; press **⌘S** (Ctrl+S) to save v3. Choose **Back to the thread**.

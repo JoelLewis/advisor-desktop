@@ -26,7 +26,7 @@ async function loadDriftFinding() {
 async function loadApproval(accountId: string) {
   const alerts = await getAlerts(ADVISOR_ID, { status: 'approved' })
   const alert = alerts.find((a) => a.entityId === accountId)
-  if (!alert) throw new Error('The engine holds no approved compliance review for this account')
+  if (!alert) throw new Error('No approved compliance review is on file for this account')
   const records = await getSupervisionRecords(ADVISOR_ID, alert.id)
   const record = records.find((r) => r.action === 'Approved')
   if (!record) throw new Error(`The compliance review "${alert.title}" has no approval on record`)

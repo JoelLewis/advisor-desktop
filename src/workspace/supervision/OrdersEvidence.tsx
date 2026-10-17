@@ -47,7 +47,7 @@ export function OrdersEvidence({ item, directory }: { item: OrdersItem; director
           grossTax={s.grossTax} netTax={s.netTax} scope={taxScope(v.preview)} rateBasis={RATE_DISCLOSURE}
           yearToDate={ytd ? ytd.shortTerm + ytd.longTerm : undefined} />
       </Pane>
-      <Pane title="Pre-trade reading"><PretradeNotes pretrade={v.pretrade} /></Pane>
+      <Pane title="Pre-trade check"><PretradeNotes pretrade={v.pretrade} /></Pane>
       <RestrictionList restrictions={v.preview.repurchaseRestrictions} />
       <div className="flex flex-wrap gap-4">
         <Link to={`/t/${encodeURIComponent(item.threadId)}`} className={LINK}>Team thread <span aria-hidden="true">↗</span></Link>

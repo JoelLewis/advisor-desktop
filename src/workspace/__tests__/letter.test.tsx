@@ -9,7 +9,7 @@ import { buildClientRateDisclosure, TAX_RATE_BASIS } from '@/lib/tax-rules'
 import { approvedV1 as fixtureApprovedV1, release } from '@/mocks/workspace/__tests__/story-fixture'
 
 const ADRIAN = 'user-001'
-const inContext = () => within(screen.getByRole('complementary', { name: 'Thread context' }))
+const inContext = () => within(screen.getByRole('complementary', { name: 'Details' }))
 const conversation = () => screen.getByRole('list', { name: 'Messages' })
 
 async function approvedV1() {

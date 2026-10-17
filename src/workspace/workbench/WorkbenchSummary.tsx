@@ -12,7 +12,7 @@ import { RestrictionRulers } from './RestrictionRulers'
 
 /** The draft's figures are not known yet: the engine refused it or has not answered. */
 function NotPreviewed() {
-  return <p className="text-body text-ink-3"><span aria-hidden="true">—</span> <span>Shown once the engine previews the draft.</span></p>
+  return <p className="text-body text-ink-3"><span aria-hidden="true">—</span> <span>Shown once the draft is previewed.</span></p>
 }
 
 type WorkbenchSummaryProps = {

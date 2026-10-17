@@ -23,7 +23,7 @@ async function openThread(path: string, title: string) {
 /** The roster under the thread's title, without its visual "Who can see:" prefix. */
 const roster = () => screen.getByRole('note', { name: 'Who can see' }).textContent?.replace(/^Who can see: /, '')
 
-const contextColumn = () => screen.getByRole('complementary', { name: 'Thread context' })
+const contextColumn = () => screen.getByRole('complementary', { name: 'Details' })
 const inContext = () => within(contextColumn())
 const conversation = () => screen.getByRole('list', { name: 'Messages' })
 const section = (name: string) => inContext().getByRole('region', { name })
@@ -149,8 +149,8 @@ describe('thread context column', () => {
       expect.stringMatching(/^Drift Monitor/), expect.stringMatching(/^Pre-trade Check/), expect.stringMatching(/^Proposal Agent/),
     ])
     const drift = agents.getByText('Drift Monitor').closest('li') as HTMLElement
-    expect(drift).toHaveTextContent('may measure and flag')
-    expect(drift).toHaveTextContent('may not stage or release trades · post in a client thread')
+    expect(drift).toHaveTextContent('Can measure and flag')
+    expect(drift).toHaveTextContent('Can\'t stage or release trades · post in a client thread')
   })
 
   it("lists compliance supervision under a client thread's title for firm viewers, and leaves it out of the context column", async () => {
@@ -171,7 +171,7 @@ describe('thread context column', () => {
 
   it('links the subject account to its full view, remembering the thread', async () => {
     await openThread('/t/th-johnson-review', 'Johnson Rebalance Review')
-    const link = await within(section('Full views')).findByRole('link', { name: /^Robert Johnson Individual/ })
+    const link = await within(section('Related records')).findByRole('link', { name: /^Robert Johnson Individual/ })
     expect(link).toHaveAttribute('href', '/accounts/acc-002?from=th-johnson-review')
     expect(link).toHaveTextContent('Robert Johnson Individual ↗')
   })

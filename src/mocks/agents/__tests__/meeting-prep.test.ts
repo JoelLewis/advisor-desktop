@@ -81,7 +81,7 @@ describe('Meeting Prep', () => {
     release(approvedV1())
     const after = runMeetingPrepAgent('hh-001', '2026-02-25T15:00:00.000Z')
     const changes = titled(after, "This morning's rebalance and harvest")
-    expect(changes.claim).toBe('Orders released today were filled in Robert Johnson Individual; the readings below are of the moved book.')
+    expect(changes.claim).toBe("Orders released today were filled in Robert Johnson Individual; the figures below include today's trades.")
     expect(changes.figures.map((f) => f.label)).toEqual(['Sold today', 'Bought today'])
     expect(titled(after, 'Wash-sale windows: what not to buy back').citations.map((c) => c.source))
       .toContain('Wash-sale window · rs-006 · INTC loss sale of 25 Feb 2026, open through 27 Mar 2026')

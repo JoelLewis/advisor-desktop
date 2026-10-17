@@ -69,7 +69,7 @@ describe('the Reconciliation view', () => {
 
   it('takes a break to a team thread', async () => {
     await open()
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Take brk-002 to a team thread' }))
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Share brk-002 to a team thread' }))
     expect(await screen.findByRole('link', { name: 'In Reconciliation · brk-002 · Johnson Family Trust' })).toBeInTheDocument()
   })
 

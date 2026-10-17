@@ -8,7 +8,7 @@ import { store } from '@/mocks/data/workspace-store'
 
 const ADRIAN = 'user-001'
 const conversation = () => within(screen.getByRole('list', { name: 'Messages' }))
-const inContext = () => within(screen.getByRole('complementary', { name: 'Thread context' }))
+const inContext = () => within(screen.getByRole('complementary', { name: 'Details' }))
 const meetingSection = () => inContext().findByRole('region', { name: 'Meeting' })
 const INTC_CLAIM = 'The remaining Intel Corp. shares can be sold at a loss today, and nothing bought in the last thirty days would wash the loss.'
 
@@ -25,12 +25,12 @@ describe('the meeting thread', () => {
     const { router } = renderRoutes(routes, '/t/th-brief')
     const user = userEvent.setup()
     const intc = await screen.findByRole('article', { name: `Harvest Scanner: ${INTC_CLAIM}` })
-    await user.click(await within(intc).findByRole('button', { name: 'Take to' }))
-    await user.click(within(within(intc).getByRole('menu', { name: 'Take to' })).getByRole('menuitem', { name: 'Johnson annual review' }))
-    expect(await within(intc).findByText('Taken to Johnson annual review.')).toBeInTheDocument()
+    await user.click(await within(intc).findByRole('button', { name: 'Share to' }))
+    await user.click(within(within(intc).getByRole('menu', { name: 'Share to' })).getByRole('menuitem', { name: 'Johnson annual review' }))
+    expect(await within(intc).findByText('Shared to Johnson annual review.')).toBeInTheDocument()
     await user.click(within(await screen.findByRole('region', { name: 'Today' })).getByRole('link', { name: 'Open the meeting thread' }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/t/th-johnson-meeting'))
-    expect(await conversation().findByRole('article', { name: `Carried from the Brief: ${INTC_CLAIM}` })).toBeInTheDocument()
+    expect(await conversation().findByRole('article', { name: `Shared from the Brief: ${INTC_CLAIM}` })).toBeInTheDocument()
   })
 
   it('states the meeting and runs prep: findings in the thread, agenda v1 in the panel', async () => {
@@ -72,7 +72,7 @@ describe('the meeting thread', () => {
 
   it('links the meeting, the household and its clients as full views', async () => {
     await openMeetingThread()
-    const views = await inContext().findByRole('region', { name: 'Full views' })
+    const views = await inContext().findByRole('region', { name: 'Related records' })
     expect(await within(views).findByRole('link', { name: /^Meeting · Johnson annual review/ })).toHaveAttribute('href', '/meetings/evt-010?from=th-johnson-meeting')
     expect(within(views).getByRole('link', { name: /^Johnson Household/ })).toHaveAttribute('href', '/households/hh-001?from=th-johnson-meeting')
     expect(within(views).getByRole('link', { name: /^Robert Johnson/ })).toHaveAttribute('href', '/clients/cli-001?from=th-johnson-meeting')
@@ -81,7 +81,7 @@ describe('the meeting thread', () => {
 
   it("Robert's thread links his client view and the household for the firm", async () => {
     renderRoutes(routes, '/t/th-robert')
-    const views = await inContext().findByRole('region', { name: 'Full views' })
+    const views = await inContext().findByRole('region', { name: 'Related records' })
     expect(await within(views).findByRole('link', { name: /^Robert Johnson/ })).toHaveAttribute('href', '/clients/cli-001?from=th-robert')
     expect(within(views).getByRole('link', { name: /^Johnson Household/ })).toHaveAttribute('href', '/households/hh-001?from=th-robert')
   })

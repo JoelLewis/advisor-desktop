@@ -4,7 +4,7 @@ import type { Visibility } from '@/kit/visibility/visibility'
 import { THREAD_GROUP_TITLE } from '@/workspace/people/visibility-words'
 
 /** The advisor's list before it arrives, in the loaded list's order: the same panes and row heights, so nothing below moves when it lands. */
-const LINK_PANES: readonly { title: string; rows: number }[] = [{ title: 'Desk', rows: 2 }, { title: 'Reference', rows: 6 }]
+const LINK_PANES: readonly { title: string; rows: number }[] = [{ title: 'Firm', rows: 2 }, { title: 'Reports', rows: 6 }]
 const THREAD_PANES: readonly { visibility: Visibility; title: string; rows: number }[] = [
   { visibility: 'private', title: THREAD_GROUP_TITLE.private, rows: 1 },
   { visibility: 'internal', title: THREAD_GROUP_TITLE.internal, rows: 3 },

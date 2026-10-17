@@ -101,7 +101,7 @@ describe('Supervision', () => {
     await approved()
     viewAsOnLoad('cco-001')
     renderRoutes(routes, '/t/th-johnson-review')
-    const panel = await within(await screen.findByRole('complementary', { name: 'Thread context' })).findByRole('region', { name: 'Approval · Johnson rebalance' })
+    const panel = await within(await screen.findByRole('complementary', { name: 'Details' })).findByRole('region', { name: 'Approval · Johnson rebalance' })
     expect(within(panel).getByRole('link', { name: /Review in Supervision/ })).toHaveAttribute('href', '/supervision/orders/prop-0001')
     expect(within(panel).queryByRole('button')).toBeNull()
   })

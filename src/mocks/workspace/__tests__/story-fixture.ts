@@ -8,7 +8,7 @@ import { releaseOrders } from '../compliance-acts'
 export const ADRIAN = 'user-001'
 export const MARK = 'cco-001'
 export const ROBERT = 'cli-001'
-export const RATIONALE = 'Reviewed the approved version, its legs and its pre-trade reading.'
+export const RATIONALE = 'Reviewed the approved version, its legs and its pre-trade check results.'
 
 export type Approved = { proposalId: string; version: number; approvalActId: string; fingerprint: string }
 

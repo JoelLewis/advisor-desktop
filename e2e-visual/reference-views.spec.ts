@@ -2,7 +2,7 @@ import { expectNoAxeViolations } from './axe'
 import { test, expect, type Page } from '@playwright/test'
 import { SCREENSHOT, clippedLabels, pageOverflowX } from './layout-checks'
 import {
-  approve, askProposalAgent, conversation, deskLink, goTo, heading, releaseByShortcut, resolveBreakNamed, settle, takeToTeamThread, threadLink, viewAs, visit, type Theme,
+  approve, askProposalAgent, conversation, deskLink, goTo, heading, releaseByShortcut, resolveBreakNamed, settle, shareToTeamThread, threadLink, viewAs, visit, type Theme,
 } from './workspace-steps'
 
 type Scene = { name: string; open: (page: Page) => Promise<void> }
@@ -101,7 +101,7 @@ test('one presenter: the release on the blotter, the moved book in risk and attr
   // 7. Book risk: the out-of-band account becomes a team conversation.
   await deskLink(page, 'Risk').click()
   await expect(heading(page)).toHaveText('Risk')
-  await takeToTeamThread(page, 'Patel Digital Assets Account')
+  await shareToTeamThread(page, 'Patel Digital Assets Account')
   await page.getByRole('link', { name: 'In Risk · Patel Digital Assets Account' }).click()
   await expect(heading(page)).toHaveText('Risk · Patel Digital Assets Account')
   await expect(conversation(page).getByRole('article', { name: /^From Risk: Patel Digital Assets Account sits above / })).toBeVisible()
@@ -109,7 +109,7 @@ test('one presenter: the release on the blotter, the moved book in risk and attr
 
   // 8. An outsider sees none of it.
   await viewAs(page, 'Robert Johnson · Client')
-  await expect(page.getByRole('navigation', { name: 'Threads' }).getByRole('heading', { name: 'Reference' })).toHaveCount(0)
+  await expect(page.getByRole('navigation', { name: 'Threads' }).getByRole('heading', { name: 'Reports' })).toHaveCount(0)
   for (const [path, subject] of [['/billing', 'Billing'], ['/reconciliation', 'Reconciliation'], ['/risk', 'Risk'], ['/models', 'Models'], ['/practice', 'Practice'], ['/blotter', 'Blotter']]) {
     await visit(page, path, 'light')
     await expect(heading(page)).toHaveText(`${subject} not found`)

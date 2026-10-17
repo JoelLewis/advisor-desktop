@@ -9,7 +9,7 @@ import { canSeeThread, isFirmViewer } from './visibility'
 
 /** What Mark writes when the presenter acts for him: the review his default disposition rests on. */
 const CCO_DEFAULT_RATIONALE: Readonly<Record<SupervisionItemKind, string>> = {
-  orders: 'Reviewed the approved version, its legs, tax effect, pre-trade reading and repurchase restrictions. Released for execution.',
+  orders: 'Reviewed the approved version, its legs, tax effect, pre-trade check results and repurchase restrictions. Released for execution.',
   alert: 'Reviewed the alert, its record trail and the account context. Approved.',
   correspondence: 'Reviewed the message as the client received it, with its provenance. No follow-up needed.',
 }

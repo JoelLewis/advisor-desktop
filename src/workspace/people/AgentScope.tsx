@@ -4,8 +4,8 @@ export function AgentScope({ agent }: { agent: AgentProfile }) {
   return (
     <div className="flex flex-col gap-1">
       <span className="text-body font-semibold">{agent.name}</span>
-      <ScopeLine verb="may" acts={agent.scope.may} />
-      <ScopeLine verb="may not" acts={agent.scope.mayNot} />
+      <ScopeLine verb="Can" acts={agent.scope.may} />
+      <ScopeLine verb="Can't" acts={agent.scope.mayNot} />
     </div>
   )
 }

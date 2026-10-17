@@ -139,7 +139,7 @@ for (const scene of SCENES) {
   })
 }
 
-test('the success path on the real app: ask, full view and back, draft, send, and each viewer sees their part', async ({ page }) => {
+test('the success path on the real app: ask, open the account and back, draft, send, and each viewer sees their part', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   const heading = page.getByRole('heading', { level: 1 })
   const conversation = page.getByRole('list', { name: 'Messages' })
@@ -154,8 +154,8 @@ test('the success path on the real app: ask, full view and back, draft, send, an
   await page.getByRole('button', { name: 'Ask Drift Monitor' }).click()
   await expect(conversation.getByRole('article', { name: /^Drift Monitor: / }).first()).toBeVisible()
 
-  // Opens the account full view from the embed, then goes back to the thread.
-  await conversation.getByRole('region', { name: /^Drift against model/ }).getByRole('link', { name: 'Open full view' }).click()
+  // Opens the account from the embed, then goes back to the thread.
+  await conversation.getByRole('region', { name: /^Drift against model/ }).getByRole('link', { name: 'Open account' }).click()
   await expect(heading).toHaveText('Robert Johnson Individual')
   await page.getByRole('link', { name: 'Back to the thread' }).click()
   await expect(heading).toHaveText('Johnson Rebalance Review')

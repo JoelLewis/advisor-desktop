@@ -55,7 +55,7 @@ describe('the Blotter view', () => {
   it('takes an order to a team thread about its account', async () => {
     renderRoutes(routes, '/blotter')
     await screen.findByRole('heading', { level: 1, name: 'Blotter' })
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Take ord-001 to a team thread' }))
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Share ord-001 to a team thread' }))
     expect(await screen.findByRole('link', { name: 'In Orders · Johnson Family Trust' })).toBeInTheDocument()
   })
 

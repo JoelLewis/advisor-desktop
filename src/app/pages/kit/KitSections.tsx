@@ -112,7 +112,7 @@ export function KitSections({ data }: { data: KitData }) {
               { id: 'approve', label: 'Approve', state: 'OPEN' },
               { id: 'message', label: 'Client message', state: 'DRAFT' },
             ]} />
-            <Attestation id="kit-attest" checked={attested} onChange={setAttested}>I reviewed every leg and its pre-trade reading.</Attestation>
+            <Attestation id="kit-attest" checked={attested} onChange={setAttested}>I reviewed every leg and its pre-trade check results.</Attestation>
           </section>
           <section aria-labelledby="kit-review-approval" className="flex flex-col gap-4">
             <h3 id="kit-review-approval" className="text-label uppercase text-ink-2">{`${alert.type} review · on record`}</h3>

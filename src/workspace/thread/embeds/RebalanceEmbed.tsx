@@ -21,7 +21,7 @@ type Leg = ProposedTrade & { index: number; status: Status }
 async function loadCheckedPreview(viewer: string, accountId: string) {
   const previews = await previewRebalance(viewer, { accountIds: [accountId], taxAware: true })
   const preview = previews.find((p) => p.accountId === accountId)
-  if (!preview) throw new Error(`The engine returned no rebalance preview for ${accountId}`)
+  if (!preview) throw new Error(`No rebalance preview is available for ${accountId}`)
   const check = await preTradeCheckProposal(viewer, {
     accountId,
     trades: preview.trades.map(({ symbol, side, quantity, estimatedValue }) => ({ symbol, side, quantity, estimatedValue })),
@@ -62,7 +62,7 @@ export function RebalanceEmbed({ subject, threadId }: EmbedProps) {
           { id: 'check', header: 'Pre-trade', cell: (l) => <StatusCode status={l.status} /> },
         ]}
         totals={{ label: 'Gross traded', cells: { value: fmtMoney(gross) } }} />
-      <Link to={accountFullViewHref(accountId, threadId)} className={`${LINK_TARGET} self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>Open full view</Link>
+      <Link to={accountFullViewHref(accountId, threadId)} className={`${LINK_TARGET} self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>Open account</Link>
     </section>
   )
 }

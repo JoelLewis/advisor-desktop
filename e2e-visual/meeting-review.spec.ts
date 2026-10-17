@@ -253,7 +253,7 @@ test('one presenter runs the Johnson annual review end to end; Robert sees only 
   await deskLink(page, 'Supervision').click()
   await page.getByRole('navigation', { name: 'Supervision queue' }).getByRole('link', { name: /^Message to Robert Johnson/ }).click()
   await expect(page.getByRole('region', { name: 'Correspondence · Message to Robert Johnson' })).toContainText(/from the filed record REC-\d{4} · fingerprint/)
-  // The Supervision page takes the whole main area (no thread list, so no Desk pane): the Archive from the command line.
+  // The Supervision page takes the whole main area (no thread list, so no Firm pane): the Archive from the command line.
   await goTo(page, 'Archive')
   await expect(page.getByRole('table', { name: 'Archive' })).toContainText('Filed the record of the Johnson annual review')
 

@@ -94,7 +94,7 @@ function ProposalApproval({ detail, directory, onRecorded }: { detail: ProposalD
       <ApprovalNote state={approval} />
       {canApprove ? (
         <div className="flex flex-col items-start gap-3">
-          <Checkbox label={`I reviewed every leg of v${latest.n} and its pre-trade reading.`} checked={attestedVersion === latest.n}
+          <Checkbox label={`I reviewed every leg of v${latest.n} and its pre-trade check results.`} checked={attestedVersion === latest.n}
             describedBy={hasReading(latest) ? readingId : undefined}
             onChange={(checked) => setAttestedVersion(checked ? latest.n : undefined)} />
           <PretradeReading id={readingId} version={latest} />
@@ -160,7 +160,7 @@ function PretradeReading({ id, version }: { id: string; version: ProposalVersion
   const lines = readingLines(version)
   if (lines.length === 0) return null
   return (
-    <ul id={id} aria-label={`Pre-trade reading of v${version.n}`} className="flex flex-col gap-1">
+    <ul id={id} aria-label={`Pre-trade check results · v${version.n}`} className="flex flex-col gap-1">
       {lines.map((v) => (
         <li key={`${v.severity}:${v.category}:${v.symbol ?? v.constraint}`} className="flex items-baseline gap-3 text-body">
           <StatusCode status={v.severity === 'block' ? 'BLOCK' : 'WARN'} /><span>{v.message}</span>

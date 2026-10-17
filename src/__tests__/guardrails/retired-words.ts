@@ -51,13 +51,13 @@ export const RETIRED_WORDS: readonly RetiredWord[] = [
   { word: 'Only you', pattern: /\bonly you\b/i, retired: true },
   { word: 'binding', pattern: /\bbinding\b/i, retired: false },
   // "Taken to" is plain English. A JSX hole ("Take {x} to") reads as two texts and is a known limit.
-  { word: 'Take to', pattern: /\bTake(?: …)? to\b/, retired: false },
-  { word: 'carried', pattern: /\b[Cc]arried (?:by|from)\b/, retired: false },
-  { word: 'Thread context', pattern: /\bThread context\b/, retired: false },
-  { word: 'Full views', pattern: /\b[Ff]ull views?\b/, retired: false },
+  { word: 'Take to', pattern: /\bTake(?: …)? to\b/, retired: true },
+  { word: 'carried', pattern: /\b[Cc]arried (?:by|from)\b/, retired: true },
+  { word: 'Thread context', pattern: /\bThread context\b/, retired: true },
+  { word: 'Full views', pattern: /\b[Ff]ull views?\b/, retired: true },
   // The role words: upper case anywhere in a string, or a lower-case label on its own (AgentScope sets the verb in
   // capitals by CSS). Never "May 2026" or "may" inside a sentence.
-  { word: 'MAY NOT', pattern: /\bMAY(?: NOT)?\b|^(?:may|may not)$/, retired: false },
+  { word: 'MAY NOT', pattern: /\bMAY(?: NOT)?\b|^(?:may|may not)$/, retired: true },
 ]
 
 const TEXT_FILES = ['index.html', 'README.md'] as const

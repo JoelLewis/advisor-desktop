@@ -10,7 +10,7 @@ import { OUTSIDER_THREAD_TITLE } from '@/workspace/people/roster'
 const ADRIAN = 'user-001'
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
 const conversation = () => within(screen.getByRole('list', { name: 'Messages' }))
-const inContext = () => within(screen.getByRole('complementary', { name: 'Thread context' }))
+const inContext = () => within(screen.getByRole('complementary', { name: 'Details' }))
 const RECAP = 'Ask Client Letter Agent for the recap'
 
 async function filed() {
@@ -67,7 +67,7 @@ describe("Robert's recap", () => {
     expect(screen.getByRole('list', { name: 'Messages' })).toHaveTextContent('Dear Robert,')
     // The View-as menu lists the firm's people for the demo, so the check reads Robert's thread and its context, not the whole page.
     expect(screen.getByRole('list', { name: 'Messages' })).not.toHaveTextContent(/transcript|Meeting Notes|agenda|REC-0001|Sarah Mitchell|Mike Chen|follow-up|filed record/i)
-    expect(screen.getByRole('complementary', { name: 'Thread context' })).not.toHaveTextContent(/transcript|Meeting Notes|agenda|REC-0001|Mike Chen|follow-up|filed record|fingerprint [0-9A-F]{8} · agent draft/i)
+    expect(screen.getByRole('complementary', { name: 'Details' })).not.toHaveTextContent(/transcript|Meeting Notes|agenda|REC-0001|Mike Chen|follow-up|filed record|fingerprint [0-9A-F]{8} · agent draft/i)
     expect(within(screen.getByRole('navigation', { name: 'Threads' })).getAllByRole('link')).toHaveLength(1)
   })
 

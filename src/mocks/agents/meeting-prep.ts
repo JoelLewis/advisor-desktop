@@ -50,7 +50,7 @@ function changes(own: readonly Account[], asOf: string): PrepFinding {
   const moved = own.filter((a) => fills.some((f) => f.accountId === a.id))
   const total = (side: 'buy' | 'sell') => fills.filter((f) => f.side === side).reduce((s, f) => s + f.value, 0)
   return {
-    claim: `Orders released today were filled in ${joinWords(moved.map(accountWords))}; the readings below are of the moved book.`,
+    claim: `Orders released today were filled in ${joinWords(moved.map(accountWords))}; the figures below include today's trades.`,
     attention: 'info',
     figures: [
       { label: 'Sold today', value: total('sell'), unit: 'USD', source: 'ledgerFills.value' },

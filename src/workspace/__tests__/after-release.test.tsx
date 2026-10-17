@@ -11,7 +11,7 @@ import type { Message } from '@/types/workspace'
 const ADRIAN = 'user-001'
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
 const conversation = () => within(screen.getByRole('list', { name: 'Messages' }))
-const inContext = () => within(screen.getByRole('complementary', { name: 'Thread context' }))
+const inContext = () => within(screen.getByRole('complementary', { name: 'Details' }))
 const RELEASED = 'Released the orders staged from v1 of the Johnson rebalance'
 
 async function approved() {
@@ -97,7 +97,7 @@ describe('the team thread after compliance releases', () => {
     await releasedByMark()
     const { unmount } = renderRoutes(routes, '/proposals/prop-0001?from=th-johnson-review')
     await screen.findByRole('heading', { level: 1, name: 'Johnson rebalance' })
-    expect(screen.getByText('The orders from v1 were filled. This proposal is closed; ask the Proposal Agent for a new one from the moved book.')).toBeInTheDocument()
+    expect(screen.getByText('The orders from v1 were filled. This proposal is closed; ask the Proposal Agent for a new one from the updated holdings.')).toBeInTheDocument()
     expect(screen.queryByRole('group', { name: 'Draft version' })).toBeNull()
     unmount()
     await openThread()

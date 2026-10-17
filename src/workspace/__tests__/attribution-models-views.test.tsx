@@ -43,7 +43,7 @@ describe('the Attribution view', () => {
   it('takes an asset-class row to the account team thread', async () => {
     renderRoutes(routes, '/accounts/acc-002/attribution')
     await screen.findByRole('heading', { level: 1, name: 'Attribution · Robert Johnson Individual' })
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Take US Equity to a team thread' }))
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Share US Equity to a team thread' }))
     expect(await screen.findByRole('link', { name: 'In Johnson Rebalance Review' })).toHaveAttribute('href', '/t/th-johnson-review')
   })
 
@@ -77,7 +77,7 @@ describe('the Models views', () => {
     for (const text of ['Mike Chen', 'Investment Committee', 'PENDING APPROVAL', '1 Apr 2026', 'Reduced US equity from 40% to 35%']) expect(history).toHaveTextContent(text)
     expect(history).not.toHaveTextContent(/Sarah Kim|David Park|BXPE/)
     expect(screen.getByRole('table', { name: 'Accounts on this model' })).toHaveTextContent('Chen Family Irrevocable Trust')
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Take Ultra-HNW Multi-Strategy v3 to a team thread' }))
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Share Ultra-HNW Multi-Strategy v3 to a team thread' }))
     expect(await screen.findByRole('link', { name: 'In Model · Ultra-HNW Multi-Strategy' })).toBeInTheDocument()
   })
 

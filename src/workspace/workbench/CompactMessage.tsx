@@ -13,7 +13,7 @@ export function CompactMessage({ message, directory }: { message: Message; direc
   switch (message.kind) {
     case 'text': return <Line who={personIn(directory, message.authorId).name} at={message.at}>{message.body}</Line>
     case 'agent_finding': return <Line who={agentName(directory, message.agentId)} at={message.at}>{message.claim}</Line>
-    case 'embed': return <Line who={personIn(directory, message.authorId).name} at={message.at}>{message.embed === 'drift' ? 'Shared the drift reading.' : 'Shared a rebalance preview.'}</Line>
+    case 'embed': return <Line who={personIn(directory, message.authorId).name} at={message.at}>{message.embed === 'drift' ? 'Shared the drift against the model.' : 'Shared a rebalance preview.'}</Line>
     case 'proposal': return <Line who={agentName(directory, message.agentId)} at={message.at}>Drafted the proposal (v1).</Line>
     case 'proposal_version': return <Line who={authorName(message.author, directory)} at={message.at}>{`v${message.version} · ${message.changeSummary}`}</Line>
     case 'act': return <Line who="Record" at={message.at}>{`Binding act recorded · ${message.actId}`}</Line>
