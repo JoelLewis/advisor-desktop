@@ -6,6 +6,7 @@ import { StatusCode } from '@/kit/status/StatusCode'
 import { Tag } from '@/kit/tag/Tag'
 import { Button } from '@/kit/button/Button'
 import { Checkbox } from '@/kit/checkbox/Checkbox'
+import { RadioGroup } from '@/kit/radio-group/RadioGroup'
 import { NumberInput } from '@/kit/number-input/NumberInput'
 import { Attestation } from '@/kit/attestation/Attestation'
 import { Stepper } from '@/kit/stepper/Stepper'
@@ -40,6 +41,7 @@ export function KitSections({ data }: { data: KitData }) {
   const [attested, setAttested] = useState(false)
   const [harvestOnly, setHarvestOnly] = useState(false)
   const [gainsCap, setGainsCap] = useState('')
+  const [reason, setReason] = useState<'ips' | 'acknowledged' | 'whole' | undefined>('ips')
   const worst = [...drift.assetClassDrifts].sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift))[0]
   const gains = preview.trades.reduce((s, t) => s + Math.max(0, t.realizedShortTerm) + Math.max(0, t.realizedLongTerm), 0)
   const losses = preview.trades.reduce((s, t) => s + Math.min(0, t.realizedShortTerm) + Math.min(0, t.realizedLongTerm), 0)
@@ -70,6 +72,12 @@ export function KitSections({ data }: { data: KitData }) {
             <Checkbox label="Harvest only: sell only lots at a loss" checked={harvestOnly} onChange={setHarvestOnly} />
             <NumberInput label="Realized gains cap" unit="USD" value={gainsCap} onChange={setGainsCap} />
           </div>
+          <RadioGroup legend="Suitability reason" value={reason} onChange={setReason} options={[
+            { value: 'ips', label: 'The IPS permits a growth allocation for this account' },
+            { value: 'acknowledged', label: 'Client acknowledged the higher risk in writing' },
+            { value: 'whole', label: "The client's accounts as a whole stay within tolerance", disabled: true,
+              hint: "Not available: after this proposal, the client's accounts as a whole sit above the tolerance." },
+          ]} />
         </Pane>
         <Pane title="Drift against model" meta={`band ${fmtTolerance(drift.driftTolerance)} pp`}>
           <div className="flex flex-col gap-2">

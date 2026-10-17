@@ -218,6 +218,7 @@ describe('approving a proposal', () => {
       const reasons = within(panel).getByRole('group', { name: 'Suitability reason' })
       expect(within(reasons).getAllByRole('radio').filter((r) => (r as HTMLInputElement).checked)).toHaveLength(0)
       expect(within(reasons).getByRole('radio', { name: WHOLE })).toBeDisabled()
+      expect(within(reasons).getByRole('radio', { name: WHOLE })).toHaveAccessibleDescription("Not available: after this proposal, Robert Johnson's accounts as a whole sit above the tolerance.")
       expect(reasons).toHaveAccessibleDescription(expect.stringContaining("Robert Johnson's accounts as a whole: 62 pts after this proposal, from 51 pts today, above Moderate, 41–55 pts. No reason is chosen for you"))
       expect(within(panel).getByText('OUT')).toBeInTheDocument()
       await userEvent.setup().click(within(panel).getByRole('checkbox', { name: REVIEWED_V1 }))

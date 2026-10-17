@@ -5,9 +5,17 @@ const wholeWithin = (check: ToleranceCheck) => check.wholeAfterStatus === 'withi
 /** The reason chosen for the advisor: the accounts-as-a-whole reason where it holds, none where the whole sits outside too. */
 export const preselectedReason = (check: ToleranceCheck): SuitabilityReasonId | '' => (wholeWithin(check) ? 'accounts_within_tolerance' : '')
 
-/** The three reasons, each in full. The accounts-as-a-whole reason is offered only where the whole sits within the band; the engine refuses it otherwise. */
-export const reasonOptions = (check: ToleranceCheck): { value: SuitabilityReasonId; label: string; disabled: boolean }[] =>
-  SUITABILITY_REASONS.map((r) => ({ value: r, label: reasonLabel(r, check.clientName), disabled: r === 'accounts_within_tolerance' && !wholeWithin(check) }))
+/**
+ * The three reasons, each in full. The accounts-as-a-whole reason is offered only where the whole sits within the
+ * band (the engine refuses it otherwise), and where it is not, it says why.
+ */
+export function reasonOptions(check: ToleranceCheck): { value: SuitabilityReasonId; label: string; disabled: boolean; hint?: string }[] {
+  return SUITABILITY_REASONS.map((r) => {
+    const disabled = r === 'accounts_within_tolerance' && !wholeWithin(check)
+    const hint = `Not available: after this proposal, ${check.clientName}'s accounts as a whole sit ${check.wholeAfterStatus} the tolerance.`
+    return { value: r, label: reasonLabel(r, check.clientName), disabled, ...(disabled ? { hint } : {}) }
+  })
+}
 
 /**
  * Where the client's accounts as a whole sit after the proposal, beside today, the figure the choice rests on:
