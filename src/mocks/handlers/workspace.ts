@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import { isBreakResolution } from '@/types/reference-reconciliation'
 import { isDisclosureDocument } from '@/types/workspace-prospect'
+import { isSuitabilityReasonId, type SuitabilityReason } from '@/lib/suitability'
 import type { AgentId, Directory, Draft, ListedThread, Message, ThreadDetail } from '@/types/workspace'
 import { AGENTS, PEOPLE, can, permissionsOf } from '../data/people'
 import { resolveBreak } from '../reference/reconciliation'
@@ -8,6 +9,8 @@ import { nextAt, nextId, store } from '../data/workspace-store'
 import { BRIEF_THREAD_ID } from '../workspace/brief'
 import { briefOrder, remeasureBrief } from '../workspace/brief-remeasure'
 import { briefToday } from '../workspace/brief-today'
+import { settleApproved } from '../workspace/brief-groups'
+import { suitablyApprovedAccounts } from '../workspace/suitability'
 import { sendToParty } from '../workspace/acts'
 import { storyProgress } from '../workspace/story-progress'
 import { deliverDisclosure } from '../workspace/disclosures'
@@ -30,6 +33,16 @@ import { workspaceProposalHandlers } from './workspace-proposals'
 import { workspaceProspectHandlers } from './workspace-prospects'
 import { workspaceReferenceHandlers } from './workspace-reference'
 import { parseComplianceAct, recordComplianceAct, workspaceSupervisionHandlers } from './workspace-supervision'
+
+/** The advisor's suitability reason, as sent: a listed reason and, if written, a note. The engine judges whether it holds. */
+function parseSuitability(value: unknown): { ok: true; value?: SuitabilityReason } | { ok: false; message: string } {
+  if (value === undefined) return { ok: true }
+  if (typeof value !== 'object' || value === null) return { ok: false, message: 'suitability must be an object.' }
+  const { reason, note } = value as Record<string, unknown>
+  if (!isSuitabilityReasonId(reason)) return { ok: false, message: 'suitability.reason must be one of the listed reasons.' }
+  if (note !== undefined && typeof note !== 'string') return { ok: false, message: 'suitability.note must be text.' }
+  return { ok: true, value: { reason, ...(note !== undefined ? { note } : {}) } }
+}
 
 const fullDirectory = (): Directory => ({ people: [...PEOPLE], agents: [...AGENTS], permissions: Object.fromEntries(PEOPLE.map((p) => [p.id, permissionsOf(p.id)])) })
 
@@ -69,7 +82,7 @@ export const workspaceHandlers = [
     if (thread.id === BRIEF_THREAD_ID) remeasureBrief()
     const inThread = store().messages.filter((m) => m.threadId === thread.id)
     const messages = thread.id === BRIEF_THREAD_ID
-      ? [briefToday(viewer), ...briefOrder(inThread)]
+      ? [briefToday(viewer), ...briefOrder(inThread).map((m) => (m.kind === 'brief_summary' ? settleApproved(m, suitablyApprovedAccounts()) : m))]
       : inThread.sort((a, b) => a.at.localeCompare(b.at))
     const detail: ThreadDetail = { thread, messages: isExternalViewer(viewer) ? messagesForOutsider(thread.id, messages) : messages, audience: audienceOf(thread), roster: rosterOf(thread, viewer) }
     return HttpResponse.json(detail)
@@ -164,7 +177,9 @@ export const workspaceHandlers = [
         }
         if (!visibleProposal(viewer, body.proposalId)) return notFound()
         if (typeof body.version !== 'number' || !nonEmptyString(body.fingerprint)) return badRequest('version (a number) and fingerprint are required.')
-        const r = approveProposal(viewer, body.proposalId, body.version, body.fingerprint)
+        const suitability = parseSuitability(body.suitability)
+        if (!suitability.ok) return badRequest(suitability.message)
+        const r = approveProposal(viewer, body.proposalId, body.version, body.fingerprint, suitability.value)
         return r.ok ? HttpResponse.json(r.act, { status: 201 }) : refusal(r)
       }
       case 'withdraw_approval': {

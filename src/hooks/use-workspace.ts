@@ -6,6 +6,7 @@ import { DEFAULT_VIEWER_ID } from '@/workspace/viewer/viewer-context'
 import type { AgentId } from '@/types/workspace'
 import type { ArchiveFilters, ComplianceActRequest, PresenterItem } from '@/types/workspace-supervision'
 import type { LegEdit, ProposalConstraint } from '@/types/workspace-proposal'
+import type { SuitabilityReason } from '@/lib/suitability'
 
 export function useDirectory() {
   const { viewerId } = useViewer()
@@ -182,8 +183,8 @@ export function useApproveProposal() {
   const { viewerId } = useViewer()
   const invalidate = useInvalidateWorkspace()
   return useMutation({
-    mutationFn: ({ proposalId, version, fingerprint }: { proposalId: string; version: number; fingerprint: string }) =>
-      api.approveProposal(viewerId, proposalId, version, fingerprint),
+    mutationFn: ({ proposalId, version, fingerprint, suitability }: { proposalId: string; version: number; fingerprint: string; suitability?: SuitabilityReason }) =>
+      api.approveProposal(viewerId, proposalId, version, fingerprint, suitability),
     onSettled: invalidate,
   })
 }

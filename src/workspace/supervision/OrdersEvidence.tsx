@@ -16,6 +16,7 @@ import { taxScope } from '@/workspace/proposal/tax-scope'
 import type { Directory } from '@/types/workspace'
 import type { OrdersItem } from '@/types/workspace-supervision'
 import { LINK_TARGET } from '@/kit/link-target'
+import { suitabilityText } from '@/lib/suitability'
 
 const LINK = `${LINK_TARGET} self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`
 const TERM = 'text-label uppercase text-ink-3'
@@ -34,6 +35,7 @@ export function OrdersEvidence({ item, directory }: { item: OrdersItem; director
           <dt className={TERM}>Version</dt><dd className="tabular">{`v${v.n}`}</dd>
           <dt className={TERM}>Fingerprint</dt><dd className="tabular">{item.approval.fingerprint}</dd>
           <dt className={TERM}>Approved by</dt><dd>{`${approver.name}, ${ROLE_LABEL[approver.role]}`}</dd>
+          {item.approval.suitability ? <><dt className={TERM}>Suitability reason</dt><dd>{suitabilityText(item.approval.suitability)}</dd></> : null}
           <dt className={TERM}>At</dt><dd className="tabular">{fmtEasternStamp(item.approval.at)}</dd>
           <dt className={TERM}>Record</dt><dd className="tabular">{item.approval.actId}</dd>
         </dl>

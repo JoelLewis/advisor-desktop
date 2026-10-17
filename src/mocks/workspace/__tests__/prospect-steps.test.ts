@@ -12,6 +12,7 @@ import { approveProposal } from '../proposal-acts'
 import { releaseOrders } from '../compliance-acts'
 import { actAsProspect, advanceProspect, herStep, nextJumpOf, partySteps, recordCoffee } from '../prospect-steps'
 import { ADRIAN } from './prospect-fixture'
+import { JOHNSON_REASON } from '@/test/suitability-fixture'
 
 const PELL = 'prsp-011'
 const SCRIPTED = { presenterId: ADRIAN, path: 'scripted' }
@@ -84,7 +85,7 @@ describe('her reply, on the clock jump', () => {
   it('after the coffee (16:30 ET) today\'s session has closed: releasing the Johnson orders is refused MARKET_CLOSED, to the next session', () => {
     const proposal = ok(createProposal(ADRIAN, 'th-johnson-review', 'acc-002')).detail
     const fp = proposal.versions[0]?.fingerprint ?? ''
-    const approval = ok(approveProposal(ADRIAN, proposal.id, 1, fp)).act
+    const approval = ok(approveProposal(ADRIAN, proposal.id, 1, fp, JOHNSON_REASON)).act
     coffee()
     expect(releaseOrders('cco-001', proposal.id, approval.id, fp, 'Reviewed.')).toEqual({
       ok: false, status: 409, code: 'MARKET_CLOSED', message: "Today's session has closed; staged orders can be released at the next session.",
@@ -182,7 +183,7 @@ describe('her acceptance', () => {
   it('leaves the Johnson orders unreleasable on Monday too: the session open then is not the frozen day\'s', () => {
     const proposal = ok(createProposal(ADRIAN, 'th-johnson-review', 'acc-002')).detail
     const fp = proposal.versions[0]?.fingerprint ?? ''
-    const approval = ok(approveProposal(ADRIAN, proposal.id, 1, fp)).act
+    const approval = ok(approveProposal(ADRIAN, proposal.id, 1, fp, JOHNSON_REASON)).act
     sentToHer()
     ok(advanceProspect(ADRIAN, PELL, 'acceptance'))
     expect(releaseOrders('cco-001', proposal.id, approval.id, fp, 'Reviewed.')).toEqual({

@@ -11,9 +11,11 @@ type SelectProps = {
   /** 'inline' sits the label beside the field, as in a toolbar; 'stacked' sits it above, as in a form. */
   layout?: 'inline' | 'stacked'
   error?: string
+  /** An element that says more about the choice, such as the figure it rests on. */
+  describedBy?: string
 }
 
-export function Select({ label, value, options, onChange, layout = 'inline', error }: SelectProps) {
+export function Select({ label, value, options, onChange, layout = 'inline', error, describedBy }: SelectProps) {
   const id = useId()
   const errorId = useId()
   const stacked = layout === 'stacked'
@@ -22,7 +24,7 @@ export function Select({ label, value, options, onChange, layout = 'inline', err
       <label htmlFor={id} className="text-label tracking-normal text-ink-3">{label}</label>
       <span className="relative inline-flex min-w-0 max-w-full">
         <select id={id} value={value} onChange={(e) => onChange(e.target.value)}
-          aria-invalid={error ? true : undefined} aria-describedby={error ? errorId : undefined}
+          aria-invalid={error ? true : undefined} aria-describedby={[describedBy, error ? errorId : undefined].filter(Boolean).join(' ') || undefined}
           className="min-h-9 coarse:min-h-11 max-w-full min-w-0 appearance-none py-1.5 rounded-xs border border-ink bg-transparent pl-3 pr-8 text-body font-semibold text-ink hover:bg-face aria-invalid:border-2">
           {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>

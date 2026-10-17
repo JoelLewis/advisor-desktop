@@ -1,11 +1,12 @@
 import type { BindingAct, Message } from '@/types/workspace'
-import type { ApprovalRecord, Proposal, StagedOrder } from '@/types/workspace-proposal'
+import type { ApprovalRecord, Proposal, ProposalVersion, StagedOrder } from '@/types/workspace-proposal'
+import { SUITABILITY_NOTE_MAX, type RecordedSuitability, type SuitabilityReason } from '@/lib/suitability'
 import { can } from '@/mocks/data/people'
 import { commitActId, nextAt, nextId, store } from '@/mocks/data/workspace-store'
 import { activeApproval, filledMessage, nextStagedId, proposalById, releasedApproval } from '@/mocks/data/proposals-store'
 import { canSeeThread, isFirmViewer } from './visibility'
 
-export type ActFailure = { ok: false; status: 403 | 404 | 409; code: string; message: string }
+export type ActFailure = { ok: false; status: 400 | 403 | 404 | 409; code: string; message: string }
 type Recorded = { ok: true; act: BindingAct }
 
 const NOT_FOUND: ActFailure = { ok: false, status: 404, code: 'NO_PROPOSAL', message: 'Proposal not found.' }
@@ -37,7 +38,36 @@ export function setApprovalStatus(approval: ApprovalRecord, status: ApprovalReco
   s.approvals = s.approvals.map((a) => (a.actId === approval.actId ? { ...a, status } : a))
 }
 
-export function approveProposal(viewerId: string, proposalId: string, version: number, fingerprint: string): Recorded | ActFailure {
+/**
+ * The reason as recorded, or why it cannot be: a version whose model sits above the client's tolerance needs one, a
+ * version without that check takes none, and the accounts-as-a-whole reason holds only where the check found the
+ * client's whole within the band after the proposal. The figure it rests on is the check's, never the request's.
+ */
+function recordedSuitability(v: ProposalVersion, suitability: SuitabilityReason | undefined): { ok: true; value?: RecordedSuitability } | ActFailure {
+  const check = v.pretrade.violations.find((x) => x.category === 'model_above_tolerance')
+  if (!check) {
+    return suitability
+      ? { ok: false, status: 409, code: 'NO_SUITABILITY_GAP', message: `v${v.n} sits within the client's tolerance; there is no suitability reason to record.` }
+      : { ok: true }
+  }
+  const gap = check.tolerance
+  if (!gap) throw new Error(`v${v.n}'s tolerance check carries no tolerance`)
+  if (!suitability) {
+    return { ok: false, status: 409, code: 'REASON_REQUIRED', message: `v${v.n} puts the account on a model above ${gap.clientName}'s tolerance; choose a suitability reason to approve it.` }
+  }
+  const { note } = suitability
+  if (note !== undefined && (note.trim() === '' || note.length > SUITABILITY_NOTE_MAX)) {
+    return { ok: false, status: 400, code: 'BAD_NOTE', message: `Write the note in 1 to ${SUITABILITY_NOTE_MAX} characters, or leave it out.` }
+  }
+  if (suitability.reason !== 'accounts_within_tolerance') return { ok: true, value: { ...suitability, clientName: gap.clientName } }
+  if (gap.wholeAfterStatus !== 'within') {
+    return { ok: false, status: 409, code: 'REASON_DOES_NOT_HOLD', message: `After v${v.n}, ${gap.clientName}'s accounts as a whole sit ${gap.wholeAfterStatus} the tolerance; choose another reason.` }
+  }
+  const whole = { score: gap.wholeAfterScore, toleranceBand: gap.toleranceBand, floor: gap.floor, ceiling: gap.ceiling }
+  return { ok: true, value: { ...suitability, clientName: gap.clientName, whole } }
+}
+
+export function approveProposal(viewerId: string, proposalId: string, version: number, fingerprint: string, suitability?: SuitabilityReason): Recorded | ActFailure {
   const proposal = visibleProposal(viewerId, proposalId)
   if (!proposal) return NOT_FOUND
   if (!can(viewerId, 'approve_proposal')) return { ok: false, status: 403, code: 'NOT_PERMITTED', message: 'Only the advisor of record can approve a proposal.' }
@@ -50,6 +80,9 @@ export function approveProposal(viewerId: string, proposalId: string, version: n
   if (v.preview.trades.length === 0) return { ok: false, status: 409, code: 'NO_LEGS', message: `v${version} has no legs to approve.` }
   const previous = activeApproval(proposal.id)
   if (previous?.version === version) return { ok: false, status: 409, code: 'ALREADY_APPROVED', message: `v${version} is already approved (${previous.actId}).` }
+  const reason = recordedSuitability(v, suitability)
+  if (!reason.ok) return reason
+  const recorded = reason.value ? { suitability: reason.value } : {}
 
   const at = nextAt()
   const actId = commitActId()
@@ -63,9 +96,10 @@ export function approveProposal(viewerId: string, proposalId: string, version: n
     summary: previous
       ? `Approved v${version} of the ${proposal.title}; the approval of v${previous.version} is withdrawn`
       : `Approved v${version} of the ${proposal.title}`,
+    ...recorded,
   }
   const s = store()
-  s.approvals.push({ proposalId: proposal.id, version, fingerprint: v.fingerprint, actId, approverId: viewerId, at, status: 'active' })
+  s.approvals.push({ proposalId: proposal.id, version, fingerprint: v.fingerprint, actId, approverId: viewerId, at, status: 'active', ...recorded })
   // Staged only: compliance's disposition releases, returns or escalates them (compliance-acts.ts).
   const staged: StagedOrder[] = v.preview.trades.map((t) => ({
     id: nextStagedId(), proposalId: proposal.id, version, accountId: proposal.accountId, symbol: t.symbol, side: t.side,

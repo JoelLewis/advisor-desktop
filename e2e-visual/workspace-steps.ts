@@ -63,9 +63,15 @@ export async function askProposalAgent(page: Page, theme: Theme) {
   await expect(embedOf(page).getByRole('table', { name: 'Proposal legs · v1' })).toBeVisible()
 }
 
+/** Robert Johnson's accounts as a whole stay within his tolerance after each proposal in the stories, so the panel chooses this reason for him. */
+const SUITABILITY_REASON = "Robert Johnson's accounts as a whole stay within tolerance (asset location)"
+
 export async function approve(page: Page, version: number) {
   const approval = approvalOf(page)
   await approval.getByRole('checkbox', { name: `I reviewed every leg of v${version} and its pre-trade check results.` }).check()
+  const reason = approval.getByLabel('Suitability reason')
+  await expect(reason.locator('option:checked')).toHaveText(SUITABILITY_REASON)
+  await reason.selectOption({ label: SUITABILITY_REASON })
   await approval.getByRole('button', { name: `Approve v${version}` }).click()
   await expect(approval).toContainText(`v${version} is approved`)
   await expect(approval).toContainText('PENDING COMPLIANCE REVIEW')

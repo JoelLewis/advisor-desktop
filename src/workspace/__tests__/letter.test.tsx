@@ -7,6 +7,7 @@ import { approveProposal, createProposal, draftLetter, reviseDraft, revisePropos
 import { store } from '@/mocks/data/workspace-store'
 import { buildClientRateDisclosure, TAX_RATE_BASIS } from '@/lib/tax-rules'
 import { approvedV1 as fixtureApprovedV1, release } from '@/mocks/workspace/__tests__/story-fixture'
+import { JOHNSON_REASON } from '@/test/suitability-fixture'
 
 const ADRIAN = 'user-001'
 const inContext = () => within(screen.getByRole('complementary', { name: 'Details' }))
@@ -14,13 +15,13 @@ const conversation = () => screen.getByRole('list', { name: 'Messages' })
 
 async function approvedV1() {
   const created = await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
-  await approveProposal(ADRIAN, created.id, 1, created.versions[0]!.fingerprint)
+  await approveProposal(ADRIAN, created.id, 1, created.versions[0]!.fingerprint, JOHNSON_REASON)
   return created
 }
 
 async function approveV2(proposalId: string) {
   const v2 = await reviseProposal(ADRIAN, proposalId, [{ kind: 'harvest_only' }])
-  await approveProposal(ADRIAN, proposalId, 2, v2.versions[1]!.fingerprint)
+  await approveProposal(ADRIAN, proposalId, 2, v2.versions[1]!.fingerprint, JOHNSON_REASON)
 }
 
 async function openRobert() {

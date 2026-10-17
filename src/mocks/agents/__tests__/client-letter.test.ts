@@ -10,6 +10,7 @@ import { accounts } from '@/mocks/data/accounts'
 import type { ProposalVersion } from '@/types/workspace-proposal'
 import { writeClientLetter } from '../client-letter'
 import { requireModelManaged } from '@/lib/mandate'
+import { JOHNSON_REASON } from '@/test/suitability-fixture'
 
 describe('the Client Letter Agent', () => {
   beforeEach(() => resetWorkspaceStore())
@@ -85,7 +86,7 @@ describe('the Client Letter Agent', () => {
     const revised = reviseProposal('user-001', created.detail.id, [{ kind: 'harvest_only' }])
     if (!revised.ok) throw new Error(revised.message)
     const v2 = revised.detail.versions[1]!
-    const approved = approveProposal('user-001', created.detail.id, 2, v2.fingerprint)
+    const approved = approveProposal('user-001', created.detail.id, 2, v2.fingerprint, JOHNSON_REASON)
     if (!approved.ok) throw new Error(approved.message)
     expect(v2.preview.estimatedTaxImpact).toBeLessThanOrEqual(0)
     const letter = writeClientLetter(revised.detail, v2, 'user-001')

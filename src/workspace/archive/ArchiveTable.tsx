@@ -8,6 +8,7 @@ import { supervisionHref } from '@/workspace/supervision/supervision-items'
 import type { Directory } from '@/types/workspace'
 import type { ArchiveEntry } from '@/types/workspace-supervision'
 import { TABLE_HIT_AREA, TABLE_LINK_TARGET } from '@/kit/link-target'
+import { suitabilityLine } from '@/lib/suitability'
 
 const LINK = `${TABLE_LINK_TARGET} underline decoration-rule-2 underline-offset-4 hover:decoration-ink`
 
@@ -28,6 +29,7 @@ function Summary({ entry }: { entry: ArchiveEntry }) {
   return (
     <span className="flex flex-col items-start gap-0.5">
       <span>{text}</span>
+      {entry.kind === 'act' && entry.act.suitability ? <span className="text-label text-ink-2">{suitabilityLine(entry.act.suitability)}</span> : null}
       <details>
         <summary className={`${TABLE_HIT_AREA} cursor-pointer text-label text-ink-3`}>Audit details</summary>
         <span className="tabular text-label text-ink-2">{`Record ${recordId} · fingerprint ${fingerprint}`}</span>

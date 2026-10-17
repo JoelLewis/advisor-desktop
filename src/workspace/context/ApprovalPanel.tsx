@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { useAnnounce } from '@/kit/announcer/use-announce'
 import { Button } from '@/kit/button/Button'
 import { Checkbox } from '@/kit/checkbox/Checkbox'
+import { Select } from '@/kit/select/Select'
+import { TextInput } from '@/kit/text-input/TextInput'
 import { Dialog } from '@/kit/dialog/Dialog'
 import { StatusCode } from '@/kit/status/StatusCode'
 import { Tag } from '@/kit/tag/Tag'
@@ -24,9 +26,12 @@ import { approveBlocker } from './approve-blocker'
 import { PresenterRelease } from './PresenterRelease'
 import { supervisionHref } from '@/workspace/supervision/supervision-items'
 import { LINK_TARGET } from '@/kit/link-target'
+import { isSuitabilityReasonId, type SuitabilityReason, type SuitabilityReasonId } from '@/lib/suitability'
+import { preselectedReason, reasonOptions, toleranceCheckOf, wholeAfterSentence, type ToleranceCheck } from './suitability-choice'
 
 type OnRecorded = (actId: string) => void
 type ApprovalPanelProps = { thread: Thread; directory: Directory; onRecorded: OnRecorded }
+type ChosenReason = { version: number; reason: SuitabilityReasonId | ''; note: string }
 type RecordCallbacks = { onSuccess: (act: { id: string; summary: string }) => void; onSettled: () => void }
 
 export function ApprovalPanel({ thread, directory, onRecorded }: ApprovalPanelProps) {
@@ -45,21 +50,31 @@ function ProposalApproval({ detail, directory, onRecorded }: { detail: ProposalD
   const withdraw = useWithdrawApproval()
   // The attestation names one version; a newer version arriving un-ticks it rather than carrying the review over.
   const [attestedVersion, setAttestedVersion] = useState<number>()
+  // The suitability reason belongs to one version too: a newer version starts again from the reason chosen for it.
+  const [chosenReason, setChosenReason] = useState<ChosenReason>()
   const [confirmingWithdrawOf, setConfirmingWithdrawOf] = useState<number>()
   const [slipTakesFocus, setSlipTakesFocus] = useState(false)
   const busy = useRef(false)
-  const reasonId = useId()
+  const blockerId = useId()
   const readingId = useId()
   const latest = latestVersionOf(detail)
+  const toleranceCheck = toleranceCheckOf(latest)
+  const chosen: ChosenReason = chosenReason?.version === latest.n
+    ? chosenReason
+    : { version: latest.n, reason: toleranceCheck ? preselectedReason(toleranceCheck) : '', note: '' }
+  const suitability: SuitabilityReason | undefined = toleranceCheck && chosen.reason !== ''
+    ? { reason: chosen.reason, ...(chosen.note.trim() ? { note: chosen.note.trim() } : {}) }
+    : undefined
   const approval = detail.approval
   const permissions = directory.permissions[viewerId] ?? []
   const canApprove = permissions.includes('approve_proposal') && approval.kind !== 'released' && !isApprovedLatest(approval)
   const withdrawableVersion = approval.kind === 'approved' && approval.approverId === viewerId && permissions.includes('withdraw_approval')
     ? approval.version : undefined
-  const reason = approveBlocker({
+  const blocker = approveBlocker({
     blocked: latest.pretrade.violations.some((v) => v.severity === 'block'),
     hasLegs: latest.preview.trades.length > 0,
     attested: attestedVersion === latest.n,
+    reasonMissing: toleranceCheck !== undefined && suitability === undefined,
   })
   // A refusal belongs to the version it was about; once another version is on screen it no longer describes anything here.
   const approveError = approve.isError && approve.variables.proposalId === detail.id && approve.variables.version === latest.n ? approve.error : undefined
@@ -73,7 +88,7 @@ function ProposalApproval({ detail, directory, onRecorded }: { detail: ProposalD
     if (busy.current) return
     busy.current = true
     send({
-      onSuccess: (act) => { setAttestedVersion(undefined); announce(`${act.summary} · ${act.id}`); afterRecorded?.(); onRecorded(act.id) },
+      onSuccess: (act) => { setAttestedVersion(undefined); setChosenReason(undefined); announce(`${act.summary} · ${act.id}`); afterRecorded?.(); onRecorded(act.id) },
       onSettled: () => { busy.current = false },
     })
   }
@@ -98,11 +113,12 @@ function ProposalApproval({ detail, directory, onRecorded }: { detail: ProposalD
             describedBy={hasReading(latest) ? readingId : undefined}
             onChange={(checked) => setAttestedVersion(checked ? latest.n : undefined)} />
           <PretradeReading id={readingId} version={latest} />
-          <Button pending={approve.isPending} disabled={reason !== undefined} aria-describedby={reason ? reasonId : undefined}
-            onClick={() => record((callbacks) => approve.mutate({ proposalId: detail.id, version: latest.n, fingerprint: latest.fingerprint }, callbacks))}>
+          {toleranceCheck ? <SuitabilityReasonField check={toleranceCheck} chosen={chosen} onChange={setChosenReason} /> : null}
+          <Button pending={approve.isPending} disabled={blocker !== undefined} aria-describedby={blocker ? blockerId : undefined}
+            onClick={() => record((callbacks) => approve.mutate({ proposalId: detail.id, version: latest.n, fingerprint: latest.fingerprint, ...(suitability ? { suitability } : {}) }, callbacks))}>
             {`Approve v${latest.n}`}
           </Button>
-          {reason ? <p id={reasonId} className="text-body text-ink-2">{reason}</p> : null}
+          {blocker ? <p id={blockerId} className="text-body text-ink-2">{blocker}</p> : null}
           {approveError ? <p role="alert" className="text-body">{approveError.message}</p> : null}
         </div>
       ) : null}
@@ -150,6 +166,23 @@ function useAnnounceRelease(detail: ProposalDetail, directory: Directory) {
     awaitingReleaseAct.current = false
     announce(releaseAnnouncement(personIn(directory, releaseAct.actorId).name, detail.fills.length))
   }, [kind, releaseAct, announce, directory, detail.fills.length])
+}
+
+/** The advisor's suitability reason for a model above the client's tolerance, with the figure it rests on. Outside the band as a whole, nothing is chosen and the warning is the stronger one. */
+function SuitabilityReasonField({ check, chosen, onChange }: { check: ToleranceCheck; chosen: ChosenReason; onChange: (next: ChosenReason) => void }) {
+  const wholeId = useId()
+  const within = check.wholeAfterStatus === 'within'
+  return (
+    <div className="flex w-full flex-col gap-2">
+      <Select label="Suitability reason" layout="stacked" value={chosen.reason} options={reasonOptions(check)} describedBy={wholeId}
+        onChange={(value) => onChange({ ...chosen, reason: isSuitabilityReasonId(value) ? value : '' })} />
+      <p id={wholeId} className={within ? 'text-body text-ink-2' : 'flex items-baseline gap-3 text-body'}>
+        {within ? null : <StatusCode status="OUT" label="Outside the tolerance as a whole" />}
+        <span>{wholeAfterSentence(check)}</span>
+      </p>
+      <TextInput label="Note (optional)" value={chosen.note} rows={2} onChange={(note) => onChange({ ...chosen, note })} />
+    </div>
+  )
 }
 
 const readingLines = (version: ProposalVersion) => version.pretrade.violations

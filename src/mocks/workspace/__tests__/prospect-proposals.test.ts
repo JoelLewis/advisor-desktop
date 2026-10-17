@@ -5,6 +5,9 @@ import {
   buildProspectVersion, createProspectProposal, parseProspectConstraints, readableProspectProposals, reviseProspectProposal,
 } from '../prospect-proposals'
 import { ADRIAN, withHerReply } from './prospect-fixture'
+import { bandFor } from '@/lib/risk-profile'
+import { riskScoreOf } from '@/mocks/reference/risk-score'
+import { modelVolatility } from '@/mocks/reference/models'
 
 const created = () => {
   const r = createProspectProposal(ADRIAN, 'prsp-011')
@@ -14,6 +17,12 @@ const created = () => {
 const digitFree = (text: string) => expect(text.replace(/403\(b\)|401\(k\)/g, ''), text).not.toMatch(/\d/)
 
 describe('drafting her proposal', () => {
+  it("a prospect proposal's model is her band's own model, so the tolerance check never applies and her best-interest record needs no suitability reason", () => {
+    withHerReply()
+    const v1 = created().versions[0]!
+    expect(bandFor(riskScoreOf(modelVolatility(v1.modelId))).profile).toBe(bandFor(v1.score).profile)
+  })
+
   it('waits for her questionnaire and her statements', () => {
     expect(createProspectProposal(ADRIAN, 'prsp-011')).toEqual({ ok: false, status: 409, code: 'NO_QUESTIONNAIRE', message: 'Her questionnaire is not on file yet.' })
     const record = withHerReply()

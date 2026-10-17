@@ -8,6 +8,7 @@ import { LedgerInvariantError } from '../fills'
 import { approveProposal, withdrawApproval } from '../proposal-acts'
 import { createProposal, previewEdits, reviseProposal, saveVersion } from '../proposals'
 import { ADRIAN, MARK, RATIONALE, approvedStoryV3, approvedV1, ok, release } from './story-fixture'
+import { JOHNSON_REASON } from '@/test/suitability-fixture'
 
 const kinds = () => store().acts.map((a) => a.kind)
 
@@ -52,7 +53,7 @@ describe('release_orders needs the matching active approval', () => {
   it('refuses an approval a newer approval superseded', () => {
     const a = approvedV1()
     const v2 = ok(reviseProposal(ADRIAN, a.proposalId, [{ kind: 'harvest_only' }])).detail.versions[1]!
-    ok(approveProposal(ADRIAN, a.proposalId, 2, v2.fingerprint))
+    ok(approveProposal(ADRIAN, a.proposalId, 2, v2.fingerprint, JOHNSON_REASON))
     expect(releaseOrders(MARK, a.proposalId, a.approvalActId, a.fingerprint, RATIONALE)).toMatchObject({ ok: false, status: 409, code: 'APPROVAL_SUPERSEDED' })
   })
 
@@ -137,7 +138,7 @@ describe('a filled proposal is closed; the next one starts from the moved book',
     release(a)
     for (const r of [
       reviseProposal(ADRIAN, a.proposalId, []), saveVersion(ADRIAN, a.proposalId, [{ kind: 'exclude', symbol: 'AGG' }]),
-      previewEdits(ADRIAN, a.proposalId, []), approveProposal(ADRIAN, a.proposalId, 3, a.fingerprint),
+      previewEdits(ADRIAN, a.proposalId, []), approveProposal(ADRIAN, a.proposalId, 3, a.fingerprint, JOHNSON_REASON),
     ]) expect(r).toMatchObject({ ok: false, status: 409, code: 'FILLED' })
   })
 
@@ -166,7 +167,7 @@ describe('return_to_advisor and escalate', () => {
     expect(store().staged.every((o) => o.status === 'returned' && o.closedByActId === act.id)).toBe(true)
     expect(approvalState(proposalById(a.proposalId)!).kind).toBe('unapproved')
     expect(releaseOrders(MARK, a.proposalId, a.approvalActId, a.fingerprint, RATIONALE)).toMatchObject({ ok: false, status: 409, code: 'APPROVAL_RETURNED' })
-    expect(approveProposal(ADRIAN, a.proposalId, 1, a.fingerprint).ok).toBe(true)
+    expect(approveProposal(ADRIAN, a.proposalId, 1, a.fingerprint, JOHNSON_REASON).ok).toBe(true)
   })
 
   it('an escalation holds the orders, once; they can still be released', () => {

@@ -3,6 +3,7 @@ import type { MeetingState, MeetingTask } from './workspace-meeting'
 import type { BestInterestRecord, DisclosureDocument, OnboardingItem } from './workspace-prospect'
 import type { BreakResolution } from './reference-reconciliation'
 import type { ReferenceView } from './reference'
+import type { RecordedSuitability } from '@/lib/suitability'
 
 export type Role = 'advisor' | 'csa' | 'analyst' | 'compliance' | 'client' | 'prospect'
 export type Person = { id: string; name: string; role: Role }
@@ -107,6 +108,8 @@ export type BindingAct = {
   delivers?: DisclosureDocument[]
   /** Firm only: filed with the approval of a prospect proposal. */
   bestInterest?: BestInterestRecord
+  /** Why the advisor approved a model above the client's tolerance. */
+  suitability?: RecordedSuitability
 }
 export type LetterBasis = { proposalId: string; version: number; fingerprint: string }
 /** A recap's basis: the filing it was written from and the Intel window end it states. It is stale once either no longer matches. */

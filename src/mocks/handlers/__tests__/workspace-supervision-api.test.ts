@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { store } from '@/mocks/data/workspace-store'
+import { JOHNSON_REASON } from '@/test/suitability-fixture'
 
 async function call(method: string, path: string, viewer: string | undefined, body?: unknown) {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -11,7 +12,7 @@ async function call(method: string, path: string, viewer: string | undefined, bo
 async function approvedV1() {
   const { body: detail } = await call('POST', '/proposals', 'user-001', { threadId: 'th-johnson-review', accountId: 'acc-002' })
   const fingerprint: string = detail.versions[0].fingerprint
-  const { body: act } = await call('POST', '/acts', 'user-001', { kind: 'approve_proposal', proposalId: 'prop-0001', version: 1, fingerprint })
+  const { body: act } = await call('POST', '/acts', 'user-001', { kind: 'approve_proposal', proposalId: 'prop-0001', version: 1, fingerprint , suitability: JOHNSON_REASON })
   return { approvalActId: act.id as string, fingerprint }
 }
 const release = (viewer: string, a: { approvalActId: string; fingerprint: string }, rationale = 'Reviewed.') =>

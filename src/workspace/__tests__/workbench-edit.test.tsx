@@ -7,6 +7,7 @@ import { approveProposal, createProposal, getProposal, saveProposalVersion } fro
 import { store } from '@/mocks/data/workspace-store'
 import { http, HttpResponse } from 'msw'
 import { server } from '@/test/server'
+import { JOHNSON_REASON } from '@/test/suitability-fixture'
 
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
 const feed = () => within(screen.getByRole('complementary', { name: 'Live thread' })).getByRole('list', { name: 'Thread feed' })
@@ -101,7 +102,7 @@ describe('editing a draft version', () => {
 
   it('states that an approval applies to an older version', async () => {
     const created = await createProposal('user-001', 'th-johnson-review', 'acc-002')
-    await approveProposal('user-001', created.id, 1, created.versions[0]!.fingerprint)
+    await approveProposal('user-001', created.id, 1, created.versions[0]!.fingerprint, JOHNSON_REASON)
     renderRoutes(routes, '/proposals/prop-0001')
     const legs = await screen.findByRole('grid', { name: 'Legs · v1' })
     act(() => within(legs).getByRole('row', { name: /^GLD/ }).focus())

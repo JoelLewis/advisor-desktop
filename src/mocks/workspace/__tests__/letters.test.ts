@@ -4,12 +4,13 @@ import { createProposal, reviseProposal } from '../proposals'
 import { approveProposal } from '../proposal-acts'
 import { sendToParty } from '../acts'
 import { draftLetter, draftsFor, reviseDraft } from '../letters'
+import { JOHNSON_REASON } from '@/test/suitability-fixture'
 
 function approvedJohnson() {
   const created = createProposal('user-001', 'th-johnson-review', 'acc-002')
   if (!created.ok) throw new Error(created.message)
   const v1 = created.detail.versions[0]!
-  const approved = approveProposal('user-001', created.detail.id, 1, v1.fingerprint)
+  const approved = approveProposal('user-001', created.detail.id, 1, v1.fingerprint, JOHNSON_REASON)
   if (!approved.ok) throw new Error(approved.message)
   return { id: created.detail.id, v1 }
 }
@@ -50,7 +51,7 @@ describe('letter drafts', () => {
     const revised = reviseProposal('user-001', id, [{ kind: 'harvest_only' }])
     if (!revised.ok) throw new Error(revised.message)
     expect(draftsFor('th-robert')[0]!.stale).toBe(false)
-    approveProposal('user-001', id, 2, revised.detail.versions[1]!.fingerprint)
+    approveProposal('user-001', id, 2, revised.detail.versions[1]!.fingerprint, JOHNSON_REASON)
     expect(draftsFor('th-robert')[0]!.stale).toBe(true)
     expect(sendToParty('user-001', r.draft.id)).toMatchObject({ ok: false, status: 409, code: 'STALE_DRAFT' })
     const fresh = draftLetter('user-001', 'th-robert', id)

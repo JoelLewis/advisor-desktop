@@ -47,6 +47,7 @@ const briefAfterFills = async (page: Page) => {
   await releaseByShortcut(page)
   await threadLink(page, 'Brief').click()
   await expect(page.getByRole('region', { name: 'Context' })).toContainText('Every asset class is inside its tolerance band')
+  await expect(page.getByRole('region', { name: 'Context' })).toContainText("Growth sits above Robert Johnson's Moderate tolerance")
   await settle(page)
 }
 

@@ -35,4 +35,4 @@ export function refuseExternal(request: Request): Response | undefined {
 }
 
 /** An act as an outsider may read it: what reached them, without the firm's subject, basis, rationale or presenter marker. */
-export const withoutProvenance = ({ subject: _subject, basis: _basis, recordBasis: _recordBasis, editedBy: _editedBy, messageId: _messageId, viaPresenter: _via, rationale: _rationale, bestInterest: _bestInterest, ...act }: BindingAct): BindingAct => act
+export const withoutProvenance = ({ subject: _subject, basis: _basis, recordBasis: _recordBasis, editedBy: _editedBy, messageId: _messageId, viaPresenter: _via, rationale: _rationale, bestInterest: _bestInterest, suitability: _suitability, ...act }: BindingAct): BindingAct => act

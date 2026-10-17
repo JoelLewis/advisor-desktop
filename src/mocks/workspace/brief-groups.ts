@@ -1,4 +1,4 @@
-import type { AgentId, Attention, BriefGroup, BriefItem } from '@/types/workspace'
+import type { AgentId, Attention, BriefGroup, BriefItem, Message } from '@/types/workspace'
 import type { BriefTopic, TopicFinding } from '@/mocks/agents/brief-topic'
 import { toleranceLine } from './suitability'
 
@@ -74,4 +74,12 @@ export function briefItems(findings: readonly MeasuredFinding[], agentOrder: rea
     ;(members.some((m) => briefGroupOf(m.topic) === 'decide') ? decide : context).push(item)
   }
   return { decide, context }
+}
+
+export type BriefSummary = Extract<Message, { kind: 'brief_summary' }>
+
+/** Composed on read: an item that waits on an approval moves to the head of Context once that approval records its reason. */
+export function settleApproved(summary: BriefSummary, approved: ReadonlySet<string>): BriefSummary {
+  const settled = (i: BriefItem) => i.awaitsApprovalOf !== undefined && approved.has(i.awaitsApprovalOf)
+  return { ...summary, decide: summary.decide.filter((i) => !settled(i)), context: [...summary.decide.filter(settled), ...summary.context] }
 }

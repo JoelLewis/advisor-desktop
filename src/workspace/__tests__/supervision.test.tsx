@@ -4,13 +4,14 @@ import userEvent from '@testing-library/user-event'
 import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
 import { approveProposal, createProposal, draftLetter, getProposal, saveProposalVersion, sendToParty } from '@/services/workspace'
+import { JOHNSON_REASON } from '@/test/suitability-fixture'
 
 const ADRIAN = 'user-001'
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
 
 async function approved() {
   const detail = await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
-  await approveProposal(ADRIAN, detail.id, 1, detail.versions[0]!.fingerprint)
+  await approveProposal(ADRIAN, detail.id, 1, detail.versions[0]!.fingerprint, JOHNSON_REASON)
   return detail.versions[0]!.fingerprint
 }
 async function open(path: string) {
@@ -34,6 +35,8 @@ describe('Supervision', () => {
     for (const text of [fingerprint, 'Adrian Hale, Advisor', 'REC-0001', 'This is the record of what was approved. The checks are not run again here.', 'PENDING COMPLIANCE REVIEW']) {
       expect(item).toHaveTextContent(text)
     }
+    const reason = within(item).getByText('Suitability reason', { selector: 'dt' })
+    expect(reason.nextElementSibling).toHaveTextContent("Robert Johnson's accounts as a whole stay within tolerance (asset location) · 46 pts after this proposal, within Moderate, 41–55 pts")
     expect(within(item).getByRole('table', { name: 'Approved legs · v1' })).toBeInTheDocument()
     expect(within(item).getByRole('link', { name: /Team thread/ })).toHaveAttribute('href', '/t/th-johnson-review')
     expect(within(item).getByRole('link', { name: /Workbench/ })).toHaveAttribute('href', '/proposals/prop-0001?from=th-johnson-review')

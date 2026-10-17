@@ -4,6 +4,7 @@ import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
 import { approveProposal, createProposal, reviseProposal, saveProposalVersion } from '@/services/workspace'
 import { approvedV1, release } from '@/mocks/workspace/__tests__/story-fixture'
+import { JOHNSON_REASON } from '@/test/suitability-fixture'
 
 const ADRIAN = 'user-001'
 
@@ -44,7 +45,7 @@ describe('the proposal in the team thread', () => {
 
   it('says the approval stays on the older version when a newer one arrives', async () => {
     const created = await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
-    await approveProposal(ADRIAN, created.id, 1, created.versions[0]!.fingerprint)
+    await approveProposal(ADRIAN, created.id, 1, created.versions[0]!.fingerprint, JOHNSON_REASON)
     await reviseProposal(ADRIAN, created.id, [{ kind: 'harvest_only' }])
     const embed = await openJohnson()
     expect(await within(embed).findByText('Approval applies to v1; v2 is unapproved')).toBeInTheDocument()

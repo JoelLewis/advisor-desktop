@@ -7,6 +7,7 @@ import { routes } from '@/app/routes'
 import { createTestQueryClient, renderRoutes } from '@/test/render'
 import { approveProposal, createProposal, reviseProposal, saveProposalVersion } from '@/services/workspace'
 import { store } from '@/mocks/data/workspace-store'
+import { JOHNSON_REASON } from '@/test/suitability-fixture'
 
 const ADRIAN = 'user-001'
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
@@ -52,7 +53,7 @@ describe('approving a proposal', () => {
 
   it('a newer version leaves the approval on v1; approving v2 withdraws it in the same act', async () => {
     const created = await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
-    await approveProposal(ADRIAN, created.id, 1, created.versions[0]!.fingerprint)
+    await approveProposal(ADRIAN, created.id, 1, created.versions[0]!.fingerprint, JOHNSON_REASON)
     await reviseProposal(ADRIAN, created.id, [{ kind: 'harvest_only' }])
     const panel = await openApproval()
     expect(within(panel).getByText('Approval applies to v1; v2 is unapproved')).toBeInTheDocument()
@@ -78,7 +79,7 @@ describe('approving a proposal', () => {
 
   it('the approver withdraws after confirming, once even on a double click; the staging goes with it', async () => {
     const created = await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
-    await approveProposal(ADRIAN, created.id, 1, created.versions[0]!.fingerprint)
+    await approveProposal(ADRIAN, created.id, 1, created.versions[0]!.fingerprint, JOHNSON_REASON)
     const panel = await openApproval()
     const user = userEvent.setup()
     await user.click(within(panel).getByRole('button', { name: 'Withdraw the approval of v1' }))
@@ -95,7 +96,7 @@ describe('approving a proposal', () => {
 
   it('a withdrawal in flight cannot be dismissed; once it lands the slip takes focus and approving still works', async () => {
     const created = await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
-    await approveProposal(ADRIAN, created.id, 1, created.versions[0]!.fingerprint)
+    await approveProposal(ADRIAN, created.id, 1, created.versions[0]!.fingerprint, JOHNSON_REASON)
     let release = () => {}
     const gate = new Promise<void>((resolve) => { release = resolve })
     // Holds every act until released, then falls through to the real handler.
@@ -124,7 +125,7 @@ describe('approving a proposal', () => {
 
   it('canceling the withdrawal records nothing and keeps the approval', async () => {
     const created = await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
-    await approveProposal(ADRIAN, created.id, 1, created.versions[0]!.fingerprint)
+    await approveProposal(ADRIAN, created.id, 1, created.versions[0]!.fingerprint, JOHNSON_REASON)
     const panel = await openApproval()
     const user = userEvent.setup()
     await user.click(within(panel).getByRole('button', { name: 'Withdraw the approval of v1' }))
@@ -158,9 +159,76 @@ describe('approving a proposal', () => {
     expect(within(panel).getByRole('checkbox', { name: 'I reviewed every leg of v1 and its pre-trade check results.' })).toHaveAccessibleDescription([...reading.querySelectorAll('li')].map((li) => li.textContent).join(' '))
   })
 
+  describe('the suitability reason', () => {
+    const WHOLE = "Robert Johnson's accounts as a whole stay within tolerance (asset location)"
+    const REVIEWED_V1 = 'I reviewed every leg of v1 and its pre-trade check results.'
+
+    it("is chosen for the advisor where Robert Johnson's accounts as a whole stay within his tolerance, stating the figure, and the slip records it", async () => {
+      await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
+      const panel = await openApproval()
+      const select = within(panel).getByLabelText('Suitability reason')
+      expect(select).toHaveDisplayValue(WHOLE)
+      expect(select).toHaveAccessibleDescription("After this proposal, Robert Johnson's accounts as a whole sit at 46 pts, within Moderate, 41–55 pts.")
+      expect(within(panel).queryByText('OUT')).toBeNull()
+      const user = userEvent.setup()
+      await user.click(within(panel).getByRole('checkbox', { name: REVIEWED_V1 }))
+      await user.click(within(panel).getByRole('button', { name: 'Approve v1' }))
+      const slip = await inContext().findByRole('article', { name: 'Approved v1 of the Johnson rebalance' })
+      expect(slip).toHaveTextContent(`Suitability reason · ${WHOLE} · 46 pts after this proposal, within Moderate, 41–55 pts`)
+      expect(store().approvals[0]!.suitability).toMatchObject({ reason: 'accounts_within_tolerance', clientName: 'Robert Johnson' })
+    })
+
+    it('another reason with a note can replace it; with none chosen, approving waits', async () => {
+      await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
+      const panel = await openApproval()
+      const user = userEvent.setup()
+      await user.click(within(panel).getByRole('checkbox', { name: REVIEWED_V1 }))
+      await user.selectOptions(within(panel).getByLabelText('Suitability reason'), 'Choose a reason')
+      const approve = within(panel).getByRole('button', { name: 'Approve v1' })
+      expect(approve).toBeDisabled()
+      expect(approve).toHaveAccessibleDescription('Choose a suitability reason above to approve.')
+      await user.selectOptions(within(panel).getByLabelText('Suitability reason'), 'The IPS permits a growth allocation for this account')
+      await user.type(within(panel).getByRole('textbox', { name: 'Note (optional)' }), 'IPS section 4.')
+      await user.click(within(panel).getByRole('button', { name: 'Approve v1' }))
+      const slip = await inContext().findByRole('article', { name: 'Approved v1 of the Johnson rebalance' })
+      expect(slip).toHaveTextContent('Suitability reason · The IPS permits a growth allocation for this account · IPS section 4.')
+    })
+
+    it('a new version clears the chosen reason and the note', async () => {
+      const created = await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
+      const queryClient = createTestQueryClient()
+      const panel = await openApproval(queryClient)
+      const user = userEvent.setup()
+      await user.selectOptions(within(panel).getByLabelText('Suitability reason'), 'Client acknowledged the higher risk in writing')
+      await user.type(within(panel).getByRole('textbox', { name: 'Note (optional)' }), 'Signed 12 Feb.')
+      await reviseProposal(ADRIAN, created.id, [{ kind: 'harvest_only' }])
+      await queryClient.invalidateQueries()
+      await within(panel).findByRole('checkbox', { name: 'I reviewed every leg of v2 and its pre-trade check results.' })
+      expect(within(panel).getByLabelText('Suitability reason')).toHaveDisplayValue(WHOLE)
+      expect(within(panel).getByRole('textbox', { name: 'Note (optional)' })).toHaveValue('')
+    })
+
+    it("where the client's accounts as a whole sit above the tolerance too, nothing is chosen, that reason is not offered, and the warning is the stronger one", async () => {
+      await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
+      const v1 = store().proposals[0]!.versions[0]!
+      v1.pretrade = {
+        ...v1.pretrade,
+        violations: v1.pretrade.violations.map((v) => (v.tolerance ? { ...v, tolerance: { ...v.tolerance, wholeAfterScore: 62, wholeAfterStatus: 'above' } } : v)),
+      }
+      const panel = await openApproval()
+      const select = within(panel).getByLabelText('Suitability reason')
+      expect(select).toHaveValue('')
+      expect(within(select).queryByRole('option', { name: WHOLE })).toBeNull()
+      expect(select).toHaveAccessibleDescription(expect.stringContaining("After this proposal, Robert Johnson's accounts as a whole would sit above the tolerance too, at 62 pts against Moderate, 41–55 pts. No reason is chosen for you"))
+      expect(within(panel).getByText('OUT')).toBeInTheDocument()
+      await userEvent.setup().click(within(panel).getByRole('checkbox', { name: REVIEWED_V1 }))
+      expect(within(panel).getByRole('button', { name: 'Approve v1' })).toHaveAccessibleDescription('Choose a suitability reason above to approve.')
+    })
+  })
+
   it.each(['cco-001', 'user-002', 'user-003'])('%s sees the approval and the staged orders, and no button', async (viewer) => {
     const created = await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
-    await approveProposal(ADRIAN, created.id, 1, created.versions[0]!.fingerprint)
+    await approveProposal(ADRIAN, created.id, 1, created.versions[0]!.fingerprint, JOHNSON_REASON)
     viewAsOnLoad(viewer)
     const panel = await openApproval()
     expect(within(panel).getByText('PENDING COMPLIANCE REVIEW')).toBeInTheDocument()

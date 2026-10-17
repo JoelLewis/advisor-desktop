@@ -4,6 +4,7 @@ import { approveProposal } from '../proposal-acts'
 import { draftLetter } from '../letters'
 import { sendToParty } from '../acts'
 import { releaseOrders } from '../compliance-acts'
+import { JOHNSON_REASON } from '@/test/suitability-fixture'
 
 export const ADRIAN = 'user-001'
 export const MARK = 'cco-001'
@@ -21,7 +22,7 @@ export function ok<T extends { ok: boolean }>(r: T): Extract<T, { ok: true }> {
 export function approvedV1(): Approved {
   const { detail } = ok(createProposal(ADRIAN, 'th-johnson-review', 'acc-002'))
   const v1 = detail.versions[0]!
-  const { act } = ok(approveProposal(ADRIAN, detail.id, 1, v1.fingerprint))
+  const { act } = ok(approveProposal(ADRIAN, detail.id, 1, v1.fingerprint, JOHNSON_REASON))
   return { proposalId: detail.id, version: 1, approvalActId: act.id, fingerprint: v1.fingerprint }
 }
 
@@ -30,7 +31,7 @@ export function approvedStoryV3(): Approved {
   const { detail } = ok(createProposal(ADRIAN, 'th-johnson-review', 'acc-002'))
   ok(reviseProposal(ADRIAN, detail.id, [{ kind: 'harvest_only' }]))
   const v3 = ok(saveVersion(ADRIAN, detail.id, [{ kind: 'exclude', symbol: 'QAI' }])).detail.versions[2]!
-  const { act } = ok(approveProposal(ADRIAN, detail.id, 3, v3.fingerprint))
+  const { act } = ok(approveProposal(ADRIAN, detail.id, 3, v3.fingerprint, JOHNSON_REASON))
   return { proposalId: detail.id, version: 3, approvalActId: act.id, fingerprint: v3.fingerprint }
 }
 

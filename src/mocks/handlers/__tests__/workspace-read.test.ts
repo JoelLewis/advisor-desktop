@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { JOHNSON_REASON } from '@/test/suitability-fixture'
 
 async function call(path: string, viewer?: string) {
   const res = await fetch(`/api/workspace${path}`, { headers: viewer ? { 'X-Viewer': viewer } : {} })
@@ -68,7 +69,7 @@ describe('directory scoping', () => {
       method: 'POST', headers: { 'X-Viewer': 'user-001', 'Content-Type': 'application/json' }, body: JSON.stringify(body),
     }).then((r) => r.json())
     const proposal = await post('/proposals', { threadId: 'th-johnson-review', accountId: 'acc-002' })
-    await post('/acts', { kind: 'approve_proposal', proposalId: proposal.id, version: 1, fingerprint: proposal.versions[0].fingerprint })
+    await post('/acts', { kind: 'approve_proposal', proposalId: proposal.id, version: 1, fingerprint: proposal.versions[0].fingerprint, suitability: JOHNSON_REASON })
     const letter = await post('/threads/th-robert/drafts/letter', { proposalId: proposal.id })
     const edited = await post(`/threads/th-robert/drafts/${letter.id}/revisions`, { body: `${letter.body}\n\nAdrian` })
     await post('/acts', { kind: 'send_to_party', draftId: edited.id })

@@ -8,6 +8,7 @@ import type {
   DisclosureDocument, PartySteps, ProspectConstraint, ProspectProposalDetail, ProspectStepName, ProspectSummary, ProspectView, StepOutcome,
 } from '@/types/workspace-prospect'
 import type { StoryProgress } from '@/types/workspace-story'
+import type { SuitabilityReason } from '@/lib/suitability'
 
 const as = (viewer: string) => ({ 'X-Viewer': viewer })
 
@@ -46,8 +47,8 @@ export const saveProposalVersion = (viewer: string, id: string, edits: LegEdit[]
 /** Read-only: what the edits would make of the latest version, saved nowhere. */
 export const previewProposalEdits = (viewer: string, id: string, edits: LegEdit[]) =>
   post<DraftPreview>(`/workspace/proposals/${id}/preview`, { edits }, as(viewer))
-export const approveProposal = (viewer: string, proposalId: string, version: number, fingerprint: string) =>
-  post<BindingAct>('/workspace/acts', { kind: 'approve_proposal', proposalId, version, fingerprint }, as(viewer))
+export const approveProposal = (viewer: string, proposalId: string, version: number, fingerprint: string, suitability?: SuitabilityReason) =>
+  post<BindingAct>('/workspace/acts', { kind: 'approve_proposal', proposalId, version, fingerprint, ...(suitability ? { suitability } : {}) }, as(viewer))
 export const withdrawApproval = (viewer: string, proposalId: string) =>
   post<BindingAct>('/workspace/acts', { kind: 'withdraw_approval', proposalId }, as(viewer))
 export const carryFinding = (viewer: string, fromThreadId: string, messageId: string, toThreadId: string) =>

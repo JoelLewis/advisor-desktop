@@ -5,6 +5,7 @@ import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
 import { approveProposal, createProposal, draftLetter, reviseProposal, sendToParty, withdrawApproval } from '@/services/workspace'
 import { store } from '@/mocks/data/workspace-store'
+import { JOHNSON_REASON } from '@/test/suitability-fixture'
 
 const ADRIAN = 'user-001'
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
@@ -12,7 +13,7 @@ const queue = () => within(screen.getByRole('navigation', { name: 'Supervision q
 
 async function approved() {
   const detail = await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
-  await approveProposal(ADRIAN, detail.id, 1, detail.versions[0]!.fingerprint)
+  await approveProposal(ADRIAN, detail.id, 1, detail.versions[0]!.fingerprint, JOHNSON_REASON)
 }
 async function openItem(path: string, name: string) {
   renderRoutes(routes, path)
@@ -111,7 +112,7 @@ describe('refusals and limits', () => {
     await user.click(within(panel).getByRole('button', { name: 'Record disposition' }))
     await withdrawApproval(ADRIAN, 'prop-0001')
     const v2 = (await reviseProposal(ADRIAN, 'prop-0001', [{ kind: 'harvest_only' }])).versions[1]!
-    await approveProposal(ADRIAN, 'prop-0001', 2, v2.fingerprint)
+    await approveProposal(ADRIAN, 'prop-0001', 2, v2.fingerprint, JOHNSON_REASON)
     await user.click(within(screen.getByRole('dialog', { name: 'Release orders?' })).getByRole('button', { name: 'Confirm' }))
     expect(await screen.findByRole('alert')).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).toBeNull()

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { store } from '@/mocks/data/workspace-store'
+import { JOHNSON_REASON } from '@/test/suitability-fixture'
 
 async function call(method: string, path: string, viewer: string | undefined, body?: unknown, raw?: string) {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -13,7 +14,7 @@ const ask = () => call('POST', '/proposals', 'user-001', { threadId: 'th-johnson
 
 async function approvedLetter() {
   const { body: detail } = await ask()
-  await call('POST', '/acts', 'user-001', { kind: 'approve_proposal', proposalId: 'prop-0001', version: 1, fingerprint: detail.versions[0].fingerprint })
+  await call('POST', '/acts', 'user-001', { kind: 'approve_proposal', proposalId: 'prop-0001', version: 1, fingerprint: detail.versions[0].fingerprint, suitability: JOHNSON_REASON })
   return (await call('POST', '/threads/th-robert/drafts/letter', 'user-001', { proposalId: 'prop-0001' })).body
 }
 
@@ -87,6 +88,9 @@ describe('proposal endpoints', () => {
       ['/proposals/prop-0001/revise', { constraints: 'all' }], ['/proposals/prop-0001/revise', { constraints: [{ kind: 'everything' }] }],
       ['/proposals/prop-0001/versions', {}], ['/proposals/prop-0001/preview', { edits: [{ kind: 'quantity', symbol: 'INTC', quantity: '6000' }] }],
       ['/acts', { kind: 'approve_proposal', proposalId: 'prop-0001', version: '1', fingerprint: 'X' }],
+      ['/acts', { kind: 'approve_proposal', proposalId: 'prop-0001', version: 1, fingerprint: 'X', suitability: { reason: 'it_felt_right' } }],
+      ['/acts', { kind: 'approve_proposal', proposalId: 'prop-0001', version: 1, fingerprint: 'X', suitability: 'ips_permits_growth' }],
+      ['/acts', { kind: 'approve_proposal', proposalId: 'prop-0001', version: 1, fingerprint: 'X', suitability: { reason: 'ips_permits_growth', note: 4 } }],
       ['/acts', { kind: 'withdraw_approval' }], ['/acts', { kind: 3 }],
       ['/threads/th-robert/drafts/letter', {}], ['/threads/th-robert/drafts/letter', { proposalId: ['prop-0001'] }],
       [`/threads/th-robert/drafts/${letter.id}/revisions`, { body: 12 }],
@@ -117,9 +121,11 @@ describe('proposal endpoints', () => {
   it('approves through the acts endpoint, stages pending compliance, and withdraws', async () => {
     const { body: detail } = await ask()
     const fp = detail.versions[0].fingerprint
-    const approved = await call('POST', '/acts', 'user-001', { kind: 'approve_proposal', proposalId: 'prop-0001', version: 1, fingerprint: fp })
-    expect(approved).toMatchObject({ status: 201, body: { id: 'REC-0001', kind: 'approve_proposal', version: 1 } })
-    expect((await call('POST', '/acts', 'user-001', { kind: 'approve_proposal', proposalId: 'prop-0001', version: 1, fingerprint: fp })).status).toBe(409)
+    expect(await call('POST', '/acts', 'user-001', { kind: 'approve_proposal', proposalId: 'prop-0001', version: 1, fingerprint: fp }))
+      .toMatchObject({ status: 409, body: { code: 'REASON_REQUIRED' } })
+    const approved = await call('POST', '/acts', 'user-001', { kind: 'approve_proposal', proposalId: 'prop-0001', version: 1, fingerprint: fp, suitability: JOHNSON_REASON })
+    expect(approved).toMatchObject({ status: 201, body: { id: 'REC-0001', kind: 'approve_proposal', version: 1, suitability: { reason: 'accounts_within_tolerance', clientName: 'Robert Johnson' } } })
+    expect((await call('POST', '/acts', 'user-001', { kind: 'approve_proposal', proposalId: 'prop-0001', version: 1, fingerprint: fp, suitability: JOHNSON_REASON })).status).toBe(409)
     expect((await call('POST', '/acts', 'user-001', { kind: 'approve_proposal', proposalId: 'prop-0001', version: '1', fingerprint: fp })).status).toBe(400)
     const read = (await call('GET', '/proposals/prop-0001', 'cco-001')).body
     expect(read.approval).toMatchObject({ kind: 'approved', version: 1 })
@@ -132,7 +138,7 @@ describe('proposal endpoints', () => {
 
   it('drafts the letter, serves staleness, revises a draft, and refuses a stale send', async () => {
     const { body: detail } = await ask()
-    await call('POST', '/acts', 'user-001', { kind: 'approve_proposal', proposalId: 'prop-0001', version: 1, fingerprint: detail.versions[0].fingerprint })
+    await call('POST', '/acts', 'user-001', { kind: 'approve_proposal', proposalId: 'prop-0001', version: 1, fingerprint: detail.versions[0].fingerprint , suitability: JOHNSON_REASON })
     const letter = await call('POST', '/threads/th-robert/drafts/letter', 'user-001', { proposalId: 'prop-0001' })
     expect(letter).toMatchObject({ status: 201, body: { agentId: 'client-letter', basis: { version: 1 } } })
     expect((await call('POST', '/threads/th-robert/drafts/letter', 'user-001', { proposalId: 'prop-0001' })).status).toBe(200)
@@ -140,7 +146,7 @@ describe('proposal endpoints', () => {
     expect(edited).toMatchObject({ status: 201, body: { supersedes: letter.body.id } })
     expect((await call('GET', '/threads/th-robert/drafts', 'user-001')).body).toEqual([expect.objectContaining({ id: edited.body.id, stale: false })])
     const v2 = await call('POST', '/proposals/prop-0001/revise', 'user-001', { constraints: [{ kind: 'harvest_only' }] })
-    await call('POST', '/acts', 'user-001', { kind: 'approve_proposal', proposalId: 'prop-0001', version: 2, fingerprint: v2.body.versions[1].fingerprint })
+    await call('POST', '/acts', 'user-001', { kind: 'approve_proposal', proposalId: 'prop-0001', version: 2, fingerprint: v2.body.versions[1].fingerprint , suitability: JOHNSON_REASON })
     expect((await call('GET', '/threads/th-robert/drafts', 'user-001')).body[0].stale).toBe(true)
     expect((await call('POST', '/acts', 'user-001', { kind: 'send_to_party', draftId: edited.body.id })).body.code).toBe('STALE_DRAFT')
   })

@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
 import { actAsCco, approveProposal, createProposal, draftLetter, recordComplianceAct, sendToParty } from '@/services/workspace'
+import { JOHNSON_REASON } from '@/test/suitability-fixture'
 
 const ADRIAN = 'user-001'
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
@@ -12,7 +13,7 @@ const summaryCell = (row: HTMLElement) => row.querySelectorAll('td')[1]?.querySe
 async function session() {
   const detail = await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
   const fingerprint = detail.versions[0]!.fingerprint
-  const approval = await approveProposal(ADRIAN, detail.id, 1, fingerprint)
+  const approval = await approveProposal(ADRIAN, detail.id, 1, fingerprint, JOHNSON_REASON)
   const draft = await draftLetter(ADRIAN, 'th-robert', detail.id)
   await sendToParty(ADRIAN, draft.id)
   await recordComplianceAct('cco-001', { kind: 'release_orders', proposalId: detail.id, approvalActId: approval.id, fingerprint, rationale: 'Reviewed.' })
@@ -34,6 +35,8 @@ describe('the Archive', () => {
       'Message to Robert Johnson',
       'Released the orders staged from v1 of the Johnson rebalance',
     ])
+    expect(rows[0]).toHaveTextContent("Suitability reason · Robert Johnson's accounts as a whole stay within tolerance (asset location) · 46 pts after this proposal, within Moderate, 41–55 pts")
+    expect(rows[3]).not.toHaveTextContent('Suitability reason')
     expect(rows[3]).not.toHaveTextContent('Fingerprint')
     const audit = within(rows[3]!).getByText('Audit details').closest('details')!
     expect(audit).not.toHaveAttribute('open')

@@ -7,6 +7,7 @@ import { modelDisplayName } from '@/mocks/handlers/pms'
 import { clientOf, clientRiskOf, modelScoreOf, scoreOfHoldings } from '@/mocks/reference/risk'
 import { bandFor, type ProfileBand } from '@/lib/risk-profile'
 import { fmtPoints } from '@/kit/measure'
+import { store } from '@/mocks/data/workspace-store'
 
 export type ToleranceGap = {
   modelName: string; modelBand: ProfileBand; modelScore: number; clientName: string; tolerance: ProfileBand
@@ -85,3 +86,11 @@ export function withSuitability(result: PreTradeCheckProposalResult, account: Ac
 
 export const needsSuitabilityReason = (pretrade: PreTradeCheckProposalResult): boolean =>
   pretrade.violations.some((v) => v.category === 'model_above_tolerance')
+
+/** Accounts whose proposal is approved (or released) with a recorded suitability reason. */
+export function suitablyApprovedAccounts(): ReadonlySet<string> {
+  const s = store()
+  return new Set(s.approvals
+    .filter((a) => (a.status === 'active' || a.status === 'released') && a.suitability !== undefined)
+    .flatMap((a) => s.proposals.filter((p) => p.id === a.proposalId).map((p) => p.accountId)))
+}

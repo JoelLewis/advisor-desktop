@@ -7,6 +7,7 @@ import { approveProposal, createProposal, recordComplianceAct } from '@/services
 import { store } from '@/mocks/data/workspace-store'
 import { approvedStoryV3 } from '@/mocks/workspace/__tests__/story-fixture'
 import type { Message } from '@/types/workspace'
+import { JOHNSON_REASON } from '@/test/suitability-fixture'
 
 const ADRIAN = 'user-001'
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
@@ -16,7 +17,7 @@ const RELEASED = 'Released the orders staged from v1 of the Johnson rebalance'
 
 async function approved() {
   const detail = await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
-  const act = await approveProposal(ADRIAN, detail.id, 1, detail.versions[0]!.fingerprint)
+  const act = await approveProposal(ADRIAN, detail.id, 1, detail.versions[0]!.fingerprint, JOHNSON_REASON)
   return { proposalId: detail.id, approvalActId: act.id, fingerprint: detail.versions[0]!.fingerprint }
 }
 async function releasedByMark() {

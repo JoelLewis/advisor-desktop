@@ -6,10 +6,11 @@ import { createTestQueryClient } from '@/test/render'
 import { ViewerProvider } from '@/workspace/viewer/ViewerProvider'
 import { useActAsCco, useSupervision } from '@/hooks/use-workspace'
 import { approveProposal, createProposal } from '@/services/workspace'
+import { JOHNSON_REASON } from '@/test/suitability-fixture'
 
 it('the shortcut refreshes the queue and marks every query stale, accounts and positions included', async () => {
   const detail = await createProposal('user-001', 'th-johnson-review', 'acc-002')
-  await approveProposal('user-001', detail.id, 1, detail.versions[0]!.fingerprint)
+  await approveProposal('user-001', detail.id, 1, detail.versions[0]!.fingerprint, JOHNSON_REASON)
   const client = createTestQueryClient()
   // Unobserved queries are collected at once under the test client's gcTime of 0; keep these so their state can be read.
   client.setQueryDefaults(['positions'], { gcTime: Infinity })

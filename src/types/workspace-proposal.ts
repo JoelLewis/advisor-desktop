@@ -1,6 +1,7 @@
 import type { AssetClass, DriftStatus } from './portfolio'
 import type { CurrencyCode } from './currency'
 import type { VersionAuthor } from './workspace'
+import type { RecordedSuitability } from '@/lib/suitability'
 import type { PreTradeCheckProposalResult, ProposedTrade, RebalancePreview } from '@/services/oms'
 
 /** A rule the Proposal Agent must honor when it drafts or revises the legs. */
@@ -77,7 +78,7 @@ export type Proposal = { id: string; title: string; accountId: string; clientId:
  * It leaves `active` when the approver withdraws it, a newer approval supersedes it, compliance
  * returns it to the advisor, or compliance releases its orders.
  */
-export type ApprovalRecord = { proposalId: string; version: number; fingerprint: string; actId: string; approverId: string; at: string; status: 'active' | 'withdrawn' | 'superseded' | 'returned' | 'released' }
+export type ApprovalRecord = { proposalId: string; version: number; fingerprint: string; actId: string; approverId: string; at: string; status: 'active' | 'withdrawn' | 'superseded' | 'returned' | 'released'; suitability?: RecordedSuitability }
 
 type StagedOrderStatus = 'pending_compliance' | 'withdrawn' | 'returned' | 'filled'
 
