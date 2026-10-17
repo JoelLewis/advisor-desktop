@@ -9,9 +9,9 @@ import { bookRiskView, clientRiskOf, modelScoreOf } from '@/mocks/reference/risk
 import { bandFor } from '@/lib/risk-profile'
 import { isModelManaged } from '@/lib/mandate'
 import { GLIDE_PATH_MODELS } from '@/mocks/data/model-governance'
-import { modelAboveTolerance, needsSuitabilityReason, toleranceLine, withSuitability } from '../suitability'
+import { modelAboveTolerance, toleranceLine, withSuitability } from '../suitability'
 import { AGENT_CONSTRAINTS, versionOf } from './proposal-fixture'
-import { wholeAfterText } from '@/lib/suitability'
+import { toleranceCheckOf, wholeAfterText } from '@/lib/suitability'
 
 const account = (id: string) => {
   const a = accounts.find((x) => x.id === id)
@@ -116,7 +116,7 @@ describe('model above tolerance', () => {
       "Growth sits above Robert Johnson's Moderate tolerance for this account; after this proposal, Robert Johnson's accounts as a whole would sit within it. "
       + 'The model scores 66 pts against a Moderate band of 41–55 pts; the accounts as a whole read 46 pts after this proposal, from 51 pts today. Approving it needs a suitability reason.',
     )
-    expect(needsSuitabilityReason(v1.pretrade)).toBe(true)
+    expect(toleranceCheckOf(v1.pretrade.violations)).toBeDefined()
     const others = v1.pretrade.violations.filter((v) => v.category !== 'model_above_tolerance')
     expect(v1.pretrade.passed).toBe(others.every((v) => v.severity !== 'block'))
   })

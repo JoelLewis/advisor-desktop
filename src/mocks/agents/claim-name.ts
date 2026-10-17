@@ -1,4 +1,8 @@
-const hasDigit = (text: string) => /\d/.test(text)
+/** Claim text carries no digits: a name with any is replaced before it reaches a claim. */
+export const hasDigit = (text: string): boolean => /\d/.test(text)
+
+/** How a claim names a model: by its name, or "The model" when the name carries digits. */
+export const claimModelName = (modelName: string): string => (hasDigit(modelName) ? 'The model' : modelName)
 
 /**
  * How a claim names a security. Claim text carries no digits, so a name with digits

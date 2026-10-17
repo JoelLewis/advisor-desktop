@@ -1,3 +1,4 @@
+import type { ProposalViolation } from '@/services/oms'
 import { fmtPoints } from '@/kit/measure'
 
 /** Why an advisor approves a model above the client's tolerance. One is chosen; a note may add to it. Shared by the engine and the UI. */
@@ -14,6 +15,15 @@ export type WholeFigure = { score: number; today: number; toleranceBand: string;
  */
 export type RecordedSuitability = SuitabilityReason & { clientName: string; whole?: WholeFigure }
 export const SUITABILITY_NOTE_MAX = 500
+
+export type ToleranceCheck = NonNullable<ProposalViolation['tolerance']>
+
+/** The model-above-tolerance check among a pre-trade check's results, if there is one. Shared by the engine and the UI. */
+export function toleranceCheckOf(violations: readonly ProposalViolation[]): ToleranceCheck | undefined {
+  const check = violations.find((v) => v.category === 'model_above_tolerance')
+  if (check && !check.tolerance) throw new Error('A model_above_tolerance check carries no tolerance facts')
+  return check?.tolerance
+}
 
 export const isSuitabilityReasonId = (v: unknown): v is SuitabilityReasonId => SUITABILITY_REASONS.some((r) => r === v)
 

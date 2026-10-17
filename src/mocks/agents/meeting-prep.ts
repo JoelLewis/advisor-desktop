@@ -18,13 +18,13 @@ import { fmtDayMonthYear } from '@/kit/measure'
 import { dontRepurchaseThrough } from '@/kit/repurchase'
 import { figureText } from '@/kit/figure-text'
 import type { Figure } from '@/types/workspace'
+import { hasDigit } from './claim-name'
 
 /** A finding, and the agenda title it proposes. */
 export type PrepFinding = AgentFinding & { agendaTitle: string }
 
 export const AGENDA_V1_SUMMARY = 'Proposed an agenda ordered by what needs attention first.'
 
-const hasDigit = (text: string) => /\d/.test(text)
 const isOrAre = (n: number) => (n === 1 ? 'is' : 'are')
 /** How a claim names an account or a goal: claims carry no digits. */
 const accountWords = (a: Account) => (hasDigit(a.name) ? 'an account' : a.name)

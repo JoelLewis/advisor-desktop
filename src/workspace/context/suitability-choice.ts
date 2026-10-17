@@ -1,15 +1,4 @@
-import type { ProposalViolation } from '@/services/oms'
-import type { ProposalVersion } from '@/types/workspace-proposal'
-import { SUITABILITY_REASONS, bandText, reasonLabel, wholeAfterText, type SuitabilityReasonId } from '@/lib/suitability'
-
-export type ToleranceCheck = NonNullable<ProposalViolation['tolerance']>
-
-/** The version's model-above-tolerance check, if it carries one. The engine's own helper lives in src/mocks, which the UI never imports. */
-export function toleranceCheckOf(version: ProposalVersion): ToleranceCheck | undefined {
-  const check = version.pretrade.violations.find((v) => v.category === 'model_above_tolerance')
-  if (check && !check.tolerance) throw new Error(`v${version.n}'s tolerance check carries no tolerance`)
-  return check?.tolerance
-}
+import { SUITABILITY_REASONS, bandText, reasonLabel, wholeAfterText, type SuitabilityReasonId, type ToleranceCheck } from '@/lib/suitability'
 
 const wholeWithin = (check: ToleranceCheck) => check.wholeAfterStatus === 'within'
 

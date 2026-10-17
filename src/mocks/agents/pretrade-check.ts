@@ -6,9 +6,7 @@ import { getPositionsForAccount } from '@/mocks/data/positions'
 import { generateRebalanceTrades } from '@/mocks/handlers/oms'
 import { evaluateProposal } from '@/mocks/handlers/compliance'
 import { tolerancePhrase, withSuitability } from '@/mocks/workspace/suitability'
-import { claimNameOf } from './claim-name'
-
-const hasDigit = (text: string) => /\d/.test(text)
+import { claimModelName, claimNameOf } from './claim-name'
 
 type Names = ReadonlyMap<string, string>
 
@@ -42,8 +40,7 @@ function describe(v: ProposalViolation, names: Names): { who: string; label: str
     case 'model_above_tolerance': {
       const t = v.tolerance
       if (!t) throw new Error('A model_above_tolerance violation carries no tolerance facts')
-      const model = hasDigit(t.modelName) ? 'The model' : t.modelName
-      return { who: model, label: t.modelName, phrase: tolerancePhrase(t.clientName, t.toleranceBand, t.wholeAfterStatus, 'rebalance') }
+      return { who: claimModelName(t.modelName), label: t.modelName, phrase: tolerancePhrase(t.clientName, t.toleranceBand, t.wholeAfterStatus, 'rebalance') }
     }
   }
 }

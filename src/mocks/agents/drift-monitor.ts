@@ -8,7 +8,7 @@ import { ASSET_CLASS_LABELS } from '@/lib/labels'
 import { isMarketTradable } from '@/lib/security-master'
 import { openWashSaleWindows } from '@/mocks/data/realized-sales'
 import type { AssetClass, Position } from '@/types/portfolio'
-import { claimNameOf } from './claim-name'
+import { claimModelName, claimNameOf } from './claim-name'
 import { fmtDayMonthYear } from '@/kit/measure'
 import { dontRepurchaseThrough } from '@/kit/repurchase'
 import { modelAboveTolerance, toleranceLine } from '@/mocks/workspace/suitability'
@@ -44,7 +44,7 @@ export function runDriftMonitor({ asOf, subject }: AgentContext): TopicFinding[]
   }]
   const gap = modelAboveTolerance(account, generateRebalanceTrades(account.id, true))
   if (gap) {
-    const model = /\d/.test(gap.modelName) ? 'The model' : gap.modelName
+    const model = claimModelName(gap.modelName)
     findings.push({
       claim: `${toleranceLine(model, gap.clientName, gap.tolerance.label, gap.wholeAfter.status, 'rebalance')}. Approving a rebalance to it needs a recorded suitability reason.`,
       attention: 'attention',

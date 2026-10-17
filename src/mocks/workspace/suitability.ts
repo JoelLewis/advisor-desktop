@@ -91,9 +91,6 @@ export function withSuitability(result: PreTradeCheckProposalResult, account: Ac
   return gap ? { ...result, violations: [...result.violations, toleranceViolation(gap)] } : result
 }
 
-export const needsSuitabilityReason = (pretrade: PreTradeCheckProposalResult): boolean =>
-  pretrade.violations.some((v) => v.category === 'model_above_tolerance')
-
 /** Accounts whose proposal is approved (or released) with a recorded suitability reason. */
 export function suitablyApprovedAccounts(): ReadonlySet<string> {
   const s = store()

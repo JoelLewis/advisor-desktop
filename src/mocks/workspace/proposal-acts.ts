@@ -1,6 +1,6 @@
 import type { BindingAct, Message } from '@/types/workspace'
 import type { ApprovalRecord, Proposal, ProposalVersion, StagedOrder } from '@/types/workspace-proposal'
-import { SUITABILITY_NOTE_MAX, type RecordedSuitability, type SuitabilityReason } from '@/lib/suitability'
+import { SUITABILITY_NOTE_MAX, toleranceCheckOf, type RecordedSuitability, type SuitabilityReason } from '@/lib/suitability'
 import { can } from '@/mocks/data/people'
 import { commitActId, nextAt, nextId, store } from '@/mocks/data/workspace-store'
 import { activeApproval, filledMessage, nextStagedId, proposalById, releasedApproval } from '@/mocks/data/proposals-store'
@@ -44,14 +44,12 @@ export function setApprovalStatus(approval: ApprovalRecord, status: ApprovalReco
  * client's whole within the band after the proposal. The figure it rests on is the check's, never the request's.
  */
 function recordedSuitability(v: ProposalVersion, suitability: SuitabilityReason | undefined): { ok: true; value?: RecordedSuitability } | ActFailure {
-  const check = v.pretrade.violations.find((x) => x.category === 'model_above_tolerance')
-  if (!check) {
+  const gap = toleranceCheckOf(v.pretrade.violations)
+  if (!gap) {
     return suitability
       ? { ok: false, status: 409, code: 'NO_SUITABILITY_GAP', message: `v${v.n} sits within the client's tolerance; there is no suitability reason to record.` }
       : { ok: true }
   }
-  const gap = check.tolerance
-  if (!gap) throw new Error(`v${v.n}'s tolerance check carries no tolerance`)
   if (!suitability) {
     return { ok: false, status: 409, code: 'REASON_REQUIRED', message: `v${v.n} puts the account on a model above ${gap.clientName}'s tolerance; choose a suitability reason to approve it.` }
   }

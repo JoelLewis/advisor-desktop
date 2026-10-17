@@ -27,7 +27,8 @@ import { PresenterRelease } from './PresenterRelease'
 import { supervisionHref } from '@/workspace/supervision/supervision-items'
 import { LINK_TARGET } from '@/kit/link-target'
 import type { SuitabilityReason, SuitabilityReasonId } from '@/lib/suitability'
-import { preselectedReason, reasonOptions, toleranceCheckOf, wholeAfterSentence, type ToleranceCheck } from './suitability-choice'
+import { preselectedReason, reasonOptions, wholeAfterSentence } from './suitability-choice'
+import { toleranceCheckOf, type ToleranceCheck } from '@/lib/suitability'
 
 type OnRecorded = (actId: string) => void
 type ApprovalPanelProps = { thread: Thread; directory: Directory; onRecorded: OnRecorded }
@@ -58,7 +59,7 @@ function ProposalApproval({ detail, directory, onRecorded }: { detail: ProposalD
   const blockerId = useId()
   const readingId = useId()
   const latest = latestVersionOf(detail)
-  const toleranceCheck = toleranceCheckOf(latest)
+  const toleranceCheck = toleranceCheckOf(latest.pretrade.violations)
   const chosen: ChosenReason = chosenReason?.version === latest.n
     ? chosenReason
     : { version: latest.n, reason: toleranceCheck ? preselectedReason(toleranceCheck) : '', note: '' }
