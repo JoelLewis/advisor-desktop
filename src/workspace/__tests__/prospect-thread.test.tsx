@@ -38,7 +38,7 @@ async function sentV1() {
 describe('her thread, for the firm', () => {
   afterEach(() => sessionStorage.clear())
 
-  it('says where she stands and delivers Form CRS as a binding act, once, however fast the confirm is pressed', async () => {
+  it('says where she stands and delivers Form CRS as a record, once, however fast the confirm is pressed', async () => {
     const user = userEvent.setup()
     await openHerThread()
     expect(await section('Prospect')).toHaveTextContent('Referred by James Thompson')

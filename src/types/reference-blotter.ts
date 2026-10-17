@@ -13,7 +13,7 @@ export type BlotterRow = {
   /** The fill price once filled; a working limit order's limit. */
   price?: number; priceKind?: 'fill' | 'limit'
   value?: number; currency: CurrencyCode; status: BlotterStatus; source: BlotterSource
-  /** The binding act that closed the order, else the approval it was staged from. Tickets have none. */
+  /** The record that closed the order, else the approval it was staged from. Tickets have none. */
   recId?: string
   submittedAt: string; filledAt?: string
   /** Submitted on a trading day before the 9:30 ET open, so queued for it. */

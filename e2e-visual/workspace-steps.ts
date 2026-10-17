@@ -150,7 +150,7 @@ const PELL_REPLY_TEXT = 'Thank you for the coffee. Here are my answers to the qu
 export const PELL_ACCEPTANCE_TEXT = "I've read the proposal and I'd like to go ahead."
 const JUMP_LABEL = { reply: 'Advance to her reply · Thu 26 Feb 09:10 ET', acceptance: 'Advance to her acceptance · Mon 2 Mar 10:00 ET' } as const
 
-/** A disclosure from her thread's timeline (or the onboarding checklist), confirmed as a binding act. */
+/** A disclosure from her thread's timeline (or the onboarding checklist), confirmed as a record. */
 export async function deliver(page: Page, short: 'Form CRS' | 'ADV Part 2A' | 'ADV Part 2B' | 'privacy notice', atDialog?: AtDialog) {
   await context(page).getByRole('button', { name: `Deliver ${short}`, exact: true }).click()
   const dialog = page.getByRole('dialog', { name: `Deliver ${short} to Dr. Amanda Pell?` })
@@ -205,7 +205,7 @@ export async function sendToHer(page: Page, version: number, atDialog?: AtDialog
   await expect(conversation(page)).toContainText('Dear Dr. Pell,')
 }
 
-/** Resolve a reconciliation break as a binding act, from the reconciliation view. */
+/** Resolve a reconciliation break as a record, from the reconciliation view. */
 export async function resolveBreakNamed(page: Page, breakId: string, resolution: string, rationale: string, atDialog?: AtDialog) {
   await page.getByRole('button', { name: `Resolve ${breakId}`, exact: true }).click()
   const dialog = page.getByRole('dialog', { name: `Resolve ${breakId}?` })

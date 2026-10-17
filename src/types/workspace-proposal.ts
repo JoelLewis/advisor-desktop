@@ -73,7 +73,7 @@ export type DraftPreview = Pick<ProposalVersion, 'preview' | 'driftBefore' | 'pr
 export type Proposal = { id: string; title: string; accountId: string; clientId: string; threadId: string; versions: ProposalVersion[] }
 
 /**
- * The approval of one exact version, pinned to its fingerprint and the binding act that recorded it.
+ * The approval of one exact version, pinned to its fingerprint and the record that recorded it.
  * It leaves `active` when the approver withdraws it, a newer approval supersedes it, compliance
  * returns it to the advisor, or compliance releases its orders.
  */

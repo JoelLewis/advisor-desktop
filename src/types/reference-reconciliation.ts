@@ -27,7 +27,7 @@ export type ReconBreakView = {
   id: string; custodian: string; accountId: string; accountName: string; field: BreakField; fieldLabel: string; symbol?: string; unit: BreakUnit
   book: number; custodianValue: number; difference: number; severity: 'low' | 'medium' | 'high'; detectedAt: string; fingerprint: string
   status: 'open' | 'resolved'; resolvedAt?: string
-  /** The binding act that resolved it in this session. */
+  /** The record that resolved it in this session. */
   resolution?: { actId: string; actorName: string; resolution: BreakResolution; rationale: string }
 }
 export type MatchRate = { kind: MatchKind; checked: number; open: number; rate: number }

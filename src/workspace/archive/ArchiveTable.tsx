@@ -7,7 +7,7 @@ import { PATH_NOTE } from '@/workspace/prospect/prospect-words'
 import { supervisionHref } from '@/workspace/supervision/supervision-items'
 import type { Directory } from '@/types/workspace'
 import type { ArchiveEntry } from '@/types/workspace-supervision'
-import { TABLE_LINK_TARGET } from '@/kit/link-target'
+import { TABLE_HIT_AREA, TABLE_LINK_TARGET } from '@/kit/link-target'
 
 const LINK = `${TABLE_LINK_TARGET} underline decoration-rule-2 underline-offset-4 hover:decoration-ink`
 
@@ -21,11 +21,19 @@ function Recorded({ entry, directory }: { entry: ArchiveEntry; directory: Direct
   return <><span className="block whitespace-nowrap tabular">{fmtEasternStamp(entry.at)}</span><span className="block">{recordedBy(entry, directory)}</span></>
 }
 
-/** The record id leads, so books-and-records keep their reference beside what was done. */
 function Summary({ entry }: { entry: ArchiveEntry }) {
   const recordId = entry.kind === 'act' ? entry.act.id : entry.actId
+  const fingerprint = entry.kind === 'act' ? entry.act.fingerprint : entry.fingerprint
   const text = entry.kind === 'act' ? entry.act.summary : `Message to ${entry.partyName}`
-  return <><span className="tabular">{recordId}</span>{` · ${text}`}</>
+  return (
+    <span className="flex flex-col items-start gap-0.5">
+      <span>{text}</span>
+      <details>
+        <summary className={`${TABLE_HIT_AREA} cursor-pointer text-label text-ink-3`}>Audit details</summary>
+        <span className="tabular text-label text-ink-2">{`Record ${recordId} · fingerprint ${fingerprint}`}</span>
+      </details>
+    </span>
+  )
 }
 
 function EntryLink({ entry }: { entry: ArchiveEntry }) {
@@ -41,7 +49,6 @@ export function ArchiveTable({ entries, directory }: { entries: ArchiveEntry[]; 
       columns={[
         { id: 'at', header: 'Recorded', wrap: true, cell: (e) => <Recorded entry={e} directory={directory} />, sortValue: (e) => e.at },
         { id: 'summary', header: 'Summary', wrap: true, cell: (e) => <Summary entry={e} /> },
-        { id: 'fingerprint', header: 'Fingerprint', cell: (e) => (e.kind === 'act' ? e.act.fingerprint : e.fingerprint) },
         { id: 'thread', header: 'Thread', cell: (e) => <EntryLink entry={e} /> },
       ]} />
   )

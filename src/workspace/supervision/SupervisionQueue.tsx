@@ -4,7 +4,7 @@ import { Pane } from '@/kit/layout/Pane'
 import { Tag } from '@/kit/tag/Tag'
 import { fmtEasternStamp } from '@/kit/measure'
 import { personIn } from '@/workspace/people/directory-people'
-import { ACT_KIND_LABEL } from '@/workspace/thread/act-kind-label'
+import { RECORD_KIND_LABEL } from '@/workspace/thread/act-kind-label'
 import type { Directory } from '@/types/workspace'
 import type { SupervisionItem, SupervisionQueue as Queue } from '@/types/workspace-supervision'
 import { supervisionHref } from './supervision-items'
@@ -35,7 +35,7 @@ export function SupervisionQueue({ queue, directory }: { queue: Queue; directory
     {
       title: 'Disposed today', empty: 'Nothing disposed of yet today.',
       rows: queue.disposedToday.map(({ item, act }) => ({
-        key: act.id, href: supervisionHref(item.kind, item.id), label: `${ACT_KIND_LABEL[act.kind]} · ${item.title}`,
+        key: act.id, href: supervisionHref(item.kind, item.id), label: `${RECORD_KIND_LABEL[act.kind]} · ${item.title}`,
         meta: `${personIn(directory, act.actorId).name} · ${fmtEasternStamp(act.at)} · ${act.id}`, tags: [],
       })),
     },

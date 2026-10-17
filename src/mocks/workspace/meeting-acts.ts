@@ -6,7 +6,7 @@ import { recordAct } from './proposal-acts'
 import { meetingTitle, notesFingerprint, refuseMeeting, replaceMeeting, visibleMeeting, type MeetingFailure } from './meetings'
 
 /**
- * The meeting's binding act. Advisor only; only once the meeting is held and its notes drafted; once;
+ * The meeting's record. Advisor only; only once the meeting is held and its notes drafted; once;
  * against the fingerprint of the notes as the advisor read them. The record keeps the lines exactly as
  * they stood, and each filed follow-up becomes a tracked task.
  */

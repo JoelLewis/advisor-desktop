@@ -53,7 +53,7 @@ export function ProspectApproval({ detail, directory, onRecorded }: Props) {
           <ConfirmRecord open={confirming} onClose={() => setConfirming(false)} mutation={approve}
             variables={{ proposalId: detail.id, version: latest.n, fingerprint: latest.fingerprint, rationale }}
             onRecorded={(actId) => { setAttestedVersion(undefined); onRecorded(actId) }}
-            title={`Approve v${latest.n} of the ${detail.title}?`} description={`Approval is a binding act; the best-interest record is filed with it, and ${addressNameOf(prospectName)} can't see the record.`} />
+            title={`Approve v${latest.n} of the ${detail.title}?`} description={`Approval is a recorded sign-off; the best-interest record is filed with it, and ${addressNameOf(prospectName)} can't see the record.`} />
         </>
       ) : null}
     </section>

@@ -117,7 +117,7 @@ export function KitSections({ data }: { data: KitData }) {
           <section aria-labelledby="kit-review-approval" className="flex flex-col gap-4">
             <h3 id="kit-review-approval" className="text-label uppercase text-ink-2">{`${alert.type} review · on record`}</h3>
             <Stamp state="approved" person={reviewer.name} role={reviewer.role} at={record.timestamp} />
-            <RecordSlip kind={`Supervisory review · ${record.action}`} title={alert.title} recordId={record.id}
+            <RecordSlip kind={`Supervisory review · ${record.action}`} title={alert.title} audit={{ recordId: record.id }}
               recordedBy={reviewer} at={record.timestamp} archive="Compliance supervision log">
               {record.notes}
             </RecordSlip>

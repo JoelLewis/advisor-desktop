@@ -49,7 +49,7 @@ export function DispositionPanel({ item, open, directory, onRecorded, record }: 
           Record disposition
         </Button>
         {blank ? <p id={reasonId} className="text-body text-ink-2">Write a rationale to record the disposition.</p> : null}
-        <p className="text-label text-ink-3">Recorded as a binding act in your name, with this rationale.</p>
+        <p className="text-label text-ink-3">Recorded in your name, with this rationale.</p>
       </div>
       <ConfirmRecord open={confirming} onClose={() => setConfirming(false)} mutation={record} variables={option.request(rationale.trim())}
         title={`${option.label}?`} description={option.consequence}

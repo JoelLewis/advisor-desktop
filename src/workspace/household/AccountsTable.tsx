@@ -28,6 +28,6 @@ export function AccountsTable({ caption, accounts, totalValue, totalLabel }: Acc
         { id: 'status', header: 'Status', cell: (a) => (a.mandate === 'model' ? <StatusCode status={a.withinBand ? 'IN' : 'OUT'} label={a.withinBand ? 'inside its band' : 'outside its band'} /> : null) },
         { id: 'outside', header: 'Outside its band', wrap: true, cell: (a) => (a.mandate === 'model' ? outsideWords(a) : a.mandateSummary) },
       ]}
-      totals={{ label: totalLabel, tiesTo: { label: 'the value the engine states', expected: totalValue, actual: rowsTotal }, cells: { value: fmtMoney(totalValue) } }} />
+      totals={{ label: totalLabel, tiesTo: { label: 'the household total', expected: totalValue, actual: rowsTotal }, cells: { value: fmtMoney(totalValue) } }} />
   )
 }

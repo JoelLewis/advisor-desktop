@@ -7,7 +7,7 @@ import { actAsCco, approveProposal, createProposal, draftLetter, recordComplianc
 
 const ADRIAN = 'user-001'
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
-const summaryCell = (row: HTMLElement) => row.querySelectorAll('td')[1]?.textContent
+const summaryCell = (row: HTMLElement) => row.querySelectorAll('td')[1]?.querySelector('span > span')?.textContent
 
 async function session() {
   const detail = await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
@@ -29,17 +29,21 @@ describe('the Archive', () => {
     await screen.findByRole('heading', { level: 1, name: 'Archive' })
     const rows = await archiveRows()
     expect(rows.map(summaryCell)).toEqual([
-      'REC-0001 · Approved v1 of the Johnson rebalance',
-      'REC-0002 · Message sent to the client',
-      'REC-0002 · Message to Robert Johnson',
-      'REC-0003 · Released the orders staged from v1 of the Johnson rebalance',
+      'Approved v1 of the Johnson rebalance',
+      'Message sent to the client',
+      'Message to Robert Johnson',
+      'Released the orders staged from v1 of the Johnson rebalance',
     ])
+    expect(rows[3]).not.toHaveTextContent('Fingerprint')
+    const audit = within(rows[3]!).getByText('Audit details').closest('details')!
+    expect(audit).not.toHaveAttribute('open')
+    expect(audit).toHaveTextContent(/Record REC-0003 · fingerprint [0-9A-F]{8}/)
     expect(rows[3]).toHaveTextContent('Mark Davis')
     expect(rows[3]).toHaveTextContent('Released the orders staged from v1 of the Johnson rebalance')
     expect(within(rows[3]!).getByRole('link', { name: 'Johnson Rebalance Review' })).toHaveAttribute('href', '/t/th-johnson-review')
     expect(within(rows[2]!).getByRole('link', { name: 'Robert Johnson' })).toHaveAttribute('href', '/t/th-robert')
-    await userEvent.setup().selectOptions(screen.getByLabelText('Kind'), 'Release orders')
-    await waitFor(async () => expect((await archiveRows()).map(summaryCell)).toEqual(['REC-0003 · Released the orders staged from v1 of the Johnson rebalance']))
+    await userEvent.setup().selectOptions(screen.getByLabelText('Kind'), 'Release')
+    await waitFor(async () => expect((await archiveRows()).map(summaryCell)).toEqual(['Released the orders staged from v1 of the Johnson rebalance']))
     expect(router.state.location.search).toBe('?kind=release_orders')
   })
 
@@ -51,7 +55,7 @@ describe('the Archive', () => {
   it('reads its filters from the URL', async () => {
     await session()
     renderRoutes(routes, '/archive?kind=send_to_party&partyId=cli-001&from=2026-02-25')
-    await waitFor(async () => expect((await archiveRows()).map(summaryCell)).toEqual(['REC-0002 · Message sent to the client']))
+    await waitFor(async () => expect((await archiveRows()).map(summaryCell)).toEqual(['Message sent to the client']))
     expect(screen.getByLabelText('Client or prospect')).toHaveValue('cli-001')
   })
 

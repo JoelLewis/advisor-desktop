@@ -61,8 +61,8 @@ describe('the client letter', () => {
     await user.click(within(edited).getByRole('button', { name: 'Send to Robert' }))
     await waitFor(() => expect(conversation()).toHaveTextContent('I will call you on Friday to walk through it.'))
     expect(conversation()).toHaveTextContent(buildClientRateDisclosure(TAX_RATE_BASIS))
-    const acts = inContext().getByRole('region', { name: 'Binding acts' })
-    expect(within(acts).getByRole('list', { name: 'Record trail' })).toHaveTextContent('Send to client')
+    const acts = inContext().getByRole('region', { name: 'Audit trail' })
+    expect(within(acts).getByRole('list', { name: 'Record trail' })).toHaveTextContent('Message sent')
     const fingerprint = store().acts.find((a) => a.kind === 'approve_proposal')!.fingerprint
     expect(within(acts).getByRole('article', { name: 'Message sent to the client' })).toHaveTextContent(`from v1 · fingerprint ${fingerprint} · edited by Adrian Hale`)
     expect(within(drafts).queryByText(/^The Client Letter Agent('s letter| drafted a letter)/)).toBeNull()
@@ -84,7 +84,7 @@ describe('the client letter', () => {
     const drafts = await openRobert()
     const draft = await within(drafts).findByRole('article', { name: 'Draft · not sent' })
     await userEvent.setup().click(within(draft).getByRole('button', { name: 'Send to Robert' }))
-    const slip = await within(inContext().getByRole('region', { name: 'Binding acts' })).findByRole('article', { name: 'Message sent to the client' })
+    const slip = await within(inContext().getByRole('region', { name: 'Audit trail' })).findByRole('article', { name: 'Message sent to the client' })
     expect(slip).toHaveTextContent(`from v1 · fingerprint ${created.versions[0]!.fingerprint} · agent draft, unedited`)
   })
 

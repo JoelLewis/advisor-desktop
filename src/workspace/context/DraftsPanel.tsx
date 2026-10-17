@@ -18,7 +18,7 @@ import { Unbroken } from '@/kit/unbroken/Unbroken'
 
 type DraftsPanelProps = { thread: Thread; directory: Directory; onSent: (actId: string) => void }
 
-/** Drafts held for the party. Sending one is the binding act; only a viewer the engine permits sees the Send button. */
+/** Drafts held for the party. Sending one is a record; only a viewer the engine permits sees the Send button. */
 export function DraftsPanel({ thread, directory, onSent }: DraftsPanelProps) {
   const { viewerId } = useViewer()
   const drafts = useDrafts(thread.id, true)
@@ -116,7 +116,7 @@ function DraftView({ draft, directory, threadId, canEdit, staleReason, sendLabel
       <p className="text-label text-ink-3">{draftOrigin(draft, directory)}</p>
       <div className="flex flex-col items-start gap-3 border-t border-rule pt-3">
         <p className="text-body text-ink-2">
-          {sendLabel ? 'Sending is recorded as a binding act by you.' : 'Only the advisor of record can send this. Sending is recorded as a binding act.'}
+          {sendLabel ? 'Sending is recorded under your name.' : 'Only the advisor of record can send this. Sending is recorded.'}
         </p>
         <div className="flex flex-wrap gap-3">
           {canEdit && !editing && staleReason === undefined ? <Button rank="secondary" onClick={startEditing}>Edit</Button> : null}

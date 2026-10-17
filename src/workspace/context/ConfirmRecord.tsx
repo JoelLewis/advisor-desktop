@@ -31,7 +31,7 @@ type ConfirmRecordProps<Variables> = {
 }
 
 /**
- * The confirm step every binding act takes: a busy ref against double submission, a kit Dialog, and
+ * The confirm step every record takes: a busy ref against double submission, a kit Dialog, and
  * focus handed to the new record slip (not back to the opener) once the act is recorded.
  */
 export function ConfirmRecord<Variables>({ open, onClose, title, description, mutation, variables, onRecorded, children, blockedReason, refusalShownByPage = false }: ConfirmRecordProps<Variables>) {

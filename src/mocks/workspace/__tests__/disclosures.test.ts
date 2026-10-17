@@ -14,7 +14,7 @@ const ONBOARDING: OnboardingChecklist = { openedAt: '2026-03-02T15:01:00.000Z', 
 ] }
 
 describe('deliver_disclosure', () => {
-  it('records Form CRS as a binding act at the session clock, with its line and slip in her thread', () => {
+  it('records Form CRS as a record at the session clock, with its line and slip in her thread', () => {
     const r = deliverDisclosure(ADRIAN, 'prsp-011', 'form_crs')
     if (!r.ok) throw new Error(r.message)
     expect(r.act).toEqual({

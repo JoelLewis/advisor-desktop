@@ -49,7 +49,7 @@ export const RETIRED_WORDS: readonly RetiredWord[] = [
     retired: true,
   },
   { word: 'Only you', pattern: /\bonly you\b/i, retired: true },
-  { word: 'binding', pattern: /\bbinding\b/i, retired: false },
+  { word: 'binding', pattern: /\bbinding\b/i, retired: true },
   // "Taken to" is plain English. A JSX hole ("Take {x} to") reads as two texts and is a known limit.
   { word: 'Take to', pattern: /\bTake(?: …)? to\b/, retired: true },
   { word: 'carried', pattern: /\b[Cc]arried (?:by|from)\b/, retired: true },

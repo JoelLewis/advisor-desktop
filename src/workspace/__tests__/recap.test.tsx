@@ -85,7 +85,7 @@ describe("Robert's recap", () => {
     expect(item).toHaveTextContent(/from the filed record REC-0001 · fingerprint [0-9A-F]{8} · agent draft, unedited/)
     unmount()
     renderRoutes(routes, '/archive')
-    expect(await screen.findByRole('table', { name: 'Archive' })).toHaveTextContent('REC-0001 · Filed the record of the Johnson annual review')
+    expect(await screen.findByRole('table', { name: 'Archive' })).toHaveTextContent('Filed the record of the Johnson annual review')
   })
 
   it('a stale recap says why and cannot be sent', async () => {

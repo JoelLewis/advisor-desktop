@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/JoelLewis/advisor-desktop/actions/workflows/ci.yml/badge.svg)](https://github.com/JoelLewis/advisor-desktop/actions/workflows/ci.yml)
 
-A multiplayer workspace for the advisors of Larkfield Advisory, a fictional SEC-registered investment adviser: threads where the advisor, the firm's agents, compliance and the client each see only what is theirs to see, and every binding step is a recorded act. Every figure is derived from one mock book or labeled modeled with its method, and the demo's clock is frozen at Wednesday 25 February 2026.
+A multiplayer workspace for the advisors of Larkfield Advisory, a fictional SEC-registered investment adviser: threads where the advisor, the firm's agents, compliance and the client each see only what is theirs to see, and every step that counts is a recorded act. Every figure is derived from one mock book or labeled modeled with its method, and the demo's clock is frozen at Wednesday 25 February 2026.
 
 **Live:** https://advisor.joelelewis.com
 

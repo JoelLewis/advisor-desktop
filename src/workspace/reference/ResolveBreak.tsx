@@ -12,10 +12,10 @@ const UNCHOSEN = BREAK_RESOLUTIONS[0]
 
 const reading = (b: ReconBreakView, v: number) => (b.unit === 'USD' ? `${fmtMoney(v)} ${UNIT.usd}` : b.unit === 'sh' ? `${fmtQuantity(v)} ${UNIT.shares}` : fmtQuantity(v))
 
-/** Resolve: the advisor or client service closes a break as a binding act, against the figures on screen, with a rationale. */
+/** Resolve: the advisor or client service closes a break as a record, against the figures on screen, with a rationale. */
 export function ResolveBreak({ brk, onRecorded }: { brk: ReconBreakView; onRecorded: (actId: string) => void }) {
   const [open, setOpen] = useState(false)
-  // A binding record's outcome is an explicit choice: the dialog opens with none selected.
+  // A record's outcome is an explicit choice: the dialog opens with none selected.
   const [resolution, setResolution] = useState<BreakResolution>()
   const [rationale, setRationale] = useState('')
   const resolve = useResolveBreak()
@@ -29,7 +29,7 @@ export function ResolveBreak({ brk, onRecorded }: { brk: ReconBreakView; onRecor
     <>
       <Button rank="secondary" aria-label={`Resolve ${brk.id}`} onClick={() => setOpen(true)}>Resolve</Button>
       <ConfirmRecord open={open} onClose={() => setOpen(false)} title={`Resolve ${brk.id}?`}
-        description={`${brk.accountName} · ${brk.fieldLabel}: the book ${reading(brk, brk.book)} against ${brk.custodian} ${reading(brk, brk.custodianValue)}. Recorded as a binding act in the Archive.`}
+        description={`${brk.accountName} · ${brk.fieldLabel}: the book ${reading(brk, brk.book)} against ${brk.custodian} ${reading(brk, brk.custodianValue)}. Recorded in the Archive.`}
         mutation={resolve} variables={{ breakId: brk.id, fingerprint: brk.fingerprint, resolution: resolution ?? UNCHOSEN, rationale }} onRecorded={onRecorded}
         blockedReason={blockedReason}>
         <Select label="Resolution" layout="stacked" value={resolution ?? ''} onChange={pick}

@@ -55,7 +55,7 @@ for (const scene of SCENES) {
   })
 }
 
-test('one presenter: the release on the blotter, the moved book in risk and attribution, a break resolved and archived, an account taken to a thread', async ({ page }) => {
+test('one presenter: the release on the blotter, the released book in risk and attribution, a break resolved and archived, an account shared to a thread', async ({ page }) => {
   test.setTimeout(300_000)
   await page.setViewportSize({ width: 1440, height: 900 })
 
@@ -77,14 +77,14 @@ test('one presenter: the release on the blotter, the moved book in risk and attr
   await expect(orders).toContainText('FILLED')
   await expect(orders).toContainText(/REC-\d{4}/)
 
-  // 4. acc-002's risk and attribution read the moved book.
+  // 4. acc-002's risk and attribution read the released book.
   await goTo(page, 'Risk · Robert Johnson Individual')
   await expect(heading(page)).toHaveText('Risk · Robert Johnson Individual')
   await expect(factors).not.toHaveText(before ?? '')
   await goTo(page, 'Attribution · Robert Johnson Individual')
   await expect(page.getByRole('table', { name: 'Attribution · Year to date' })).toBeVisible()
 
-  // 5. The Brief's Today reconciliation line → the view → resolve brk-002 as a binding act.
+  // 5. The Brief's Today reconciliation line → the view → resolve brk-002 as a record.
   await visit(page, '/t/th-brief', 'light')
   const line = page.getByRole('region', { name: 'Today' }).getByRole('listitem').filter({ hasText: 'Reconciliation' })
   await expect(line).toContainText('1 open break')

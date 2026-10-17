@@ -14,7 +14,7 @@ export function ActsPanel({ acts, directory, viewerIsExternal }: ActsPanelProps)
     return { label: actWording(a, actor, viewerIsExternal).trailLabel, actor: actor.name, state: 'DONE' as const, at: a.at }
   })
   return (
-    <ContextSection title={viewerIsExternal ? 'Records' : 'Binding acts'}>
+    <ContextSection title={viewerIsExternal ? 'Records' : 'Audit trail'}>
       {acts.length === 0 ? <p className="text-body text-ink-3">None in this thread</p> : (
         <>
           <RecordTrail steps={steps} />

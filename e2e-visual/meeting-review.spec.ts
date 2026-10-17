@@ -18,7 +18,7 @@ async function meetingView(page: Page) {
 }
 
 /**
- * The morning (Phases 3–4): v1 approved and released through the presenter shortcut, so the meeting reads the moved book —
+ * The morning (Phases 3–4): v1 approved and released through the presenter shortcut, so the meeting reads the released book —
  * as transcript t-02 says ("This morning we rebalanced … sold the rest of the Intel shares"). The store lives in the page,
  * so every later step navigates inside the app.
  */
@@ -177,7 +177,7 @@ test('one presenter runs the Johnson annual review end to end; Robert sees only 
   test.setTimeout(300_000)
   await page.setViewportSize({ width: 1440, height: 900 })
 
-  // 1. The morning (Phases 3–4): v1 approved and released through the presenter shortcut, so the meeting reads the moved book.
+  // 1. The morning (Phases 3–4): v1 approved and released through the presenter shortcut, so the meeting reads the released book.
   await askProposalAgent(page, 'light')
   await approve(page, 1)
   await releaseByShortcut(page)
@@ -236,9 +236,8 @@ test('one presenter runs the Johnson annual review end to end; Robert sees only 
   await expect(conversation(page)).toContainText('When is my annual review this year?')
   // Not the whole body: the presenter's "View as" select names every person. Not the whole main area either: the roster
   // under his title names Sarah, a member of Robert's thread; the messages must not.
-  // Robert's own send slip carries its own record id and fingerprint (the send act's), so the check names the filing's.
   const firmRecord = new RegExp(`transcript|agenda|Meeting Notes|follow-up|filed record|${filedId}|${filedFingerprint}|fingerprint [0-9A-F]{8}`, 'i')
-  await expect(conversation(page).getByRole('listitem').last()).toContainText(/REC-\d{4}/)
+  await expect(conversation(page).getByRole('listitem').last()).not.toContainText(/REC-\d{4}|fingerprint|UTC|Audit details/)
   await expect(conversation(page).getByRole('listitem').last()).not.toContainText(filedId)
   await expect(page.getByRole('main')).not.toContainText(firmRecord)
   await expect(page.getByRole('main')).not.toContainText('Mike Chen')

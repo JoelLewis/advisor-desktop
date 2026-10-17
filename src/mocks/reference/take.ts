@@ -26,7 +26,7 @@ function openThread(viewerId: string, quote: RowQuote): Thread {
 /** The row, quoted into the first team thread about its subject the viewer is a member of (or one opened for it), once. */
 export function takeToTeamThread(viewerId: string, view: ReferenceView, rowId: string): Taken | TakeFailure {
   if (!isFirmViewer(viewerId)) return { ok: false, status: 404, code: 'NOT_FOUND', message: 'Not found.' }
-  if (!can(viewerId, 'post_firm')) return { ok: false, status: 403, code: 'NOT_PERMITTED', message: 'Only people who post in team threads can take a row to one.' }
+  if (!can(viewerId, 'post_firm')) return { ok: false, status: 403, code: 'NOT_PERMITTED', message: 'Only people who post in team threads can share a row to one.' }
   const quote = rowQuote(view, rowId)
   if (!quote) return { ok: false, status: 404, code: 'NO_ROW', message: 'That row is not in the view.' }
   const s = store()

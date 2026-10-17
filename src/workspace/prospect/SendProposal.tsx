@@ -9,7 +9,7 @@ import { DISCLOSURE_TITLES, type ProspectView } from '@/types/workspace-prospect
 
 type Props = { view: ProspectView; canSend: boolean; onRecorded: (actId: string) => void }
 
-/** The approved version, sent to her as a binding act: Form CRS first; ADV 2A goes with it when she has not had it. */
+/** The approved version, sent to her as a record: Form CRS first; ADV 2A goes with it when she has not had it. */
 export function SendProposal({ view, canSend, onRecorded }: Props) {
   const send = useSendProspectProposal()
   const [open, setOpen] = useState(false)

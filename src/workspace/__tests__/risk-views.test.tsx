@@ -76,7 +76,7 @@ describe('account risk', () => {
 
   it('is one step from the account view, as are its attribution and its model', async () => {
     renderRoutes(routes, '/accounts/acc-002?from=th-johnson-review')
-    const nav = await screen.findByRole('navigation', { name: 'Reference' })
+    const nav = await screen.findByRole('navigation', { name: 'Reports' })
     expect(within(nav).getByRole('link', { name: 'Risk' })).toHaveAttribute('href', '/accounts/acc-002/risk?from=th-johnson-review')
     expect(within(nav).getByRole('link', { name: 'Attribution' })).toHaveAttribute('href', '/accounts/acc-002/attribution?from=th-johnson-review')
     expect(await within(nav).findByRole('link', { name: 'Model · Growth' })).toHaveAttribute('href', '/models/mod-002?from=th-johnson-review')

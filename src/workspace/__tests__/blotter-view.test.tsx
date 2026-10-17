@@ -20,7 +20,7 @@ describe('the Blotter view', () => {
     expect(within(orders()).getByRole('row', { name: /ord-003/ })).not.toHaveTextContent('pre-market')
     expect(within(orders()).getByRole('row', { name: /ord-001/ })).not.toHaveTextContent('pre-market')
     expect(within(orders()).getByRole('row', { name: /ord-014/ })).toHaveTextContent('47,600')
-    expect(screen.getByRole('region', { name: 'Methods & sources' })).toHaveTextContent('REC is the binding act')
+    expect(screen.getByRole('region', { name: 'Methods & sources' })).toHaveTextContent('REC is the record')
   })
 
   it('filters by status through the URL', async () => {

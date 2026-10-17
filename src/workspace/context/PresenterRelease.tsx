@@ -8,7 +8,7 @@ type PresenterReleaseProps = { proposalId: string; version: number; directory: D
 
 /**
  * The one-presenter demo's shortcut: compliance's default release of these orders, recorded as the
- * compliance officer with the record noting the shortcut. A binding act, so it confirms first.
+ * compliance officer with the record noting the shortcut. A record, so it confirms first.
  */
 export function PresenterRelease({ proposalId, version, directory, onRecorded }: PresenterReleaseProps) {
   const shortcut = useActAsCco()

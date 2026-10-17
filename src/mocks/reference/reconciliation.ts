@@ -146,7 +146,7 @@ const METHODS: readonly MethodNote[] = [
   { label: 'Match rates', modeled: false, text: "Each break counts against the record it is about: a quantity break against one of the book's non-cash positions, a market-value break against one account's valuation, a cash break against one account's balance, a transaction-count break against one account's transaction stream. A rate is the share of those records with no open break." },
   { label: 'Trend', modeled: false, text: `End-of-day open breaks for each of the ${TREND_DAYS - 1} trading days before today, from each break's detection and resolution times, then today's count as it stands now. Weekends and NYSE holidays are left out: no nightly file arrives on them.` },
   { label: 'Integrations', modeled: false, text: "Each feed's status and last sync come from its log. A feed outside the US syncs on its own market's close." },
-  { label: 'Resolving', modeled: false, text: 'Resolving a break is a binding act by the advisor or client service, recorded in the Archive with its rationale. Nothing edits or deletes it.' },
+  { label: 'Resolving', modeled: false, text: 'Resolving a break is recorded by the advisor or client service in the Archive, with its rationale. Nothing edits or deletes it.' },
 ]
 
 export function reconciliationView(viewerId: string): ReconciliationView | undefined {

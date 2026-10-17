@@ -44,7 +44,7 @@ describe('recording a disposition', () => {
     await waitFor(() => expect(document.activeElement).toBe(document.getElementById('act-REC-0002')))
     expect(store().acts.filter((a) => a.kind === 'release_orders')).toHaveLength(1)
     expect(queue().getByText("No orders are waiting. Today's are under Disposed today.")).toBeInTheDocument()
-    expect(queue().getByRole('link', { name: /^Release orders · Johnson rebalance · v1/ })).toBeInTheDocument()
+    expect(queue().getByRole('link', { name: /^Release · Johnson rebalance · v1/ })).toBeInTheDocument()
     expect(item).toHaveTextContent('FILLED')
     expect(within(item).queryByRole('region', { name: 'Record a disposition' })).toBeNull()
   })
@@ -80,7 +80,7 @@ describe('recording a disposition', () => {
     await user.click(within(screen.getByRole('dialog', { name: 'Approve?' })).getByRole('button', { name: 'Confirm' }))
     await waitFor(() => expect(within(item).getByRole('list', { name: 'Record trail' })).toHaveTextContent('Approved'))
     expect(within(item).getByRole('list', { name: 'Reviewer notes' })).toHaveTextContent('sr-004')
-    expect(queue().getByRole('link', { name: /^Dispose alert · Single-name concentration — MSFT in Johnson Trust/ })).toBeInTheDocument()
+    expect(queue().getByRole('link', { name: /^Alert closed · Single-name concentration — MSFT in Johnson Trust/ })).toBeInTheDocument()
   })
 
   it('a flagged letter stays in the queue, flagged, with only "Mark reviewed" left to choose', async () => {

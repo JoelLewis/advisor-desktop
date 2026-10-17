@@ -16,7 +16,7 @@ const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
 async function openThread(path: string, title: string) {
   const view = renderRoutes(routes, path)
   await screen.findByRole('heading', { level: 1, name: title })
-  await inContext().findByRole('region', { name: /^(Binding acts|Records)$/ })
+  await inContext().findByRole('region', { name: /^(Audit trail|Records)$/ })
   return view
 }
 
@@ -47,16 +47,16 @@ describe('thread context column', () => {
     await user.click(screen.getByRole('button', { name: 'Save draft' }))
     const draft = await inContext().findByRole('article', { name: 'Draft · not sent' })
     expect(draft).toHaveTextContent('Sarah will be in touch this week.')
-    expect(draft).toHaveTextContent('Sending is recorded as a binding act by you.')
+    expect(draft).toHaveTextContent('Sending is recorded under your name.')
 
     await user.click(within(draft).getByRole('button', { name: 'Send to Robert' }))
-    const slip = await within(section('Binding acts')).findByRole('article', { name: 'Message sent to the client' })
+    const slip = await within(section('Audit trail')).findByRole('article', { name: 'Message sent to the client' })
     expect(slip).toHaveTextContent('REC-0001')
     expect(slip).toHaveTextContent('Adrian Hale, Advisor')
     const anchor = document.getElementById('act-REC-0001')
     expect(anchor).toContainElement(slip)
     await waitFor(() => expect(document.activeElement).toBe(anchor))
-    expect(within(section('Binding acts')).getByRole('list', { name: 'Record trail' })).toHaveTextContent('Send to client')
+    expect(within(section('Audit trail')).getByRole('list', { name: 'Record trail' })).toHaveTextContent('Message sent')
     await waitFor(() => expect(conversation()).toHaveTextContent('Sarah will be in touch this week.'))
     expect(inContext().queryByRole('article', { name: 'Draft · not sent' })).toBeNull()
 
@@ -65,13 +65,13 @@ describe('thread context column', () => {
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'Message' })).toBeInTheDocument())
     const record = await within(section('Records')).findByRole('article', { name: 'Sent to you' })
     expect(record).toHaveTextContent('Message from Adrian Hale')
-    expect(record).toHaveTextContent('REC-0001')
+    expect(record).not.toHaveTextContent('REC-0001')
     expect(record).toHaveTextContent('Adrian Hale, Advisor')
     expect(conversation()).toHaveTextContent('Sarah will be in touch this week.')
     expect(screen.queryByText('Draft · not sent')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Send to Robert' })).toBeNull()
     expect(document.body).not.toHaveTextContent('Your statement is ready.')
-    expect(document.body.textContent).not.toMatch(/binding|Supervisory review|Send to client/i)
+    expect(document.body.textContent).not.toMatch(/binding|Supervisory review|Message sent ·/i)
     expect(document.body).toHaveTextContent('Retained as a record')
     expect(inContext().queryByRole('region', { name: 'Ask an agent' })).toBeNull()
     expect(inContext().queryByRole('button')).toBeNull()
@@ -83,10 +83,10 @@ describe('thread context column', () => {
     await viewAs('Sarah Mitchell · Client service')
     const sarahsView = await within(await inContext().findByRole('region', { name: 'Drafts · message to Robert Johnson' })).findByRole('article', { name: 'Draft · not sent' })
     expect(sarahsView).toHaveTextContent('Your statement is ready.')
-    expect(sarahsView).toHaveTextContent('Only the advisor of record can send this. Sending is recorded as a binding act.')
+    expect(sarahsView).toHaveTextContent('Only the advisor of record can send this. Sending is recorded.')
     expect(within(sarahsView).queryByRole('button', { name: 'Send to Robert' })).toBeNull()
     expect(within(sarahsView).getByRole('button', { name: 'Edit' })).toBeInTheDocument()
-    expect(within(section('Binding acts')).getByText('Send to client or prospect · binding')).toBeInTheDocument()
+    expect(within(section('Audit trail')).getByText('Message sent · record')).toBeInTheDocument()
   })
 
   it('a double-click on Send records exactly one act', async () => {
@@ -102,7 +102,7 @@ describe('thread context column', () => {
     server.use(http.post('/api/workspace/acts', async () => { await delay(100) }))
     const user = userEvent.setup()
     await user.dblClick(within(draft).getByRole('button', { name: 'Send to Robert' }))
-    await within(section('Binding acts')).findByText('REC-0001')
+    await within(section('Audit trail')).findByText('REC-0001')
     await waitFor(() => expect(document.activeElement).toBe(document.getElementById('act-REC-0001')))
     server.events.removeListener('request:start', countSends)
     expect(sends).toHaveLength(1)
@@ -118,7 +118,7 @@ describe('thread context column', () => {
     const draft = await inContext().findByRole('article', { name: 'Draft · not sent' })
     await userEvent.setup().click(within(draft).getByRole('button', { name: 'Send to Robert' }))
     expect(await inContext().findByRole('alert')).toHaveTextContent('This draft was already sent (REC-0001).')
-    expect(within(section('Binding acts')).getByText('None in this thread')).toBeInTheDocument()
+    expect(within(section('Audit trail')).getByText('None in this thread')).toBeInTheDocument()
   })
 
   it('"Ask Drift Monitor" adds its findings to the open thread', async () => {

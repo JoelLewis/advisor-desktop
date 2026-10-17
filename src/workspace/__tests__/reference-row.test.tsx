@@ -12,7 +12,7 @@ describe('a quoted row in a team thread', () => {
     renderRoutes(routes, '/t/th-johnson-review')
     const card = await screen.findByRole('article', { name: "From Risk: Robert Johnson Individual sits above Robert Johnson's risk tolerance." })
     expect(within(card).getByRole('link', { name: 'Risk' })).toHaveAttribute('href', '/accounts/acc-002/risk?from=th-johnson-review')
-    expect(card).toHaveTextContent('taken by Adrian Hale')
+    expect(card).toHaveTextContent('shared by Adrian Hale')
     expect(card).toHaveTextContent('Risk score')
     expect(card).toHaveTextContent('VaR, one month, 95%')
   })

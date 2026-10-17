@@ -103,7 +103,7 @@ describe('integrations', () => {
 })
 
 describe('resolve_break', () => {
-  it('is a binding act outside any thread that closes the break', () => {
+  it('is a record outside any thread that closes the break', () => {
     const r = resolve002()
     if (!r.ok) throw new Error(r.message)
     expect(r.act).toMatchObject({

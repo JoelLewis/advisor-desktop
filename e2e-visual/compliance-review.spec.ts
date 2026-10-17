@@ -31,7 +31,7 @@ const archive = async (page: Page) => {
   await approvedV1(page, 'light')
   await releaseByShortcut(page)
   await deskLink(page, 'Archive').click()
-  await expect(page.getByRole('table', { name: 'Archive' })).toContainText('REC-0002 · Released the orders staged from v1 of the Johnson rebalance')
+  await expect(page.getByRole('table', { name: 'Archive' })).toContainText('Released the orders staged from v1 of the Johnson rebalance')
   await settle(page)
 }
 

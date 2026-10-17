@@ -40,7 +40,7 @@ export function OnboardingChecklist({ view, directory, canDeliver, onRecorded }:
       ) : null}
       {confirming ? (
         <ConfirmRecord open onClose={() => setConfirming(undefined)} mutation={deliver} variables={confirming} onRecorded={onRecorded}
-          title={`Deliver ${DISCLOSURE_SHORT[confirming]} to ${view.name}?`} description="Delivery is a binding act: the record names you, the document and the time." />
+          title={`Deliver ${DISCLOSURE_SHORT[confirming]} to ${view.name}?`} description="Delivery is recorded: the record names you, the document and the time." />
       ) : null}
     </div>
   )

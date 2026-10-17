@@ -16,7 +16,7 @@ export function ActRecordSlip({ act, directory }: { act: BindingAct; directory: 
   // Firm-only: a client's slip never carries the firm's provenance.
   const lines = viewerIsExternal ? [] : [...(origin ? [origin] : []), ...actProvenance(act, directory)]
   return (
-    <RecordSlip kind={kind} title={title} recordId={act.id} fingerprint={act.fingerprint}
+    <RecordSlip kind={kind} title={title} audit={viewerIsExternal ? undefined : { recordId: act.id, fingerprint: act.fingerprint }}
       recordedBy={{ name: actor.name, role: ROLE_LABEL[actor.role] }} at={act.at} archive={archive}>
       {lines.length > 0 ? (
         <span className="flex flex-col gap-1 text-label text-ink-2">

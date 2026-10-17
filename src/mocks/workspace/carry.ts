@@ -14,7 +14,7 @@ export function carryFinding(viewerId: string, fromThreadId: string, findingId: 
   if (!from || !canSeeThread(viewerId, from)) return { ok: false, status: 404, code: 'NO_THREAD', message: 'Thread not found.' }
   const finding = s.messages.find((m): m is Finding => m.kind === 'agent_finding' && m.id === findingId && m.threadId === from.id)
   if (!finding) return { ok: false, status: 404, code: 'NO_FINDING', message: 'Finding not found.' }
-  if (from.visibility !== 'private' || from.ownerId !== viewerId) return { ok: false, status: 403, code: 'NOT_YOUR_BRIEF', message: "Only a brief's owner can take its findings to a team thread." }
+  if (from.visibility !== 'private' || from.ownerId !== viewerId) return { ok: false, status: 403, code: 'NOT_YOUR_BRIEF', message: "Only a brief's owner can share its findings to a team thread." }
   const to = s.threads.find((t) => t.id === toThreadId)
   if (!to || !canSeeThread(viewerId, to)) return { ok: false, status: 404, code: 'NO_THREAD', message: 'Thread not found.' }
   if (to.visibility !== 'internal') return { ok: false, status: 400, code: 'NOT_A_TEAM_THREAD', message: 'Findings go to a team thread; a client hears from you through a draft.' }

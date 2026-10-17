@@ -31,16 +31,16 @@ describe('the Reconciliation view', () => {
     expect(trend).toHaveTextContent('13 Jan 2026')
     expect(trend).not.toHaveTextContent('16 Feb 2026')
     expect(trend).toHaveTextContent('25 Feb 2026')
-    expect(screen.getByRole('region', { name: 'Methods & sources' })).toHaveTextContent('Resolving a break is a binding act')
+    expect(screen.getByRole('region', { name: 'Methods & sources' })).toHaveTextContent('Resolving a break is recorded by the advisor or client service in the Archive')
   })
 
-  it('Adrian resolves brk-002 as a binding act; the row and the counts follow', async () => {
+  it('Adrian resolves brk-002 as a record; the row and the counts follow', async () => {
     await open()
     const user = userEvent.setup()
     const openBefore = openCount()
     await user.click(screen.getByRole('button', { name: 'Resolve brk-002' }))
     const dialog = await screen.findByRole('dialog', { name: 'Resolve brk-002?' })
-    expect(dialog).toHaveTextContent('Recorded as a binding act in the Archive.')
+    expect(dialog).toHaveTextContent('Recorded in the Archive.')
     expect(within(dialog).getByRole('button', { name: 'Confirm' })).toBeDisabled()
     // No resolution is chosen for the advisor: the dialog says so until one is.
     expect(within(dialog).getByRole('combobox', { name: 'Resolution' })).toHaveValue('')

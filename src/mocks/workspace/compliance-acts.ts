@@ -24,7 +24,7 @@ const refuse = (status: ComplianceFailure['status'], code: string, message: stri
 const via = (options: ActOptions) => (options.viaPresenter ? { viaPresenter: options.viaPresenter } : {})
 
 /**
- * Every binding act carries a rationale: something other than whitespace, and not an essay. `subject`
+ * Every record carries a rationale: something other than whitespace, and not an essay. `subject`
  * names what the act decides, so a break's refusal speaks of a break rather than a disposition.
  */
 export function rationaleRefusal(rationale: string, subject: 'disposition' | 'break resolution' = 'disposition'): ComplianceFailure | undefined {
