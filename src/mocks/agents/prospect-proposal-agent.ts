@@ -6,7 +6,7 @@ import { modelMix } from '@/mocks/workspace/prospect-model'
 import { FIRM_NAME } from '@/lib/firm'
 import { TAX_RATE_BASIS, buildClientRateDisclosure } from '@/lib/tax-rules'
 import { CLIENT_ASSET_CLASS_WORDS } from '@/lib/labels'
-import { clientMoney, clientRate, clientWholePercent, fmtDayMonthYear, fmtQuantity } from '@/kit/measure'
+import { clientDate, clientMoney, clientRate, clientWholePercent, fmtQuantity } from '@/kit/measure'
 import { claimNameOf } from './claim-name'
 
 export type ProspectVersionContent = Omit<ProspectProposalVersion, 'n' | 'author' | 'createdAt' | 'changeSummary' | 'clientSummary' | 'fingerprint'>
@@ -45,12 +45,31 @@ export function inKindVsModelLine(c: ProspectVersionContent, voice: 'you' | 'she
 const HORIZON_QUESTION = 'rq-01'
 const GOAL_QUESTION = 'rq-03'
 
-/** Her answer to one question, as the questionnaire words it, for a sentence ("Maximize long-term growth" → "maximize long-term growth"). */
-function answerWords(record: ProspectRecord, questionId: string): string {
+/** Each goal answer as it completes "your goal is to …". */
+const GOAL_PHRASES: ReadonlyMap<string, string> = new Map([
+  ['Preserve capital — minimize losses', 'preserve your capital and keep losses small'],
+  ['Generate steady income', 'generate steady income'],
+  ['Balanced growth and income', 'balance growth and income'],
+  ['Maximize long-term growth', 'maximize long-term growth'],
+  ['Aggressive growth — willing to accept significant risk', 'pursue aggressive growth and accept significant risk'],
+])
+/** Each horizon answer as it completes "over a horizon of …", ranges with en dashes. */
+const HORIZON_PHRASES: ReadonlyMap<string, string> = new Map([
+  ['Less than 3 years', 'less than 3 years'],
+  ['3-5 years', '3–5 years'],
+  ['5-10 years', '5–10 years'],
+  ['10-20 years', '10–20 years'],
+  ['More than 20 years', 'more than 20 years'],
+])
+
+/** Her answer to one question, in the letter's words for it. A questionnaire option without words here is an error, not a guess. */
+function answerWords(record: ProspectRecord, questionId: string, phrases: ReadonlyMap<string, string>): string {
   const answer = record.questionnaire?.answers.find((a) => a.questionId === questionId)
   const label = answer && riskQuestions.find((q) => q.id === questionId)?.options[answer.selectedOption]?.label
   if (!label) throw new Error(`Prospect ${record.id} has no answer to ${questionId}`)
-  return `${label.charAt(0).toLowerCase()}${label.slice(1)}`
+  const phrase = phrases.get(label)
+  if (phrase === undefined) throw new Error(`The letter has no words for the answer "${label}" to ${questionId}`)
+  return phrase
 }
 
 /** What she reads when the approved version is sent: the firm's plain language, each figure the version's, formatted for a client. */
@@ -70,12 +89,12 @@ export function clientSummaryOf(record: ProspectRecord, c: ProspectVersionConten
     '',
     `One option to decide with your CPA: selling ${c.concentration.name} in ${TRANCHE_WORDS[c.tranches.length === 3 ? 3 : 2]} parts, one in each tax year:`,
     ...c.tranches.map((t) => `- ${t.taxYear}: ${fmtQuantity(t.shares)} shares, a gain of about ${aboutMoney(t.gain)}, an estimated federal tax of about ${aboutMoney(t.tax)}${t.n > 1 ? " at today's rates" : ''}.`),
-    `Figures are at the ${fmtDayMonthYear(c.pricesAsOf)} close; gains in later years depend on the price when sold (an estimate; please check with your tax professional). Nothing is sold unless you decide to.`,
+    `Figures are at the ${clientDate(c.pricesAsOf)} close; gains in later years depend on the price when sold (an estimate; please check with your tax professional). Nothing is sold unless you decide to.`,
   ] : []
   return [
     `Dear ${record.salutation},`,
     '',
-    `Thank you for your questionnaire and your statements. You told us your goal is to ${answerWords(record, GOAL_QUESTION)} over a horizon of ${answerWords(record, HORIZON_QUESTION)}`
+    `Thank you for your questionnaire and your statements. You told us your goal is to ${answerWords(record, GOAL_QUESTION, GOAL_PHRASES)} over a horizon of ${answerWords(record, HORIZON_QUESTION, HORIZON_PHRASES)}`
       + `.${c.concentration ? ` Your statements show a large, low-basis ${c.concentration.name} position, and we want to address it with you.` : ''}`,
     '',
     `We recommend our ${c.modelName} model, the one your answers point to: about ${clientWholePercent(mix.stocks)} in stocks and ${clientWholePercent(1 - mix.stocks)} in bonds, alternatives, commodities and cash.`,
@@ -93,7 +112,7 @@ export function clientSummaryOf(record: ProspectRecord, c: ProspectVersionConten
     `Fees: an estimated ${clientMoney(c.fees.annual)} a year on today's value of ${clientMoney(c.fees.base)} (a blended ${clientRate(c.fees.blendedRate)}), from our tiered schedule; the fee moves with the account's value.`,
     '',
     buildClientRateDisclosure(TAX_RATE_BASIS, { collectibles: c.transfer.some((l) => taxCharacterOf(l.symbol) === 'collectible') }),
-    `Prices as of ${fmtDayMonthYear(c.pricesAsOf)} close.`,
+    `Prices as of the ${clientDate(c.pricesAsOf)} close.`,
     '',
     advisor,
     FIRM_NAME,

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { resetWorkspaceStore } from '@/mocks/data/workspace-store'
+import { resetWorkspaceStore, store } from '@/mocks/data/workspace-store'
 import { createProposal, reviseProposal } from '@/mocks/workspace/proposals'
 import { approveProposal } from '@/mocks/workspace/proposal-acts'
 import { ORDINARY_INCOME_OFFSET_LIMIT, capitalLossUse } from '@/lib/capital-gains'
@@ -42,8 +42,7 @@ describe('the Client Letter Agent', () => {
     expect(letter.body).toContain('so we plan to sell some holdings and add to the areas below their targets')
     expect(letter.body).toContain('which can offset capital gains, now or in later years. To avoid postponing or losing that loss, if the sale')
     expect(letter.body).toContain(`is expected to realize a loss of about ${clientMoney(45_900)} at today's prices`)
-    expect(letter.body).toContain(`if the sale is made on ${clientDate('2026-02-25')}, please don't repurchase Intel Corp.`)
-    expect(letter.body).toContain(` through ${clientDate('2026-03-27')}. A purchase in that period`)
+    expect(letter.body).toContain(`To avoid postponing or losing that loss, if the sale is made on ${clientDate('2026-02-25')}, please don't repurchase Intel Corp. in any of your accounts or Patricia's, including IRAs, through ${clientDate('2026-03-27')}. A purchase in that period`)
     expect(letter.body).toContain(`If the sale is made on ${clientDate('2026-02-25')}, please also tell us before the sale if you or Patricia have bought Intel Corp. in any account on or after ${clientDate('2026-01-26')}, because that can affect the loss`)
     expect(letter.body).toContain("in any of your accounts or Patricia's, including IRAs")
     expect(letter.body).toContain('would not forfeit the loss but would postpone it')
@@ -57,6 +56,17 @@ describe('the Client Letter Agent', () => {
     expect(letter.body).toContain('with our compliance team for review before any is placed')
     expect(letter.body.endsWith('Adrian Hale\nLarkfield Advisory')).toBe(true)
     expect(letter.body).not.toMatch(/cleared|household|realis|We have approved/i)
+  })
+
+  it('tells the collectibles rate only to a reader who trades or holds one in the account', () => {
+    const { v1, letter } = v1Letter()
+    expect(v1.preview.trades.map((t) => t.symbol)).toContain('GLD')
+    expect(letter.body).toContain(buildClientRateDisclosure(TAX_RATE_BASIS, { collectibles: true }))
+    const proposal = store().proposals[0]!
+    const noGold: ProposalVersion = { ...v1, preview: { ...v1.preview, trades: v1.preview.trades.filter((t) => t.symbol !== 'GLD') } }
+    const without = writeClientLetter(proposal, noGold, 'user-001')
+    expect(without.body).toContain(buildClientRateDisclosure(TAX_RATE_BASIS, { collectibles: false }))
+    expect(without.body).not.toMatch(/collectibles/)
   })
 
   it('an IRA or Roth IRA buyback loses the loss for good; an employer plan only may be treated the same way', () => {

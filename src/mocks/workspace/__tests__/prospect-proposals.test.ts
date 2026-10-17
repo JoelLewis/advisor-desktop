@@ -5,6 +5,7 @@ import {
   buildProspectVersion, createProspectProposal, parseProspectConstraints, readableProspectProposals, reviseProspectProposal,
 } from '../prospect-proposals'
 import { ADRIAN, withHerReply } from './prospect-fixture'
+import { clientSummaryOf } from '@/mocks/agents/prospect-proposal-agent'
 import { bandFor } from '@/lib/risk-profile'
 import { riskScoreOf } from '@/mocks/reference/risk-score'
 import { modelVolatility } from '@/mocks/reference/models'
@@ -69,7 +70,7 @@ describe('drafting her proposal', () => {
     expect(summary).toContain("You asked about moving your TIAA 403(b). We'll compare the options and come back to you.")
     expect(summary).toContain("Fees: an estimated $20,850 a year on today's value of $2,100,000 (a blended 0.99%), from our tiered schedule; the fee moves with the account's value.")
     expect(summary).toContain('State tax is not modeled.')
-    expect(summary).toContain('Prices as of 25 Feb 2026 close.')
+    expect(summary).toContain('Prices as of the February 25, 2026 close.')
     expect(summary).toContain('Adrian Hale\nLarkfield Advisory')
     expect(summary).not.toMatch(/cleared|would exceed|the firm's model|US Equity/i)
     expect(summary.match(/recommend/gi), 'the one recommendation is the model').toEqual(['recommend'])
@@ -85,6 +86,22 @@ describe('drafting her proposal', () => {
       + 'Your statements show a large, low-basis Stryker Corp. position, and we want to address it with you.')
     expect(proposal).toMatch(/^We recommend our Growth model, the one your answers point to/)
     expect(summary).not.toMatch(/This is our proposal\.|Here is what we propose|you asked us what to do/)
+  })
+
+  it('words every goal and horizon the questionnaire offers as a sentence, ranges with en dashes', () => {
+    withHerReply()
+    const v1 = created().versions[0]!
+    const record = requireProspect('prsp-011')
+    const questionnaire = record.questionnaire
+    if (!questionnaire) throw new Error('she has no questionnaire')
+    const answered = (horizon: number, goal: number) => ({
+      ...record,
+      questionnaire: { ...questionnaire, answers: [{ questionId: 'rq-01', selectedOption: horizon }, { questionId: 'rq-03', selectedOption: goal }] },
+    })
+    const openingOf = (horizon: number, goal: number) => clientSummaryOf(answered(horizon, goal), v1).split('\n')[2]
+    expect(openingOf(1, 2)).toContain('your goal is to balance growth and income over a horizon of 3–5 years.')
+    expect(openingOf(3, 4)).toContain('your goal is to pursue aggressive growth and accept significant risk over a horizon of 10–20 years.')
+    for (let horizon = 0; horizon < 5; horizon++) for (let goal = 0; goal < 5; goal++) expect(openingOf(horizon, goal)).not.toMatch(/to [A-Z]|\d-\d/)
   })
 
   it('drops the collectibles sentence; tax lines are estimates to check with her tax professional', () => {
@@ -129,7 +146,7 @@ describe('revising it', () => {
       'One option to decide with your CPA: selling Stryker Corp. in two parts, one in each tax year:',
       '- 2026: 695 shares, a gain of about $240,700, an estimated federal tax of about $57,300.',
       '- 2027: 695 shares, a gain of about $240,700, an estimated federal tax of about $57,300 at today\'s rates.',
-      'Figures are at the 25 Feb 2026 close; gains in later years depend on the price when sold (an estimate; please check with your tax professional). Nothing is sold unless you decide to.',
+      'Figures are at the February 25, 2026 close; gains in later years depend on the price when sold (an estimate; please check with your tax professional). Nothing is sold unless you decide to.',
     ].join('\n'))
     expect(v2?.fingerprint).not.toBe(r.detail.versions[0]?.fingerprint)
     expect(store().messages.filter((m) => m.kind === 'prospect_proposal_version').map((m) => m.kind === 'prospect_proposal_version' && m.version)).toEqual([2])

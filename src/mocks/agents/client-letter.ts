@@ -17,7 +17,8 @@ import { firstNameOf, joinWords } from '@/lib/words'
 import { buildClientRateDisclosure, formatRatePercent, NIIT_RATE, TAX_RATE_BASIS } from '@/lib/tax-rules'
 import { ACCOUNT_TYPE_LABELS, CLIENT_ASSET_CLASS_WORDS } from '@/lib/labels'
 import { capitalLossUse, ORDINARY_INCOME_OFFSET_LIMIT, ORDINARY_INCOME_OFFSET_LIMIT_SEPARATE, recognizedResult } from '@/lib/capital-gains'
-import { isSubjectToWashSale } from '@/lib/security-master'
+import { isSubjectToWashSale, taxCharacterOf } from '@/lib/security-master'
+import { getPositionsForAccount } from '@/mocks/data/positions'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { clientDate, clientMoney, clientPercent } from '@/kit/measure'
 
@@ -103,7 +104,7 @@ export function writeClientLetter(proposal: Proposal, version: ProposalVersion, 
     figures.push({ label: `${t.symbol} loss`, value: recognized(t), unit: 'USD', source: `version.preview.trades.${t.symbol} realized, less any washed part` })
     paragraphs.push(
       `Selling ${security(t)} is expected to realize a loss of about ${aboutMoney(-recognized(t))} at today's prices, which can offset capital gains, now or in later years. `
-      + `To avoid postponing or losing that loss, if the sale is made on ${clientDate(saleDate)}, please don't repurchase ${t.name} ${where} through ${clientDate(until)}. ${consequence} `
+      + `To avoid postponing or losing that loss, if the sale is made on ${clientDate(saleDate)}, please don't repurchase ${t.name} ${where}${where.includes(',') ? ',' : ''} through ${clientDate(until)}. ${consequence} `
       + `If the sale is made on ${clientDate(saleDate)}, please also tell us before the sale if ${buyers} bought ${t.name} in any account on or after ${clientDate(window.start)}, because that can affect the loss.`,
     )
   }
@@ -128,11 +129,16 @@ export function writeClientLetter(proposal: Proposal, version: ProposalVersion, 
   } else {
     paragraphs.push('This account is tax-advantaged, so these sales create no taxable gain or loss.')
   }
-  paragraphs.push(buildClientRateDisclosure(TAX_RATE_BASIS, { collectibles: true }))
+  paragraphs.push(buildClientRateDisclosure(TAX_RATE_BASIS, { collectibles: holdsCollectibles(account, version) }))
   paragraphs.push('The orders are with our compliance team for review before any is placed.')
   paragraphs.push(`${signer.name}\n${FIRM_NAME}`)
   return { body: paragraphs.join('\n\n'), figures }
 }
+
+/** Whether the letter's reader trades or holds a collectible in this account; one who does neither is not told that rate. */
+const holdsCollectibles = (account: Account, version: ProposalVersion): boolean =>
+  [...version.preview.trades.map((t) => t.symbol), ...getPositionsForAccount(account.id, account.totalValue).map((p) => p.symbol)]
+    .some((symbol) => taxCharacterOf(symbol) === 'collectible')
 
 const harvestOnly = (version: ProposalVersion) => version.constraints.some((c) => c.kind === 'harvest_only')
 
