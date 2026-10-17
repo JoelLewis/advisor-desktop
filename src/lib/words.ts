@@ -3,6 +3,11 @@ export function joinWords(words: readonly string[]): string {
   return words.length <= 1 ? words.join('') : `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`
 }
 
+/** Clauses that carry their own commas, joined with semicolons so each reads whole: "a, x; b, y; and c, z". */
+export function joinClauses(clauses: readonly string[]): string {
+  return clauses.length <= 1 ? clauses.join('') : `${clauses.slice(0, -1).join('; ')}; and ${clauses[clauses.length - 1]}`
+}
+
 /** "Robert Johnson" → "Robert". */
 export function firstNameOf(fullName: string): string {
   return fullName.split(' ')[0] ?? fullName

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addressNameOf, firstNameOf, joinWords } from '@/lib/words'
+import { addressNameOf, firstNameOf, joinClauses, joinWords } from '@/lib/words'
 
 describe('joinWords', () => {
   it('joins none, one, two and three', () => {
@@ -7,6 +7,14 @@ describe('joinWords', () => {
     expect(joinWords(['a'])).toBe('a')
     expect(joinWords(['a', 'b'])).toBe('a and b')
     expect(joinWords(['a', 'b', 'c'])).toBe('a, b and c')
+  })
+})
+
+describe('joinClauses', () => {
+  it('joins clauses that carry commas with semicolons, so two owners read apart', () => {
+    expect(joinClauses(["Robert's IRA begin in 2031, at age 73"])).toBe("Robert's IRA begin in 2031, at age 73")
+    expect(joinClauses(["Robert's IRA begin in 2031, at age 73", "Patricia's IRA begin in 2033, at age 75"]))
+      .toBe("Robert's IRA begin in 2031, at age 73; and Patricia's IRA begin in 2033, at age 75")
   })
 })
 

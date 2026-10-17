@@ -12,7 +12,7 @@ import { openWashSaleWindows } from '@/mocks/data/realized-sales'
 import { ledgerFills } from '@/mocks/data/portfolio-ledger'
 import { computeDriftForAccount } from '@/mocks/handlers/pms'
 import { isModelManaged } from '@/lib/mandate'
-import { firstNameOf, joinWords } from '@/lib/words'
+import { firstNameOf, joinClauses, joinWords } from '@/lib/words'
 import { firstRmdYear, requiredBeginningAge } from '@/lib/rmd'
 import { fmtDayMonthYear } from '@/kit/measure'
 import { dontRepurchaseThrough } from '@/kit/repurchase'
@@ -178,7 +178,7 @@ function rmd(household: HouseholdFixture, own: readonly Account[], asOf: string)
     return { phrase: `${first}'s traditional IRA begin in ${figureText(year)}, at age ${figureText(age)}`, figures: [year, age] }
   })
   return {
-    claim: `Required distributions from ${joinWords(timing.map((t) => t.phrase))}; the years before then are when Roth conversions can be modeled, as an estimate for the clients' tax professional to confirm.`,
+    claim: `Required distributions from ${joinClauses(timing.map((t) => t.phrase))}; the years before then are when Roth conversions can be modeled, as an estimate for the clients' tax professional to confirm.`,
     attention: 'info',
     figures: [...timing.flatMap((t) => t.figures), ...owners.map(({ account }) => ({ label: account.name, value: valueOf(account), unit: 'USD' as const, source: 'positions.marketValue' }))],
     citations: owners.map(({ member }) => ({

@@ -13,4 +13,11 @@ describe('handTypedDigits', () => {
     expect(handTypedDigits('begin in 2032, at age 73', [year, age])).toEqual(['2032'])
     expect(handTypedDigits('begin in 2031', [])).toEqual(['2031'])
   })
+  it('takes a short figure out only where it stands alone, never from inside a longer number', () => {
+    const three: Figure = { label: 'Accounts', value: 3, unit: 'count', source: 'accounts.length' }
+    expect(handTypedDigits('3 accounts', [three])).toEqual([])
+    expect(handTypedDigits('3 accounts since 2033', [three])).toEqual(['2033'])
+    expect(handTypedDigits('3 accounts, 33 positions', [three])).toEqual(['33'])
+    expect(handTypedDigits('3 accounts, 1.3 times', [three])).toEqual(['1', '3'])
+  })
 })
