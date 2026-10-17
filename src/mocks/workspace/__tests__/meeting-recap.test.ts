@@ -63,7 +63,7 @@ describe('the recap', () => {
     for (const l of lines.filter((x) => x.toClient)) expect(body, l.id).not.toContain(l.text)
     for (const l of lines.filter((x) => x.section === 'discussion' || x.section === 'follow_ups')) expect(body, l.id).not.toContain(l.text)
     expect(body.indexOf('What you asked us:')).toBeLessThan(body.indexOf('What we decided:'))
-    expect(body).toContain("You asked about moving your Vanguard 401(k) and Patricia's TIAA 403(b). We'll compare the options and come back to you.")
+    expect(body).toContain("Patricia asked about moving Robert's Vanguard 401(k) and her TIAA 403(b). We'll compare the options and come back to you.")
     expect(body).toContain('The amounts will be estimates; please check them with your tax professional.')
   })
 
@@ -79,8 +79,8 @@ describe('the recap', () => {
     heldAndDrafted()
     file()
     const { body } = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft
-    expect(body).toContain("- Please don't buy Intel shares in any of your accounts through March 22, 2026.\n- The Intel restriction covers Patricia's accounts")
-    expect(body).toContain('as firm policy, your held-away Vanguard 401(k), because the rule for employer plans is unsettled.')
+    expect(body).toContain("- Please don't buy Intel shares in any of your accounts through March 22, 2026.\n- The Intel restriction covers all of your accounts")
+    expect(body).toContain("as firm policy, Robert's held-away Vanguard 401(k), because the rule for employer plans is unsettled.")
   })
 
   it('after the morning release, the latest Intel window is the release sale\'s', () => {
@@ -100,16 +100,17 @@ describe('the recap', () => {
     expect(body).not.toContain('Reviewed the rebalance and the harvest in detail.')
   })
 
-  it('speaks to Robert as "you" past the greeting; Patricia, who is not the addressee, stays Patricia', () => {
+  it('speaks to both of them as "you"; a line about one of them names whose it is, so "your" never means only one', () => {
     heldAndDrafted()
     file()
     const { body } = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft
     const [greeting, ...rest] = body.split('\n\n')
     expect(greeting).toBe('Dear Robert and Patricia,')
-    expect(rest.join('\n\n')).not.toMatch(/\bRobert\b/)
-    expect(body).toContain("- The Intel restriction covers Patricia's accounts and the IRAs too")
-    expect(body).toContain("- You'll contact the Vanguard plan administrator to correct the beneficiary, and we'll send you our beneficiary checklist.")
-    expect(body).toContain("- No trades in Patricia's accounts until her risk profile and models are reviewed.")
+    expect(rest.join('\n\n')).not.toMatch(/\byour (Vanguard|TIAA|required distributions|held-away)|\bYou'll contact/)
+    expect(body).toContain("- The Intel restriction covers all of your accounts, the IRAs included, and, as firm policy, Robert's held-away Vanguard 401(k)")
+    expect(body).toContain("- Robert will contact the Vanguard plan administrator to correct the beneficiary, and we'll send you our beneficiary checklist.")
+    expect(body).toContain("- We'll keep your legacy goal and bring the options to your next review.")
+    expect(body).toContain("- We won't trade in Patricia's accounts until her risk profile and models are reviewed.")
   })
 
   it('files the client wording with the record, in the fingerprint; the firm lines stay as filed', () => {
@@ -198,8 +199,8 @@ describe('the recap reads like a person wrote it', () => {
   it('asks plainly, and promises in the first person', () => {
     const body = recapBody()
     expect(body).toContain(`- Please don't buy Intel shares in any of your accounts through ${lastWashDay()}.`)
-    expect(body).toContain("- We'll model Roth conversion amounts for the years before your required distributions begin and share them with your CPA. The amounts will be estimates; please check them with your tax professional.")
-    expect(body).toContain("- You asked about moving your Vanguard 401(k) and Patricia's TIAA 403(b). We'll compare the options and come back to you.")
+    expect(body).toContain("- We'll model Roth conversion amounts for the years before Robert's required distributions begin and share them with your CPA. The amounts will be estimates; please check them with your tax professional.")
+    expect(body).toContain("- Patricia asked about moving Robert's Vanguard 401(k) and her TIAA 403(b). We'll compare the options and come back to you.")
     expect(body).not.toMatch(/You will not|comparison to follow|consult your tax professional|\buntil the wash-sale/)
   })
   it('puts the Intel date before the Intel line it governs', () => {

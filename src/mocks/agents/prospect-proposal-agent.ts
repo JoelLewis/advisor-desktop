@@ -42,7 +42,6 @@ export function inKindVsModelLine(c: ProspectVersionContent, voice: 'you' | 'she
   return `Moved in kind, about ${clientWholePercent(widest.transferred)} of ${holder} would be in ${label}${including}, against ${clientWholePercent(widest.target)} in the ${c.modelName} model. Reaching the model would take sales, each a tax decision to make with ${whose} CPA.`
 }
 
-/** What she reads when the approved version is sent: the firm's plain language, each figure the version's, formatted for a client. */
 const HORIZON_QUESTION = 'rq-01'
 const GOAL_QUESTION = 'rq-03'
 
@@ -54,6 +53,7 @@ function answerWords(record: ProspectRecord, questionId: string): string {
   return `${label.charAt(0).toLowerCase()}${label.slice(1)}`
 }
 
+/** What she reads when the approved version is sent: the firm's plain language, each figure the version's, formatted for a client. */
 export function clientSummaryOf(record: ProspectRecord, c: ProspectVersionContent): string {
   const advisor = prospects.find((p) => p.id === record.id)?.assignedAdvisor
   if (!advisor) throw new Error(`Prospect ${record.id} has no assigned advisor`)
@@ -76,9 +76,9 @@ export function clientSummaryOf(record: ProspectRecord, c: ProspectVersionConten
     `Dear ${record.salutation},`,
     '',
     `Thank you for your questionnaire and your statements. You told us your goal is to ${answerWords(record, GOAL_QUESTION)} over a horizon of ${answerWords(record, HORIZON_QUESTION)}`
-      + `${c.concentration ? `, and you asked us what to do about your large, low-basis ${c.concentration.name} position` : ''}. Here is what we propose.`,
+      + `.${c.concentration ? ` Your statements show a large, low-basis ${c.concentration.name} position, and we want to address it with you.` : ''}`,
     '',
-    `We propose our ${c.modelName} model, the one your answers point to: about ${clientWholePercent(mix.stocks)} in stocks and ${clientWholePercent(1 - mix.stocks)} in bonds, alternatives, commodities and cash.`,
+    `We recommend our ${c.modelName} model, the one your answers point to: about ${clientWholePercent(mix.stocks)} in stocks and ${clientWholePercent(1 - mix.stocks)} in bonds, alternatives, commodities and cash.`,
     'Account: one individual taxable account in your name.',
     '',
     `Moving your ${custodian} account: everything moves in kind; nothing is sold to make the move.`,

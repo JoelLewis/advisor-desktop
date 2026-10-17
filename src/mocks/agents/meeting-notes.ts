@@ -8,14 +8,14 @@ type ScriptLine = { id: string; section: NoteSection; text: string; cites: strin
 const ADRIAN: TaskOwner = { kind: 'person', personId: 'user-001' }
 const SARAH: TaskOwner = { kind: 'person', personId: 'user-002' }
 const MIKE: TaskOwner = { kind: 'person', personId: 'user-003' }
-/** A line Robert reads in the recap, addressed to him; Patricia stays Patricia. */
+/** A line as the recap to Robert reads it: the clients who attended are "you"; a line about one of them names whose it is. */
 const toRobert = (text: string): ClientWording => ({ clientId: 'cli-001', text })
 
 /**
  * What Meeting Notes records from the Johnson annual review. Each line records only what was said or
  * decided, citing where; a follow-up's owner is the one the meeting named in the cited line. The lines
- * the client will read (decisions and requests) speak in the firm's voice and name no colleague; one that
- * names Robert also carries his wording of it, the same meaning addressed to him, for the recap.
+ * the client will read (decisions and requests) speak in the firm's voice and name no colleague; each also
+ * carries the wording the recap to Robert reads, the same meaning addressed to the clients who attended.
  */
 const JOHNSON_REVIEW_NOTES: readonly ScriptLine[] = [
   { id: 'n-01', section: 'discussion', text: "Reviewed this morning's rebalance and the Intel harvest: the loss is deductible now only if Intel is not bought back before its window closes.", cites: ['t-02'] },
@@ -27,16 +27,18 @@ const JOHNSON_REVIEW_NOTES: readonly ScriptLine[] = [
   { id: 'n-07', section: 'discussion', text: 'Discussed ESG alternatives for the trust.', cites: ['t-23', 't-24'] },
   { id: 'n-08', section: 'discussion', text: 'Reviewed the investment policy statement.', cites: ['t-27'] },
   { id: 'n-09', section: 'decisions', text: "Robert will not buy Intel in any of his or Patricia's accounts, including the IRAs, until the wash-sale window closes. As firm policy, the held-away Vanguard 401(k) counts too: the rule for employer plans is unsettled. Reinvested dividends count as buying.", cites: ['t-03', 't-04', 't-05'],
-    toClient: toRobert("The Intel restriction covers Patricia's accounts and the IRAs too and, as firm policy, your held-away Vanguard 401(k), because the rule for employer plans is unsettled. Reinvested Intel dividends count as buying.") },
-  { id: 'n-10', section: 'decisions', text: 'We keep the legacy goal and will bring the options to the next review.', cites: ['t-07', 't-08'] },
-  { id: 'n-11', section: 'decisions', text: "No trades in Patricia's accounts until her risk profile and models are reviewed.", cites: ['t-09', 't-11'] },
+    toClient: toRobert("The Intel restriction covers all of your accounts, the IRAs included, and, as firm policy, Robert's held-away Vanguard 401(k), because the rule for employer plans is unsettled. Reinvested Intel dividends count as buying.") },
+  { id: 'n-10', section: 'decisions', text: 'We keep the legacy goal and will bring the options to the next review.', cites: ['t-07', 't-08'],
+    toClient: toRobert("We'll keep your legacy goal and bring the options to your next review.") },
+  { id: 'n-11', section: 'decisions', text: "No trades in Patricia's accounts until her risk profile and models are reviewed.", cites: ['t-09', 't-11'],
+    toClient: toRobert("We won't trade in Patricia's accounts until her risk profile and models are reviewed.") },
   { id: 'n-12', section: 'decisions', text: 'Robert will contact the Vanguard plan administrator to correct the beneficiary; we will send our beneficiary checklist.', cites: ['t-21', 't-22'],
-    toClient: toRobert("You'll contact the Vanguard plan administrator to correct the beneficiary, and we'll send you our beneficiary checklist.") },
+    toClient: toRobert("Robert will contact the Vanguard plan administrator to correct the beneficiary, and we'll send you our beneficiary checklist.") },
   { id: 'n-13', section: 'decisions', text: 'The investment policy statement stays as signed; an ESG change would need a signed amendment.', cites: ['t-24', 't-27', 't-28'] },
-  { id: 'n-14', section: 'client_requests', text: "Model Roth conversion amounts for the years before Robert's required distributions begin. This is an estimate; consult your tax professional. We will involve your CPA.", cites: ['t-13', 't-14', 't-15'],
-    toClient: toRobert("We'll model Roth conversion amounts for the years before your required distributions begin and share them with your CPA. The amounts will be estimates; please check them with your tax professional.") },
+  { id: 'n-14', section: 'client_requests', text: "Model Roth conversion amounts for the years before Robert's required distributions begin and share them with your CPA. This is an estimate; please check with your tax professional.", cites: ['t-13', 't-14', 't-15'],
+    toClient: toRobert("We'll model Roth conversion amounts for the years before Robert's required distributions begin and share them with your CPA. The amounts will be estimates; please check them with your tax professional.") },
   { id: 'n-15', section: 'client_requests', text: "A rollover of Robert's Vanguard 401(k) and Patricia's TIAA 403(b) was asked about; comparison to follow.", cites: ['t-16', 't-17', 't-18'],
-    toClient: toRobert("You asked about moving your Vanguard 401(k) and Patricia's TIAA 403(b). We'll compare the options and come back to you.") },
+    toClient: toRobert("Patricia asked about moving Robert's Vanguard 401(k) and her TIAA 403(b). We'll compare the options and come back to you.") },
   { id: 'n-16', section: 'client_requests', text: 'Look at ESG alternatives for the trust, through a signed amendment to the investment policy statement.', cites: ['t-23', 't-24', 't-25'],
     toClient: toRobert("We'll look at ESG alternatives for the trust; a change would need a signed amendment to the investment policy statement.") },
   { id: 'n-17', section: 'follow_ups', text: 'Plan scenarios for the legacy goal.', cites: ['t-07', 't-08'], owner: MIKE, dueInTradingDays: 3 },

@@ -29,7 +29,6 @@ describe('Meeting Notes', () => {
   it('states no figure (the plan names aside)', () => {
     for (const line of notes) expect(line.text.replace(PLAN_NAMES, ''), line.id).not.toMatch(/\d/)
     for (const line of clientTexts) expect(line.text.replace(PLAN_NAMES, ''), line.id).not.toMatch(/\d/)
-    for (const line of clientTexts) expect(line.text.replace(PLAN_NAMES, ''), line.id).not.toMatch(/\d/)
   })
 
   it('assigns each follow-up as the meeting did, due on a trading day', () => {
@@ -65,15 +64,16 @@ describe('Meeting Notes', () => {
     const rollover = toClient.filter((l) => /consolidat|roll ?over|401\(k\).*403\(b\)/i.test(l.text))
     expect(rollover.map((l) => l.id)).toEqual(['n-15'])
     for (const line of rollover) expect(line.text).toContain('asked about; comparison to follow')
-    expect(rollover[0]?.toClient?.text).toBe("You asked about moving your Vanguard 401(k) and Patricia's TIAA 403(b). We'll compare the options and come back to you.")
+    expect(rollover[0]?.toClient?.text).toBe("Patricia asked about moving Robert's Vanguard 401(k) and her TIAA 403(b). We'll compare the options and come back to you.")
     expect(notes.find((l) => l.id === 'n-15')?.text).toBe("A rollover of Robert's Vanguard 401(k) and Patricia's TIAA 403(b) was asked about; comparison to follow.")
   })
 
   it('every tax item the client will read carries the estimate wording', () => {
     const tax = toClient.filter((l) => /\btax\b|Roth|conversion/i.test(l.text))
     expect(tax.map((l) => l.id)).toEqual(['n-14'])
-    for (const line of tax) expect(line.text).toContain('estimate; consult your tax professional')
+    for (const line of tax) expect(line.text).toContain('estimate; please check with your tax professional')
     for (const line of tax) expect(line.toClient?.text, line.id).toContain('The amounts will be estimates; please check them with your tax professional.')
+    for (const line of tax) for (const text of [line.text, line.toClient?.text]) expect(text, line.id).toContain('share them with your CPA')
   })
 
   it('names no colleague in a line the client will read, and scopes wash sales to the taxpayer', () => {
@@ -96,19 +96,21 @@ describe('Meeting Notes', () => {
     expect(line('n-21').cites).toEqual(['t-16', 't-18'])
   })
 
-  it("words for Robert, speaking to him, each line that names him; the meaning and the citations stay the line's", () => {
+  it("words each line the clients read for the recap to Robert: both are \"you\", and a line about one of them names whose it is", () => {
     const worded = notes.filter((l) => l.toClient)
-    expect(worded.map((l) => [l.id, l.toClient!.clientId])).toEqual([['n-09', 'cli-001'], ['n-12', 'cli-001'], ['n-14', 'cli-001'], ['n-15', 'cli-001'], ['n-16', 'cli-001']])
+    expect(worded.map((l) => [l.id, l.toClient!.clientId])).toEqual([['n-09', 'cli-001'], ['n-10', 'cli-001'], ['n-11', 'cli-001'], ['n-12', 'cli-001'], ['n-14', 'cli-001'], ['n-15', 'cli-001'], ['n-16', 'cli-001']])
     for (const line of notes) expect(line.toClient === undefined || line.section === 'decisions' || line.section === 'client_requests', line.id).toBe(true)
     for (const line of toClient.filter((l) => /\bRobert\b/.test(l.text))) expect(line.toClient, line.id).toBeDefined()
     for (const line of worded) {
-      expect(line.toClient!.text, line.id).not.toMatch(/\bRobert\b/)
-      expect(line.toClient!.text, line.id).toMatch(/\b(you(r)?|we'll)\b/i)
+      expect(line.toClient!.text, line.id).toMatch(/\b(you(r)?|we'll|we won't)\b/i)
+      expect(line.toClient!.text, `${line.id}: "your" never means only one of them`).not.toMatch(/\byour (Vanguard|TIAA|required distributions|held-away)/)
     }
     const to = (id: string) => notes.find((l) => l.id === id)!.toClient!.text
-    expect(to('n-09')).toBe("The Intel restriction covers Patricia's accounts and the IRAs too and, as firm policy, your held-away Vanguard 401(k), because the rule for employer plans is unsettled. Reinvested Intel dividends count as buying.")
-    expect(to('n-12')).toBe("You'll contact the Vanguard plan administrator to correct the beneficiary, and we'll send you our beneficiary checklist.")
-    expect(to('n-14')).toBe("We'll model Roth conversion amounts for the years before your required distributions begin and share them with your CPA. The amounts will be estimates; please check them with your tax professional.")
+    expect(to('n-09')).toBe("The Intel restriction covers all of your accounts, the IRAs included, and, as firm policy, Robert's held-away Vanguard 401(k), because the rule for employer plans is unsettled. Reinvested Intel dividends count as buying.")
+    expect(to('n-10')).toBe("We'll keep your legacy goal and bring the options to your next review.")
+    expect(to('n-11')).toBe("We won't trade in Patricia's accounts until her risk profile and models are reviewed.")
+    expect(to('n-12')).toBe("Robert will contact the Vanguard plan administrator to correct the beneficiary, and we'll send you our beneficiary checklist.")
+    expect(to('n-14')).toBe("We'll model Roth conversion amounts for the years before Robert's required distributions begin and share them with your CPA. The amounts will be estimates; please check them with your tax professional.")
     expect(to('n-16')).toBe("We'll look at ESG alternatives for the trust; a change would need a signed amendment to the investment policy statement.")
   })
 

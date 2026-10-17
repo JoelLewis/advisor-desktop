@@ -63,7 +63,7 @@ describe('drafting her proposal', () => {
   it('writes what she will read: plain figures, the rollover asked about, the estimates hedged, the close named, no recommendation to roll over', () => {
     const summary = letter()
     expect(summary).toContain('Dear Dr. Pell,')
-    expect(summary).toContain('We propose our Growth model, the one your answers point to: about 75% in stocks and 25% in bonds, alternatives, commodities and cash.')
+    expect(summary).toContain('We recommend our Growth model, the one your answers point to: about 75% in stocks and 25% in bonds, alternatives, commodities and cash.')
     expect(summary).toContain('Stryker Corp. (SYK): 1,390 shares, $542,378, about 18% of your total assets across both accounts.')
     expect(summary).toContain('a long-term gain of about $481,400, with an estimated federal tax of about $114,600 (an estimate; please check with your tax professional)')
     expect(summary).toContain("You asked about moving your TIAA 403(b). We'll compare the options and come back to you.")
@@ -71,18 +71,20 @@ describe('drafting her proposal', () => {
     expect(summary).toContain('State tax is not modeled.')
     expect(summary).toContain('Prices as of 25 Feb 2026 close.')
     expect(summary).toContain('Adrian Hale\nLarkfield Advisory')
-    expect(summary).not.toMatch(/recommend|cleared|would exceed|the firm's model|US Equity/i)
+    expect(summary).not.toMatch(/cleared|would exceed|the firm's model|US Equity/i)
+    expect(summary.match(/recommend/gi), 'the one recommendation is the model').toEqual(['recommend'])
+    expect(summary).not.toMatch(/recommend\w* (a |that you )?(roll|mov)/i)
   })
 
-  it('opens with her goals and her Stryker concern, then the proposal', () => {
+  it('opens with her goals and the Stryker position her statements show, then recommends the model once', () => {
     const summary = letter()
     const [greeting, , opening, , proposal] = summary.split('\n')
     expect(greeting).toBe('Dear Dr. Pell,')
     expect(opening).toBe(
-      'Thank you for your questionnaire and your statements. You told us your goal is to maximize long-term growth over a horizon of more than 20 years, '
-      + 'and you asked us what to do about your large, low-basis Stryker Corp. position. Here is what we propose.')
-    expect(proposal).toMatch(/^We propose our Growth model/)
-    expect(summary).not.toContain('This is our proposal.')
+      'Thank you for your questionnaire and your statements. You told us your goal is to maximize long-term growth over a horizon of more than 20 years. '
+      + 'Your statements show a large, low-basis Stryker Corp. position, and we want to address it with you.')
+    expect(proposal).toMatch(/^We recommend our Growth model, the one your answers point to/)
+    expect(summary).not.toMatch(/This is our proposal\.|Here is what we propose|you asked us what to do/)
   })
 
   it('drops the collectibles sentence; tax lines are estimates to check with her tax professional', () => {
