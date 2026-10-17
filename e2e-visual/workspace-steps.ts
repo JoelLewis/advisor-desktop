@@ -64,7 +64,7 @@ export async function askProposalAgent(page: Page, theme: Theme) {
 }
 
 /** Robert Johnson's accounts as a whole stay within his tolerance after each proposal in the stories, so the panel chooses this reason for him. */
-const SUITABILITY_REASON = "Robert Johnson's accounts as a whole stay within tolerance (asset location)"
+export const SUITABILITY_REASON = "Robert Johnson's accounts as a whole stay within tolerance (asset location)"
 
 export async function approve(page: Page, version: number) {
   const approval = approvalOf(page)

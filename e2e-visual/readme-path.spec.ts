@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { expectNoAxeViolations } from './axe'
 import {
-  PELL_ACCEPTANCE_TEXT, advanceTo, approve, approveProspect, askAgentNamed, askForRecap, context, conversation, deliver, deskLink,
+  PELL_ACCEPTANCE_TEXT, SUITABILITY_REASON, advanceTo, approve, approveProspect, askAgentNamed, askForRecap, context, conversation, deliver, deskLink,
   draftNotes, embedOf, fileRecord, heading, holdTheMeeting, letterDraft, meetingPanel, recordTheCoffee, releaseByShortcut,
   resolveBreakNamed, reviseToTwoTaxYears, runPrep, sendToHer, shareFindingTo, shareToTeamThread, threadLink, viewAs, visit,
 } from './workspace-steps'
@@ -27,6 +27,7 @@ test("the README's five-minute path, end to end", async ({ page }) => {
   await expect(today).toContainText('14:00–15:15 ET')
   await expect(today).toContainText('Coffee with Dr. Amanda Pell · Form CRS due before it (firm policy)')
   await expect(page.getByRole('region', { name: 'Needs a decision' })).toContainText('Intel Corp.')
+  await expect(page.getByRole('region', { name: 'Needs a decision' })).toContainText("Growth sits above Robert Johnson's Moderate tolerance")
 
   // 2. The Johnson rebalance and harvest: the finding to the team thread, v1, v2 "harvest only", v3 in the workbench, approved.
   const intc = conversation(page).getByRole('article', { name: /^Harvest Scanner: The remaining Intel Corp\. shares can be sold at a loss today/ })
@@ -50,6 +51,7 @@ test("the README's five-minute path, end to end", async ({ page }) => {
   await expect(page.getByRole('group', { name: 'Draft version' }).getByText('Saved as v3 · posted to the thread.')).toBeVisible()
   await back()
   await approve(page, 3)
+  await expect(context(page).getByRole('region', { name: 'Audit trail' })).toContainText(`Suitability reason · ${SUITABILITY_REASON}`)
 
   // 3. The compliance release as Mark Davis, through the presenter's shortcut.
   await releaseByShortcut(page, axe)
@@ -64,6 +66,8 @@ test("the README's five-minute path, end to end", async ({ page }) => {
   await back()
   await threadLink(page, 'Brief').click()
   await expect(page.getByRole('region', { name: 'Needs a decision' })).not.toContainText('Intel Corp.')
+  await expect(page.getByRole('region', { name: 'Needs a decision' })).not.toContainText('Growth sits above')
+  await expect(page.getByRole('region', { name: 'Context' })).toContainText("Growth sits above Robert Johnson's Moderate tolerance")
   await expect(page.getByRole('region', { name: 'Context' })).toContainText('Intel Corp.')
 
   // 5. The Johnson annual review: prep, hold, notes, file, recap.
@@ -82,6 +86,7 @@ test("the README's five-minute path, end to end", async ({ page }) => {
   await askForRecap(page)
   await letterDraft(page).getByRole('button', { name: 'Send to Robert' }).click()
   await expect(conversation(page)).toContainText('What we decided:')
+  await expect(conversation(page)).toContainText('Dear Robert and Patricia,')
 
   // 6. Dr. Pell, from first contact to an onboarding opened.
   await threadLink(page, 'Brief').click()
@@ -120,10 +125,12 @@ test("the README's five-minute path, end to end", async ({ page }) => {
 
   // 8. View as Robert: one thread, his own — his question, the recap and its record.
   await viewAs(page, 'Robert Johnson · Client')
+  await expect(page.getByRole('banner')).toContainText('Larkfield Advisory')
   const threads = page.getByRole('navigation', { name: 'Threads' }).getByRole('link')
   await expect(threads).toHaveCount(1)
   await expect(threads).toHaveAccessibleName('Your conversation with Larkfield')
   await threads.click()
+  await expect(page.getByLabel('Who can see')).toContainText('Larkfield compliance (review)')
   await expect(conversation(page).getByRole('listitem')).toHaveCount(3)
   await expect(conversation(page)).toContainText('What we decided:')
 })
