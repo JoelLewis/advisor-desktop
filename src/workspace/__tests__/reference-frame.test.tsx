@@ -60,8 +60,8 @@ describe('the command line', () => {
     await waitFor(() => expect(box).toHaveFocus())
     await waitFor(() => {
       const names = screen.getAllByRole('option').map((o) => o.textContent)
-      for (const name of ['Billing', 'Reconciliation', 'Risk · book', 'Models', 'Practice', 'Blotter', 'Risk · Robert Johnson Individual',
-        'Attribution · Robert Johnson Individual', 'Model · Ultra-HNW Multi-Strategy']) expect(names).toContain(name)
+      for (const name of ['Billing', 'Reconciliation', 'Risk · book', 'Models', 'Practice', 'Blotter', 'Risk · Robert Johnson · Individual (…3847)',
+        'Attribution · Robert Johnson · Individual (…3847)', 'Model · Ultra-HNW Multi-Strategy']) expect(names).toContain(name)
     })
   })
 })

@@ -1,3 +1,4 @@
+import { accountDisplayName } from '@/lib/account-display'
 import { it, expect } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -19,7 +20,7 @@ if (!account) throw new Error('acc-002 missing from the engine data')
 
 it('shows the account name, a gauge per asset class, every position and every tax lot', async () => {
   renderRoutes(routes, '/accounts/acc-002')
-  expect(await screen.findByRole('heading', { level: 1, name: account.name })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { level: 1, name: accountDisplayName(account) })).toBeInTheDocument()
   const drift = computeDriftForAccount(requireModelManaged(account))
   const positions = getPositionsForAccount(account.id, account.totalValue)
   const lots = generateTaxLots(account.id, account.totalValue)
@@ -38,7 +39,7 @@ it('links back to the thread only when opened from one', async () => {
   expect(await screen.findByRole('link', { name: 'Back to the thread' })).toHaveAttribute('href', '/t/th-johnson-review')
   unmount()
   renderRoutes(routes, '/accounts/acc-002')
-  await screen.findByRole('heading', { level: 1, name: account.name })
+  await screen.findByRole('heading', { level: 1, name: accountDisplayName(account) })
   expect(screen.queryByRole('link', { name: 'Back to the thread' })).not.toBeInTheDocument()
 })
 
@@ -58,7 +59,7 @@ it('is firm-only: a client viewer opening the URL is told the account is not fou
 
 it('switching to a client while on the account goes home', async () => {
   const { router } = renderRoutes(appRoutes, '/accounts/acc-002?from=th-johnson-review')
-  await screen.findByRole('heading', { level: 1, name: account.name })
+  await screen.findByRole('heading', { level: 1, name: accountDisplayName(account) })
   const user = userEvent.setup()
   const select = await screen.findByRole('combobox', { name: 'View as' })
   await screen.findByRole('option', { name: 'Robert Johnson · Client' })

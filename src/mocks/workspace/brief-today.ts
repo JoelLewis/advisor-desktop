@@ -1,3 +1,4 @@
+import { accountDisplayName } from '@/lib/account-display'
 import type { Message, TodayLine } from '@/types/workspace'
 import { accounts } from '@/mocks/data/accounts'
 import { calendarEvents } from '@/mocks/data/calendar'
@@ -19,7 +20,7 @@ function releaseLines(): Timed[] {
     if (!proposal) throw new Error(`Approval ${approval.actId} names a missing proposal ${approval.proposalId}`)
     const account = accounts.find((a) => a.id === proposal.accountId)
     if (!account) throw new Error(`Proposal ${proposal.id} names a missing account ${proposal.accountId}`)
-    return [{ kind: 'release', at: approval.at, accountName: account.name, version: approval.version, threadId: proposal.threadId }]
+    return [{ kind: 'release', at: approval.at, accountName: accountDisplayName(account), version: approval.version, threadId: proposal.threadId }]
   })
 }
 

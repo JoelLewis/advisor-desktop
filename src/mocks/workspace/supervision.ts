@@ -1,3 +1,4 @@
+import { accountDisplayName } from '@/lib/account-display'
 import type { AlertSeverity, ComplianceAlert } from '@/types/compliance'
 import type { BindingAct, BindingActKind } from '@/types/workspace'
 import type { ApprovalRecord, Proposal } from '@/types/workspace-proposal'
@@ -24,7 +25,7 @@ function ordersItem(proposal: Proposal, approval: ApprovalRecord): OrdersItem {
   const escalation = escalationOf(approval.actId)
   return {
     kind: 'orders', id: proposal.id, title: `${proposal.title} · v${approval.version}`, proposalId: proposal.id,
-    accountId: account.id, accountName: account.name, clientId: proposal.clientId, threadId: proposal.threadId,
+    accountId: account.id, accountName: accountDisplayName(account), clientId: proposal.clientId, threadId: proposal.threadId,
     approval, version, latestVersion: latestVersion(proposal).n,
     staged: store().staged.filter((o) => o.approvalActId === approval.actId),
     fills: ledgerFills().filter((f) => f.proposalId === proposal.id && f.version === approval.version),

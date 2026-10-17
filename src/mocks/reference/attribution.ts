@@ -1,3 +1,4 @@
+import { accountDisplayName } from '@/lib/account-display'
 import type { Account } from '@/types/account'
 import type { AssetClass } from '@/types/portfolio'
 import type { MethodNote, RowQuote } from '@/types/reference'
@@ -29,7 +30,7 @@ function build(account: Account, period: AttributionPeriod): AttributionView {
   const a = attributionFor(account, years)
   const r = periodReturnsFor(account, years)
   return {
-    asOf: MOCK_NOW_ISO, accountId: account.id, accountName: account.name, clientName: clientOf(account).fullName, modelId: account.mandate === 'model' ? account.modelId : null, mandateName: mandateNameOf(account), benchmark: accountBenchmark(account),
+    asOf: MOCK_NOW_ISO, accountId: account.id, accountName: accountDisplayName(account), clientName: clientOf(account).fullName, modelId: account.mandate === 'model' ? account.modelId : null, mandateName: mandateNameOf(account), benchmark: accountBenchmark(account),
     period, periods: ATTRIBUTION_PERIODS.map((p) => ({ id: p.id, label: p.label })),
     portfolioReturn: r.portfolioReturn, benchmarkReturn: r.benchmarkReturn, activeReturn: r.activeReturn,
     multiYear: years > 1 ? { years, annualized: { portfolio: annualize(r.portfolioReturn, years), benchmark: annualize(r.benchmarkReturn, years) } } : null,

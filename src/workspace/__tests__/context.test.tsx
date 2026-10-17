@@ -171,9 +171,9 @@ describe('thread context column', () => {
 
   it('links the subject account to its full view, remembering the thread', async () => {
     await openThread('/t/th-johnson-review', 'Johnson Rebalance Review')
-    const link = await within(section('Related records')).findByRole('link', { name: /^Robert Johnson Individual/ })
+    const link = await within(section('Related records')).findByRole('link', { name: /^Robert Johnson · Individual \(…3847\)/ })
     expect(link).toHaveAttribute('href', '/accounts/acc-002?from=th-johnson-review')
-    expect(link).toHaveTextContent('Robert Johnson Individual ↗')
+    expect(link).toHaveTextContent('Robert Johnson · Individual (…3847) ↗')
   })
 
   it("tells Robert, on his own thread, that compliance reviews it, without naming anyone in compliance", async () => {

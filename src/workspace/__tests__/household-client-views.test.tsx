@@ -61,7 +61,7 @@ describe('the client full view', () => {
     expect(main).toHaveTextContent('11 Jul 1960')
     expect(main).toHaveTextContent('Retired')
     expect(main).toHaveTextContent('Moderate Conservative · score 35 of 100 · assessed 15 Sep 2025')
-    expect(screen.getByRole('table', { name: 'Accounts owned' })).toHaveTextContent('Patricia Johnson Roth IRA')
+    expect(screen.getByRole('table', { name: 'Accounts owned' })).toHaveTextContent('Patricia Johnson · Roth IRA (…1028)')
     expect(main).toHaveTextContent('Johnson Family Trust — IPS · signed 14 Nov 2025')
     expect(screen.getByRole('link', { name: 'Johnson Household' })).toHaveAttribute('href', '/households/hh-001')
   })

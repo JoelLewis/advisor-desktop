@@ -1,3 +1,4 @@
+import { accountDisplayName } from '@/lib/account-display'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Pane } from '@/kit/layout/Pane'
@@ -71,7 +72,7 @@ function AccountReadings({ account, drift, positions, lots, from }: AccountReadi
     <div className="flex min-w-0 flex-col gap-6">
       <header className="flex flex-col gap-2">
         {from ? <Link to={`/t/${encodeURIComponent(from)}`} className={`${LINK_TARGET} self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>Back to the thread</Link> : null}
-        <h1 id={PAGE_TITLE_ID} tabIndex={-1} className="text-title">{account.name}</h1>
+        <h1 id={PAGE_TITLE_ID} tabIndex={-1} className="text-title">{accountDisplayName(account)}</h1>
         <ReferenceLinks account={account} from={from} />
       </header>
       <Pane title="Drift against model" meta={driftMeta(drift)}>

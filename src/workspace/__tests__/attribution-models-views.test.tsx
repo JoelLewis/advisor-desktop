@@ -14,12 +14,12 @@ describe('the Attribution view', () => {
   it('reads the Brinson-Fachler rows, the returns, the benchmark and its modeled line', async () => {
     const engine = await getReferenceAttribution('user-001', 'acc-002', 'ytd')
     renderRoutes(routes, '/accounts/acc-002/attribution?from=th-johnson-review')
-    expect(await screen.findByRole('heading', { level: 1, name: 'Attribution · Robert Johnson Individual' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Attribution · Robert Johnson · Individual (…3847)' })).toBeInTheDocument()
     expect(screen.getByRole('note', { name: "Visibility: Larkfield team · Robert can't see this" })).toBeInTheDocument()
     const main = screen.getByRole('main')
     expect(main).toHaveTextContent(`Active return${fmtReturn(engine.activeReturn)}%`)
     expect(main).toHaveTextContent('Brinson-Fachler · single period, arithmetic, no linking · returns modeled, not realized')
-    expect(screen.getByRole('img', { name: 'Modeled growth of 100 · Robert Johnson Individual against the Growth policy benchmark' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Modeled growth of 100 · Robert Johnson · Individual (…3847) against the Growth policy benchmark' })).toBeInTheDocument()
     expect(screen.getByRole('table', { name: 'Benchmark components' })).toHaveTextContent('Bloomberg US Aggregate')
     expect(screen.getByRole('table', { name: 'Attribution · Year to date' })).toHaveTextContent('US Equity')
     expect(screen.getByRole('region', { name: 'Methods & sources' })).toHaveTextContent('ReturnsMODELED')
@@ -34,7 +34,7 @@ describe('the Attribution view', () => {
 
   it('changes period over the same derivation', async () => {
     renderRoutes(routes, '/accounts/acc-002/attribution')
-    await screen.findByRole('heading', { level: 1, name: 'Attribution · Robert Johnson Individual' })
+    await screen.findByRole('heading', { level: 1, name: 'Attribution · Robert Johnson · Individual (…3847)' })
     await userEvent.setup().selectOptions(screen.getByRole('combobox', { name: 'Period' }), 'Three years')
     expect(await screen.findByRole('table', { name: 'Attribution · Three years, cumulative' })).toBeInTheDocument()
     expect(screen.getByText('Portfolio, annualized')).toBeInTheDocument()
@@ -42,7 +42,7 @@ describe('the Attribution view', () => {
 
   it('takes an asset-class row to the account team thread', async () => {
     renderRoutes(routes, '/accounts/acc-002/attribution')
-    await screen.findByRole('heading', { level: 1, name: 'Attribution · Robert Johnson Individual' })
+    await screen.findByRole('heading', { level: 1, name: 'Attribution · Robert Johnson · Individual (…3847)' })
     await userEvent.setup().click(screen.getByRole('button', { name: 'Share US Equity to a team thread' }))
     expect(await screen.findByRole('link', { name: 'In Johnson Rebalance Review' })).toHaveAttribute('href', '/t/th-johnson-review')
   })

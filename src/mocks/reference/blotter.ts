@@ -1,3 +1,4 @@
+import { accountDisplayName } from '@/lib/account-display'
 import type { Order } from '@/services/oms'
 import type { StagedOrder } from '@/types/workspace-proposal'
 import type { MethodNote, RowQuote } from '@/types/reference'
@@ -21,7 +22,7 @@ const STAGED_STATUS: Readonly<Record<StagedOrder['status'], BlotterStatus>> = {
 function accountName(id: string): string {
   const account = accounts.find((a) => a.id === id)
   if (!account) throw new Error(`An order names no account ${id}`)
-  return account.name
+  return accountDisplayName(account)
 }
 
 function sideOf(order: Order): 'buy' | 'sell' {
@@ -120,10 +121,12 @@ const STATUS_WORDS: Readonly<Record<BlotterStatus, string>> = {
 export function blotterQuote(rowId: string): RowQuote | undefined {
   const r = allRows().find((x) => x.id === rowId)
   if (!r) return undefined
+  const name = accounts.find((a) => a.id === r.accountId)?.name
+  if (name === undefined) throw new Error(`Order ${r.id} names no account ${r.accountId}`)
   const source = r.source.kind === 'proposal' ? `${r.source.title} v${r.source.version}${r.recId ? `, ${r.recId}` : ''}` : `order management ticket ${r.id}`
   return {
-    view: 'blotter', rowId: r.id, subject: { type: 'account', id: r.accountId }, threadTitle: `Orders · ${r.accountName}`,
-    claim: `${r.side === 'buy' ? 'A buy' : 'A sale'} of ${r.symbol} in ${r.accountName}: ${STATUS_WORDS[r.status]}.`,
+    view: 'blotter', rowId: r.id, subject: { type: 'account', id: r.accountId }, threadTitle: `Orders · ${name}`,
+    claim: `${r.side === 'buy' ? 'A buy' : 'A sale'} of ${r.symbol} in ${name}: ${STATUS_WORDS[r.status]}.`,
     figures: [
       { label: r.quantityUnit === 'par' ? 'Par' : 'Quantity', value: r.quantity, unit: r.quantityUnit, source: 'blotter.rows.quantity' },
       ...(r.value !== undefined && r.currency === 'USD' ? [{ label: 'Value', value: r.value, unit: 'USD' as const, source: 'blotter.rows.value' }] : []),

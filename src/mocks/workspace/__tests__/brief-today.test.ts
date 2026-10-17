@@ -26,7 +26,7 @@ describe("the Brief's Today", () => {
 
   it('leads with the release line while approved orders await compliance, and drops it once released', () => {
     const a = approvedV1()
-    expect(lines()[0]).toMatchObject({ kind: 'release', accountName: 'Robert Johnson Individual', version: 1, threadId: 'th-johnson-review' })
+    expect(lines()[0]).toMatchObject({ kind: 'release', accountName: 'Robert Johnson · Individual (…3847)', version: 1, threadId: 'th-johnson-review' })
     release(a)
     expect(kinds()).not.toContain('release')
   })

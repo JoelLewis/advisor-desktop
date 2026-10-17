@@ -1,3 +1,4 @@
+import { accountDisplayName } from '@/lib/account-display'
 import type { Account } from '@/types/account'
 import type { HouseholdFixture } from '@/types/household'
 import type {
@@ -37,7 +38,7 @@ function clientName(clientId: string): string {
 /** An account against its model: drift from the drift engine, and for an out-of-band class, the structural reason it cannot be sold back in. */
 function accountRow(account: Account): HouseholdAccount {
   const base = {
-    accountId: account.id, name: account.name, ownerId: account.clientId, ownerName: clientName(account.clientId), typeLabel: ACCOUNT_TYPE_LABELS[account.type],
+    accountId: account.id, name: accountDisplayName(account), ownerId: account.clientId, ownerName: clientName(account.clientId), typeLabel: ACCOUNT_TYPE_LABELS[account.type],
     value: getPositionsForAccount(account.id, account.totalValue).reduce((s, p) => s + p.marketValue, 0),
   }
   if (account.mandate === 'custom') return { ...base, mandate: 'custom', mandateSummary: account.mandateSummary }

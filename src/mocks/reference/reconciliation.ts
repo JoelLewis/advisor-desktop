@@ -1,3 +1,4 @@
+import { accountDisplayName } from '@/lib/account-display'
 import type { Account } from '@/types/account'
 import type { BindingAct } from '@/types/workspace'
 import type { MethodNote, RowQuote } from '@/types/reference'
@@ -70,7 +71,7 @@ function breakView(b: ReconBreakRecord): ReconBreakView {
   const act = resolutionAct(b.id)
   const resolvedAt = act?.at ?? b.resolvedBeforeSession
   return {
-    id: b.id, custodian: account.custodian, accountId: account.id, accountName: account.name, field: b.field, fieldLabel: field.label,
+    id: b.id, custodian: account.custodian, accountId: account.id, accountName: accountDisplayName(account), field: b.field, fieldLabel: field.label,
     ...(b.symbol ? { symbol: b.symbol } : {}),
     unit: field.unit, book, custodianValue, difference: b.custodianDelta, severity: b.severity, detectedAt: b.detectedAt,
     fingerprint: fingerprint([b.id, account.id, b.field, b.symbol ?? '', book, custodianValue].join('|')),
@@ -181,7 +182,7 @@ export function resolveBreak(viewerId: string, r: ResolveBreakRequest): { ok: tr
   const act: BindingAct = {
     id: commitActId(), kind: 'resolve_break', actorId: viewerId, at: nextAt(), subject: { type: 'recon_break', id: record.id },
     fingerprint: r.fingerprint, rationale: r.rationale.trim(), outcome: r.resolution,
-    summary: `Resolved ${record.id} · ${view.accountName} ${view.fieldLabel.toLowerCase()}: ${RESOLUTION_WORDS[r.resolution].toLowerCase()}`,
+    summary: `Resolved ${record.id} · ${accountOf(record.accountId).name} ${view.fieldLabel.toLowerCase()}: ${RESOLUTION_WORDS[r.resolution].toLowerCase()}`,
   }
   recordAct(act)
   return { ok: true, act }
@@ -197,12 +198,13 @@ export function reconciliationQuote(breakId: string): RowQuote | undefined {
   const record = RECON_BREAKS.find((b) => b.id === breakId)
   if (!record) return undefined
   const b = breakView(record)
+  const name = accountOf(record.accountId).name
   const field = b.fieldLabel.toLowerCase()
   return {
-    view: 'reconciliation', rowId: b.id, subject: { type: 'recon_break', id: b.id }, threadTitle: `Reconciliation · ${b.id} · ${b.accountName}`,
+    view: 'reconciliation', rowId: b.id, subject: { type: 'recon_break', id: b.id }, threadTitle: `Reconciliation · ${b.id} · ${name}`,
     claim: b.status === 'open'
-      ? `${b.accountName}: the book's ${field} differs from ${b.custodian}'s.`
-      : `${b.accountName}: the book's ${field} differed from ${b.custodian}'s; the break is resolved.`,
+      ? `${name}: the book's ${field} differs from ${b.custodian}'s.`
+      : `${name}: the book's ${field} differed from ${b.custodian}'s; the break is resolved.`,
     figures: [
       { label: b.status === 'open' ? 'Book' : 'Book today', value: b.book, unit: b.unit, source: 'reconciliation.breaks.book' },
       { label: b.custodian, value: b.custodianValue, unit: b.unit, source: 'reconciliation.breaks.custodianValue' },

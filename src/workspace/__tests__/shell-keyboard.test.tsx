@@ -45,7 +45,7 @@ describe('keyboard in the shell', () => {
   it('offers every visible thread, the accounts they are about, the household and its clients, the meeting, home and the kit', async () => {
     await renderAt('/')
     await openCommandLine()
-    await waitFor(() => expect(destinationNames()).toContain('Account · Robert Johnson Individual'))
+    await waitFor(() => expect(destinationNames()).toContain('Account · Robert Johnson · Individual (…3847)'))
     await waitFor(() => expect(destinationNames()).toContain('Client · Patricia Johnson'))
     await waitFor(() => expect(destinationNames()).toContain('Meeting · Johnson annual review'))
     await waitFor(() => expect(destinationNames()).toContain('Model · Moderate Balanced'))
@@ -57,7 +57,7 @@ describe('keyboard in the shell', () => {
       'Thread · Robert Johnson',
       'Thread · Dr. Amanda Pell',
       'Thread · Pell · prospect work',
-      'Account · Robert Johnson Individual',
+      'Account · Robert Johnson · Individual (…3847)',
       'Household · Johnson',
       'Client · Robert Johnson',
       'Client · Patricia Johnson',
@@ -69,8 +69,8 @@ describe('keyboard in the shell', () => {
       'Models',
       'Practice',
       'Blotter',
-      'Risk · Robert Johnson Individual',
-      'Attribution · Robert Johnson Individual',
+      'Risk · Robert Johnson · Individual (…3847)',
+      'Attribution · Robert Johnson · Individual (…3847)',
       'Model · Balanced Growth',
       'Model · Growth',
       'Model · Conservative Income',

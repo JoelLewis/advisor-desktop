@@ -36,7 +36,7 @@ const resolve002 = (viewerId = ADRIAN, fingerprint = brk('brk-002').fingerprint)
 
 describe('breaks', () => {
   it("read the book's side off the book, and the custodian's as the book plus its recorded difference", () => {
-    expect(brk('brk-002')).toMatchObject({ custodian: 'Schwab', accountName: 'Johnson Family Trust', fieldLabel: 'Cash balance', unit: 'USD', difference: -150, status: 'open' })
+    expect(brk('brk-002')).toMatchObject({ custodian: 'Schwab', accountName: 'Johnson Family Trust (…7291)', fieldLabel: 'Cash balance', unit: 'USD', difference: -150, status: 'open' })
     expect(brk('brk-002').book).toBeCloseTo(cashBalanceOf(account('acc-001')), 6)
     expect(brk('brk-002').custodianValue).toBeCloseTo(cashBalanceOf(account('acc-001')) - 150, 6)
     expect(brk('brk-003')).toMatchObject({ custodian: 'Fidelity', symbol: 'EFA', unit: 'sh', book: 14_500, custodianValue: 14_480, status: 'resolved' })

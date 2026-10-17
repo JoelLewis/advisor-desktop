@@ -1,3 +1,4 @@
+import { accountDisplayName } from '@/lib/account-display'
 import { useQueries } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { getAccount } from '@/services/custodian'
@@ -46,7 +47,7 @@ export function useDestinations(): Destination[] {
     { id: 'home', label: 'Workspace home', aliases: ['home'], run: () => navigate('/') },
     ...threads.map((t) => ({ id: `thread-${t.id}`, label: `Thread · ${t.title}`, aliases: [], run: () => navigate(`/t/${t.id}`) })),
     ...accounts.flatMap(({ data }) => (data
-      ? [{ id: `account-${data.id}`, label: `Account · ${data.name}`, aliases: [], run: () => navigate(`/accounts/${data.id}`) }]
+      ? [{ id: `account-${data.id}`, label: `Account · ${accountDisplayName(data)}`, aliases: [], run: () => navigate(`/accounts/${data.id}`) }]
       : [])),
     ...households.flatMap(({ data }) => (data ? [
       { id: `household-${data.id}`, label: `Household · ${data.shortName}`, aliases: ['household'], run: () => navigate(householdFullViewHref(data.id)) },
@@ -57,8 +58,8 @@ export function useDestinations(): Destination[] {
     ...proposals.map((p) => ({ id: `proposal-${p.id}`, label: `Proposal · ${p.title}`, aliases: ['workbench'], run: () => navigate(proposalWorkbenchHref(p.id, p.threadId)) })),
     ...(firmViewer ? REFERENCE_DESTINATIONS.map((r) => ({ id: r.id, label: r.label, aliases: r.aliases, run: () => navigate(r.href()) })) : []),
     ...(firmViewer ? accounts.flatMap(({ data }) => (data ? [
-      { id: `risk-${data.id}`, label: `Risk · ${data.name}`, aliases: ['risk'], run: () => navigate(accountRiskHref(data.id)) },
-      { id: `attribution-${data.id}`, label: `Attribution · ${data.name}`, aliases: ['attribution', 'performance'], run: () => navigate(accountAttributionHref(data.id)) },
+      { id: `risk-${data.id}`, label: `Risk · ${accountDisplayName(data)}`, aliases: ['risk'], run: () => navigate(accountRiskHref(data.id)) },
+      { id: `attribution-${data.id}`, label: `Attribution · ${accountDisplayName(data)}`, aliases: ['attribution', 'performance'], run: () => navigate(accountAttributionHref(data.id)) },
     ] : [])) : []),
     ...models.map((m) => ({ id: `model-${m.id}`, label: `Model · ${m.name}`, aliases: ['model'], run: () => navigate(modelHref(m.id)) })),
     ...(firmViewer ? [{ id: 'supervision', label: 'Supervision', aliases: ['queue', 'compliance'], run: () => navigate('/supervision') }] : []),

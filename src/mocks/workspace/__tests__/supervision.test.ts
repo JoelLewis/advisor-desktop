@@ -21,7 +21,7 @@ describe('the supervision queue', () => {
   it('lists the staged orders of an approval as the approval record and the version it names', () => {
     const a = approvedV1()
     const [orders] = queue().orders
-    expect(orders).toMatchObject({ kind: 'orders', id: 'prop-0001', title: 'Johnson rebalance · v1', accountName: 'Robert Johnson Individual', threadId: 'th-johnson-review', latestVersion: 1, fingerprint: a.fingerprint, approval: { actId: 'REC-0001', approverId: 'user-001', status: 'active' } })
+    expect(orders).toMatchObject({ kind: 'orders', id: 'prop-0001', title: 'Johnson rebalance · v1', accountName: 'Robert Johnson · Individual (…3847)', threadId: 'th-johnson-review', latestVersion: 1, fingerprint: a.fingerprint, approval: { actId: 'REC-0001', approverId: 'user-001', status: 'active' } })
     expect(orders?.version.n).toBe(1)
     expect(orders?.staged.every((o) => o.status === 'pending_compliance')).toBe(true)
     expect(queue('user-001').orders.map((o) => o.id)).toEqual(['prop-0001'])

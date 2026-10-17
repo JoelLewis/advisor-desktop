@@ -49,7 +49,7 @@ describe('the attribution read model', () => {
     expect(v.rows.reduce((s, r) => s + r.portfolioWeight, 0)).toBeCloseTo(1, 9)
     expect(v.rows.reduce((s, r) => s + r.benchmarkWeight, 0)).toBeCloseTo(1, 9)
     expect(v.benchmark.name).toBe('Growth policy benchmark')
-    expect(v).toMatchObject({ accountName: 'Robert Johnson Individual', clientName: 'Robert Johnson', mandateName: 'Growth', modelId: 'mod-002' })
+    expect(v).toMatchObject({ accountName: 'Robert Johnson · Individual (…3847)', clientName: 'Robert Johnson', mandateName: 'Growth', modelId: 'mod-002' })
   })
 
   it("draws the line from the account's modeled series, ending today; one benchmark line per model", () => {

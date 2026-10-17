@@ -1,3 +1,4 @@
+import { accountDisplayName } from '@/lib/account-display'
 import { Link } from 'react-router-dom'
 import { useAccount } from '@/hooks/use-accounts'
 import { useProspect } from '@/hooks/use-prospect-work'
@@ -30,7 +31,7 @@ function AccountViews({ accountId, threadId }: { accountId: string; threadId: st
     <ContextSection title="Related records">
       {account.isPending ? <p role="status" className="text-body text-ink-3">Loading the account…</p>
         : account.isError ? <p role="alert" className="text-body">{account.error.message}</p>
-        : <FullViewLink to={accountFullViewHref(accountId, threadId)}>{account.data.name}</FullViewLink>}
+        : <FullViewLink to={accountFullViewHref(accountId, threadId)}>{accountDisplayName(account.data)}</FullViewLink>}
     </ContextSection>
   )
 }

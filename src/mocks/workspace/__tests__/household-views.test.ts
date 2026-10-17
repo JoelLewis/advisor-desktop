@@ -42,7 +42,7 @@ describe('the household view', () => {
       expect(row.outside.map((o) => o.assetClass)).toEqual(drift.assetClassDrifts.filter((d) => Math.abs(d.drift) > drift.driftTolerance).map((d) => d.assetClass))
       for (const o of row.outside) expect([undefined, 'not_market_tradable', 'replacement_hold']).toContain(o.residual)
     }
-    expect(rows[1]).toMatchObject({ name: 'Robert Johnson Individual', ownerName: 'Robert Johnson', typeLabel: 'Individual' })
+    expect(rows[1]).toMatchObject({ name: 'Robert Johnson · Individual (…3847)', ownerName: 'Robert Johnson', typeLabel: 'Individual' })
     expect(Math.abs(johnson().managedValue - 18_750_000)).toBeLessThanOrEqual(5)
     expect(johnson().managedValue).toBe(rows.reduce((s, r) => s + r.value, 0))
   })

@@ -179,7 +179,7 @@ test('one presenter closes the supervisory loop; the book moves; Robert sees not
   await expect(conversation(page).getByRole('article', { name: 'Released the orders staged from v3 of the Johnson rebalance' })).toContainText('Mark Davis, Compliance')
   await expect(conversation(page).getByRole('article', { name: 'Fills · Johnson rebalance v3' })).toBeVisible()
   await expect(approvalOf(page)).toContainText('v3 was released by compliance and filled')
-  await context(page).getByRole('link', { name: /^Robert Johnson Individual/ }).click()
+  await context(page).getByRole('link', { name: /^Robert Johnson · Individual \(…3847\)/ }).click()
   const holdings = page.getByRole('table', { name: 'Holdings' })
   await expect(holdings.getByRole('row', { name: /^VWO/ })).toHaveCount(1)
   await expect(holdings.getByRole('row', { name: /^INTC/ })).toHaveCount(0)

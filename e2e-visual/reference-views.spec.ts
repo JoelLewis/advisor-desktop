@@ -19,8 +19,8 @@ const SCENES: Scene[] = [
   { name: 'reconciliation-light', open: at('/reconciliation', 'Reconciliation') },
   { name: 'risk-book-light', open: at('/risk', 'Risk') },
   { name: 'risk-book-dark', open: at('/risk', 'Risk', 'dark') },
-  { name: 'risk-account-light', open: at('/accounts/acc-002/risk', 'Risk · Robert Johnson Individual') },
-  { name: 'attribution-light', open: at('/accounts/acc-002/attribution', 'Attribution · Robert Johnson Individual') },
+  { name: 'risk-account-light', open: at('/accounts/acc-002/risk', 'Risk · Robert Johnson · Individual (…3847)') },
+  { name: 'attribution-light', open: at('/accounts/acc-002/attribution', 'Attribution · Robert Johnson · Individual (…3847)') },
   { name: 'models-light', open: at('/models', 'Models') },
   { name: 'model-light', open: at('/models/mod-005', 'Ultra-HNW Multi-Strategy') },
   { name: 'practice-light', open: at('/practice', 'Practice') },
@@ -78,10 +78,10 @@ test('one presenter: the release on the blotter, the released book in risk and a
   await expect(orders).toContainText(/REC-\d{4}/)
 
   // 4. acc-002's risk and attribution read the released book.
-  await goTo(page, 'Risk · Robert Johnson Individual')
-  await expect(heading(page)).toHaveText('Risk · Robert Johnson Individual')
+  await goTo(page, 'Risk · Robert Johnson · Individual (…3847)')
+  await expect(heading(page)).toHaveText('Risk · Robert Johnson · Individual (…3847)')
   await expect(factors).not.toHaveText(before ?? '')
-  await goTo(page, 'Attribution · Robert Johnson Individual')
+  await goTo(page, 'Attribution · Robert Johnson · Individual (…3847)')
   await expect(page.getByRole('table', { name: 'Attribution · Year to date' })).toBeVisible()
 
   // 5. The Brief's Today reconciliation line → the view → resolve brk-002 as a record.
@@ -101,7 +101,7 @@ test('one presenter: the release on the blotter, the released book in risk and a
   // 7. Book risk: the out-of-band account becomes a team conversation.
   await deskLink(page, 'Risk').click()
   await expect(heading(page)).toHaveText('Risk')
-  await shareToTeamThread(page, 'Patel Digital Assets Account')
+  await shareToTeamThread(page, 'Patel Digital Assets Account (…0912)')
   await page.getByRole('link', { name: 'In Risk · Patel Digital Assets Account' }).click()
   await expect(heading(page)).toHaveText('Risk · Patel Digital Assets Account')
   await expect(conversation(page).getByRole('article', { name: /^From Risk: Patel Digital Assets Account sits above / })).toBeVisible()

@@ -193,7 +193,7 @@ describe('the household summary', () => {
     renderWithProviders(<HouseholdSummaryPanes summary={await getHousehold(ADRIAN, 'hh-001')} />)
     const accounts = screen.getByRole('table', { name: 'Household accounts' })
     expect(within(accounts).getAllByRole('row').map((r) => r.textContent).join('|')).toContain('Johnson Family Trust')
-    expect(accounts).toHaveTextContent('Robert Johnson Individual')
+    expect(accounts).toHaveTextContent('Robert Johnson · Individual (…3847)')
     // A drift and its unit never break apart.
     expect(accounts.textContent).toMatch(/\d\u00a0pp/)
     expect(accounts.textContent).not.toMatch(/\d pp/)

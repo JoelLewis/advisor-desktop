@@ -1,3 +1,4 @@
+import { accountDisplayName } from '@/lib/account-display'
 import type { Account } from '@/types/account'
 import type { MethodNote, RowQuote } from '@/types/reference'
 import type { Client } from '@/types/client'
@@ -147,7 +148,7 @@ function accountRisk(account: Account): AccountRiskView {
   const var95 = Math.round(parametricVaR(p.value, p.vol))
   const concentration = concentrationFor(account)
   return {
-    asOf: MOCK_NOW_ISO, accountId: account.id, accountName: account.name, clientName: clientOf(account).fullName,
+    asOf: MOCK_NOW_ISO, accountId: account.id, accountName: accountDisplayName(account), clientName: clientOf(account).fullName,
     modelId: p.modelId, mandateName: mandateNameOf(account), benchmarkName: p.benchmarkName, value: p.value,
     volatility: p.vol, beta: p.beta,
     var95: { value: var95, percent: var95 / p.value, horizon: 'one month', confidence: 0.95, method: 'parametric normal' },
@@ -177,7 +178,7 @@ export function bookRiskView(viewerId: string): BookRiskView | undefined {
     const p = riskProfileFor(a)
     const posture = postureOf(a, p.vol)
     return {
-      accountId: a.id, accountName: a.name, householdName: householdNameOf(a.householdId), clientName: clientOf(a).fullName, mandateName: mandateNameOf(a),
+      accountId: a.id, accountName: accountDisplayName(a), householdName: householdNameOf(a.householdId), clientName: clientOf(a).fullName, mandateName: mandateNameOf(a),
       value: p.value, volatility: p.vol, var95: Math.round(parametricVaR(p.value, p.vol)), posture,
       assetLocation: isAssetLocation(a, posture.score, wholeWithin.has(a.clientId)),
     }

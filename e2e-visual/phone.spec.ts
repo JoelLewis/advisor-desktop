@@ -104,8 +104,8 @@ test.describe('a phone at 390px', () => {
 
     await visitPhone(page, '/t/th-johnson-review', 'light')
     await openPhonePane(page, 'Context')
-    await page.locator('#context-column').getByRole('link', { name: /^Robert Johnson Individual/ }).click()
-    await expect(page.getByRole('heading', { level: 1, name: 'Robert Johnson Individual' })).toBeFocused()
+    await page.locator('#context-column').getByRole('link', { name: /^Robert Johnson · Individual \(…3847\)/ }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Robert Johnson · Individual (…3847)' })).toBeFocused()
     await page.goBack()
     await expect(panes(page).getByRole('button', { name: 'Context', exact: true })).toHaveAttribute('aria-current', 'true')
     await expect(page.locator('#context-column')).toBeFocused()

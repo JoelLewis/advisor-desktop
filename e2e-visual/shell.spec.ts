@@ -156,7 +156,7 @@ test('the success path on the real app: ask, open the account and back, draft, s
 
   // Opens the account from the embed, then goes back to the thread.
   await conversation.getByRole('region', { name: /^Drift against model/ }).getByRole('link', { name: 'Open account' }).click()
-  await expect(heading).toHaveText('Robert Johnson Individual')
+  await expect(heading).toHaveText('Robert Johnson · Individual (…3847)')
   await page.getByRole('link', { name: 'Back to the thread' }).click()
   await expect(heading).toHaveText('Johnson Rebalance Review')
 

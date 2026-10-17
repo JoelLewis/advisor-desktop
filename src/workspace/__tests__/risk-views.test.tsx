@@ -16,9 +16,9 @@ describe('book risk', () => {
     renderRoutes(routes, '/risk')
     expect(await screen.findByRole('heading', { level: 1, name: 'Risk' })).toBeInTheDocument()
     const rows = within(screen.getByRole('table', { name: 'Accounts against tolerance' })).getAllByRole('row')
-    expect(rows[1]).toHaveTextContent('Patel Digital Assets Account')
+    expect(rows[1]).toHaveTextContent('Patel Digital Assets Account (…0912)')
     expect(rows[1]).toHaveTextContent('ABOVE TOLERANCE')
-    expect(within(rows[1] as HTMLElement).getByRole('link', { name: 'Patel Digital Assets Account' })).toHaveAttribute('href', '/accounts/acc-045/risk')
+    expect(within(rows[1] as HTMLElement).getByRole('link', { name: 'Patel Digital Assets Account (…0912)' })).toHaveAttribute('href', '/accounts/acc-045/risk')
     expect(screen.getByRole('region', { name: 'Methods & sources' })).toHaveTextContent('Value at riskMODELED')
   })
 
@@ -30,10 +30,10 @@ describe('book risk', () => {
     expect(robert).toHaveTextContent('WITHIN TOLERANCE')
     expect(clientRows.find((r) => r.textContent?.includes('Thomas Kim · all accounts'))).toHaveTextContent('review whether too little risk')
     const rows = within(screen.getByRole('table', { name: 'Accounts against tolerance' })).getAllByRole('row')
-    const ira = rows.find((r) => r.textContent?.includes('Robert Johnson Traditional IRA'))
+    const ira = rows.find((r) => r.textContent?.includes('Robert Johnson · Traditional IRA (…9201)'))
     expect(ira).toHaveTextContent('ASSET LOCATION')
     expect(ira).toHaveTextContent("below Moderate (41–55); Robert Johnson's accounts as a whole within")
-    expect(rows.find((r) => r.textContent?.includes('Robert Johnson Individual'))).toHaveTextContent('ABOVE TOLERANCE')
+    expect(rows.find((r) => r.textContent?.includes('Robert Johnson · Individual (…3847)'))).toHaveTextContent('ABOVE TOLERANCE')
     expect(screen.getByText('Accounts needing a recorded reason')).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Methods & sources' })).toHaveTextContent('not the risk of the combined portfolio')
   })
@@ -41,7 +41,7 @@ describe('book risk', () => {
   it('takes an account above tolerance to a team thread', async () => {
     renderRoutes(routes, '/risk')
     await screen.findByRole('heading', { level: 1, name: 'Risk' })
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Share Patel Digital Assets Account to a team thread' }))
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Share Patel Digital Assets Account (…0912) to a team thread' }))
     expect(await screen.findByRole('link', { name: 'In Risk · Patel Digital Assets Account' })).toHaveAttribute('href', '/t/th-ref-0001')
   })
 
@@ -58,7 +58,7 @@ describe('account risk', () => {
   it('reads volatility, beta, VaR, tracking error, the score against tolerance, factors, concentration and stress', async () => {
     const engine = await getAccountRisk('user-001', 'acc-002')
     renderRoutes(routes, '/accounts/acc-002/risk?from=th-johnson-review')
-    expect(await screen.findByRole('heading', { level: 1, name: 'Risk · Robert Johnson Individual' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Risk · Robert Johnson · Individual (…3847)' })).toBeInTheDocument()
     expect(screen.getByRole('note', { name: "Visibility: Larkfield team · Robert can't see this" })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Back to the thread' })).toHaveAttribute('href', '/t/th-johnson-review')
     const main = screen.getByRole('main')
@@ -77,7 +77,7 @@ describe('account risk', () => {
     const after = await getAccountRisk('user-001', 'acc-002')
     expect(after.volatility).not.toBe(before.volatility)
     renderRoutes(routes, '/accounts/acc-002/risk')
-    await screen.findByRole('heading', { level: 1, name: 'Risk · Robert Johnson Individual' })
+    await screen.findByRole('heading', { level: 1, name: 'Risk · Robert Johnson · Individual (…3847)' })
     expect(screen.getByRole('main')).toHaveTextContent(`Volatility${fmtWeight(after.volatility)}%`)
   })
 

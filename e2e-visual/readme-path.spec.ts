@@ -59,7 +59,7 @@ test("the README's five-minute path, end to end", async ({ page }) => {
   await expect(heading(page)).toHaveText('Blotter')
   await expect(page.getByRole('table', { name: 'Orders' })).toContainText('FILLED')
   await back()
-  await context(page).getByRole('link', { name: /^Robert Johnson Individual/ }).click()
+  await context(page).getByRole('link', { name: /^Robert Johnson · Individual \(…3847\)/ }).click()
   await expect(page.getByRole('table', { name: 'Holdings' }).getByRole('row', { name: /^INTC/ })).toHaveCount(0)
   await back()
   await threadLink(page, 'Brief').click()
@@ -114,7 +114,7 @@ test("the README's five-minute path, end to end", async ({ page }) => {
   await resolveBreakNamed(page, 'brk-002', 'Timing difference', 'Schwab confirmed the 24 Feb cash sweep posted after the file was cut.', axe)
   await home()
   await deskLink(page, 'Risk').click()
-  await shareToTeamThread(page, 'Patel Digital Assets Account')
+  await shareToTeamThread(page, 'Patel Digital Assets Account (…0912)')
   await home()
   await expect(path.nth(7)).toContainText('NEXT')
 

@@ -90,7 +90,7 @@ describe('thread view', () => {
     const user = userEvent.setup()
     const embed = await within(conversation()).findByRole('region', { name: /^Drift against model/ })
     await user.click(within(embed).getByRole('link', { name: 'Open account' }))
-    await screen.findByRole('heading', { level: 1, name: 'Robert Johnson Individual' })
+    await screen.findByRole('heading', { level: 1, name: 'Robert Johnson · Individual (…3847)' })
     await user.click(screen.getByRole('link', { name: 'Back to the thread' }))
     await screen.findByRole('heading', { level: 1, name: 'Johnson Rebalance Review' })
     expect(router.state.location.pathname).toBe('/t/th-johnson-review')
