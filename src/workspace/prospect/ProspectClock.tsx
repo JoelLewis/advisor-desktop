@@ -31,7 +31,7 @@ export function ProspectClock({ view, canRecordCoffee, presents }: Props) {
   const go = (to: 'reply' | 'acceptance') => once((settled) => advance.mutate(to, { onSettled: settled }))
 
   return (
-    <ContextSection title="Clock">
+    <ContextSection title="Demo · clock">
       {view.coffee ? <p className="text-body text-ink-2">Coffee recorded · the note is in the prospect work thread.</p>
         : canRecordCoffee ? <Button rank="secondary" className="self-start" onClick={() => { coffee.reset(); setWriting(true) }}>Record the coffee</Button>
         : null}
@@ -49,7 +49,7 @@ export function ProspectClock({ view, canRecordCoffee, presents }: Props) {
       {jump ? (
         <div className="flex flex-col items-start gap-1.5">
           <Button rank="secondary" pending={advance.isPending} disabled={jump.blockedReason !== undefined} aria-describedby={jump.blockedReason ? reasonId : undefined} onClick={() => go(jump.to)}>
-            <span>{`Advance to her ${jump.to} · `}<span className="whitespace-nowrap">{fmtEasternDayTime(jump.at)}</span></span>
+            <span>{`Demo · skip to her ${jump.to} · `}<span className="whitespace-nowrap">{fmtEasternDayTime(jump.at)}</span></span>
           </Button>
           {jump.blockedReason ? <p id={reasonId} className="text-label text-ink-3">{jump.blockedReason}</p> : null}
         </div>

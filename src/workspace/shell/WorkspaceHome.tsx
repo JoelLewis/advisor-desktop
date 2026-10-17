@@ -27,7 +27,7 @@ export function WorkspaceHome() {
         <h1 id={PAGE_TITLE_ID} tabIndex={-1} className="text-title">Workspace</h1>
         <p className="text-copy">{`One advisor's day at ${FIRM_NAME}: agents measure the book, the advisor decides, compliance releases, and each client sees only what is theirs.`}</p>
         <p className="text-body text-ink-3">
-          {`A demonstration: ${FIRM_NAME} and everyone in it are fictional, the date is frozen at ${fmtDayMonthYear(MOCK_TODAY_ISO)}, and nothing here is investment, tax or legal advice.`}
+          {`A demonstration: ${FIRM_NAME} and everyone in it are fictional, and nothing here is investment, tax or legal advice. Starts at ${fmtDayMonthYear(MOCK_TODAY_ISO)}; the presenter can move the clock forward.`}
         </p>
         <RedirectNote />
       </div>

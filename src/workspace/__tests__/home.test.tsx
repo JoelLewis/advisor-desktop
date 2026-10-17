@@ -22,6 +22,15 @@ describe('home', () => {
     expect(screen.queryByText('DONE')).toBeNull()
   })
 
+  it('the date line stays true after the clock moves, and every step says why before what to click', async () => {
+    renderRoutes(routes, '/')
+    expect(await screen.findByText(/Starts at 25 Feb 2026; the presenter can move the clock forward\./)).toBeInTheDocument()
+    expect(screen.queryByText(/frozen/)).not.toBeInTheDocument()
+    const steps = await path()
+    expect(steps).not.toHaveTextContent(/\bv3\b|exclude QAI|Take /)
+    expect(steps).toHaveTextContent('Demo ·')
+  })
+
   it('marks what the session has done and the next step', async () => {
     approvedV1()
     renderRoutes(routes, '/')

@@ -78,7 +78,7 @@ describe('Supervision', () => {
 
   it('says what fills each empty group and how the demo fills it', async () => {
     renderRoutes(routes, '/supervision')
-    expect(await screen.findByText('Orders appear here once an advisor approves a proposal (Johnson Rebalance Review → Approve).')).toBeInTheDocument()
+    expect(await screen.findByText('Orders appear here once an advisor approves a proposal.')).toBeInTheDocument()
     expect(screen.getByText('Sent client messages appear here for review.')).toBeInTheDocument()
     expect(screen.getByText(/^Choose an item from the queue: its evidence/)).toBeInTheDocument()
   })

@@ -119,7 +119,7 @@ export async function runPrep(page: Page) {
 }
 
 export async function holdTheMeeting(page: Page, atDialog?: AtDialog) {
-  await page.getByRole('button', { name: 'Hold the meeting', exact: true }).click()
+  await page.getByRole('button', { name: 'Demo · hold the meeting', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Hold the meeting?' })
   await checkOpenDialog(dialog, atDialog)
   await dialog.getByRole('button', { name: 'Hold the meeting', exact: true }).click()
@@ -154,7 +154,7 @@ export async function goTo(page: Page, destination: string) {
 
 const PELL_REPLY_TEXT = 'Thank you for the coffee. Here are my answers to the questionnaire and my two statements.'
 export const PELL_ACCEPTANCE_TEXT = "I've read the proposal and I'd like to go ahead."
-const JUMP_LABEL = { reply: 'Advance to her reply · Thu 26 Feb 09:10 ET', acceptance: 'Advance to her acceptance · Mon 2 Mar 10:00 ET' } as const
+const JUMP_LABEL = { reply: 'Demo · skip to her reply · Thu 26 Feb 09:10 ET', acceptance: 'Demo · skip to her acceptance · Mon 2 Mar 10:00 ET' } as const
 
 /** A disclosure from her thread's timeline (or the onboarding checklist), confirmed as a record. */
 export async function deliver(page: Page, short: 'Form CRS' | 'ADV Part 2A' | 'ADV Part 2B' | 'privacy notice', atDialog?: AtDialog) {
@@ -166,7 +166,7 @@ export async function deliver(page: Page, short: 'Form CRS' | 'ADV Part 2A' | 'A
 }
 
 export async function recordTheCoffee(page: Page, atDialog?: AtDialog) {
-  const clock = context(page).getByRole('region', { name: 'Clock' })
+  const clock = context(page).getByRole('region', { name: 'Demo · clock' })
   await clock.getByRole('button', { name: 'Record the coffee' }).click()
   const dialog = page.getByRole('dialog', { name: 'Record the coffee' })
   await checkOpenDialog(dialog, atDialog)

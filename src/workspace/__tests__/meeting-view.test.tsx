@@ -61,7 +61,7 @@ describe('the meeting full view', () => {
   it('holding from here moves the meeting on; the transcript arrives beside the notes', async () => {
     await openMeeting()
     const user = userEvent.setup()
-    await user.click(screen.getByRole('button', { name: 'Hold the meeting' }))
+    await user.click(screen.getByRole('button', { name: 'Demo · hold the meeting' }))
     await user.click(within(screen.getByRole('dialog', { name: 'Hold the meeting?' })).getByRole('button', { name: 'Hold the meeting' }))
     const transcript = await screen.findByRole('list', { name: 'Transcript' })
     expect(within(transcript).getAllByRole('listitem')).toHaveLength(28)

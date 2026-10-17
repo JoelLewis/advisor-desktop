@@ -56,12 +56,12 @@ function BeforeTheMeeting({ meeting }: { meeting: MeetingView }) {
     <div className="flex flex-col items-start gap-3">
       <div className="flex flex-wrap gap-2">
         <Button rank="secondary" pending={prep.isPending} onClick={runPrep}>Run prep</Button>
-        <Button onClick={() => { hold.reset(); setConfirming(true) }}>Hold the meeting</Button>
+        <Button onClick={() => { hold.reset(); setConfirming(true) }}>Demo · hold the meeting</Button>
       </div>
       {report ? <p className="text-body text-ink-2">{report}</p> : null}
       {prep.isError ? <p role="alert" className="text-body">{prep.error.message}</p> : null}
       <Dialog open={confirming} onOpenChange={(open) => { if (!open && !hold.isPending) setConfirming(false) }} title="Hold the meeting?"
-        description={`The session clock moves to the end of the meeting, ${fmtEasternTime(meeting.end)} ET, and the transcript arrives. Prep and the agenda close.`}>
+        description={`A demo step: the session clock moves to the end of the meeting, ${fmtEasternTime(meeting.end)} ET, and the transcript arrives. Prep and the agenda close.`}>
         <div className="flex flex-col gap-4">
           {hold.isError ? <p role="alert" className="text-body">{hold.error.message}</p> : null}
           <div className="flex justify-end gap-3">

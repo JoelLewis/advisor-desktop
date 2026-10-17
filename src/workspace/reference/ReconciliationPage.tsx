@@ -54,7 +54,7 @@ function Reconciliation({ view }: { view: ReconciliationView }) {
                 <span className="flex flex-col items-start gap-1">
                   <Tag tone={b.status === 'open' ? 'solid' : 'outline'}>{b.status === 'open' ? 'OPEN' : 'RESOLVED'}</Tag>
                   {b.resolution ? <span className="text-label text-ink-2">{`${RESOLUTION_WORDS[b.resolution.resolution]} · ${b.resolution.actorName} · ${b.resolution.actId}`}</span>
-                    : b.resolvedAt ? <span className="text-label text-ink-3">{`Before this session · ${fmtEasternStamp(b.resolvedAt)}`}</span> : null}
+                    : b.resolvedAt ? <span className="text-label text-ink-3">{`Resolved earlier · ${fmtEasternStamp(b.resolvedAt)}`}</span> : null}
                 </span>
               ),
             },

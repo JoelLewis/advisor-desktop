@@ -52,7 +52,7 @@ describe('the meeting thread', () => {
     await runMeetingPrep(ADRIAN, 'evt-010')
     const panel = await openMeetingThread()
     const user = userEvent.setup()
-    await user.click(within(panel).getByRole('button', { name: 'Hold the meeting' }))
+    await user.click(within(panel).getByRole('button', { name: 'Demo · hold the meeting' }))
     await user.click(within(screen.getByRole('dialog', { name: 'Hold the meeting?' })).getByRole('button', { name: 'Hold the meeting' }))
     expect(await conversation().findByRole('article', { name: 'Meeting held' })).toHaveTextContent('Meeting held · 14:00–15:15 ET · transcript received')
     await waitFor(() => expect(document.querySelector('[data-part="announcer"]')).toHaveTextContent('Meeting held.'))
