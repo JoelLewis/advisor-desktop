@@ -1,4 +1,3 @@
-import { useId } from 'react'
 import { WindowRuler } from '@/kit/window-ruler/WindowRuler'
 import { todayISO } from '@/lib/clock'
 import { restrictionSource } from '@/workspace/proposal/restriction-words'
@@ -9,12 +8,10 @@ const GROUPS = [
   { kind: 'projected', title: "Projected · from this proposal's loss sales", event: 'Proposed sale' },
 ] as const
 
-/** The taxpayer's repurchase windows, the recorded ones apart from the ones this proposal would open, each with its source. */
+/** The taxpayer's repurchase windows, the recorded ones apart from the ones this proposal would open, each with its source. Its pane carries the heading. */
 export function RestrictionRulers({ restrictions }: { restrictions: RepurchaseRestriction[] }) {
-  const titleId = useId()
   return (
-    <section aria-labelledby={titleId} className="flex min-w-0 flex-col gap-4">
-      <h3 id={titleId} className="text-label uppercase text-ink-2">Wash-sale restrictions</h3>
+    <div className="flex min-w-0 flex-col gap-4">
       {restrictions.length === 0 ? <p className="text-body text-ink-3">None for this taxpayer.</p> : GROUPS.map((group) => {
         const shown = restrictions.filter((r) => r.source.kind === group.kind)
         if (shown.length === 0) return null
@@ -31,6 +28,6 @@ export function RestrictionRulers({ restrictions }: { restrictions: RepurchaseRe
           </div>
         )
       })}
-    </section>
+    </div>
   )
 }

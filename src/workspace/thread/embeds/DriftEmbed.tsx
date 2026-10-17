@@ -7,6 +7,7 @@ import { driftMeta } from '@/workspace/drift/drift-meta'
 import { accountFullViewHref } from '@/workspace/full-views/full-view-href'
 import { accountIdOf, type EmbedProps } from './embed-props'
 import { LINK_TARGET } from '@/kit/link-target'
+import { accountDisplayName } from '@/lib/account-display'
 
 export function DriftEmbed({ subject, threadId }: EmbedProps) {
   const accountId = accountIdOf(subject, 'drift')
@@ -19,7 +20,7 @@ export function DriftEmbed({ subject, threadId }: EmbedProps) {
   return (
     <section aria-labelledby={titleId} className="flex min-w-0 flex-col gap-3 border border-rule-2 p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-rule pb-2">
-        <h2 id={titleId} className="text-label uppercase text-ink-2">{`Drift against model · ${account.data.name}`}</h2>
+        <h2 id={titleId} className="text-label uppercase text-ink-2">{`Drift against model · ${accountDisplayName(account.data)}`}</h2>
         <span className="tabular text-label text-ink-3">{driftMeta(drift.data)}</span>
       </div>
       <DriftGauges drift={drift.data} />

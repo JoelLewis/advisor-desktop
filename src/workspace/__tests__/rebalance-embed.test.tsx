@@ -4,6 +4,7 @@ import { renderRoutes } from '@/test/render'
 import { fmtMoney } from '@/kit/measure'
 import { preTradeCheckProposal, previewRebalance } from '@/services/oms'
 import { RebalanceEmbed } from '@/workspace/thread/embeds/RebalanceEmbed'
+import { DriftEmbed } from '@/workspace/thread/embeds/DriftEmbed'
 import { accountIdOf } from '@/workspace/thread/embeds/embed-props'
 
 const STATUS = { block: 'BLOCK', warning: 'WARN', pass: 'CLEAR' } as const
@@ -16,8 +17,8 @@ it("lists the preview's legs with each leg's pre-trade status, and the gross tra
     trades: preview.trades.map(({ symbol, side, quantity, estimatedValue }) => ({ symbol, side, quantity, estimatedValue })),
   })
   renderRoutes([{ path: '/', element: <RebalanceEmbed subject={{ type: 'account', id: 'acc-002' }} /> }], '/')
-  const embed = await screen.findByRole('region', { name: 'Rebalance preview · Robert Johnson Individual' })
-  const table = within(embed).getByRole('table', { name: 'Rebalance legs · Robert Johnson Individual' })
+  const embed = await screen.findByRole('region', { name: 'Rebalance preview · Robert Johnson · Individual (…3847)' })
+  const table = within(embed).getByRole('table', { name: 'Rebalance legs · Robert Johnson · Individual (…3847)' })
   const rows = within(table).getAllByRole('row').slice(1, -1)
   expect(rows).toHaveLength(preview.trades.length)
   preview.trades.forEach((trade, i) => {
@@ -44,6 +45,11 @@ it('a non-account subject is an explicit error', () => {
 
 it('its full-view link remembers the thread it sits in', async () => {
   renderRoutes([{ path: '/', element: <RebalanceEmbed subject={{ type: 'account', id: 'acc-002' }} threadId="th-johnson-review" /> }], '/')
-  const embed = await screen.findByRole('region', { name: 'Rebalance preview · Robert Johnson Individual' })
+  const embed = await screen.findByRole('region', { name: 'Rebalance preview · Robert Johnson · Individual (…3847)' })
   expect(within(embed).getByRole('link', { name: 'Open account' })).toHaveAttribute('href', '/accounts/acc-002?from=th-johnson-review')
+})
+
+it('the drift embed beside it names the account as its link and the context column do', async () => {
+  renderRoutes([{ path: '/', element: <DriftEmbed subject={{ type: 'account', id: 'acc-002' }} threadId="th-johnson-review" /> }], '/')
+  expect(await screen.findByRole('region', { name: 'Drift against model · Robert Johnson · Individual (…3847)' })).toBeInTheDocument()
 })

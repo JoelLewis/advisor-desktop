@@ -165,7 +165,7 @@ describe('routes', () => {
     await renderKitReady()
     const pane = screen.getByRole('heading', { name: 'Workspace embeds' }).closest('section') as HTMLElement
     const p = within(pane)
-    expect(await p.findByRole('region', { name: 'Rebalance preview · Robert Johnson Individual' })).toBeInTheDocument()
+    expect(await p.findByRole('region', { name: 'Rebalance preview · Robert Johnson · Individual (…3847)' })).toBeInTheDocument()
     expect(p.getByRole('article', { name: /^Drift Monitor: .* is outside its tolerance band\.$/ })).toBeInTheDocument()
   })
   it('the kit never writes conversation state: the Johnson thread has no finding after it renders', async () => {

@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import { Pane } from '@/kit/layout/Pane'
 import { Reading } from '@/kit/reading/Reading'
 import { TaxTape } from '@/kit/tax-tape/TaxTape'
@@ -26,6 +27,7 @@ export function WorkbenchSummary({ detail, view, notPreviewed = false }: Workben
   const s = view.summary
   // Collectibles gains are part of the long-term result, so short plus long is the whole year to date.
   const ytd = view.preview.ytdRealizedOnReturn
+  const restrictionsId = useId()
   return (
     <>
       <Pane title="Tax effect" meta="return-level estimate against this year's results">
@@ -39,7 +41,7 @@ export function WorkbenchSummary({ detail, view, notPreviewed = false }: Workben
       <Pane title="Drift before and after">
         {notPreviewed ? <NotPreviewed /> : <DriftTable before={view.driftBefore} projected={view.preview.projectedDrift} />}
       </Pane>
-      <Pane title="Wash-sale restrictions">
+      <Pane title="Wash-sale restrictions" titleId={restrictionsId}>
         {notPreviewed ? <NotPreviewed /> : <RestrictionRulers restrictions={view.preview.repurchaseRestrictions} />}
       </Pane>
       <HeldAwayList accountId={detail.accountId} />

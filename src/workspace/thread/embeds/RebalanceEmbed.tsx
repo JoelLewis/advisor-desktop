@@ -12,6 +12,7 @@ import { preTradeCheckProposal, previewRebalance, type ProposalLegResult, type P
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { accountIdOf, type EmbedProps } from './embed-props'
 import { LINK_TARGET } from '@/kit/link-target'
+import { accountDisplayName } from '@/lib/account-display'
 
 const SEVERITY_STATUS: Readonly<Record<ProposalLegResult['severity'], Status>> = { block: 'BLOCK', warning: 'WARN', pass: 'CLEAR' }
 const SIDE: Readonly<Record<ProposedTrade['side'], string>> = { buy: 'Buy', sell: 'Sell' }
@@ -49,10 +50,10 @@ export function RebalanceEmbed({ subject, threadId }: EmbedProps) {
   return (
     <section aria-labelledby={titleId} className="flex min-w-0 flex-col gap-3 border border-rule-2 p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-rule pb-2">
-        <h2 id={titleId} className="text-label uppercase text-ink-2">{`Rebalance preview · ${account.data.name}`}</h2>
+        <h2 id={titleId} className="text-label uppercase text-ink-2">{`Rebalance preview · ${accountDisplayName(account.data)}`}</h2>
         <span className="text-label text-ink-3">{preview.taxable ? 'tax-aware · not yet approved' : 'tax-advantaged · not yet approved'}</span>
       </div>
-      <DataTable caption={`Rebalance legs · ${account.data.name}`} rows={legs} getRowId={(l) => `${l.index}:${l.symbol}`}
+      <DataTable caption={`Rebalance legs · ${accountDisplayName(account.data)}`} rows={legs} getRowId={(l) => `${l.index}:${l.symbol}`}
         noun={{ singular: 'leg', plural: 'legs' }}
         columns={[
           { id: 'symbol', header: 'Symbol', cell: (l) => l.symbol },
