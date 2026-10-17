@@ -160,7 +160,7 @@ describe('approving a proposal', () => {
   })
 
   describe('the suitability reason', () => {
-    const WHOLE = "Robert Johnson's accounts as a whole stay within tolerance (asset location)"
+    const WHOLE = "Robert Johnson's accounts as a whole stay within tolerance"
     const REVIEWED_V1 = 'I reviewed every leg of v1 and its pre-trade check results.'
 
     it("is chosen for the advisor where Robert Johnson's accounts as a whole stay within his tolerance, stating the figure, and the slip records it", async () => {

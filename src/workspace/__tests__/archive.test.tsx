@@ -35,7 +35,7 @@ describe('the Archive', () => {
       'Message to Robert Johnson',
       'Released the orders staged from v1 of the Johnson rebalance',
     ])
-    expect(rows[0]).toHaveTextContent("Suitability reason · Robert Johnson's accounts as a whole stay within tolerance (asset location) · 46 pts after this proposal, from 51 pts today, within Moderate, 41–55 pts")
+    expect(rows[0]).toHaveTextContent("Suitability reason · Robert Johnson's accounts as a whole stay within tolerance · 46 pts after this proposal, from 51 pts today, within Moderate, 41–55 pts")
     expect(rows[3]).not.toHaveTextContent('Suitability reason')
     expect(rows[3]).not.toHaveTextContent('Fingerprint')
     const audit = within(rows[3]!).getByText('Audit details').closest('details')!

@@ -22,7 +22,7 @@ export function reasonLabel(reason: SuitabilityReasonId, clientName: string): st
   switch (reason) {
     case 'ips_permits_growth': return 'The IPS permits a growth allocation for this account'
     case 'client_acknowledged_risk': return 'Client acknowledged the higher risk in writing'
-    case 'accounts_within_tolerance': return `${clientName}'s accounts as a whole stay within tolerance (asset location)`
+    case 'accounts_within_tolerance': return `${clientName}'s accounts as a whole stay within tolerance`
   }
 }
 

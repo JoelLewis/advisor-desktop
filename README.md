@@ -18,7 +18,7 @@ You are Adrian Hale, the advisor. Nobody else acts live: colleagues' history is 
    - In the context column choose **Ask Proposal Agent**: v1 appears in the thread.
    - On the proposal choose **Revise**, tick **Harvest only: sell only lots at a loss** and choose **Ask Proposal Agent to revise**: v2.
    - Choose **Workbench**. In **Legs · v2** move to the QAI row and press **x** to exclude it; press **⌘S** (Ctrl+S) to save v3. Choose **Back to the thread**.
-   - In the approval panel tick **I reviewed every leg of v3 and its pre-trade check results.**, keep **Suitability reason** on its pre-selected choice, **Robert Johnson's accounts as a whole stay within tolerance (asset location)** (the pre-trade check warns that Growth sits above Robert's tolerance, and his household is within it), and choose **Approve v3**. The orders wait for compliance: **Pending compliance release**.
+   - In the approval panel tick **I reviewed every leg of v3 and its pre-trade check results.**, keep **Suitability reason** on its pre-selected choice, **Robert Johnson's accounts as a whole stay within tolerance** (the pre-trade check warns that Growth sits above Robert's tolerance for this account, and Robert's accounts as a whole are within it), and choose **Approve v3**. The orders wait for compliance: **Pending compliance release**.
 
    ![A proposal in its thread: legs, tax effect, repurchase restrictions and drift before and after](e2e-visual/__baselines__/proposal-thread-light.png)
    ![The workbench: legs with their washed losses, the return-level tax estimate, and the wash-sale windows](e2e-visual/__baselines__/workbench-light.png)
