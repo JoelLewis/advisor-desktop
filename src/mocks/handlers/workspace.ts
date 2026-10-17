@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import { isBreakResolution } from '@/types/reference-reconciliation'
 import { isDisclosureDocument } from '@/types/workspace-prospect'
-import type { AgentId, BindingActKind, Directory, Draft, ListedThread, Message, ThreadDetail } from '@/types/workspace'
+import type { AgentId, Directory, Draft, ListedThread, Message, ThreadDetail } from '@/types/workspace'
 import { AGENTS, PEOPLE, can, permissionsOf } from '../data/people'
 import { resolveBreak } from '../reference/reconciliation'
 import { nextAt, nextId, store } from '../data/workspace-store'
@@ -21,6 +21,7 @@ import { approveProposal, visibleProposal, withdrawApproval } from '../workspace
 import { previewAgent, runAgent } from '../workspace/run-agent'
 import { canSeeThread, isExternalViewer, viewerFrom, visibleThreads } from '../workspace/visibility'
 import { audienceOf } from '../workspace/party'
+import { actsForOutsider, messageForOutsider, messagesForOutsider } from '../workspace/outsider-view'
 import { rosterOf } from '../workspace/roster'
 import { notFound } from './utils'
 import { badRequest, firmViewer, nonEmptyString, readJson, refusal, unauthorized, withoutProvenance } from './workspace-http'
@@ -38,9 +39,6 @@ function externalDirectory(partyId: string): Directory {
   for (const thread of visibleThreads(partyId)) thread.memberIds.forEach((id) => ids.add(id))
   return { people: PEOPLE.filter((p) => ids.has(p.id)), agents: [], permissions: { [partyId]: permissionsOf(partyId) } }
 }
-
-/** The record kinds an outsider may read in their own thread: what reached them. */
-const PARTY_VISIBLE_ACTS: ReadonlySet<BindingActKind> = new Set<BindingActKind>(['send_to_party', 'deliver_disclosure', 'accept_proposal'])
 
 const isAgentId = (value: string): value is AgentId => AGENTS.some((a) => a.id === value)
 
@@ -73,7 +71,7 @@ export const workspaceHandlers = [
     const messages = thread.id === BRIEF_THREAD_ID
       ? [briefToday(viewer), ...briefOrder(inThread)]
       : inThread.sort((a, b) => a.at.localeCompare(b.at))
-    const detail: ThreadDetail = { thread, messages, audience: audienceOf(thread), roster: rosterOf(thread, viewer) }
+    const detail: ThreadDetail = { thread, messages: isExternalViewer(viewer) ? messagesForOutsider(thread.id, messages) : messages, audience: audienceOf(thread), roster: rosterOf(thread, viewer) }
     return HttpResponse.json(detail)
   }),
 
@@ -92,7 +90,7 @@ export const workspaceHandlers = [
     const { body } = json
     const message: Message = { kind: 'text', id: nextId('msg'), threadId: thread.id, authorId: viewer, at: nextAt(), body }
     store().messages.push(message)
-    return HttpResponse.json(message, { status: 201 })
+    return HttpResponse.json(external ? messageForOutsider(message) : message, { status: 201 })
   }),
 
   http.get('/api/workspace/threads/:id/drafts', ({ request, params }) => {
@@ -126,7 +124,7 @@ export const workspaceHandlers = [
     const acts = store().acts.filter((a) => a.threadId === thread.id)
     // An outsider sees the record of what reached them, not what it was made from (the firm's draft, its proposal, its editors) nor how the firm reviewed it.
     return HttpResponse.json(isExternalViewer(viewer)
-      ? acts.filter((a) => PARTY_VISIBLE_ACTS.has(a.kind)).map(withoutProvenance)
+      ? actsForOutsider(thread.id, acts.map(withoutProvenance))
       : acts)
   }),
 

@@ -35,7 +35,7 @@ export function actWording(act: BindingAct, actor: Person, forParty: boolean): A
     case 'deliver_disclosure':
       return { kind: `Document from ${actor.name}`, title: `${documents} delivered to you`, archive: 'Retained as a record', trailLabel: `Document from ${actor.name}` }
     case 'accept_proposal':
-      return { kind: `Acceptance by ${actor.name}`, title: 'You accepted the proposal (agreement awaiting signature)', archive: 'Retained as a record', trailLabel: `Acceptance by ${actor.name}` }
+      return { kind: RECORD_KIND_LABEL.accept_proposal, title: 'You accepted the proposal', archive: 'Retained as a record', trailLabel: RECORD_KIND_LABEL.accept_proposal }
     default:
       return { kind: `Message from ${actor.name}`, title: documents ? `Sent to you, with ${documents}` : 'Sent to you', archive: 'Retained as a record', trailLabel: `Message from ${actor.name}` }
   }

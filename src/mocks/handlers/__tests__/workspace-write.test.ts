@@ -51,7 +51,7 @@ describe('send to client (rules 5–6)', () => {
     const seen = (await call('GET', '/threads/th-robert', 'cli-001')).body
     const last = seen.messages.slice(-2)
     expect(last[0]).toMatchObject({ kind: 'text', authorId: 'user-001', body: 'Sarah will be in touch this week.' })
-    expect(last[1]).toMatchObject({ kind: 'act', actId: 'REC-0001' })
+    expect(last[1]).toMatchObject({ kind: 'act', actId: '1' })
     expect((await call('POST', '/acts', 'user-001', { kind: 'send_to_party', draftId: draft.id })).status).toBe(409)
   })
   it('a csa may draft but not send', async () => {

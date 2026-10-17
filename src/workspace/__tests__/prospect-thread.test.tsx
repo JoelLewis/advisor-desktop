@@ -183,5 +183,7 @@ describe('her thread, as she sees it', () => {
     expect(store().acts.find((a) => a.kind === 'accept_proposal')).toMatchObject({ actorId: PELL, version: 1, viaPresenter: { presenterId: ADRIAN, path: 'view_as' } })
     await waitFor(() => expect(within(steps).queryByRole('button', { name: 'Accept the proposal' })).toBeNull())
     expect(screen.getByRole('main').textContent).not.toMatch(/viaPresenter|view_as|presenter|REC-\d{4}.*bestInterest/i)
+    expect((await screen.findAllByText('Proposal accepted (agreement awaiting signature)')).length).toBeGreaterThan(0)
+    expect(screen.getByRole('main')).not.toHaveTextContent('Audit details')
   })
 })

@@ -115,7 +115,7 @@ function accept(record: ProspectRecord, via: ViaPresenter, version: number | und
   const act: BindingAct = {
     id: commitActId(), kind: 'accept_proposal', actorId: record.id, at, threadId: record.threadId,
     subject: { type: 'prospect_proposal', id: proposal.id }, version: v.n, fingerprint: v.fingerprint,
-    summary: `${record.name} accepted v${v.n} of the ${proposal.title}`, viaPresenter: via,
+    summary: `${record.name} accepted v${v.n} of the ${proposal.title} (agreement awaiting signature)`, viaPresenter: via,
   }
   recordAct(act)
   const marker = store().messages.find((m) => m.kind === 'act' && m.actId === act.id)

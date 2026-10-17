@@ -7,6 +7,7 @@ import { actAsProspect, advanceProspect, herStep, partySteps, recordCoffee, type
 import {
   createProspectProposal, parseProspectConstraints, readableProspectProposals, reviseProspectProposal, visibleProspectProposal,
 } from '../workspace/prospect-proposals'
+import { actForOutsider } from '../workspace/outsider-view'
 import { isExternalViewer, viewerFrom } from '../workspace/visibility'
 import { notFound } from './utils'
 import { badRequest, firmViewer, nonEmptyString, readJson, refusal, unauthorized, withoutProvenance } from './workspace-http'
@@ -26,7 +27,7 @@ function parseAnswers(value: unknown): { ok: true; value?: RiskAnswer[] } | { ok
 /** A step's answer. An outsider (she, viewing as herself) reads the act stripped of the firm's provenance. */
 function stepped(r: StepDone | StepFailure, viewer: string) {
   if (!r.ok) return refusal(r)
-  const act = r.act && isExternalViewer(viewer) ? withoutProvenance(r.act) : r.act
+  const act = r.act && isExternalViewer(viewer) ? actForOutsider(withoutProvenance(r.act)) : r.act
   return HttpResponse.json({ steps: r.steps, ...(act ? { act } : {}) }, { status: 201 })
 }
 

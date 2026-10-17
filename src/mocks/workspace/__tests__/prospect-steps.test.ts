@@ -161,7 +161,7 @@ describe('her acceptance', () => {
     ])
     expect(herThread().find((m) => m.kind === 'text' && m.at === '2026-03-02T15:00:00.000Z')).toMatchObject({ authorId: PELL, body: PELL_ACCEPTANCE })
     expect(r.act).toMatchObject({ kind: 'accept_proposal', actorId: PELL, at: '2026-03-02T15:01:00.000Z', threadId: 'th-pell', version: 1,
-      subject: { type: 'prospect_proposal', id: detail.id }, viaPresenter: SCRIPTED, summary: 'Dr. Amanda Pell accepted v1 of the Pell proposal' })
+      subject: { type: 'prospect_proposal', id: detail.id }, viaPresenter: SCRIPTED, summary: 'Dr. Amanda Pell accepted v1 of the Pell proposal (agreement awaiting signature)' })
     const record = requireProspect(PELL)
     expect(record.stage).toBe('onboarding')
     expect(record.stageHistory.map((h) => h.stage)).toEqual(['contact', 'discovery', 'proposal', 'accepted', 'onboarding'])

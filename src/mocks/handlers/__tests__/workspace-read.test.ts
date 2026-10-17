@@ -60,7 +60,8 @@ describe('directory scoping', () => {
     const client = await call('/acts?threadId=th-robert', 'cli-001')
     expect(client.body).toHaveLength(1)
     expect(client.body[0]).not.toHaveProperty('subject')
-    expect(client.body[0]).toMatchObject({ id: 'REC-0001', kind: 'send_to_party', actorId: 'user-001' })
+    expect(client.body[0]).toMatchObject({ id: '1', kind: 'send_to_party', actorId: 'user-001' })
+    expect(client.body[0]).not.toHaveProperty('fingerprint')
   })
   it("a client is served a sent letter's act without its proposal basis or its editors", async () => {
     const post = (path: string, body: unknown) => fetch(`/api/workspace${path}`, {

@@ -30,7 +30,7 @@ describe('Mark, on prospect work', () => {
     expect(screen.getByLabelText('Client or prospect')).toHaveValue('prsp-011')
     expect(table).toHaveTextContent('Delivered Form CRS (client relationship summary) to Dr. Amanda Pell')
     expect(table).toHaveTextContent('Message to Dr. Amanda Pell')
-    expect(table).toHaveTextContent('Dr. Amanda Pell accepted v1 of the Pell proposal')
+    expect(table).toHaveTextContent('Dr. Amanda Pell accepted v1 of the Pell proposal (agreement awaiting signature)')
     expect(table).toHaveTextContent('via a scripted clock jump')
   })
 
