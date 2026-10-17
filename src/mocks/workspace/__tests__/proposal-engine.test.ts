@@ -27,7 +27,7 @@ describe('buildVersion · acc-002', () => {
       sold: 835_915, bought: 926_282, gains: 122_388, losses: -45_850, netShortTerm: 0, netLongTerm: 76_538, washed: 0, grossTax: 29_128, netTax: 10_422,
     })
     expect(v.pretrade.passed).toBe(true)
-    expect(v.pretrade.violations.map((x) => [x.category, x.symbol, x.severity])).toEqual([['concentration_limit', 'SPY', 'warning']])
+    expect(v.pretrade.violations.map((x) => [x.category, x.symbol, x.severity])).toEqual([['concentration_limit', 'SPY', 'warning'], ['model_above_tolerance', undefined, 'warning']])
     expect(v.legFacts.find((f) => f.symbol === 'INTC')).toEqual({ symbol: 'INTC', lotIds: ['lot-pos-023-0'], lots: [{ lotId: 'lot-pos-023-0', shares: 7_000, realized: -45_850, character: 'long' }], washed: 0 })
     expect(v.excludedLegs).toEqual([])
   })

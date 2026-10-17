@@ -1,6 +1,7 @@
 import type { Account } from '@/types/account'
 import type { MethodNote, RowQuote } from '@/types/reference'
-import type { AccountRiskView, BookRiskView, RiskPosture, ToleranceStatus } from '@/types/reference-risk'
+import type { Client } from '@/types/client'
+import type { AccountRiskView, BookRiskView, HouseholdRisk, RiskPosture, ToleranceStatus } from '@/types/reference-risk'
 import { accounts } from '@/mocks/data/accounts'
 import { clients } from '@/mocks/data/clients'
 import { households } from '@/mocks/data/households'
@@ -33,12 +34,9 @@ const STATUS_RANK: Readonly<Record<ToleranceStatus, number>> = { above: 3, below
  * band; its sign is the status, and because the bands partition 0–100 in whole points this is the same
  * status a band-rank comparison gives. One key orders the book and the table's header click alike.
  */
-function postureOf(account: Account, vol: number): RiskPosture {
-  const client = clientOf(account)
-  const score = riskScoreOf(vol)
+function postureAt(score: number, client: Client, glide: boolean): RiskPosture {
   const own = bandFor(score)
   const tolerance = bandFor(client.riskProfile.score)
-  const glide = followsGlidePath(account)
   const beyond = glide ? 0 : score > tolerance.ceiling ? score - tolerance.ceiling : score < tolerance.floor ? score - tolerance.floor : 0
   const status: ToleranceStatus = glide ? 'glide_path' : beyond > 0 ? 'above' : beyond < 0 ? 'below' : 'within'
   const headroom = score - tolerance.ceiling
@@ -46,6 +44,33 @@ function postureOf(account: Account, vol: number): RiskPosture {
   return {
     score, band: own.label, status, beyond, headroom, sortKey: STATUS_RANK[status] * 1000 + Math.abs(beyond) + within,
     tolerance: { clientId: client.id, clientName: client.fullName, score: client.riskProfile.score, band: tolerance.label, floor: tolerance.floor, ceiling: tolerance.ceiling, assessedOn: client.riskProfile.lastAssessed },
+  }
+}
+
+const postureOf = (account: Account, vol: number): RiskPosture => postureAt(riskScoreOf(vol), clientOf(account), followsGlidePath(account))
+
+const householdNameOf = (householdId: string) => {
+  const household = households.find((h) => h.id === householdId)
+  if (!household) throw new Error(`No household ${householdId}`)
+  return household.name
+}
+
+/**
+ * Suitability is judged per household: the client's accounts in the household (a glide path aside, as it
+ * is aside from the tolerance), each account's score weighted by its value, on the same scale and against
+ * the same band. A spouse's accounts are measured against the spouse's own questionnaire. Undefined when
+ * the client holds no measured account.
+ */
+export function householdRiskOf(clientId: string): HouseholdRisk | undefined {
+  const client = clients.find((c) => c.id === clientId)
+  if (!client) throw new Error(`No client ${clientId}`)
+  const measured = accounts.filter((a) => a.clientId === clientId && !followsGlidePath(a)).map((a) => ({ id: a.id, ...riskProfileFor(a) }))
+  if (measured.length === 0) return undefined
+  const value = measured.reduce((s, p) => s + p.value, 0)
+  const score = Math.round(measured.reduce((s, p) => s + riskScoreOf(p.vol) * p.value, 0) / value)
+  return {
+    clientId, clientName: client.fullName, householdName: householdNameOf(client.householdId),
+    accountIds: measured.map((p) => p.id), value, posture: postureAt(score, client, false),
   }
 }
 
@@ -79,7 +104,7 @@ const methods = (): MethodNote[] => [
   { label: 'Concentration', modeled: false, text: 'The Herfindahl-Hirschman index of position weights (0 to 10,000) and its effective number of positions; limits are the IPS limits for a single issuer, a pooled vehicle and cash.' },
   { label: 'Stress tests', modeled: true, text: "Each scenario's asset-class returns replayed on today's holdings." },
   { label: 'Risk score and tolerance', modeled: true, text: `Modeled, not realized: the account's σ placed on the questionnaire's 0 to 100 scale through the model each band of the firm's risk-profile table names. Tolerance is the band the client's questionnaire score falls in, not the score itself: an account is above or below when its score falls outside that band, by the points shown, and the book is read above first, then below, each by how far outside; accounts within are ordered by how close they sit to the top of the band. ${scaleText()}` },
-  { label: 'Screening, not suitability', modeled: false, text: "Each account is measured on its own. Tolerance applies to the client's whole relationship, and asset location can rightly hold an IRA more conservatively and a taxable account more aggressively, so an account's status is a signal to review, not a suitability finding." },
+  { label: 'Screening, not suitability', modeled: false, text: "An account's status is a screening signal, not a suitability finding: suitability is judged per household. Each client's household score is the value-weighted average of the scores of that client's accounts in the household, glide paths aside, on the same scale and against the same band; a spouse's accounts are measured against the spouse's own questionnaire. Asset location can rightly hold an IRA more conservatively and a taxable account more aggressively, so an account outside the band whose household is within it is marked asset location." },
   { label: 'Glide paths', modeled: false, text: "A 529 on the education model follows its beneficiary's time horizon, not the owner's questionnaire, so it carries the status glide path and no comparison with the owner's tolerance; it is listed last." },
 ]
 
@@ -111,17 +136,24 @@ export function accountRiskView(viewerId: string, accountId: string): AccountRis
 
 export function bookRiskView(viewerId: string): BookRiskView | undefined {
   if (!isFirmViewer(viewerId)) return undefined
+  const householdRows = clients.flatMap((c) => householdRiskOf(c.id) ?? [])
+    .sort((a, b) => b.posture.sortKey - a.posture.sortKey || a.clientId.localeCompare(b.clientId))
+  const householdWithin = new Set(householdRows.filter((h) => h.posture.status === 'within').map((h) => h.clientId))
   const rows = accounts.map((a) => {
     const p = riskProfileFor(a)
-    const household = households.find((h) => h.id === a.householdId)
-    if (!household) throw new Error(`${a.id} names no household`)
+    const posture = postureOf(a, p.vol)
+    const outside = posture.status === 'above' || posture.status === 'below'
     return {
-      accountId: a.id, accountName: a.name, householdName: household.name, clientName: clientOf(a).fullName, mandateName: mandateNameOf(a),
-      value: p.value, volatility: p.vol, var95: Math.round(parametricVaR(p.value, p.vol)), posture: postureOf(a, p.vol),
+      accountId: a.id, accountName: a.name, householdName: householdNameOf(a.householdId), clientName: clientOf(a).fullName, mandateName: mandateNameOf(a),
+      value: p.value, volatility: p.vol, var95: Math.round(parametricVaR(p.value, p.vol)), posture,
+      assetLocation: outside && householdWithin.has(a.clientId),
     }
   }).sort((a, b) => b.posture.sortKey - a.posture.sortKey || a.accountId.localeCompare(b.accountId))
   const count = (status: ToleranceStatus) => rows.filter((r) => r.posture.status === status).length
-  return { asOf: MOCK_NOW_ISO, rows, aboveTolerance: count('above'), belowTolerance: count('below'), methods: methods() }
+  return {
+    asOf: MOCK_NOW_ISO, households: householdRows, householdsOutside: householdRows.length - householdWithin.size,
+    rows, aboveTolerance: count('above'), belowTolerance: count('below'), methods: methods(),
+  }
 }
 
 const STATUS_WORDS: Readonly<Record<Exclude<ToleranceStatus, 'glide_path'>, string>> = { above: 'above', within: 'within', below: 'below' }

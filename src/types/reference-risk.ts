@@ -4,6 +4,8 @@ export type FactorId = 'market' | 'size' | 'value' | 'momentum' | 'quality' | 'r
 export type FactorRow = { factor: FactorId; label: string; exposure: number; benchmark: number; active: number }
 /** `glide_path`: a 529 whose risk follows the beneficiary's horizon, not measured against the owner's questionnaire. */
 export type ToleranceStatus = 'above' | 'within' | 'below' | 'glide_path'
+/** A household is always measured: it has no glide-path status. */
+export type HouseholdStatus = Exclude<ToleranceStatus, 'glide_path'>
 export type RiskPosture = {
   /** The account's σ on the questionnaire's 0–100 scale, whole points. */
   score: number; band: string
@@ -39,5 +41,19 @@ export type AccountRiskView = {
   stress: StressRow[]
   methods: MethodNote[]
 }
-type BookRiskRow = { accountId: string; accountName: string; householdName: string; clientName: string; mandateName: string; value: number; volatility: number; var95: number; posture: RiskPosture }
-export type BookRiskView = { asOf: string; rows: BookRiskRow[]; aboveTolerance: number; belowTolerance: number; methods: MethodNote[] }
+type BookRiskRow = {
+  accountId: string; accountName: string; householdName: string; clientName: string; mandateName: string; value: number; volatility: number; var95: number; posture: RiskPosture
+  /** Outside the client's band while the client's household is within it: asset location, a screening signal and not a suitability flag. */
+  assetLocation: boolean
+}
+/**
+ * A client's household against the client's tolerance: the value-weighted score of the client's accounts
+ * in the household, glide paths aside. `posture.status` is never `glide_path`.
+ */
+export type HouseholdRisk = { clientId: string; clientName: string; householdName: string; accountIds: string[]; value: number; posture: RiskPosture }
+export type BookRiskView = {
+  asOf: string
+  /** One row per client holding a measured account, read in the same order as the accounts. */
+  households: HouseholdRisk[]; householdsOutside: number
+  rows: BookRiskRow[]; aboveTolerance: number; belowTolerance: number; methods: MethodNote[]
+}

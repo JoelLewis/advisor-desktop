@@ -25,7 +25,11 @@ export type BriefGroup = 'decide' | 'context'
 /** One reading of a Brief item: a line in words with no digits and, for a decision, its key figure, formatted by the kit. */
 export type BriefReading = { findingId: string; line: string; figure?: Figure }
 /** A line of the Brief's summary: one finding, or the findings about one security under its name (`title`). */
-export type BriefItem = { key: string; agentId: AgentId; attention: Attention; title?: string; readings: BriefReading[] }
+export type BriefItem = {
+  key: string; agentId: AgentId; attention: Attention; title?: string; readings: BriefReading[]
+  /** Engine: the account whose approved proposal settles this item (Task 8 moves it to Context then). */
+  awaitsApprovalOf?: string
+}
 export type TodayLine =
   /** Approved orders staged and waiting for compliance; `at` is the approval. */
   | { kind: 'release'; at: string; accountName: string; version: number; threadId: string }

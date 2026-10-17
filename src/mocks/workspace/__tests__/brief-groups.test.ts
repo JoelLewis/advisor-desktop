@@ -23,6 +23,7 @@ describe('the Brief groups its findings', () => {
     [{ kind: 'replacement_hold', held: 'VanEck Semiconductor ETF', sold: 'Intel Corp.' }, 'context'],
     [{ kind: 'realized_loss', symbol: 'INTC', name: 'Intel Corp.', when: 'recently' }, 'context'],
     [{ kind: 'held_away' }, 'context'],
+    [{ kind: 'model_above_tolerance', accountId: 'acc-002', model: 'Growth', clientName: 'Robert Johnson', tolerance: 'Moderate', household: 'within' }, 'decide'],
     [{ kind: 'not_measured' }, 'context'],
   ])('%o is %s', (topic, group) => expect(briefGroupOf(topic)).toBe(group))
 
@@ -34,10 +35,11 @@ describe('the Brief groups its findings', () => {
   ])('%o, grouped %s, reads %j', (topic, grouped, line) =>
     expect(briefLine({ topic, claim: 'No position in this account can be sold at a loss today.' }, grouped)).toBe(line))
 
-  it('in the morning: three decisions, Intel as one item with two readings, four lines of context', () => {
+  it('in the morning: four decisions, Intel as one item with two readings, four lines of context', () => {
     const { decide, context } = summaryOf()
     expect(lines(decide)).toEqual([
       { title: undefined, lines: ['US Equity is outside its tolerance band'] },
+      { title: undefined, lines: ["Growth sits above Robert Johnson's Moderate tolerance for this account; the household as a whole is within it"] },
       { title: 'Intel Corp.', lines: ['The remaining shares can be sold at a loss today', 'Sold at a loss recently; a buyback would wash the loss'] },
       { title: undefined, lines: ['iShares Core US Aggregate Bond ETF can be sold at a loss today'] },
     ])
@@ -49,10 +51,19 @@ describe('the Brief groups its findings', () => {
     ])
   })
 
+  it("the morning's Needs a decision: the drift, then Growth above Robert's tolerance with the household within it, then Intel", () => {
+    const { decide } = summaryOf()
+    expect(decide.map((i) => i.title ?? i.readings[0]!.line).slice(0, 3)).toEqual([
+      'US Equity is outside its tolerance band', "Growth sits above Robert Johnson's Moderate tolerance for this account; the household as a whole is within it", 'Intel Corp.',
+    ])
+    expect(decide[1]).toMatchObject({ agentId: 'drift-monitor', attention: 'attention', awaitsApprovalOf: 'acc-002' })
+    expect(decide.filter((i) => i.awaitsApprovalOf !== undefined)).toHaveLength(1)
+  })
+
   it('carries each decision its key figure, and no line a digit', () => {
     const { decide, context } = summaryOf()
     expect(decide.flatMap((i) => i.readings.map((r) => r.figure?.label))).toEqual([
-      'Largest drift · US Equity', 'Loss allowed now · INTC', 'Loss realized · INTC', 'Loss allowed now · AGG',
+      'Largest drift · US Equity', 'Growth risk score', 'Loss allowed now · INTC', 'Loss realized · INTC', 'Loss allowed now · AGG',
     ])
     for (const r of [...decide, ...context].flatMap((i) => i.readings)) expect(r.line).not.toMatch(/\d/)
     expect(context.flatMap((i) => i.readings).every((r) => r.figure === undefined)).toBe(true)

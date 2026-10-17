@@ -9,6 +9,7 @@ import { openWashSaleWindows } from '@/mocks/data/realized-sales'
 import type { AssetClass, Position } from '@/types/portfolio'
 import { claimNameOf } from './claim-name'
 import { fmtDayMonthYear } from '@/kit/measure'
+import { modelAboveTolerance, toleranceLine } from '@/mocks/workspace/suitability'
 
 const label = (key: AssetClass): string => ASSET_CLASS_LABELS[key]
 
@@ -39,6 +40,21 @@ export function runDriftMonitor({ asOf, subject }: AgentContext): TopicFinding[]
       ...outside.filter((d) => d !== worst).map((d) => ({ label: label(d.assetClass), value: d.drift, unit: 'pp' as const, source: 'drift.assetClassDrifts' })),
     ],
   }]
+  const gap = modelAboveTolerance(account)
+  if (gap) {
+    const model = /\d/.test(gap.modelName) ? 'The model' : gap.modelName
+    findings.push({
+      claim: `${toleranceLine(model, gap.clientName, gap.tolerance.label, gap.household.status)}. A rebalance to it needs a recorded suitability reason.`,
+      attention: 'attention',
+      citations: [{ source: `Risk tolerance · ${gap.clientName}'s questionnaire against ${gap.modelName}'s risk score and the household's`, asOf }],
+      topic: { kind: 'model_above_tolerance', accountId: account.id, model, clientName: gap.clientName, tolerance: gap.tolerance.label, household: gap.household.status },
+      figures: [
+        { label: `${gap.modelName} risk score`, value: gap.modelScore, unit: 'pts', source: 'riskScoreOf(modelVolatility)' },
+        { label: `${gap.clientName}'s tolerance ceiling`, value: gap.tolerance.ceiling, unit: 'pts', source: 'clients.riskProfile.score · RISK_PROFILE_TABLE' },
+        { label: `${gap.clientName}'s household risk score`, value: gap.household.score, unit: 'pts', source: 'householdRiskOf' },
+      ],
+    })
+  }
   const offModel = drifts.filter((d) => d.target === 0 && d.actual > 0)
   if (offModel.length > 0) {
     findings.push({

@@ -14,6 +14,8 @@ export const BLOTTER_STATUS_TAG: Readonly<Record<BlotterStatus, string>> = {
   working: 'WORKING', pending_compliance: 'PENDING COMPLIANCE', filled: 'FILLED', canceled: 'CANCELED', withdrawn: 'WITHDRAWN', returned: 'RETURNED',
 }
 export const TOLERANCE_TAG: Readonly<Record<ToleranceStatus, string>> = { above: 'ABOVE TOLERANCE', within: 'WITHIN TOLERANCE', below: 'BELOW TOLERANCE', glide_path: 'GLIDE PATH' }
+/** An account outside its client's band whose household is within it: a screening signal, not a suitability flag. */
+export const ASSET_LOCATION_TAG = 'ASSET LOCATION'
 
 const pointsWords = (n: number) => `${fmtPoints(n)} ${n === 1 ? 'pt' : 'pts'}`
 /** "Moderate Conservative (26–40)": the client's tolerance as the band it is. */

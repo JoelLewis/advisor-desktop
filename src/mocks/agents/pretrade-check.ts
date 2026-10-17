@@ -5,7 +5,10 @@ import { accounts } from '@/mocks/data/accounts'
 import { getPositionsForAccount } from '@/mocks/data/positions'
 import { generateRebalanceTrades } from '@/mocks/handlers/oms'
 import { evaluateProposal } from '@/mocks/handlers/compliance'
+import { tolerancePhrase, withSuitability } from '@/mocks/workspace/suitability'
 import { claimNameOf } from './claim-name'
+
+const hasDigit = (text: string) => /\d/.test(text)
 
 type Names = ReadonlyMap<string, string>
 
@@ -36,6 +39,12 @@ function describe(v: ProposalViolation, names: Names): { who: string; label: str
     case 'sector_limit': { const sector = sectorOf(v); return { who: sector, label: sector, phrase: weightPhrase(v, 'sector') } }
     case 'cash_minimum': return { who: 'Cash', label: 'Cash', phrase: 'would fall below the minimum reserve' }
     case 'wash_sale': { const symbol = symbolOf(v); return { who: securityName(names, symbol), label: symbol, phrase: 'may trigger a wash sale' } }
+    case 'model_above_tolerance': {
+      const t = v.tolerance
+      if (!t) throw new Error('A model_above_tolerance violation carries no tolerance facts')
+      const model = hasDigit(t.modelName) ? 'The model' : t.modelName
+      return { who: model, label: t.modelName, phrase: tolerancePhrase(t.clientName, t.toleranceBand, t.householdStatus) }
+    }
   }
 }
 
@@ -48,8 +57,9 @@ export function runPretradeCheck({ asOf, subject }: AgentContext): AgentFinding[
   if (account.mandate === 'custom') return info('This account is a custom mandate, not model-managed: there is no model to rebalance it to, so no proposal to check.')
   const legs = generateRebalanceTrades(account.id, true)
   if (legs.length === 0) return info('There is no rebalance proposal to check.')
-  const result = evaluateProposal(account.id, legs.map((l) => ({ symbol: l.symbol, side: l.side, quantity: l.quantity, estimatedValue: l.estimatedValue })))
-  if (!result) return info('The pre-trade check could not evaluate this account.')
+  const evaluated = evaluateProposal(account.id, legs.map((l) => ({ symbol: l.symbol, side: l.side, quantity: l.quantity, estimatedValue: l.estimatedValue })))
+  if (!evaluated) return info('The pre-trade check could not evaluate this account.')
+  const result = withSuitability(evaluated, account)
   if (result.violations.length === 0) return info('No pre-trade check flagged the proposal.')
   const names: Names = new Map([...getPositionsForAccount(account.id, account.totalValue).map((p) => [p.symbol, p.name] as const), ...legs.map((l) => [l.symbol, l.name] as const)])
   return result.violations.map((v) => {
@@ -59,6 +69,10 @@ export function runPretradeCheck({ asOf, subject }: AgentContext): AgentFinding[
     if (v.category === 'cash_minimum') {
       figures.push({ label: 'Cash after the proposal', value: result.projectedCashPct, unit: '%', source: 'evaluateProposal.projectedCashPct' })
       figures.push({ label: 'Minimum cash', value: v.limitWeight ?? result.minimumCash / account.totalValue, unit: '%', source: 'evaluateProposal.violations.limitWeight' })
+    } else if (v.category === 'model_above_tolerance' && v.tolerance) {
+      figures.push({ label: `${v.tolerance.modelName} risk score`, value: v.tolerance.modelScore, unit: 'pts', source: 'riskScoreOf(modelVolatility)' })
+      figures.push({ label: `${v.tolerance.clientName}'s tolerance ceiling`, value: v.tolerance.ceiling, unit: 'pts', source: 'clients.riskProfile.score · RISK_PROFILE_TABLE' })
+      figures.push({ label: `${v.tolerance.clientName}'s household risk score`, value: v.tolerance.householdScore, unit: 'pts', source: 'householdRiskOf' })
     } else {
       if (v.projectedWeight !== undefined) figures.push({ label: `${label} after the proposal`, value: v.projectedWeight, unit: '%', source: 'evaluateProposal.violations.projectedWeight' })
       if (v.limitWeight !== undefined) figures.push({ label: `${label} limit`, value: v.limitWeight, unit: '%', source: 'evaluateProposal.violations.limitWeight' })

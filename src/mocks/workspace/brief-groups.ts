@@ -1,15 +1,16 @@
 import type { AgentId, Attention, BriefGroup, BriefItem } from '@/types/workspace'
 import type { BriefTopic, TopicFinding } from '@/mocks/agents/brief-topic'
+import { toleranceLine } from './suitability'
 
 export type MeasuredFinding = TopicFinding & { id: string; agentId: AgentId }
 
 /** The one rule: a finding needs a decision when acting on it would change a trade. */
 export function briefGroupOf(topic: BriefTopic): BriefGroup {
-  return topic.kind === 'out_of_band' || topic.kind === 'harvest_allowed' ? 'decide' : 'context'
+  return topic.kind === 'out_of_band' || topic.kind === 'harvest_allowed' || topic.kind === 'model_above_tolerance' ? 'decide' : 'context'
 }
 
-/** The topics whose line carries its finding's first figure: the drift, the loss allowed now, the loss realized. */
-const KEY_FIGURE: ReadonlySet<BriefTopic['kind']> = new Set(['out_of_band', 'harvest_allowed', 'realized_loss'])
+/** The topics whose line carries its finding's first figure: the drift, the loss allowed now, the loss realized, the model's risk score. */
+const KEY_FIGURE: ReadonlySet<BriefTopic['kind']> = new Set(['out_of_band', 'harvest_allowed', 'realized_loss', 'model_above_tolerance'])
 
 /** The security a finding is about, where two findings can be about the same one. */
 function securityOf(topic: BriefTopic): { symbol: string; name: string } | undefined {
@@ -30,6 +31,7 @@ export function briefLine({ topic, claim }: Pick<MeasuredFinding, 'topic' | 'cla
     case 'realized_loss':
       return grouped ? `Sold at a loss ${topic.when}; a buyback would wash the loss` : `${topic.name} was sold at a loss ${topic.when}`
     case 'held_away': return 'Held-away accounts are outside the wash-sale checks'
+    case 'model_above_tolerance': return toleranceLine(topic.model, topic.clientName, topic.tolerance, topic.household)
     case 'not_measured': return claim.replace(/\.$/, '')
   }
 }
@@ -62,6 +64,7 @@ export function briefItems(findings: readonly MeasuredFinding[], agentOrder: rea
       agentId: finding.agentId,
       attention: finding.attention,
       ...(grouped && security ? { title: security.name } : {}),
+      ...(finding.topic.kind === 'model_above_tolerance' ? { awaitsApprovalOf: finding.topic.accountId } : {}),
       readings: members.map((m) => {
         const figure = m.figures[0]
         if (KEY_FIGURE.has(m.topic.kind) && !figure) throw new Error(`A ${m.topic.kind} finding (${m.id}) carries no key figure`)

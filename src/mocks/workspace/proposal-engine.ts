@@ -5,6 +5,7 @@ import type { DraftPreview, ExcludedLeg, LegEdit, LegFacts, ProposalConstraint, 
 import { accounts } from '@/mocks/data/accounts'
 import { getPositionsForAccount } from '@/mocks/data/positions'
 import { evaluateProposal } from '@/mocks/handlers/compliance'
+import { withSuitability } from './suitability'
 import { computeDriftForAccount } from '@/mocks/handlers/pms'
 import { requireModelManaged } from '@/lib/mandate'
 import type { LegSale } from '@/mocks/handlers/batch-wash-sales'
@@ -217,8 +218,9 @@ export function buildVersion(accountId: string, constraints: readonly ProposalCo
   if (!edited.ok) return edited
   const [preview] = buildRebalancePreviews([{ account, ...edited.proposal }], true, PROPOSAL_DRIFT_THRESHOLD, MOCK_TODAY_ISO)
   if (!preview) throw new Error(`No preview for ${accountId}`)
-  const pretrade = evaluateProposal(accountId, preview.trades.map(({ symbol, side, quantity, estimatedValue }) => ({ symbol, side, quantity, estimatedValue })))
-  if (!pretrade) throw new Error(`No pre-trade result for ${accountId}`)
+  const evaluated = evaluateProposal(accountId, preview.trades.map(({ symbol, side, quantity, estimatedValue }) => ({ symbol, side, quantity, estimatedValue })))
+  if (!evaluated) throw new Error(`No pre-trade result for ${accountId}`)
+  const pretrade = withSuitability(evaluated, account)
   const legFacts: LegFacts[] = edited.proposal.legs.flatMap((leg, i) => {
     const settled = preview.trades[i]
     if (leg.side !== 'sell' || !settled) return []

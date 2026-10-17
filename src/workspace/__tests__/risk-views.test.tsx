@@ -22,6 +22,21 @@ describe('book risk', () => {
     expect(screen.getByRole('region', { name: 'Methods & sources' })).toHaveTextContent('Value at riskMODELED')
   })
 
+  it("reads each client's household first, and marks an account outside its band asset location when the household is within it", async () => {
+    renderRoutes(routes, '/risk')
+    await screen.findByRole('heading', { level: 1, name: 'Risk' })
+    const households = within(screen.getByRole('table', { name: 'Households against tolerance' })).getAllByRole('row')
+    const robert = households.find((r) => r.textContent?.includes('Robert Johnson'))
+    expect(robert).toHaveTextContent('Johnson Household')
+    expect(robert).toHaveTextContent('WITHIN TOLERANCE')
+    const accounts = within(screen.getByRole('table', { name: 'Accounts against tolerance' })).getAllByRole('row')
+    const ira = accounts.find((r) => r.textContent?.includes('Robert Johnson Traditional IRA'))
+    expect(ira).toHaveTextContent('ASSET LOCATION')
+    expect(ira).toHaveTextContent('below Moderate (41–55); household within')
+    expect(accounts.find((r) => r.textContent?.includes('Patel Digital Assets Account'))).toHaveTextContent('ABOVE TOLERANCE')
+    expect(screen.getByRole('region', { name: 'Methods & sources' })).toHaveTextContent('suitability is judged per household')
+  })
+
   it('takes an account above tolerance to a team thread', async () => {
     renderRoutes(routes, '/risk')
     await screen.findByRole('heading', { level: 1, name: 'Risk' })

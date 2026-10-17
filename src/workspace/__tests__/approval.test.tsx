@@ -155,7 +155,7 @@ describe('approving a proposal', () => {
     const panel = await openApproval()
     const reading = within(panel).getByRole('list', { name: 'Pre-trade check results · v1' })
     expect(within(reading).getAllByText('WARN').length).toBeGreaterThan(0)
-    expect(within(panel).getByRole('checkbox', { name: 'I reviewed every leg of v1 and its pre-trade check results.' })).toHaveAccessibleDescription(reading.textContent ?? '')
+    expect(within(panel).getByRole('checkbox', { name: 'I reviewed every leg of v1 and its pre-trade check results.' })).toHaveAccessibleDescription([...reading.querySelectorAll('li')].map((li) => li.textContent).join(' '))
   })
 
   it.each(['cco-001', 'user-002', 'user-003'])('%s sees the approval and the staged orders, and no button', async (viewer) => {
