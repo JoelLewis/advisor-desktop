@@ -163,6 +163,15 @@ describe('the suitability reason', () => {
       .toMatchObject({ ok: false, status: 409, code: 'REASON_DOES_NOT_HOLD' })
     expect(approveProposal('user-001', p.id, 1, v1.fingerprint, { reason: 'client_acknowledged_risk' }).ok).toBe(true)
   })
+  it('refuses a v2 approval without a reason, and leaves the v1 approval standing', () => {
+    const p = seedJohnsonProposal()
+    approveProposal('user-001', p.id, 1, p.versions[0]!.fingerprint, JOHNSON_REASON)
+    const v2 = versionOf(2, [...AGENT_CONSTRAINTS, { kind: 'harvest_only' }])
+    p.versions.push(v2)
+    expect(approveProposal('user-001', p.id, 2, v2.fingerprint)).toMatchObject({ ok: false, status: 409, code: 'REASON_REQUIRED' })
+    expect(store().approvals.map((a) => [a.version, a.status])).toEqual([[1, 'active']])
+    expect(store().acts).toHaveLength(1)
+  })
   it('refuses an over-long or blank note', () => {
     const p = seedJohnsonProposal()
     const fp = p.versions[0]!.fingerprint

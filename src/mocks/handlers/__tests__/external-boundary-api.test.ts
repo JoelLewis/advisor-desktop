@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest'
+import { store } from '@/mocks/data/workspace-store'
+import { JOHNSON_REASON } from '@/test/suitability-fixture'
 
 async function call(method: string, path: string, viewer: string | undefined, body?: unknown) {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -94,5 +96,36 @@ describe("the firm's records over HTTP", () => {
   it.each(['user-001', 'user-002', 'user-003', 'cco-001'])('%s, inside the firm, reads every one of them', async (viewer) => {
     for (const path of FIRM_RECORDS) expect((await read(path, viewer)).status, path).toBe(200)
     for (const [path, body] of FIRM_CHECKS) expect((await check(path, body, viewer)).status, path).toBe(200)
+  })
+})
+
+describe("the suitability reason never reaches an outsider", () => {
+  const firm = (path: string, body: unknown) => call('POST', path, 'user-001', body).then((r) => r.body)
+  const REASON_FIELDS = /"(?:suitability|clientName)"/
+
+  /** A party-visible act carrying a reason, as a future act kind might: the stripping must hold even then. */
+  function forgeReasonedAct(threadId: string, summary: string) {
+    store().acts.push({
+      id: `REC-${summary}`, kind: 'send_to_party', actorId: 'user-001', at: '2026-02-25T15:00:00Z', threadId, fingerprint: 'ABCDEF01', summary,
+      suitability: { reason: 'client_acknowledged_risk', note: 'Signed 12 Feb.', clientName: 'Robert Johnson' },
+    })
+  }
+
+  it.each([['cli-001', 'th-robert'], ['prsp-011', 'th-pell']])('%s reads %s without any suitability field', async (party, threadId) => {
+    const proposal = await firm('/proposals', { threadId: 'th-johnson-review', accountId: 'acc-002' })
+    expect(await call('POST', '/acts', 'user-001', { kind: 'approve_proposal', proposalId: proposal.id, version: 1, fingerprint: proposal.versions[0].fingerprint, suitability: JOHNSON_REASON }))
+      .toMatchObject({ status: 201, body: { suitability: { clientName: 'Robert Johnson' } } })
+    if (party === 'cli-001') {
+      const letter = await firm('/threads/th-robert/drafts/letter', { proposalId: proposal.id })
+      expect((await call('POST', '/acts', 'user-001', { kind: 'send_to_party', draftId: letter.id })).status).toBe(201)
+    }
+    forgeReasonedAct(threadId, 'Forged reasoned act')
+    const acts = await call('GET', `/acts?threadId=${threadId}`, party)
+    expect(acts.status).toBe(200)
+    expect(acts.body.some((a: { summary: string }) => a.summary === 'Forged reasoned act')).toBe(true)
+    expect(JSON.stringify(acts.body)).not.toMatch(REASON_FIELDS)
+    const thread = await call('GET', `/threads/${threadId}`, party)
+    expect(thread.status).toBe(200)
+    expect(JSON.stringify(thread.body)).not.toMatch(REASON_FIELDS)
   })
 })

@@ -166,9 +166,10 @@ describe('approving a proposal', () => {
     it("is chosen for the advisor where Robert Johnson's accounts as a whole stay within his tolerance, stating the figure, and the slip records it", async () => {
       await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
       const panel = await openApproval()
-      const select = within(panel).getByLabelText('Suitability reason')
-      expect(select).toHaveDisplayValue(WHOLE)
-      expect(select).toHaveAccessibleDescription("After this proposal, Robert Johnson's accounts as a whole sit at 46 pts, within Moderate, 41–55 pts.")
+      const reasons = within(panel).getByRole('group', { name: 'Suitability reason' })
+      expect(within(reasons).getAllByRole('radio').map((r) => r.getAttribute('value'))).toEqual(['ips_permits_growth', 'client_acknowledged_risk', 'accounts_within_tolerance'])
+      expect(within(reasons).getByRole('radio', { name: WHOLE })).toBeChecked()
+      expect(reasons).toHaveAccessibleDescription("After this proposal, Robert Johnson's accounts as a whole sit at 46 pts, within Moderate, 41–55 pts.")
       expect(within(panel).queryByText('OUT')).toBeNull()
       const user = userEvent.setup()
       await user.click(within(panel).getByRole('checkbox', { name: REVIEWED_V1 }))
@@ -178,16 +179,13 @@ describe('approving a proposal', () => {
       expect(store().approvals[0]!.suitability).toMatchObject({ reason: 'accounts_within_tolerance', clientName: 'Robert Johnson' })
     })
 
-    it('another reason with a note can replace it; with none chosen, approving waits', async () => {
+    it('another reason with a note can replace it', async () => {
       await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
       const panel = await openApproval()
       const user = userEvent.setup()
       await user.click(within(panel).getByRole('checkbox', { name: REVIEWED_V1 }))
-      await user.selectOptions(within(panel).getByLabelText('Suitability reason'), 'Choose a reason')
-      const approve = within(panel).getByRole('button', { name: 'Approve v1' })
-      expect(approve).toBeDisabled()
-      expect(approve).toHaveAccessibleDescription('Choose a suitability reason above to approve.')
-      await user.selectOptions(within(panel).getByLabelText('Suitability reason'), 'The IPS permits a growth allocation for this account')
+      await user.click(within(panel).getByRole('radio', { name: 'The IPS permits a growth allocation for this account' }))
+      expect(within(panel).getByRole('radio', { name: WHOLE })).not.toBeChecked()
       await user.type(within(panel).getByRole('textbox', { name: 'Note (optional)' }), 'IPS section 4.')
       await user.click(within(panel).getByRole('button', { name: 'Approve v1' }))
       const slip = await inContext().findByRole('article', { name: 'Approved v1 of the Johnson rebalance' })
@@ -199,16 +197,17 @@ describe('approving a proposal', () => {
       const queryClient = createTestQueryClient()
       const panel = await openApproval(queryClient)
       const user = userEvent.setup()
-      await user.selectOptions(within(panel).getByLabelText('Suitability reason'), 'Client acknowledged the higher risk in writing')
+      await user.click(within(panel).getByRole('radio', { name: 'Client acknowledged the higher risk in writing' }))
       await user.type(within(panel).getByRole('textbox', { name: 'Note (optional)' }), 'Signed 12 Feb.')
       await reviseProposal(ADRIAN, created.id, [{ kind: 'harvest_only' }])
       await queryClient.invalidateQueries()
       await within(panel).findByRole('checkbox', { name: 'I reviewed every leg of v2 and its pre-trade check results.' })
-      expect(within(panel).getByLabelText('Suitability reason')).toHaveDisplayValue(WHOLE)
+      expect(within(panel).getByRole('radio', { name: WHOLE })).toBeChecked()
+      expect(within(panel).getByRole('radio', { name: 'Client acknowledged the higher risk in writing' })).not.toBeChecked()
       expect(within(panel).getByRole('textbox', { name: 'Note (optional)' })).toHaveValue('')
     })
 
-    it("where the client's accounts as a whole sit above the tolerance too, nothing is chosen, that reason is not offered, and the warning is the stronger one", async () => {
+    it("where the client's accounts as a whole sit above the tolerance too, nothing is chosen, that reason cannot be chosen, and the warning is the stronger one", async () => {
       await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
       const v1 = store().proposals[0]!.versions[0]!
       v1.pretrade = {
@@ -216,10 +215,10 @@ describe('approving a proposal', () => {
         violations: v1.pretrade.violations.map((v) => (v.tolerance ? { ...v, tolerance: { ...v.tolerance, wholeAfterScore: 62, wholeAfterStatus: 'above' } } : v)),
       }
       const panel = await openApproval()
-      const select = within(panel).getByLabelText('Suitability reason')
-      expect(select).toHaveValue('')
-      expect(within(select).queryByRole('option', { name: WHOLE })).toBeNull()
-      expect(select).toHaveAccessibleDescription(expect.stringContaining("After this proposal, Robert Johnson's accounts as a whole would sit above the tolerance too, at 62 pts against Moderate, 41–55 pts. No reason is chosen for you"))
+      const reasons = within(panel).getByRole('group', { name: 'Suitability reason' })
+      expect(within(reasons).getAllByRole('radio').filter((r) => (r as HTMLInputElement).checked)).toHaveLength(0)
+      expect(within(reasons).getByRole('radio', { name: WHOLE })).toBeDisabled()
+      expect(reasons).toHaveAccessibleDescription(expect.stringContaining("After this proposal, Robert Johnson's accounts as a whole would sit above the tolerance too, at 62 pts against Moderate, 41–55 pts. No reason is chosen for you"))
       expect(within(panel).getByText('OUT')).toBeInTheDocument()
       await userEvent.setup().click(within(panel).getByRole('checkbox', { name: REVIEWED_V1 }))
       expect(within(panel).getByRole('button', { name: 'Approve v1' })).toHaveAccessibleDescription('Choose a suitability reason above to approve.')

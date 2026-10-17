@@ -17,13 +17,9 @@ const wholeWithin = (check: ToleranceCheck) => check.wholeAfterStatus === 'withi
 /** The reason chosen for the advisor: the accounts-as-a-whole reason where it holds, none where the whole sits outside too. */
 export const preselectedReason = (check: ToleranceCheck): SuitabilityReasonId | '' => (wholeWithin(check) ? 'accounts_within_tolerance' : '')
 
-/** The reasons offered: the accounts-as-a-whole reason only where the whole sits within the band; the engine refuses it otherwise. */
-export const reasonOptions = (check: ToleranceCheck): { value: string; label: string }[] => [
-  { value: '', label: 'Choose a reason' },
-  ...SUITABILITY_REASONS
-    .filter((r) => r !== 'accounts_within_tolerance' || wholeWithin(check))
-    .map((r) => ({ value: r, label: reasonLabel(r, check.clientName) })),
-]
+/** The three reasons, each in full. The accounts-as-a-whole reason is offered only where the whole sits within the band; the engine refuses it otherwise. */
+export const reasonOptions = (check: ToleranceCheck): { value: SuitabilityReasonId; label: string; disabled: boolean }[] =>
+  SUITABILITY_REASONS.map((r) => ({ value: r, label: reasonLabel(r, check.clientName), disabled: r === 'accounts_within_tolerance' && !wholeWithin(check) }))
 
 /** Where the client's accounts as a whole sit after the proposal, the figure the choice rests on. Outside the band, it is the stronger warning. */
 export function wholeAfterSentence(check: ToleranceCheck): string {

@@ -69,9 +69,9 @@ const SUITABILITY_REASON = "Robert Johnson's accounts as a whole stay within tol
 export async function approve(page: Page, version: number) {
   const approval = approvalOf(page)
   await approval.getByRole('checkbox', { name: `I reviewed every leg of v${version} and its pre-trade check results.` }).check()
-  const reason = approval.getByLabel('Suitability reason')
-  await expect(reason.locator('option:checked')).toHaveText(SUITABILITY_REASON)
-  await reason.selectOption({ label: SUITABILITY_REASON })
+  const reason = approval.getByRole('group', { name: 'Suitability reason' }).getByRole('radio', { name: SUITABILITY_REASON })
+  await expect(reason).toBeChecked()
+  await reason.check()
   await approval.getByRole('button', { name: `Approve v${version}` }).click()
   await expect(approval).toContainText(`v${version} is approved`)
   await expect(approval).toContainText('PENDING COMPLIANCE REVIEW')

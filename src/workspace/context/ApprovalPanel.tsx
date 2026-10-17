@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom'
 import { useAnnounce } from '@/kit/announcer/use-announce'
 import { Button } from '@/kit/button/Button'
 import { Checkbox } from '@/kit/checkbox/Checkbox'
-import { Select } from '@/kit/select/Select'
 import { TextInput } from '@/kit/text-input/TextInput'
+import { RadioGroup } from '@/kit/radio-group/RadioGroup'
 import { Dialog } from '@/kit/dialog/Dialog'
 import { StatusCode } from '@/kit/status/StatusCode'
 import { Tag } from '@/kit/tag/Tag'
@@ -26,7 +26,7 @@ import { approveBlocker } from './approve-blocker'
 import { PresenterRelease } from './PresenterRelease'
 import { supervisionHref } from '@/workspace/supervision/supervision-items'
 import { LINK_TARGET } from '@/kit/link-target'
-import { isSuitabilityReasonId, type SuitabilityReason, type SuitabilityReasonId } from '@/lib/suitability'
+import type { SuitabilityReason, SuitabilityReasonId } from '@/lib/suitability'
 import { preselectedReason, reasonOptions, toleranceCheckOf, wholeAfterSentence, type ToleranceCheck } from './suitability-choice'
 
 type OnRecorded = (actId: string) => void
@@ -174,8 +174,8 @@ function SuitabilityReasonField({ check, chosen, onChange }: { check: ToleranceC
   const within = check.wholeAfterStatus === 'within'
   return (
     <div className="flex w-full flex-col gap-2">
-      <Select label="Suitability reason" layout="stacked" value={chosen.reason} options={reasonOptions(check)} describedBy={wholeId}
-        onChange={(value) => onChange({ ...chosen, reason: isSuitabilityReasonId(value) ? value : '' })} />
+      <RadioGroup legend="Suitability reason" options={reasonOptions(check)} value={chosen.reason === '' ? undefined : chosen.reason} describedBy={wholeId}
+        onChange={(reason) => onChange({ ...chosen, reason })} />
       <p id={wholeId} className={within ? 'text-body text-ink-2' : 'flex items-baseline gap-3 text-body'}>
         {within ? null : <StatusCode status="OUT" label="Outside the tolerance as a whole" />}
         <span>{wholeAfterSentence(check)}</span>
