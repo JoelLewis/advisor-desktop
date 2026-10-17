@@ -58,6 +58,9 @@ export const RETIRED_WORDS: readonly RetiredWord[] = [
   // The role words: upper case anywhere in a string, or a lower-case label on its own (AgentScope sets the verb in
   // capitals by CSS). Never "May 2026" or "may" inside a sentence.
   { word: 'MAY NOT', pattern: /\bMAY(?: NOT)?\b|^(?:may|may not)$/, retired: true },
+  // Orders read "pending compliance release"; "staged" is the system's word for them.
+  { word: 'staged orders', pattern: /\bstaged orders\b|\borders staged\b|\bstay staged\b/i, retired: true },
+  { word: 'moved book', pattern: /\bmoved book\b|\bbook moves\b/i, retired: true },
 ]
 
 const TEXT_FILES = ['index.html', 'README.md'] as const

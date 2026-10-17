@@ -138,7 +138,7 @@ function ProposalApproval({ detail, directory, onRecorded }: { detail: ProposalD
         </Button>
       ) : null}
       <Dialog open={confirmingWithdrawOf !== undefined} onOpenChange={(open) => { if (!open) closeWithdraw() }} returnFocus={!slipTakesFocus}
-        title={`Withdraw the approval of v${confirmingWithdrawOf ?? ''}?`} description="The staged orders are withdrawn.">
+        title={`Withdraw the approval of v${confirmingWithdrawOf ?? ''}?`} description="The orders pending compliance release are withdrawn.">
         <div className="flex flex-col gap-4">
           {withdraw.isError ? <p role="alert" className="text-body">{withdraw.error.message}</p> : null}
           <div className="flex justify-end gap-3">

@@ -83,7 +83,7 @@ describe("releasing the story's v3", () => {
     expect(act).toEqual({
       id: 'REC-0002', kind: 'release_orders', actorId: MARK, at: act.at, threadId: 'th-johnson-review',
       subject: { type: 'proposal', id: a.proposalId }, version: 3, fingerprint: a.fingerprint,
-      summary: 'Released the orders staged from v3 of the Johnson rebalance', rationale: RATIONALE, approvalActId: 'REC-0001',
+      summary: 'Released the orders approved in v3 of the Johnson rebalance', rationale: RATIONALE, approvalActId: 'REC-0001',
     })
     expect(act.at < '2026-02-25T14:30:00.000Z').toBe(true)
     const thread = store().messages.filter((m) => m.threadId === 'th-johnson-review')
@@ -173,7 +173,7 @@ describe('return_to_advisor and escalate', () => {
   it('an escalation holds the orders, once; they can still be released', () => {
     const a = approvedV1()
     const act = ok(escalate(MARK, a.proposalId, a.approvalActId, a.fingerprint, 'Concentration exception needs the investment committee.')).act
-    expect(act.summary).toBe('Escalated the orders staged from v1 of the Johnson rebalance; they stay held')
+    expect(act.summary).toBe('Escalated the orders approved in v1 of the Johnson rebalance; they stay held')
     expect(detailOf(proposalById(a.proposalId)!).escalation).toEqual({ actId: act.id, at: act.at })
     expect(store().staged.every((o) => o.status === 'pending_compliance')).toBe(true)
     expect(escalate(MARK, a.proposalId, a.approvalActId, a.fingerprint, 'Again.')).toMatchObject({ ok: false, status: 409, code: 'ALREADY_ESCALATED' })

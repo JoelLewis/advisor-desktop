@@ -63,7 +63,7 @@ describe('returnedLine', () => {
     currency: 'USD', status: 'returned', stagedAt: '2026-02-25T13:00:00Z', approvalActId: 'REC-0001', closedByActId: 'REC-0002',
   }
   it('names the version and the act that returned it', () => {
-    expect(returnedLine(order)).toBe('Compliance returned v2 (REC-0002). Revise it, or approve it again, to stage new orders.')
+    expect(returnedLine(order)).toBe('Compliance returned v2 (REC-0002). Revise it, or approve it again, to send new orders to compliance.')
   })
   it('refuses a returned order that names no act, rather than printing "()"', () => {
     expect(() => returnedLine({ ...order, closedByActId: undefined })).toThrow('Returned order stg-0001 names no act that returned it')

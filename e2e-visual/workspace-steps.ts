@@ -99,7 +99,7 @@ export const viewAs = (page: Page, label: string) => page.getByLabel('View as').
 export const deskLink = (page: Page, name: 'Supervision' | 'Archive' | 'Billing' | 'Reconciliation' | 'Risk' | 'Models' | 'Practice' | 'Blotter') =>
   page.getByRole('navigation', { name: 'Threads' }).getByRole('link', { name, exact: true })
 
-/** The presenter's shortcut beside pending staged orders: Mark's default release, confirmed. */
+/** The presenter's shortcut beside orders pending compliance release: Mark's default release, confirmed. */
 export async function releaseByShortcut(page: Page, atDialog?: AtDialog) {
   const panel = approvalOf(page)
   await panel.getByRole('button', { name: 'Demo · act as Mark Davis' }).click()

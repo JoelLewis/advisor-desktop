@@ -58,7 +58,7 @@ function notActive(approval: ApprovalRecord): ComplianceFailure | undefined {
 function ordersGuard(viewerId: string, kind: OrdersKind, proposalId: string, approvalActId: string, fingerprint: string, rationale: string): Guarded | ComplianceFailure {
   const proposal = visibleProposal(viewerId, proposalId)
   if (!proposal) return refuse(404, 'NO_PROPOSAL', 'Proposal not found.')
-  if (!can(viewerId, kind)) return refuse(403, 'NOT_PERMITTED', 'Only compliance can release, return or escalate staged orders.')
+  if (!can(viewerId, kind)) return refuse(403, 'NOT_PERMITTED', 'Only compliance can release, return or escalate orders pending compliance release.')
   const badRationale = rationaleRefusal(rationale)
   if (badRationale) return badRationale
   const approval = store().approvals.find((a) => a.proposalId === proposal.id && a.actId === approvalActId)
@@ -84,8 +84,8 @@ function sessionSequences(pending: number, count: number): number[] | undefined 
 
 /** Why no session prices the fills: the frozen day's has closed, or a clock jump has left the frozen day behind. */
 const marketClosedMessage = () => sessionNow().slice(0, 10) > MOCK_TODAY_ISO
-  ? 'Fills are priced only in the 25 Feb session; after a clock jump, staged orders stay staged.'
-  : "Today's session has closed; staged orders can be released at the next session."
+  ? 'Fills are priced only in the 25 Feb session; after a clock jump, orders pending compliance release stay pending.'
+  : "Today's session has closed; orders pending compliance release can be released at the next session."
 
 export function releaseOrders(viewerId: string, proposalId: string, approvalActId: string, fingerprint: string, rationale: string, options: ActOptions = {}): Recorded | ComplianceFailure {
   const guard = ordersGuard(viewerId, 'release_orders', proposalId, approvalActId, fingerprint, rationale)
@@ -104,7 +104,7 @@ export function releaseOrders(viewerId: string, proposalId: string, approvalActI
   const act: BindingAct = {
     id: commitActId(), kind: 'release_orders', actorId: viewerId, at, threadId: proposal.threadId,
     subject: { type: 'proposal', id: proposal.id }, version: approval.version, fingerprint: approval.fingerprint,
-    summary: `Released the orders staged from v${approval.version} of the ${proposal.title}`,
+    summary: `Released the orders approved in v${approval.version} of the ${proposal.title}`,
     rationale: rationale.trim(), approvalActId: approval.actId, ...via(options),
   }
   const s = store()
@@ -149,7 +149,7 @@ export function escalate(viewerId: string, proposalId: string, approvalActId: st
   const act: BindingAct = {
     id: commitActId(), kind: 'escalate', actorId: viewerId, at: nextAt(), threadId: proposal.threadId,
     subject: { type: 'proposal', id: proposal.id }, version: approval.version, fingerprint: approval.fingerprint,
-    summary: `Escalated the orders staged from v${approval.version} of the ${proposal.title}; they stay held`,
+    summary: `Escalated the orders approved in v${approval.version} of the ${proposal.title}; they stay held`,
     rationale: rationale.trim(), approvalActId: approval.actId, ...via(options),
   }
   recordAct(act)

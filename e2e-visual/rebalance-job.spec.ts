@@ -158,7 +158,7 @@ test('one presenter runs Brief → proposal → revise → workbench → approve
   await expect(embed.getByRole('table', { name: 'Proposal legs · v3' })).toBeVisible()
   await expect(conversation(page).getByRole('article', { name: 'v3 · Adrian Hale' })).toBeVisible()
 
-  // 6. Approve v3: the act is recorded and the orders are staged from it, pending compliance review.
+  // 6. Approve v3: the act is recorded and its orders wait, pending compliance release.
   await approve(page, 3)
   await expect(approvalOf(page)).toContainText(/From v3 · approval REC-/)
 
@@ -195,7 +195,7 @@ test('one presenter runs Brief → proposal → revise → workbench → approve
     /binding|supervisory review|edited by|from v\d|proposal|client letter|drift monitor|harvest scanner|pre-trade check|johnson rebalance review|staged/i,
   )
 
-  // 9. Mark: the firm threads but not the Brief; the staged orders pending compliance review; nothing for him to approve.
+  // 9. Mark: the firm threads but not the Brief; the orders pending compliance release; nothing for him to approve.
   await viewAs.selectOption({ label: 'Mark Davis · Compliance' })
   await expect(threadLink(page, 'Johnson Rebalance Review')).toHaveCount(1)
   await expect(threadLink(page, 'Brief')).toHaveCount(0)

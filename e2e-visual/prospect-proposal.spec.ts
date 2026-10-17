@@ -17,7 +17,7 @@ async function replied(page: Page, theme: Theme) {
   await advanceTo(page, 'reply')
 }
 
-/** Her findings, v1, the staged revision, v2 approved with the best-interest record. */
+/** Her findings, v1, the phased-sale revision, v2 approved with the best-interest record. */
 async function approved(page: Page, theme: Theme) {
   await replied(page, theme)
   await threadLink(page, 'Pell · prospect work').click()

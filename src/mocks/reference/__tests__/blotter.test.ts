@@ -53,7 +53,7 @@ describe('tickets', () => {
 })
 
 describe("the session's proposal orders", () => {
-  it('appear when staged: pending compliance, from the proposal and version, under the approval act', () => {
+  it('appear when approved: pending compliance release, from the proposal and version, under the approval act', () => {
     const a = approvedV1()
     const staged = view().rows.filter((r) => r.source.kind === 'proposal')
     expect(staged.length).toBe(store().staged.length)

@@ -31,7 +31,7 @@ const archive = async (page: Page) => {
   await approvedV1(page, 'light')
   await releaseByShortcut(page)
   await deskLink(page, 'Archive').click()
-  await expect(page.getByRole('table', { name: 'Archive' })).toContainText('Released the orders staged from v1 of the Johnson rebalance')
+  await expect(page.getByRole('table', { name: 'Archive' })).toContainText('Released the orders approved in v1 of the Johnson rebalance')
   await settle(page)
 }
 
@@ -176,7 +176,7 @@ test('one presenter closes the supervisory loop; the book moves; Robert sees not
   await viewAs(page, 'Adrian Hale · Advisor')
   await page.getByRole('link', { name: 'Advisor Desktop' }).click()
   await threadLink(page, 'Johnson Rebalance Review').click()
-  await expect(conversation(page).getByRole('article', { name: 'Released the orders staged from v3 of the Johnson rebalance' })).toContainText('Mark Davis, Compliance')
+  await expect(conversation(page).getByRole('article', { name: 'Released the orders approved in v3 of the Johnson rebalance' })).toContainText('Mark Davis, Compliance')
   await expect(conversation(page).getByRole('article', { name: 'Fills · Johnson rebalance v3' })).toBeVisible()
   await expect(approvalOf(page)).toContainText('v3 was released by compliance and filled')
   await context(page).getByRole('link', { name: /^Robert Johnson · Individual \(…3847\)/ }).click()
@@ -207,7 +207,7 @@ test('one presenter closes the supervisory loop; the book moves; Robert sees not
   await expect(embedOf(page).getByRole('table', { name: 'Proposal legs · v1' })).toBeVisible()
   await approve(page, 1)
   await releaseByShortcut(page)
-  const slip = context(page).getByRole('article', { name: 'Released the orders staged from v1 of the Johnson rebalance' })
+  const slip = context(page).getByRole('article', { name: 'Released the orders approved in v1 of the Johnson rebalance' })
   await expect(slip).toContainText('Mark Davis, Compliance')
   await expect(slip).toContainText('Demo · recorded through the presenter shortcut by Adrian Hale')
   await expect(conversation(page).getByRole('article', { name: 'Fills · Johnson rebalance v1' })).toBeVisible()

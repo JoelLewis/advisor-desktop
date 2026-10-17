@@ -13,7 +13,7 @@ const ADRIAN = 'user-001'
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
 const conversation = () => within(screen.getByRole('list', { name: 'Messages' }))
 const inContext = () => within(screen.getByRole('complementary', { name: 'Details' }))
-const RELEASED = 'Released the orders staged from v1 of the Johnson rebalance'
+const RELEASED = 'Released the orders approved in v1 of the Johnson rebalance'
 
 async function approved() {
   const detail = await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')

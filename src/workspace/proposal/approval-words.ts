@@ -14,5 +14,5 @@ export function approvalWords(state: ApprovalState): string {
 /** The panel's line for an approval compliance returned: the version, and the act that returned it. */
 export function returnedLine(order: StagedOrder): string {
   if (order.closedByActId === undefined) throw new Error(`Returned order ${order.id} names no act that returned it`)
-  return `Compliance returned v${order.version} (${order.closedByActId}). Revise it, or approve it again, to stage new orders.`
+  return `Compliance returned v${order.version} (${order.closedByActId}). Revise it, or approve it again, to send new orders to compliance.`
 }

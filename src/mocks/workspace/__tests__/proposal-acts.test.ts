@@ -10,7 +10,7 @@ import { suitabilityText } from '@/lib/suitability'
 describe('approve_proposal', () => {
   beforeEach(() => resetWorkspaceStore())
 
-  it('records one act in the team thread and stages every leg pending compliance', () => {
+  it('records one act in the team thread and puts every leg pending compliance release', () => {
     const p = seedJohnsonProposal()
     const v1 = p.versions[0]!
     const r = approveProposal('user-001', p.id, 1, v1.fingerprint, JOHNSON_REASON)
@@ -100,7 +100,7 @@ describe('withdraw_approval', () => {
     expect(withdrawApproval('user-002', p.id)).toMatchObject({ ok: false, status: 403, code: 'NOT_PERMITTED' })
   })
 
-  it('withdrawn staged orders name the act that withdrew them', () => {
+  it('withdrawn orders name the act that withdrew them', () => {
     const p = seedJohnsonProposal()
     approveProposal('user-001', p.id, 1, p.versions[0]!.fingerprint, JOHNSON_REASON)
     const r = withdrawApproval('user-001', p.id)

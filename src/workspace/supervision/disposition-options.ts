@@ -12,8 +12,8 @@ export function dispositionOptions(item: SupervisionItem, open: boolean): Dispos
       const orders = (kind: 'release_orders' | 'return_to_advisor' | 'escalate') => (rationale: string): ComplianceActRequest =>
         ({ kind, proposalId: item.proposalId, approvalActId: item.approval.actId, fingerprint: item.fingerprint, rationale })
       return [
-        { value: 'release_orders', act: 'release_orders', label: 'Release orders', consequence: "The staged orders are released and fill at the day's prices. The book moves.", request: orders('release_orders') },
-        { value: 'return_to_advisor', act: 'return_to_advisor', label: 'Return to advisor', consequence: 'The approval is withdrawn and the staged orders are returned to the advisor.', request: orders('return_to_advisor') },
+        { value: 'release_orders', act: 'release_orders', label: 'Release orders', consequence: "The orders are released and fill at the day's prices; the account's holdings change.", request: orders('release_orders') },
+        { value: 'return_to_advisor', act: 'return_to_advisor', label: 'Return to advisor', consequence: 'The approval is withdrawn and the orders are returned to the advisor.', request: orders('return_to_advisor') },
         ...(item.escalation ? [] : [{ value: 'escalate', act: 'escalate' as const, label: 'Escalate', consequence: 'The orders stay held, and the item is marked escalated.', request: orders('escalate') }]),
       ]
     }

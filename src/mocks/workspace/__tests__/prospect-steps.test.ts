@@ -88,7 +88,7 @@ describe('her reply, on the clock jump', () => {
     const approval = ok(approveProposal(ADRIAN, proposal.id, 1, fp, JOHNSON_REASON)).act
     coffee()
     expect(releaseOrders('cco-001', proposal.id, approval.id, fp, 'Reviewed.')).toEqual({
-      ok: false, status: 409, code: 'MARKET_CLOSED', message: "Today's session has closed; staged orders can be released at the next session.",
+      ok: false, status: 409, code: 'MARKET_CLOSED', message: "Today's session has closed; orders pending compliance release can be released at the next session.",
     })
   })
 })
@@ -187,7 +187,7 @@ describe('her acceptance', () => {
     sentToHer()
     ok(advanceProspect(ADRIAN, PELL, 'acceptance'))
     expect(releaseOrders('cco-001', proposal.id, approval.id, fp, 'Reviewed.')).toEqual({
-      ok: false, status: 409, code: 'MARKET_CLOSED', message: 'Fills are priced only in the 25 Feb session; after a clock jump, staged orders stay staged.',
+      ok: false, status: 409, code: 'MARKET_CLOSED', message: 'Fills are priced only in the 25 Feb session; after a clock jump, orders pending compliance release stay pending.',
     })
   })
 })

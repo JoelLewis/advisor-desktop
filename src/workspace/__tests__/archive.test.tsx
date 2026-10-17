@@ -33,7 +33,7 @@ describe('the Archive', () => {
       'Approved v1 of the Johnson rebalance',
       'Message sent to the client',
       'Message to Robert Johnson',
-      'Released the orders staged from v1 of the Johnson rebalance',
+      'Released the orders approved in v1 of the Johnson rebalance',
     ])
     expect(rows[0]).toHaveTextContent("Suitability reason · Robert Johnson's accounts as a whole stay within tolerance · 46 pts after this proposal, from 51 pts today, within Moderate, 41–55 pts")
     expect(rows[3]).not.toHaveTextContent('Suitability reason')
@@ -42,11 +42,11 @@ describe('the Archive', () => {
     expect(audit).not.toHaveAttribute('open')
     expect(audit).toHaveTextContent(/Record REC-0003 · fingerprint [0-9A-F]{8}/)
     expect(rows[3]).toHaveTextContent('Mark Davis')
-    expect(rows[3]).toHaveTextContent('Released the orders staged from v1 of the Johnson rebalance')
+    expect(rows[3]).toHaveTextContent('Released the orders approved in v1 of the Johnson rebalance')
     expect(within(rows[3]!).getByRole('link', { name: 'Johnson Rebalance Review' })).toHaveAttribute('href', '/t/th-johnson-review')
     expect(within(rows[2]!).getByRole('link', { name: 'Robert Johnson' })).toHaveAttribute('href', '/t/th-robert')
     await userEvent.setup().selectOptions(screen.getByLabelText('Kind'), 'Release')
-    await waitFor(async () => expect((await archiveRows()).map(summaryCell)).toEqual(['Released the orders staged from v1 of the Johnson rebalance']))
+    await waitFor(async () => expect((await archiveRows()).map(summaryCell)).toEqual(['Released the orders approved in v1 of the Johnson rebalance']))
     expect(router.state.location.search).toBe('?kind=release_orders')
   })
 

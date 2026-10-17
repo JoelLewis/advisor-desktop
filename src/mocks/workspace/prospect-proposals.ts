@@ -84,7 +84,7 @@ export function buildProspectVersion(record: ProspectRecord, constraints: readon
   const concentration = concentrationOf(summary)
   const staged = constraints.find((c) => c.kind === 'stage_diversification')
   const line = concentration && summary.lines.find((l) => l.symbol === concentration.symbol)
-  if (staged && !line) return refuse(400, 'NOTHING_TO_STAGE', 'She holds no concentrated position to stage.')
+  if (staged && !line) return refuse(400, 'NOTHING_TO_STAGE', 'She holds no concentrated position to phase.')
   const content: ProspectVersionContent = {
     constraints: [...constraints], score: profile.score, profileLabel: profile.profileLabel, modelId: profile.modelId, modelName: profile.modelName,
     transfer: summary.lines, cash: summary.cash, transferValue: summary.transferValue, totalAssets: summary.totalAssets,
@@ -162,9 +162,9 @@ export function parseProspectConstraints(value: unknown): { ok: true; value: Pro
   for (const raw of value) {
     const tranches: unknown = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>).tranches : undefined
     const kind: unknown = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>).kind : undefined
-    if (kind !== 'stage_diversification' || (tranches !== 2 && tranches !== 3)) return { ok: false, message: 'A revision may stage the concentrated sale in two or three tax years.' }
+    if (kind !== 'stage_diversification' || (tranches !== 2 && tranches !== 3)) return { ok: false, message: 'A revision may phase the concentrated sale over two or three tax years.' }
     parsed.push({ kind: 'stage_diversification', tranches })
   }
-  if (parsed.length > 1) return { ok: false, message: 'Stage the sale once.' }
+  if (parsed.length > 1) return { ok: false, message: 'Phase the sale once.' }
   return { ok: true, value: parsed }
 }

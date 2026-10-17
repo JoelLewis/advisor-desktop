@@ -20,7 +20,7 @@ async function openApproval(queryClient = createTestQueryClient()) {
 }
 
 describe('approving a proposal', () => {
-  it('the advisor attests and approves v1 once, even on a double click; orders are staged pending compliance review', async () => {
+  it('the advisor attests and approves v1 once, even on a double click; orders wait pending compliance release', async () => {
     await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
     const panel = await openApproval()
     const approve = within(panel).getByRole('button', { name: 'Approve v1' })
@@ -84,7 +84,7 @@ describe('approving a proposal', () => {
     const user = userEvent.setup()
     await user.click(within(panel).getByRole('button', { name: 'Withdraw the approval of v1' }))
     const confirm = await screen.findByRole('dialog', { name: 'Withdraw the approval of v1?' })
-    expect(confirm).toHaveAccessibleDescription('The staged orders are withdrawn.')
+    expect(confirm).toHaveAccessibleDescription('The orders pending compliance release are withdrawn.')
     await user.dblClick(within(confirm).getByRole('button', { name: 'Confirm' }))
     expect(await inContext().findByRole('article', { name: 'Withdrew the approval of v1 of the Johnson rebalance' })).toBeInTheDocument()
     await waitFor(() => expect(document.activeElement).toBe(document.getElementById('act-REC-0002')))
@@ -225,7 +225,7 @@ describe('approving a proposal', () => {
     })
   })
 
-  it.each(['cco-001', 'user-002', 'user-003'])('%s sees the approval and the staged orders, and no button', async (viewer) => {
+  it.each(['cco-001', 'user-002', 'user-003'])('%s sees the approval and the orders pending compliance release, and no button', async (viewer) => {
     const created = await createProposal(ADRIAN, 'th-johnson-review', 'acc-002')
     await approveProposal(ADRIAN, created.id, 1, created.versions[0]!.fingerprint, JOHNSON_REASON)
     viewAsOnLoad(viewer)

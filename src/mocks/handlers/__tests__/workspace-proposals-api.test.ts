@@ -118,7 +118,7 @@ describe('proposal endpoints', () => {
     expect(saved.body.versions.map((v: { n: number }) => v.n)).toEqual([1, 2, 3])
   })
 
-  it('approves through the acts endpoint, stages pending compliance, and withdraws', async () => {
+  it('approves through the acts endpoint, puts the orders pending compliance release, and withdraws', async () => {
     const { body: detail } = await ask()
     const fp = detail.versions[0].fingerprint
     expect(await call('POST', '/acts', 'user-001', { kind: 'approve_proposal', proposalId: 'prop-0001', version: 1, fingerprint: fp }))

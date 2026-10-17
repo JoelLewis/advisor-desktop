@@ -91,9 +91,9 @@ function allRows(): BlotterRow[] {
 }
 
 const METHODS: readonly MethodNote[] = [
-  { label: 'Orders', modeled: false, text: "Tickets are the order management system's orders. Proposal orders are those staged from an approved version in this session, released by compliance and filled at the day's prices." },
+  { label: 'Orders', modeled: false, text: "Tickets are the order management system's orders. Proposal orders come from a version approved in this session; they wait for compliance to release them, then fill at the day's prices." },
   { label: 'Status', modeled: false, text: 'Working: entered and not yet filled or canceled, either with the market or queued for the open. Pending compliance release: from an approval, waiting for compliance to release it. Withdrawn, returned and canceled orders closed without a fill. Pre-market: entered on a trading day before the 9:30 ET open, and queued for it.' },
-  { label: 'Record', modeled: false, text: 'REC is the record that closed the order (the release, the return or the withdrawal) or, while it waits, the approval it was staged from.' },
+  { label: 'Record', modeled: false, text: 'REC is the record that closed the order (the release, the return or the withdrawal) or, while it waits, the approval it came from.' },
   { label: 'Value', modeled: false, text: "A fill's value is quantity times fill price, in the account's currency; a bond's is par times price; an option's is contracts times price times its multiplier. Quantities are shares, option contracts, or a bond's par. A working order's price is its limit. A day filter runs through the day it names." },
 ]
 
@@ -115,7 +115,7 @@ export function blotterView(viewerId: string, filters: BlotterFilters): BlotterV
 }
 
 const STATUS_WORDS: Readonly<Record<BlotterStatus, string>> = {
-  working: 'working', pending_compliance: 'pending compliance', filled: 'filled', canceled: 'canceled', withdrawn: 'withdrawn', returned: 'returned to the advisor',
+  working: 'working', pending_compliance: 'pending compliance release', filled: 'filled', canceled: 'canceled', withdrawn: 'withdrawn', returned: 'returned to the advisor',
 }
 
 export function blotterQuote(rowId: string): RowQuote | undefined {
