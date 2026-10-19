@@ -5,6 +5,7 @@ import { getPositionsForAccount } from './positions'
 import { realizedSales } from './realized-sales'
 import { orders } from '../handlers/oms'
 import { KNOWN_OPEN_DATES } from '../handlers/custodian'
+import { accountDisplayName } from '@/lib/account-display'
 
 /**
  * The INTC harvest and its SMH replacement, from the records that state them: rs-001 and
@@ -58,7 +59,7 @@ export const activities: ActivityItem[] = [
   {
     id: 'act-005', type: 'trade', source: 'oms',
     title: `Trade executed — ${rs001.symbol} sell for tax harvest`,
-    description: `Sold ${rs001.quantity.toLocaleString('en-US')} shares ${rs001.symbol} at ${dollarsAndCents(rs001.proceeds / rs001.quantity)} in ${acc002.name}. ` +
+    description: `Sold ${rs001.quantity.toLocaleString('en-US')} shares ${rs001.symbol} at ${dollarsAndCents(rs001.proceeds / rs001.quantity)} in ${accountDisplayName(acc002)}. ` +
       `Realized ${rs001.holdingPeriod}-term loss: $${Math.abs(rs001.realizedGainLoss).toLocaleString('en-US')}.`,
     entityType: 'client', entityId: 'cli-001', entityName: 'Robert Johnson',
     timestamp: ord004.filledAt!, read: true,
@@ -94,7 +95,7 @@ export const activities: ActivityItem[] = [
   {
     id: 'act-011', type: 'trade', source: 'oms',
     title: `Order filled — ${smh.symbol} purchase (tax harvest replacement)`,
-    description: `Purchased ${smh.quantity.toLocaleString('en-US')} shares ${smh.symbol} at ${dollarsAndCents(smh.costBasis / smh.quantity)} in ${acc002.name} as the ${rs001.symbol} replacement.`,
+    description: `Purchased ${smh.quantity.toLocaleString('en-US')} shares ${smh.symbol} at ${dollarsAndCents(smh.costBasis / smh.quantity)} in ${accountDisplayName(acc002)} as the ${rs001.symbol} replacement.`,
     entityType: 'client', entityId: 'cli-001', entityName: 'Robert Johnson',
     // Bought five minutes after the INTC fill (ord-004), on the date pos-265 records it opened.
     timestamp: smhPurchaseTimestamp(), read: true,

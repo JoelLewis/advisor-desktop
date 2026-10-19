@@ -19,7 +19,6 @@ import { activities } from '@/mocks/data/activities'
 import { clients } from '@/mocks/data/clients'
 import { calendarEvents } from '@/mocks/data/calendar'
 import { OPEN_ITEMS } from '@/mocks/data/open-items'
-import { getPositionsForAccount } from '@/mocks/data/positions'
 import { openWashSaleWindows } from '@/mocks/data/realized-sales'
 import { sessionNow, store } from '@/mocks/data/workspace-store'
 import { computeDriftForAccount, modelDisplayName } from '@/mocks/handlers/pms'
@@ -38,7 +37,7 @@ import { latestVersion } from '@/mocks/data/proposals-store'
 import { currencyForAccount } from '@/mocks/handlers/oms'
 import { BRIEF_THREAD_ID } from './brief'
 import { briefSummaryNow, clientsWaiting, openAlertsAbout, unapprovedProposals } from './household-book'
-import { accountValueUsd, managedValueUsd, householdLedger, type AccountLedger, type HouseholdLedger } from './household-ledger'
+import { accountLedger, accountValueUsd, managedValueUsd, householdLedger, type AccountLedger, type HouseholdLedger } from './household-ledger'
 import { wholeStandingOf } from './meeting-agents'
 import { audienceOf } from './party'
 import { meetingOf, meetingTitle } from './meetings'
@@ -55,12 +54,13 @@ function clientName(clientId: string): string {
 }
 
 /** An account against its model: drift from the drift engine, and for an out-of-band class, the structural reason it cannot be sold back in. */
-function accountRow(account: Account): HouseholdAccount {
-  const value = getPositionsForAccount(account.id, account.totalValue).reduce((s, p) => s + p.marketValue, 0)
-  const currency = currencyForAccount(account.id)
+/** An account's row from the ledger's reading of it: its value is the ledger's, the one managed value every screen shows. */
+function accountRow(l: AccountLedger): HouseholdAccount {
+  const { account } = l
+  const value = l.positions.reduce((s, p) => s + p.marketValue, 0)
   const base = {
     accountId: account.id, name: accountDisplayName(account), ownerId: account.clientId, ownerName: clientName(account.clientId), typeLabel: ACCOUNT_TYPE_LABELS[account.type],
-    value, currency, valueUsd: convertToBase(value, currency, FX_RATES_USD_BASE),
+    value, currency: currencyForAccount(account.id), valueUsd: accountValueUsd(l),
   }
   if (account.mandate === 'custom') return { ...base, mandate: 'custom', mandateSummary: account.mandateSummary }
   const drift = computeDriftForAccount(account)
@@ -87,7 +87,7 @@ function communicationsOf(memberIds: ReadonlySet<string>): CommunicationRow[] {
 
 function summaryOf(household: HouseholdFixture, ledger: HouseholdLedger): HouseholdSummary {
   const memberIds = new Set(household.members.map((m) => m.clientId))
-  const own = accounts.filter((a) => a.householdId === household.id).map(accountRow)
+  const own = ledger.accounts.map(accountRow)
   const heldAway = heldAwayAssets.filter((h) => h.householdId === household.id).map((h) => ({
     id: h.id, ownerName: clientName(h.clientId), institution: h.institutionName, accountType: h.accountType, value: h.estimatedValue, reportedOn: h.lastUpdated,
   }))
@@ -329,7 +329,7 @@ export function clientView(viewerId: string, clientId: string): ClientView | und
   const household = client && householdFixtures.find((h) => h.id === client.householdId)
   if (!client || !household || !isFirmViewer(viewerId)) return undefined
   const ips = ipsOf(new Set(household.members.map((m) => m.clientId)))
-  const owned = accounts.filter((a) => a.clientId === client.id).map(accountRow)
+  const owned = accounts.filter((a) => a.clientId === client.id).map((a) => accountRow(accountLedger(a.id)))
   return {
     id: client.id, name: client.fullName, householdId: household.id, householdName: household.name, dateOfBirth: client.dateOfBirth, occupation: client.occupation,
     ...(client.contactInfo.preferredContactMethod ? { preferredContact: client.contactInfo.preferredContactMethod } : {}),

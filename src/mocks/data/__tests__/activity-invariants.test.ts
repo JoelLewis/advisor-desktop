@@ -13,7 +13,7 @@ describe('§0.7 · the activity feed agrees with the records', () => {
   const rs001 = realizedSales.find((s) => s.id === 'rs-001')!
 
   it("act-005 is rs-001: 5,000 INTC at $28.45, a $32,750 long-term loss, at ord-004's fill", () => {
-    expect(sale.description).toBe('Sold 5,000 shares INTC at $28.45 in Robert Johnson Individual. Realized long-term loss: $32,750.')
+    expect(sale.description).toBe('Sold 5,000 shares INTC at $28.45 in Robert Johnson · Individual (…3847). Realized long-term loss: $32,750.')
     expect(rs001.proceeds / rs001.quantity).toBe(28.45)
     expect(rs001.realizedGainLoss).toBe(-32_750)
     expect(sale.timestamp).toBe(orders.find((o) => o.id === 'ord-004')!.filledAt)
@@ -22,7 +22,7 @@ describe('§0.7 · the activity feed agrees with the records', () => {
   })
 
   it('act-011 is the SMH bought five minutes after the sale fill, on its recorded open date', () => {
-    expect(replacement.description).toBe('Purchased 180 shares SMH at $245.20 in Robert Johnson Individual as the INTC replacement.')
+    expect(replacement.description).toBe('Purchased 180 shares SMH at $245.20 in Robert Johnson · Individual (…3847) as the INTC replacement.')
     expect(replacement.timestamp.slice(0, 10)).toBe(KNOWN_OPEN_DATES.get('pos-265'))
     expect(Date.parse(replacement.timestamp) - Date.parse(sale.timestamp)).toBe(5 * 60_000)
   })

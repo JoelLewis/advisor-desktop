@@ -54,6 +54,8 @@ for (const scene of SCENES) {
         expect(await clippedLabels(page)).toEqual([])
         const scroller = holdings(page).locator('xpath=ancestor::div[@data-scroll="table"]')
         await expect(scroller, 'the class table fits without its own sideways scroll').not.toHaveAttribute('data-overflowing', 'true')
+        const accounts = page.getByRole('main').getByRole('table', { name: 'Household accounts' }).locator('xpath=ancestor::div[@data-scroll="table"]')
+        await expect(accounts, 'the accounts table fits without its own sideways scroll').not.toHaveAttribute('data-overflowing', 'true')
       })
     }
   })
