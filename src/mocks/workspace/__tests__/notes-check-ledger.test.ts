@@ -20,7 +20,7 @@ describe('Meeting Notes checks what filled on the meeting day', () => {
   it("says \"this morning's rebalance\" only once the rebalance has filled that day", () => {
     release(approvedStoryV3())
     holdAndDraft()
-    expect(line('n-01')).toBe(REBALANCE_LINE.filled)
+    expect(line('n-01')).toBe(REBALANCE_LINE.filled_this_morning)
     expect(line('n-01')).toContain("this morning's rebalance")
   })
   it('reads as a plan when the review is held before the release', () => {
@@ -33,6 +33,20 @@ describe('Meeting Notes checks what filled on the meeting day', () => {
     holdAndDraft()
     expect(line('n-01')).toBe(REBALANCE_LINE.not_approved)
     expect(line('n-01')).not.toMatch(/this morning|rebalanced/)
+  })
+  it('reads the rebalance as the meeting left it: a release after the meeting is still a plan in its notes', () => {
+    const approved = approvedStoryV3()
+    ok(holdMeeting(ADRIAN, 'evt-010'))
+    release(approved)
+    expect(rebalanceStateOf(householdLedger('hh-001'))).toBe('filled_today')
+    ok(draftMeetingNotes(ADRIAN, 'evt-010'))
+    expect(line('n-01')).toBe(REBALANCE_LINE.awaiting_release)
+  })
+  it('does not count an approval given after the meeting', () => {
+    ok(holdMeeting(ADRIAN, 'evt-010'))
+    approvedStoryV3()
+    ok(draftMeetingNotes(ADRIAN, 'evt-010'))
+    expect(line('n-01')).toBe(REBALANCE_LINE.not_approved)
   })
 })
 
@@ -47,7 +61,7 @@ describe("Meeting Notes states Patricia's accounts as the Risk view shows them",
     expect(line('n-03')).not.toMatch(/well away/)
   })
   it('reads each member from the ledger and the Risk view at the time it drafts', () => {
-    expect(notesFactsOf('hh-001', '2026-02-25')).toEqual({
+    expect(notesFactsOf('hh-001', '2026-02-25T20:15:00.000Z')).toEqual({
       rebalance: 'not_approved',
       wholes: new Map([['cli-001', { tolerance: 'Moderate', status: 'within' }], ['cli-002', { tolerance: 'Moderate Conservative', status: 'within' }]]),
     })
@@ -60,7 +74,7 @@ describe('the shared readings', () => {
     const approved = approvedStoryV3()
     expect(rebalanceStateOf(householdLedger('hh-001'))).toBe('awaiting_release')
     release(approved)
-    expect(rebalanceStateOf(householdLedger('hh-001'))).toBe('filled')
+    expect(rebalanceStateOf(householdLedger('hh-001'))).toBe('filled_this_morning')
   })
   it("reads a client's accounts as a whole against their own tolerance", () => {
     expect(wholeStandingOf('cli-002')).toEqual({ tolerance: 'Moderate Conservative', status: 'within', score: clientRiskOf('cli-002')?.posture.score, value: clientRiskOf('cli-002')?.value })

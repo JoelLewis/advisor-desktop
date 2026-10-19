@@ -6,7 +6,7 @@ import { isTradingDay } from '@/lib/trading-calendar'
 import { firstNameOf } from '@/lib/words'
 
 const PLAN_NAMES = /401\(k\)|403\(b\)/g
-const FACTS: NotesFacts = { rebalance: 'filled', wholes: new Map([['cli-001', { tolerance: 'Moderate', status: 'within' }], ['cli-002', { tolerance: 'Moderate Conservative', status: 'within' }]]) }
+const FACTS: NotesFacts = { rebalance: 'filled_this_morning', wholes: new Map([['cli-001', { tolerance: 'Moderate', status: 'within' }], ['cli-002', { tolerance: 'Moderate Conservative', status: 'within' }]]) }
 const notes = draftNotesFromTranscript('evt-010', '2026-02-25', FACTS)
 const transcript = new Map(JOHNSON_REVIEW_TRANSCRIPT.map((l) => [l.id, l]))
 const toClient = notes.filter((l) => l.section === 'decisions' || l.section === 'client_requests')
@@ -33,7 +33,7 @@ describe('Meeting Notes', () => {
   })
 
   it('states the rebalance as the facts give it, and refuses to draft without a reading of Patricia', () => {
-    for (const rebalance of ['filled', 'awaiting_release', 'not_approved'] as const) {
+    for (const rebalance of ['filled_this_morning', 'filled_today', 'awaiting_release', 'not_approved'] as const) {
       const n01 = draftNotesFromTranscript('evt-010', '2026-02-25', { ...FACTS, rebalance }).find((l) => l.id === 'n-01')
       expect(n01?.text).toBe(REBALANCE_LINE[rebalance])
     }

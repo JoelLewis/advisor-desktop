@@ -7,7 +7,8 @@ import { draftNotesFromTranscript, type NotesFacts, type RebalanceState } from '
 import type { WholeStatus } from '@/types/reference-risk'
 import { householdFixtures } from '@/mocks/data/households'
 import { clientRiskOf } from '@/mocks/reference/risk'
-import { householdLedger, type HouseholdLedger } from './household-ledger'
+import { householdLedgerAt, type HouseholdLedger } from './household-ledger'
+import { isEasternMorning } from '@/lib/eastern-day'
 import { alreadyFiled, appendAgenda, meetingDay, preparing, refuseMeeting, replaceMeeting, type MeetingFailure } from './meetings'
 
 export type AgentMessage = Extract<Message, { kind: 'agent_finding' }>
@@ -45,9 +46,13 @@ export function runMeetingPrep(viewerId: string, eventId: string): { ok: true; m
   return { ok: true, meeting, findings, created: true }
 }
 
-/** Whether the household's rebalance has filled on the ledger's day, is approved and awaiting release, or was never approved. */
+/**
+ * Whether the household's rebalance had filled in the ledger's reading (that morning, or later that day), was approved
+ * and awaiting release, or was never approved. Read as of a meeting's end (`householdLedgerAt`), it is what the meeting knew.
+ */
 export function rebalanceStateOf(ledger: HouseholdLedger): RebalanceState {
-  if (ledger.fillsOnDay.some((f) => f.source.kind === 'proposal')) return 'filled'
+  const fills = ledger.fillsOnDay.filter((f) => f.source.kind === 'proposal')
+  if (fills.length > 0) return fills.every((f) => isEasternMorning(f.at)) ? 'filled_this_morning' : 'filled_today'
   return ledger.openOrders.some((o) => o.status === 'pending_compliance') ? 'awaiting_release' : 'not_approved'
 }
 
@@ -61,15 +66,15 @@ export function wholeStandingOf(clientId: string): { tolerance: string; status: 
   return { tolerance: tolerance.band, status, score: risk.posture.score, value: risk.value }
 }
 
-/** What the ledger and the Risk view show for the household on `day`: the notes are checked against it. */
-export function notesFactsOf(householdId: string, day: string): NotesFacts {
+/** What the ledger showed for the household when the meeting ended (`end`), and what the Risk view shows: the notes are checked against it. */
+export function notesFactsOf(householdId: string, end: string): NotesFacts {
   const household = householdFixtures.find((h) => h.id === householdId)
   if (!household) throw new Error(`No household ${householdId}`)
   const wholes = new Map(household.members.flatMap((m) => {
     const standing = wholeStandingOf(m.clientId)
     return standing ? [[m.clientId, { tolerance: standing.tolerance, status: standing.status }] as const] : []
   }))
-  return { rebalance: rebalanceStateOf(householdLedger(householdId, day)), wholes }
+  return { rebalance: rebalanceStateOf(householdLedgerAt(householdId, end)), wholes }
 }
 
 /** Meeting Notes drafts the record from the transcript, once the meeting is held; a second request keeps the draft as Adrian left it. */
@@ -80,8 +85,8 @@ export function draftMeetingNotes(viewerId: string, eventId: string): { ok: true
   if (meeting.state === 'scheduled') return refuseMeeting(409, 'NOT_HELD', 'Hold the meeting first: the notes are drafted from its transcript.')
   if (meeting.state === 'filed') return alreadyFiled(meeting)
   if (meeting.notesDraft) return { ok: true, meeting, created: false }
-  const day = meetingDay(meeting)
-  const next: Meeting = { ...meeting, notesDraft: draftNotesFromTranscript(meeting.eventId, day, notesFactsOf(meeting.householdId, day)) }
+  if (!meeting.heldAt) throw new Error(`Meeting ${meeting.eventId} is held but records no time it was held`)
+  const next: Meeting = { ...meeting, notesDraft: draftNotesFromTranscript(meeting.eventId, meetingDay(meeting), notesFactsOf(meeting.householdId, meeting.heldAt.end)) }
   replaceMeeting(next)
   store().messages.push({ kind: 'notes_drafted', id: nextId('msg'), threadId: meeting.threadId, at: nextAt(), eventId: meeting.eventId, agentId: 'meeting-notes' })
   return { ok: true, meeting: next, created: true }

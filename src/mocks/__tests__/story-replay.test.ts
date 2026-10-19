@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { store } from '@/mocks/data/workspace-store'
 import { JOHNSON_REASON } from '@/test/suitability-fixture'
 import { REBALANCE_LINE } from '@/mocks/agents/meeting-notes'
-import { householdLedger } from '@/mocks/workspace/household-ledger'
+import { householdLedger, householdLedgerAt } from '@/mocks/workspace/household-ledger'
 import { carryFinding } from '@/mocks/workspace/carry'
 import { createProposal, reviseProposal, saveVersion } from '@/mocks/workspace/proposals'
 import { approveProposal } from '@/mocks/workspace/proposal-acts'
@@ -30,7 +30,7 @@ type Expected = { claims: number; letterLines?: number; rules: readonly string[]
 
 /**
  * Checks every claim made since the last check against the ledger as it stands now; the notes, which record the
- * meeting's own day, against the ledger read for that day. Returns the rules it used.
+ * meeting, against the ledger as it stood when the meeting ended. Returns the rules it used.
  */
 function checker() {
   const seen = new Set<string>()
@@ -40,8 +40,13 @@ function checker() {
     const claims = newClaims(seen)
     checked += claims.length
     const usedHere = new Set<string>()
-    for (const day of new Set(claims.map((c) => c.day))) {
-      const { unguarded, disagreeing, rulesUsed } = disagreements(claims.filter((c) => c.day === day), householdLedger('hh-001', day))
+    const readingOf = (c: (typeof claims)[number]) => c.asOf ?? c.day
+    for (const reading of new Set(claims.map(readingOf))) {
+      const these = claims.filter((c) => readingOf(c) === reading)
+      const first = these[0]
+      if (!first) throw new Error('a reading with no claims')
+      const ledger = first.asOf === undefined ? householdLedger('hh-001', first.day) : householdLedgerAt('hh-001', first.asOf)
+      const { unguarded, disagreeing, rulesUsed } = disagreements(these, ledger)
       rulesUsed.forEach((r) => usedHere.add(r))
       expect(unguarded, `${step}: claims about trades, fills or holdings that no rule checks`).toEqual([])
       expect(disagreeing, `${step}: claims the ledger contradicts`).toEqual([])
@@ -114,7 +119,7 @@ describe("the README path: no agent claim or letter line contradicts the ledger 
     check('meeting prep', { claims: 7, rules: ['prep: filled', 'prep: wash-sale windows'] })
     heldDraftedFiled()
     check('the notes, filed', NOTES)
-    expect(rebalanceNote()).toBe(REBALANCE_LINE.filled)
+    expect(rebalanceNote()).toBe(REBALANCE_LINE.filled_this_morning)
     const recap = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft
     check('the recap, drafted', { claims: 21, letterLines: 21, rules: RECAP_SENT.rules })
     ok(sendToParty(ADRIAN, recap.id))
@@ -148,6 +153,18 @@ describe("the README path: no agent claim or letter line contradicts the ledger 
     expect(rebalanceNote()).toBe(REBALANCE_LINE.awaiting_release)
   })
 
+  it('holds the review, then releases, then drafts: the notes read the rebalance as the meeting left it', () => {
+    const { check } = checker()
+    check('session start: the Brief', BRIEF_AT_START)
+    const approved = approvedStoryV3()
+    ok(holdMeeting(ADRIAN, 'evt-010'))
+    release(approved)
+    check('released after the meeting', { claims: 2, rules: ['fills report'] })
+    ok(draftMeetingNotes(ADRIAN, 'evt-010'))
+    check('the notes, drafted after the release', NOTES)
+    expect(rebalanceNote()).toBe(REBALANCE_LINE.awaiting_release)
+  })
+
   it.each([
     ['Thu 26 Feb', () => jumpToHerReply()],
     ['Mon 2 Mar', () => { jumpToHerReply(); jumpToHerAcceptance() }],
@@ -161,7 +178,7 @@ describe("the README path: no agent claim or letter line contradicts the ledger 
     check(`${day}: meeting prep`, { claims: 7, rules: ['prep: nothing filled', 'prep: wash-sale windows'] })
     heldDraftedFiled()
     check(`${day}: the notes, filed`, NOTES)
-    expect(rebalanceNote()).toBe(REBALANCE_LINE.filled)
+    expect(rebalanceNote()).toBe(REBALANCE_LINE.filled_this_morning)
     ok(sendToParty(ADRIAN, ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft.id))
     check(`${day}: the recap, sent to both`, RECAP_SENT)
   })
@@ -174,7 +191,9 @@ describe("the README path: no agent claim or letter line contradicts the ledger 
     const meeting = store().meetings[0]
     if (!meeting?.notesDraft) throw new Error('the notes are drafted')
     meeting.notesDraft = meeting.notesDraft.map((l) => (l.id === 'n-01' ? { ...l, text: "Reviewed this morning's rebalance and the Intel harvest: the loss is deductible now only if Intel is not bought back before its window closes." } : l))
-    expect(disagreements(newClaims(seen), householdLedger('hh-001')).disagreeing).toEqual([
+    const meetingEnd = meeting.heldAt?.end
+    if (!meetingEnd) throw new Error('the meeting was held')
+    expect(disagreements(newClaims(seen), householdLedgerAt('hh-001', meetingEnd)).disagreeing).toEqual([
       'notes: the rebalance · notes n-01: the notes say "Reviewed this morning\'s rebalance and the Intel harvest: the loss is deductible now only if Intel is not bought back before its window closes."; the ledger says not_approved',
     ])
   })

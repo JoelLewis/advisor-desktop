@@ -11,9 +11,10 @@ import { easternDayOf } from '@/lib/eastern-day'
 
 /**
  * Something the product said about the Johnsons' book, with what it said it from. `day` is the New York day the claim
- * speaks of: the session's day when it was made, except the meeting notes, which record the meeting's own day.
+ * speaks of: the session's day when it was made, except the meeting notes, which record the meeting's own day and are
+ * read against the ledger as the meeting ended (`asOf`).
  */
-type Claim = { key: string; source: 'finding' | 'proposal' | 'fills' | 'notes' | 'letter'; day: string; agentId?: AgentId; accountId?: string; text: string; figures: Figure[]; fillIds?: string[] }
+type Claim = { key: string; source: 'finding' | 'proposal' | 'fills' | 'notes' | 'letter'; day: string; asOf?: string; agentId?: AgentId; accountId?: string; text: string; figures: Figure[]; fillIds?: string[] }
 type Rule = { name: string; applies: (c: Claim) => boolean; disagrees: (c: Claim, ledger: HouseholdLedger) => string | undefined }
 
 /** Words that make a claim about trades, fills or holdings: such a claim must be checked by a rule. */
@@ -102,7 +103,11 @@ export function newClaims(seen: Set<string>): Claim[] {
     return []
   })
   const fromProposals = s.proposals.flatMap((p) => p.versions.flatMap((v): Claim[] => (fresh(`v:${p.id}:${v.n}`) ? [{ key: `${p.id} v${v.n}`, source: 'proposal', day, accountId: p.accountId, text: v.changeSummary, figures: [] }] : [])))
-  const fromNotes = s.meetings.flatMap((m) => (m.notesDraft ?? []).flatMap((l): Claim[] => (fresh(`n:${m.eventId}:${l.id}:${l.text}`) ? [{ key: l.id, source: 'notes', day: meetingDay(m), text: l.text, figures: [] }] : [])))
+  const fromNotes = s.meetings.flatMap((m) => (m.notesDraft ?? []).flatMap((l): Claim[] => {
+    if (!fresh(`n:${m.eventId}:${l.id}:${l.text}`)) return []
+    if (!m.heldAt) throw new Error(`Meeting ${m.eventId} has notes but was never held`)
+    return [{ key: l.id, source: 'notes', day: meetingDay(m), asOf: m.heldAt.end, text: l.text, figures: [] }]
+  }))
   const fromDrafts = s.drafts.filter((d) => CLIENT_THREADS.has(d.clientThreadId)).flatMap((d) => (fresh(`d:${d.id}`) ? d.body.split('\n').map((line, i): Claim => ({ key: `${d.id}:${i}`, source: 'letter', day, text: line, figures: [] })) : []))
   return [...fromMessages, ...fromProposals, ...fromNotes, ...fromDrafts]
 }
@@ -114,6 +119,7 @@ export function disagreements(claims: readonly Claim[], ledger: HouseholdLedger)
   const disagreeing: string[] = []
   for (const c of claims) {
     if (c.day !== ledger.day) throw new Error(`${c.source} ${c.key} speaks of ${c.day}; the ledger was read for ${ledger.day}`)
+    if (c.asOf !== undefined && c.asOf !== ledger.asOf) throw new Error(`${c.source} ${c.key} speaks as of ${c.asOf}; the ledger was read as of ${ledger.asOf}`)
     const rules = RULES.filter((r) => r.applies(c))
     if (rules.length === 0 && TRADE_WORDS.test(c.text)) unguarded.push(`${c.source} ${c.key}: ${c.text}`)
     for (const r of rules) {

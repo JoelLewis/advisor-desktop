@@ -44,7 +44,7 @@ export type LedgerFill = {
 export type AccountLedger = { account: Account; positions: Position[]; lots: CustodianLot[]; cash: number; openOrders: OpenOrder[]; fillsOnDay: LedgerFill[] }
 export type HouseholdLedger = {
   householdId: string
-  /** The session clock when it was read. */
+  /** The session clock when it was read, or the instant a reading as of a moment was cut off at. */
   asOf: string
   /** The New York day `fillsOnDay` and `washWindows` are read for. */
   day: string
@@ -128,22 +128,32 @@ function workingValue(order: Order, positions: readonly Position[]): number {
   return valueAt(order, price, order.quantity)
 }
 
-function openOrdersOf(account: Account, positions: readonly Position[]): OpenOrder[] {
-  const tickets = orders.filter((o) => o.accountId === account.id && WORKING.has(o.status)).map((o): OpenOrder => ({
+/** Whether an instant falls at or before the reading's cut-off; every instant does when the reading has none. */
+const byThen = (at: string, until: string | undefined) => until === undefined || Date.parse(at) <= Date.parse(until)
+/** Whether an order still open at `until` filled after it; never, when the reading has no cut-off. */
+const filledAfter = (filledAt: string | undefined, until: string | undefined) =>
+  until !== undefined && filledAt !== undefined && Date.parse(filledAt) > Date.parse(until)
+
+/** The account's orders open now or, with `until`, open at that instant: entered by then and not yet filled then. */
+function openOrdersOf(account: Account, positions: readonly Position[], until?: string): OpenOrder[] {
+  const fillAt = new Map(ledgerFills().map((f) => [f.stagedOrderId, f.at]))
+  const tickets = orders.filter((o) => o.accountId === account.id && byThen(o.submittedAt, until)
+    && (WORKING.has(o.status) || (o.status === 'filled' && filledAfter(o.filledAt, until)))).map((o): OpenOrder => ({
     id: o.id, accountId: o.accountId, symbol: o.symbol, assetClass: assetClassIn(account, o.symbol, positions, o.underlying),
     side: ticketSide(o), ...ticketQuantity(o), status: 'working', estimatedValue: workingValue(o, positions),
     ...(o.limitPrice !== undefined ? { limitPrice: o.limitPrice } : {}), enteredAt: o.submittedAt, source: { kind: 'ticket', orderId: o.id },
   }))
-  const staged = orderBook().staged.filter((o) => o.accountId === account.id && o.status === 'pending_compliance').map((o): OpenOrder => ({
+  const staged = orderBook().staged.filter((o) => o.accountId === account.id && byThen(o.stagedAt, until)
+    && (o.status === 'pending_compliance' || (o.status === 'filled' && filledAfter(fillAt.get(o.id), until)))).map((o): OpenOrder => ({
     id: o.id, accountId: o.accountId, symbol: o.symbol, assetClass: assetClassIn(account, o.symbol, positions),
     side: o.side, quantity: o.quantity, quantityUnit: 'sh', status: 'pending_compliance', estimatedValue: o.estimatedValue,
     enteredAt: o.stagedAt, source: { kind: 'proposal', stagedOrderId: o.id, proposalId: o.proposalId, version: o.version },
   }))
-  return [...tickets, ...staged].sort((a, b) => a.enteredAt.localeCompare(b.enteredAt) || a.id.localeCompare(b.id))
+  return [...tickets, ...staged].sort((a, b) => Date.parse(a.enteredAt) - Date.parse(b.enteredAt) || a.id.localeCompare(b.id))
 }
 
-function fillsOn(account: Account, positions: readonly Position[], day: string): LedgerFill[] {
-  const tickets = orders.filter((o) => o.accountId === account.id && o.status === 'filled' && o.filledAt !== undefined && easternDayOf(o.filledAt) === day).map((o): LedgerFill => {
+function fillsOn(account: Account, positions: readonly Position[], day: string, until?: string): LedgerFill[] {
+  const tickets = orders.filter((o) => o.accountId === account.id && o.status === 'filled' && o.filledAt !== undefined && easternDayOf(o.filledAt) === day && byThen(o.filledAt, until)).map((o): LedgerFill => {
     const value = ticketValue(o)
     if (value === undefined || o.filledPrice === undefined || o.filledAt === undefined) throw new Error(`Filled ticket ${o.id} states no fill`)
     return {
@@ -151,37 +161,46 @@ function fillsOn(account: Account, positions: readonly Position[], day: string):
       price: o.filledPrice, value, at: o.filledAt, source: { kind: 'ticket', orderId: o.id },
     }
   })
-  const released = ledgerFills().filter((f) => f.accountId === account.id && easternDayOf(f.at) === day).map((f): LedgerFill => ({
+  const released = ledgerFills().filter((f) => f.accountId === account.id && easternDayOf(f.at) === day && byThen(f.at, until)).map((f): LedgerFill => ({
     id: f.id, accountId: f.accountId, symbol: f.symbol, assetClass: assetClassIn(account, f.symbol, positions), side: f.side, quantity: f.quantity, quantityUnit: 'sh',
     price: f.price, value: f.value, at: f.at, source: { kind: 'proposal', stagedOrderId: f.stagedOrderId, proposalId: f.proposalId, version: f.version },
   }))
-  return [...tickets, ...released].sort((a, b) => a.at.localeCompare(b.at) || a.id.localeCompare(b.id))
+  return [...tickets, ...released].sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.id.localeCompare(b.id))
 }
 
 const sessionDay = (): string => easternDayOf(sessionNow())
 
-export function accountLedger(accountId: string, day: string = sessionDay()): AccountLedger {
+export function accountLedger(accountId: string, day: string = sessionDay(), until?: string): AccountLedger {
   const account = accountOf(accountId)
   const positions = getPositionsForAccount(account.id, account.totalValue)
   return {
     account, positions, lots: generateTaxLots(account.id, account.totalValue), cash: cashBalanceOf(account),
-    openOrders: openOrdersOf(account, positions), fillsOnDay: fillsOn(account, positions, day),
+    openOrders: openOrdersOf(account, positions, until), fillsOnDay: fillsOn(account, positions, day, until),
   }
 }
 
-export function householdLedger(householdId: string, day: string = sessionDay()): HouseholdLedger {
+function readHousehold(householdId: string, day: string, until?: string): HouseholdLedger {
   if (!householdFixtures.some((h) => h.id === householdId)) throw new Error(`No household ${householdId}`)
-  const own = accounts.filter((a) => a.householdId === householdId).map((a) => accountLedger(a.id, day))
+  const own = accounts.filter((a) => a.householdId === householdId).map((a) => accountLedger(a.id, day, until))
   return {
-    householdId, asOf: sessionNow(), day, accounts: own,
+    householdId, asOf: until ?? sessionNow(), day, accounts: own,
     heldAway: heldAwayAssets.filter((h) => h.householdId === householdId),
-    openOrders: own.flatMap((a) => a.openOrders).sort((a, b) => a.enteredAt.localeCompare(b.enteredAt) || a.id.localeCompare(b.id)),
-    fillsOnDay: own.flatMap((a) => a.fillsOnDay).sort((a, b) => a.at.localeCompare(b.at) || a.id.localeCompare(b.id)),
+    openOrders: own.flatMap((a) => a.openOrders).sort((a, b) => Date.parse(a.enteredAt) - Date.parse(b.enteredAt) || a.id.localeCompare(b.id)),
+    fillsOnDay: own.flatMap((a) => a.fillsOnDay).sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.id.localeCompare(b.id)),
     realizedSales: allRealizedSales().filter((s) => s.householdId === householdId),
     washWindows: openWashSaleWindows(day, householdId),
     cashUsd: own.reduce((s, a) => s + convertToBase(a.cash, currencyForAccount(a.account.id), FX_RATES_USD_BASE), 0),
   }
 }
+
+export const householdLedger = (householdId: string, day: string = sessionDay()): HouseholdLedger => readHousehold(householdId, day)
+
+/**
+ * The household's orders and fills as they stood at `at`: the fills of that New York day up to `at`, and the orders
+ * entered by then and not yet filled then. Positions, lots, cash and realized sales are read as they stand now.
+ * A meeting's record reads the book this way as of the meeting's end.
+ */
+export const householdLedgerAt = (householdId: string, at: string): HouseholdLedger => readHousehold(householdId, easternDayOf(at), at)
 
 /** An open order as a proposal counts it: what it moves once filled. `name` is the holding's or the quote's, when either names it. */
 type WorkingMove = {

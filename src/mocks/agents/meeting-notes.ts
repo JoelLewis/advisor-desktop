@@ -3,14 +3,15 @@ import { transcriptOf } from '@/mocks/data/meeting-transcripts'
 import { tradingDaysAfter } from '@/lib/trading-calendar'
 import type { WholeStatus } from '@/types/reference-risk'
 
-/** What the ledger showed on the meeting's day about the household's rebalance. */
-export type RebalanceState = 'filled' | 'awaiting_release' | 'not_approved'
-/** What Meeting Notes checks the transcript against: the rebalance on the meeting's day, and each client's accounts as a whole against their own tolerance. */
+/** What the ledger showed about the household's rebalance when the meeting ended: filled that morning, filled later that day, approved and waiting, or never approved. */
+export type RebalanceState = 'filled_this_morning' | 'filled_today' | 'awaiting_release' | 'not_approved'
+/** What Meeting Notes checks the transcript against: the rebalance as the meeting ended, and each client's accounts as a whole against their own tolerance. */
 export type NotesFacts = { rebalance: RebalanceState; wholes: ReadonlyMap<string, { tolerance: string; status: WholeStatus }> }
 
 /** The Intel harvest and the rebalance as the ledger shows them; the transcript (t-02) stays as spoken. */
 export const REBALANCE_LINE: Readonly<Record<RebalanceState, string>> = {
-  filled: "Reviewed this morning's rebalance and the Intel harvest: the loss is deductible now only if Intel is not bought back before its window closes.",
+  filled_this_morning: "Reviewed this morning's rebalance and the Intel harvest: the loss is deductible now only if Intel is not bought back before its window closes.",
+  filled_today: "Reviewed today's rebalance and the Intel harvest: the loss is deductible now only if Intel is not bought back before its window closes.",
   awaiting_release: 'Reviewed the rebalance and the Intel harvest; the rebalance is approved and awaiting compliance release, and the loss will be deductible only if Intel is not bought back before its window closes.',
   not_approved: 'Discussed a rebalance and the Intel harvest; nothing has been approved or traded yet, and a loss would be deductible only if Intel is not bought back before its window closes.',
 }
@@ -76,8 +77,8 @@ const SCRIPTS: ReadonlyMap<string, readonly ScriptLine[]> = new Map([['evt-010',
 
 /**
  * The notes as Meeting Notes drafts them: scripted, deterministic, every citation checked against the transcript.
- * Each line records only what was said or decided, citing where; a line about the book states what the ledger and
- * the Risk view show on the meeting's day.
+ * Each line records only what was said or decided, citing where; a line about the book states what the ledger showed
+ * when the meeting ended and what the Risk view shows.
  */
 export function draftNotesFromTranscript(eventId: string, meetingDay: string, facts: NotesFacts): NoteLine[] {
   const script = SCRIPTS.get(eventId)
