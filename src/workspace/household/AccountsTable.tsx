@@ -20,7 +20,7 @@ export function AccountsTable({ caption, accounts, totalValue, totalLabel, tiesT
     <DataTable caption={caption} rows={accounts} getRowId={(a) => a.accountId} total={accounts.length}
       noun={{ singular: 'account', plural: 'accounts' }}
       columns={[
-        { id: 'account', header: 'Account', cell: (a) => a.name, sortValue: (a) => a.name },
+        { id: 'account', header: 'Account', cell: (a) => (a.currency === 'USD' ? a.name : `${a.name} · ${a.currency} account`), sortValue: (a) => a.name },
         { id: 'owner', header: 'Owner', cell: (a) => a.ownerName },
         { id: 'model', header: 'Model', wrap: true, cell: (a) => (a.mandate === 'model' ? a.modelName : 'Custom mandate · not model-managed') },
         { id: 'value', header: 'Value', unit: UNIT.usd, align: 'right', cell: (a) => <Num text={fmtMoney(a.valueUsd)} />, sortValue: (a) => a.valueUsd },

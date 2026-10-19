@@ -18,7 +18,7 @@ export function LastContactLine({ view }: { view: Pick<HouseholdView, 'lastConta
       {lastContact ? (
         <p className="flex flex-wrap items-baseline gap-x-3 text-body">
           <span>{contactWords(lastContact, asOf)}</span>
-          {lastContact.where.kind === 'conversation' ? <Link to={`/t/${lastContact.where.threadId}`} className={LINK}>{`Open ${lastContact.where.title}`}</Link> : null}
+          {lastContact.where.kind === 'conversation' ? <Link to={`/t/${lastContact.where.threadId}`} className={LINK}>{`Open the conversation with ${lastContact.where.title}`}</Link> : null}
         </p>
       ) : <p className="text-body text-ink-3">No contact on file.</p>}
       {waiting.map((w) => (

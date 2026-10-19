@@ -15,7 +15,6 @@ import { AssetClassTable } from '@/workspace/household/AssetClassTable'
 import { HouseholdDecisions } from '@/workspace/household/HouseholdDecisions'
 import { HouseholdTasks } from '@/workspace/household/HouseholdTasks'
 import { LastContactLine } from '@/workspace/household/LastContactLine'
-import { unbreakableZone } from '@/workspace/household/holding-words'
 import { MethodsAndSources } from '@/workspace/reference/MethodsAndSources'
 import { CommunicationsList } from '@/workspace/household/CommunicationsList'
 import { DOCUMENT_TYPE_WORDS, SIGNATURE_WORDS } from '@/workspace/household/household-words'
@@ -89,7 +88,7 @@ function HouseholdPage({ view }: { view: HouseholdReadModel }) {
               <li key={a.id} className="flex min-w-0 flex-col gap-1 border-b border-rule py-3 first:pt-0 last:border-b-0">
                 <span className="flex flex-wrap items-baseline gap-x-3">
                   <span className="text-body font-semibold">{a.title}</span>
-                  <span className="tabular ml-auto text-label text-ink-3">{unbreakableZone(fmtEasternStamp(a.at))}</span>
+                  <span className="tabular ml-auto text-label text-ink-3">{fmtEasternStamp(a.at)}</span>
                 </span>
                 <span className="text-copy text-ink-2">{a.description}</span>
               </li>
@@ -108,7 +107,7 @@ function MeetingList({ label, meetings, from }: { label: string; meetings: Meeti
     <ul aria-label={label} className="flex flex-col gap-2">
       {meetings.map((m) => (
         <li key={m.eventId} className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <span className="tabular text-body">{unbreakableZone(`${m.title} · ${fmtDayMonthYear(m.start)} · ${fmtEasternRange(m.start, m.end)}`)}</span>
+          <span className="tabular text-body">{`${m.title} · ${fmtDayMonthYear(m.start)} · ${fmtEasternRange(m.start, m.end)}`}</span>
           {m.state !== 'calendar' ? <Tag>{MEETING_STATE_TAG[m.state]}</Tag> : null}
           {m.threadId ? <Link to={meetingFullViewHref(m.eventId, from ?? m.threadId)} className={LINK}>Open the meeting view <span aria-hidden="true">↗</span></Link> : null}
         </li>

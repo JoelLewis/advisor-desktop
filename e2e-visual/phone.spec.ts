@@ -37,6 +37,11 @@ const SCENES: Scene[] = [
     await expect(queue).not.toContainText('Decision waiting')
     await settle(page)
   } },
+  { name: 'phone-household-light', open: async (page) => {
+    await visitPhone(page, '/households/hh-001', 'light')
+    await expect(page.getByRole('main').getByRole('table', { name: 'Holdings by asset class' })).toBeVisible()
+    await settle(page)
+  } },
   { name: 'phone-brief-light', open: async (page) => { await visitPhone(page, '/t/th-brief', 'light'); await settle(page) } },
   { name: 'phone-thread-light', open: async (page) => { await visitPhone(page, '/t/th-johnson-review', 'light'); await settle(page) } },
   { name: 'phone-context-light', open: async (page) => { await visitPhone(page, '/t/th-johnson-review', 'light'); await openPhonePane(page, 'Context'); await settle(page) } },

@@ -156,9 +156,12 @@ export function fmtEasternDay(iso: string): string {
   return `${partOf(parts, 'weekday')} ${partOf(parts, 'day')} ${monthAbbreviation(Number(partOf(parts, 'month')))}`
 }
 
+/** The zone's name, held to the time before it: "09:10 ET" never breaks between them. */
+const ET = '\u00a0ET'
+
 /** A moment on the story's clock as its control names it: "Thu 26 Feb 09:10 ET". */
 export function fmtEasternDayTime(iso: string): string {
-  return `${fmtEasternDay(iso)} ${fmtEasternTime(iso)} ET`
+  return `${fmtEasternDay(iso)} ${fmtEasternTime(iso)}${ET}`
 }
 
 const easternStampParts = new Intl.DateTimeFormat('en-US', {
@@ -178,19 +181,19 @@ function easternParts(iso: string): { dayKey: string; year: string; day: string;
  */
 export function fmtEasternStamp(iso: string, sameDayAs?: string): string {
   const at = easternParts(iso)
-  if (sameDayAs !== undefined && easternParts(sameDayAs).dayKey === at.dayKey) return `${at.time} ET`
-  return `${at.day} ${monthAbbreviation(at.month)} ${at.time} ET`
+  if (sameDayAs !== undefined && easternParts(sameDayAs).dayKey === at.dayKey) return `${at.time}${ET}`
+  return `${at.day} ${monthAbbreviation(at.month)} ${at.time}${ET}`
 }
 
 /** A meeting's window in New York time, with the zone: "14:00–15:15 ET". */
 export function fmtEasternRange(start: string, end: string): string {
-  return `${fmtEasternTime(start)}–${fmtEasternTime(end)} ET`
+  return `${fmtEasternTime(start)}–${fmtEasternTime(end)}${ET}`
 }
 
 /** A window on the story's clock: "14:00–15:15 ET" on the compared New York day, "25 Feb 14:00–15:15 ET" on any other. */
 export function fmtEasternWindow(start: string, end: string, sameDayAs?: string): string {
-  const from = fmtEasternStamp(start, sameDayAs).replace(/ ET$/, '')
-  return `${from}–${fmtEasternTime(end)} ET`
+  const from = fmtEasternStamp(start, sameDayAs).replace(new RegExp(`${ET}$`), '')
+  return `${from}–${fmtEasternTime(end)}${ET}`
 }
 
 /** How long someone has waited, from `since` to `now`, in the largest whole unit: "45 min", "8h", "2d". Both must be moments. */

@@ -17,7 +17,7 @@ export function HouseholdDecisions({ decisions }: { decisions: HouseholdDecision
         </li>
       ) : (
         <li key={d.item.key} className="flex flex-wrap items-baseline gap-x-3">
-          <span className="text-body">{[d.item.title, d.item.readings.map((r) => (r.figure ? `${r.line} · ${figureText(r.figure)}` : r.line)).join('; ')].filter((x): x is string => x !== undefined).join(': ')}</span>
+          <span className="text-body">{`${d.accountName}: `}{[d.item.title, d.item.readings.map((r) => (r.figure ? `${r.line} · ${figureText(r.figure)}` : r.line)).join('; ')].filter((x): x is string => x !== undefined).join(': ')}</span>
           <Link to={`/t/${d.threadId}`} className={LINK}>Open the Brief</Link>
         </li>
       )))}

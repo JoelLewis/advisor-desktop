@@ -67,6 +67,7 @@ function DataTableRowView<T>({
     <tr
       ref={(el) => rowRef(index, el)}
       tabIndex={tabbable === undefined ? undefined : tabbable ? 0 : -1}
+      aria-expanded={expanded}
       aria-keyshortcuts={interactive ? shortcuts : undefined}
       onFocus={interactive ? () => onRowFocus(row.id) : undefined}
       onKeyDown={interactive ? (e) => onRowKeyDown(e, index) : undefined}
@@ -79,7 +80,7 @@ function DataTableRowView<T>({
         const p = col?.proportion?.(row.original)
         const first = cell.column.id === columns[0]?.id
         return (
-          <td key={cell.id} role={interactive ? 'gridcell' : undefined} aria-expanded={first ? expanded : undefined} className={cn(first && STICKY_FIRST, col?.wrap ? 'min-w-32 whitespace-normal px-2 py-1' : 'whitespace-nowrap px-2', col?.align === 'right' ? 'text-right tabular' : 'text-left')}>
+          <td key={cell.id} role={interactive ? 'gridcell' : undefined} className={cn(first && STICKY_FIRST, col?.wrap ? 'min-w-32 whitespace-normal px-2 py-1' : 'whitespace-nowrap px-2', col?.align === 'right' ? 'text-right tabular' : 'text-left')}>
             {p !== undefined ? (
               <span className="inline-flex w-full items-center justify-end gap-2">
                 <span aria-hidden className="inline-block h-1.5 bg-ink-3" style={{ width: `${Math.round(Math.max(0, Math.min(1, p)) * 64)}px` }} />
@@ -93,7 +94,6 @@ function DataTableRowView<T>({
   )
 }
 
-/* aria-expanded sits on the first cell, not the row: axe allows it on a row only in a treegrid. */
 const DataTableRow = memo(DataTableRowView) as typeof DataTableRowView
 
 export function DataTable<T>({

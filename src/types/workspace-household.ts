@@ -78,7 +78,8 @@ export type AssetClassRow = {
 }
 export type HouseholdHoldings = { managedValue: number; modelValue: number; rows: AssetClassRow[]; notInTarget: { accountId: string; name: string; value: number; mandateSummary: string; orders: HoldingOrder[] }[] }
 export type HouseholdDecision =
-  | { kind: 'brief'; item: BriefItem; threadId: string }
+  /** `accountName` is the account the Brief is about, as people read it (the display name); its claims stay digit-free. */
+  | { kind: 'brief'; item: BriefItem; threadId: string; accountName: string }
   | { kind: 'proposal'; proposalId: string; title: string; latestVersion: number; threadId: string }
 export type HouseholdTask = { id: string; title: string; owner: string; due?: string; overdue: boolean; source: 'meeting' | 'compliance' | 'open_item' | 'signature' }
 export type LastContact = {

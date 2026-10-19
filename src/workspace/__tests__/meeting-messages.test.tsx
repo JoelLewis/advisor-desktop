@@ -58,7 +58,7 @@ describe('meeting messages', () => {
       return text
     })
     expect(lines[0]).toContain('Agenda v1 · Proposed an agenda ordered by what needs attention first.')
-    expect(lines[1]).toContain('Meeting held · 14:00–15:15 ET · transcript received')
+    expect(lines[1]).toContain('Meeting held · 14:00–15:15\u00a0ET · transcript received')
     expect(lines[2]).toContain('Drafted the notes from the transcript.')
     expect(lines[3]).toContain('1 follow-up task from REC-0001.')
   })

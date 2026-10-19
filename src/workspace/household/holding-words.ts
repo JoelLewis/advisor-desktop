@@ -3,15 +3,12 @@ import type { AssetClassRow, HoldingOrder, LastContact, MemberStanding } from '@
 import { workingOrderWords } from '@/workspace/proposal/working-order-words'
 import { CHANNEL_WORDS } from './household-words'
 
-/** A time's zone stays on the line with the time: "09:30 ET" never breaks between them. */
-export const unbreakableZone = (text: string): string => text.replace(/ ET\b/g, '\u00a0ET')
-
 /** An order on the holding it changes: "working: buy 200 QQQ, limit 480.00", "pending compliance release: sell 943 SPY", "filled 09:30 ET: sold 7,000 INTC". */
 export function holdingOrderWords(order: HoldingOrder, asOf: string): string {
   switch (order.kind) {
     case 'working': return `working: ${workingOrderWords(order, order.quantityUnit === 'sh' ? undefined : order.quantityUnit)}`
     case 'pending_compliance': return `pending compliance release: ${order.side} ${fmtQuantity(order.quantity)} ${order.symbol}`
-    case 'filled': return `filled ${unbreakableZone(fmtEasternStamp(order.at, asOf))}: ${order.side === 'buy' ? 'bought' : 'sold'} ${fmtQuantity(order.quantity)} ${order.symbol}`
+    case 'filled': return `filled ${fmtEasternStamp(order.at, asOf)}: ${order.side === 'buy' ? 'bought' : 'sold'} ${fmtQuantity(order.quantity)} ${order.symbol}`
   }
 }
 
@@ -27,7 +24,7 @@ export function ordersCellWords({ openOrders, fillsToday }: Pick<AssetClassRow, 
 
 /** The last word between the firm and a client: who, when (Eastern), and where. */
 export function contactWords({ clientName, at, direction, where }: LastContact, asOf: string): string {
-  const when = unbreakableZone(fmtEasternStamp(at, asOf))
+  const when = fmtEasternStamp(at, asOf)
   if (where.kind === 'conversation') return direction === 'from_client' ? `${clientName} wrote at ${when}, in their conversation` : `The firm wrote to ${clientName} at ${when}, in their conversation`
   const how = `by ${CHANNEL_WORDS[where.channel].toLowerCase()}: ${where.subject}`
   return direction === 'from_client' ? `From ${clientName}, ${when}, ${how}` : `To ${clientName}, ${when}, ${how}`

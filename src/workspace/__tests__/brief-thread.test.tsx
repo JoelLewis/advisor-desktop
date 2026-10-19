@@ -173,8 +173,8 @@ describe('the Brief', () => {
     const today = await screen.findByRole('region', { name: 'Today' })
     const rows = within(today).getAllByRole('listitem')
     expect(rows.map((r) => r.textContent)).toEqual([
-      '14:00–15:15 ETJohnson annual review · scheduledOpen the meeting thread',
-      '15:30 ETCoffee with Dr. Amanda Pell · Form CRS due before it (firm policy)Open her thread',
+      '14:00–15:15\u00a0ETJohnson annual review · scheduledOpen the meeting thread',
+      '15:30\u00a0ETCoffee with Dr. Amanda Pell · Form CRS due before it (firm policy)Open her thread',
       'Reconciliation · 1 open breakOpen reconciliation',
     ])
     expect(within(rows[0]!).getByRole('link', { name: 'Open the meeting thread' })).toHaveAttribute('href', '/t/th-johnson-meeting')

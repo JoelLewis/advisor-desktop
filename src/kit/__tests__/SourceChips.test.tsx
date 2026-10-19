@@ -13,7 +13,7 @@ it('lists what a finding relies on; a single as-of shared by every source is sai
 it('puts the as-of on each chip only where the sources differ', () => {
   render(<SourceChips sources={[{ label: 'Lots', asOf: '2026-02-25T12:00:00Z' }, { label: 'Held away', asOf: '2025-12-01T05:00:00Z' }, { label: 'Policy' }]} />)
   const items = within(screen.getByRole('list', { name: 'Relies on' })).getAllByRole('listitem')
-  expect(items.map((i) => i.textContent)).toEqual(['Lotsas of 25 Feb 07:00 ET', 'Held awayas of 1 Dec 00:00 ET', 'Policy'])
+  expect(items.map((i) => i.textContent)).toEqual(['Lotsas of 25 Feb 07:00\u00a0ET', 'Held awayas of 1 Dec 00:00\u00a0ET', 'Policy'])
   expect(document.querySelector('[data-part="shared-as-of"]')).toBeNull()
 })
 

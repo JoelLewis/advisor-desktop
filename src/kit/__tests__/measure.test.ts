@@ -127,30 +127,30 @@ describe('measure', () => {
     expect(fmtEasternTime('2026-02-25T19:00:00.000Z')).toBe('14:00')
     expect(fmtEasternTime('2026-02-25T14:00:00-05:00')).toBe('14:00')
     expect(fmtEasternTime('2026-02-25T05:05:00Z')).toBe('00:05')
-    expect(fmtEasternRange('2026-02-25T19:00:00.000Z', '2026-02-25T20:15:00.000Z')).toBe('14:00–15:15 ET')
+    expect(fmtEasternRange('2026-02-25T19:00:00.000Z', '2026-02-25T20:15:00.000Z')).toBe('14:00–15:15\u00a0ET')
     expect(() => fmtEasternTime('2026-02-25T14:00:00')).toThrow(MeasureError)
   })
 })
 
 describe('fmtEasternStamp', () => {
   it('states the New York day and time with the zone', () => {
-    expect(fmtEasternStamp('2026-02-25T12:00:00Z')).toBe('25 Feb 07:00 ET')
-    expect(fmtEasternStamp('2026-02-25T19:00:00.000Z')).toBe('25 Feb 14:00 ET')
-    expect(fmtEasternStamp('2026-03-02T15:00:00-05:00')).toBe('2 Mar 15:00 ET')
+    expect(fmtEasternStamp('2026-02-25T12:00:00Z')).toBe('25 Feb 07:00\u00a0ET')
+    expect(fmtEasternStamp('2026-02-25T19:00:00.000Z')).toBe('25 Feb 14:00\u00a0ET')
+    expect(fmtEasternStamp('2026-03-02T15:00:00-05:00')).toBe('2 Mar 15:00\u00a0ET')
   })
   it('takes the New York date across UTC midnight', () => {
-    expect(fmtEasternStamp('2026-02-26T03:30:00Z')).toBe('25 Feb 22:30 ET')
+    expect(fmtEasternStamp('2026-02-26T03:30:00Z')).toBe('25 Feb 22:30\u00a0ET')
   })
   it('follows daylight saving time both ways', () => {
-    expect(fmtEasternStamp('2026-03-08T06:30:00Z')).toBe('8 Mar 01:30 ET')
-    expect(fmtEasternStamp('2026-03-08T07:30:00Z')).toBe('8 Mar 03:30 ET')
-    expect(fmtEasternStamp('2026-11-01T05:30:00Z')).toBe('1 Nov 01:30 ET')
-    expect(fmtEasternStamp('2026-11-01T06:30:00Z')).toBe('1 Nov 01:30 ET')
+    expect(fmtEasternStamp('2026-03-08T06:30:00Z')).toBe('8 Mar 01:30\u00a0ET')
+    expect(fmtEasternStamp('2026-03-08T07:30:00Z')).toBe('8 Mar 03:30\u00a0ET')
+    expect(fmtEasternStamp('2026-11-01T05:30:00Z')).toBe('1 Nov 01:30\u00a0ET')
+    expect(fmtEasternStamp('2026-11-01T06:30:00Z')).toBe('1 Nov 01:30\u00a0ET')
   })
   it('drops the date on the New York day it is compared with, and only then', () => {
-    expect(fmtEasternStamp('2026-02-25T19:00:00Z', '2026-02-25T12:00:00Z')).toBe('14:00 ET')
-    expect(fmtEasternStamp('2026-02-26T03:30:00Z', '2026-02-25T12:00:00Z')).toBe('22:30 ET')
-    expect(fmtEasternStamp('2026-02-25T19:00:00Z', '2026-02-26T14:10:00Z')).toBe('25 Feb 14:00 ET')
+    expect(fmtEasternStamp('2026-02-25T19:00:00Z', '2026-02-25T12:00:00Z')).toBe('14:00\u00a0ET')
+    expect(fmtEasternStamp('2026-02-26T03:30:00Z', '2026-02-25T12:00:00Z')).toBe('22:30\u00a0ET')
+    expect(fmtEasternStamp('2026-02-25T19:00:00Z', '2026-02-26T14:10:00Z')).toBe('25 Feb 14:00\u00a0ET')
   })
   it('refuses a time with no offset', () => {
     expect(() => fmtEasternStamp('2026-02-25T12:00:00')).toThrow(MeasureError)
@@ -191,7 +191,7 @@ describe('date-only facts', () => {
     expect(offsets.size, 'the machine zone really changed between checks').toBe(ZONES.length - 1)
   })
   it('says a moment as its ET stamp, and its day as the New York day', () => {
-    expect(fmtAsOf('2026-02-25T12:00:00Z')).toBe('25 Feb 07:00 ET')
+    expect(fmtAsOf('2026-02-25T12:00:00Z')).toBe('25 Feb 07:00\u00a0ET')
     expect(fmtDayMonthYear('2026-02-26T03:30:00Z')).toBe('25 Feb 2026')
     expect(fmtDayMonthYear('2026-02-25T19:00:00.000Z')).toBe('25 Feb 2026')
   })
@@ -216,12 +216,12 @@ describe('prospect-proposal formats', () => {
 
 describe('fmtEasternDayTime', () => {
   it('states a jump as the control names it', () => {
-    expect(fmtEasternDayTime('2026-02-26T14:10:00.000Z')).toBe('Thu 26 Feb 09:10 ET')
-    expect(fmtEasternDayTime('2026-03-02T15:00:00.000Z')).toBe('Mon 2 Mar 10:00 ET')
+    expect(fmtEasternDayTime('2026-02-26T14:10:00.000Z')).toBe('Thu 26 Feb 09:10\u00a0ET')
+    expect(fmtEasternDayTime('2026-03-02T15:00:00.000Z')).toBe('Mon 2 Mar 10:00\u00a0ET')
   })
   it('names the New York day, three-letter weekday and month', () => {
-    expect(fmtEasternDayTime('2025-09-30T14:00:00.000Z')).toBe('Tue 30 Sep 10:00 ET')
-    expect(fmtEasternDayTime('2026-03-03T03:30:00.000Z')).toBe('Mon 2 Mar 22:30 ET')
+    expect(fmtEasternDayTime('2025-09-30T14:00:00.000Z')).toBe('Tue 30 Sep 10:00\u00a0ET')
+    expect(fmtEasternDayTime('2026-03-03T03:30:00.000Z')).toBe('Mon 2 Mar 22:30\u00a0ET')
   })
 })
 
@@ -253,8 +253,8 @@ describe("no source formats or dates in the host's locale or time zone", () => {
 
 describe('fmtEasternWindow', () => {
   it('drops the date on the compared day, states it otherwise', () => {
-    expect(fmtEasternWindow('2026-02-25T19:00:00.000Z', '2026-02-25T20:15:00.000Z', '2026-02-25T12:00:00Z')).toBe('14:00–15:15 ET')
-    expect(fmtEasternWindow('2026-02-25T19:00:00.000Z', '2026-02-25T20:15:00.000Z', '2026-02-26T14:10:00Z')).toBe('25 Feb 14:00–15:15 ET')
+    expect(fmtEasternWindow('2026-02-25T19:00:00.000Z', '2026-02-25T20:15:00.000Z', '2026-02-25T12:00:00Z')).toBe('14:00–15:15\u00a0ET')
+    expect(fmtEasternWindow('2026-02-25T19:00:00.000Z', '2026-02-25T20:15:00.000Z', '2026-02-26T14:10:00Z')).toBe('25 Feb 14:00–15:15\u00a0ET')
   })
 })
 describe('driftChange', () => {

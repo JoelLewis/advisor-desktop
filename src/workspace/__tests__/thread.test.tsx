@@ -67,7 +67,7 @@ describe('thread view', () => {
     expect(items).toHaveLength(3)
     expect(items[0]).toHaveTextContent('Sarah Mitchell')
     expect(items[0]).toHaveTextContent('Client service')
-    expect(items[0]).toHaveTextContent(fmtEasternStamp(eventTime(2)))
+    expect(items[0]).toHaveTextContent(fmtEasternStamp(eventTime(2)).replace('\u00a0', ' '))
     expect(items[0]).toHaveTextContent('25 Feb 07:02 ET')
     expect(items[0]).toHaveTextContent('Robert asked when his annual review is this year.')
     expect(items[2]).toHaveTextContent('Adrian Hale')

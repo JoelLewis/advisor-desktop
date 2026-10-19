@@ -3,7 +3,7 @@ import { test, expect, type Page } from '@playwright/test'
 import { SCREENSHOT, clippedLabels, pageOverflowX } from './layout-checks'
 import { approve, askProposalAgent, bookColumn, heading, releaseByShortcut, settle, visit, type Theme } from './workspace-steps'
 
-const holdings = (page: Page) => page.getByRole('main').getByRole('grid', { name: 'Holdings by asset class' })
+const holdings = (page: Page) => page.getByRole('main').getByRole('table', { name: 'Holdings by asset class' })
 
 const before = (theme: Theme) => async (page: Page) => {
   await visit(page, '/households/hh-001', theme)
@@ -24,7 +24,7 @@ const after = (theme: Theme) => async (page: Page) => {
 
 const expanded = async (page: Page) => {
   await visit(page, '/households/hh-001', 'light')
-  await holdings(page).getByRole('row', { name: /^US Equity/ }).click()
+  await holdings(page).getByRole('button', { name: 'US Equity' }).click()
   await expect(page.getByRole('region', { name: 'US Equity · accounts holding it' })).toBeVisible()
   await settle(page)
 }

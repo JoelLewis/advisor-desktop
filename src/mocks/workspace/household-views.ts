@@ -223,8 +223,9 @@ function decisionsOf(accountIds: ReadonlySet<string>): HouseholdDecision[] {
   const proposals = unapprovedProposals(accountIds)
     .map((p): HouseholdDecision => ({ kind: 'proposal', proposalId: p.id, title: p.title, latestVersion: latestVersion(p).n, threadId: p.threadId }))
   const subject = s.threads.find((t) => t.id === BRIEF_THREAD_ID)?.subject
-  const brief = subject?.type === 'account' && accountIds.has(subject.id)
-    ? briefSummaryNow().decide.map((item): HouseholdDecision => ({ kind: 'brief', item, threadId: BRIEF_THREAD_ID }))
+  const briefAccount = subject?.type === 'account' && accountIds.has(subject.id) ? accounts.find((a) => a.id === subject.id) : undefined
+  const brief = briefAccount
+    ? briefSummaryNow().decide.map((item): HouseholdDecision => ({ kind: 'brief', item, threadId: BRIEF_THREAD_ID, accountName: accountDisplayName(briefAccount) }))
     : []
   return [...proposals, ...brief]
 }
