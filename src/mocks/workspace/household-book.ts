@@ -23,9 +23,11 @@ import { householdLedger, managedValueUsd } from './household-ledger'
 import { isFirmViewer } from './visibility'
 
 type TextMessage = Extract<Message, { kind: 'text' }>
-const byAt = (a: { at: string }, b: { at: string }) => a.at.localeCompare(b.at)
+/** Instants compare as instants: the fixtures mix "…:00Z" and "….000Z", which sort apart as text. */
+const byInstant = (a: string, b: string) => Date.parse(a) - Date.parse(b)
+const byAt = (a: { at: string }, b: { at: string }) => byInstant(a.at, b.at)
 const oldest = (instants: readonly string[]): string => {
-  const first = [...instants].sort()[0]
+  const first = [...instants].sort(byInstant)[0]
   if (first === undefined) throw new Error('No instant to take the oldest of')
   return first
 }
@@ -73,7 +75,7 @@ export function clientsWaiting(householdId: string): Extract<QueueReason, { kind
       const first = texts.slice(lastReply + 1).find((m) => m.authorId === member.clientId)
       return first ? [{ kind: 'client_waiting' as const, clientName: member.name, since: first.at, threadId: t.id }] : []
     }))
-    .sort((a, b) => a.since.localeCompare(b.since))
+    .sort((a, b) => byInstant(a.since, b.since))
 }
 
 const MEETING_LABEL: Readonly<Record<MeetingType, string>> = {
@@ -89,7 +91,7 @@ function meetingsToday(householdId: string, day: string, now: string): MeetingRe
     const meeting = meetingOf(e.id)
     const pending = meeting ? meeting.state === 'scheduled' : Date.parse(toUtc(e.endTime)) > Date.parse(now)
     return pending ? [{ kind: 'meeting', label: MEETING_LABEL[e.meetingType], start: toUtc(e.startTime), eventId: e.id }] : []
-  }).sort((a, b) => a.start.localeCompare(b.start))
+  }).sort((a, b) => byInstant(a.start, b.start))
 }
 
 /** Open compliance alerts about the household's accounts or clients. */
@@ -106,7 +108,11 @@ function complianceSince(accountIds: ReadonlySet<string>, clientIds: ReadonlySet
   const s = store()
   const held = s.proposals.filter((p) => accountIds.has(p.accountId)).flatMap((p) => {
     const approvals = s.approvals.filter((a) => a.proposalId === p.id)
-    const returned = approvals.filter((a) => a.status === 'returned' && !activeApproval(p.id)).flatMap((a) => actOnApproval('return_to_advisor', a.actId)?.at ?? [])
+    const returned = approvals.filter((a) => a.status === 'returned' && !activeApproval(p.id)).map((a) => {
+      const act = actOnApproval('return_to_advisor', a.actId)
+      if (!act) throw new Error(`Approval ${a.actId} is returned but no return_to_advisor act names it`)
+      return act.at
+    })
     const active = activeApproval(p.id)
     const escalated = active ? escalationOf(active.actId)?.at : undefined
     return [...returned, ...(escalated ? [escalated] : [])]
@@ -170,7 +176,7 @@ export function householdBook(viewerId: string): HouseholdBook | undefined {
   const queue = households.filter((h) => h.reasons.length > 0).sort((a, b) => {
     const [ra, rb] = [a.reasons[0], b.reasons[0]]
     if (!ra || !rb) throw new Error('A queued household has no reason')
-    return tierOf(ra) - tierOf(rb) || ageOf(ra).localeCompare(ageOf(rb)) || a.name.localeCompare(b.name)
+    return tierOf(ra) - tierOf(rb) || byInstant(ageOf(ra), ageOf(rb)) || a.name.localeCompare(b.name)
   })
   return { asOf: sessionNow(), queue, households }
 }

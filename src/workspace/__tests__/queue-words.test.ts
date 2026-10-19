@@ -27,9 +27,14 @@ describe('the queue in words', () => {
   it('a household with nothing due has no line and no markers', () => {
     const quiet: HouseholdRow = { ...johnson, reasons: [], markers: { outOfBand: false, compliance: 0, tasks: 0 } }
     expect(statusLineOf(quiet, AS_OF)).toBe('')
-    expect(markerWords(quiet.markers)).toEqual([])
+    expect(markerWords(quiet)).toEqual([])
   })
   it('marks drift, compliance and open items in words, never by color alone', () => {
-    expect(markerWords(johnson.markers)).toEqual(['OUT OF BAND', 'COMPLIANCE · 1', 'OPEN ITEMS · 1'])
+    expect(markerWords(johnson)).toEqual(['OUT OF BAND', 'COMPLIANCE · 1', 'OPEN ITEMS · 1'])
+  })
+  it('does not repeat as a tag the compliance count the status line already names', () => {
+    const named: HouseholdRow = { ...johnson, reasons: [...johnson.reasons, { kind: 'compliance', count: 1, since: AS_OF }] }
+    expect(statusLineOf(named, AS_OF)).toContain('1 compliance item')
+    expect(markerWords(named)).toEqual(['OUT OF BAND', 'OPEN ITEMS · 1'])
   })
 })

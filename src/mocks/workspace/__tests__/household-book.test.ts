@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { advanceClockTo, sessionNow, store } from '@/mocks/data/workspace-store'
+import { advanceClockTo, nextAt, sessionNow, store } from '@/mocks/data/workspace-store'
 import { minuteOf } from '@/lib/clock'
 import { householdBook, unapprovedProposals } from '../household-book'
 import { holdMeeting, meetingView } from '../meetings'
@@ -8,6 +8,7 @@ import { fileMeetingRecord } from '../meeting-acts'
 import { draftRecap } from '../recap'
 import { sendToParty } from '../acts'
 import { createProposal } from '../proposals'
+import { startConversation } from '../conversations'
 import { approvedStoryV3, approvedV1, ok, release } from './story-fixture'
 
 const ADRIAN = 'user-001'
@@ -83,7 +84,38 @@ describe('the household queue', () => {
     if (!fingerprint) throw new Error('the notes have a fingerprint')
     ok(fileMeetingRecord(ADRIAN, 'evt-010', fingerprint))
     ok(sendToParty(ADRIAN, ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft.id))
-    expect(kinds('hh-001')).not.toContain('client_waiting')
+    const waiting = rowOf('hh-001').reasons.flatMap((r) => (r.kind === 'client_waiting' ? [r.clientName] : []))
+    expect(waiting).not.toContain('Patricia Johnson')
+    expect(waiting).toEqual([])
+  })
+
+  it('orders meetings by when they fall, never by name: each meeting-tier row starts no earlier than the one before', () => {
+    const starts = book().queue.flatMap((h) => (h.reasons[0]?.kind === 'meeting' ? [Date.parse(h.reasons[0].start)] : []))
+    expect(starts.length).toBeGreaterThan(1)
+    expect(new Set(starts).size, 'no two meetings share a start, so the name never breaks a tie here').toBe(starts.length)
+    expect(starts).toEqual([...starts].sort((a, b) => a - b))
+  })
+
+  it('ranks clients waiting across households by how long they have waited, above every meeting', () => {
+    release(approvedStoryV3())
+    const margaret = ok(startConversation(ADRIAN, { householdId: 'hh-002', title: '', audience: { kind: 'client', clientId: 'cli-003' } })).thread
+    // Margaret is not a View-as target, so her message is seeded as a client's would be.
+    store().messages.push({ kind: 'text', id: 'msg-margaret', threadId: margaret.id, authorId: 'cli-003', at: nextAt(), body: 'Can we talk about the Hong Kong account?' })
+    const queue = book().queue.map((h) => [h.householdId, h.reasons[0]?.kind])
+    // Robert has waited since 07:01 ET; Margaret wrote just now. Chen-Wong sorts before Johnson by name, so the order is age.
+    expect(queue.slice(0, 2)).toEqual([['hh-001', 'client_waiting'], ['hh-002', 'client_waiting']])
+    expect(queue[2]?.[1]).toBe('meeting')
+  })
+
+  it('ranks tasks across households by the oldest due date, never by name', () => {
+    const task = (id: string, due: string) => ({ id, title: 'Follow up', owner: { kind: 'person' as const, personId: ADRIAN }, due, state: 'open' as const, fromNoteLine: 'n-01' })
+    store().meetings.push(
+      { eventId: 'evt-x1', householdId: 'hh-008', threadId: 'th-brief', state: 'filed', agenda: [], tasks: [task('t-x1', '2026-02-25')] },
+      { eventId: 'evt-x2', householdId: 'hh-012', threadId: 'th-brief', state: 'filed', agenda: [], tasks: [task('t-x2', '2026-02-23')] },
+    )
+    const tasks = book().queue.filter((h) => h.reasons[0]?.kind === 'task').map((h) => h.householdId)
+    // O'Brien sorts before Taylor by name; Taylor's task is two days older, so it leads.
+    expect(tasks).toEqual(['hh-012', 'hh-008'])
   })
 
   it('is firm only', () => {

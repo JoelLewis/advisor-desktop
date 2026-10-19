@@ -59,7 +59,7 @@ function HouseholdList({ title, rows, asOf, empty }: { title: string; rows: Hous
 
 function HouseholdRowLink({ row, asOf }: { row: HouseholdRow; asOf: string }) {
   const line = statusLineOf(row, asOf)
-  const markers = markerWords(row.markers)
+  const markers = markerWords(row)
   return (
     <li>
       <NavLink to={householdFullViewHref(row.householdId)} className={({ isActive }) => cn(ROW, isActive ? 'border-ink bg-face' : 'border-transparent')}>
