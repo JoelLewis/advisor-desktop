@@ -5,6 +5,7 @@ import { ApprovalNote } from '@/workspace/proposal/ApprovalNote'
 import { DriftBeforeAfter } from '@/workspace/proposal/DriftBeforeAfter'
 import { PretradeNotes } from '@/workspace/proposal/PretradeNotes'
 import { ProposalLegsTable } from '@/workspace/proposal/ProposalLegsTable'
+import { WorkingOrdersNote } from '@/workspace/proposal/WorkingOrdersNote'
 import { RestrictionList } from '@/workspace/proposal/RestrictionList'
 import { TaxReadings } from '@/workspace/proposal/TaxReadings'
 import { authorName } from '@/workspace/proposal/author-name'
@@ -41,6 +42,7 @@ export function ProposalEmbed({ proposalId, threadId, actions }: ProposalEmbedPr
       <p className="text-copy">{latest.changeSummary}</p>
       <ApprovalNote state={p.approval} />
       <ProposalLegsTable version={latest} caption={`Proposal legs · v${latest.n}`} />
+      <WorkingOrdersNote orders={latest.workingOrders} />
       <div className="flex flex-col gap-2">
         <TaxReadings summary={latest.summary} currency={currency} />
         <p className="text-label normal-case text-ink-3">{taxScope(latest.preview)}</p>

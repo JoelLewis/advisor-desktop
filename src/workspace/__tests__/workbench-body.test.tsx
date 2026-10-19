@@ -34,21 +34,21 @@ describe('the workbench body', () => {
     const detail = await screen.findByRole('region', { name: 'Leg · SPY' })
     expect(within(detail).getByRole('checkbox', { name: /^lot-pos-020-0/ })).toBeChecked()
     expect(within(detail).getByRole('checkbox', { name: /^lot-pos-020-1/ })).not.toBeChecked()
-    expect(within(detail).getByRole('textbox', { name: 'Quantity sh' })).toHaveValue('758')
+    expect(within(detail).getByRole('textbox', { name: 'Quantity sh' })).toHaveValue('943')
     expect(within(detail).getByRole('heading', { level: 3, name: 'Leg · SPY' })).toBeInTheDocument()
-    // What the leg takes from the lot, against what the lot holds: it ties to the leg's 758 sh and +69,411 LT.
+    // What the leg takes from the lot, against what the lot holds: it ties to the leg's 943 sh and +86,352 LT.
     expect(within(detail).getByRole('checkbox', { name: /^lot-pos-020-0/ })).toHaveAccessibleName(
-      'lot-pos-020-0 · bought 23 Aug 2024 · long-term · 758 of 1,515.332 sh · +69,411 of +138,761 USD')
+      'lot-pos-020-0 · bought 23 Aug 2024 · long-term · 943 of 1,515.332 sh · +86,352 of +138,761 USD')
     expect(within(detail).getByRole('checkbox', { name: /^lot-pos-020-1/ })).toHaveAccessibleName(/2,363\.668 sh · \+216,446 USD · not sold$/)
   })
 
   it('summarizes the tax, the drift before and after, the restrictions and the held-away accounts', async () => {
     await openWorkbench()
     const tape = await screen.findByRole('region', { name: 'Tax effect estimate' })
-    expect(tape).toHaveTextContent('10,422')
+    expect(tape).toHaveTextContent('14,454')
     expect(tape).toHaveTextContent('Nets this proposal')
     expect(tape).toHaveTextContent(`Year-to-date realized${MINUS}32,750`)
-    expect(tape).toHaveTextContent('Net for the year+43,788')
+    expect(tape).toHaveTextContent('Net for the year+60,729')
     const drift = await screen.findByRole('table', { name: 'Drift before and after' })
     expect(drift).toHaveTextContent('no market to sell into')
     expect(within(drift).getAllByRole('row')).toHaveLength(10)

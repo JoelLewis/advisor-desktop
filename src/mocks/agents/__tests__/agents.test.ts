@@ -3,7 +3,8 @@ import { accounts } from '@/mocks/data/accounts'
 import { computeDriftForAccount } from '@/mocks/handlers/pms'
 import { AGENT_DEFINITIONS } from '../registry'
 import { evaluateProposal } from '@/mocks/handlers/compliance'
-import { generateRebalanceTrades } from '@/mocks/handlers/oms'
+import { generateRebalanceProposal } from '@/mocks/handlers/oms'
+import { workingMovesOf } from '@/mocks/workspace/household-ledger'
 import { MOCK_NOW_ISO, MOCK_TODAY_ISO } from '@/lib/clock'
 import { getPositionsForAccount } from '@/mocks/data/positions'
 import { openWashSaleWindows, realizedSales, washSaleWindow } from '@/mocks/data/realized-sales'
@@ -13,6 +14,12 @@ import { isModelManaged, requireModelManaged } from '@/lib/mandate'
 
 const drift = AGENT_DEFINITIONS.get('drift-monitor')!
 const pretrade = AGENT_DEFINITIONS.get('pretrade-check')!
+/** The proposal the Pre-trade Check judges: the rebalance with the account's working orders counted, and its result. */
+function agentProposal(accountId: string) {
+  const working = workingMovesOf(accountId)
+  const legs = generateRebalanceProposal(accountId, true, undefined, undefined, { workingOrders: working }).legs
+  return { legs, result: evaluateProposal(accountId, legs.map((l) => ({ symbol: l.symbol, side: l.side, quantity: l.quantity, estimatedValue: l.estimatedValue })), working) }
+}
 const ctx = (id: string) => ({ asOf: MOCK_NOW_ISO, subject: { type: 'account' as const, id } })
 
 describe('agents over the whole book', () => {
@@ -54,8 +61,7 @@ describe('agents over the whole book', () => {
   })
   it('concentration claims agree with the engine weights', () => {
     for (const a of accounts.filter(isModelManaged)) {
-      const legs = generateRebalanceTrades(a.id, true)
-      const result = evaluateProposal(a.id, legs.map((l) => ({ symbol: l.symbol, side: l.side, quantity: l.quantity, estimatedValue: l.estimatedValue })))
+      const { result } = agentProposal(a.id)
       const findings = pretrade.run(ctx(a.id))
       if (!result || result.violations.length === 0) continue
       result.violations.forEach((v, i) => {
@@ -70,8 +76,7 @@ describe('agents over the whole book', () => {
   it('no claim says "A security" when the name or the ticker is digit-free', () => {
     let named = 0
     for (const a of accounts.filter(isModelManaged)) {
-      const legs = generateRebalanceTrades(a.id, true)
-      const result = evaluateProposal(a.id, legs.map((l) => ({ symbol: l.symbol, side: l.side, quantity: l.quantity, estimatedValue: l.estimatedValue })))
+      const { legs, result } = agentProposal(a.id)
       if (!result) continue
       const names = new Map([...getPositionsForAccount(a.id, a.totalValue).map((p) => [p.symbol, p.name] as const), ...legs.map((l) => [l.symbol, l.name] as const)])
       const findings = pretrade.run(ctx(a.id))
@@ -103,7 +108,7 @@ describe('agents over the whole book', () => {
     expect(drift.run(ctx('acc-003')).some((f) => f.claim.includes('tolerance for this account'))).toBe(false)
   })
   it('names SPY by its ticker on acc-002, since its name carries digits', () => {
-    expect(pretrade.run(ctx('acc-002')).map((f) => f.claim)).toContain('Warning: SPY is already over its concentration limit; the proposal reduces it.')
+    expect(pretrade.run(ctx('acc-002')).map((f) => f.claim)).toContain('Warning: SPY is approaching its concentration limit.')
   })
 })
 

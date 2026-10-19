@@ -50,7 +50,7 @@ describe('the Client Letter Agent', () => {
     expect(letter.body).toContain(`If the sale is made on ${clientDate('2026-02-25')} and any account reinvests dividends into Intel Corp., please turn that off through ${clientDate('2026-03-27')}, and check with us`)
     expect(letter.body).not.toMatch(/until then/)
     expect(letter.body).toContain("your Vanguard 401(k) and Patricia's TIAA 403(b)")
-    expect(letter.body).toContain(`about ${clientMoney(10_400)} of federal tax on these gains, including the 3.8% net investment income tax, added to your joint return for 2026`)
+    expect(letter.body).toContain(`about ${clientMoney(14_500)} of federal tax on these gains, including the 3.8% net investment income tax, added to your joint return for 2026`)
     expect(letter.body).toContain(buildClientRateDisclosure(TAX_RATE_BASIS, { collectibles: true }))
     expect(letter.body).not.toContain(RATE_DISCLOSURE)
     expect(letter.body).toContain('with our compliance team for review before any is placed')

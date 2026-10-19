@@ -216,6 +216,10 @@ type ProposalConstraint =
   | 'cash_minimum'
   | 'wash_sale'
   | 'model_above_tolerance'
+  | 'working_order'
+
+/** A working order a proposal leg overlaps: the order already open on the same security. */
+export type WorkingOrderRef = { orderId: string; symbol: string; side: 'buy' | 'sell'; quantity: number }
 
 export type ProposalViolation = PreTradeViolation & {
   category: ProposalConstraint
@@ -228,6 +232,8 @@ export type ProposalViolation = PreTradeViolation & {
   currentWeight?: number
   projectedWeight?: number
   limitWeight?: number
+  /** The working-order check: the order already open on the leg's security. */
+  workingOrder?: WorkingOrderRef
   /** The model-above-tolerance check: the model, the client's tolerance it was measured against, and the client's accounts as a whole after the proposal (and today) against the same band. */
   tolerance?: {
     modelName: string; modelBand: string; modelScore: number; clientName: string; toleranceBand: string; floor: number; ceiling: number

@@ -63,6 +63,7 @@ export function RebalanceEmbed({ subject, threadId }: EmbedProps) {
           { id: 'check', header: 'Pre-trade', cell: (l) => <StatusCode status={l.status} /> },
         ]}
         totals={{ label: 'Gross traded', cells: { value: fmtMoney(gross) } }} />
+      <p className="text-label normal-case text-ink-3">Method: this ticket preview sizes legs from current holdings and does not count working orders; a proposal does.</p>
       <Link to={accountFullViewHref(accountId, threadId)} className={`${LINK_TARGET} self-start text-body underline decoration-rule-2 underline-offset-4 hover:decoration-ink`}>Open account</Link>
     </section>
   )

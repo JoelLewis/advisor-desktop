@@ -3,7 +3,9 @@ import type { ProposalVersion, StagedOrder } from '@/types/workspace-proposal'
 import { accounts } from '@/mocks/data/accounts'
 import { cashBalanceOf, getPositionsForAccount } from '@/mocks/data/positions'
 import { generateTaxLots } from '@/mocks/handlers/custodian'
-import { computeDriftForAccount } from '@/mocks/handlers/pms'
+import { computeDriftForHoldings } from '@/mocks/handlers/pms'
+import { holdingsAfterTrades } from '@/mocks/handlers/oms'
+import { workingMovesOf } from '../household-ledger'
 import { agentConstraints } from '@/mocks/agents/proposal-agent'
 import { eventTime } from '@/lib/clock'
 import { buildVersion } from '../proposal-engine'
@@ -17,6 +19,7 @@ describe('releasing every account\'s approvable proposal, one after another', ()
     const constraints = agentConstraints([])
     let released = 0
     for (const account of accounts.filter(isModelManaged)) {
+      const working = workingMovesOf(account.id)
       const built = buildVersion(account.id, constraints, [])
       if (!built.ok) throw new Error(`${account.id}: ${built.message}`)
       const version: ProposalVersion = { n: 1, author: { kind: 'agent', agentId: 'proposal' }, createdAt: eventTime(5), constraints, edits: [], changeSummary: 'x', ...built.built }
@@ -44,7 +47,8 @@ describe('releasing every account\'s approvable proposal, one after another', ()
       const moved = fills.reduce((s, f) => s + (f.side === 'sell' ? f.value : -f.value), 0)
       expect(cashBalanceOf(account), `${account.id} cash`).toBeCloseTo(cashBefore + moved, 2)
       expect(positions.reduce((s, p) => s + p.marketValue, 0), `${account.id} value`).toBeCloseTo(account.totalValue, 1)
-      const after = new Map(computeDriftForAccount(requireModelManaged(account)).assetClassDrifts.map((d) => [d.assetClass, d.drift]))
+      // The version measured its drift with the account's working orders filled too, so the new holdings are read the same way.
+      const after = new Map(computeDriftForHoldings(requireModelManaged(account), holdingsAfterTrades(account, positions, working)).assetClassDrifts.map((d) => [d.assetClass, d.drift]))
       for (const d of version.preview.projectedDrift.assetClassDrifts) {
         expect(Math.abs((after.get(d.assetClass) ?? 0) - d.drift), `${account.id} ${d.assetClass} drift`).toBeLessThan(0.0005)
       }

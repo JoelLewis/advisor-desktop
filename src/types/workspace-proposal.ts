@@ -48,6 +48,9 @@ export type HarvestSubstitution = {
 /** The tax and cash totals of a version's legs, all computed by the engine. */
 export type ProposalTaxSummary = { sold: number; bought: number; gains: number; losses: number; netShortTerm: number; netLongTerm: number; washed: number; grossTax: number; netTax: number }
 
+/** A working order the version counted as filled: an OMS ticket, or another proposal's order pending release. */
+export type CountedWorkingOrder = { orderId: string; symbol: string; name?: string; side: 'buy' | 'sell'; quantity: number; estimatedValue: number; limitPrice?: number }
+
 /** One immutable revision of a proposal; approval attaches to its fingerprint. */
 export type ProposalVersion = {
   n: number
@@ -62,13 +65,15 @@ export type ProposalVersion = {
   legFacts: LegFacts[]
   excludedLegs: ExcludedLeg[]
   harvestSubstitutions: HarvestSubstitution[]
+  /** What the version counted as already traded; its legs are sized with these filled. */
+  workingOrders: CountedWorkingOrder[]
   summary: ProposalTaxSummary
   fingerprint: string
   changeSummary: string
 }
 
 /** A version-shaped result that has not been saved, for previewing workbench edits. */
-export type DraftPreview = Pick<ProposalVersion, 'preview' | 'driftBefore' | 'pretrade' | 'legFacts' | 'excludedLegs' | 'harvestSubstitutions' | 'summary' | 'fingerprint'>
+export type DraftPreview = Pick<ProposalVersion, 'preview' | 'driftBefore' | 'pretrade' | 'legFacts' | 'excludedLegs' | 'harvestSubstitutions' | 'workingOrders' | 'summary' | 'fingerprint'>
 
 /** A proposal for one account, with every version it has had. */
 export type Proposal = { id: string; title: string; accountId: string; clientId: string; threadId: string; versions: ProposalVersion[] }

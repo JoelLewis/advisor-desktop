@@ -14,6 +14,9 @@ import { createProposal, previewEdits, readableProposals, reviseProposal, saveVe
 import { runAgent } from '../run-agent'
 import { isModelManaged } from '@/lib/mandate'
 
+/** What every summary of acc-002 says last: the QQQ order it counts, named without digits. */
+const WORKING_SENTENCE = ' It counts the working order already open in this account (a buy of Invesco QQQ Trust) as filled, so it does not trade it again.'
+
 const create = () => {
   const r = createProposal('user-001', 'th-johnson-review', 'acc-002')
   if (!r.ok) throw new Error(r.message)
@@ -43,7 +46,8 @@ describe('asking the Proposal Agent', () => {
     const v1 = detail.versions[0]!
     expect(v1).toMatchObject({ n: 1, author: { kind: 'agent', agentId: 'proposal' }, constraints: [{ kind: 'avoid_self_wash' }], edits: [] })
     expect(v1.changeSummary).toBe("Drafted a tax-aware rebalance toward the Growth model. Where it sells, it sells loss lots first, then the lots that cost the least tax, and it buys nothing that would wash a loss the taxpayer has taken or this proposal takes. "
-      + 'iShares Core US Aggregate Bond ETF is bought here, so its loss cannot be harvested for thirty days without a wash sale.')
+      + 'iShares Core US Aggregate Bond ETF is bought here, so its loss cannot be harvested for thirty days without a wash sale.'
+      + WORKING_SENTENCE)
     expect(detail.approval).toEqual({ kind: 'unapproved', latestVersion: 1 })
     const posted = store().messages.filter((m) => m.kind === 'proposal')
     expect(posted).toEqual([expect.objectContaining({ threadId: 'th-johnson-review', agentId: 'proposal', proposalId: 'prop-0001', at: v1.createdAt })])
@@ -132,7 +136,8 @@ describe('revising under constraints', () => {
     const loose = reviseProposal('user-001', id, [{ kind: 'cap_realized_gains', usd: 100_000_000 }])
     if (!loose.ok) throw new Error(loose.message)
     expect(loose.detail.versions[1]!.changeSummary).toBe('Revised to cap the gains it realizes. The cap changes no trade. Every asset class ends inside its band. '
-      + 'iShares Core US Aggregate Bond ETF is bought here, so its loss cannot be harvested for thirty days without a wash sale.')
+      + 'iShares Core US Aggregate Bond ETF is bought here, so its loss cannot be harvested for thirty days without a wash sale.'
+      + WORKING_SENTENCE)
     const tight = reviseProposal('user-001', id, [{ kind: 'cap_realized_gains', usd: 1_000 }])
     if (!tight.ok) throw new Error(tight.message)
     expect(tight.detail.versions[2]!.changeSummary).not.toContain('The cap changes no trade.')
@@ -196,9 +201,9 @@ describe('workbench versions', () => {
     const r = saveVersion('user-001', id, [{ kind: 'quantity', symbol: 'INTC', quantity: 6_000 }])
     if (!r.ok) throw new Error(r.message)
     for (const v of r.detail.versions) {
-      const fresh = buildVersion('acc-002', v.constraints, v.edits)
+      const fresh = buildVersion('acc-002', v.constraints, v.edits, id)
       if (!fresh.ok) throw new Error(fresh.message)
-      expect({ preview: v.preview, driftBefore: v.driftBefore, pretrade: v.pretrade, legFacts: v.legFacts, excludedLegs: v.excludedLegs, harvestSubstitutions: v.harvestSubstitutions, summary: v.summary, fingerprint: v.fingerprint }).toEqual(fresh.built)
+      expect({ preview: v.preview, driftBefore: v.driftBefore, pretrade: v.pretrade, legFacts: v.legFacts, excludedLegs: v.excludedLegs, harvestSubstitutions: v.harvestSubstitutions, workingOrders: v.workingOrders, summary: v.summary, fingerprint: v.fingerprint }).toEqual(fresh.built)
     }
   })
 

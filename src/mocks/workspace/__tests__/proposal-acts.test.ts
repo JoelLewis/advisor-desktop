@@ -64,7 +64,7 @@ describe('approve_proposal', () => {
   it('a newer version leaves the approval on the older one; approving it withdraws the older approval in the same act', () => {
     const p = seedJohnsonProposal()
     approveProposal('user-001', p.id, 1, p.versions[0]!.fingerprint, JOHNSON_REASON)
-    const v2 = versionOf(2, [...AGENT_CONSTRAINTS, { kind: 'harvest_only' }])
+    const v2 = versionOf(2, [...AGENT_CONSTRAINTS, { kind: 'harvest_only' }], [], p.id)
     p.versions.push(v2)
     expect(approvalState(p)).toMatchObject({ kind: 'approved', version: 1, latestVersion: 2 })
     const r = approveProposal('user-001', p.id, 2, v2.fingerprint, JOHNSON_REASON)
@@ -117,7 +117,7 @@ describe('send_to_party refuses a stale letter', () => {
     const v1 = p.versions[0]!
     approveProposal('user-001', p.id, 1, v1.fingerprint, JOHNSON_REASON)
     store().drafts.push({ id: 'draft-0001', clientThreadId: 'th-robert', authorId: 'user-001', body: 'Letter', createdAt: 'x', agentId: 'client-letter', basis: { proposalId: p.id, version: 1, fingerprint: v1.fingerprint } })
-    const v2 = versionOf(2, [...AGENT_CONSTRAINTS, { kind: 'harvest_only' }])
+    const v2 = versionOf(2, [...AGENT_CONSTRAINTS, { kind: 'harvest_only' }], [], p.id)
     p.versions.push(v2)
     approveProposal('user-001', p.id, 2, v2.fingerprint, JOHNSON_REASON)
     expect(sendToParty('user-001', 'draft-0001')).toMatchObject({ ok: false, status: 409, code: 'STALE_DRAFT' })
@@ -179,7 +179,7 @@ describe('the suitability reason', () => {
   it('refuses a v2 approval without a reason, and leaves the v1 approval standing', () => {
     const p = seedJohnsonProposal()
     approveProposal('user-001', p.id, 1, p.versions[0]!.fingerprint, JOHNSON_REASON)
-    const v2 = versionOf(2, [...AGENT_CONSTRAINTS, { kind: 'harvest_only' }])
+    const v2 = versionOf(2, [...AGENT_CONSTRAINTS, { kind: 'harvest_only' }], [], p.id)
     p.versions.push(v2)
     expect(approveProposal('user-001', p.id, 2, v2.fingerprint)).toMatchObject({ ok: false, status: 409, code: 'REASON_REQUIRED' })
     expect(store().approvals.map((a) => [a.version, a.status])).toEqual([[1, 'active']])

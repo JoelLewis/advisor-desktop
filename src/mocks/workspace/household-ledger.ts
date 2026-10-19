@@ -175,3 +175,25 @@ export function householdLedger(householdId: string, day: string = sessionDay())
     cashUsd: own.reduce((s, a) => s + convertToBase(a.cash, currencyForAccount(a.account.id), FX_RATES_USD_BASE), 0),
   }
 }
+
+/** An open order as a proposal counts it: what it moves once filled. `name` is the holding's or the quote's, when either names it. */
+type WorkingMove = {
+  orderId: string; symbol: string; name?: string; side: 'buy' | 'sell'; quantity: number; estimatedValue: number; assetClass: AssetClass; limitPrice?: number
+}
+
+/**
+ * The open orders a proposal for this account counts as filled: every working ticket, and every other proposal's
+ * orders pending compliance release. A proposal's own pending orders are its legs, so `exceptProposalId` leaves them out.
+ */
+export function workingMovesOf(accountId: string, exceptProposalId?: string): WorkingMove[] {
+  const { positions, openOrders } = accountLedger(accountId)
+  return openOrders
+    .filter((o) => !(o.source.kind === 'proposal' && o.source.proposalId === exceptProposalId))
+    .map((o) => {
+      const name = positions.find((p) => p.symbol === o.symbol)?.name ?? usdQuoteFor(o.symbol)?.name
+      return {
+        orderId: o.id, symbol: o.symbol, ...(name !== undefined ? { name } : {}), side: o.side, quantity: o.quantity,
+        estimatedValue: o.estimatedValue, assetClass: o.assetClass, ...(o.limitPrice !== undefined ? { limitPrice: o.limitPrice } : {}),
+      }
+    })
+}

@@ -81,7 +81,7 @@ export function reviseProposal(viewerId: string, proposalId: string, requested: 
   if (!guard.ok) return guard
   const latest = latestVersion(proposal)
   const constraints = agentConstraints(requested)
-  const built = buildVersion(proposal.accountId, constraints, [])
+  const built = buildVersion(proposal.accountId, constraints, [], proposal.id)
   if (!built.ok) return refuse(400, built.code, built.message)
   if (latest.edits.length === 0 && built.built.fingerprint === latest.fingerprint) {
     return refuse(409, 'NO_CHANGE', `v${latest.n} already has those constraints.`)
@@ -104,7 +104,7 @@ export function saveVersion(viewerId: string, proposalId: string, edits: readonl
   const guard = draftingThread(viewerId, proposal.threadId)
   if (!guard.ok) return guard
   const latest = latestVersion(proposal)
-  const built = buildVersion(proposal.accountId, latest.constraints, edits)
+  const built = buildVersion(proposal.accountId, latest.constraints, edits, proposal.id)
   if (!built.ok) return refuse(400, built.code, built.message)
   if (built.built.fingerprint === latest.fingerprint) return refuse(409, 'NO_CHANGE', `Nothing differs from v${latest.n}.`)
   return {
@@ -122,7 +122,7 @@ export function previewEdits(viewerId: string, proposalId: string, edits: readon
   if (!proposal) return NOT_FOUND
   const closed = closedRefusal(proposal)
   if (closed) return closed
-  const built = buildVersion(proposal.accountId, latestVersion(proposal).constraints, edits)
+  const built = buildVersion(proposal.accountId, latestVersion(proposal).constraints, edits, proposal.id)
   return built.ok ? { ok: true, preview: built.built } : refuse(400, built.code, built.message)
 }
 

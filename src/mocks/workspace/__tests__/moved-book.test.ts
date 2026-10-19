@@ -9,6 +9,7 @@ import { taxReturnFor, ytdRealizedOnReturn } from '@/mocks/handlers/tax-return'
 import { proposalById } from '@/mocks/data/proposals-store'
 import { MOCK_NOW_ISO, MOCK_TODAY_ISO } from '@/lib/clock'
 import { createProposal } from '../proposals'
+import { workingMovesOf } from '../household-ledger'
 import { ADRIAN, approvedStoryV3, approvedV1, ok, release } from './story-fixture'
 import { requireModelManaged } from '@/lib/mandate'
 
@@ -28,10 +29,13 @@ describe("after the story's v3 fills, every engine read sees the moved book", ()
   it('the Drift Monitor measures the new holdings: US Equity still outside its band after a harvest-only version', () => {
     const a = approvedStoryV3()
     const projected = proposalById(a.proposalId)!.versions[2]!.preview.projectedDrift.assetClassDrifts.find((d) => d.assetClass === 'us_equity')!.drift
+    // The version measured its drift with the working QQQ buy filled; the book has not filled it, so the monitor reads that much less US equity.
+    const workingUs = workingMovesOf('acc-002', a.proposalId).filter((w) => w.assetClass === 'us_equity')
+      .reduce((s, w) => s + (w.side === 'buy' ? w.estimatedValue : -w.estimatedValue), 0) / acc002.totalValue
     release(a)
     const [first] = runDriftMonitor(ctx)
     expect(first?.claim).toBe('US Equity is outside its tolerance band.')
-    expect(Math.abs(first!.figures[0]!.value - projected)).toBeLessThan(0.0005)
+    expect(Math.abs(first!.figures[0]!.value - (projected - workingUs))).toBeLessThan(0.0005)
   })
 
   it('the return-level results include the realized INTC loss', () => {
@@ -60,13 +64,13 @@ describe('after v1 (the full rebalance) fills', () => {
     release(approvedV1())
     const agg = generateTaxLotsWithSaleRisk('acc-002', acc002.totalValue).find((l) => l.id === 'lot-pos-024-0')!
     expect(agg.gainLoss).toBeLessThan(0)
-    expect(agg.saleWash).toEqual({ deferredShares: 1567, disallowedShares: 0 })
+    expect(agg.saleWash).toEqual({ deferredShares: 1577, disallowedShares: 0 })
     const finding = runHarvestScanner(ctx).find((f) => f.figures.some((g) => g.label === 'Loss allowed now · AGG'))
     expect(finding?.claim).toBe('iShares Core US Aggregate Bond ETF can be sold at a loss today; part of the loss would be deferred into the replacement shares.')
-    expect(finding?.figures.slice(0, 2).map((f) => f.value)).toEqual([-2_043, -911])
+    expect(finding?.figures.slice(0, 2).map((f) => f.value)).toEqual([-2_037, -917])
     const acc001 = accounts.find((a) => a.id === 'acc-001')!
     const aggInAcc001 = generateTaxLotsWithSaleRisk('acc-001', acc001.totalValue).find((l) => l.id === 'lot-pos-007-0')!
-    expect(aggInAcc001.saleWash.deferredShares).toBe(1567)
+    expect(aggInAcc001.saleWash.deferredShares).toBe(1577)
   })
 
   it("the drift reading is as of the account's last fill, not the morning", () => {

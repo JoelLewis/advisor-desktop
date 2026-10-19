@@ -167,7 +167,8 @@ function realizeOrderedLots(ordered: readonly CustodianLot[], symbol: string, no
   const soldLosses: SoldLossLot[] = []
   const rawTakes: RawTake[] = []
   for (const lot of ordered) {
-    if (remaining <= 0 || lot.currentValue <= 0) continue
+    // Under half a cent left is floating-point residue of the last lot's own division, not a lot to open.
+    if (remaining < 0.005 || lot.currentValue <= 0) continue
     const portion = Math.min(1, remaining / lot.currentValue)
     consumedLotIds.push(lot.id)
     const realized = lot.gainLoss * portion
@@ -418,6 +419,9 @@ export function standingHarvestSubstitutions(
   return substitutions.filter((s) => traded('buy', s.bought.symbol) && (!s.harvested || traded('sell', s.foreclosed.symbol)))
 }
 
+/** What moves a holding and cash: a leg, or a working order counted as filled. */
+export type HoldingMove = Pick<ProposedTradeLeg, 'symbol' | 'side' | 'estimatedValue' | 'assetClass'>
+
 /** Constraints a proposal is generated under. All optional; `{}` is the unconstrained generator. */
 export type GenerationConstraints = {
   /** Sell only loss lots. Tax-advantaged accounts have no loss to harvest and sell nothing. */
@@ -434,6 +438,8 @@ export type GenerationConstraints = {
    * moves to a non-identical substitute in the class where one exists, and a loss held here is harvested.
    */
   protectHarvests?: ReadonlySet<string>
+  /** Working orders counted as filled: the legs are sized from holdings with them filled, buys draw on cash net of them, and a sale never takes what a working sale takes. */
+  workingOrders?: readonly HoldingMove[]
 }
 
 type RealizedResult = Pick<ProposedTrade, 'realizedShortTerm' | 'realizedLongTerm'>
@@ -509,7 +515,13 @@ export function generateRebalanceProposal(
   const account = accounts.find((a) => a.id === accountId)
   if (!account) return { legs: [], sales: new Map(), heldBack: new Map(), harvestSubstitutions: [] }
   const positions = getPositionsForAccount(account.id, account.totalValue)
-  const drift = computeDriftForAccount(account, modelIdFor(account, modelId))
+  const working = constraints.workingOrders ?? []
+  const committedCash = working.reduce((s, w) => s + (w.side === 'buy' ? w.estimatedValue : -w.estimatedValue), 0)
+  const workingSold = new Map<string, number>()
+  for (const w of working) if (w.side === 'sell') workingSold.set(w.symbol, (workingSold.get(w.symbol) ?? 0) + w.estimatedValue)
+  const drift = working.length === 0
+    ? computeDriftForAccount(account, modelIdFor(account, modelId))
+    : computeDriftForHoldings(account, holdingsAfterTrades(account, positions, working), modelIdFor(account, modelId))
   const taxable = isTaxableAccount(account.taxTreatment)
   const currency = currencyForAccount(accountId)
   const lossWindows = openWashSaleWindowsFor(account, MOCK_TODAY_ISO)
@@ -561,7 +573,7 @@ export function generateRebalanceProposal(
         const legs: RawLeg[] = []
         for (const position of candidates) {
           if (remaining <= 0) break
-          const notional = Math.min(remaining, harvestOnly ? lossValueOf(position) : position.marketValue)
+          const notional = Math.min(remaining, harvestOnly ? lossValueOf(position) : position.marketValue - (workingSold.get(position.symbol) ?? 0))
           if (notional <= 0) continue
           legs.push({
             target: { symbol: position.symbol, name: position.name, price: position.price, position },
@@ -648,7 +660,7 @@ export function generateRebalanceProposal(
   // measured in cash. The CASH position's market value equals `account.cashBalance` for all 47
   // accounts (`cash-cap-invariants` pins it); the fallback covers an account with no CASH row.
   const cashDrift = drift.assetClassDrifts.find((d) => d.assetClass === 'cash')
-  const cashValue = positions.find((p) => p.symbol === 'CASH')?.marketValue ?? account.cashBalance
+  const cashValue = (positions.find((p) => p.symbol === 'CASH')?.marketValue ?? account.cashBalance) - committedCash
   const cashTargetValue = (cashDrift?.target ?? 0) * account.totalValue
   // Executed money is whole currency units (`estimatedValue` is rounded), so the band is measured
   // in whole units too: floored, a whole-unit trade set cannot step past a target that falls on a
@@ -957,7 +969,7 @@ export function generateRebalanceProposal(
  * totalValue`, the definition `getPositionsForAccount` uses, because trades move money between
  * holdings without changing the account's value.
  */
-export function holdingsAfterTrades(account: (typeof accounts)[number], positions: readonly Position[], legs: readonly ProposedTradeLeg[]): DriftHolding[] {
+export function holdingsAfterTrades(account: (typeof accounts)[number], positions: readonly Position[], legs: readonly HoldingMove[]): DriftHolding[] {
   const bySymbol = new Map(positions.map((p) => [p.symbol, { assetClass: p.assetClass, marketValue: p.marketValue }]))
   let cashMoved = 0
   for (const leg of legs) {
@@ -1101,11 +1113,12 @@ export function projectDrift(
   driftThreshold = 0.005,
   modelId?: string,
   constrainedBy: ReadonlyMap<AssetClass, ResidualDriftReason> = new Map(),
+  working: readonly HoldingMove[] = [],
 ): ProjectedDrift {
   const account = accounts.find((a) => a.id === accountId)
   if (!account) throw new Error(`projectDrift: unknown account ${accountId}`)
   const positions = getPositionsForAccount(account.id, account.totalValue)
-  const after = computeDriftForHoldings(account, holdingsAfterTrades(account, positions, legs), modelIdFor(account, modelId))
+  const after = computeDriftForHoldings(account, holdingsAfterTrades(account, positions, [...working, ...legs]), modelIdFor(account, modelId))
   const heldBack = taxAware && isTaxableAccount(account.taxTreatment)
     ? recentlyOpenedPositions(generateTaxLots(account.id, account.totalValue), MOCK_TODAY_ISO)
     : new Set<string>()
@@ -1153,7 +1166,7 @@ export function projectDrift(
 
 /** One account's entry in a preview batch. */
 /** `modelId` names the model the proposal was generated against when it is not the account's own. */
-export type PreviewEntry = { account: Account; modelId?: string } & RebalanceProposal
+export type PreviewEntry = { account: Account; modelId?: string; working?: readonly HoldingMove[] } & RebalanceProposal
 
 /**
  * The rebalance previews of a batch: §1091 settled across each wash-sale taxpayer's accounts, the
@@ -1193,7 +1206,7 @@ export function buildRebalancePreviews(
       // this account" from "taxed, and the result is zero".
       taxable: isTaxableAccount(account.taxTreatment),
       repurchaseRestrictions: repurchaseRestrictionsFor(account, asOfISO, proposals),
-      projectedDrift: projectDrift(account.id, trades, taxAware, driftThreshold, proposed[i]!.modelId, proposed[i]!.heldBack),
+      projectedDrift: projectDrift(account.id, trades, taxAware, driftThreshold, proposed[i]!.modelId, proposed[i]!.heldBack, proposed[i]!.working ?? []),
     }
   })
 }

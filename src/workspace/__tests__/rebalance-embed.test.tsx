@@ -37,6 +37,7 @@ it("lists the preview's legs with each leg's pre-trade status, and the gross tra
   expect(totals).toHaveTextContent(fmtMoney(gross))
   expect(within(table).getByRole('columnheader', { name: `Value ${preview.currency}` })).toBeInTheDocument()
   expect(within(embed).getByRole('link', { name: 'Open account' })).toHaveAttribute('href', '/accounts/acc-002')
+  expect(embed).toHaveTextContent('does not count working orders; a proposal does')
 })
 
 it('a non-account subject is an explicit error', () => {

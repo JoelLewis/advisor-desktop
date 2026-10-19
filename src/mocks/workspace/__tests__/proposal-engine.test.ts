@@ -6,6 +6,7 @@ import { MOCK_TODAY_ISO } from '@/lib/clock'
 import type { DraftPreview, LegEdit, ProposalConstraint } from '@/types/workspace-proposal'
 import { applyEdits, buildVersion, editSummary, normalizeConstraints, parseConstraints, parseEdits } from '../proposal-engine'
 import { buildRebalancePreviews, generateRebalanceProposal } from '@/mocks/handlers/oms'
+import { workingMovesOf } from '../household-ledger'
 import { isModelManaged } from '@/lib/mandate'
 
 
@@ -20,11 +21,11 @@ describe('buildVersion · acc-002', () => {
   it('v1 is the tax-aware rebalance Phase 0 pinned, with its tax summary from the engine', () => {
     const v = built(AGENT)
     expect(v.preview.trades.map((t) => [t.symbol, t.side, t.quantity])).toEqual([
-      ['INTC', 'sell', 7_000], ['SPY', 'sell', 758], ['EFA', 'buy', 3_578], ['VWO', 'buy', 4_441], ['AGG', 'buy', 1_567],
-      ['QAI', 'buy', 5_652], ['GLD', 'buy', 369], ['ETHE', 'sell', 3_882], ['IBIT', 'sell', 3_234],
+      ['INTC', 'sell', 7_000], ['SPY', 'sell', 943], ['EFA', 'buy', 3_600], ['VWO', 'buy', 4_469], ['AGG', 'buy', 1_577],
+      ['QAI', 'buy', 5_688], ['GLD', 'buy', 371], ['ETHE', 'sell', 3_882], ['IBIT', 'sell', 3_234],
     ])
     expect(v.summary).toEqual({
-      sold: 835_915, bought: 926_282, gains: 122_388, losses: -45_850, netShortTerm: 0, netLongTerm: 76_538, washed: 0, grossTax: 29_128, netTax: 10_422,
+      sold: 932_171, bought: 932_032, gains: 139_329, losses: -45_850, netShortTerm: 0, netLongTerm: 93_479, washed: 0, grossTax: 33_160, netTax: 14_454,
     })
     expect(v.pretrade.passed).toBe(true)
     expect(v.pretrade.violations.map((x) => [x.category, x.symbol, x.severity])).toEqual([['concentration_limit', 'SPY', 'warning'], ['model_above_tolerance', undefined, 'warning']])
@@ -53,7 +54,7 @@ describe('buildVersion · acc-002', () => {
   it('an excluded leg is listed with the figures the agent proposed, and its class is held back', () => {
     const v = built(AGENT, [{ kind: 'exclude', symbol: 'QAI' }])
     expect(v.preview.trades.some((t) => t.symbol === 'QAI')).toBe(false)
-    expect(v.excludedLegs).toEqual([{ symbol: 'QAI', name: 'IQ Hedge Multi-Strategy Tracker ETF', side: 'buy', quantity: 5_652, estimatedValue: 198_950 }])
+    expect(v.excludedLegs).toEqual([{ symbol: 'QAI', name: 'IQ Hedge Multi-Strategy Tracker ETF', side: 'buy', quantity: 5_688, estimatedValue: 200_218 }])
     expect(v.preview.projectedDrift.assetClassDrifts.find((d) => d.assetClass === 'alternatives')?.residualReason).toBe('excluded_by_constraint')
   })
 
@@ -73,8 +74,9 @@ describe('a version and the engine agree', () => {
   it("the agent version's preview is an independent preview of the generator's own legs", () => {
     const account = accounts.find((a) => a.id === 'acc-002')
     if (!account) throw new Error('acc-002 missing')
-    const generated = generateRebalanceProposal('acc-002', true, 0.005, undefined, { avoidSelfWash: true })
-    const [fresh] = buildRebalancePreviews([{ account, ...generated }], true, 0.005, MOCK_TODAY_ISO)
+    const working = workingMovesOf('acc-002')
+    const generated = generateRebalanceProposal('acc-002', true, 0.005, undefined, { avoidSelfWash: true, workingOrders: working })
+    const [fresh] = buildRebalancePreviews([{ account, working, ...generated }], true, 0.005, MOCK_TODAY_ISO)
     expect(built(AGENT).preview).toEqual(fresh)
   })
 
@@ -229,9 +231,9 @@ function expectTakesTie(v: DraftPreview) {
 }
 
 describe('lot takes · acc-002', () => {
-  it('SPY sells 758 shares of its first lot for the leg\'s whole long-term result', () => {
+  it('SPY sells 943 shares of its first lot for the leg\'s whole long-term result', () => {
     const spy = built(AGENT).legFacts.find((f) => f.symbol === 'SPY')
-    expect(spy?.lots).toEqual([{ lotId: 'lot-pos-020-0', shares: 758, realized: 69_411, character: 'long' }])
+    expect(spy?.lots).toEqual([{ lotId: 'lot-pos-020-0', shares: 943, realized: 86_352, character: 'long' }])
   })
   it('a re-cut leg (a quantity and lots chosen in the workbench) ties too', () => {
     const v = built(AGENT, [{ kind: 'quantity', symbol: 'SPY', quantity: 2_000 }, { kind: 'lots', symbol: 'INTC', lotIds: ['lot-pos-023-0'] }])

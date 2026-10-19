@@ -2,7 +2,7 @@ import type { Account } from '@/types/account'
 import type { WholeStatus } from '@/types/reference-risk'
 import type { PreTradeCheckProposalResult, ProposalViolation } from '@/services/oms'
 import { getPositionsForAccount } from '@/mocks/data/positions'
-import { holdingsAfterTrades, type ProposedTradeLeg } from '@/mocks/handlers/oms'
+import { holdingsAfterTrades, type HoldingMove, type ProposedTradeLeg } from '@/mocks/handlers/oms'
 import { modelDisplayName } from '@/mocks/handlers/pms'
 import { clientOf, clientRiskOf, modelScoreOf, scoreOfHoldings } from '@/mocks/reference/risk'
 import { bandFor, type ProfileBand } from '@/lib/risk-profile'
@@ -25,13 +25,13 @@ export type ToleranceGap = {
  * questionnaire's scale, read through the same table as the client's score. A glide path changes its mix
  * by design and a custom mandate has no model, so neither is measured.
  */
-export function modelAboveTolerance(account: Account, legs: readonly ProposedTradeLeg[]): ToleranceGap | undefined {
+export function modelAboveTolerance(account: Account, legs: readonly ProposedTradeLeg[], working: readonly HoldingMove[] = []): ToleranceGap | undefined {
   const modelScore = modelScoreOf(account)
   if (modelScore === undefined || account.mandate !== 'model') return undefined
   const client = clientOf(account)
   const tolerance = bandFor(client.riskProfile.score)
   if (modelScore <= tolerance.ceiling) return undefined
-  const after = scoreOfHoldings(holdingsAfterTrades(account, getPositionsForAccount(account.id, account.totalValue), legs))
+  const after = scoreOfHoldings(holdingsAfterTrades(account, getPositionsForAccount(account.id, account.totalValue), [...working, ...legs]))
   const whole = clientRiskOf(client.id, new Map([[account.id, after]]))
   const today = clientRiskOf(client.id)
   if (!whole || !today) throw new Error(`${account.id} is measured, yet ${client.id} has no accounts as a whole`)
@@ -86,8 +86,8 @@ function toleranceViolation(gap: ToleranceGap): ProposalViolation {
 }
 
 /** A proposal's pre-trade results with the tolerance check added. `evaluateProposal` itself, shared with the trade ticket, is untouched. */
-export function withSuitability(result: PreTradeCheckProposalResult, account: Account, legs: readonly ProposedTradeLeg[]): PreTradeCheckProposalResult {
-  const gap = modelAboveTolerance(account, legs)
+export function withSuitability(result: PreTradeCheckProposalResult, account: Account, legs: readonly ProposedTradeLeg[], working: readonly HoldingMove[] = []): PreTradeCheckProposalResult {
+  const gap = modelAboveTolerance(account, legs, working)
   return gap ? { ...result, violations: [...result.violations, toleranceViolation(gap)] } : result
 }
 

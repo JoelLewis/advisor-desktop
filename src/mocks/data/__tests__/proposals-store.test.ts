@@ -19,7 +19,7 @@ function version(n: number, fingerprint: string): ProposalVersion {
       assetClassDrifts: [], lastCalculated: '2026-02-25T12:00:00Z', needsRebalance: false,
     },
     pretrade: { accountId: 'acc-002', passed: true, violations: [], legs: [], projectedCash: 0, projectedCashPct: 0, minimumCash: 0 },
-    legFacts: [], excludedLegs: [], harvestSubstitutions: [],
+    legFacts: [], excludedLegs: [], harvestSubstitutions: [], workingOrders: [],
     summary: { sold: 0, bought: 0, gains: 0, losses: 0, netShortTerm: 0, netLongTerm: 0, washed: 0, grossTax: 0, netTax: 0 },
     fingerprint, changeSummary: 'Drafted a rebalance.',
   }

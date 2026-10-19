@@ -6,6 +6,7 @@ import { accounts } from '@/mocks/data/accounts'
 import { getPositionsForAccount } from '@/mocks/data/positions'
 import { evaluateProposal } from '@/mocks/handlers/compliance'
 import { withSuitability } from './suitability'
+import { workingMovesOf } from './household-ledger'
 import { computeDriftForAccount } from '@/mocks/handlers/pms'
 import { requireModelManaged } from '@/lib/mandate'
 import type { LegSale } from '@/mocks/handlers/batch-wash-sales'
@@ -203,24 +204,25 @@ function flaggedHarvests(account: Account): Set<string> {
  * and the proposal-level pre-trade check. The fingerprint covers the account, the constraints, the
  * edits, every leg and every lot it sells.
  */
-export function buildVersion(accountId: string, constraints: readonly ProposalConstraint[], edits: readonly LegEdit[]): { ok: true; built: DraftPreview; names: ReadonlyMap<string, string> } | EngineFailure {
+export function buildVersion(accountId: string, constraints: readonly ProposalConstraint[], edits: readonly LegEdit[], proposalId?: string): { ok: true; built: DraftPreview; names: ReadonlyMap<string, string> } | EngineFailure {
   const account = accounts.find((a) => a.id === accountId)
   if (!account) return fail('NO_ACCOUNT', 'Account not found.')
   const refused = unexcludable(account, constraints)
   if (refused) return refused
   const avoidsWash = constraints.some((c) => c.kind === 'avoid_self_wash')
+  const working = workingMovesOf(accountId, proposalId)
   const generated = generateRebalanceProposal(accountId, true, PROPOSAL_DRIFT_THRESHOLD, undefined, {
-    ...generationConstraintsOf(constraints), ...(avoidsWash ? { protectHarvests: flaggedHarvests(account) } : {}),
+    ...generationConstraintsOf(constraints), workingOrders: working, ...(avoidsWash ? { protectHarvests: flaggedHarvests(account) } : {}),
   })
   const symbols = generated.legs.map((l) => l.symbol)
   if (new Set(symbols).size !== symbols.length) throw new Error(`The proposal for ${accountId} names a symbol twice; edits address legs by symbol`)
   const edited = applyEdits(accountId, generated, edits)
   if (!edited.ok) return edited
-  const [preview] = buildRebalancePreviews([{ account, ...edited.proposal }], true, PROPOSAL_DRIFT_THRESHOLD, MOCK_TODAY_ISO)
+  const [preview] = buildRebalancePreviews([{ account, working, ...edited.proposal }], true, PROPOSAL_DRIFT_THRESHOLD, MOCK_TODAY_ISO)
   if (!preview) throw new Error(`No preview for ${accountId}`)
-  const evaluated = evaluateProposal(accountId, preview.trades.map(({ symbol, side, quantity, estimatedValue }) => ({ symbol, side, quantity, estimatedValue })))
+  const evaluated = evaluateProposal(accountId, preview.trades.map(({ symbol, side, quantity, estimatedValue }) => ({ symbol, side, quantity, estimatedValue })), working)
   if (!evaluated) throw new Error(`No pre-trade result for ${accountId}`)
-  const pretrade = withSuitability(evaluated, account, edited.proposal.legs)
+  const pretrade = withSuitability(evaluated, account, edited.proposal.legs, working)
   const legFacts: LegFacts[] = edited.proposal.legs.flatMap((leg, i) => {
     const settled = preview.trades[i]
     if (leg.side !== 'sell' || !settled) return []
@@ -239,10 +241,15 @@ export function buildVersion(accountId: string, constraints: readonly ProposalCo
     edits: normalizeEdits(edits).map(editTuple),
     legs: preview.trades.map((t) => [t.symbol, t.side, t.quantity, t.estimatedValue]),
     lots: legFacts.map((f) => [f.symbol, f.lotIds]),
+    working: working.map((w) => [w.orderId, w.quantity]),
   }
   return {
     ok: true,
-    built: { preview, driftBefore: computeDriftForAccount(requireModelManaged(account)), pretrade, legFacts, excludedLegs: edited.excludedLegs, harvestSubstitutions: standingHarvestSubstitutions(generated.harvestSubstitutions, preview.trades), summary: taxSummaryOf(preview), fingerprint: fingerprint(JSON.stringify(content)) },
+    built: { preview, driftBefore: computeDriftForAccount(requireModelManaged(account)), pretrade, legFacts, excludedLegs: edited.excludedLegs, harvestSubstitutions: standingHarvestSubstitutions(generated.harvestSubstitutions, preview.trades),
+      workingOrders: working.map(({ orderId, symbol, name, side, quantity, estimatedValue, limitPrice }) => ({
+        orderId, symbol, ...(name !== undefined ? { name } : {}), side, quantity, estimatedValue, ...(limitPrice !== undefined ? { limitPrice } : {}),
+      })),
+      summary: taxSummaryOf(preview), fingerprint: fingerprint(JSON.stringify(content)) },
     names: new Map(generated.legs.map((l) => [l.symbol, l.name])),
   }
 }

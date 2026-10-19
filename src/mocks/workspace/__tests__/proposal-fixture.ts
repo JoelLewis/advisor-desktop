@@ -5,8 +5,9 @@ import { buildVersion } from '../proposal-engine'
 
 export const AGENT_CONSTRAINTS: ProposalConstraint[] = [{ kind: 'avoid_self_wash' }]
 
-export function versionOf(n: number, constraints: ProposalConstraint[], edits: LegEdit[] = []): ProposalVersion {
-  const r = buildVersion('acc-002', constraints, edits)
+/** `proposalId` is the proposal the version joins: its own pending orders are its legs, not working orders to count. */
+export function versionOf(n: number, constraints: ProposalConstraint[], edits: LegEdit[] = [], proposalId?: string): ProposalVersion {
+  const r = buildVersion('acc-002', constraints, edits, proposalId)
   if (!r.ok) throw new Error(r.message)
   return { n, author: { kind: 'agent', agentId: 'proposal' }, createdAt: nextAt(), constraints, edits, changeSummary: 'Drafted a tax-aware rebalance.', ...r.built }
 }

@@ -7,7 +7,8 @@ import { cashBalanceOf, getPositionsForAccount } from '../data/positions'
 import { personById } from '../data/people'
 import { openWashSaleWindowsFor } from './tax-return'
 import { refuseExternal } from './workspace-http'
-import type { ProposalTradeLeg, ProposalViolation, ProposalLegResult, PreTradeCheckProposalResult } from '@/services/oms'
+import type { ProposalTradeLeg, ProposalViolation, ProposalLegResult, PreTradeCheckProposalResult, WorkingOrderRef } from '@/services/oms'
+import type { AssetClass } from '@/types/portfolio'
 
 /**
  * Pre-trade compliance / conflicts of interest — one list, used by both the trade ticket
@@ -59,7 +60,11 @@ const pct0 = (weight: number) => `${(weight * 100).toFixed(0)}%`
  * Each violation names the legs behind it (`legs`, indexes into `trades`): the legs that raise
  * the weight, or, for a reduced breach, the legs that reduce it. A breach no leg touches names none.
  */
-export function evaluateProposal(accountId: string, trades: readonly ProposalTradeLeg[]): PreTradeCheckProposalResult | undefined {
+export function evaluateProposal(
+  accountId: string,
+  trades: readonly ProposalTradeLeg[],
+  working: readonly (WorkingOrderRef & { estimatedValue: number; assetClass: AssetClass })[] = [],
+): PreTradeCheckProposalResult | undefined {
   const account = accounts.find((a) => a.id === accountId)
   if (!account) return undefined
   const accountValue = account.totalValue
@@ -70,6 +75,12 @@ export function evaluateProposal(accountId: string, trades: readonly ProposalTra
   for (const p of getPositionsForAccount(account.id, accountValue)) {
     if (securityKind(p.symbol, p.assetClass) === 'cash') continue
     held.set(p.symbol, { value: p.marketValue, assetClass: p.assetClass })
+  }
+  // Working orders are counted as filled: they are the book the proposal starts from, never one of its legs.
+  for (const w of working) {
+    const was = held.get(w.symbol)
+    const signed = w.side === 'buy' ? w.estimatedValue : -w.estimatedValue
+    held.set(w.symbol, { value: Math.max(0, (was?.value ?? 0) + signed), assetClass: was?.assetClass ?? w.assetClass })
   }
   const projected = new Map<string, number>([...held].map(([symbol, h]) => [symbol, h.value]))
   const legsOn = new Map<string, number[]>()
@@ -169,8 +180,20 @@ export function evaluateProposal(accountId: string, trades: readonly ProposalTra
     })
   }
 
+  // ── A leg on a security a working order already trades: the proposal counts the order; a second order is the advisor's call ──
+  for (const w of working) {
+    const on = trades.flatMap((t, i) => (t.symbol === w.symbol ? [i] : []))
+    if (on.length === 0) continue
+    violations.push({
+      category: 'working_order', constraint: 'Working order on the same security', severity: 'warning',
+      currentValue: `${w.side} ${w.quantity}`, limit: 'One open order per security',
+      message: `A working order to ${w.side} ${w.quantity} ${w.symbol} (${w.orderId}) is already open in this account; this proposal also trades ${w.symbol}.`,
+      legs: on, preExisting: true, symbol: w.symbol, workingOrder: { orderId: w.orderId, symbol: w.symbol, side: w.side, quantity: w.quantity },
+    })
+  }
+
   // ── Cash: sells settle first, then buys draw down in proposal order ──
-  const startingCash = cashBalanceOf(account)
+  const startingCash = cashBalanceOf(account) - working.reduce((s, w) => s + (w.side === 'buy' ? w.estimatedValue : -w.estimatedValue), 0)
   const minimumCash = accountValue * CASH_MINIMUM_PCT
   const sellProceeds = trades.reduce((sum, t) => sum + (t.side === 'sell' ? t.estimatedValue : 0), 0)
   let cash = startingCash + sellProceeds

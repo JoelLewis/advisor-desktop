@@ -2,8 +2,8 @@ import type { AgentContext, AgentFinding } from './agent'
 import type { Figure } from '@/types/workspace'
 import type { ProposalViolation } from '@/services/oms'
 import { accounts } from '@/mocks/data/accounts'
-import { getPositionsForAccount } from '@/mocks/data/positions'
-import { generateRebalanceTrades } from '@/mocks/handlers/oms'
+import { generateRebalanceProposal } from '@/mocks/handlers/oms'
+import { accountLedger, workingMovesOf } from '@/mocks/workspace/household-ledger'
 import { evaluateProposal } from '@/mocks/handlers/compliance'
 import { tolerancePhrase, withSuitability } from '@/mocks/workspace/suitability'
 import { claimModelName, claimNameOf } from './claim-name'
@@ -37,6 +37,11 @@ function describe(v: ProposalViolation, names: Names): { who: string; label: str
     case 'sector_limit': { const sector = sectorOf(v); return { who: sector, label: sector, phrase: weightPhrase(v, 'sector') } }
     case 'cash_minimum': return { who: 'Cash', label: 'Cash', phrase: 'would fall below the minimum reserve' }
     case 'wash_sale': { const symbol = symbolOf(v); return { who: securityName(names, symbol), label: symbol, phrase: 'may trigger a wash sale' } }
+    case 'working_order': {
+      const w = v.workingOrder
+      if (!w) throw new Error('A working_order violation names no working order')
+      return { who: securityName(names, w.symbol), label: w.symbol, phrase: `already has a working order to ${w.side} in this account, and the proposal trades it too` }
+    }
     case 'model_above_tolerance': {
       const t = v.tolerance
       if (!t) throw new Error('A model_above_tolerance violation carries no tolerance facts')
@@ -52,13 +57,14 @@ export function runPretradeCheck({ asOf, subject }: AgentContext): AgentFinding[
   const citations = [{ source: `Pre-trade check · tax-aware rebalance preview · ${account.name}`, asOf }]
   const info = (claim: string): AgentFinding[] => [{ claim, attention: 'info', figures: [], citations }]
   if (account.mandate === 'custom') return info('This account is a custom mandate, not model-managed: there is no model to rebalance it to, so no proposal to check.')
-  const legs = generateRebalanceTrades(account.id, true)
+  const working = workingMovesOf(account.id)
+  const legs = generateRebalanceProposal(account.id, true, undefined, undefined, { workingOrders: working }).legs
   if (legs.length === 0) return info('There is no rebalance proposal to check.')
-  const evaluated = evaluateProposal(account.id, legs.map((l) => ({ symbol: l.symbol, side: l.side, quantity: l.quantity, estimatedValue: l.estimatedValue })))
+  const evaluated = evaluateProposal(account.id, legs.map((l) => ({ symbol: l.symbol, side: l.side, quantity: l.quantity, estimatedValue: l.estimatedValue })), working)
   if (!evaluated) return info('The pre-trade check could not evaluate this account.')
-  const result = withSuitability(evaluated, account, legs)
+  const result = withSuitability(evaluated, account, legs, working)
   if (result.violations.length === 0) return info('No pre-trade check flagged the proposal.')
-  const names: Names = new Map([...getPositionsForAccount(account.id, account.totalValue).map((p) => [p.symbol, p.name] as const), ...legs.map((l) => [l.symbol, l.name] as const)])
+  const names: Names = new Map([...accountLedger(account.id).positions.map((p) => [p.symbol, p.name] as const), ...legs.map((l) => [l.symbol, l.name] as const)])
   return result.violations.map((v) => {
     const { who, label, phrase } = describe(v, names)
     const verb = v.severity === 'block' ? 'Blocked' : 'Warning'
@@ -70,6 +76,8 @@ export function runPretradeCheck({ asOf, subject }: AgentContext): AgentFinding[
       figures.push({ label: `${v.tolerance.modelName} risk score`, value: v.tolerance.modelScore, unit: 'pts', source: 'riskScoreOf(modelVolatility)' })
       figures.push({ label: `${v.tolerance.clientName}'s tolerance ceiling`, value: v.tolerance.ceiling, unit: 'pts', source: 'clients.riskProfile.score · RISK_PROFILE_TABLE' })
       figures.push({ label: `${v.tolerance.clientName}'s accounts as a whole, after a full rebalance to the model`, value: v.tolerance.wholeAfterScore, unit: 'pts', source: 'clientRiskOf after the rebalance legs' })
+    } else if (v.category === 'working_order' && v.workingOrder) {
+      figures.push({ label: `Working order · ${v.workingOrder.symbol}`, value: v.workingOrder.quantity, unit: 'sh', source: 'orders.quantity' })
     } else {
       if (v.projectedWeight !== undefined) figures.push({ label: `${label} after the proposal`, value: v.projectedWeight, unit: '%', source: 'evaluateProposal.violations.projectedWeight' })
       if (v.limitWeight !== undefined) figures.push({ label: `${label} limit`, value: v.limitWeight, unit: '%', source: 'evaluateProposal.violations.limitWeight' })

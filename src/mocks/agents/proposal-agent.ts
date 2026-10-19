@@ -99,6 +99,13 @@ function harvestSubstitutionSentence(built: DraftPreview): string {
   }).join('') + SUBSTITUTE_HEDGE
 }
 
+/** The working orders the version counted, named without digits. */
+function workingOrderSentence({ workingOrders }: Pick<DraftPreview, 'workingOrders'>): string {
+  if (workingOrders.length === 0) return ''
+  const named = joinWords(workingOrders.map((w) => `${w.side === 'buy' ? 'a buy' : 'a sale'} of ${claimNameOf(w.symbol, w.name)}`))
+  return ` It counts ${workingOrders.length === 1 ? 'the working order' : 'the working orders'} already open in this account (${named}) as filled, so it does not trade ${workingOrders.length === 1 ? 'it' : 'them'} again.`
+}
+
 /** Lot choice only changes the tax in an account whose sales are taxed. */
 export function draftSummary(accountId: string, built: DraftPreview): string {
   const account = accounts.find((a) => a.id === accountId)
@@ -108,10 +115,10 @@ export function draftSummary(accountId: string, built: DraftPreview): string {
   switch (account.taxTreatment) {
     case 'taxable':
     case 'trust_taxable':
-      return `Drafted a tax-aware rebalance toward ${toward}. Where it sells, it sells loss lots first, then the lots that cost the least tax, and it ${NO_SELF_WASH}.${harvestSubstitutionSentence(built)}${foreclosedHarvestCaveat(accountId, built)}`
+      return `Drafted a tax-aware rebalance toward ${toward}. Where it sells, it sells loss lots first, then the lots that cost the least tax, and it ${NO_SELF_WASH}.${harvestSubstitutionSentence(built)}${foreclosedHarvestCaveat(accountId, built)}${workingOrderSentence(built)}`
     case 'tax_deferred':
     case 'tax_free':
-      return `Drafted a rebalance toward ${toward}. Sales in this account are not taxed when they happen, so the choice of lots does not change the tax; it still ${NO_SELF_WASH}.${harvestSubstitutionSentence(built)}${foreclosedHarvestCaveat(accountId, built)}`
+      return `Drafted a rebalance toward ${toward}. Sales in this account are not taxed when they happen, so the choice of lots does not change the tax; it still ${NO_SELF_WASH}.${harvestSubstitutionSentence(built)}${foreclosedHarvestCaveat(accountId, built)}${workingOrderSentence(built)}`
   }
 }
 
@@ -164,5 +171,5 @@ export function revisionSummary(
   const onlyDropsEdits = previous !== undefined && hadEdits && sameConstraints(constraints, previous.constraints)
   const cap = capBinds(constraints, built) === false ? ' The cap changes no trade.' : ''
   const carried = hadEdits ? ' Workbench edits on the previous version are not carried into this one.' : ''
-  return `${opening(constraints, onlyDropsEdits)}${cap}${bandResult(built)}${harvestSubstitutionSentence(built)}${foreclosedHarvestCaveat(built.preview.accountId, built)}${carried}`
+  return `${opening(constraints, onlyDropsEdits)}${cap}${bandResult(built)}${harvestSubstitutionSentence(built)}${foreclosedHarvestCaveat(built.preview.accountId, built)}${workingOrderSentence(built)}${carried}`
 }
