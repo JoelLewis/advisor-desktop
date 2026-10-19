@@ -5,7 +5,7 @@ import type { Position } from '@/types/portfolio'
 import type { HeldAwayAsset } from '@/types/held-away'
 import type { Figure } from '@/types/workspace'
 import { accounts } from '@/mocks/data/accounts'
-import { getPositionsForAccount } from '@/mocks/data/positions'
+import { accountLedger } from '@/mocks/workspace/household-ledger'
 import { heldAwayAssets } from '@/mocks/data/held-away'
 import { washSaleWindow } from '@/mocks/data/realized-sales'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
@@ -43,6 +43,10 @@ export function taxpayerHeldAway(account: Account): HeldAwayAsset[] {
 /** "401(k) — Former employer" → "401(k)". */
 const shortAccountType = (accountType: string) => accountType.split(' — ')[0] ?? accountType
 
+/** Symbols the firm bought in the account on the session day: selling them at a loss now would undo the trade and wash the loss. */
+const boughtToday = (accountId: string): Map<string, number> =>
+  accountLedger(accountId).fillsOnDay.filter((f) => f.side === 'buy').reduce((m, f) => m.set(f.symbol, (m.get(f.symbol) ?? 0) + f.quantity), new Map<string, number>())
+
 export type HarvestOpportunity = { position: Position; losses: PositionLosses }
 
 /**
@@ -53,8 +57,9 @@ export function harvestOpportunities(account: Account): HarvestOpportunity[] {
   if (!isTaxableAccount(account.taxTreatment)) return []
   const currency = account.baseCurrency ?? 'USD'
   const lots = generateTaxLotsWithSaleRisk(account.id, account.totalValue)
-  return getPositionsForAccount(account.id, account.totalValue)
-    .filter((p) => p.symbol !== 'CASH')
+  const bought = boughtToday(account.id)
+  return accountLedger(account.id).positions
+    .filter((p) => p.symbol !== 'CASH' && !bought.has(p.symbol))
     .map((p) => {
       const own = lots.filter((l) => l.positionId === p.id)
       const sum = (f: (l: (typeof own)[number]) => number) => own.reduce((s, l) => s + f(l), 0)
@@ -99,6 +104,16 @@ export function runHarvestScanner({ asOf, subject }: AgentContext): TopicFinding
       findings.push({
         claim: harvestClaim(harvestName(p.symbol, p.name), p.symbol, losses), attention: 'attention', figures, citations,
         topic: { kind: 'harvest_allowed', symbol: p.symbol, name: claimNameOf(p.symbol, p.name), remaining: partlySold.has(p.symbol) },
+      })
+    }
+    const positions = accountLedger(account.id).positions
+    for (const [symbol, quantity] of boughtToday(account.id)) {
+      const held = positions.find((p) => p.symbol === symbol)
+      if (!held || held.gainLoss >= 0) continue
+      findings.push({
+        claim: `${claimNameOf(symbol, held.name)} was bought today in this account; selling it at a loss now would undo that trade and the purchase would wash the loss, so it is not offered for harvest.`,
+        attention: 'info', citations: lotsCite, topic: { kind: 'bought_today', symbol, name: claimNameOf(symbol, held.name) },
+        figures: [{ label: `Bought today · ${symbol}`, value: quantity, unit: 'sh', source: 'ledger.fillsOnDay.quantity' }],
       })
     }
   }

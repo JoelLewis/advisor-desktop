@@ -34,7 +34,7 @@ export type WorkspaceState = {
 function seed(): WorkspaceState {
   return {
     threads: SEED_THREADS.map((t) => ({ ...t, memberIds: [...t.memberIds], agentIds: [...t.agentIds] })),
-    messages: [...briefMessages(), ...SEED_MESSAGES.map((m) => ({ ...m }))],
+    messages: SEED_MESSAGES.map((m) => ({ ...m })),
     acts: [],
     drafts: [],
     proposals: [],
@@ -54,9 +54,21 @@ function seed(): WorkspaceState {
 // engine must finish loading before anything runs it.
 let state: WorkspaceState | undefined
 
+/**
+ * The morning Brief is composed from the household ledger, which reads this store, so the store exists (empty of
+ * orders) while the Brief is composed; a Brief that cannot be composed leaves no half-seeded store behind.
+ */
 export function store(): WorkspaceState {
-  state ??= seed()
-  return state
+  if (state) return state
+  const seeded = seed()
+  state = seeded
+  try {
+    seeded.messages.unshift(...briefMessages())
+  } catch (error) {
+    state = undefined
+    throw error
+  }
+  return seeded
 }
 
 export function resetWorkspaceStore(): void {

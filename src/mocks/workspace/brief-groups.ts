@@ -28,6 +28,7 @@ export function briefLine({ topic, claim }: Pick<MeasuredFinding, 'topic' | 'cla
     case 'harvest_allowed':
       if (grouped) return `${topic.remaining ? 'The remaining shares' : 'The position'} can be sold at a loss today`
       return `${topic.remaining ? `The remaining ${topic.name} shares` : topic.name} can be sold at a loss today`
+    case 'bought_today': return `${topic.name} was bought today; not offered for harvest`
     case 'realized_loss':
       return grouped ? `Sold at a loss ${topic.when}; a buyback would wash the loss` : `${topic.name} was sold at a loss ${topic.when}`
     case 'held_away': return 'Held-away accounts are outside the wash-sale checks'

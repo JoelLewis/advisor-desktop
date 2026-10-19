@@ -1,9 +1,9 @@
 import type { AgentContext } from './agent'
 import type { TopicFinding } from './brief-topic'
 import { accounts } from '@/mocks/data/accounts'
-import { getPositionsForAccount } from '@/mocks/data/positions'
 import { computeDriftForAccount } from '@/mocks/handlers/pms'
-import { generateRebalanceTrades } from '@/mocks/handlers/oms'
+import { generateRebalanceProposal } from '@/mocks/handlers/oms'
+import { accountLedger, workingMovesOf } from '@/mocks/workspace/household-ledger'
 import { ASSET_CLASS_LABELS } from '@/lib/labels'
 import { isMarketTradable } from '@/lib/security-master'
 import { openWashSaleWindows } from '@/mocks/data/realized-sales'
@@ -42,7 +42,8 @@ export function runDriftMonitor({ asOf, subject }: AgentContext): TopicFinding[]
       ...outside.filter((d) => d !== worst).map((d) => ({ label: label(d.assetClass), value: d.drift, unit: 'pp' as const, source: 'drift.assetClassDrifts' })),
     ],
   }]
-  const gap = modelAboveTolerance(account, generateRebalanceTrades(account.id, true))
+  const working = workingMovesOf(account.id)
+  const gap = modelAboveTolerance(account, generateRebalanceProposal(account.id, true, undefined, undefined, { workingOrders: working }).legs, working)
   if (gap) {
     const model = claimModelName(gap.modelName)
     findings.push({
@@ -67,7 +68,7 @@ export function runDriftMonitor({ asOf, subject }: AgentContext): TopicFinding[]
       figures: offModel.map((d) => ({ label: label(d.assetClass), value: d.actual, unit: '%' as const, source: 'drift.assetClassDrifts.actual' })),
     })
   }
-  const positions = getPositionsForAccount(account.id, account.totalValue)
+  const positions = accountLedger(account.id).positions
   for (const d of drifts) {
     const held = positions.filter((p) => p.assetClass === d.assetClass && p.symbol !== 'CASH')
     if (held.length > 0 && held.every((p) => !isMarketTradable(p.symbol)) && d.drift > 0) {

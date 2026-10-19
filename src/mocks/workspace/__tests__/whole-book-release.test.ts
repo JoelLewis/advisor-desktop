@@ -53,9 +53,11 @@ describe('releasing every account\'s approvable proposal, one after another', ()
         expect(Math.abs((after.get(d.assetClass) ?? 0) - d.drift), `${account.id} ${d.assetClass} drift`).toBeLessThan(0.0005)
       }
     }
-    // Phase 7a · C1: 38 of the 44 model-managed accounts have an approvable proposal, where 11 of 47
+    // Phase 7a · C1: 38 of the 44 model-managed accounts had an approvable proposal, where 11 of 47
     // did against the one generic mix every generated account used to hold; the custom mandates have none.
-    expect(released).toBe(38)
+    // Phase 10: acc-046 is the 38th only before its taxpayer's AGG is bought today, when the Harvest Scanner
+    // flags AGG and the engine buys a substitute; once the scanner stops offering it, AGG concentrates past its limit.
+    expect(released).toBe(37)
     const ids = accounts.flatMap((a) => generateTaxLots(a.id, a.totalValue).map((l) => l.id))
     expect(new Set(ids).size).toBe(ids.length)
   }, 180_000)

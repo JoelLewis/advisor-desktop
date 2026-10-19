@@ -18,7 +18,7 @@ import { buildClientRateDisclosure, formatRatePercent, NIIT_RATE, TAX_RATE_BASIS
 import { ACCOUNT_TYPE_LABELS, CLIENT_ASSET_CLASS_WORDS } from '@/lib/labels'
 import { capitalLossUse, ORDINARY_INCOME_OFFSET_LIMIT, ORDINARY_INCOME_OFFSET_LIMIT_SEPARATE, recognizedResult } from '@/lib/capital-gains'
 import { isSubjectToWashSale, taxCharacterOf } from '@/lib/security-master'
-import { getPositionsForAccount } from '@/mocks/data/positions'
+import { accountLedger } from '@/mocks/workspace/household-ledger'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { clientDate, clientMoney, clientPercent } from '@/kit/measure'
 
@@ -137,7 +137,7 @@ export function writeClientLetter(proposal: Proposal, version: ProposalVersion, 
 
 /** Whether the letter's reader trades or holds a collectible in this account; one who does neither is not told that rate. */
 const holdsCollectibles = (account: Account, version: ProposalVersion): boolean =>
-  [...version.preview.trades.map((t) => t.symbol), ...getPositionsForAccount(account.id, account.totalValue).map((p) => p.symbol)]
+  [...version.preview.trades.map((t) => t.symbol), ...accountLedger(account.id).positions.map((p) => p.symbol)]
     .some((symbol) => taxCharacterOf(symbol) === 'collectible')
 
 const harvestOnly = (version: ProposalVersion) => version.constraints.some((c) => c.kind === 'harvest_only')

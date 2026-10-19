@@ -5,6 +5,7 @@ import { calendarEvents } from '@/mocks/data/calendar'
 import { sessionNow, store } from '@/mocks/data/workspace-store'
 import { reconciliationView } from '@/mocks/reference/reconciliation'
 import { BRIEF_THREAD_ID } from './brief'
+import { accountLedger } from './household-ledger'
 import { meetingEvent, meetingTitle, toUtc } from './meetings'
 
 export const BRIEF_TODAY_ID = 'msg-btoday'
@@ -15,9 +16,10 @@ const timeOf = (line: Timed) => (line.kind === 'release' ? line.at : line.start)
 function releaseLines(): Timed[] {
   const s = store()
   return s.approvals.filter((a) => a.status === 'active').flatMap((approval) => {
-    if (!s.staged.some((o) => o.approvalActId === approval.actId && o.status === 'pending_compliance')) return []
     const proposal = s.proposals.find((p) => p.id === approval.proposalId)
     if (!proposal) throw new Error(`Approval ${approval.actId} names a missing proposal ${approval.proposalId}`)
+    const pending = accountLedger(proposal.accountId).openOrders.some((o) => o.source.kind === 'proposal' && o.source.proposalId === proposal.id && o.source.version === approval.version)
+    if (!pending) return []
     const account = accounts.find((a) => a.id === proposal.accountId)
     if (!account) throw new Error(`Proposal ${proposal.id} names a missing account ${proposal.accountId}`)
     return [{ kind: 'release', at: approval.at, accountName: accountDisplayName(account), version: approval.version, threadId: proposal.threadId }]
