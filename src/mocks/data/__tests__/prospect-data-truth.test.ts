@@ -78,9 +78,9 @@ describe('prospects', () => {
 
   it('name only real clients as referrers, by their own names', () => {
     const named = prospects.flatMap((p) => [p.notes ?? '', ...p.activities.map((a) => a.description)])
-      .flatMap((text) => [...text.matchAll(/Referred by ([^()]+?) \((cli-\d{3})\)/g)])
+      .flatMap((text) => [...text.matchAll(/Referred by ([A-Z][a-z]+ [A-Z][a-z]+)/g)])
     expect(named.length).toBeGreaterThanOrEqual(5)
-    for (const [, name, id] of named) expect(clients.find((c) => c.id === id)?.fullName, `${name} (${id})`).toBe(name)
+    for (const [, name] of named) expect(clients.some((c) => c.fullName === name), `${name ?? '?'} is a client`).toBe(true)
   })
 })
 

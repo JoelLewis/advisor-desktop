@@ -143,7 +143,7 @@ export function recordCoffee(viewerId: string, prospectId: string, body: string)
   const record = visibleProspect(viewerId, prospectId)
   if (!record) return NO_PROSPECT
   if (!can(viewerId, 'prepare_meeting')) return refuse(403, 'NOT_PERMITTED', 'Only the advisor records the coffee.')
-  if (record.coffee) return refuse(409, 'ALREADY_RECORDED', `The coffee was already recorded (${record.coffee.messageId}).`)
+  if (record.coffee) return refuse(409, 'ALREADY_RECORDED', 'The coffee was already recorded.')
   const text = body.trim()
   if (text.length === 0 || text.length > COFFEE_NOTE_MAX) return refuse(400, 'BAD_NOTE', `Write the note in 1 to ${COFFEE_NOTE_MAX} characters.`)
   const event = calendarEvents.find((e) => e.id === record.eventId)

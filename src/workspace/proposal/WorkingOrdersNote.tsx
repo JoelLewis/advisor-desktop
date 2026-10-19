@@ -1,5 +1,5 @@
 import type { CountedWorkingOrder } from '@/types/workspace-proposal'
-import { workingOrderWords } from './working-order-words'
+import { workingOrderWords } from '@/kit/working-order-words'
 
 /** The working orders a version counted as filled, so a reviewer sees why its legs leave them alone. */
 export function WorkingOrdersNote({ orders }: { orders: readonly CountedWorkingOrder[] }) {

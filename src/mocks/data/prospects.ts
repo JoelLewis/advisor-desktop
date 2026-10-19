@@ -20,7 +20,7 @@ export const prospects: Prospect[] = [
     ],
     createdAt: '2026-02-19T14:30:00Z',
     stageChangedAt: '2026-02-19T14:30:00Z',
-    notes: 'Referred by Robert Johnson (cli-001). Recently sold a business and looking for comprehensive wealth management.',
+    notes: 'Referred by Robert Johnson. Recently sold a business and looking for comprehensive wealth management.',
   },
   {
     id: 'prsp-002',
@@ -99,7 +99,7 @@ export const prospects: Prospect[] = [
     nextAction: 'Schedule meeting to review concentrated stock position',
     nextActionDate: '2026-03-02T16:00:00Z',
     activities: [
-      { id: 'act-008', type: 'call', description: 'Referred by Margaret Chen (cli-003) — initial phone screen', date: '2026-02-12T16:00:00Z' },
+      { id: 'act-008', type: 'call', description: 'Referred by Margaret Chen — initial phone screen', date: '2026-02-12T16:00:00Z' },
       { id: 'act-009', type: 'email', description: 'Received brokerage statements for review — heavy NVDA concentration', date: '2026-02-13T15:30:00Z' },
     ],
     createdAt: '2026-02-12T16:00:00Z',
@@ -167,7 +167,7 @@ export const prospects: Prospect[] = [
     nextAction: 'Finalize fee schedule and sign advisory agreement',
     nextActionDate: '2026-02-27T14:00:00Z',
     activities: [
-      { id: 'act-016', type: 'call', description: 'Referred by James Thompson (cli-008) — initial call', date: '2026-01-15T15:00:00Z' },
+      { id: 'act-016', type: 'call', description: 'Referred by James Thompson — initial call', date: '2026-01-15T15:00:00Z' },
       { id: 'act-017', type: 'meeting', description: 'Comprehensive planning session at Atlanta office', date: '2026-01-30T14:00:00Z' },
       { id: 'act-018', type: 'email', description: 'Sent detailed proposal with UMA structure and fee tiers', date: '2026-02-10T13:00:00Z' },
       { id: 'act-019', type: 'call', description: 'Fee negotiation call — requested volume discount on >$10M', date: '2026-02-20T16:00:00Z' },
@@ -214,7 +214,7 @@ export const prospects: Prospect[] = [
     nextAction: 'Initiate ACAT transfer from Merrill Lynch',
     nextActionDate: '2026-02-27T14:00:00Z',
     activities: [
-      { id: 'act-023', type: 'call', description: 'Referred by Richard Anderson (cli-009) — discovery call', date: '2026-01-08T15:00:00Z' },
+      { id: 'act-023', type: 'call', description: 'Referred by Richard Anderson — discovery call', date: '2026-01-08T15:00:00Z' },
       { id: 'act-024', type: 'meeting', description: 'In-person planning session with spouse', date: '2026-01-22T14:00:00Z' },
       { id: 'act-025', type: 'email', description: 'Signed advisory agreement and IPS returned', date: '2026-02-12T13:00:00Z' },
       { id: 'act-026', type: 'note', description: 'Account opening paperwork submitted — awaiting ACAT initiation', date: '2026-02-24T16:00:00Z' },
@@ -238,7 +238,7 @@ export const prospects: Prospect[] = [
     nextAction: 'Coffee with Adrian Hale',
     nextActionDate: '2026-02-25T20:30:00Z',
     activities: [
-      { id: 'act-027', type: 'email', description: 'Referred by James Thompson (cli-008) — contact details received', date: '2026-02-20T14:30:00Z' },
+      { id: 'act-027', type: 'email', description: 'Referred by James Thompson — contact details received', date: '2026-02-20T14:30:00Z' },
     ],
     createdAt: '2026-02-20T14:30:00Z',
     stageChangedAt: '2026-02-20T14:30:00Z',

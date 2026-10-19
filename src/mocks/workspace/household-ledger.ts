@@ -204,7 +204,7 @@ export const householdLedgerAt = (householdId: string, at: string): HouseholdLed
 
 /** An open order as a proposal counts it: what it moves once filled. `name` is the holding's or the quote's, when either names it. */
 type WorkingMove = {
-  orderId: string; symbol: string; name?: string; side: 'buy' | 'sell'; quantity: number; estimatedValue: number; assetClass: AssetClass; limitPrice?: number
+  orderId: string; symbol: string; name?: string; side: 'buy' | 'sell'; quantity: number; quantityUnit: QuantityUnit; estimatedValue: number; assetClass: AssetClass; limitPrice?: number
 }
 
 /**
@@ -218,7 +218,7 @@ export function workingMovesOf(accountId: string, exceptProposalId?: string): Wo
     .map((o) => {
       const name = positions.find((p) => p.symbol === o.symbol)?.name ?? usdQuoteFor(o.symbol)?.name
       return {
-        orderId: o.id, symbol: o.symbol, ...(name !== undefined ? { name } : {}), side: o.side, quantity: o.quantity,
+        orderId: o.id, symbol: o.symbol, ...(name !== undefined ? { name } : {}), side: o.side, quantity: o.quantity, quantityUnit: o.quantityUnit,
         estimatedValue: o.estimatedValue, assetClass: o.assetClass, ...(o.limitPrice !== undefined ? { limitPrice: o.limitPrice } : {}),
       }
     })

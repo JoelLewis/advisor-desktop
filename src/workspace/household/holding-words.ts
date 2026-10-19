@@ -1,12 +1,12 @@
 import { fmtEasternStamp, fmtPoints, fmtQuantity } from '@/kit/measure'
 import type { AssetClassRow, HoldingOrder, LastContact, MemberStanding } from '@/types/workspace-household'
-import { workingOrderWords } from '@/workspace/proposal/working-order-words'
+import { quantityUnitWords, workingOrderWords } from '@/kit/working-order-words'
 import { CHANNEL_WORDS } from './household-words'
 
 /** An order on the holding it changes: "working: buy 200 QQQ, limit 480.00", "pending compliance release: sell 943 SPY", "filled 09:30 ET: sold 7,000 INTC". */
 export function holdingOrderWords(order: HoldingOrder, asOf: string): string {
   switch (order.kind) {
-    case 'working': return `working: ${workingOrderWords(order, order.quantityUnit === 'sh' ? undefined : order.quantityUnit)}`
+    case 'working': return `working: ${workingOrderWords(order, quantityUnitWords(order.quantityUnit))}`
     case 'pending_compliance': return `pending compliance release: ${order.side} ${fmtQuantity(order.quantity)} ${order.symbol}`
     case 'filled': return `filled ${fmtEasternStamp(order.at, asOf)}: ${order.side === 'buy' ? 'bought' : 'sold'} ${fmtQuantity(order.quantity)} ${order.symbol}`
   }

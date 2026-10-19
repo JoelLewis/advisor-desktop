@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { workingOrderWords } from '@/workspace/proposal/working-order-words'
+import { workingOrderWords } from '@/kit/working-order-words'
 import { WorkingOrdersNote } from '@/workspace/proposal/WorkingOrdersNote'
 
 describe('WorkingOrdersNote', () => {

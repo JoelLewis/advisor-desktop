@@ -78,7 +78,7 @@ export function runPretradeCheck({ asOf, subject }: AgentContext): AgentFinding[
       figures.push({ label: `${v.tolerance.clientName}'s tolerance ceiling`, value: v.tolerance.ceiling, unit: 'pts', source: 'clients.riskProfile.score · RISK_PROFILE_TABLE' })
       figures.push({ label: `${v.tolerance.clientName}'s accounts as a whole, after a full rebalance to the model`, value: v.tolerance.wholeAfterScore, unit: 'pts', source: 'clientRiskOf after the rebalance legs' })
     } else if (v.category === 'working_order' && v.workingOrder) {
-      figures.push({ label: `Working order · ${v.workingOrder.symbol}`, value: v.workingOrder.quantity, unit: 'sh', source: 'orders.quantity' })
+      figures.push({ label: `Working order · ${v.workingOrder.symbol}`, value: v.workingOrder.quantity, unit: v.workingOrder.quantityUnit, source: 'orders.quantity' })
     } else {
       if (v.projectedWeight !== undefined) figures.push({ label: `${label} after the proposal`, value: v.projectedWeight, unit: '%', source: 'evaluateProposal.violations.projectedWeight' })
       if (v.limitWeight !== undefined) figures.push({ label: `${label} limit`, value: v.limitWeight, unit: '%', source: 'evaluateProposal.violations.limitWeight' })

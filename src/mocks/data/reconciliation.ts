@@ -23,7 +23,7 @@ export const PLANNING_INTEGRATION = 'MoneyGuidePro'
 /** Why each feed shows the sync time it does. A feed outside the US syncs on its own market's close. */
 export const INTEGRATION_LOG: readonly IntegrationLogEntry[] = [
   { integration: 'Schwab', at: '2026-02-24T07:00:00Z', status: 'synced', detail: 'Nightly positions, cash and transactions file for 23 Feb received and matched.' },
-  { integration: 'Schwab', at: '2026-02-25T07:00:00Z', status: 'synced', detail: 'Nightly positions, cash and transactions file for 24 Feb received; one cash break raised (brk-002).' },
+  { integration: 'Schwab', at: '2026-02-25T07:00:00Z', status: 'synced', detail: 'Nightly positions, cash and transactions file for 24 Feb received; one cash break raised, brk-002.' },
   { integration: 'Fidelity', at: '2026-02-25T07:00:00Z', status: 'synced', detail: 'Nightly file for 24 Feb received and matched.' },
   { integration: 'Vanguard', at: '2026-02-25T07:00:00Z', status: 'synced', detail: 'Nightly file for 24 Feb received and matched.' },
   { integration: 'HSBC', at: '2026-02-24T23:00:00Z', status: 'synced', detail: 'Hong Kong file for 24 Feb received overnight, after the Hong Kong close; it syncs hours before the US feeds.' },

@@ -8,7 +8,7 @@ export const clientComms: ClientComm[] = [
     channel: 'email',
     direction: 'outbound',
     subject: 'Q4 Portfolio Review Summary',
-    summary: 'Sent the Q4 2025 performance report (doc-002) with a cover note.',
+    summary: 'Sent the Q4 2025 performance report with a cover note.',
     timestamp: '2026-02-24T17:30:00Z',
     aiGenerated: true,
   },

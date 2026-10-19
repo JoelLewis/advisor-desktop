@@ -219,7 +219,8 @@ type ProposalConstraint =
   | 'working_order'
 
 /** A working order a proposal leg overlaps: the order already open on the same security. */
-export type WorkingOrderRef = { orderId: string; symbol: string; side: 'buy' | 'sell'; quantity: number }
+/** A working order a proposal counted: `quantityUnit` says what its quantity counts (shares, option contracts, or a bond's par). */
+export type WorkingOrderRef = { orderId: string; symbol: string; side: 'buy' | 'sell'; quantity: number; quantityUnit: 'sh' | 'contracts' | 'par'; limitPrice?: number }
 
 export type ProposalViolation = PreTradeViolation & {
   category: ProposalConstraint

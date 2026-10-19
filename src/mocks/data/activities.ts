@@ -44,7 +44,7 @@ export const activities: ActivityItem[] = [
   {
     id: 'act-003', type: 'compliance', source: 'compliance',
     title: 'Large wire alert — Anderson account',
-    description: '$250,000 incoming wire to Richard Anderson (acc-022). Source-of-funds documentation required.',
+    description: '$250,000 incoming wire to Richard Anderson · Individual (…6649). Source-of-funds documentation required.',
     entityType: 'client', entityId: 'cli-009', entityName: 'Richard Anderson',
     timestamp: '2026-02-24T15:10:00Z', read: false,
   },

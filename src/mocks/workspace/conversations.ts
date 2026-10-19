@@ -25,7 +25,7 @@ export function startConversation(viewerId: string, input: { householdId: string
   const s = store()
   const { audience } = input
   if (audience.kind === 'client') {
-    if (!household.members.some((m) => m.clientId === audience.clientId)) return refuse(400, 'NOT_A_MEMBER', `${audience.clientId} is not a member of ${household.name}.`)
+    if (!household.members.some((m) => m.clientId === audience.clientId)) return refuse(400, 'NOT_A_MEMBER', `That client is not a member of the ${household.name}.`)
     if (!can(viewerId, 'draft_for_client')) return refuse(403, 'NOT_PERMITTED', 'Only the advisor and client service write to a client.')
     const existing = s.threads.find((t) => t.visibility === 'client' && t.partyId === audience.clientId)
     if (existing) return { ok: true, thread: existing, created: false }

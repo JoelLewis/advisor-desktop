@@ -40,7 +40,7 @@ describe('the coffee', () => {
     expect(note).toMatchObject({ kind: 'prospect_note', threadId: 'th-pell-work', at: '2026-02-25T21:30:00.000Z', authorId: ADRIAN, eventId: 'evt-004',
       title: 'Coffee with Dr. Amanda Pell', start: '2026-02-25T20:30:00.000Z', end: '2026-02-25T21:30:00.000Z' })
     expect(requireProspect(PELL).coffee).toEqual({ at: note.at, messageId: note.id, authorId: ADRIAN })
-    expect(recordCoffee(ADRIAN, PELL, 'Again.')).toEqual({ ok: false, status: 409, code: 'ALREADY_RECORDED', message: `The coffee was already recorded (${note.id}).` })
+    expect(recordCoffee(ADRIAN, PELL, 'Again.')).toEqual({ ok: false, status: 409, code: 'ALREADY_RECORDED', message: 'The coffee was already recorded.' })
   })
 
   it('is the advisor\'s, written in 1 to 2,000 characters; it never moves the clock back', () => {
