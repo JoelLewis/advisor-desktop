@@ -70,8 +70,8 @@ describe('§0.2 · a loss sale opens its own wash-sale window', () => {
     const intc = preview!.repurchaseRestrictions.filter((r) => r.symbol === 'INTC')
     const rs001 = realizedSales.find((s) => s.id === 'rs-001')!
     expect(intc).toEqual([
-      { symbol: 'INTC', start: '2026-01-21', until: '2026-03-22', source: { kind: 'recorded', saleId: 'rs-001', accountId: 'acc-002', saleDate: rs001.saleDate } },
-      { symbol: 'INTC', start: '2026-01-26', until: '2026-03-27', source: { kind: 'projected', accountId: 'acc-002', saleDate: MOCK_TODAY_ISO } },
+      { symbol: 'INTC', start: '2026-01-21', until: '2026-03-22', source: { kind: 'recorded', saleId: 'rs-001', accountId: 'acc-002', accountName: 'Robert Johnson · Individual (…3847)', saleDate: rs001.saleDate } },
+      { symbol: 'INTC', start: '2026-01-26', until: '2026-03-27', source: { kind: 'projected', accountId: 'acc-002', accountName: 'Robert Johnson · Individual (…3847)', saleDate: MOCK_TODAY_ISO } },
     ])
   })
 

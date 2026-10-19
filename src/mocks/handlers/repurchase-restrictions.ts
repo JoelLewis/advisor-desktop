@@ -3,6 +3,15 @@ import type { ProposedTrade, RepurchaseRestriction } from '@/services/oms'
 import { isSubjectToWashSale } from '@/lib/security-master'
 import { washSaleWindow } from '../data/realized-sales'
 import { openWashSaleWindowsFor, sameWashSaleTaxpayer } from './tax-return'
+import { accounts } from '../data/accounts'
+import { accountDisplayName } from '@/lib/account-display'
+
+/** An account as people read it, "<Owner> · <Type> (…<last 4>)". */
+function displayNameOf(accountId: string): string {
+  const account = accounts.find((a) => a.id === accountId)
+  if (!account) throw new Error(`A wash-sale window names an unknown account ${accountId}`)
+  return accountDisplayName(account)
+}
 
 /** The legs of one account's proposal, as far as a restriction list needs them. */
 export type ProposalLegs = { accountId: string; legs: readonly Pick<ProposedTrade, 'symbol' | 'repurchaseBlockedUntil'>[] }
@@ -26,7 +35,7 @@ export function repurchaseRestrictionsFor(
     symbol: w.symbol,
     start: w.start,
     until: w.end,
-    source: { kind: 'recorded', saleId: w.id, accountId: w.accountId, saleDate: w.saleDate },
+    source: { kind: 'recorded', saleId: w.id, accountId: w.accountId, accountName: displayNameOf(w.accountId), saleDate: w.saleDate },
   }))
   const sameTaxpayer = new Set(sameWashSaleTaxpayer(account).map((a) => a.id))
   const { start } = washSaleWindow(asOfISO)
@@ -40,7 +49,7 @@ export function repurchaseRestrictionsFor(
         symbol: leg.symbol,
         start,
         until: leg.repurchaseBlockedUntil,
-        source: { kind: 'projected', accountId, saleDate: asOfISO },
+        source: { kind: 'projected', accountId, accountName: displayNameOf(accountId), saleDate: asOfISO },
       })
     }
   }

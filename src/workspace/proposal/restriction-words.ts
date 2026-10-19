@@ -3,6 +3,6 @@ import type { RepurchaseRestriction } from '@/services/oms'
 
 export function restrictionSource({ source }: RepurchaseRestriction): string {
   return source.kind === 'recorded'
-    ? `recorded · sale ${source.saleId} of ${fmtDayMonthYear(source.saleDate)} in ${source.accountId}`
-    : `projected · this proposal's sale in ${source.accountId}`
+    ? `recorded · sale of ${fmtDayMonthYear(source.saleDate)} in ${source.accountName}`
+    : `projected · this proposal's sale in ${source.accountName}`
 }

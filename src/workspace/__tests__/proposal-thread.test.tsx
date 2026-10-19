@@ -25,7 +25,7 @@ describe('the proposal in the team thread', () => {
     expect(embed).toHaveTextContent('14,454')
     expect(embed).toHaveTextContent('Counts the working order already open in this account as filled: buy 200 QQQ, limit 480.00.')
     expect(embed).toHaveTextContent("Don't repurchase through 27 Mar 2026")
-    expect(embed).toHaveTextContent('recorded · sale rs-001 of 20 Feb 2026 in acc-002')
+    expect(embed).toHaveTextContent('recorded · sale of 20 Feb 2026 in Robert Johnson · Individual (…3847)')
     const drift = await within(embed).findByRole('table', { name: 'Drift before and after' })
     expect(drift).toHaveTextContent('Private Equity')
     expect(drift).toHaveTextContent('no market to sell into')

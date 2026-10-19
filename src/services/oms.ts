@@ -104,8 +104,8 @@ export type RepurchaseRestriction = {
   start: string
   until: string
   source:
-    | { kind: 'recorded'; saleId: string; accountId: string; saleDate: string }
-    | { kind: 'projected'; accountId: string; saleDate: string }
+    | { kind: 'recorded'; saleId: string; accountId: string; accountName: string; saleDate: string }
+    | { kind: 'projected'; accountId: string; accountName: string; saleDate: string }
 }
 
 /**

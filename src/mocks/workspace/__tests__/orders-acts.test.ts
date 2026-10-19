@@ -152,7 +152,7 @@ describe('a filled proposal is closed; the next one starts from the moved book',
     expect(v1.preview.trades.some((t) => t.symbol === 'INTC')).toBe(false)
     expect(v1.legFacts.flatMap((f) => f.lotIds)).not.toContain('lot-pos-023-0')
     const intc = v1.preview.repurchaseRestrictions.filter((r) => r.symbol === 'INTC')
-    expect(intc).toContainEqual({ symbol: 'INTC', start: '2026-01-26', until: '2026-03-27', source: { kind: 'recorded', saleId: 'rs-006', accountId: 'acc-002', saleDate: '2026-02-25' } })
+    expect(intc).toContainEqual({ symbol: 'INTC', start: '2026-01-26', until: '2026-03-27', source: { kind: 'recorded', saleId: 'rs-006', accountId: 'acc-002', accountName: 'Robert Johnson · Individual (…3847)', saleDate: '2026-02-25' } })
     expect(intc.some((r) => r.source.kind === 'projected')).toBe(false)
     expect(createProposal(ADRIAN, 'th-johnson-review', 'acc-002')).toMatchObject({ ok: true, created: false, detail: { id: 'prop-0002' } })
   })

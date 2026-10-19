@@ -28,10 +28,10 @@ describe('proposal wording', () => {
     expect(proposalWorkbenchHref('prop-0001')).toBe('/proposals/prop-0001')
   })
   it('keeps recorded and projected restrictions apart, with their sources', () => {
-    expect(restrictionSource({ symbol: 'INTC', start: '2026-01-21', until: '2026-03-22', source: { kind: 'recorded', saleId: 'rs-001', accountId: 'acc-002', saleDate: '2026-02-20' } }))
-      .toBe('recorded · sale rs-001 of 20 Feb 2026 in acc-002')
-    expect(restrictionSource({ symbol: 'INTC', start: '2026-01-26', until: '2026-03-27', source: { kind: 'projected', accountId: 'acc-002', saleDate: '2026-02-25' } }))
-      .toBe("projected · this proposal's sale in acc-002")
+    expect(restrictionSource({ symbol: 'INTC', start: '2026-01-21', until: '2026-03-22', source: { kind: 'recorded', saleId: 'rs-001', accountId: 'acc-002', accountName: 'Robert Johnson · Individual (…3847)', saleDate: '2026-02-20' } }))
+      .toBe('recorded · sale of 20 Feb 2026 in Robert Johnson · Individual (…3847)')
+    expect(restrictionSource({ symbol: 'INTC', start: '2026-01-26', until: '2026-03-27', source: { kind: 'projected', accountId: 'acc-002', accountName: 'Robert Johnson · Individual (…3847)', saleDate: '2026-02-25' } }))
+      .toBe("projected · this proposal's sale in Robert Johnson · Individual (…3847)")
   })
   it('lists the classes that were out or still carry a reason, before beside after', () => {
     const before = { assetClassDrifts: [
