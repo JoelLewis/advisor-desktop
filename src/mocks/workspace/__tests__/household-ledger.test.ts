@@ -2,11 +2,21 @@ import { describe, it, expect } from 'vitest'
 import { advanceClockTo } from '@/mocks/data/workspace-store'
 import { ledgerFills } from '@/mocks/data/portfolio-ledger'
 import { minuteOf } from '@/lib/clock'
-import { accountLedger, householdLedger, ticketValue } from '../household-ledger'
+import { getPositionsForAccount } from '@/mocks/data/positions'
+import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
+import { accounts } from '@/mocks/data/accounts'
+import { orders } from '@/mocks/handlers/oms'
+import { usdQuoteFor } from '@/mocks/handlers/pms'
+import type { Order } from '@/services/oms'
+import { convertCurrency } from '@/lib/currency'
+import {
+  accountLedger, householdLedger, ticketValue,
+  type AccountLedger, type HouseholdLedger, type LedgerFill, type LedgerSource, type OpenOrder, type QuantityUnit,
+} from '../household-ledger'
 import { approvedV1, release } from './story-fixture'
 
-const johnson = () => householdLedger('hh-001')
-const account = (id: string) => {
+const johnson = (): HouseholdLedger => householdLedger('hh-001')
+const account = (id: string): AccountLedger => {
   const found = johnson().accounts.find((a) => a.account.id === id)
   if (!found) throw new Error(`no ${id} in the Johnson ledger`)
   return found
@@ -59,9 +69,14 @@ describe('the household ledger', () => {
     const pending = johnson().openOrders.filter((o) => o.status === 'pending_compliance')
     expect(pending.length).toBeGreaterThan(0)
     for (const o of pending) expect(o.source).toMatchObject({ kind: 'proposal', proposalId: a.proposalId, version: 1 })
+    expect(account('acc-002').positions.some((p) => p.symbol === 'INTC')).toBe(true)
     release(a)
     expect(johnson().openOrders.filter((o) => o.status === 'pending_compliance')).toEqual([])
+    expect(johnson().fillsOnDay.length).toBeGreaterThan(0)
     expect(johnson().fillsOnDay.map((f) => f.id)).toEqual(ledgerFills().map((f) => f.id))
+    const robert = accounts.find((x) => x.id === 'acc-002')
+    if (!robert) throw new Error('acc-002 exists')
+    expect(accountLedger('acc-002').positions).toEqual(getPositionsForAccount('acc-002', robert.totalValue))
     expect(account('acc-002').positions.some((p) => p.symbol === 'INTC')).toBe(false)
   })
 
@@ -70,7 +85,52 @@ describe('the household ledger', () => {
     advanceClockTo(minuteOf('2026-02-26T14:10:00Z'))
     expect(johnson().day).toBe('2026-02-26')
     expect(johnson().fillsOnDay).toEqual([])
+    expect(ledgerFills().length).toBeGreaterThan(0)
+    expect(householdLedger('hh-001', '2026-02-25').fillsOnDay.length).toBeGreaterThan(0)
     expect(householdLedger('hh-001', '2026-02-25').fillsOnDay.length).toBe(ledgerFills().length)
+  })
+
+  it("reads an OMS ticket's fill on the New York day it filled, not the UTC day", () => {
+    const ticket: Order = {
+      id: 'ord-test-fill', accountId: 'acc-001', symbol: 'VTI', side: 'buy', quantity: 10, orderType: 'market', status: 'filled',
+      filledQuantity: 10, filledPrice: 270, submittedAt: '2026-02-26T01:30:00Z', filledAt: '2026-02-26T02:00:00Z', assetClass: 'equity',
+    }
+    orders.push(ticket)
+    try {
+      const fill = householdLedger('hh-001', '2026-02-25').fillsOnDay.find((f) => f.id === ticket.id)
+      const source: LedgerSource = { kind: 'ticket', orderId: ticket.id }
+      const unit: QuantityUnit = 'sh'
+      expect(fill).toMatchObject({ accountId: 'acc-001', side: 'buy', quantity: 10, quantityUnit: unit, price: 270, value: 2_700, source })
+      const asFill: LedgerFill | undefined = fill
+      expect(asFill?.at).toBe('2026-02-26T02:00:00Z')
+      expect(householdLedger('hh-001', '2026-02-26').fillsOnDay.some((f) => f.id === ticket.id)).toBe(false)
+    } finally {
+      orders.splice(orders.indexOf(ticket), 1)
+    }
+  })
+
+  it("moves the taxpayer's open wash-sale windows with the day", () => {
+    expect(householdLedger('hh-001', '2026-02-25').washWindows.map((w) => w.symbol)).toEqual(['INTC'])
+    expect(householdLedger('hh-001', '2026-03-23').washWindows).toEqual([])
+  })
+
+  it("values a market ticket in a non-USD account in that account's currency", () => {
+    const hk = accountLedger('acc-041')
+    const symbol = ['VTI', 'SPY', 'BND', 'GLD'].find((s) => usdQuoteFor(s) !== undefined && !hk.positions.some((p) => p.symbol === s))
+    const quote = symbol === undefined ? undefined : usdQuoteFor(symbol)
+    if (symbol === undefined || quote === undefined) throw new Error('a quoted symbol acc-041 does not hold')
+    const ticket: Order = {
+      id: 'ord-test-hkd', accountId: 'acc-041', symbol, side: 'buy', quantity: 100, orderType: 'market', status: 'pending',
+      filledQuantity: 0, submittedAt: '2026-02-24T21:00:00Z', assetClass: 'equity',
+    }
+    orders.push(ticket)
+    try {
+      const open: OpenOrder | undefined = accountLedger('acc-041').openOrders.find((o) => o.id === ticket.id)
+      expect(open?.estimatedValue).toBeCloseTo(100 * convertCurrency(quote.price, 'USD', 'HKD', FX_RATES_USD_BASE), 6)
+      expect(open?.estimatedValue).toBeGreaterThan(100 * quote.price)
+    } finally {
+      orders.splice(orders.indexOf(ticket), 1)
+    }
   })
 
   it('refuses an account or a household it does not know', () => {

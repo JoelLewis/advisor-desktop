@@ -13,7 +13,7 @@ import { sessionNow, store } from '@/mocks/data/workspace-store'
 import { generateTaxLots, type CustodianLot } from '@/mocks/handlers/custodian'
 import { currencyForAccount, orders } from '@/mocks/handlers/oms'
 import { usdQuoteFor } from '@/mocks/handlers/pms'
-import { convertToBase } from '@/lib/currency'
+import { convertCurrency, convertToBase } from '@/lib/currency'
 import { easternDayOf } from '@/lib/eastern-day'
 
 /**
@@ -22,27 +22,27 @@ import { easternDayOf } from '@/lib/eastern-day'
  * session portfolio ledger, the OMS tickets and the staged proposal orders; it stores nothing.
  */
 
-type QuantityUnit = 'sh' | 'contracts' | 'par'
+export type QuantityUnit = 'sh' | 'contracts' | 'par'
 /** Where an order or a fill comes from: an OMS ticket, or an order staged from an approved proposal version. */
-type LedgerSource = { kind: 'ticket'; orderId: string } | { kind: 'proposal'; stagedOrderId: string; proposalId: string; version: number }
+export type LedgerSource = { kind: 'ticket'; orderId: string } | { kind: 'proposal'; stagedOrderId: string; proposalId: string; version: number }
 
 /**
  * An order not yet filled: a working OMS ticket, or a proposal's order waiting for compliance to release it.
  * `estimatedValue` is what it would move between the holding and cash, in the account's currency: a limit order at
  * its limit, a market order at the holding's price or the quote, a proposal's order at its estimate.
  */
-type OpenOrder = {
+export type OpenOrder = {
   id: string; accountId: string; symbol: string; assetClass: AssetClass; side: 'buy' | 'sell'
   quantity: number; quantityUnit: QuantityUnit; status: 'working' | 'pending_compliance'
   estimatedValue: number; limitPrice?: number; enteredAt: string; source: LedgerSource
 }
-type LedgerFill = {
+export type LedgerFill = {
   id: string; accountId: string; symbol: string; assetClass: AssetClass; side: 'buy' | 'sell'
   quantity: number; quantityUnit: QuantityUnit; price: number; value: number; at: string; source: LedgerSource
 }
 /** One account as the ledger reads it on `day`: `fillsOnDay` are that New York day's fills. */
-type AccountLedger = { account: Account; positions: Position[]; lots: CustodianLot[]; cash: number; openOrders: OpenOrder[]; fillsOnDay: LedgerFill[] }
-type HouseholdLedger = {
+export type AccountLedger = { account: Account; positions: Position[]; lots: CustodianLot[]; cash: number; openOrders: OpenOrder[]; fillsOnDay: LedgerFill[] }
+export type HouseholdLedger = {
   householdId: string
   /** The session clock when it was read. */
   asOf: string
@@ -114,7 +114,9 @@ function assetClassIn(account: Account, symbol: string, positions: readonly Posi
 }
 
 function workingValue(order: Order, positions: readonly Position[]): number {
-  const price = order.limitPrice ?? positions.find((p) => p.symbol === order.symbol)?.price ?? usdQuoteFor(order.symbol)?.price
+  const held = positions.find((p) => p.symbol === order.symbol)?.price
+  const quoted = usdQuoteFor(order.symbol)?.price
+  const price = order.limitPrice ?? held ?? (quoted === undefined ? undefined : convertCurrency(quoted, 'USD', currencyForAccount(order.accountId), FX_RATES_USD_BASE))
   if (price === undefined) throw new Error(`Working ticket ${order.id} has no limit and no quote for ${order.symbol}`)
   return valueAt(order, price, order.quantity)
 }
