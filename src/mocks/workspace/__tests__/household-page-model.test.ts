@@ -74,7 +74,7 @@ describe('the Johnson page model', () => {
   })
 
   it('words the open item as the advisor\'s follow-up on the client\'s action', () => {
-    expect(johnson().tasks.find((t) => t.id === 'oi-001')?.title).toBe('Confirm Robert Johnson has corrected the beneficiary on his held-away Vanguard 401(k) (ha-001) to match the estate plan.')
+    expect(johnson().tasks.find((t) => t.id === 'oi-001')?.title).toBe('Confirm Robert Johnson has corrected the beneficiary on his held-away Vanguard 401(k) to match the estate plan.')
   })
 
   it('is firm only', () => {
