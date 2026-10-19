@@ -1,12 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { draftNotesFromTranscript } from '../meeting-notes'
+import { draftNotesFromTranscript, REBALANCE_LINE, type NotesFacts } from '../meeting-notes'
 import { JOHNSON_REVIEW_TRANSCRIPT } from '@/mocks/data/meeting-transcripts'
 import { personById } from '@/mocks/data/people'
 import { isTradingDay } from '@/lib/trading-calendar'
 import { firstNameOf } from '@/lib/words'
 
 const PLAN_NAMES = /401\(k\)|403\(b\)/g
-const notes = draftNotesFromTranscript('evt-010', '2026-02-25')
+const FACTS: NotesFacts = { rebalance: 'filled', wholes: new Map([['cli-001', { tolerance: 'Moderate', status: 'within' }], ['cli-002', { tolerance: 'Moderate Conservative', status: 'within' }]]) }
+const notes = draftNotesFromTranscript('evt-010', '2026-02-25', FACTS)
 const transcript = new Map(JOHNSON_REVIEW_TRANSCRIPT.map((l) => [l.id, l]))
 const toClient = notes.filter((l) => l.section === 'decisions' || l.section === 'client_requests')
 /** Every text a client may read: the firm's line, and its client wording where it has one. */
@@ -29,6 +30,18 @@ describe('Meeting Notes', () => {
   it('states no figure (the plan names aside)', () => {
     for (const line of notes) expect(line.text.replace(PLAN_NAMES, ''), line.id).not.toMatch(/\d/)
     for (const line of clientTexts) expect(line.text.replace(PLAN_NAMES, ''), line.id).not.toMatch(/\d/)
+  })
+
+  it('states the rebalance as the facts give it, and refuses to draft without a reading of Patricia', () => {
+    for (const rebalance of ['filled', 'awaiting_release', 'not_approved'] as const) {
+      const n01 = draftNotesFromTranscript('evt-010', '2026-02-25', { ...FACTS, rebalance }).find((l) => l.id === 'n-01')
+      expect(n01?.text).toBe(REBALANCE_LINE[rebalance])
+    }
+    expect(() => draftNotesFromTranscript('evt-010', '2026-02-25', { ...FACTS, wholes: new Map() })).toThrow("no reading of Patricia's accounts as a whole")
+  })
+  it('says above or below when the Risk view does', () => {
+    const above = draftNotesFromTranscript('evt-010', '2026-02-25', { ...FACTS, wholes: new Map([['cli-002', { tolerance: 'Moderate Conservative', status: 'above' }]]) })
+    expect(above.find((l) => l.id === 'n-03')?.text).toContain('as a whole they sit above her Moderate Conservative tolerance')
   })
 
   it('assigns each follow-up as the meeting did, due on a trading day', () => {
@@ -115,7 +128,7 @@ describe('Meeting Notes', () => {
   })
 
   it('has no script for a meeting without a transcript', () => {
-    expect(() => draftNotesFromTranscript('evt-002', '2026-02-25')).toThrow(/no transcript/)
+    expect(() => draftNotesFromTranscript('evt-002', '2026-02-25', FACTS)).toThrow(/no transcript/)
   })
 })
 

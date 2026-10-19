@@ -1,9 +1,31 @@
 import type { ClientWording, NoteLine, NoteSection, TaskOwner } from '@/types/workspace-meeting'
 import { transcriptOf } from '@/mocks/data/meeting-transcripts'
 import { tradingDaysAfter } from '@/lib/trading-calendar'
+import type { WholeStatus } from '@/types/reference-risk'
+
+/** What the ledger showed on the meeting's day about the household's rebalance. */
+export type RebalanceState = 'filled' | 'awaiting_release' | 'not_approved'
+/** What Meeting Notes checks the transcript against: the rebalance on the meeting's day, and each client's accounts as a whole against their own tolerance. */
+export type NotesFacts = { rebalance: RebalanceState; wholes: ReadonlyMap<string, { tolerance: string; status: WholeStatus }> }
+
+/** The Intel harvest and the rebalance as the ledger shows them; the transcript (t-02) stays as spoken. */
+export const REBALANCE_LINE: Readonly<Record<RebalanceState, string>> = {
+  filled: "Reviewed this morning's rebalance and the Intel harvest: the loss is deductible now only if Intel is not bought back before its window closes.",
+  awaiting_release: 'Reviewed the rebalance and the Intel harvest; the rebalance is approved and awaiting compliance release, and the loss will be deductible only if Intel is not bought back before its window closes.',
+  not_approved: 'Discussed a rebalance and the Intel harvest; nothing has been approved or traded yet, and a loss would be deductible only if Intel is not bought back before its window closes.',
+}
+
+const PATRICIA = 'cli-002'
+
+/** Patricia's accounts as the Risk view reads them, not as the transcript (t-09) put it. */
+function patriciaLine({ wholes }: NotesFacts): string {
+  const whole = wholes.get(PATRICIA)
+  if (!whole) throw new Error("Meeting Notes: the Risk view has no reading of Patricia's accounts as a whole")
+  return `Reviewed Patricia's accounts: as a whole they sit ${whole.status} her ${whole.tolerance} tolerance. Patricia said she is more cautious than the models on her accounts assume.`
+}
 
 /** A scripted line: what it records, the transcript lines it cites, and for a follow-up the owner the meeting named and when it is due. */
-type ScriptLine = { id: string; section: NoteSection; text: string; cites: string[]; owner?: TaskOwner; dueInTradingDays?: number; toClient?: ClientWording }
+type ScriptLine = { id: string; section: NoteSection; text: string | ((facts: NotesFacts) => string); cites: string[]; owner?: TaskOwner; dueInTradingDays?: number; toClient?: ClientWording }
 
 const ADRIAN: TaskOwner = { kind: 'person', personId: 'user-001' }
 const SARAH: TaskOwner = { kind: 'person', personId: 'user-002' }
@@ -18,9 +40,9 @@ const toRobert = (text: string): ClientWording => ({ clientId: 'cli-001', text }
  * carries the wording the recap to Robert reads, the same meaning addressed to the clients who attended.
  */
 const JOHNSON_REVIEW_NOTES: readonly ScriptLine[] = [
-  { id: 'n-01', section: 'discussion', text: "Reviewed this morning's rebalance and the Intel harvest: the loss is deductible now only if Intel is not bought back before its window closes.", cites: ['t-02'] },
+  { id: 'n-01', section: 'discussion', text: (facts) => REBALANCE_LINE[facts.rebalance], cites: ['t-02'] },
   { id: 'n-02', section: 'discussion', text: 'Reviewed the plan: the legacy goal is at risk and the retirement goal is on track.', cites: ['t-06'] },
-  { id: 'n-03', section: 'discussion', text: "Reviewed Patricia's accounts, which sit well away from their models; Patricia said she is more cautious than those models assume.", cites: ['t-09', 't-10'] },
+  { id: 'n-03', section: 'discussion', text: patriciaLine, cites: ['t-09', 't-10'] },
   { id: 'n-04', section: 'discussion', text: "Discussed Roth conversions in the years before Robert's required distributions begin.", cites: ['t-12', 't-13'] },
   { id: 'n-05', section: 'discussion', text: 'Discussed the held-away Vanguard 401(k) and TIAA 403(b); no recommendation was made.', cites: ['t-16', 't-17'] },
   { id: 'n-06', section: 'discussion', text: 'Reviewed the beneficiary on the Vanguard 401(k), which does not match the estate plan.', cites: ['t-20'] },
@@ -52,13 +74,18 @@ const JOHNSON_REVIEW_NOTES: readonly ScriptLine[] = [
 
 const SCRIPTS: ReadonlyMap<string, readonly ScriptLine[]> = new Map([['evt-010', JOHNSON_REVIEW_NOTES]])
 
-/** The notes as Meeting Notes drafts them: scripted, deterministic, every citation checked against the transcript. */
-export function draftNotesFromTranscript(eventId: string, meetingDay: string): NoteLine[] {
+/**
+ * The notes as Meeting Notes drafts them: scripted, deterministic, every citation checked against the transcript.
+ * Each line records only what was said or decided, citing where; a line about the book states what the ledger and
+ * the Risk view show on the meeting's day.
+ */
+export function draftNotesFromTranscript(eventId: string, meetingDay: string, facts: NotesFacts): NoteLine[] {
   const script = SCRIPTS.get(eventId)
   const transcript = transcriptOf(eventId)
   if (!script || !transcript) throw new Error(`Meeting Notes: no transcript for ${eventId}`)
   const ids = new Set(transcript.map((l) => l.id))
-  return script.map(({ dueInTradingDays, owner, ...line }) => {
+  return script.map(({ dueInTradingDays, owner, text: scripted, ...rest }) => {
+    const line = { ...rest, text: typeof scripted === 'function' ? scripted(facts) : scripted }
     if (line.cites.length === 0 || line.cites.some((id) => !ids.has(id))) throw new Error(`Meeting Notes: ${line.id} cites a line the transcript does not have`)
     if (line.toClient && line.section !== 'decisions' && line.section !== 'client_requests') throw new Error(`Meeting Notes: ${line.id} is not a line the client reads`)
     if (line.section !== 'follow_ups') return { ...line, cites: [...line.cites], ...(line.toClient ? { toClient: { ...line.toClient } } : {}) }

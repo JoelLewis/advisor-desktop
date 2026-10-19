@@ -7,9 +7,9 @@ import { heldAwayAssets } from '@/mocks/data/held-away'
 import { plans } from '@/mocks/data/planning'
 import { documents } from '@/mocks/data/documents'
 import { OPEN_ITEMS } from '@/mocks/data/open-items'
-import { getPositionsForAccount } from '@/mocks/data/positions'
 import { openWashSaleWindows } from '@/mocks/data/realized-sales'
-import { ledgerFills } from '@/mocks/data/portfolio-ledger'
+import { accountLedger, householdLedger } from '@/mocks/workspace/household-ledger'
+import { easternDayOf } from '@/lib/eastern-day'
 import { computeDriftForAccount } from '@/mocks/handlers/pms'
 import { isModelManaged } from '@/lib/mandate'
 import { firstNameOf, joinClauses, joinWords } from '@/lib/words'
@@ -29,7 +29,7 @@ const isOrAre = (n: number) => (n === 1 ? 'is' : 'are')
 /** How a claim names an account or a goal: claims carry no digits. */
 const accountWords = (a: Account) => (hasDigit(a.name) ? 'an account' : a.name)
 const goalWords = (name: string) => (hasDigit(name) ? 'a goal' : name)
-const valueOf = (a: Account) => getPositionsForAccount(a.id, a.totalValue).reduce((s, p) => s + p.marketValue, 0)
+const valueOf = (a: Account) => accountLedger(a.id).positions.reduce((s, p) => s + p.marketValue, 0)
 
 function householdOf(householdId: string): HouseholdFixture {
   const household = householdFixtures.find((h) => h.id === householdId)
@@ -43,10 +43,9 @@ function memberName(household: HouseholdFixture, clientId: string): string {
   return member.name
 }
 
-/** What changed today: the session's fills in the household's accounts. */
-function changes(own: readonly Account[], asOf: string): PrepFinding {
-  const ids = new Set(own.map((a) => a.id))
-  const fills = ledgerFills().filter((f) => ids.has(f.accountId))
+/** What changed today: the ledger's fills in the household's accounts on the day the agent speaks. */
+function changes(householdId: string, own: readonly Account[], asOf: string): PrepFinding {
+  const fills = householdLedger(householdId, easternDayOf(asOf)).fillsOnDay
   if (fills.length === 0) {
     return { claim: "No orders have been filled in the household's accounts today.", attention: 'info', figures: [], citations: [{ source: 'Fills recorded this session', asOf }], agendaTitle: 'Changes since the last review' }
   }
@@ -56,8 +55,8 @@ function changes(own: readonly Account[], asOf: string): PrepFinding {
     claim: `Orders released today were filled in ${joinWords(moved.map(accountWords))}; the figures below include today's trades.`,
     attention: 'info',
     figures: [
-      { label: 'Sold today', value: total('sell'), unit: 'USD', source: 'ledgerFills.value' },
-      { label: 'Bought today', value: total('buy'), unit: 'USD', source: 'ledgerFills.value' },
+      { label: 'Sold today', value: total('sell'), unit: 'USD', source: 'ledger.fillsOnDay.value' },
+      { label: 'Bought today', value: total('buy'), unit: 'USD', source: 'ledger.fillsOnDay.value' },
     ],
     citations: moved.map((a) => ({ source: `Fills · ${a.name}`, asOf })),
     agendaTitle: "This morning's rebalance and harvest",
@@ -193,6 +192,6 @@ function rmd(household: HouseholdFixture, own: readonly Account[], asOf: string)
 export function runMeetingPrepAgent(householdId: string, asOf: string): PrepFinding[] {
   const household = householdOf(householdId)
   const own = accounts.filter((a) => a.householdId === householdId)
-  return [changes(own, asOf), windows(householdId, asOf), drift(own, asOf), goals(householdId), heldAway(household), openItems(household), rmd(household, own, asOf)]
+  return [changes(householdId, own, asOf), windows(householdId, asOf), drift(own, asOf), goals(householdId), heldAway(household), openItems(household), rmd(household, own, asOf)]
     .flatMap((f) => (f ? [f] : []))
 }

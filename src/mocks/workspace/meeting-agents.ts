@@ -3,7 +3,11 @@ import type { AgendaItem, Meeting } from '@/types/workspace-meeting'
 import { nextAt, nextId, nextNumber, pad, store } from '@/mocks/data/workspace-store'
 import { AGENDA_V1_SUMMARY, runMeetingPrepAgent } from '@/mocks/agents/meeting-prep'
 import { runKeyOf } from './run-key'
-import { draftNotesFromTranscript } from '@/mocks/agents/meeting-notes'
+import { draftNotesFromTranscript, type NotesFacts, type RebalanceState } from '@/mocks/agents/meeting-notes'
+import type { WholeStatus } from '@/types/reference-risk'
+import { householdFixtures } from '@/mocks/data/households'
+import { clientRiskOf } from '@/mocks/reference/risk'
+import { householdLedger, type HouseholdLedger } from './household-ledger'
 import { alreadyFiled, appendAgenda, meetingDay, preparing, refuseMeeting, replaceMeeting, type MeetingFailure } from './meetings'
 
 export type AgentMessage = Extract<Message, { kind: 'agent_finding' }>
@@ -41,6 +45,33 @@ export function runMeetingPrep(viewerId: string, eventId: string): { ok: true; m
   return { ok: true, meeting, findings, created: true }
 }
 
+/** Whether the household's rebalance has filled on the ledger's day, is approved and awaiting release, or was never approved. */
+export function rebalanceStateOf(ledger: HouseholdLedger): RebalanceState {
+  if (ledger.fillsOnDay.some((f) => f.source.kind === 'proposal')) return 'filled'
+  return ledger.openOrders.some((o) => o.status === 'pending_compliance') ? 'awaiting_release' : 'not_approved'
+}
+
+/** A client's accounts as a whole against their own tolerance, as the Risk view reads them; none when the client holds no measured account. */
+export function wholeStandingOf(clientId: string): { tolerance: string; status: WholeStatus } | undefined {
+  const risk = clientRiskOf(clientId)
+  if (!risk) return undefined
+  const { status, tolerance } = risk.posture
+  // A client's accounts as a whole are always measured (ClientRisk); a glide-path status here is a broken invariant.
+  if (status === 'glide_path') throw new Error(`${clientId}'s accounts as a whole carry a glide-path status`)
+  return { tolerance: tolerance.band, status }
+}
+
+/** What the ledger and the Risk view show for the household on `day`: the notes are checked against it. */
+export function notesFactsOf(householdId: string, day: string): NotesFacts {
+  const household = householdFixtures.find((h) => h.id === householdId)
+  if (!household) throw new Error(`No household ${householdId}`)
+  const wholes = new Map(household.members.flatMap((m) => {
+    const standing = wholeStandingOf(m.clientId)
+    return standing ? [[m.clientId, standing] as const] : []
+  }))
+  return { rebalance: rebalanceStateOf(householdLedger(householdId, day)), wholes }
+}
+
 /** Meeting Notes drafts the record from the transcript, once the meeting is held; a second request keeps the draft as Adrian left it. */
 export function draftMeetingNotes(viewerId: string, eventId: string): { ok: true; meeting: Meeting; created: boolean } | MeetingFailure {
   const prepared = preparing(viewerId, eventId)
@@ -49,7 +80,8 @@ export function draftMeetingNotes(viewerId: string, eventId: string): { ok: true
   if (meeting.state === 'scheduled') return refuseMeeting(409, 'NOT_HELD', 'Hold the meeting first: the notes are drafted from its transcript.')
   if (meeting.state === 'filed') return alreadyFiled(meeting)
   if (meeting.notesDraft) return { ok: true, meeting, created: false }
-  const next: Meeting = { ...meeting, notesDraft: draftNotesFromTranscript(meeting.eventId, meetingDay(meeting)) }
+  const day = meetingDay(meeting)
+  const next: Meeting = { ...meeting, notesDraft: draftNotesFromTranscript(meeting.eventId, day, notesFactsOf(meeting.householdId, day)) }
   replaceMeeting(next)
   store().messages.push({ kind: 'notes_drafted', id: nextId('msg'), threadId: meeting.threadId, at: nextAt(), eventId: meeting.eventId, agentId: 'meeting-notes' })
   return { ok: true, meeting: next, created: true }
