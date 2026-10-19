@@ -74,7 +74,7 @@ describe('phase 5 · meeting agents', () => {
   it('Meeting Notes drafts with citations; it never files, assigns or recommends', () => {
     expect(AGENTS.find((a) => a.id === 'meeting-notes')).toMatchObject({
       name: 'Meeting Notes',
-      scope: { may: ['draft notes from the transcript, each line citing it', 'check what the notes say about the book against the household ledger'], mayNot: ['file the record', 'assign people', 'add a recommendation nobody made', 'post in a client conversation'] },
+      scope: { may: ['draft notes from the transcript, each line citing it', 'state what the book shows from the household ledger'], mayNot: ['file the record', 'assign people', 'add a recommendation nobody made', 'post in a client conversation'] },
     })
   })
   it('the Client Letter Agent may also draft a recap from a filed record, and still never sends', () => {
