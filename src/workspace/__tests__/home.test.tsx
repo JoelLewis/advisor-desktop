@@ -14,7 +14,7 @@ describe('home', () => {
     expect(screen.getByText(/everyone in it are fictional/)).toBeInTheDocument()
     const steps = within(await path()).getAllByRole('listitem')
     expect(steps).toHaveLength(8)
-    expect(within(steps[0]!).getByRole('link', { name: 'Open the Brief' })).toHaveAttribute('href', '/t/th-brief')
+    expect(within(steps[0]!).getByRole('link', { name: 'Open the Johnson household' })).toHaveAttribute('href', '/households/hh-001')
     await waitFor(() => expect(steps[0]).toHaveTextContent('NEXT'))
     expect(steps[0]).toHaveAttribute('aria-current', 'step')
     expect(steps.filter((s) => s.hasAttribute('aria-current'))).toHaveLength(1)

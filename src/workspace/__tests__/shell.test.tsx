@@ -100,11 +100,11 @@ describe('workspace shell', () => {
     expect(screen.getByRole('main')).toHaveTextContent(/^Workspace.*One advisor's day at Larkfield Advisory/)
   })
 
-  it('home says the firm and its people are fictional and the date starts at 25 Feb, and links the Brief in the path', async () => {
+  it('home says the firm and its people are fictional and the date starts at 25 Feb, and links the Johnson household in the path', async () => {
     await renderHome()
     const main = screen.getByRole('main')
     expect(main).toHaveTextContent('Larkfield Advisory and everyone in it are fictional, and nothing here is investment, tax or legal advice. Starts at 25 Feb 2026; the presenter can move the clock forward.')
-    expect(within(main).getByRole('link', { name: 'Open the Brief' })).toHaveAttribute('href', '/t/th-brief')
+    expect(within(main).getByRole('link', { name: 'Open the Johnson household' })).toHaveAttribute('href', '/households/hh-001')
   })
 
   it('lays out the frame: banner, thread nav, main, and no context column on home', async () => {

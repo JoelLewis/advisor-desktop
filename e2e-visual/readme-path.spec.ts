@@ -20,7 +20,19 @@ test("the README's five-minute path, end to end", async ({ page }) => {
   await expect(path).toHaveCount(8)
   await expect(path.first()).toContainText('NEXT')
 
-  // 1. The Brief: Today, Needs a decision, Context.
+  // 1. Your households, then the Brief: the queue, the Johnson household, the Brief.
+  const queue = bookColumn(page).getByRole('list', { name: 'Needs you today' })
+  const johnsonRow = queue.getByRole('link', { name: /^Johnson Household/ })
+  await expect(queue.getByRole('link').first()).toHaveAccessibleName(/^Johnson Household/)
+  await expect(johnsonRow).toContainText('Decision waiting')
+  await expect(johnsonRow).toContainText('review 14:00 ET')
+  await johnsonRow.click()
+  await expect(heading(page)).toHaveText('Johnson Household')
+  const holdings = page.getByRole('main').getByRole('table', { name: 'Holdings by asset class' })
+  await holdings.getByRole('button', { name: 'US Equity' }).focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('region', { name: 'US Equity · accounts holding it' })).toContainText('working: buy 200 QQQ, limit 480.00')
+  await expect(page.getByRole('complementary', { name: 'Conversations' })).toContainText('Johnson Rebalance Review')
   await bookColumn(page).getByRole('link', { name: 'Brief', exact: true }).click()
   await expect(heading(page)).toHaveText('Brief')
   const today = page.getByRole('region', { name: 'Today' })
@@ -36,6 +48,7 @@ test("the README's five-minute path, end to end", async ({ page }) => {
   await context(page).getByRole('button', { name: 'Ask Proposal Agent', exact: true }).click()
   const embed = embedOf(page)
   await expect(embed.getByRole('table', { name: 'Proposal legs · v1' })).toBeVisible()
+  await expect(embed).toContainText('Counts the working order already open in this account as filled: buy 200 QQQ, limit 480.00.')
   await embed.getByRole('button', { name: 'Revise' }).click()
   const revise = page.getByRole('dialog', { name: 'Revise the proposal' })
   await expect(revise).toBeVisible()
@@ -64,11 +77,15 @@ test("the README's five-minute path, end to end", async ({ page }) => {
   await context(page).getByRole('link', { name: /^Robert Johnson · Individual \(…3847\)/ }).click()
   await expect(page.getByRole('table', { name: 'Holdings' }).getByRole('row', { name: /^INTC/ })).toHaveCount(0)
   await back()
-  await bookColumn(page).getByRole('link', { name: 'Brief', exact: true }).click()
+  await openThread(page, 'Brief')
   await expect(page.getByRole('region', { name: 'Needs a decision' })).not.toContainText('Intel Corp.')
   await expect(page.getByRole('region', { name: 'Needs a decision' })).not.toContainText('Growth sits above')
   await expect(page.getByRole('region', { name: 'Context' })).toContainText("Growth sits above Robert Johnson's Moderate tolerance")
   await expect(page.getByRole('region', { name: 'Context' })).toContainText('Intel Corp.')
+  await bookColumn(page).getByRole('button', { name: 'Households' }).click()
+  const johnsonNow = bookColumn(page).getByRole('list', { name: 'Needs you today' }).getByRole('link', { name: /^Johnson Household/ })
+  await expect(johnsonNow).not.toContainText('Decision waiting')
+  await expect(johnsonNow).toContainText('review 14:00 ET')
 
   // 5. The Johnson annual review: prep, hold, notes, file, recap.
   await page.getByRole('region', { name: 'Today' }).getByRole('link', { name: 'Open the meeting thread' }).click()
@@ -87,9 +104,10 @@ test("the README's five-minute path, end to end", async ({ page }) => {
   await letterDraft(page).getByRole('button', { name: 'Send to Robert and Patricia' }).click()
   await expect(conversation(page)).toContainText('What we decided:')
   await expect(conversation(page)).toContainText('Dear Robert and Patricia,')
+  await expect(context(page).getByRole('region', { name: 'Audit trail' })).toContainText('Message sent to Robert Johnson and Patricia Johnson')
 
   // 6. Dr. Pell, from first contact to an onboarding opened.
-  await bookColumn(page).getByRole('link', { name: 'Brief', exact: true }).click()
+  await openThread(page, 'Brief')
   await page.getByRole('region', { name: 'Today' }).getByRole('link', { name: 'Open her thread' }).click()
   await expect(heading(page)).toHaveText('Dr. Amanda Pell')
   await deliver(page, 'Form CRS', axe)
@@ -113,8 +131,15 @@ test("the README's five-minute path, end to end", async ({ page }) => {
     await deskLink(page, view).click()
     await expect(heading(page)).toHaveText(view)
     await expect(page.getByRole('heading', { name: 'Methods & sources' })).toBeVisible()
+    if (view === 'Practice') {
+      await expect(page.getByRole('main')).toContainText("Largest 3 clients' share of revenue")
+      await expect(page.getByRole('main')).toContainText("Largest 5 clients' share of revenue")
+    }
     await home()
   }
+  await bookColumn(page).getByRole('link', { name: 'Agents', exact: true }).click()
+  await expect(heading(page)).toHaveText('Agents')
+  await home()
   await deskLink(page, 'Reconciliation').click()
   await resolveBreakNamed(page, 'brk-002', 'Timing difference', 'Schwab confirmed the 24 Feb cash sweep posted after the file was cut.', axe)
   await home()
@@ -123,7 +148,7 @@ test("the README's five-minute path, end to end", async ({ page }) => {
   await home()
   await expect(path.nth(7)).toContainText('NEXT')
 
-  // 8. View as Robert: one thread, his own — his question, the recap and its record.
+  // 8. View as Robert, then Patricia: one conversation each, the recap and its record.
   await viewAs(page, 'Robert Johnson · Client')
   await expect(page.getByRole('banner')).toContainText('Larkfield Advisory')
   const threads = page.getByRole('navigation', { name: 'Threads' }).getByRole('link')
@@ -133,4 +158,11 @@ test("the README's five-minute path, end to end", async ({ page }) => {
   await expect(page.getByLabel('Who can see')).toContainText('Larkfield compliance (review)')
   await expect(conversation(page).getByRole('listitem')).toHaveCount(3)
   await expect(conversation(page)).toContainText('What we decided:')
+  await viewAs(page, 'Patricia Johnson · Client')
+  const hers = page.getByRole('navigation', { name: 'Threads' }).getByRole('link')
+  await expect(hers).toHaveCount(1)
+  await hers.click()
+  await expect(heading(page)).toHaveText('Your conversation with Larkfield')
+  await expect(conversation(page).getByRole('listitem')).toHaveCount(2)
+  await expect(conversation(page)).toContainText("We won't trade in Patricia's accounts")
 })
