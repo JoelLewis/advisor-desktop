@@ -28,6 +28,18 @@ describe('the rebalancer counts working orders', () => {
     expect(Math.abs(us.drift)).toBeLessThanOrEqual(projectedDrift.driftTolerance)
   })
 
+  it('says v1 takes SPY from over its limit to under it, and v3, which leaves SPY alone, that no leg trades it', () => {
+    const spyViolation = (v: ReturnType<typeof versionOf>) => v.pretrade.violations.find((x) => x.category === 'concentration_limit' && x.symbol === 'SPY')
+    const v1 = spyViolation(versionOf(1, AGENT_CONSTRAINTS))
+    expect(v1).toMatchObject({ severity: 'warning', preExisting: true })
+    expect(v1!.currentWeight!).toBeGreaterThan(v1!.limitWeight!)
+    expect(v1!.projectedWeight!).toBeLessThanOrEqual(v1!.limitWeight!)
+    expect(v1!.message).toBe('SPY is over the 35% single-fund limit today at 44.8% of this account; this proposal brings it under, to 33.9%.')
+    const v3 = spyViolation(versionOf(3, [...AGENT_CONSTRAINTS, { kind: 'harvest_only' }], [{ kind: 'exclude', symbol: 'QAI' }]))
+    expect(v3!.projectedWeight!).toBeGreaterThan(v3!.limitWeight!)
+    expect(v3!.message).toContain('remains above the 35% single-fund limit; no leg of this proposal trades it.')
+  })
+
   it('spends cash net of the working buy: the pre-trade cash is the cash less the order, plus sales, less buys', () => {
     const v3 = versionOf(3, [...AGENT_CONSTRAINTS, { kind: 'harvest_only' }], [{ kind: 'exclude', symbol: 'QAI' }])
     const sold = v3.preview.trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.estimatedValue, 0)

@@ -107,8 +107,8 @@ describe('agents over the whole book', () => {
     )
     expect(drift.run(ctx('acc-003')).some((f) => f.claim.includes('tolerance for this account'))).toBe(false)
   })
-  it('names SPY by its ticker on acc-002, since its name carries digits', () => {
-    expect(pretrade.run(ctx('acc-002')).map((f) => f.claim)).toContain('Warning: SPY is approaching its concentration limit.')
+  it('names SPY by its ticker on acc-002, since its name carries digits, and says it is over its limit today and under it after', () => {
+    expect(pretrade.run(ctx('acc-002')).map((f) => f.claim)).toContain('Warning: SPY is over its concentration limit today; the proposal brings it under.')
   })
 })
 

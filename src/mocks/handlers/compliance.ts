@@ -134,6 +134,8 @@ export function evaluateProposal(
       message = `${symbol} remains above the ${pct0(limit)} ${kindLabel} limit after this proposal: ${pct(currentWeight)} now, ${pct(projectedWeight)} after. The proposal reduces the breach; it does not cause it.`
     } else if (overLimit) {
       message = `${symbol} is already ${pct(currentWeight)} of this account and remains above the ${pct0(limit)} ${kindLabel} limit; no leg of this proposal trades it.`
+    } else if (preExisting) {
+      message = `${symbol} is over the ${pct0(limit)} ${kindLabel} limit today at ${pct(currentWeight)} of this account; this proposal brings it under, to ${pct(projectedWeight)}.`
     } else {
       message = `${symbol} would be ${pct(projectedWeight)} of this account after this proposal, approaching the ${pct0(limit)} ${kindLabel} limit.`
     }

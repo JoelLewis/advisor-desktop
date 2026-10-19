@@ -153,6 +153,8 @@ function taxAwareLotOrder(lots: readonly CustodianLot[], symbol: string): Custod
   return [...lots].sort((a, b) => taxPerDollar(a) - taxPerDollar(b))
 }
 
+const MIN_TAKE_SHARES = 1e-6
+
 /** Realize a sale of `notional` drawn from `ordered` in exactly that order. */
 function realizeOrderedLots(ordered: readonly CustodianLot[], symbol: string, notional: number): RealizedSale {
   if (ordered.length === 0 || notional <= 0) return NOTHING_REALIZED
@@ -167,9 +169,11 @@ function realizeOrderedLots(ordered: readonly CustodianLot[], symbol: string, no
   const soldLosses: SoldLossLot[] = []
   const rawTakes: RawTake[] = []
   for (const lot of ordered) {
-    // Under half a cent left is floating-point residue of the last lot's own division, not a lot to open.
-    if (remaining < 0.005 || lot.currentValue <= 0) continue
+    if (lot.currentValue <= 0) continue
     const portion = Math.min(1, remaining / lot.currentValue)
+    // A take under a millionth of a share is floating-point residue of the last lot's own division, not a lot to open;
+    // a whole-position sale takes every lot whole, so it never leaves one behind.
+    if (lot.quantity * portion < MIN_TAKE_SHARES) continue
     consumedLotIds.push(lot.id)
     const realized = lot.gainLoss * portion
     rawTakes.push({ lotId: lot.id, shares: lot.quantity * portion, realized, character: lot.holdingPeriod, held: lot.quantity })

@@ -6,6 +6,7 @@ import { MOCK_TODAY_ISO } from '@/lib/clock'
 import type { DraftPreview, LegEdit, ProposalConstraint } from '@/types/workspace-proposal'
 import { applyEdits, buildVersion, editSummary, normalizeConstraints, parseConstraints, parseEdits } from '../proposal-engine'
 import { buildRebalancePreviews, generateRebalanceProposal } from '@/mocks/handlers/oms'
+import { generateTaxLots } from '@/mocks/handlers/custodian'
 import { workingMovesOf } from '../household-ledger'
 import { isModelManaged } from '@/lib/mandate'
 
@@ -231,6 +232,15 @@ function expectTakesTie(v: DraftPreview) {
 }
 
 describe('lot takes · acc-002', () => {
+  it('a whole-position sale takes every lot of the position whole, and no sale opens a take of floating-point dust', () => {
+    const v = built(AGENT)
+    const ibit = v.legFacts.find((f) => f.symbol === 'IBIT')!
+    const lots = generateTaxLots('acc-002', accounts.find((a) => a.id === 'acc-002')!.totalValue).filter((l) => l.positionId === 'pos-026')
+    expect(ibit.lotIds.sort()).toEqual(lots.map((l) => l.id).sort())
+    expect(ibit.lots.reduce((s, l) => s + l.shares, 0)).toBeCloseTo(lots.reduce((s, l) => s + l.quantity, 0), 6)
+    for (const f of v.legFacts) for (const t of f.lots) expect(t.shares).toBeGreaterThan(1e-6)
+  })
+
   it('SPY sells 943 shares of its first lot for the leg\'s whole long-term result', () => {
     const spy = built(AGENT).legFacts.find((f) => f.symbol === 'SPY')
     expect(spy?.lots).toEqual([{ lotId: 'lot-pos-020-0', shares: 943, realized: 86_352, character: 'long' }])

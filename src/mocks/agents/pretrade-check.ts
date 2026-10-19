@@ -18,7 +18,8 @@ const sectorOf = (v: ProposalViolation): string => /\(([^)]+)\)/.exec(v.constrai
 
 function weightPhrase(v: ProposalViolation, noun: string): string {
   const { projectedWeight, limitWeight, currentWeight } = v
-  if (projectedWeight === undefined || limitWeight === undefined || projectedWeight <= limitWeight) return `is approaching its ${noun} limit`
+  if (projectedWeight === undefined || limitWeight === undefined) return `is approaching its ${noun} limit`
+  if (projectedWeight <= limitWeight) return v.preExisting ? `is over its ${noun} limit today; the proposal brings it under` : `is approaching its ${noun} limit`
   if (!v.preExisting) return `would exceed its ${noun} limit`
   if (currentWeight !== undefined && projectedWeight > currentWeight) return `is already over its ${noun} limit, and the proposal adds to it`
   if (currentWeight !== undefined && projectedWeight < currentWeight) return `is already over its ${noun} limit; the proposal reduces it`
