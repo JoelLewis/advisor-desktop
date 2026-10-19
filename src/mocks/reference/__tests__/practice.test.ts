@@ -50,10 +50,13 @@ describe('practice', () => {
     expect(v.households.find((h) => h.householdId === 'hh-013')?.since).toBe('2024-03-15')
   })
 
-  it('states book concentration as the HHI of household shares: 1,828, about 5.5 households', () => {
-    const { concentration } = view()
-    expect(concentration.hhi).toBe(1828)
-    expect(Math.round(concentration.effectiveN * 10) / 10).toBe(5.5)
+  it("states concentration as the largest clients' share of revenue, top three and top five, from the table's own shares", () => {
+    const { concentration, households } = view()
+    const shares = households.map((h) => h.shareOfRevenue).sort((a, b) => b - a)
+    const top = (n: number) => shares.slice(0, n).reduce((s, x) => s + x, 0)
+    expect(concentration).toEqual({ top3Share: top(3), top5Share: top(5) })
+    expect(concentration.top3Share).toBeGreaterThan(0.5)
+    expect(concentration.top5Share).toBeLessThanOrEqual(1)
   })
 
   it("lists households by value, each one's share of revenue summing to one", () => {

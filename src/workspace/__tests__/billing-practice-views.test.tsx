@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
 import { getBilling, getPractice } from '@/services/reference'
-import { fmtBasisPoints, fmtMoney } from '@/kit/measure'
+import { fmtBasisPoints, fmtMoney, fmtWeight } from '@/kit/measure'
 
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
 
@@ -70,7 +70,8 @@ describe('the Practice view', () => {
     const main = screen.getByRole('main')
     expect(main).toHaveTextContent(fmtMoney(engine.revenue.annual))
     expect(main).toHaveTextContent(`${fmtBasisPoints(engine.revenue.effectiveRate)}bps`)
-    expect(main).toHaveTextContent('1,828')
+    expect(main).toHaveTextContent(`Largest 3 clients' share of revenue${fmtWeight(engine.concentration.top3Share)}`)
+    expect(main).toHaveTextContent(`Largest 5 clients' share of revenue${fmtWeight(engine.concentration.top5Share)}`)
     const rows = within(screen.getByRole('table', { name: 'Households by value' })).getAllByRole('row')
     expect(rows[1]).toHaveTextContent('Chen-Wong Household')
     expect(screen.getByRole('table', { name: 'By segment' })).toHaveTextContent('Platinum')

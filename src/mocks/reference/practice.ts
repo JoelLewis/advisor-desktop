@@ -4,7 +4,7 @@ import { accounts } from '@/mocks/data/accounts'
 import { households } from '@/mocks/data/households'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
 import { isFirmViewer } from '@/mocks/workspace/visibility'
-import { accountValueUSD, deriveBookAUM, effectiveN, herfindahlIndex } from '@/lib/aum'
+import { accountValueUSD, deriveBookAUM } from '@/lib/aum'
 import { ACCOUNT_TYPE_LABELS } from '@/lib/labels'
 import { MOCK_NOW_ISO, MOCK_TODAY_ISO } from '@/lib/clock'
 import { billingRuns, householdBillings } from './billing'
@@ -40,7 +40,7 @@ const METHODS: readonly MethodNote[] = [
   { label: 'Latest run', modeled: true, text: "Modeled, not realized: the latest billing run's total rests on quarter-end values drawn from each account's modeled performance series." },
   { label: 'Book', modeled: false, text: "Value, households, clients and accounts are counted from the accounts in the book; an account held in another currency is converted at today's exchange rate." },
   { label: 'Tenure', modeled: false, text: 'Years since each household joined the firm, to today.' },
-  { label: 'Concentration', modeled: false, text: 'The Herfindahl-Hirschman index of household shares of the book, on a 0 to 10,000 scale, and its effective number of households (10,000 divided by the index).' },
+  { label: 'Concentration', modeled: false, text: "The largest clients' share of annual revenue: the three and the five households with the largest fees, each household's fee over the firm's annual revenue, as the table states them. Revenue is the advisory fee billed on assets the firm manages; held-away assets carry no fee and are not in it. The figures count households, not named clients." },
 ]
 
 export function practiceView(viewerId: string): PracticeView | undefined {
@@ -50,7 +50,8 @@ export function practiceView(viewerId: string): PracticeView | undefined {
   const annual = rows.reduce((s, r) => s + r.annualFee, 0)
   const [latest] = billingRuns()
   if (!latest) throw new Error('The firm has no billing run')
-  const index = herfindahlIndex(rows.map((r) => r.value / bookValue))
+  const byRevenue = rows.map((r) => r.shareOfRevenue).sort((a, b) => b - a)
+  const topShare = (n: number) => byRevenue.slice(0, n).reduce((s, x) => s + x, 0)
   const usd = (a: (typeof accounts)[number]) => accountValueUSD(a, FX_RATES_USD_BASE)
   return {
     asOf: MOCK_NOW_ISO,
@@ -69,8 +70,7 @@ export function practiceView(viewerId: string): PracticeView | undefined {
         return years < under && years >= (TENURE[i - 1]?.under ?? 0)
       }).length,
     })),
-    // The index is stated in whole points; effective N comes from the unrounded index.
-    concentration: { hhi: Math.round(index), effectiveN: effectiveN(index) },
+    concentration: { top3Share: topShare(3), top5Share: topShare(5) },
     households: rows,
     methods: [...METHODS],
   }

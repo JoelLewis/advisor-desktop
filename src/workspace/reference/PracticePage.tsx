@@ -4,7 +4,7 @@ import { Num } from '@/kit/data-table/Num'
 import { Pane } from '@/kit/layout/Pane'
 import { Tag } from '@/kit/tag/Tag'
 import { Reading } from '@/kit/reading/Reading'
-import { UNIT, fmtBasisPoints, fmtDayMonthYear, fmtMoney, fmtQuantity, fmtRatio, fmtEasternStamp, fmtWeight } from '@/kit/measure'
+import { UNIT, fmtBasisPoints, fmtDayMonthYear, fmtMoney, fmtQuantity, fmtEasternStamp, fmtWeight } from '@/kit/measure'
 import { usePractice } from '@/hooks/use-reference'
 import type { PracticeView } from '@/types/reference-practice'
 import { ReferenceGate } from './ReferenceGate'
@@ -85,8 +85,8 @@ function Practice({ view }: { view: PracticeView }) {
         </Pane>
         <Pane title="Concentration">
           <div className="flex flex-wrap gap-x-10 gap-y-4">
-            <Reading label="HHI of household shares" value={fmtQuantity(view.concentration.hhi)} />
-            <Reading label="Effective number of households" value={fmtRatio(view.concentration.effectiveN)} />
+            <Reading label="Largest 3 clients' share of revenue" value={fmtWeight(view.concentration.top3Share)} unit={UNIT.pct} limit="Three households with the largest advisory fees" />
+            <Reading label="Largest 5 clients' share of revenue" value={fmtWeight(view.concentration.top5Share)} unit={UNIT.pct} limit="Five households with the largest advisory fees" />
           </div>
         </Pane>
       </div>

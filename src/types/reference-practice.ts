@@ -9,7 +9,7 @@ export type PracticeView = {
   byAccountType: { type: string; accounts: number; value: number }[]
   byCustodian: { custodian: string; accounts: number; value: number }[]
   tenure: { bucket: string; households: number }[]
-  concentration: { hhi: number; effectiveN: number }
+  concentration: { top3Share: number; top5Share: number }
   households: PracticeHousehold[]
   methods: MethodNote[]
 }
