@@ -14,7 +14,8 @@ const johnson: HouseholdRow = {
 
 describe('the queue in words', () => {
   it("reads a household's reasons as one line", () => {
-    expect(statusLineOf(johnson, AS_OF)).toBe('Decision waiting · Robert waiting 8h · review 14:00 ET')
+    expect(statusLineOf(johnson, AS_OF)).toBe('Decision waiting · Robert waiting 8h · review 14:00\u00A0ET')
+    expect(statusLineOf({ ...johnson, reasons: [{ kind: 'meeting', label: 'quarterly review', start: '2026-02-25T15:00:00.000Z', eventId: 'evt-x' }] }, AS_OF)).toBe('Quarterly review 10:00\u00A0ET')
   })
   it('counts several of a kind, and says when a task is overdue', () => {
     expect(reasonWords({ kind: 'decision', count: 2, since: AS_OF }, AS_OF)).toBe('2 decisions waiting')

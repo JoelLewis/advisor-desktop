@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { SCREENSHOT, pageOverflowX, smallTargets } from './layout-checks'
 import { expectNoAxeViolations } from './axe'
-import { bookColumn, openPhonePane, settle, showConversations, visit, visitPhone } from './workspace-steps'
+import { approve, askProposalAgent, bookColumn, openPhonePane, releaseByShortcut, settle, showConversations, visit, visitPhone } from './workspace-steps'
 
 /**
  * A full-page capture of an emulated phone drops the touch emulation (hover and pointer media revert to a
@@ -23,8 +23,18 @@ type Scene = { name: string; open: (page: Page) => Promise<void> }
 const SCENES: Scene[] = [
   { name: 'phone-home-light', open: async (page) => { await visitPhone(page, '/', 'light'); await settle(page) } },
   { name: 'phone-households-light', open: async (page) => {
-    await visitPhone(page, '/', 'light')
-    await expect(page.getByRole('navigation', { name: 'Book' }).getByRole('list', { name: 'Needs you today' })).toBeVisible()
+    // The book after the release, reached on a desktop-width page (the session lives in the page), then shown at the phone's width.
+    const phone = page.viewportSize()
+    if (!phone) throw new Error('the phone scene has no viewport')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await askProposalAgent(page, 'light')
+    await approve(page, 1)
+    await releaseByShortcut(page)
+    await page.getByRole('banner').getByRole('link', { name: 'Advisor Desktop' }).click()
+    await page.setViewportSize(phone)
+    const queue = page.getByRole('navigation', { name: 'Book' }).getByRole('list', { name: 'Needs you today' })
+    await expect(queue).toBeVisible()
+    await expect(queue).not.toContainText('Decision waiting')
     await settle(page)
   } },
   { name: 'phone-brief-light', open: async (page) => { await visitPhone(page, '/t/th-brief', 'light'); await settle(page) } },

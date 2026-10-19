@@ -11,6 +11,7 @@ const threadNav = () => screen.getByRole('navigation', { name: 'Book' })
 
 async function renderAt(path: string) {
   const view = renderRoutes(routes, path)
+  await screen.findByRole('navigation', { name: 'Book' })
   await within(threadNav()).findByRole('link', { name: 'Brief' })
   return view
 }

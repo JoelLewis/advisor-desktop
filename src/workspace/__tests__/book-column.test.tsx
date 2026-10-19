@@ -7,6 +7,13 @@ import { bookModeKey } from '@/workspace/shell/book-mode'
 
 const book = () => screen.getByRole('navigation', { name: 'Book' })
 
+/** The column is named for the firm only once the directory says who is viewing. */
+async function renderBook() {
+  const view = renderRoutes(routes, '/')
+  await screen.findByRole('navigation', { name: 'Book' })
+  return view
+}
+
 async function viewAs(option: string) {
   const user = userEvent.setup()
   await screen.findByRole('option', { name: option })
@@ -15,7 +22,7 @@ async function viewAs(option: string) {
 
 describe('the Book', () => {
   it('opens on Households: the switch, the Brief, the queue, then every household', async () => {
-    renderRoutes(routes, '/')
+    await renderBook()
     const queue = await within(book()).findByRole('list', { name: 'Needs you today' })
     expect(within(book()).getByRole('button', { name: 'Households' })).toHaveAttribute('aria-pressed', 'true')
     expect(within(book()).getByRole('link', { name: 'Brief' })).toHaveAttribute('href', '/t/th-brief')
@@ -30,16 +37,25 @@ describe('the Book', () => {
   })
 
   it('a household with nothing due shows no status line and no markers', async () => {
-    renderRoutes(routes, '/')
+    await renderBook()
     const all = await within(book()).findByRole('list', { name: 'All households' })
     const obrien = within(all).getByRole('link', { name: /O'Brien Household/ })
     expect(obrien.querySelector('[data-part="status-line"]')).toBeNull()
     expect(obrien.querySelector('[data-tone]')).toBeNull()
   })
 
+  it('offers the Brief only to a viewer who has one: Sarah gets no link', async () => {
+    await renderBook()
+    await within(book()).findByRole('link', { name: 'Brief' })
+    await viewAs('Sarah Mitchell · Client service')
+    await within(book()).findByRole('list', { name: 'Needs you today' })
+    expect(within(book()).queryByRole('link', { name: 'Brief' })).toBeNull()
+    expect(within(book()).queryByRole('heading', { name: 'Your day' })).toBeNull()
+  })
+
   it('switches to Conversations, remembered for this viewer only', async () => {
     const user = userEvent.setup()
-    renderRoutes(routes, '/')
+    await renderBook()
     await user.click(await within(book()).findByRole('button', { name: 'Conversations' }))
     expect(await within(book()).findByRole('heading', { name: 'Just me' })).toBeInTheDocument()
     expect(localStorage.getItem(bookModeKey('user-001'))).toBe('conversations')

@@ -14,11 +14,12 @@ import { OUTSIDER_BAND } from '@/workspace/people/visibility-words'
 import type { ShellHandle } from '@/workspace/shell/context-column'
 import { PHONE_LAYOUT_QUERY } from '@/workspace/shell/phone-panes'
 
-const threadNav = (name: 'Book' | 'Threads' = 'Book') => screen.getByRole('navigation', { name })
+const threadNav = (name: 'Book' | 'Threads' | 'List' = 'Book') => screen.getByRole('navigation', { name })
 const outsiderNav = () => threadNav('Threads')
 
 async function renderHome() {
   const view = renderRoutes(routes, '/')
+  await screen.findByRole('navigation', { name: 'Book' })
   await within(threadNav()).findByRole('link', { name: 'Brief' })
   return view
 }
@@ -36,25 +37,25 @@ const spokenText = (el: Element) => [...el.childNodes]
 const threadLinks = (nav = threadNav) => within(nav()).getAllByRole('link').map(spokenText)
 
 describe('workspace shell', () => {
-  it('reserves the Book while it loads: the switch, the panes and the rows the loaded column will have, and a status', async () => {
+  it('reserves the column while the directory loads: the switch and wordless panes at the loaded rows, and a status', async () => {
     server.use(http.get('/api/workspace/people', async () => { await delay(200) }))
     renderRoutes(routes, '/')
-    expect(await screen.findByText('Loading threads…')).toBeInTheDocument()
+    expect(await screen.findByText('Loading…')).toBeInTheDocument()
     const skeleton = document.querySelector('[data-part="thread-list-skeleton"]')!
     expect(skeleton).toHaveAttribute('aria-hidden', 'true')
     expect(skeleton.querySelector('[data-part="skeleton-switch"]')).not.toBeNull()
     expect(skeleton.querySelectorAll('[data-part="skeleton-row"]')).toHaveLength(27)
     expect(skeleton.querySelector('ul[aria-label="Visibility"]')).toBeNull()
-    expect([...skeleton.querySelectorAll('h2')].map((h) => h.textContent)).toEqual(['Your day', 'Needs you today', 'All households', 'Firm', 'Reports'])
+    expect([...skeleton.querySelectorAll('h2')].map((h) => h.textContent?.trim())).toEqual(['', '', '', '', ''])
   })
   it('reserves the Conversations panes when that is the mode', async () => {
     showConversationsFor()
     server.use(http.get('/api/workspace/people', async () => { await delay(200) }))
     renderRoutes(routes, '/')
-    expect(await screen.findByText('Loading threads…')).toBeInTheDocument()
+    expect(await screen.findByText('Loading…')).toBeInTheDocument()
     const skeleton = document.querySelector('[data-part="thread-list-skeleton"]')!
     expect(skeleton.querySelectorAll('[data-part="skeleton-row"]')).toHaveLength(15)
-    expect([...skeleton.querySelectorAll('h2')].map((h) => h.textContent)).toEqual(['Just me', 'Larkfield team', 'Client conversations', 'Firm', 'Reports'])
+    expect([...skeleton.querySelectorAll('h2')].map((h) => h.textContent?.trim())).toEqual(['', '', '', '', ''])
   })
   it('keeps the skeleton until the directory arrives, so no row is described before its party is known', async () => {
     server.use(http.get('/api/workspace/people', async () => { await delay('infinite'); return HttpResponse.json({}) }))
@@ -65,9 +66,9 @@ describe('workspace shell', () => {
       renderRoutes(routes, '/')
       await waitFor(() => expect(threadsServed).toBe(true))
       await delay(50)
-      expect(screen.getByText('Loading threads…')).toBeInTheDocument()
+      expect(screen.getByText('Loading…')).toBeInTheDocument()
       expect(document.querySelector('[data-part="thread-list-skeleton"]')).not.toBeNull()
-      expect(within(threadNav()).queryAllByRole('link')).toHaveLength(0)
+      expect(within(threadNav('List')).queryAllByRole('link')).toHaveLength(0)
     } finally {
       server.events.removeListener('response:mocked', onResponse)
     }
@@ -132,8 +133,11 @@ describe('workspace shell', () => {
     }))
     renderRoutes(routes, '/')
     const banner = await screen.findByRole('banner')
-    // His directory is still on its way: the thread list waits for it.
-    expect(within(threadNav()).getByRole('status')).toHaveTextContent('Loading threads…')
+    // His directory is still on its way: the column waits for it, and says nothing in the firm's words.
+    expect(within(threadNav('List')).getByRole('status')).toHaveTextContent('Loading…')
+    expect(screen.queryByRole('navigation', { name: 'Book' })).toBeNull()
+    expect(within(screen.getByRole('navigation', { name: 'Panes' })).getAllByRole('button')[0]).toHaveTextContent('List')
+    expect(document.body.textContent).not.toMatch(/\bBook\b|Households|Your day|Needs you today/)
     expect(within(banner).getByRole('link', { name: 'Larkfield Advisory' })).toBeInTheDocument()
     expect(banner).toHaveTextContent('Robert Johnson')
     expect(document.title).toMatch(/(^| · )Larkfield Advisory$/)
@@ -202,15 +206,16 @@ describe('workspace shell', () => {
     expect(groupHeadings()).toEqual(['Larkfield team', 'Client conversations', 'Agents', 'Firm', 'Reports'])
   })
 
-  it('shows a status while threads load', () => {
+  it('shows a status while the column loads', () => {
     renderRoutes(routes, '/')
-    expect(within(threadNav()).getByRole('status')).toHaveTextContent('Loading threads…')
+    expect(within(threadNav('List')).getByRole('status')).toHaveTextContent('Loading…')
   })
 
   it('shows the error message when threads fail to load', async () => {
     showConversationsFor()
     server.use(http.get('/api/workspace/threads', () => HttpResponse.json({ message: 'Engine offline' }, { status: 503 })))
     renderRoutes(routes, '/')
+    await screen.findByRole('navigation', { name: 'Book' })
     const alert = await within(threadNav()).findByRole('alert')
     expect(alert).toHaveTextContent('Engine offline')
   })
@@ -230,6 +235,7 @@ describe('workspace shell', () => {
       }],
     }]
     renderRoutes(table, '/t/th-brief')
+    await screen.findByRole('navigation', { name: 'Book' })
     const current = await within(threadNav()).findByRole('link', { name: 'Brief' })
     expect(current).toHaveAttribute('aria-current', 'page')
     expect(current).not.toHaveClass('font-semibold')

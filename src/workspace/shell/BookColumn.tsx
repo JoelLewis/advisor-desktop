@@ -16,11 +16,12 @@ export function BookColumn() {
   const [mode, setMode] = useBookMode(viewerId)
   if (directory.isPending) return <ThreadListSkeleton mode={mode} />
   if (directory.isError) return <p role="alert" className="text-body">{directory.error.message}</p>
-  if (isExternalViewerIn(directory.data, viewerId)) return <ThreadList />
+  const external = isExternalViewerIn(directory.data, viewerId)
+  if (external) return <ThreadList external />
   return (
     <div className="flex flex-col gap-8">
       <SegmentedControl label="Show" options={BOOK_MODE_OPTIONS} value={mode} onChange={setMode} />
-      {mode === 'households' ? <HouseholdsColumn /> : <ThreadList />}
+      {mode === 'households' ? <HouseholdsColumn /> : <ThreadList external={false} />}
       <DeskLinks />
     </div>
   )

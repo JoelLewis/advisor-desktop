@@ -3,25 +3,36 @@ import { Pane } from '@/kit/layout/Pane'
 import { Tag } from '@/kit/tag/Tag'
 import { UNIT, fmtMoney } from '@/kit/measure'
 import { cn } from '@/lib/utils'
-import { useHouseholdBook } from '@/hooks/use-workspace'
+import { useHouseholdBook, useThreads } from '@/hooks/use-workspace'
 import { householdFullViewHref } from '@/workspace/full-views/full-view-href'
 import { markerWords, statusLineOf } from '@/workspace/book/queue-words'
 import type { HouseholdRow } from '@/types/workspace-book'
 
 const ROW = 'flex flex-col gap-1 border-l-2 py-2 pl-3 pr-2 hover:bg-face'
 
-/** Households mode: the day's Brief, who needs the advisor today, then every household A–Z. */
+const BRIEF_THREAD_ID = 'th-brief'
+
+/** The Brief is one viewer's own thread: its link is offered only to someone whose thread list holds it. */
+function YourDay() {
+  const threads = useThreads()
+  if (!threads.data?.some((t) => t.id === BRIEF_THREAD_ID)) return null
+  return (
+    <Pane title="Your day">
+      <ul className="flex flex-col">
+        <li>
+          <NavLink to={`/t/${BRIEF_THREAD_ID}`} className={({ isActive }) => cn(ROW, 'text-body', isActive ? 'border-ink bg-face font-semibold' : 'border-transparent')}>Brief</NavLink>
+        </li>
+      </ul>
+    </Pane>
+  )
+}
+
+/** Households mode: the day's Brief (for whoever has one), who needs the advisor today, then every household A–Z. */
 export function HouseholdsColumn() {
   const book = useHouseholdBook()
   return (
     <>
-      <Pane title="Your day">
-        <ul className="flex flex-col">
-          <li>
-            <NavLink to="/t/th-brief" className={({ isActive }) => cn(ROW, 'text-body', isActive ? 'border-ink bg-face font-semibold' : 'border-transparent')}>Brief</NavLink>
-          </li>
-        </ul>
-      </Pane>
+      <YourDay />
       {book.isPending ? <p role="status" className="text-body text-ink-3">Loading households…</p>
         : book.isError ? <p role="alert" className="text-body">{book.error.message}</p>
         : (

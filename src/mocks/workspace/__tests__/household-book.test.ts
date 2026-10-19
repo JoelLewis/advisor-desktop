@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { advanceClockTo } from '@/mocks/data/workspace-store'
+import { advanceClockTo, sessionNow, store } from '@/mocks/data/workspace-store'
 import { minuteOf } from '@/lib/clock'
 import { householdBook, unapprovedProposals } from '../household-book'
 import { holdMeeting, meetingView } from '../meetings'
@@ -22,6 +22,18 @@ const rowOf = (id: string) => {
   return row
 }
 const kinds = (id: string) => rowOf(id).reasons.map((r) => r.kind)
+
+describe('reading the book', () => {
+  it('never writes: after fills move the book, reading it twice leaves the messages and the event clock as they were', () => {
+    release(approvedV1())
+    const [messages, clock, briefBook] = [store().messages.length, sessionNow(), store().briefBook]
+    book()
+    book()
+    expect(store().messages).toHaveLength(messages)
+    expect(sessionNow()).toBe(clock)
+    expect(store().briefBook).toBe(briefBook)
+  })
+})
 
 describe('the household queue', () => {
   it('ranks who needs the advisor today: a decision, then meetings in time order, then compliance oldest first', () => {

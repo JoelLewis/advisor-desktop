@@ -26,7 +26,7 @@ export function WorkspaceShell() {
   const matches = useMatches()
   const { viewerId } = useViewer()
   const directory = useDirectory()
-  const external = directory.data !== undefined && isExternalViewerIn(directory.data, viewerId)
+  const external = directory.data === undefined ? undefined : isExternalViewerIn(directory.data, viewerId)
   const provided = contextColumnOf(matches)
   const listHidden = threadListHidden(matches)
   const [available, setAvailable] = useState(true)
@@ -44,7 +44,7 @@ export function WorkspaceShell() {
     if (chosen) document.getElementById(PANE_REGION_ID[chosen.pane])?.focus()
   }, [chosen])
   useJumpKeys('shell', [
-    ...(listHidden ? [] : [{ key: '[', label: external ? 'Thread list' : 'Book', run: choose('threads') } satisfies Binding]),
+    ...(listHidden ? [] : [{ key: '[', label: external ? 'Thread list' : columnLabelOf(external), run: choose('threads') } satisfies Binding]),
     { key: '\\', label: 'Conversation', run: choose('thread') },
     ...(context ? [{ key: ']', label: 'Context column', run: choose('context') } satisfies Binding] : []),
   ])

@@ -35,6 +35,7 @@ describe('the Firm pane', () => {
 
   it("offers the firm the Reports group, beneath the Firm's own links", async () => {
     renderRoutes(routes, '/')
+    await screen.findByRole('navigation', { name: 'Book' })
     const reference = await within(threadNav()).findByRole('heading', { level: 2, name: 'Reports' })
     const pane = reference.closest('section') as HTMLElement
     expect(within(pane).getAllByRole('link').map((l) => [l.textContent, l.getAttribute('href')])).toEqual([
@@ -54,6 +55,7 @@ describe('the Firm pane', () => {
 describe('the command line', () => {
   it('goes to every reference view, each thread account’s risk and attribution, and each model', async () => {
     renderRoutes(routes, '/')
+    await screen.findByRole('navigation', { name: 'Book' })
     await within(threadNav()).findByRole('link', { name: 'Brief' })
     await userEvent.keyboard('/')
     const box = await screen.findByRole('combobox', { name: 'Go to' })

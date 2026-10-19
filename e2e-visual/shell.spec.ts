@@ -1,7 +1,7 @@
 import { expectNoAxeViolations } from './axe'
 import { test, expect, type Locator, type Page } from '@playwright/test'
 import { SCREENSHOT, clippedLabels, pageOverflowX } from './layout-checks'
-import { approve, askProposalAgent, bookColumn, openThread, showConversations } from './workspace-steps'
+import { approve, askProposalAgent, bookColumn, openThread, releaseByShortcut, showConversations } from './workspace-steps'
 
 type Theme = 'light' | 'dark'
 type Scene = { name: string; hasContext: boolean; open: (page: Page) => Promise<void> }
@@ -51,9 +51,17 @@ const home = (theme: Theme) => async (page: Page) => {
   await settle(page)
 }
 
+/** The book after the release: the Johnsons' decision has left the queue, and their review is still to hold. */
 const households = (theme: Theme) => async (page: Page) => {
-  await visit(page, '/', theme)
-  await expect(page.getByRole('navigation', { name: 'Book' }).getByRole('list', { name: 'Needs you today' })).toBeVisible()
+  await askProposalAgent(page, theme)
+  await approve(page, 1)
+  await releaseByShortcut(page)
+  // An in-app link, not a reload: a reload resets the session.
+  await page.getByRole('banner').getByRole('link', { name: 'Advisor Desktop' }).click()
+  const queue = bookColumn(page).getByRole('list', { name: 'Needs you today' })
+  await expect(queue).toBeVisible()
+  await expect(queue.getByRole('link', { name: /^Johnson Household/ })).toContainText('review 14:00')
+  await expect(queue).not.toContainText('Decision waiting')
   await settle(page)
 }
 

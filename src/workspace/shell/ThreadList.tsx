@@ -4,27 +4,23 @@ import { FIRM_NAME } from '@/lib/firm'
 import { cn } from '@/lib/utils'
 import { Pane } from '@/kit/layout/Pane'
 import { VisibilityMark } from '@/kit/visibility/VisibilityMark'
-import { ThreadListSkeleton } from '@/workspace/shell/ThreadListSkeleton'
+import { ConversationsSkeleton } from '@/workspace/shell/ThreadListSkeleton'
 import { useDirectory, useThreads } from '@/hooks/use-workspace'
-import { isExternalViewerIn } from '@/workspace/people/directory-people'
 import { threadTitleFor } from '@/workspace/people/roster'
 import { THREAD_GROUP_TITLE, bandWordsOf } from '@/workspace/people/visibility-words'
-import { useViewer } from '@/workspace/viewer/use-viewer'
 import { AgentScope } from '@/workspace/people/AgentScope'
 import type { AgentProfile, ListedThread, Thread, Visibility } from '@/types/workspace'
 
 const GROUPS: readonly { visibility: Visibility; title: string }[] =
   (['private', 'internal', 'client'] as const).map((visibility) => ({ visibility, title: THREAD_GROUP_TITLE[visibility] }))
 
-export function ThreadList() {
+/** The conversations, for a viewer already known to be the firm or an outsider (the Book decides). */
+export function ThreadList({ external }: { external: boolean }) {
   const threads = useThreads()
-  const { viewerId } = useViewer()
   const directory = useDirectory()
-  // Whether the viewer is an outsider decides the rows' words and the panes, so the list waits for the directory too.
-  if (threads.isPending || directory.isPending) return <ThreadListSkeleton mode="conversations" />
+  if (threads.isPending || directory.isPending) return <ConversationsSkeleton external={external} />
   if (threads.isError) return <p role="alert" className="text-body">{threads.error.message}</p>
   if (directory.isError) return <p role="alert" className="text-body">{directory.error.message}</p>
-  const external = isExternalViewerIn(directory.data, viewerId)
   return (
     <div className="flex flex-col gap-8">
       {GROUPS.map(({ visibility, title }) => {

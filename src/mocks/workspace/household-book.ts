@@ -11,12 +11,12 @@ import { actOnApproval, activeApproval, escalationOf, latestVersion, releasedApp
 import { sessionNow, store } from '@/mocks/data/workspace-store'
 import { complianceAlerts } from '@/mocks/handlers/compliance'
 import { computeDriftForAccount } from '@/mocks/handlers/pms'
+import { bookVersion } from '@/mocks/data/portfolio-ledger'
 import { accountValueUSD } from '@/lib/aum'
 import { easternDayOf } from '@/lib/eastern-day'
 import { isModelManaged } from '@/lib/mandate'
 import { alertContext, isOpenAlert } from './alerts'
-import { BRIEF_THREAD_ID } from './brief'
-import { remeasureBrief } from './brief-remeasure'
+import { BRIEF_THREAD_ID, composeBrief } from './brief'
 import { settleApproved, type BriefSummary } from './brief-groups'
 import { meetingOf, toUtc } from './meetings'
 import { suitablyApprovedAccounts } from './suitability'
@@ -36,10 +36,17 @@ function householdOf(householdId: string) {
   return household
 }
 
-/** The Brief's summary as it reads now: re-measured if the book moved, suitability settled by recorded approvals. */
+const isBriefSummary = (m: Message): m is BriefSummary => m.kind === 'brief_summary' && m.threadId === BRIEF_THREAD_ID
+
+/**
+ * The Brief's summary as it reads now, suitability settled by recorded approvals. A read never writes: if fills have
+ * moved the book since the Brief was measured, the summary is composed in memory as of now and left unstored (opening
+ * the Brief thread is what re-measures and stores it).
+ */
 function briefSummaryNow(): BriefSummary {
-  remeasureBrief()
-  const summary = store().messages.filter((m): m is BriefSummary => m.kind === 'brief_summary' && m.threadId === BRIEF_THREAD_ID).sort(byAt).pop()
+  const stale = store().briefBook !== bookVersion()
+  const messages = stale ? composeBrief((i) => `msg-q${bookVersion()}-${i}`, sessionNow()) : store().messages
+  const summary = messages.filter(isBriefSummary).sort(byAt).pop()
   if (!summary) throw new Error('The Brief has no summary')
   return settleApproved(summary, suitablyApprovedAccounts())
 }
