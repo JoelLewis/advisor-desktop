@@ -231,7 +231,7 @@ export function DataTable<T>({
             <tfoot>
               <tr className="border-t-2 border-ink font-semibold">
                 {columns.map((c, i) => (
-                  <td key={c.id} className={cn(i === 0 && STICKY_FIRST, 'whitespace-nowrap px-2 py-2 text-table', c.align === 'right' ? 'text-right tabular' : 'text-left')}>
+                  <td key={c.id} className={cn(i === 0 && STICKY_FIRST, c.wrap ? 'whitespace-normal' : 'whitespace-nowrap', 'px-2 py-2 text-table', c.align === 'right' ? 'text-right tabular' : 'text-left')}>
                     {i === 0 ? (
                       <span className="flex flex-col">
                         <span>{totals.label}</span>

@@ -24,15 +24,31 @@ function ClassToggle({ assetClass }: { assetClass: AssetClassRow['assetClass'] }
   )
 }
 
+/**
+ * Drift and its status follow the class name, so a phone that scrolls sideways shows how far off each class is before the figures.
+ * The weight sits under the value and the class's order count under its name, so every column fits the main column at 1024px.
+ */
 const COLUMNS: Column<AssetClassRow>[] = [
-  { id: 'class', header: 'Asset class', cell: (r) => <ClassToggle assetClass={r.assetClass} /> },
-  { id: 'value', header: 'Value', unit: UNIT.usd, align: 'right', cell: (r) => <Num text={fmtMoney(r.value)} />, sortValue: (r) => r.value },
-  { id: 'weight', header: 'Weight', unit: UNIT.pct, align: 'right', cell: (r) => <Num text={fmtWeight(r.weight)} /> },
-  { id: 'target', header: 'Target', unit: UNIT.pct, align: 'right', cell: (r) => <Num text={fmtWeight(r.target)} /> },
+  { id: 'class', header: 'Asset class', wrap: true, cell: (r) => (
+    <span className="flex flex-col items-start">
+      <ClassToggle assetClass={r.assetClass} />
+      {ordersCellWords(r) ? <span className="tabular text-label text-ink-3">{ordersCellWords(r)}</span> : null}
+    </span>
+  ) },
   { id: 'drift', header: 'Drift', unit: UNIT.pp, align: 'right', cell: (r) => <Num text={fmtDrift(r.drift)} />, sortValue: (r) => Math.abs(r.drift) },
-  { id: 'band', header: 'Band', unit: UNIT.pp, align: 'right', cell: (r) => fmtTolerance(r.band) },
-  { id: 'status', header: 'Status', cell: (r) => <StatusCode status={r.withinBand ? 'IN' : 'OUT'} label={r.withinBand ? 'inside its band' : 'outside its band'} /> },
-  { id: 'orders', header: 'Orders', wrap: true, cell: (r) => ordersCellWords(r) },
+  { id: 'status', header: 'Status, band', cell: (r) => (
+    <span className="inline-flex items-baseline gap-2">
+      <StatusCode status={r.withinBand ? 'IN' : 'OUT'} label={r.withinBand ? 'inside its band' : 'outside its band'} />
+      <span className="tabular">{`${fmtTolerance(r.band)} ${UNIT.pp}`}</span>
+    </span>
+  ) },
+  { id: 'value', header: 'Value', unit: UNIT.usd, align: 'right', cell: (r) => (
+    <span className="flex flex-col items-end">
+      <Num text={fmtMoney(r.value)} />
+      <span className="tabular text-label text-ink-3">{`${fmtWeight(r.weight)}${UNIT.pct} weight`}</span>
+    </span>
+  ), sortValue: (r) => r.value },
+  { id: 'target', header: 'Target', unit: UNIT.pct, align: 'right', cell: (r) => <Num text={fmtWeight(r.target)} /> },
 ]
 
 /** The household's model-managed holdings by asset class against its target; a class opens onto the accounts holding it. */

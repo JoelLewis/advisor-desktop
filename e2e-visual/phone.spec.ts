@@ -39,7 +39,14 @@ const SCENES: Scene[] = [
   } },
   { name: 'phone-household-light', open: async (page) => {
     await visitPhone(page, '/households/hh-001', 'light')
-    await expect(page.getByRole('main').getByRole('table', { name: 'Holdings by asset class' })).toBeVisible()
+    const table = page.getByRole('main').getByRole('table', { name: 'Holdings by asset class' })
+    await expect(table).toBeVisible()
+    // The table scrolls sideways at 390px, but its drift and status columns sit beside the class name, inside the view.
+    const width = page.viewportSize()?.width ?? 0
+    for (const name of [/^Drift/, /^Status/]) {
+      const box = await table.getByRole('columnheader', { name }).boundingBox()
+      expect(box && box.x + box.width, `${name} header inside the 390px view`).toBeLessThanOrEqual(width)
+    }
     await settle(page)
   } },
   { name: 'phone-brief-light', open: async (page) => { await visitPhone(page, '/t/th-brief', 'light'); await settle(page) } },
