@@ -52,13 +52,13 @@ export function rebalanceStateOf(ledger: HouseholdLedger): RebalanceState {
 }
 
 /** A client's accounts as a whole against their own tolerance, as the Risk view reads them; none when the client holds no measured account. */
-export function wholeStandingOf(clientId: string): { tolerance: string; status: WholeStatus } | undefined {
+export function wholeStandingOf(clientId: string): { tolerance: string; status: WholeStatus; score: number; value: number } | undefined {
   const risk = clientRiskOf(clientId)
   if (!risk) return undefined
   const { status, tolerance } = risk.posture
   // A client's accounts as a whole are always measured (ClientRisk); a glide-path status here is a broken invariant.
   if (status === 'glide_path') throw new Error(`${clientId}'s accounts as a whole carry a glide-path status`)
-  return { tolerance: tolerance.band, status }
+  return { tolerance: tolerance.band, status, score: risk.posture.score, value: risk.value }
 }
 
 /** What the ledger and the Risk view show for the household on `day`: the notes are checked against it. */
@@ -67,7 +67,7 @@ export function notesFactsOf(householdId: string, day: string): NotesFacts {
   if (!household) throw new Error(`No household ${householdId}`)
   const wholes = new Map(household.members.flatMap((m) => {
     const standing = wholeStandingOf(m.clientId)
-    return standing ? [[m.clientId, standing] as const] : []
+    return standing ? [[m.clientId, { tolerance: standing.tolerance, status: standing.status }] as const] : []
   }))
   return { rebalance: rebalanceStateOf(householdLedger(householdId, day)), wholes }
 }

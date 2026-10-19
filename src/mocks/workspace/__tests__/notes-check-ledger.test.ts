@@ -63,7 +63,7 @@ describe('the shared readings', () => {
     expect(rebalanceStateOf(householdLedger('hh-001'))).toBe('filled')
   })
   it("reads a client's accounts as a whole against their own tolerance", () => {
-    expect(wholeStandingOf('cli-002')).toEqual({ tolerance: 'Moderate Conservative', status: 'within' })
+    expect(wholeStandingOf('cli-002')).toEqual({ tolerance: 'Moderate Conservative', status: 'within', score: clientRiskOf('cli-002')?.posture.score, value: clientRiskOf('cli-002')?.value })
   })
 })
 

@@ -79,6 +79,30 @@ describe('holdings by asset class against the household target', () => {
     expect(v.managedValue).toBe(v.holdings.managedValue)
   })
 
+  it("Chen-Wong's accounts, in USD, sum to its managed value, and each names its currency", () => {
+    const v = view('hh-002')
+    expect(Math.abs(sum(v.accounts.map((a) => a.valueUsd)) - v.managedValue)).toBeLessThanOrEqual(5)
+    expect(v.accounts.some((a) => a.currency !== 'USD')).toBe(true)
+    for (const a of v.accounts) expect(a.currency === 'USD' ? a.valueUsd === a.value : a.valueUsd !== a.value, a.accountId).toBe(true)
+  })
+
+  it('has a row for every class named by a target, a position, a held-away plan, an open order or a fill', () => {
+    release(approvedStoryV3())
+    for (const id of ['hh-001', 'hh-002', 'hh-007']) {
+      const { holdings } = view(id)
+      const named = new Set(holdings.rows.map((r) => r.assetClass))
+      for (const r of holdings.rows) for (const h of r.holders) if (h.kind === 'managed') for (const o of h.orders) expect(named.has(r.assetClass), `${id} ${o.id}`).toBe(true)
+    }
+    expect(view('hh-001').holdings.rows.map((r) => r.assetClass)).toEqual(expect.arrayContaining(['us_equity', 'fixed_income']))
+  })
+
+  it("lists a custom mandate's orders and fills with that account, outside the class rows", () => {
+    for (const a of view('hh-007').holdings.notInTarget) expect(Array.isArray(a.orders), a.accountId).toBe(true)
+    const classOrders = view('hh-007').holdings.rows.flatMap((r) => r.holders.flatMap((h) => (h.kind === 'managed' ? h.orders : [])))
+    const custom = new Set(view('hh-007').holdings.notInTarget.flatMap((a) => a.orders.map((o) => o.id)))
+    expect(classOrders.filter((o) => custom.has(o.id))).toEqual([])
+  })
+
   it("Patel's custom mandate is outside the target, listed by name", () => {
     const { holdings } = view('hh-007')
     expect(holdings.notInTarget.map((a) => a.name)).toContain('Patel Digital Assets Account (…0912)')

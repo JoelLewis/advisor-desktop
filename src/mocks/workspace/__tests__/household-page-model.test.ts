@@ -67,6 +67,16 @@ describe('the Johnson page model', () => {
     expect(johnson().methods.map((m) => m.label)).toEqual(['Household target', 'Held away', 'Orders and fills', 'Risk against tolerance'])
   })
 
+  it('says household class rows summarize the household and trades are gated per account', () => {
+    const note = johnson().methods.find((m) => m.label === 'Household target')?.text ?? ''
+    expect(note).toContain('Class rows summarize the household')
+    expect(note).toContain('trades are gated per account')
+  })
+
+  it('words the open item as the advisor\'s follow-up on the client\'s action', () => {
+    expect(johnson().tasks.find((t) => t.id === 'oi-001')?.title).toBe('Confirm Robert Johnson has corrected the beneficiary on his held-away Vanguard 401(k) (ha-001) to match the estate plan.')
+  })
+
   it('is firm only', () => {
     expect(householdView('cli-001', 'hh-001')).toBeUndefined()
     expect(householdView('cli-002', 'hh-001')).toBeUndefined()

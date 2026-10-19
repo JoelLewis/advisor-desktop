@@ -1,3 +1,4 @@
+import type { CurrencyCode } from './currency'
 import type { AssetClass } from './portfolio'
 import type { GoalStatus } from './planning'
 import type { DocumentType, SignatureStatus } from './document'
@@ -14,8 +15,11 @@ export type OutOfBand = { assetClass: AssetClass; drift: number; residual?: Stru
 
 type HouseholdAccountBase = {
   accountId: string; name: string; ownerId: string; ownerName: string; typeLabel: string
-  /** The sum of the account's positions as the book stands (moved by the session's fills). */
+  /** The sum of the account's positions as the book stands (moved by the session's fills), in the account's own currency. */
   value: number
+  currency: CurrencyCode
+  /** `value` in USD: what the household totals add. */
+  valueUsd: number
 }
 /** A model-managed account against its model's band; a custom mandate has no model and so no drift. */
 export type HouseholdAccount = HouseholdAccountBase & (
@@ -72,7 +76,7 @@ export type AssetClassRow = {
   assetClass: AssetClass; value: number; weight: number; target: number; drift: number; band: number; withinBand: boolean
   holders: ClassHolder[]; openOrders: number; fillsToday: number
 }
-export type HouseholdHoldings = { managedValue: number; modelValue: number; rows: AssetClassRow[]; notInTarget: { accountId: string; name: string; value: number; mandateSummary: string }[] }
+export type HouseholdHoldings = { managedValue: number; modelValue: number; rows: AssetClassRow[]; notInTarget: { accountId: string; name: string; value: number; mandateSummary: string; orders: HoldingOrder[] }[] }
 export type HouseholdDecision =
   | { kind: 'brief'; item: BriefItem; threadId: string }
   | { kind: 'proposal'; proposalId: string; title: string; latestVersion: number; threadId: string }
@@ -105,7 +109,7 @@ export type ClientView = {
   /** The risk score as a fraction of the 100-point scale. */
   risk: { tolerance: string; scoreFraction: number; assessedOn: string }
   accounts: HouseholdAccount[]
-  /** The sum of the client's own accounts' values. */
+  /** The sum of the client's own accounts' values, in USD. */
   accountsValue: number
   ips?: IpsOnFile
   communications: CommunicationRow[]

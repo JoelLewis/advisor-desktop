@@ -15,7 +15,7 @@ type AccountsTableProps = { caption: string; accounts: HouseholdAccount[]; total
 
 /** Managed accounts against their models: value, largest drift against the band, and what sits outside it and why. */
 export function AccountsTable({ caption, accounts, totalValue, totalLabel, tiesTo }: AccountsTableProps) {
-  const rowsTotal = accounts.reduce((s, a) => s + a.value, 0)
+  const rowsTotal = accounts.reduce((s, a) => s + a.valueUsd, 0)
   return (
     <DataTable caption={caption} rows={accounts} getRowId={(a) => a.accountId} total={accounts.length}
       noun={{ singular: 'account', plural: 'accounts' }}
@@ -23,7 +23,7 @@ export function AccountsTable({ caption, accounts, totalValue, totalLabel, tiesT
         { id: 'account', header: 'Account', cell: (a) => a.name, sortValue: (a) => a.name },
         { id: 'owner', header: 'Owner', cell: (a) => a.ownerName },
         { id: 'model', header: 'Model', wrap: true, cell: (a) => (a.mandate === 'model' ? a.modelName : 'Custom mandate · not model-managed') },
-        { id: 'value', header: 'Value', unit: UNIT.usd, align: 'right', cell: (a) => <Num text={fmtMoney(a.value)} />, sortValue: (a) => a.value },
+        { id: 'value', header: 'Value', unit: UNIT.usd, align: 'right', cell: (a) => <Num text={fmtMoney(a.valueUsd)} />, sortValue: (a) => a.valueUsd },
         { id: 'drift', header: 'Largest drift', unit: UNIT.pp, align: 'right', cell: (a) => (a.mandate === 'model' ? <Num text={fmtWeight(a.maxAbsDrift)} /> : null), sortValue: (a) => (a.mandate === 'model' ? a.maxAbsDrift : -1) },
         { id: 'band', header: 'Band', unit: UNIT.pp, align: 'right', cell: (a) => (a.mandate === 'model' ? fmtTolerance(a.driftTolerance) : null) },
         { id: 'status', header: 'Status', cell: (a) => (a.mandate === 'model' ? <StatusCode status={a.withinBand ? 'IN' : 'OUT'} label={a.withinBand ? 'inside its band' : 'outside its band'} /> : null) },

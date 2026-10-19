@@ -36,7 +36,6 @@ import { AGENTS, PEOPLE, can, personById } from '@/mocks/data/people'
 import { MODEL_BANDS, MODEL_DEFINITIONS } from '@/mocks/data/model-definitions'
 import { latestVersion } from '@/mocks/data/proposals-store'
 import { currencyForAccount } from '@/mocks/handlers/oms'
-import { clientRiskOf } from '@/mocks/reference/risk'
 import { BRIEF_THREAD_ID } from './brief'
 import { briefSummaryNow, clientsWaiting, openAlertsAbout, unapprovedProposals } from './household-book'
 import { accountValueUsd, managedValueUsd, householdLedger, type AccountLedger, type HouseholdLedger } from './household-ledger'
@@ -57,9 +56,11 @@ function clientName(clientId: string): string {
 
 /** An account against its model: drift from the drift engine, and for an out-of-band class, the structural reason it cannot be sold back in. */
 function accountRow(account: Account): HouseholdAccount {
+  const value = getPositionsForAccount(account.id, account.totalValue).reduce((s, p) => s + p.marketValue, 0)
+  const currency = currencyForAccount(account.id)
   const base = {
     accountId: account.id, name: accountDisplayName(account), ownerId: account.clientId, ownerName: clientName(account.clientId), typeLabel: ACCOUNT_TYPE_LABELS[account.type],
-    value: getPositionsForAccount(account.id, account.totalValue).reduce((s, p) => s + p.marketValue, 0),
+    value, currency, valueUsd: convertToBase(value, currency, FX_RATES_USD_BASE),
   }
   if (account.mandate === 'custom') return { ...base, mandate: 'custom', mandateSummary: account.mandateSummary }
   const drift = computeDriftForAccount(account)
@@ -159,18 +160,18 @@ function standingOf(household: HouseholdFixture): MemberStanding[] {
     const band = bandFor(client.riskProfile.score)
     const tolerance = { band: band.label, floor: band.floor, ceiling: band.ceiling, score: client.riskProfile.score, assessedOn: client.riskProfile.lastAssessed }
     const whole = wholeStandingOf(m.clientId)
-    const risk = clientRiskOf(m.clientId)
-    if (!whole || !risk) return { clientId: m.clientId, name: m.name, tolerance }
-    return { clientId: m.clientId, name: m.name, tolerance, whole: { score: risk.posture.score, status: whole.status, value: risk.value } }
+    if (!whole) return { clientId: m.clientId, name: m.name, tolerance }
+    return { clientId: m.clientId, name: m.name, tolerance, whole: { score: whole.score, status: whole.status, value: whole.value } }
   })
 }
 
-function holdingOrders(l: AccountLedger, assetClass: AssetClass): HoldingOrder[] {
+function holdingOrders(l: AccountLedger, assetClass?: AssetClass): HoldingOrder[] {
+  const inClass = ({ assetClass: c }: { assetClass: AssetClass }) => assetClass === undefined || c === assetClass
   return [
-    ...l.openOrders.filter((o) => o.assetClass === assetClass).map((o): HoldingOrder => (o.status === 'working'
+    ...l.openOrders.filter(inClass).map((o): HoldingOrder => (o.status === 'working'
       ? { kind: 'working', id: o.id, side: o.side, symbol: o.symbol, quantity: o.quantity, quantityUnit: o.quantityUnit, ...(o.limitPrice !== undefined ? { limitPrice: o.limitPrice } : {}) }
       : { kind: 'pending_compliance', id: o.id, side: o.side, symbol: o.symbol, quantity: o.quantity })),
-    ...l.fillsOnDay.filter((f) => f.assetClass === assetClass).map((f): HoldingOrder => ({ kind: 'filled', id: f.id, side: f.side, symbol: f.symbol, quantity: f.quantity, at: f.at })),
+    ...l.fillsOnDay.filter(inClass).map((f): HoldingOrder => ({ kind: 'filled', id: f.id, side: f.side, symbol: f.symbol, quantity: f.quantity, at: f.at })),
   ]
 }
 
@@ -181,7 +182,12 @@ function holdingOrders(l: AccountLedger, assetClass: AssetClass): HoldingOrder[]
 function holdingsOf(ledger: HouseholdLedger): HouseholdHoldings {
   const model = ledger.accounts.flatMap((l) => (isModelManaged(l.account) ? [{ l, account: l.account, ...modelOf(l.account.modelId) }] : []))
   const modelValue = model.reduce((s, m) => s + accountValueUsd(m.l), 0)
-  const classes = new Set<AssetClass>([...model.flatMap((m) => m.targets.map((t) => t.assetClass)), ...model.flatMap((m) => m.l.positions.map((p) => p.assetClass))])
+  const classes = new Set<AssetClass>([
+    ...model.flatMap((m) => m.targets.map((t) => t.assetClass)), ...model.flatMap((m) => m.l.positions.map((p) => p.assetClass)),
+    ...ledger.heldAway.flatMap((h) => h.assetClasses.map((c) => c.assetClass)),
+    ...ledger.openOrders.map((o) => o.assetClass), ...ledger.fillsOnDay.map((f) => f.assetClass),
+  ])
+  const ofModel = (x: number) => (modelValue === 0 ? 0 : x / modelValue)
   const rows = [...classes].map((assetClass): AssetClassRow => {
     const managed = model.flatMap(({ l, account }): ClassHolder[] => {
       const value = usd(account, l.positions.filter((p) => p.assetClass === assetClass).reduce((s, p) => s + p.marketValue, 0))
@@ -196,9 +202,9 @@ function holdingsOf(ledger: HouseholdLedger): HouseholdHoldings {
     })
     const value = managed.reduce((s, h) => s + h.value, 0)
     // A class a model does not name has a target of nothing in that model.
-    const target = model.reduce((s, m) => s + (m.targets.find((t) => t.assetClass === assetClass)?.targetWeight ?? 0) * accountValueUsd(m.l), 0) / modelValue
-    const band = model.reduce((s, m) => s + m.band * accountValueUsd(m.l), 0) / modelValue
-    const weight = value / modelValue
+    const target = ofModel(model.reduce((s, m) => s + (m.targets.find((t) => t.assetClass === assetClass)?.targetWeight ?? 0) * accountValueUsd(m.l), 0))
+    const band = ofModel(model.reduce((s, m) => s + m.band * accountValueUsd(m.l), 0))
+    const weight = ofModel(value)
     const orders = managed.flatMap((h) => (h.kind === 'managed' ? h.orders : []))
     return {
       assetClass, value, weight, target, drift: weight - target, band, withinBand: Math.abs(weight - target) <= band,
@@ -208,7 +214,7 @@ function holdingsOf(ledger: HouseholdLedger): HouseholdHoldings {
   return {
     managedValue: managedValueUsd(ledger), modelValue, rows,
     notInTarget: ledger.accounts.flatMap((l) => (l.account.mandate === 'custom'
-      ? [{ accountId: l.account.id, name: accountDisplayName(l.account), value: accountValueUsd(l), mandateSummary: l.account.mandateSummary }] : [])),
+      ? [{ accountId: l.account.id, name: accountDisplayName(l.account), value: accountValueUsd(l), mandateSummary: l.account.mandateSummary, orders: holdingOrders(l) }] : [])),
   }
 }
 
@@ -273,7 +279,7 @@ function conversationsOf(viewerId: string, householdId: string, accountIds: Read
 }
 
 const HOUSEHOLD_METHODS: readonly MethodNote[] = [
-  { label: 'Household target', modeled: false, text: "The household target is the value-weighted average of the model targets of its model-managed accounts, in USD; its band is the same weighting of their models' drift bands. Each class's drift is its weight of those accounts against that target. A custom mandate follows no model and is listed outside the target." },
+  { label: 'Household target', modeled: false, text: "The household target is the value-weighted average of the model targets of its model-managed accounts, in USD; its band is the same weighting of their models' drift bands. Each class's drift is its weight of those accounts against that target. A custom mandate follows no model: it is listed outside the target, with its own orders and fills. Class rows summarize the household; trades are gated per account, so a household row can read within its band while one account is outside its own." },
   { label: 'Held away', modeled: false, text: "Held-away accounts are shown inside each class at the client's last reported value and mix. They are outside the firm's view and not in the totals." },
   { label: 'Orders and fills', modeled: false, text: "Open orders are working order-management tickets and a proposal's orders pending compliance release. Fills are today's, in Eastern Time, against the holding they change." },
   { label: 'Risk against tolerance', modeled: true, text: "Each member is judged against their own questionnaire, on their own accounts as a whole: a value-weighted average of their accounts' risk scores, glide paths aside. Nothing is pooled across the household." },
@@ -319,7 +325,7 @@ export function clientView(viewerId: string, clientId: string): ClientView | und
     ...(client.contactInfo.preferredContactMethod ? { preferredContact: client.contactInfo.preferredContactMethod } : {}),
     risk: { tolerance: bandFor(client.riskProfile.score).label, scoreFraction: client.riskProfile.score / 100, assessedOn: client.riskProfile.lastAssessed },
     accounts: owned,
-    accountsValue: owned.reduce((s, a) => s + a.value, 0),
+    accountsValue: owned.reduce((s, a) => s + a.valueUsd, 0),
     ...(ips ? { ips } : {}),
     communications: communicationsOf(new Set([client.id])),
   }
