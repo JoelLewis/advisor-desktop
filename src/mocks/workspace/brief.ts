@@ -9,7 +9,7 @@ import { bookVersion } from '@/mocks/data/portfolio-ledger'
 import { runKeyOf } from './run-key'
 import { briefItems } from './brief-groups'
 
-export const BRIEF_THREAD_ID = 'th-brief'
+import { BRIEF_THREAD_ID } from '@/lib/brief-thread'
 
 let composed: readonly Message[] | undefined
 

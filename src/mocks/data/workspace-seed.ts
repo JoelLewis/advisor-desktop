@@ -1,3 +1,4 @@
+import { BRIEF_THREAD_ID } from '@/lib/brief-thread'
 import type { Message, Thread } from '@/types/workspace'
 import type { Meeting } from '@/types/workspace-meeting'
 import { eventTime } from '@/lib/clock'
@@ -7,7 +8,7 @@ import { PELL_INTRO } from './prospect-script'
 export const PATRICIA_THREAD_ID = 'th-patricia'
 
 export const SEED_THREADS: readonly Thread[] = [
-  { id: 'th-brief', title: 'Brief', visibility: 'private', ownerId: 'user-001', memberIds: ['user-001'], agentIds: ['drift-monitor', 'harvest-scanner'],
+  { id: BRIEF_THREAD_ID, title: 'Brief', visibility: 'private', ownerId: 'user-001', memberIds: ['user-001'], agentIds: ['drift-monitor', 'harvest-scanner'],
     subject: { type: 'account', id: 'acc-002' } },
   { id: 'th-johnson-review', title: 'Johnson Rebalance Review', visibility: 'internal', memberIds: ['user-001', 'user-002', 'user-003'],
     agentIds: ['drift-monitor', 'pretrade-check', 'proposal'], subject: { type: 'account', id: 'acc-002' } },

@@ -19,7 +19,7 @@ export function AgentsPage() {
   useEffect(() => {
     if (switchedToClient) navigate('/', { replace: true, state: { hiddenSubject: 'Agents', hiddenFrom: viewerId } satisfies HiddenRedirect })
   }, [switchedToClient, navigate, viewerId])
-  if (switchedToClient || directory.isPending) return <p role="status" className="text-body text-ink-3">Loading the agents…</p>
+  if (switchedToClient || directory.isPending) return <p role="status" className="text-body text-ink-3">Loading…</p>
   if (directory.isError) return <p role="alert" className="text-body">{directory.error.message}</p>
   if (viewerIsExternal) return <FullViewNotFound subject="Agents" />
   return (

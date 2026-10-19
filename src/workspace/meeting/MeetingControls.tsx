@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { useAnnounce } from '@/kit/announcer/use-announce'
 import { Button } from '@/kit/button/Button'
 import { Dialog } from '@/kit/dialog/Dialog'
-import { fmtEasternTime } from '@/kit/measure'
+import { fmtEasternClock } from '@/kit/measure'
 import { useDraftMeetingNotes, useFileMeetingRecord, useHoldMeeting, useRunMeetingPrep } from '@/hooks/use-meetings'
 import { ConfirmRecord } from '@/workspace/context/ConfirmRecord'
 import type { MeetingView } from '@/types/workspace-meeting'
@@ -61,7 +61,7 @@ function BeforeTheMeeting({ meeting }: { meeting: MeetingView }) {
       {report ? <p className="text-body text-ink-2">{report}</p> : null}
       {prep.isError ? <p role="alert" className="text-body">{prep.error.message}</p> : null}
       <Dialog open={confirming} onOpenChange={(open) => { if (!open && !hold.isPending) setConfirming(false) }} title="Hold the meeting?"
-        description={`A demo step: the session clock moves to the end of the meeting, ${fmtEasternTime(meeting.end)} ET, and the transcript arrives. Prep and the agenda close.`}>
+        description={`A demo step: the session clock moves to the end of the meeting, ${fmtEasternClock(meeting.end)}, and the transcript arrives. Prep and the agenda close.`}>
         <div className="flex flex-col gap-4">
           {hold.isError ? <p role="alert" className="text-body">{hold.error.message}</p> : null}
           <div className="flex justify-end gap-3">

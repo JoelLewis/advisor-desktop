@@ -37,25 +37,17 @@ const spokenText = (el: Element) => [...el.childNodes]
 const threadLinks = (nav = threadNav) => within(nav()).getAllByRole('link').map(spokenText)
 
 describe('workspace shell', () => {
-  it('reserves the column while the directory loads: the switch and wordless panes at the loaded rows, and a status', async () => {
+  it.each([['Households', () => undefined], ['Conversations', showConversationsFor]])("shows one neutral pane while the directory loads, whatever the remembered mode (%s): no switch, no words, no firm shape", async (_mode, remember) => {
+    remember()
     server.use(http.get('/api/workspace/people', async () => { await delay(200) }))
     renderRoutes(routes, '/')
     expect(await screen.findByText('Loading…')).toBeInTheDocument()
     const skeleton = document.querySelector('[data-part="thread-list-skeleton"]')!
     expect(skeleton).toHaveAttribute('aria-hidden', 'true')
-    expect(skeleton.querySelector('[data-part="skeleton-switch"]')).not.toBeNull()
-    expect(skeleton.querySelectorAll('[data-part="skeleton-row"]')).toHaveLength(28)
+    expect(skeleton.querySelector('[data-part="skeleton-switch"]')).toBeNull()
+    expect(skeleton.querySelectorAll('[data-part="skeleton-row"]')).toHaveLength(1)
     expect(skeleton.querySelector('ul[aria-label="Visibility"]')).toBeNull()
-    expect([...skeleton.querySelectorAll('h2')].map((h) => h.textContent?.trim())).toEqual(['', '', '', '', ''])
-  })
-  it('reserves the Conversations panes when that is the mode', async () => {
-    showConversationsFor()
-    server.use(http.get('/api/workspace/people', async () => { await delay(200) }))
-    renderRoutes(routes, '/')
-    expect(await screen.findByText('Loading…')).toBeInTheDocument()
-    const skeleton = document.querySelector('[data-part="thread-list-skeleton"]')!
-    expect(skeleton.querySelectorAll('[data-part="skeleton-row"]')).toHaveLength(16)
-    expect([...skeleton.querySelectorAll('h2')].map((h) => h.textContent?.trim())).toEqual(['', '', '', '', ''])
+    expect([...skeleton.querySelectorAll('h2')].map((h) => h.textContent?.trim())).toEqual([''])
   })
   it('keeps the skeleton until the directory arrives, so no row is described before its party is known', async () => {
     server.use(http.get('/api/workspace/people', async () => { await delay('infinite'); return HttpResponse.json({}) }))

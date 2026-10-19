@@ -7,10 +7,9 @@ import { useHouseholdBook, useThreads } from '@/hooks/use-workspace'
 import { householdFullViewHref } from '@/workspace/full-views/full-view-href'
 import { markerWords, statusLineOf } from '@/workspace/book/queue-words'
 import type { HouseholdRow } from '@/types/workspace-book'
+import { BRIEF_THREAD_ID } from '@/lib/brief-thread'
 
 const ROW = 'flex flex-col gap-1 border-l-2 py-2 pl-3 pr-2 hover:bg-face'
-
-const BRIEF_THREAD_ID = 'th-brief'
 
 /** The Brief is one viewer's own thread: its link is offered only to someone whose thread list holds it. */
 function YourDay() {

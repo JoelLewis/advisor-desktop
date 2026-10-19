@@ -1,9 +1,6 @@
-import { fmtEasternTime, fmtQuantity, fmtWaited } from '@/kit/measure'
+import { fmtEasternClock, fmtQuantity, fmtWaited } from '@/kit/measure'
 import { addressNameOf } from '@/lib/words'
 import type { HouseholdRow, QueueReason } from '@/types/workspace-book'
-
-/** A non-breaking space, so a time never parts from its zone at a line end. */
-const NBSP = '\u00A0'
 
 const counted = (n: number, one: string, many: string) => `${fmtQuantity(n)} ${n === 1 ? one : many}`
 
@@ -12,7 +9,7 @@ export function reasonWords(reason: QueueReason, asOf: string): string {
   switch (reason.kind) {
     case 'decision': return reason.count === 1 ? 'Decision waiting' : `${counted(reason.count, 'decision', 'decisions')} waiting`
     case 'client_waiting': return `${addressNameOf(reason.clientName)} waiting ${fmtWaited(reason.since, asOf)}`
-    case 'meeting': return `${reason.label} ${fmtEasternTime(reason.start)}${NBSP}ET`
+    case 'meeting': return `${reason.label} ${fmtEasternClock(reason.start)}`
     case 'compliance': return counted(reason.count, 'compliance item', 'compliance items')
     case 'task': return `${reason.count === 1 ? 'Task' : counted(reason.count, 'task', 'tasks')} ${reason.overdue ? 'overdue' : 'due today'}`
   }

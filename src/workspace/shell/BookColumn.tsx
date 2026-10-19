@@ -14,7 +14,7 @@ export function BookColumn() {
   const { viewerId } = useViewer()
   const directory = useDirectory()
   const [mode, setMode] = useBookMode(viewerId)
-  if (directory.isPending) return <ThreadListSkeleton mode={mode} />
+  if (directory.isPending) return <ThreadListSkeleton />
   if (directory.isError) return <p role="alert" className="text-body">{directory.error.message}</p>
   const external = isExternalViewerIn(directory.data, viewerId)
   if (external) return <ThreadList external />

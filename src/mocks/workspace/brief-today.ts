@@ -4,7 +4,7 @@ import { accounts } from '@/mocks/data/accounts'
 import { calendarEvents } from '@/mocks/data/calendar'
 import { sessionNow, store } from '@/mocks/data/workspace-store'
 import { reconciliationView } from '@/mocks/reference/reconciliation'
-import { BRIEF_THREAD_ID } from './brief'
+import { BRIEF_THREAD_ID } from '@/lib/brief-thread'
 import { accountLedger } from './household-ledger'
 import { meetingEvent, meetingTitle, toUtc } from './meetings'
 

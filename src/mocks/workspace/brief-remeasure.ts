@@ -3,7 +3,8 @@ import { bookVersion } from '@/mocks/data/portfolio-ledger'
 import { nextAt, sessionNow, store } from '@/mocks/data/workspace-store'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { easternDayOf } from '@/lib/eastern-day'
-import { BRIEF_THREAD_ID, composeBrief } from './brief'
+import { composeBrief } from './brief'
+import { BRIEF_THREAD_ID } from '@/lib/brief-thread'
 
 /** Whether the Brief's findings still measure the book as it stands on the session's day: no fill has moved it and the day has not changed. */
 export function briefIsCurrent(): boolean {

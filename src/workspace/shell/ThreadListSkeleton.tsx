@@ -2,15 +2,13 @@ import { Pane } from '@/kit/layout/Pane'
 import { VisibilityMark } from '@/kit/visibility/VisibilityMark'
 import type { Visibility } from '@/kit/visibility/visibility'
 import { THREAD_GROUP_TITLE } from '@/workspace/people/visibility-words'
-import type { BookMode } from './book-mode'
 
 type SkeletonPane = { rows: number; title?: string; visibility?: Visibility }
-const DESK_PANES: readonly SkeletonPane[] = [{ rows: 3 }, { rows: 6 }]
-/** Before the viewer is known the panes carry no titles: the firm's words are not shown to someone who may be a client. */
-const MODE_PANES: Readonly<Record<BookMode, readonly SkeletonPane[]>> = {
-  households: [{ rows: 1 }, { rows: 5 }, { rows: 13 }],
-  conversations: [{ rows: 1, visibility: 'private' }, { rows: 3, visibility: 'internal' }, { rows: 3, visibility: 'client' }],
-}
+/**
+ * Before the viewer is known: one untitled pane of one row, the shape every viewer's column starts with. It carries no
+ * firm words and no firm shape, so a client's column never collapses from the firm's book; the firm's grows below it.
+ */
+const NEUTRAL_PANES: readonly SkeletonPane[] = [{ rows: 1 }]
 
 /** The firm's conversations once the viewer is known to be the firm: the same panes, now titled. */
 const FIRM_CONVERSATION_PANES: readonly SkeletonPane[] = [
@@ -41,14 +39,13 @@ function SkeletonPanes({ panes }: { panes: readonly SkeletonPane[] }) {
   return panes.map(({ title, rows, visibility }, i) => <Pane key={i} title={title ?? NO_TITLE}><SkeletonRows rows={rows} visibility={visibility} /></Pane>)
 }
 
-/** The left column before the directory arrives: the switch's height, then panes of the loaded column's row heights, with no words. */
-export function ThreadListSkeleton({ mode }: { mode: BookMode }) {
+/** The left column before the directory arrives: one neutral pane, with no words, whoever the viewer turns out to be. */
+export function ThreadListSkeleton() {
   return (
     <>
       <p role="status" className="sr-only">Loading…</p>
       <div aria-hidden="true" data-part="thread-list-skeleton" className="flex flex-col gap-8">
-        <div data-part="skeleton-switch" className="min-h-9 border border-transparent coarse:min-h-11" />
-        <SkeletonPanes panes={[...MODE_PANES[mode], ...DESK_PANES]} />
+        <SkeletonPanes panes={NEUTRAL_PANES} />
       </div>
     </>
   )

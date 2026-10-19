@@ -159,6 +159,11 @@ export function fmtEasternDay(iso: string): string {
 /** The zone's name, held to the time before it: "09:10 ET" never breaks between them. */
 const ET = '\u00a0ET'
 
+/** A time with its zone, in a same-day context: "14:00 ET", the zone held to the time. */
+export function fmtEasternClock(iso: string): string {
+  return `${fmtEasternTime(iso)}${ET}`
+}
+
 /** A moment on the story's clock as its control names it: "Thu 26 Feb 09:10 ET". */
 export function fmtEasternDayTime(iso: string): string {
   return `${fmtEasternDay(iso)} ${fmtEasternTime(iso)}${ET}`

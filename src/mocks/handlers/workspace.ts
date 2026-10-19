@@ -6,7 +6,7 @@ import type { AgentId, ConversationAudience, Directory, Draft, ListedThread, Mes
 import { AGENTS, PEOPLE, can, permissionsOf } from '../data/people'
 import { resolveBreak } from '../reference/reconciliation'
 import { nextAt, nextId, store } from '../data/workspace-store'
-import { BRIEF_THREAD_ID } from '../workspace/brief'
+import { BRIEF_THREAD_ID } from '@/lib/brief-thread'
 import { briefOrder, remeasureBrief } from '../workspace/brief-remeasure'
 import { briefToday } from '../workspace/brief-today'
 import { settleApproved } from '../workspace/brief-groups'
