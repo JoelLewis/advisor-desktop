@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 import { Pane } from '@/kit/layout/Pane'
 
 /** Firm surfaces that are not threads. A client is never offered them. */
-const DESK: readonly { to: string; label: string }[] = [{ to: '/supervision', label: 'Supervision' }, { to: '/archive', label: 'Archive' }]
+const DESK: readonly { to: string; label: string }[] = [{ to: '/supervision', label: 'Supervision' }, { to: '/archive', label: 'Archive' }, { to: '/agents', label: 'Agents' }]
 
 /** The firm's reference views, one step from every thread. */
 const REFERENCE: readonly { to: string; label: string }[] = [

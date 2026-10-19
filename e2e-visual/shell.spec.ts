@@ -85,6 +85,7 @@ const SCENES: Scene[] = [
   { name: 'robert-thread-light', hasContext: true, open: robertOnHisThread('light') },
   { name: 'robert-thread-dark', hasContext: true, open: robertOnHisThread('dark') },
   { name: 'account-full-view-light', hasContext: false, open: accountFullView },
+  { name: 'agents-light', hasContext: false, open: async (page) => { await visit(page, '/agents', 'light'); await expect(page.getByRole('list', { name: 'Agents' })).toBeVisible(); await settle(page) } },
   { name: 'adrian-robert-thread-light', hasContext: true, open: async (page) => { await visit(page, '/t/th-robert', 'light'); await settle(page) } },
   { name: 'not-found-light', hasContext: false, open: async (page) => { await visit(page, '/portfolios/trading', 'light'); await settle(page) } },
 ]

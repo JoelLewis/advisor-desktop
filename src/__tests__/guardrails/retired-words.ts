@@ -60,6 +60,8 @@ export const RETIRED_WORDS: readonly RetiredWord[] = [
   { word: 'MAY NOT', pattern: /\bMAY(?: NOT)?\b|^(?:may|may not)$/, retired: true },
   // Orders read "pending compliance release"; "staged" is the system's word for them.
   { word: 'staged orders', pattern: /\bstaged orders\b|\borders staged\b|\bstay staged\b/i, retired: true },
+  // An agent places or approves nothing; "stage" was the system's word for an order waiting on compliance.
+  { word: 'stage trades', pattern: /\bstage(?: or release)? trades\b/i, retired: true },
   { word: 'moved book', pattern: /\bmoved book\b|\bbook moves\b/i, retired: true },
 ]
 

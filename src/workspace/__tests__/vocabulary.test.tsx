@@ -6,14 +6,14 @@ import { renderRoutes } from '@/test/render'
 import { showConversationsFor } from '@/test/book-mode'
 
 describe('the practice words', () => {
-  it('the list says Firm, Reports and Agents; agents say what they can and cannot do', async () => {
+  it('the list says Firm and Reports; the Agents page says what each agent can and cannot do', async () => {
     showConversationsFor()
     renderRoutes(routes, '/t/th-johnson-review')
     const list = await screen.findByRole('navigation', { name: 'Book' })
     expect(await within(list).findByRole('heading', { name: 'Firm' })).toBeInTheDocument()
     expect(await within(list).findByRole('heading', { name: 'Reports' })).toBeInTheDocument()
-    expect(await within(list).findByRole('heading', { name: 'Agents' })).toBeInTheDocument()
-    expect(within(list).getAllByText("Can't").length).toBeGreaterThan(0)
+    expect(within(list).queryByRole('heading', { name: 'Agents' })).toBeNull()
+    expect(within(list).getByRole('link', { name: 'Agents' })).toHaveAttribute('href', '/agents')
   })
   it('the context column is Details, with Related records', async () => {
     renderRoutes(routes, '/t/th-johnson-review')

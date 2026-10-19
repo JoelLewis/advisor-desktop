@@ -50,6 +50,7 @@ export const routes: RouteObject[] = [
           { path: 'households/:householdId', element: <HouseholdView />, handle: householdHandle },
           { path: 'clients/:clientId', element: <ClientView />, handle: fullWidthHandle },
           { path: 'archive', lazy: () => import('@/workspace/archive/ArchivePage').then((m) => ({ Component: m.ArchivePage })), HydrateFallback: PageLoading },
+          { path: 'agents', lazy: () => import('@/workspace/agents/AgentsPage').then((m) => ({ Component: m.AgentsPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
           { path: 'billing', lazy: () => import('@/workspace/reference/BillingPage').then((m) => ({ Component: m.BillingPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
           { path: 'risk', lazy: () => import('@/workspace/reference/BookRiskPage').then((m) => ({ Component: m.BookRiskPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },
           { path: 'accounts/:accountId/risk', lazy: () => import('@/workspace/reference/AccountRiskPage').then((m) => ({ Component: m.AccountRiskPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },

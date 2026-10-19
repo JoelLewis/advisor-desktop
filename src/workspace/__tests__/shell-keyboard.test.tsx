@@ -83,6 +83,7 @@ describe('keyboard in the shell', () => {
       'Model · Moderate Balanced',
       'Supervision',
       'Archive',
+      'Agents',
       'Component kit',
     ])
   })

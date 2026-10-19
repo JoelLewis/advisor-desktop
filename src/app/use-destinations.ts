@@ -66,6 +66,7 @@ export function useDestinations(): Destination[] {
     ...models.map((m) => ({ id: `model-${m.id}`, label: `Model · ${m.name}`, aliases: ['model'], run: () => navigate(modelHref(m.id)) })),
     ...(firmViewer ? [{ id: 'supervision', label: 'Supervision', aliases: ['queue', 'compliance'], run: () => navigate('/supervision') }] : []),
     ...(firmViewer ? [{ id: 'archive', label: 'Archive', aliases: ['records', 'books and records'], run: () => navigate('/archive') }] : []),
+    ...(firmViewer ? [{ id: 'agents', label: 'Agents', aliases: ['agent scopes', 'what agents can do'], run: () => navigate('/agents') }] : []),
     ...(firmViewer ? [{ id: 'kit', label: 'Component kit', aliases: ['kit', 'components', 'gallery'], run: () => navigate('/kit') }] : []),
   ]
 }

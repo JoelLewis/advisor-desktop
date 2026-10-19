@@ -5,7 +5,7 @@ import { THREAD_GROUP_TITLE } from '@/workspace/people/visibility-words'
 import type { BookMode } from './book-mode'
 
 type SkeletonPane = { rows: number; title?: string; visibility?: Visibility }
-const DESK_PANES: readonly SkeletonPane[] = [{ rows: 2 }, { rows: 6 }]
+const DESK_PANES: readonly SkeletonPane[] = [{ rows: 3 }, { rows: 6 }]
 /** Before the viewer is known the panes carry no titles: the firm's words are not shown to someone who may be a client. */
 const MODE_PANES: Readonly<Record<BookMode, readonly SkeletonPane[]>> = {
   households: [{ rows: 1 }, { rows: 5 }, { rows: 13 }],

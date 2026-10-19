@@ -44,7 +44,7 @@ describe('workspace shell', () => {
     const skeleton = document.querySelector('[data-part="thread-list-skeleton"]')!
     expect(skeleton).toHaveAttribute('aria-hidden', 'true')
     expect(skeleton.querySelector('[data-part="skeleton-switch"]')).not.toBeNull()
-    expect(skeleton.querySelectorAll('[data-part="skeleton-row"]')).toHaveLength(27)
+    expect(skeleton.querySelectorAll('[data-part="skeleton-row"]')).toHaveLength(28)
     expect(skeleton.querySelector('ul[aria-label="Visibility"]')).toBeNull()
     expect([...skeleton.querySelectorAll('h2')].map((h) => h.textContent?.trim())).toEqual(['', '', '', '', ''])
   })
@@ -54,7 +54,7 @@ describe('workspace shell', () => {
     renderRoutes(routes, '/')
     expect(await screen.findByText('Loading…')).toBeInTheDocument()
     const skeleton = document.querySelector('[data-part="thread-list-skeleton"]')!
-    expect(skeleton.querySelectorAll('[data-part="skeleton-row"]')).toHaveLength(15)
+    expect(skeleton.querySelectorAll('[data-part="skeleton-row"]')).toHaveLength(16)
     expect([...skeleton.querySelectorAll('h2')].map((h) => h.textContent?.trim())).toEqual(['', '', '', '', ''])
   })
   it('keeps the skeleton until the directory arrives, so no row is described before its party is known', async () => {
@@ -92,8 +92,8 @@ describe('workspace shell', () => {
   it('as Adrian lists six threads under the three headings, then Firm and Reports, with one h1', async () => {
     showConversationsFor()
     const { container } = await renderHome()
-    await waitFor(() => expect(groupHeadings()).toEqual(['Just me', 'Larkfield team', 'Client conversations', 'Agents', 'Firm', 'Reports']))
-    expect(threadLinks()).toEqual(['Brief', 'Johnson Rebalance Review', 'Johnson annual review', 'Pell · prospect work', 'Robert Johnson', 'Patricia Johnson', 'Dr. Amanda Pell', 'Supervision', 'Archive', 'Billing', 'Reconciliation', 'Risk', 'Models', 'Practice', 'Blotter'])
+    await waitFor(() => expect(groupHeadings()).toEqual(['Just me', 'Larkfield team', 'Client conversations', 'Firm', 'Reports']))
+    expect(threadLinks()).toEqual(['Brief', 'Johnson Rebalance Review', 'Johnson annual review', 'Pell · prospect work', 'Robert Johnson', 'Patricia Johnson', 'Dr. Amanda Pell', 'Supervision', 'Archive', 'Agents', 'Billing', 'Reconciliation', 'Risk', 'Models', 'Practice', 'Blotter'])
     expect(within(threadNav()).getByRole('link', { name: 'Johnson Rebalance Review' })).toHaveAttribute('href', '/t/th-johnson-review')
     expect(container.querySelectorAll('h1')).toHaveLength(1)
     expect(screen.getByRole('heading', { level: 1, name: 'Workspace' })).toHaveAttribute('tabindex', '-1')
@@ -154,16 +154,6 @@ describe('workspace shell', () => {
     await waitFor(() => expect(document.title).toBe('Robert Johnson · Advisor Desktop'))
   })
 
-  it('lists the agents of the visible threads with their scopes', async () => {
-    showConversationsFor()
-    await renderHome()
-    const agents = within(threadNav()).getByRole('heading', { name: 'Agents' }).closest('section') as HTMLElement
-    expect(within(agents).getByText('Drift Monitor')).toBeInTheDocument()
-    expect(within(agents).getByText('Pre-trade Check')).toBeInTheDocument()
-    expect(agents).toHaveTextContent('Can measure and flag')
-    expect(agents).toHaveTextContent('Can\'t clear a block')
-  })
-
   it('the view-as control lists everyone in the directory with their role, defaulting to Adrian', async () => {
     await renderHome()
     const select = await screen.findByRole('combobox', { name: 'View as' })
@@ -202,8 +192,8 @@ describe('workspace shell', () => {
     showConversationsFor('cco-001')
     await renderHome()
     await viewAs('Mark Davis · Compliance')
-    await waitFor(() => expect(threadLinks()).toEqual(['Johnson Rebalance Review', 'Johnson annual review', 'Pell · prospect work', 'Robert Johnson', 'Patricia Johnson', 'Dr. Amanda Pell', 'Supervision', 'Archive', 'Billing', 'Reconciliation', 'Risk', 'Models', 'Practice', 'Blotter']))
-    expect(groupHeadings()).toEqual(['Larkfield team', 'Client conversations', 'Agents', 'Firm', 'Reports'])
+    await waitFor(() => expect(threadLinks()).toEqual(['Johnson Rebalance Review', 'Johnson annual review', 'Pell · prospect work', 'Robert Johnson', 'Patricia Johnson', 'Dr. Amanda Pell', 'Supervision', 'Archive', 'Agents', 'Billing', 'Reconciliation', 'Risk', 'Models', 'Practice', 'Blotter']))
+    expect(groupHeadings()).toEqual(['Larkfield team', 'Client conversations', 'Firm', 'Reports'])
   })
 
   it('shows a status while the column loads', () => {

@@ -49,6 +49,9 @@ describe('what each pattern reads', () => {
     ['CLIENT CAN SEE', 'no client can see this', false],
     ['staged orders', 'The staged orders are withdrawn.', true],
     ['staged orders', 'Released the orders approved in v1', false],
+    ['stage trades', 'stage or release trades', true],
+    ['stage trades', 'stage trades', true],
+    ['stage trades', 'place or approve trades', false],
     ['moved book', "The orders fill at the day's prices. The book moves.", true],
   ])('%s: "%s" -> %s', (word, text, hit) => expect(entry(word).test(text)).toBe(hit))
 })

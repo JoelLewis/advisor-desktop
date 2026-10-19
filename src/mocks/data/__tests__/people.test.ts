@@ -28,8 +28,15 @@ describe('people and permissions', () => {
   it('agents declare what they may and may not do', () => {
     for (const a of AGENTS) {
       expect(a.scope.may.length).toBeGreaterThan(0)
-      expect(a.scope.mayNot).toEqual(expect.arrayContaining(['post in a client thread']))
+      expect(a.scope.mayNot).toEqual(expect.arrayContaining(['post in a client conversation']))
     }
+  })
+  it("states each agent's scope in plain words, never \"stage\"", () => {
+    for (const a of AGENTS) {
+      for (const act of [...a.scope.may, ...a.scope.mayNot]) expect(act, `${a.name}: ${act}`).not.toMatch(/\bstag(?:e|ed|es|ing)\b/i)
+    }
+    expect(AGENTS.find((a) => a.id === 'drift-monitor')?.scope.mayNot).toContain('place or approve trades')
+    expect(AGENTS.find((a) => a.id === 'harvest-scanner')?.scope.mayNot).toContain('place or approve trades')
   })
 })
 
@@ -42,9 +49,9 @@ describe('phase 3 agents', () => {
     ])
   })
   it('the Proposal Agent may not approve or release; the Client Letter Agent may not send', () => {
-    expect(AGENTS.find((a) => a.id === 'proposal')?.scope.mayNot).toEqual(['approve', 'release', 'post in a client thread'])
-    expect(AGENTS.find((a) => a.id === 'client-letter')?.scope.mayNot).toEqual(['send', 'post in a client thread'])
-    expect(AGENTS.find((a) => a.id === 'harvest-scanner')?.scope.mayNot).toEqual(['stage trades', 'post in a client thread'])
+    expect(AGENTS.find((a) => a.id === 'proposal')?.scope.mayNot).toEqual(['approve a proposal', 'release orders', 'post in a client conversation'])
+    expect(AGENTS.find((a) => a.id === 'client-letter')?.scope.mayNot).toEqual(['send', 'post in a client conversation'])
+    expect(AGENTS.find((a) => a.id === 'harvest-scanner')?.scope.mayNot).toEqual(['place or approve trades', 'post in a client conversation'])
   })
 })
 
@@ -61,18 +68,18 @@ describe('phase 4 · separation of duties', () => {
 describe('phase 5 · meeting agents', () => {
   it('Meeting Prep measures and proposes; it files nothing and contacts no one', () => {
     expect(AGENTS.find((a) => a.id === 'meeting-prep')).toMatchObject({
-      name: 'Meeting Prep', scope: { may: ["measure the household's accounts", 'propose an agenda'], mayNot: ['file notes', 'contact the client', 'post in a client thread'] },
+      name: 'Meeting Prep', scope: { may: ["measure the household's accounts", 'propose an agenda'], mayNot: ['file notes', 'contact the client', 'post in a client conversation'] },
     })
   })
   it('Meeting Notes drafts with citations; it never files, assigns or recommends', () => {
     expect(AGENTS.find((a) => a.id === 'meeting-notes')).toMatchObject({
       name: 'Meeting Notes',
-      scope: { may: ['draft notes from the transcript, each line citing it'], mayNot: ['file', 'assign people', 'add a recommendation nobody made', 'post in a client thread'] },
+      scope: { may: ['draft notes from the transcript, each line citing it', 'check what the notes say about the book against the household ledger'], mayNot: ['file the record', 'assign people', 'add a recommendation nobody made', 'post in a client conversation'] },
     })
   })
   it('the Client Letter Agent may also draft a recap from a filed record, and still never sends', () => {
     expect(AGENTS.find((a) => a.id === 'client-letter')?.scope).toEqual({
-      may: ['draft a client message from an approved version', 'draft a meeting recap from a filed record'], mayNot: ['send', 'post in a client thread'],
+      may: ['draft a client letter from an approved version', 'draft a meeting recap from a filed record'], mayNot: ['send', 'post in a client conversation'],
     })
   })
   it('only the advisor prepares a meeting and files its record', () => {

@@ -149,8 +149,8 @@ describe('thread context column', () => {
       expect.stringMatching(/^Drift Monitor/), expect.stringMatching(/^Pre-trade Check/), expect.stringMatching(/^Proposal Agent/),
     ])
     const drift = agents.getByText('Drift Monitor').closest('li') as HTMLElement
-    expect(drift).toHaveTextContent('Can measure and flag')
-    expect(drift).toHaveTextContent('Can\'t stage or release trades · post in a client thread')
+    expect(drift).toHaveTextContent('Can measure drift against the model · flag what sits outside its band')
+    expect(drift).toHaveTextContent('Can\'t place or approve trades · post in a client conversation')
   })
 
   it("lists compliance supervision under a client thread's title for firm viewers, and leaves it out of the context column", async () => {

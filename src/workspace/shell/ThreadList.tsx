@@ -8,8 +8,7 @@ import { ConversationsSkeleton } from '@/workspace/shell/ThreadListSkeleton'
 import { useDirectory, useThreads } from '@/hooks/use-workspace'
 import { threadTitleFor } from '@/workspace/people/roster'
 import { THREAD_GROUP_TITLE, bandWordsOf } from '@/workspace/people/visibility-words'
-import { AgentScope } from '@/workspace/people/AgentScope'
-import type { AgentProfile, ListedThread, Thread, Visibility } from '@/types/workspace'
+import type { ListedThread, Visibility } from '@/types/workspace'
 
 const GROUPS: readonly { visibility: Visibility; title: string }[] =
   (['private', 'internal', 'client'] as const).map((visibility) => ({ visibility, title: THREAD_GROUP_TITLE[visibility] }))
@@ -30,7 +29,6 @@ export function ThreadList({ external }: { external: boolean }) {
           ? <ThreadGroup key={visibility} title={external && visibility === 'client' ? FIRM_NAME : title} threads={group} viewerIsExternal={external} />
           : null
       })}
-      <DeskAgents threads={threads.data} agents={directory.data.agents} />
     </div>
   )
 }
@@ -62,18 +60,5 @@ function ThreadRow({ thread: t, viewerIsExternal }: { thread: ListedThread; view
       </NavLink>
       <span id={noteId} className="sr-only">{`Visibility: ${bandWordsOf(t.audience, viewerIsExternal)}`}</span>
     </li>
-  )
-}
-
-function DeskAgents({ threads, agents: everyAgent }: { threads: Thread[]; agents: AgentProfile[] }) {
-  const onDesk = new Set(threads.flatMap((t) => t.agentIds))
-  const agents = everyAgent.filter((a) => onDesk.has(a.id))
-  if (agents.length === 0) return null
-  return (
-    <Pane title="Agents">
-      <ul className="flex flex-col gap-4">
-        {agents.map((a) => <li key={a.id}><AgentScope agent={a} /></li>)}
-      </ul>
-    </Pane>
   )
 }
