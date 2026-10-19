@@ -39,4 +39,42 @@ describe("the household's conversations", () => {
     await user.click(within(column()).getByRole('button', { name: 'Open the conversation' }))
     expect(await screen.findByRole('heading', { level: 1, name: 'Patricia Johnson' })).toBeInTheDocument()
   })
+
+  it('keeps the title and says why when the start is refused', async () => {
+    const user = userEvent.setup()
+    renderRoutes(routes, '/households/hh-001')
+    const tooLong = 'A'.repeat(121)
+    await user.click(await within(column()).findByRole('textbox', { name: 'Title' }))
+    await user.paste(tooLong)
+    await user.click(within(column()).getByRole('button', { name: 'Start the conversation' }))
+    expect(await within(column()).findByRole('alert')).toHaveTextContent('A title is at most 120 characters.')
+    expect(within(column()).getByRole('textbox', { name: 'Title' })).toHaveValue(tooLong)
+  })
+
+  it('lists a Just me conversation it started as "Just you"', async () => {
+    const user = userEvent.setup()
+    renderRoutes(routes, '/households/hh-001')
+    await user.click(await within(column()).findByRole('radio', { name: 'Just me' }))
+    await user.type(within(column()).getByRole('textbox', { name: 'Title' }), 'Notes to self')
+    await user.click(within(column()).getByRole('button', { name: 'Start the conversation' }))
+    await screen.findByRole('heading', { level: 1, name: 'Notes to self' })
+    await user.click(screen.getAllByRole('link', { name: /^Johnson Household/ })[0]!)
+    const list = await within(column()).findByRole('list', { name: 'Conversations about this household' })
+    expect(await within(list).findByRole('link', { name: /Notes to self/ })).toHaveTextContent('Just you')
+  })
+})
+
+describe('a conversation started from the household page, over HTTP', () => {
+  const start = (audience: { kind: 'private' } | { kind: 'internal' }, title: string) => fetch('/api/workspace/threads', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Viewer': 'user-001' }, body: JSON.stringify({ householdId: 'hh-001', title, audience }),
+  }).then(async (r) => ((await r.json()) as { thread: { id: string } }).thread)
+
+  it.each([['Just me', { kind: 'private' } as const], ['Larkfield team', { kind: 'internal' } as const]])('a %s thread is hidden from Robert and Patricia', async (_label, audience) => {
+    const thread = await start(audience, 'Johnson estate questions')
+    for (const client of ['cli-001', 'cli-002']) {
+      const listed = (await (await fetch('/api/workspace/threads', { headers: { 'X-Viewer': client } })).json()) as { id: string }[]
+      expect(listed.map((t) => t.id)).not.toContain(thread.id)
+      expect((await fetch(`/api/workspace/threads/${thread.id}`, { headers: { 'X-Viewer': client } })).status).toBe(404)
+    }
+  })
 })

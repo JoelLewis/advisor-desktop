@@ -10,7 +10,7 @@ import { carryTargets } from './carry-targets'
 type Move = 1 | -1 | 'first' | 'last'
 const MOVES = new Map<string, Move>([['ArrowDown', 1], ['ArrowUp', -1], ['Home', 'first'], ['End', 'last']])
 
-/** "Share to ▾": the brief's owner sends a finding to the team thread about its subject, or to its household's meeting thread. */
+/** "Share to ▾": the brief's owner sends a finding to a team thread about its subject or about its household, each named by its title. */
 export function CarryControl({ thread, findingId }: { thread: Thread; findingId: string }) {
   const announce = useAnnounce()
   const { viewerId } = useViewer()
@@ -44,7 +44,7 @@ export function CarryControl({ thread, findingId }: { thread: Thread; findingId:
     setPendingFocus(undefined)
   }, [open, pendingFocus])
 
-  // The team thread is offered at once; the household's meeting thread joins it once the account's household arrives.
+  // The team thread is offered at once; the household's team threads join it once the account's household arrives.
   if (thread.ownerId !== viewerId || targets.length === 0) return null
 
   function focusItem(move: Move) {
