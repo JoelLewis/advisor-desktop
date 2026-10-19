@@ -32,8 +32,8 @@ import { refuseExternal } from './workspace-http'
 // were written as New York time with a Z, so several read as pre-market fills; they now fall in the
 // regular session, 14:30–21:00Z before daylight time starts on 2026-03-08. The working orders were
 // entered after Tuesday's close (16:31–18:00 ET) and wait for Wednesday's open; none has met a session
-// since, so the market order (ord-008) is still unfilled. ord-014, which filled on
-// Sunday 2026-02-22, filled on Friday 2026-02-20. BTC (ord-015) trades every day.
+// since, so the market order (ord-008) is still unfilled. ord-012, ord-013 and ord-014 were canceled
+// unfilled the day they were entered, so no holding shows them. BTC (ord-015) trades every day.
 export const orders: Order[] = [
   // ── Recent orders for Johnson Family Trust (acc-001) ──
   { id: 'ord-001', accountId: 'acc-001', symbol: 'VTI', side: 'buy', quantity: 150, orderType: 'market', status: 'filled', filledQuantity: 150, filledPrice: 268.35, submittedAt: '2026-02-24T14:30:00Z', filledAt: '2026-02-24T14:30:02Z', assetClass: 'equity' },
@@ -46,6 +46,9 @@ export const orders: Order[] = [
   // filled Friday 2026-02-20 at 10:15 ET (15:15Z).
   { id: 'ord-004', accountId: 'acc-002', symbol: 'INTC', side: 'sell', quantity: 5000, orderType: 'market', status: 'filled', filledQuantity: 5000, filledPrice: 28.45, submittedAt: '2026-02-20T15:15:00Z', filledAt: '2026-02-20T15:15:03Z', assetClass: 'equity' },
   { id: 'ord-005', accountId: 'acc-002', symbol: 'QQQ', side: 'buy', quantity: 200, orderType: 'limit', limitPrice: 480.00, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-24T21:35:00Z', assetClass: 'equity' },
+  // The INTC harvest's replacement: 180 SMH bought five minutes after the INTC sale (ord-004), the purchase
+  // pos-265 records and the activity feed states. Its value is the position's cost, 180 × 245.20 = $44,136.
+  { id: 'ord-017', accountId: 'acc-002', symbol: 'SMH', side: 'buy', quantity: 180, orderType: 'market', status: 'filled', filledQuantity: 180, filledPrice: 245.20, submittedAt: '2026-02-20T15:20:00Z', filledAt: '2026-02-20T15:20:03Z', assetClass: 'equity' },
 
   // ── Chen Irrevocable Trust (acc-006) ──
   { id: 'ord-006', accountId: 'acc-006', symbol: 'VTI', side: 'buy', quantity: 800, orderType: 'market', status: 'filled', filledQuantity: 800, filledPrice: 268.40, submittedAt: '2026-02-20T16:00:00Z', filledAt: '2026-02-20T16:00:04Z', assetClass: 'equity' },
@@ -58,20 +61,15 @@ export const orders: Order[] = [
   // ── Michael Martinez Individual (acc-015) ──
   { id: 'ord-010', accountId: 'acc-015', symbol: 'EFA', side: 'buy', quantity: 350, orderType: 'limit', limitPrice: 81.50, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-24T21:45:00Z', assetClass: 'equity' },
   { id: 'ord-011', accountId: 'acc-015', symbol: 'GLD', side: 'sell', quantity: 50, orderType: 'market', status: 'filled', filledQuantity: 50, filledPrice: 215.80, submittedAt: '2026-02-24T18:20:00Z', filledAt: '2026-02-24T18:20:01Z', assetClass: 'equity' },
-  { id: 'ord-012', accountId: 'acc-015', symbol: 'VNQ', side: 'buy', quantity: 200, orderType: 'market', status: 'filled', filledQuantity: 200, filledPrice: 89.15, submittedAt: '2026-02-24T18:20:00Z', filledAt: '2026-02-24T18:20:02Z', assetClass: 'equity' },
+  // Canceled unfilled: Michael Martinez Individual holds no VNQ; the GLD sale's proceeds stayed in cash.
+  { id: 'ord-012', accountId: 'acc-015', symbol: 'VNQ', side: 'buy', quantity: 200, orderType: 'market', status: 'canceled', filledQuantity: 0, submittedAt: '2026-02-24T18:20:00Z', assetClass: 'equity' },
 
   // ── Multi-asset orders ──
-  // A mutual fund order cannot fill at 11:00 ET. Rule 22c-1 requires forward pricing at the
-  // next computed NAV, which for VFIAX is 4:00 PM ET (21:00Z), and a $25,000 dollar-amount purchase
-  // buys $25,000 / $465.32 shares, not the placeholder 1.
-  //
-  // 53.72647 — five decimals, because no shorter rounding reconciles: 53.73 multiplies out to
-  // $25,001.64, and 53.727 to $25,000.25, while 53.72647 x 465.32 = $25,000.00103, which agrees with
-  // `dollarAmount` to the cent. Fractional-share precision beyond the three decimals retail
-  // statements usually display is a settlement-layer detail; the arithmetic is the reason here, not
-  // a claim about any particular clearing system's record layout.
-  { id: 'ord-013', accountId: 'acc-001', symbol: 'VFIAX', side: 'purchase', quantity: 53.72647, orderType: 'market', status: 'filled', filledQuantity: 53.72647, filledPrice: 465.32, submittedAt: '2026-02-23T15:00:00Z', filledAt: '2026-02-23T21:00:00Z', assetClass: 'mutual_fund', dollarAmount: 25000, amountType: 'dollars' },
-  { id: 'ord-014', accountId: 'acc-002', symbol: 'UST-10Y', side: 'buy', quantity: 50, orderType: 'limit', limitPrice: 95.25, status: 'filled', filledQuantity: 50, filledPrice: 95.20, submittedAt: '2026-02-20T15:30:00Z', filledAt: '2026-02-20T15:30:05Z', assetClass: 'fixed_income', parAmount: 50000, bondPriceType: 'price', priceOrYield: 95.25 },
+  // Canceled before the 4:00 PM ET cutoff, so it never priced: the Johnson Trust holds no VFIAX. (A fund
+  // purchase that does fill prices at the next NAV, Rule 22c-1; `ticketValue` values it by its shares.)
+  { id: 'ord-013', accountId: 'acc-001', symbol: 'VFIAX', side: 'purchase', quantity: 53.72647, orderType: 'market', status: 'canceled', filledQuantity: 0, submittedAt: '2026-02-23T15:00:00Z', assetClass: 'mutual_fund', dollarAmount: 25000, amountType: 'dollars' },
+  // A limit order canceled unfilled the same day: Robert Johnson Individual holds no Treasury.
+  { id: 'ord-014', accountId: 'acc-002', symbol: 'UST-10Y', side: 'buy', quantity: 50, orderType: 'limit', limitPrice: 95.25, status: 'canceled', filledQuantity: 0, submittedAt: '2026-02-20T15:30:00Z', assetClass: 'fixed_income', parAmount: 50000, bondPriceType: 'price', priceOrYield: 95.25 },
   // Spot BTC settled into acc-002, a Schwab brokerage that can only hold the IBIT and ETHE
   // ETFs. It belongs in acc-045, the Coinbase account that actually custodies coins, and at the one
   // BTC price the app knows.

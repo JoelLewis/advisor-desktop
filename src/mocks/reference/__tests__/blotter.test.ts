@@ -35,11 +35,11 @@ describe('tickets', () => {
     expect(row('ord-015')?.preMarket, 'a coin bought on a Saturday is not queued for an open').toBeUndefined()
   })
 
-  it('values a fill by what it is: a fund purchase, a bond at par, a coin', () => {
-    expect(row('ord-013')).toMatchObject({ side: 'buy' })
-    expect(row('ord-013')?.value).toBeCloseTo(25_000, 2)
-    expect(row('ord-014')?.value).toBeCloseTo(47_600, 6)
+  it('values each fill, and states no value for a ticket that never filled', () => {
+    expect(row('ord-017')).toMatchObject({ side: 'buy', status: 'filled', value: 44_136, filledAt: '2026-02-20T15:20:03Z' })
     expect(row('ord-015')?.value).toBeCloseTo(21_862.5, 6)
+    for (const id of ['ord-012', 'ord-013', 'ord-014']) expect(row(id), id).toMatchObject({ status: 'canceled' })
+    for (const id of ['ord-012', 'ord-013', 'ord-014']) expect(row(id)?.value, id).toBeUndefined()
     expect(row('ord-016')).toMatchObject({ side: 'buy', status: 'working' })
   })
 
@@ -82,7 +82,7 @@ describe("the session's proposal orders", () => {
 
 describe('filters and order', () => {
   it('filters by status, account and submitted day, newest first', () => {
-    expect(view({ status: 'canceled' }).rows.map((r) => r.id)).toEqual(['ord-009'])
+    expect(view({ status: 'canceled' }).rows.map((r) => r.id)).toEqual(['ord-012', 'ord-009', 'ord-013', 'ord-014'])
     expect(view({ accountId: 'acc-001' }).rows.every((r) => r.accountId === 'acc-001')).toBe(true)
     expect(view({ since: '2026-02-24', until: '2026-02-24' }).rows.every((r) => r.submittedAt.startsWith('2026-02-24'))).toBe(true)
     const times = view().rows.map((r) => r.submittedAt)

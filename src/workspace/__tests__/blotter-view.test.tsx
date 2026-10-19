@@ -19,7 +19,7 @@ describe('the Blotter view', () => {
     expect(within(orders()).getByRole('row', { name: /ord-003/ })).toHaveTextContent('24 Feb 16:31 ET')
     expect(within(orders()).getByRole('row', { name: /ord-003/ })).not.toHaveTextContent('pre-market')
     expect(within(orders()).getByRole('row', { name: /ord-001/ })).not.toHaveTextContent('pre-market')
-    expect(within(orders()).getByRole('row', { name: /ord-014/ })).toHaveTextContent('47,600')
+    expect(within(orders()).getByRole('row', { name: /ord-017/ })).toHaveTextContent('44,136')
     expect(screen.getByRole('region', { name: 'Methods & sources' })).toHaveTextContent('REC is the record')
   })
 
@@ -28,7 +28,7 @@ describe('the Blotter view', () => {
     await screen.findByRole('heading', { level: 1, name: 'Blotter' })
     await userEvent.setup().selectOptions(screen.getByRole('combobox', { name: 'Status' }), 'Canceled')
     await waitFor(() => expect(router.state.location.search).toBe('?status=canceled'))
-    await waitFor(() => expect(within(orders()).getAllByRole('row').slice(1).map((r) => r.textContent)).toEqual([expect.stringContaining('ord-009')]))
+    await waitFor(() => expect(within(orders()).getAllByRole('row').slice(1).map((r) => r.textContent)).toEqual(['ord-012', 'ord-009', 'ord-013', 'ord-014'].map((id) => expect.stringContaining(id))))
   })
 
   it("shows the session's fills with their proposal, version, fill and the release's REC id", async () => {

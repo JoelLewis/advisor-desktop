@@ -13,12 +13,14 @@ import { KNOWN_OPEN_DATES } from '../handlers/custodian'
  */
 const rs001 = realizedSales.find((s) => s.id === 'rs-001')!
 const ord004 = orders.find((o) => o.id === 'ord-004')!
+const ord017 = orders.find((o) => o.id === 'ord-017')
 const acc002 = accounts.find((a) => a.id === rs001.accountId)!
 const smh = getPositionsForAccount(acc002.id, acc002.totalValue).find((p) => p.id === 'pos-265')!
 
-/** The SMH replacement filled five minutes after the INTC sale, on the day pos-265 records it opened. */
+/** The SMH replacement, as its ticket filled, on the day pos-265 records it opened. */
 function smhPurchaseTimestamp(): string {
-  const filled = new Date(Date.parse(ord004.filledAt!) + 5 * 60_000).toISOString()
+  const filled = ord017?.filledAt
+  if (filled === undefined) throw new Error('The SMH replacement has no filled ticket (ord-017)')
   if (filled.slice(0, 10) !== KNOWN_OPEN_DATES.get(smh.id)) throw new Error(`SMH replacement at ${filled} is not on pos-265's open date`)
   return filled
 }
