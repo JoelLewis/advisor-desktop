@@ -61,8 +61,9 @@ export const orders: Order[] = [
   // ── Michael Martinez Individual (acc-015) ──
   { id: 'ord-010', accountId: 'acc-015', symbol: 'EFA', side: 'buy', quantity: 350, orderType: 'limit', limitPrice: 81.50, status: 'pending', filledQuantity: 0, submittedAt: '2026-02-24T21:45:00Z', assetClass: 'equity' },
   { id: 'ord-011', accountId: 'acc-015', symbol: 'GLD', side: 'sell', quantity: 50, orderType: 'market', status: 'filled', filledQuantity: 50, filledPrice: 215.80, submittedAt: '2026-02-24T18:20:00Z', filledAt: '2026-02-24T18:20:01Z', assetClass: 'equity' },
-  // Canceled unfilled: Michael Martinez Individual holds no VNQ; the GLD sale's proceeds stayed in cash.
-  { id: 'ord-012', accountId: 'acc-015', symbol: 'VNQ', side: 'buy', quantity: 200, orderType: 'market', status: 'canceled', filledQuantity: 0, submittedAt: '2026-02-24T18:20:00Z', assetClass: 'equity' },
+  // A limit order below the market (VNQ last 89.20), canceled unfilled at the close: Michael Martinez Individual holds no
+  // VNQ, and the GLD sale's proceeds stayed in cash. A market order sent beside the GLD sale would have filled with it.
+  { id: 'ord-012', accountId: 'acc-015', symbol: 'VNQ', side: 'buy', quantity: 200, orderType: 'limit', limitPrice: 86.50, status: 'canceled', filledQuantity: 0, submittedAt: '2026-02-24T18:20:00Z', assetClass: 'equity' },
 
   // ── Multi-asset orders ──
   // Canceled before the 4:00 PM ET cutoff, so it never priced: the Johnson Trust holds no VFIAX. (A fund
