@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { clientRiskOf } from '@/mocks/reference/risk'
 import { householdView } from '../household-views'
-import { approvedStoryV3, release } from './story-fixture'
+import { approvedStoryV3, ok, release } from './story-fixture'
+import { createProposal } from '../proposals'
+import { store } from '@/mocks/data/workspace-store'
+import { canSeeThread } from '../visibility'
 
 const ADRIAN = 'user-001'
 const johnson = () => {
@@ -16,6 +19,17 @@ describe('the Johnson page model', () => {
       { clientId: 'cli-001', name: 'Robert Johnson', tolerance: { band: 'Moderate', floor: 41, ceiling: 55, score: 55, assessedOn: '2025-09-15' }, whole: expect.objectContaining({ score: 51, status: 'within' }) },
       { clientId: 'cli-002', name: 'Patricia Johnson', tolerance: { band: 'Moderate Conservative', floor: 26, ceiling: 40, score: 35, assessedOn: '2025-09-15' }, whole: expect.objectContaining({ score: 34, status: 'within' }) },
     ])
+  })
+
+  it.each([['Sarah Mitchell', 'user-002'], ['Mark Davis', 'cco-001']])("shows %s no item from Adrian's Brief, and no decision from a thread they cannot read", (_name, viewerId) => {
+    const { detail } = ok(createProposal(ADRIAN, 'th-johnson-review', 'acc-002'))
+    const decisions = householdView(viewerId, 'hh-001')?.decisions ?? []
+    expect(decisions.some((d) => d.kind === 'brief' || d.threadId === 'th-brief')).toBe(false)
+    const review = store().threads.find((t) => t.id === 'th-johnson-review')
+    if (!review) throw new Error('the review thread is seeded')
+    const proposals = decisions.filter((d) => d.kind === 'proposal').map((d) => d.kind === 'proposal' && d.proposalId)
+    expect(proposals).toEqual(canSeeThread(viewerId, review) ? [detail.id] : [])
+    expect(johnson().decisions.some((d) => d.kind === 'brief')).toBe(true)
   })
 
   it("lists the Brief's decisions about the household's account, then none for the proposal once approved with a reason", () => {

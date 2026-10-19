@@ -42,7 +42,7 @@ import { accountValueUsd, managedValueUsd, householdLedger, type AccountLedger, 
 import { wholeStandingOf } from './meeting-agents'
 import { audienceOf } from './party'
 import { meetingOf, meetingTitle } from './meetings'
-import { isFirmViewer, visibleThreads } from './visibility'
+import { canSeeThread, isFirmViewer, visibleThreads } from './visibility'
 
 const STRUCTURAL: ReadonlySet<string> = new Set<StructuralResidual>(['not_market_tradable', 'replacement_hold'])
 const isStructural = (reason: string | undefined): reason is StructuralResidual => reason !== undefined && STRUCTURAL.has(reason)
@@ -218,11 +218,20 @@ function holdingsOf(ledger: HouseholdLedger): HouseholdHoldings {
   }
 }
 
-function decisionsOf(accountIds: ReadonlySet<string>): HouseholdDecision[] {
+/**
+ * The household's decide items the viewer may read: unapproved proposals and the Brief's decide items about its
+ * accounts, each only when the viewer can read the thread it comes from, so no item or link leads past a thread's audience.
+ */
+function decisionsOf(viewerId: string, accountIds: ReadonlySet<string>): HouseholdDecision[] {
   const s = store()
-  const proposals = unapprovedProposals(accountIds)
+  const readable = (threadId: string) => {
+    const thread = s.threads.find((t) => t.id === threadId)
+    if (!thread) throw new Error(`A decision names a missing thread ${threadId}`)
+    return canSeeThread(viewerId, thread)
+  }
+  const proposals = unapprovedProposals(accountIds).filter((p) => readable(p.threadId))
     .map((p): HouseholdDecision => ({ kind: 'proposal', proposalId: p.id, title: p.title, latestVersion: latestVersion(p).n, threadId: p.threadId }))
-  const subject = s.threads.find((t) => t.id === BRIEF_THREAD_ID)?.subject
+  const subject = readable(BRIEF_THREAD_ID) ? s.threads.find((t) => t.id === BRIEF_THREAD_ID)?.subject : undefined
   const briefAccount = subject?.type === 'account' && accountIds.has(subject.id) ? accounts.find((a) => a.id === subject.id) : undefined
   const brief = briefAccount
     ? briefSummaryNow().decide.map((item): HouseholdDecision => ({ kind: 'brief', item, threadId: BRIEF_THREAD_ID, accountName: accountDisplayName(briefAccount) }))
@@ -305,7 +314,7 @@ export function householdView(viewerId: string, householdId: string): HouseholdV
     meetings: meetingsOf(household.id),
     standing: standingOf(household),
     holdings: holdingsOf(ledger),
-    decisions: decisionsOf(accountIds),
+    decisions: decisionsOf(viewerId, accountIds),
     tasks: tasksOf(household, accountIds, memberIds, ledger.day),
     ...(lastContact ? { lastContact } : {}),
     waiting: clientsWaiting(household.id).map(({ clientName: name, since, threadId }) => ({ clientName: name, since, threadId })),
