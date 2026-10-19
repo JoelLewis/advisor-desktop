@@ -378,7 +378,7 @@ export function washSaleAcquisitions(account: Account, lotsFor: (a: Account) => 
 
 /**
  * The account's lots, each with `saleWash`: how many of its shares would have their loss taken by
- * §1091 if this account harvested every loss lot today (`matchWashedShares`), split by whether
+ * §1091 if this account harvested every loss lot on `day` (`matchWashedShares`), split by whether
  * that loss is deferred into a taxable replacement's basis or permanently disallowed by an IRA or
  * Roth replacement. A lot at a gain, and every lot in an account whose sales are not taxed, has
  * nothing to lose and reads 0/0; so does a coin held directly, which §1091 does not reach
@@ -393,7 +393,7 @@ export function washSaleAcquisitions(account: Account, lotsFor: (a: Account) => 
  * leg lot by lot (`settleBatchWashSales`), so a leg that nets to a gain is flagged, and carries
  * `washedLoss`, when any loss lot it sells washes, as its lots here would show.
  */
-export function generateTaxLotsWithSaleRisk(accountId: string, totalValue: number): TaxLot[] {
+export function generateTaxLotsWithSaleRisk(accountId: string, totalValue: number, day: string = MOCK_TODAY_ISO): TaxLot[] {
   const own = generateTaxLots(accountId, totalValue)
   const account = accounts.find((a) => a.id === accountId)
   if (!account) throw new Error(`tax lots requested for unknown account ${accountId}`)
@@ -414,7 +414,7 @@ export function generateTaxLotsWithSaleRisk(accountId: string, totalValue: numbe
       lotId: l.id, symbol: symbolOf(l.id), purchaseDate: l.purchaseDate, quantity: l.quantity,
     }))
     : []
-  const washed = matchWashedShares(lossLots, acquisitions, MOCK_TODAY_ISO)
+  const washed = matchWashedShares(lossLots, acquisitions, day)
   return own.map((lot) => ({ ...lot, saleWash: washed.get(lot.id) ?? { deferredShares: 0, disallowedShares: 0 } }))
 }
 

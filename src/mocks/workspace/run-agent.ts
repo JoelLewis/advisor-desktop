@@ -1,9 +1,8 @@
 import type { AgentId, Message } from '@/types/workspace'
 import { AGENT_DEFINITIONS } from '@/mocks/agents/registry'
 import { nextAt, nextId, store } from '@/mocks/data/workspace-store'
-import { MOCK_NOW_ISO } from '@/lib/clock'
 import { canSeeThread } from './visibility'
-import { runKeyOf } from './run-key'
+import { runAsOf, runKeyOf } from './run-key'
 import { prospectRevision } from './prospects'
 
 type Failure = { ok: false; status: 400 | 403 | 404; code: string; message: string }
@@ -24,15 +23,16 @@ function resolveRun(viewerId: string, threadId: string, agentId: AgentId): Resol
   const subject = thread.subject
   if (!subject) return { ok: false, status: 400, code: 'NO_SUBJECT', message: 'This thread has no subject for the agent to work on.' }
   const runKey = runKeyOf(agentId, thread.id, subject, subject.type === 'prospect' ? prospectRevision(subject.id) : undefined)
-  return { ok: true, threadId: thread.id, runKey, run: () => agent.run({ asOf: MOCK_NOW_ISO, subject }) }
+  return { ok: true, threadId: thread.id, runKey, run: () => agent.run({ asOf: runAsOf(), subject }) }
 }
 
 /** Read-only: what a run would find, shaped as findings with deterministic ids. Writes nothing to the store. */
 export function previewAgent(viewerId: string, threadId: string, agentId: AgentId): { ok: true; findings: Message[] } | Failure {
   const resolved = resolveRun(viewerId, threadId, agentId)
   if (!resolved.ok) return resolved
+  const asOf = runAsOf()
   const findings: Finding[] = resolved.run().map((f, n) => ({
-    kind: 'agent_finding', id: `preview-${agentId}-${n}`, threadId: resolved.threadId, agentId, at: MOCK_NOW_ISO, runKey: resolved.runKey, ...f,
+    kind: 'agent_finding', id: `preview-${agentId}-${n}`, threadId: resolved.threadId, agentId, at: asOf, runKey: resolved.runKey, ...f,
   }))
   return { ok: true, findings }
 }

@@ -4,7 +4,8 @@ import { resetWorkspaceStore, store } from '@/mocks/data/workspace-store'
 import { MOCK_NOW_ISO } from '@/lib/clock'
 import { BRIEF_THREAD_ID, briefMessages } from '../brief'
 import { remeasureBrief } from '../brief-remeasure'
-import { approvedStoryV3, approvedV1, release } from './story-fixture'
+import { approvedStoryV3, approvedV1, ok, release } from './story-fixture'
+import { advanceProspect, recordCoffee } from '../prospect-steps'
 
 type Finding = Extract<Message, { kind: 'agent_finding' }>
 const brief = () => store().messages.filter((m) => m.threadId === BRIEF_THREAD_ID)
@@ -40,6 +41,18 @@ describe('the Brief re-measures on view once the book has moved', () => {
     const ids = brief().map((m) => m.id)
     await openBrief()
     expect(brief().map((m) => m.id)).toEqual(ids)
+  })
+
+  it('re-measures when the day changes though the book has not: nothing bought on Wednesday reads "bought today" on Thursday', async () => {
+    release(approvedStoryV3())
+    await openBrief()
+    expect(findings().some((f) => f.claim.includes('was bought today in this account'))).toBe(true)
+    ok(recordCoffee('user-001', 'prsp-011', 'Coffee after the introduction.'))
+    ok(advanceProspect('user-001', 'prsp-011', 'reply'))
+    const { messages } = await openBrief()
+    expect(messages[0]).toMatchObject({ kind: 'brief_summary', id: 'msg-r1-0226-00' })
+    expect(findings().some((f) => /bought today|was sold at a loss today/.test(f.claim))).toBe(false)
+    expect(findings().every((f) => f.runKey.endsWith('|book 1|day 2026-02-26'))).toBe(true)
   })
 
   it('after v1 fills: every class inside its band, private equity still noted', async () => {

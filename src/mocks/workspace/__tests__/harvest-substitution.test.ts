@@ -12,7 +12,7 @@ const built = (accountId: string): DraftPreview => {
   if (!r.ok) throw new Error(`${accountId}: ${r.message}`)
   return r.built
 }
-const flaggedFor = (accountId: string) => new Set(sameWashSaleTaxpayer(accounts.find((a) => a.id === accountId)!).flatMap(harvestOpportunities).map((o) => o.position.symbol))
+const flaggedFor = (accountId: string) => new Set(sameWashSaleTaxpayer(accounts.find((a) => a.id === accountId)!).flatMap((a) => harvestOpportunities(a, '2026-02-25')).map((o) => o.position.symbol))
 
 describe('harvest-plus-substitute', () => {
   it("acc-043 harvests its CSBGU0.SW loss and buys the model's AGG in its place", () => {

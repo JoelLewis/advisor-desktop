@@ -11,6 +11,8 @@ import { harvestOpportunities } from './harvest-scanner'
 import { claimNameOf, hasDigit } from './claim-name'
 import { joinWords } from '@/lib/words'
 import { isTaxableAccount } from '@/lib/tax-treatment'
+import { easternDayOf } from '@/lib/eastern-day'
+import { sessionNow } from '@/mocks/data/workspace-store'
 
 const NO_SELF_WASH = 'buys nothing that would wash a loss the taxpayer has taken or this proposal takes'
 
@@ -69,7 +71,7 @@ export function proposalTitle(accountId: string): string {
 function foreclosedHarvestCaveat(accountId: string, built: DraftPreview): string {
   const account = accounts.find((a) => a.id === accountId)
   if (!account) throw new Error(`Proposal Agent: unknown account ${accountId}`)
-  const flagged = new Set(sameWashSaleTaxpayer(account).flatMap(harvestOpportunities).map((o) => o.position.symbol))
+  const flagged = new Set(sameWashSaleTaxpayer(account).flatMap((a) => harvestOpportunities(a, easternDayOf(sessionNow()))).map((o) => o.position.symbol))
   const names = [...new Set(built.preview.trades
     .filter((t) => t.side === 'buy' && isSubjectToWashSale(t.symbol) && flagged.has(t.symbol))
     .map((t) => claimNameOf(t.symbol, t.name)))]

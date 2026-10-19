@@ -5,9 +5,10 @@ import { joinWords } from '@/lib/words'
 
 /**
  * `addresseeId` is the client the recap is written to: a filed line worded for them is read in that wording.
- * `greetingNames` are the first names of the clients who attended, the addressee first.
+ * `greetingNames` are the first names of the clients who attended, the addressee first. `metOn` is when they met, as
+ * the letter says it: "today" on the meeting's day, else the date ("on February 25, 2026").
  */
-export type RecapInput = { addresseeId: string; greetingNames: string[]; filing: MeetingFiling; signerName: string; windowSentence?: string }
+export type RecapInput = { addresseeId: string; greetingNames: string[]; filing: MeetingFiling; signerName: string; metOn: string; windowSentence?: string }
 
 const RECAP_HEADINGS = { client_requests: 'What you asked us', decisions: 'What we decided' } as const
 
@@ -23,7 +24,7 @@ const asRead = (line: NoteLine, addresseeId: string) => (line.toClient?.clientId
  * so the plain instruction comes before the detail it governs, or ends the decisions when none mentions Intel,
  * so it is never dropped.
  */
-export function writeMeetingRecap({ addresseeId, greetingNames, filing, signerName, windowSentence }: RecapInput): ClientLetter {
+export function writeMeetingRecap({ addresseeId, greetingNames, filing, signerName, metOn, windowSentence }: RecapInput): ClientLetter {
   const listed = (section: Extract<NoteSection, 'client_requests' | 'decisions'>) => {
     const lines = filing.lines.filter((l) => l.section === section).map((l) => `- ${asRead(l, addresseeId)}`)
     return lines.length > 0 ? [[`${RECAP_HEADINGS[section]}:`, ...lines].join('\n')] : []
@@ -40,7 +41,7 @@ export function writeMeetingRecap({ addresseeId, greetingNames, filing, signerNa
   const decided = decisionsWithWindow()
   const paragraphs = [
     `Dear ${joinWords(greetingNames)},`,
-    `Thank you${greetingNames.length === 2 ? ' both' : greetingNames.length > 2 ? ' all' : ''} for meeting with me today. Here is what we agreed.`,
+    `Thank you${greetingNames.length === 2 ? ' both' : greetingNames.length > 2 ? ' all' : ''} for meeting with me ${metOn}. Here is what we agreed.`,
     ...asked,
     ...decided,
     ...(asked.length + decided.length === 0 ? ['Nothing was decided or asked of us at this meeting.'] : []),

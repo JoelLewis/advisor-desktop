@@ -11,12 +11,12 @@ import { sessionNow, store } from '@/mocks/data/workspace-store'
 import type { ComplianceAlert } from '@/types/compliance'
 import { complianceAlerts } from '@/mocks/handlers/compliance'
 import { computeDriftForAccount } from '@/mocks/handlers/pms'
-import { bookVersion } from '@/mocks/data/portfolio-ledger'
 import { easternDayOf } from '@/lib/eastern-day'
 import { isModelManaged } from '@/lib/mandate'
 import { alertContext, isOpenAlert } from './alerts'
 import { BRIEF_THREAD_ID, composeBrief } from './brief'
 import { settleApproved, type BriefSummary } from './brief-groups'
+import { briefIsCurrent, remeasurePrefix } from './brief-remeasure'
 import { meetingOf, toUtc } from './meetings'
 import { suitablyApprovedAccounts } from './suitability'
 import { householdLedger, managedValueUsd } from './household-ledger'
@@ -40,12 +40,12 @@ const isBriefSummary = (m: Message): m is BriefSummary => m.kind === 'brief_summ
 
 /**
  * The Brief's summary as it reads now, suitability settled by recorded approvals. A read never writes: if fills have
- * moved the book since the Brief was measured, the summary is composed in memory as of now and left unstored (opening
- * the Brief thread is what re-measures and stores it).
+ * moved the book, or the session has moved to another day, since the Brief was measured, the summary is composed in
+ * memory as of now and left unstored (opening the Brief thread is what re-measures and stores it).
  */
 export function briefSummaryNow(): BriefSummary {
-  const stale = store().briefBook !== bookVersion()
-  const messages = stale ? composeBrief((i) => `msg-q${bookVersion()}-${i}`, sessionNow()) : store().messages
+  const prefix = remeasurePrefix('q')
+  const messages = briefIsCurrent() ? store().messages : composeBrief((i) => `${prefix}-${i}`, sessionNow())
   const summary = messages.filter(isBriefSummary).sort(byAt).pop()
   if (!summary) throw new Error('The Brief has no summary')
   return settleApproved(summary, suitablyApprovedAccounts())

@@ -3,7 +3,7 @@ import type { Meeting } from '@/types/workspace-meeting'
 import type { ProspectProposal, ProspectRecord } from '@/types/workspace-prospect'
 import type { BindingAct, Draft, Message, Thread } from '@/types/workspace'
 import type { ApprovalRecord, Proposal, StagedOrder } from '@/types/workspace-proposal'
-import { eventTime } from '@/lib/clock'
+import { eventTime, MOCK_TODAY_ISO } from '@/lib/clock'
 import { briefMessages } from '@/mocks/workspace/brief'
 import { bookVersion, resetLedger } from './portfolio-ledger'
 import { SEED_PROSPECTS } from './prospect-seed'
@@ -25,8 +25,8 @@ export type WorkspaceState = {
   /** The session's prospects: stage, disclosures, steps, statements, tasks, onboarding. */
   prospects: ProspectRecord[]
   prospectProposals: ProspectProposal[]
-  /** The book version the Brief's findings measured. */
-  briefBook: number
+  /** The book version and the New York day the Brief's findings measured. */
+  briefMeasured: { book: number; day: string }
   sequence: number
   counters: Record<Counter, number>
 }
@@ -44,7 +44,7 @@ function seed(): WorkspaceState {
     meetings: SEED_MEETINGS.map((m) => ({ ...m, agenda: [], tasks: [] })),
     prospects: SEED_PROSPECTS.map((p) => ({ ...p, stageHistory: [...p.stageHistory], statements: [], disclosures: [], steps: [], tasks: [] })),
     prospectProposals: [],
-    briefBook: bookVersion(),
+    briefMeasured: { book: bookVersion(), day: MOCK_TODAY_ISO },
     sequence: SEED_LAST_SEQUENCE,
     counters: { msg: 0, draft: 0, act: 0, proposal: 0, staged: 0, record: 0, agenda: 0, task: 0, note: 0, pproposal: 0, ptask: 0, thread: 0 },
   }

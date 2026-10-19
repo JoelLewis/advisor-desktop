@@ -248,7 +248,7 @@ describe('the Proposal Agent over the whole book', () => {
 describe('the Proposal Agent never claims a harvest its own buys foreclose', () => {
   const account = (id: string) => accounts.find((a) => a.id === id)!
   /** Securities the Harvest Scanner flags in any account of this account's wash-sale taxpayer. */
-  const flaggedFor = (id: string) => new Set(sameWashSaleTaxpayer(account(id)).flatMap(harvestOpportunities).map((o) => o.position.symbol))
+  const flaggedFor = (id: string) => new Set(sameWashSaleTaxpayer(account(id)).flatMap((a) => harvestOpportunities(a, '2026-02-25')).map((o) => o.position.symbol))
 
   it('the Johnson draft buys AGG while the Brief flags AGG as a harvest, and says so', () => {
     const built = buildVersion('acc-002', agentConstraints([]), [])

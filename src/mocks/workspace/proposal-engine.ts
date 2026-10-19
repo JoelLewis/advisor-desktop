@@ -20,6 +20,8 @@ import { claimNameOf } from '@/mocks/agents/claim-name'
 import { ASSET_CLASS_LABELS } from '@/lib/labels'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import { fingerprint } from '@/lib/fingerprint'
+import { easternDayOf } from '@/lib/eastern-day'
+import { sessionNow } from '@/mocks/data/workspace-store'
 
 /** Proposals are generated tax-aware against the drift surface's own threshold. */
 const PROPOSAL_DRIFT_THRESHOLD = 0.005
@@ -195,7 +197,7 @@ function unexcludable(account: Account, constraints: readonly ProposalConstraint
 
 /** What the Harvest Scanner flags for the account's wash-sale taxpayer: buying one of these forecloses its harvest. */
 function flaggedHarvests(account: Account): Set<string> {
-  return new Set(sameWashSaleTaxpayer(account).flatMap(harvestOpportunities).map((o) => o.position.symbol))
+  return new Set(sameWashSaleTaxpayer(account).flatMap((a) => harvestOpportunities(a, easternDayOf(sessionNow()))).map((o) => o.position.symbol))
 }
 
 /**

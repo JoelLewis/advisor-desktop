@@ -5,6 +5,7 @@ import { holdMeeting, meetingView, notesFingerprint, saveNotes } from '../meetin
 import { draftMeetingNotes } from '../meeting-agents'
 import { fileMeetingRecord } from '../meeting-acts'
 import { draftRecap } from '../recap'
+import { advanceProspect, recordCoffee } from '../prospect-steps'
 import { writeMeetingRecap } from '@/mocks/agents/meeting-recap'
 import { draftsFor, reviseDraft } from '../letters'
 import { sendToParty } from '../acts'
@@ -152,7 +153,7 @@ describe('the recap', () => {
   it('reads a line worded for another client as filed', () => {
     heldAndDrafted()
     file()
-    const { body } = writeMeetingRecap({ addresseeId: 'cli-002', greetingNames: ['Patricia', 'Robert'], filing: meeting().filed!, signerName: 'Adrian Hale' })
+    const { body } = writeMeetingRecap({ addresseeId: 'cli-002', greetingNames: ['Patricia', 'Robert'], filing: meeting().filed!, signerName: 'Adrian Hale', metOn: 'today' })
     expect(body).toContain("- Robert will not buy Intel in any of his or Patricia's accounts")
     expect(body).not.toContain('The Intel restriction covers')
   })
@@ -193,8 +194,20 @@ describe('the recap reads like a person wrote it', () => {
   it('greets and thanks one client who attended alone', () => {
     heldAndDrafted()
     file()
-    const { body } = writeMeetingRecap({ addresseeId: 'cli-001', greetingNames: ['Robert'], filing: meeting().filed!, signerName: 'Adrian Hale' })
+    const { body } = writeMeetingRecap({ addresseeId: 'cli-001', greetingNames: ['Robert'], filing: meeting().filed!, signerName: 'Adrian Hale', metOn: 'today' })
     expect(body).toMatch(/^Dear Robert,\n\nThank you for meeting with me today\./)
+  })
+  it('dates the meeting when drafted on a later day, and a "today" drafted on the meeting day goes stale after a jump', () => {
+    heldAndDrafted()
+    file()
+    const sameDay = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft
+    expect(sameDay.body).toContain('meeting with me today.')
+    ok(recordCoffee(ADRIAN, 'prsp-011', 'Coffee after the introduction.'))
+    ok(advanceProspect(ADRIAN, 'prsp-011', 'reply'))
+    expect(sendToParty(ADRIAN, sameDay.id)).toMatchObject({ status: 409, code: 'STALE_DRAFT', message: 'This recap thanks them for meeting today, but the meeting was on an earlier day. Ask for a new recap.' })
+    const later = ok(draftRecap(ADRIAN, 'th-robert', 'evt-010')).draft
+    expect(later.id).not.toBe(sameDay.id)
+    expect(later.body).toMatch(/^Dear Robert and Patricia,\n\nThank you both for meeting with me on February 25, 2026\./)
   })
   it('asks plainly, and promises in the first person', () => {
     const body = recapBody()

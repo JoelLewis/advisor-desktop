@@ -1,18 +1,26 @@
 import type { Draft } from '@/types/workspace'
 import { clients } from '@/mocks/data/clients'
 import { personById } from '@/mocks/data/people'
-import { nextAt, nextId, store } from '@/mocks/data/workspace-store'
+import { nextAt, nextId, sessionNow, store } from '@/mocks/data/workspace-store'
+import type { Meeting } from '@/types/workspace-meeting'
+import { easternDayOf } from '@/lib/eastern-day'
 import { writeMeetingRecap } from '@/mocks/agents/meeting-recap'
 import { firstNameOf } from '@/lib/words'
 import { draftingClientThread, type LetterFailure } from './letters'
 import { isRecapStale, latestIntelWindowEnd } from './draft-staleness'
 import { clientDate } from '@/kit/measure'
-import { meetingEvent, meetingTitle, visibleMeeting } from './meetings'
+import { meetingDay, meetingEvent, meetingTitle, visibleMeeting } from './meetings'
 
 const refuse = (status: LetterFailure['status'], code: string, message: string): LetterFailure => ({ ok: false, status, code, message })
 
 /** The Intel instruction, in the client's words: no purchase through the last day of the latest open Intel window (the house rule writes windows "through <date>"). */
 const intelWindowSentence = (end: string) => `Please don't buy Intel shares in any of your accounts through ${clientDate(end)}.`
+
+/** When the clients met, as the recap says it on the session's day: "today" on the meeting's own day, else its date. */
+const metOnWords = (meeting: Meeting): string => {
+  const day = meetingDay(meeting)
+  return day === easternDayOf(sessionNow()) ? 'today' : `on ${clientDate(day)}`
+}
 
 /** The Client Letter Agent's recap of a filed meeting, drafted in the client thread of a member of the meeting's household. */
 export function draftRecap(viewerId: string, clientThreadId: string, eventId: string): { ok: true; draft: Draft; created: boolean } | LetterFailure {
@@ -42,6 +50,7 @@ export function draftRecap(viewerId: string, clientThreadId: string, eventId: st
   })
   const letter = writeMeetingRecap({
     addresseeId: client.id, greetingNames: attending.map((c) => firstNameOf(c.fullName)), filing: meeting.filed, signerName: signer.name,
+    metOn: metOnWords(meeting),
     windowSentence: windowEnd === undefined ? undefined : intelWindowSentence(windowEnd),
   })
   const draft: Draft = {

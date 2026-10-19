@@ -17,6 +17,7 @@ import { isTaxableAccount } from '@/lib/tax-treatment'
 import { convertToBase } from '@/lib/currency'
 import { canHoldSecurities } from '@/lib/held-away'
 import { claimNameOf } from './claim-name'
+import { easternDayOf } from '@/lib/eastern-day'
 import { fmtDayMonthYear } from '@/kit/measure'
 import { dontRepurchaseThrough } from '@/kit/repurchase'
 
@@ -43,22 +44,34 @@ export function taxpayerHeldAway(account: Account): HeldAwayAsset[] {
 /** "401(k) — Former employer" → "401(k)". */
 const shortAccountType = (accountType: string) => accountType.split(' — ')[0] ?? accountType
 
-/** Symbols the firm bought in the account on the session day: selling them at a loss now would undo the trade and wash the loss. */
-const boughtToday = (accountId: string): Map<string, number> =>
-  accountLedger(accountId).fillsOnDay.filter((f) => f.side === 'buy').reduce((m, f) => m.set(f.symbol, (m.get(f.symbol) ?? 0) + f.quantity), new Map<string, number>())
+/** What the firm bought on `day` in one of the taxpayer's accounts: selling it at a loss now would wash the loss (§1091 reads the taxpayer). */
+type BoughtToday = { quantity: number; here: boolean }
+
+/** Symbols the firm bought on `day` in any account of this account's wash-sale taxpayer, and whether any was bought in this account. */
+function boughtToday(account: Account, day: string): Map<string, BoughtToday> {
+  const bought = new Map<string, BoughtToday>()
+  for (const a of sameWashSaleTaxpayer(account)) {
+    for (const f of accountLedger(a.id, day).fillsOnDay.filter((fill) => fill.side === 'buy')) {
+      const seen = bought.get(f.symbol)
+      bought.set(f.symbol, { quantity: (seen?.quantity ?? 0) + f.quantity, here: (seen?.here ?? false) || a.id === account.id })
+    }
+  }
+  return bought
+}
 
 export type HarvestOpportunity = { position: Position; losses: PositionLosses }
 
 /**
- * The positions in a taxable account that a sale today would harvest: a loss allowed now past the
- * harvest threshold, largest first. None in an account whose sales are not taxed.
+ * The positions in a taxable account that a sale on `day` (the New York day) would harvest: a loss allowed now past
+ * the harvest threshold, largest first, leaving out what the taxpayer bought that day. None in an account whose sales
+ * are not taxed.
  */
-export function harvestOpportunities(account: Account): HarvestOpportunity[] {
+export function harvestOpportunities(account: Account, day: string): HarvestOpportunity[] {
   if (!isTaxableAccount(account.taxTreatment)) return []
   const currency = account.baseCurrency ?? 'USD'
-  const lots = generateTaxLotsWithSaleRisk(account.id, account.totalValue)
-  const bought = boughtToday(account.id)
-  return accountLedger(account.id).positions
+  const lots = generateTaxLotsWithSaleRisk(account.id, account.totalValue, day)
+  const bought = boughtToday(account, day)
+  return accountLedger(account.id, day).positions
     .filter((p) => p.symbol !== 'CASH' && !bought.has(p.symbol))
     .map((p) => {
       const own = lots.filter((l) => l.positionId === p.id)
@@ -73,7 +86,7 @@ export function runHarvestScanner({ asOf, subject }: AgentContext): TopicFinding
   if (subject.type !== 'account') return []
   const account = accounts.find((a) => a.id === subject.id)
   if (!account) return []
-  const today = asOf.slice(0, 10)
+  const today = easternDayOf(asOf)
   const lotsCite = [{ source: `Tax lots with wash-sale matching · ${account.name}`, asOf }]
   const findings: TopicFinding[] = []
   const openWindows = openWashSaleWindowsFor(account, today)
@@ -88,11 +101,11 @@ export function runHarvestScanner({ asOf, subject }: AgentContext): TopicFinding
     const currency = account.baseCurrency ?? 'USD'
     const usd = (amount: number) => Math.round(convertToBase(amount, currency, FX_RATES_USD_BASE))
     const window = washSaleWindow(today)
-    const harvestable = harvestOpportunities(account)
-    const positions = accountLedger(account.id).positions
-    const boughtAtLoss = [...boughtToday(account.id)].flatMap(([symbol, quantity]) => {
+    const harvestable = harvestOpportunities(account, today)
+    const positions = accountLedger(account.id, today).positions
+    const boughtAtLoss = [...boughtToday(account, today)].flatMap(([symbol, { quantity, here }]) => {
       const held = positions.find((p) => p.symbol === symbol)
-      return held && held.gainLoss < 0 ? [{ symbol, quantity, name: claimNameOf(symbol, held.name) }] : []
+      return held && held.gainLoss < 0 ? [{ symbol, quantity, here, name: claimNameOf(symbol, held.name) }] : []
     })
     if (harvestable.length === 0) {
       // A loss held in shares the firm bought today is not harvestable without a wash, so the summary may not say there is none.
@@ -115,9 +128,11 @@ export function runHarvestScanner({ asOf, subject }: AgentContext): TopicFinding
         topic: { kind: 'harvest_allowed', symbol: p.symbol, name: claimNameOf(p.symbol, p.name), remaining: partlySold.has(p.symbol) },
       })
     }
-    for (const { symbol, quantity, name } of boughtAtLoss) {
+    for (const { symbol, quantity, here, name } of boughtAtLoss) {
       findings.push({
-        claim: `${name} was bought today in this account; a sale at a loss now would be partly washed by that purchase, so it is not offered for harvest.`,
+        claim: here
+          ? `${name} was bought today in this account; a sale at a loss now would be partly washed by that purchase, so it is not offered for harvest.`
+          : `${name} was bought today in another account of the same taxpayer; a sale at a loss here now would be partly washed by that purchase, so it is not offered for harvest.`,
         attention: 'info', citations: lotsCite, topic: { kind: 'bought_today', symbol, name },
         figures: [{ label: `Bought today · ${symbol}`, value: quantity, unit: 'sh', source: 'ledger.fillsOnDay.quantity' }],
       })

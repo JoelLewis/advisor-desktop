@@ -26,12 +26,12 @@ const kinds = (id: string) => rowOf(id).reasons.map((r) => r.kind)
 describe('reading the book', () => {
   it('never writes: after fills move the book, reading it twice leaves the messages and the event clock as they were', () => {
     release(approvedV1())
-    const [messages, clock, briefBook] = [store().messages.length, sessionNow(), store().briefBook]
+    const [messages, clock, briefBook] = [store().messages.length, sessionNow(), store().briefMeasured]
     book()
     book()
     expect(store().messages).toHaveLength(messages)
     expect(sessionNow()).toBe(clock)
-    expect(store().briefBook).toBe(briefBook)
+    expect(store().briefMeasured).toEqual(briefBook)
   })
 })
 

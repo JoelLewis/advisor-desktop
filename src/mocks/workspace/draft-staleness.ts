@@ -1,7 +1,9 @@
 import type { Draft } from '@/types/workspace'
 import { isDraftStale } from '@/mocks/data/proposals-store'
 import { accounts } from '@/mocks/data/accounts'
-import { store } from '@/mocks/data/workspace-store'
+import { sessionNow, store } from '@/mocks/data/workspace-store'
+import { easternDayOf } from '@/lib/eastern-day'
+import { meetingDay } from './meetings'
 import { openWashSaleWindowsFor } from '@/mocks/handlers/tax-return'
 import type { OpenWashSaleWindow } from '@/mocks/data/realized-sales'
 import { todayISO } from '@/lib/clock'
@@ -41,13 +43,25 @@ const windowMoved = (draft: Draft): boolean => {
   return basis.windowEnd !== latestIntelWindowEnd(requireClientOfDraft(draft))
 }
 
-/** A recap is current only while the meeting's filing is exactly the one it was written from and its Intel window is still the engine's. */
-export const isRecapStale = (draft: Draft): boolean => filingMoved(draft) || windowMoved(draft)
+/** The recap was written on the meeting's day, so it says they met "today", and the session has moved to a later day. */
+const dayMoved = (draft: Draft): boolean => {
+  const basis = draft.recordBasis
+  const meeting = basis && store().meetings.find((m) => m.eventId === basis.eventId)
+  if (!meeting) return false
+  const written = easternDayOf(draft.createdAt)
+  return written === meetingDay(meeting) && easternDayOf(sessionNow()) !== written
+}
+
+/** A recap is current only while the meeting's filing is exactly the one it was written from, its Intel window is still the engine's, and its "today" is still today. */
+export const isRecapStale = (draft: Draft): boolean => filingMoved(draft) || windowMoved(draft) || dayMoved(draft)
 
 /** Whether an agent letter's basis — an approved version, or a filed record — no longer holds. */
 export const isStale = (draft: Draft): boolean => isDraftStale(draft) || isRecapStale(draft)
 
 export function staleMessage(draft: Draft): string {
+  if (draft.recordBasis && !filingMoved(draft) && !windowMoved(draft) && dayMoved(draft)) {
+    return 'This recap thanks them for meeting today, but the meeting was on an earlier day. Ask for a new recap.'
+  }
   if (draft.recordBasis && !filingMoved(draft)) {
     const stated = draft.recordBasis.windowEnd
     const now = latestIntelWindowEnd(requireClientOfDraft(draft))
