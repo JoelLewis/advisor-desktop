@@ -3,7 +3,7 @@ import * as api from '@/services/workspace'
 import { NotSentError } from '@/hooks/not-sent-error'
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { DEFAULT_VIEWER_ID } from '@/workspace/viewer/viewer-context'
-import type { AgentId } from '@/types/workspace'
+import type { AgentId, ConversationAudience } from '@/types/workspace'
 import type { ArchiveFilters, ComplianceActRequest, PresenterItem } from '@/types/workspace-supervision'
 import type { LegEdit, ProposalConstraint } from '@/types/workspace-proposal'
 import type { SuitabilityReason } from '@/lib/suitability'
@@ -263,4 +263,10 @@ export function useStoryProgress(enabled: boolean) {
 export function useHouseholdBook() {
   const { viewerId } = useViewer()
   return useQuery({ queryKey: ['workspace', viewerId, 'households'], queryFn: () => api.getHouseholdBook(viewerId) })
+}
+
+export function useStartConversation() {
+  const { viewerId } = useViewer()
+  const invalidate = useInvalidateWorkspace()
+  return useMutation({ mutationFn: (input: { householdId: string; title: string; audience: ConversationAudience }) => api.startConversation(viewerId, input), onSettled: invalidate })
 }

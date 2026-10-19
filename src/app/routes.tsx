@@ -14,6 +14,8 @@ import { useWorkbenchThreadAvailable } from '@/workspace/workbench/use-workbench
 import { MeetingPage } from '@/workspace/meeting/MeetingPage'
 import { MeetingThreadColumn } from '@/workspace/meeting/MeetingThreadColumn'
 import { useMeetingThreadAvailable } from '@/workspace/meeting/use-meeting-thread-available'
+import { HouseholdConversations } from '@/workspace/household/HouseholdConversations'
+import { useHouseholdConversationsAvailable } from '@/workspace/household/use-household-conversations-available'
 import type { ShellHandle } from '@/workspace/shell/context-column'
 import { RootLayout } from './RootLayout'
 import { PageLoading } from './PageLoading'
@@ -30,6 +32,7 @@ const meetingHandle: ShellHandle = {
   contextColumn: { label: 'Live thread', Content: MeetingThreadColumn, useAvailable: useMeetingThreadAvailable },
   threadList: 'hidden',
 }
+const householdHandle: ShellHandle = { contextColumn: { label: 'Conversations', Content: HouseholdConversations, useAvailable: useHouseholdConversationsAvailable } }
 const fullWidthHandle: ShellHandle = { threadList: 'hidden' }
 
 export const routes: RouteObject[] = [
@@ -44,7 +47,7 @@ export const routes: RouteObject[] = [
           { index: true, element: <WorkspaceHome /> },
           { path: 't/:threadId', element: <ThreadPage />, handle: threadHandle },
           { path: 'accounts/:accountId', element: <AccountView /> },
-          { path: 'households/:householdId', element: <HouseholdView /> },
+          { path: 'households/:householdId', element: <HouseholdView />, handle: householdHandle },
           { path: 'clients/:clientId', element: <ClientView />, handle: fullWidthHandle },
           { path: 'archive', lazy: () => import('@/workspace/archive/ArchivePage').then((m) => ({ Component: m.ArchivePage })), HydrateFallback: PageLoading },
           { path: 'billing', lazy: () => import('@/workspace/reference/BillingPage').then((m) => ({ Component: m.BillingPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },

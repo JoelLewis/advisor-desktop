@@ -1,5 +1,5 @@
 import { get, post, put } from './api-client'
-import type { AgentId, BindingAct, Directory, ServedAct, Draft, ListedThread, Message, ThreadDetail } from '@/types/workspace'
+import type { AgentId, BindingAct, ConversationAudience, StartedConversation, Directory, ServedAct, Draft, ListedThread, Message, ThreadDetail } from '@/types/workspace'
 import type { Archive, ArchiveFilters, ComplianceActRequest, PresenterItem, SupervisionQueue } from '@/types/workspace-supervision'
 import type { DraftPreview, LegEdit, ProposalConstraint, ProposalDetail } from '@/types/workspace-proposal'
 import type { AgendaItemInput, MeetingSummary, MeetingView, NoteLineInput } from '@/types/workspace-meeting'
@@ -125,3 +125,6 @@ export const sendProspectProposal = (viewer: string, proposalId: string) =>
 
 export const getStoryProgress = (viewer: string) =>
   get<StoryProgress>('/workspace/story', undefined, as(viewer))
+
+export const startConversation = (viewer: string, input: { householdId: string; title: string; audience: ConversationAudience }) =>
+  post<StartedConversation>('/workspace/threads', input, as(viewer))

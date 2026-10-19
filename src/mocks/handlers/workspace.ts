@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw'
 import { isBreakResolution } from '@/types/reference-reconciliation'
 import { isDisclosureDocument } from '@/types/workspace-prospect'
 import { isSuitabilityReasonId, type SuitabilityReason } from '@/lib/suitability'
-import type { AgentId, Directory, Draft, ListedThread, Message, ThreadDetail } from '@/types/workspace'
+import type { AgentId, ConversationAudience, Directory, Draft, ListedThread, Message, ThreadDetail } from '@/types/workspace'
 import { AGENTS, PEOPLE, can, permissionsOf } from '../data/people'
 import { resolveBreak } from '../reference/reconciliation'
 import { nextAt, nextId, store } from '../data/workspace-store'
@@ -18,6 +18,7 @@ import { approveProspectProposal, sendProspectProposal } from '../workspace/pros
 import { prospectProposalById, visibleProspectProposal } from '../workspace/prospect-proposals'
 import { visibleProspect } from '../workspace/prospects'
 import { fileMeetingRecord } from '../workspace/meeting-acts'
+import { startConversation } from '../workspace/conversations'
 import { carryFinding } from '../workspace/carry'
 import { draftLetter, draftsFor, reviseDraft } from '../workspace/letters'
 import { approveProposal, visibleProposal, withdrawApproval } from '../workspace/proposal-acts'
@@ -42,6 +43,13 @@ function parseSuitability(value: unknown): { ok: true; value?: SuitabilityReason
   if (!isSuitabilityReasonId(reason)) return { ok: false, message: 'suitability.reason must be one of the listed reasons.' }
   if (note !== undefined && typeof note !== 'string') return { ok: false, message: 'suitability.note must be text.' }
   return { ok: true, value: { reason, ...(note !== undefined ? { note } : {}) } }
+}
+
+function parseAudience(value: unknown): ConversationAudience | undefined {
+  if (typeof value !== 'object' || value === null) return undefined
+  const { kind, clientId } = value as Record<string, unknown>
+  if (kind === 'private' || kind === 'internal') return { kind }
+  return kind === 'client' && nonEmptyString(clientId) ? { kind, clientId } : undefined
 }
 
 const fullDirectory = (): Directory => ({ people: [...PEOPLE], agents: [...AGENTS], permissions: Object.fromEntries(PEOPLE.map((p) => [p.id, permissionsOf(p.id)])) })
@@ -72,6 +80,18 @@ export const workspaceHandlers = [
     if (!viewer) return unauthorized()
     const listed: ListedThread[] = visibleThreads(viewer).map((t) => ({ ...t, audience: audienceOf(t) }))
     return HttpResponse.json(listed)
+  }),
+
+  http.post('/api/workspace/threads', async ({ request }) => {
+    const viewer = firmViewer(request)
+    if (!viewer.ok) return viewer.response
+    const body = await readJson(request)
+    const audience = parseAudience(body?.audience)
+    if (!body || !nonEmptyString(body.householdId) || typeof body.title !== 'string' || !audience) {
+      return badRequest('householdId, a title and an audience (private, internal, or client with a clientId) are required.')
+    }
+    const r = startConversation(viewer.viewerId, { householdId: body.householdId, title: body.title, audience })
+    return r.ok ? HttpResponse.json({ thread: r.thread, created: r.created }, { status: r.created ? 201 : 200 }) : refusal(r)
   }),
 
   http.get('/api/workspace/threads/:id', ({ request, params }) => {

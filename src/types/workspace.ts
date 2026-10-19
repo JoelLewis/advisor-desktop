@@ -125,6 +125,10 @@ export type Draft = { id: string; clientThreadId: string; authorId: string; body
   /** Firm only: the other client conversations this letter also goes to when sent, as one act. */
   copies?: { threadId: string; partyName: string }[] }
 /** Who reads a thread besides the firm, as the band says it: its owner alone, the team (about these clients, by full name), or its party. */
+/** Who a new conversation from a household page is for: the advisor alone, the team, or one member of the household. */
+export type ConversationAudience = { kind: 'private' } | { kind: 'internal' } | { kind: 'client'; clientId: string }
+/** A started conversation; `created` is false when a member's existing conversation was opened instead. */
+export type StartedConversation = { thread: Thread; created: boolean }
 export type ThreadAudience = { kind: 'owner' } | { kind: 'team'; about: string[] } | { kind: 'party'; name: string }
 /** The thread, its messages, who reads it as the band says it, and everyone who reads it by name, as its viewer may be told. */
 export type ThreadDetail = { thread: Thread; messages: Message[]; audience: ThreadAudience; roster: string[] }
