@@ -4,6 +4,9 @@ import type { DocumentType, SignatureStatus } from './document'
 import type { CommChannel, CommDirection } from './client-comms'
 import type { HouseholdRelationship } from './household'
 import type { MeetingState } from './workspace-meeting'
+import type { WholeStatus } from './reference-risk'
+import type { MethodNote } from './reference'
+import type { BriefItem, ThreadAudience, Visibility } from './workspace'
 
 /** A reason the engine can state, without a proposal, that an out-of-band class cannot be closed by selling. */
 export type StructuralResidual = 'not_market_tradable' | 'replacement_hold'
@@ -52,11 +55,48 @@ type ActivityRow = { id: string; title: string; description: string; at: string 
 /** A meeting on the household's calendar: one the workspace runs carries its state and thread; any other is a calendar entry. */
 export type MeetingRef = { eventId: string; title: string; start: string; end: string; state: MeetingState | 'calendar'; threadId?: string }
 
+export type MemberStanding = {
+  clientId: string; name: string
+  tolerance: { band: string; floor: number; ceiling: number; score: number; assessedOn: string }
+  /** The member's own accounts as a whole, against their own tolerance; absent when they hold no measured account. */
+  whole?: { score: number; status: WholeStatus; value: number }
+}
+export type HoldingOrder =
+  | { kind: 'working'; id: string; side: 'buy' | 'sell'; symbol: string; quantity: number; quantityUnit: 'sh' | 'contracts' | 'par'; limitPrice?: number }
+  | { kind: 'pending_compliance'; id: string; side: 'buy' | 'sell'; symbol: string; quantity: number }
+  | { kind: 'filled'; id: string; side: 'buy' | 'sell'; symbol: string; quantity: number; at: string }
+export type ClassHolder =
+  | { kind: 'managed'; accountId: string; name: string; ownerName: string; typeLabel: string; value: number; weightInAccount: number; orders: HoldingOrder[] }
+  | { kind: 'held_away'; heldAwayId: string; name: string; ownerName: string; value: number; reportedOn: string }
+export type AssetClassRow = {
+  assetClass: AssetClass; value: number; weight: number; target: number; drift: number; band: number; withinBand: boolean
+  holders: ClassHolder[]; openOrders: number; fillsToday: number
+}
+export type HouseholdHoldings = { managedValue: number; modelValue: number; rows: AssetClassRow[]; notInTarget: { accountId: string; name: string; value: number; mandateSummary: string }[] }
+export type HouseholdDecision =
+  | { kind: 'brief'; item: BriefItem; threadId: string }
+  | { kind: 'proposal'; proposalId: string; title: string; latestVersion: number; threadId: string }
+export type HouseholdTask = { id: string; title: string; owner: string; due?: string; overdue: boolean; source: 'meeting' | 'compliance' | 'open_item' | 'signature' }
+export type LastContact = {
+  clientName: string; at: string; direction: 'from_client' | 'to_client'
+  where: { kind: 'conversation'; threadId: string; title: string } | { kind: 'crm'; channel: CommChannel; subject: string }
+}
+type ClientWaiting = { clientName: string; since: string; threadId: string }
+export type HouseholdConversation = { threadId: string; title: string; visibility: Visibility; audience: ThreadAudience }
+
 export type HouseholdView = HouseholdSummary & {
   documents: DocumentRow[]
   communications: CommunicationRow[]
   activity: ActivityRow[]
   meetings: { past: MeetingRef[]; upcoming: MeetingRef[] }
+  standing: MemberStanding[]
+  holdings: HouseholdHoldings
+  decisions: HouseholdDecision[]
+  tasks: HouseholdTask[]
+  lastContact?: LastContact
+  waiting: ClientWaiting[]
+  conversations: HouseholdConversation[]
+  methods: MethodNote[]
 }
 
 export type ClientView = {

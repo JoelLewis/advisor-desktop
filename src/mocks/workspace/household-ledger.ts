@@ -58,6 +58,13 @@ export type HouseholdLedger = {
   cashUsd: number
 }
 
+/** An account's positions as the ledger reads them, in USD. */
+export const accountValueUsd = (l: AccountLedger): number =>
+  convertToBase(l.positions.reduce((s, p) => s + p.marketValue, 0), currencyForAccount(l.account.id), FX_RATES_USD_BASE)
+
+/** The household's managed value in USD: its accounts' positions as the ledger reads them, held-away accounts left out. */
+export const managedValueUsd = (ledger: HouseholdLedger): number => ledger.accounts.reduce((s, l) => s + accountValueUsd(l), 0)
+
 const BUY_SIDES: ReadonlySet<string> = new Set(['buy', 'purchase', 'buy_to_open', 'buy_to_close', 'buy_to_cover'])
 const SELL_SIDES: ReadonlySet<string> = new Set(['sell', 'redemption', 'sell_short', 'sell_to_open', 'sell_to_close'])
 const WORKING: ReadonlySet<Order['status']> = new Set(['pending', 'submitted'])

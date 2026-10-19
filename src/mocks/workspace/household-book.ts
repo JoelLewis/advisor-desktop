@@ -4,15 +4,14 @@ import { accounts } from '@/mocks/data/accounts'
 import { calendarEvents } from '@/mocks/data/calendar'
 import type { MeetingType } from '@/types/calendar'
 import { documents } from '@/mocks/data/documents'
-import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
 import { householdFixtures } from '@/mocks/data/households'
 import { OPEN_ITEMS } from '@/mocks/data/open-items'
 import { actOnApproval, activeApproval, escalationOf, latestVersion, releasedApproval } from '@/mocks/data/proposals-store'
 import { sessionNow, store } from '@/mocks/data/workspace-store'
+import type { ComplianceAlert } from '@/types/compliance'
 import { complianceAlerts } from '@/mocks/handlers/compliance'
 import { computeDriftForAccount } from '@/mocks/handlers/pms'
 import { bookVersion } from '@/mocks/data/portfolio-ledger'
-import { accountValueUSD } from '@/lib/aum'
 import { easternDayOf } from '@/lib/eastern-day'
 import { isModelManaged } from '@/lib/mandate'
 import { alertContext, isOpenAlert } from './alerts'
@@ -20,6 +19,7 @@ import { BRIEF_THREAD_ID, composeBrief } from './brief'
 import { settleApproved, type BriefSummary } from './brief-groups'
 import { meetingOf, toUtc } from './meetings'
 import { suitablyApprovedAccounts } from './suitability'
+import { householdLedger, managedValueUsd } from './household-ledger'
 import { isFirmViewer } from './visibility'
 
 type TextMessage = Extract<Message, { kind: 'text' }>
@@ -43,7 +43,7 @@ const isBriefSummary = (m: Message): m is BriefSummary => m.kind === 'brief_summ
  * moved the book since the Brief was measured, the summary is composed in memory as of now and left unstored (opening
  * the Brief thread is what re-measures and stores it).
  */
-function briefSummaryNow(): BriefSummary {
+export function briefSummaryNow(): BriefSummary {
   const stale = store().briefBook !== bookVersion()
   const messages = stale ? composeBrief((i) => `msg-q${bookVersion()}-${i}`, sessionNow()) : store().messages
   const summary = messages.filter(isBriefSummary).sort(byAt).pop()
@@ -64,7 +64,7 @@ function decision(accountIds: ReadonlySet<string>, summary: BriefSummary): Queue
 }
 
 /** Since when a client has waited: their first message after the firm's last reply in their own conversation. */
-function clientsWaiting(householdId: string): Extract<QueueReason, { kind: 'client_waiting' }>[] {
+export function clientsWaiting(householdId: string): Extract<QueueReason, { kind: 'client_waiting' }>[] {
   return householdOf(householdId).members.flatMap((member) => store().threads
     .filter((t) => t.visibility === 'client' && t.partyId === member.clientId)
     .flatMap((t) => {
@@ -92,12 +92,17 @@ function meetingsToday(householdId: string, day: string, now: string): MeetingRe
   }).sort((a, b) => a.start.localeCompare(b.start))
 }
 
-/** Open alerts about the household's accounts or clients, and its orders compliance returned or escalated. */
-function complianceSince(accountIds: ReadonlySet<string>, clientIds: ReadonlySet<string>): string[] {
-  const alerts = complianceAlerts.filter(isOpenAlert).filter((a) => {
+/** Open compliance alerts about the household's accounts or clients. */
+export function openAlertsAbout(accountIds: ReadonlySet<string>, clientIds: ReadonlySet<string>): ComplianceAlert[] {
+  return complianceAlerts.filter(isOpenAlert).filter((a) => {
     const c = alertContext(a)
     return (c.accountId !== undefined && accountIds.has(c.accountId)) || (c.clientId !== undefined && clientIds.has(c.clientId))
-  }).map((a) => a.createdAt)
+  })
+}
+
+/** Open alerts about the household's accounts or clients, and its orders compliance returned or escalated. */
+function complianceSince(accountIds: ReadonlySet<string>, clientIds: ReadonlySet<string>): string[] {
+  const alerts = openAlertsAbout(accountIds, clientIds).map((a) => a.createdAt)
   const s = store()
   const held = s.proposals.filter((p) => accountIds.has(p.accountId)).flatMap((p) => {
     const approvals = s.approvals.filter((a) => a.proposalId === p.id)
@@ -152,7 +157,7 @@ function householdRow(householdId: string, summary: BriefSummary): HouseholdRow 
     ...tasksDue(householdId, day),
   ]
   return {
-    householdId, name: household.name, managedValue: own.reduce((s, a) => s + accountValueUSD(a, FX_RATES_USD_BASE), 0),
+    householdId, name: household.name, managedValue: managedValueUsd(householdLedger(householdId)),
     reasons, markers: markersOf(householdId, compliance.length),
   }
 }
