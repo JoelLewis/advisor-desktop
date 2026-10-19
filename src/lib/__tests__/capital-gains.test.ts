@@ -51,8 +51,8 @@ describe('netCapitalGainsTax with collectibles gain (§1(h)(4)–(5), Schedule D
 describe('netTaxForLegs', () => {
   it('nets the legs\' summed results and reports the per-leg gross alongside', () => {
     const legs = [
-      { realisedShortTerm: 0, realisedLongTerm: -4_000, taxImpact: 0 },
-      { realisedShortTerm: 10_000, realisedLongTerm: 0, taxImpact: 3_700 },
+      { realizedShortTerm: 0, realizedLongTerm: -4_000, taxImpact: 0 },
+      { realizedShortTerm: 10_000, realizedLongTerm: 0, taxImpact: 3_700 },
     ]
     expect(netTaxForLegs(legs, rate)).toEqual({ net: Math.round(6_000 * 0.37), gross: 3_700 })
   })
@@ -60,8 +60,8 @@ describe('netTaxForLegs', () => {
     // Each leg's own tax is 1.4 x 0.25 = 0.35, which rounds to 0; the net is 2.8 x 0.25 = 0.7,
     // which rounds to 1. Nothing was netted, so the bill cannot be higher than the gross.
     const legs = [
-      { realisedShortTerm: 0, realisedLongTerm: 1.4, taxImpact: 0 },
-      { realisedShortTerm: 0, realisedLongTerm: 1.4, taxImpact: 0 },
+      { realizedShortTerm: 0, realizedLongTerm: 1.4, taxImpact: 0 },
+      { realizedShortTerm: 0, realizedLongTerm: 1.4, taxImpact: 0 },
     ]
     expect(netTaxForLegs(legs, () => 0.25)).toEqual({ net: 0, gross: 0 })
   })
@@ -70,9 +70,9 @@ describe('netTaxForLegs', () => {
   })
 })
 
-describe('additionalCapitalGainsTax (a proposal on top of results already realised)', () => {
+describe('additionalCapitalGainsTax (a proposal on top of results already realized)', () => {
   const none = { shortTerm: 0, longTerm: 0 }
-  it('with nothing realised yet, it is the proposal\'s own netted tax', () => {
+  it('with nothing realized yet, it is the proposal\'s own netted tax', () => {
     expect(additionalCapitalGainsTax(none, { shortTerm: 1_000, longTerm: 2_000 }, rate)).toBe(netCapitalGainsTax(1_000, 2_000, rate))
   })
   it('a year-to-date long-term loss shelters a proposal\'s long-term gain (acc-002: −32,750 against +76,538)', () => {
@@ -92,7 +92,7 @@ describe('additionalCapitalGainsTax (a proposal on top of results already realis
     expect(additionalCapitalGainsTax(prior, { shortTerm: 0, longTerm: 10_000 }, taxRateFor)).toBe(3_180)
     expect(Math.round(10_000 * taxRateFor('long'))).toBe(2_380)
   })
-  it('a loss against gains already realised this year is a negative change — tax saved', () => {
+  it('a loss against gains already realized this year is a negative change — tax saved', () => {
     expect(additionalCapitalGainsTax({ shortTerm: 0, longTerm: 50_000 }, { shortTerm: 0, longTerm: -20_000 }, rate))
       .toBe(Math.round(30_000 * 0.238) - Math.round(50_000 * 0.238))
   })

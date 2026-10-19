@@ -5,10 +5,10 @@ import type { CurrencyCode, FXRateMap } from '@/types/currency'
  * AUM derivation. Nothing in this module reads a fixture — accounts and FX rates are always
  * passed in — so it is pure, cheap to test, and safe to import from both app and mock layers.
  *
- * D1 · data-quality / reconciliation / currencies-and-fx — household `managedAUM` was hand-typed
+ * Household `managedAUM` was hand-typed
  * and disagreed with the sum of its accounts for 5 of 13 households, and mixed currencies were
  * summed 1:1 (Chen-Wong stated $43.5M against $30.3M of actual FX-applied account value).
- * C36 · currencies-and-fx — conversion now happens at exactly one boundary.
+ * Conversion now happens at exactly one boundary.
  */
 export type AUMAccount = {
   id: string
@@ -16,13 +16,6 @@ export type AUMAccount = {
   clientId: string
   totalValue: number
   baseCurrency?: CurrencyCode
-}
-
-export type SegmentAUM = {
-  segment: string
-  householdCount: number
-  aum: number
-  pctOfAUM: number
 }
 
 export function accountValueUSD(account: AUMAccount, rates: FXRateMap): number {
@@ -54,29 +47,8 @@ export function deriveBookAUM(accounts: readonly AUMAccount[], rates: FXRateMap)
   return sumAccountsUSD(accounts, rates)
 }
 
-export function deriveSegmentAUM(
-  households: readonly { id: string; segment: string }[],
-  accounts: readonly AUMAccount[],
-  rates: FXRateMap,
-): SegmentAUM[] {
-  const book = deriveBookAUM(accounts, rates)
-  const grouped = new Map<string, { householdCount: number; aum: number }>()
-  for (const hh of households) {
-    const entry = grouped.get(hh.segment) ?? { householdCount: 0, aum: 0 }
-    entry.householdCount += 1
-    entry.aum += deriveHouseholdAUM(hh.id, accounts, rates)
-    grouped.set(hh.segment, entry)
-  }
-  return [...grouped.entries()].map(([segment, d]) => ({
-    segment,
-    householdCount: d.householdCount,
-    aum: d.aum,
-    pctOfAUM: book === 0 ? 0 : d.aum / book,
-  }))
-}
-
 /**
- * C22 · diversification — the product previously carried two HHI scales (0–10,000 on Book of
+ * The product previously carried two HHI scales (0–10,000 on Book of
  * Business, 0–1 on account concentration). This is the single scale: shares are fractions of 1,
  * the result is 0–10,000, and `effectiveN` is the companion figure that makes it readable.
  * At 13 households the mathematical floor is 769, which is why 1828 must be reported alongside

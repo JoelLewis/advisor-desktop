@@ -1,4 +1,9 @@
 import type { Position, PositionSeed } from '@/types/portfolio'
+import type { Account } from '@/types/account'
+import { bookOf } from './portfolio-ledger'
+import { accounts } from './accounts'
+import { NotModelManagedError, UnknownModelError } from '@/lib/mandate'
+import { MODEL_BANDS, MODEL_DEFINITIONS } from './model-definitions'
 
 // ─── acc-001: Johnson Family Trust ($8.2M, mod-001 Balanced Growth) ──────────
 const trustPositions: PositionSeed[] = [
@@ -19,7 +24,7 @@ const trustPositions: PositionSeed[] = [
 // ─── acc-002: Robert Johnson Individual ($4.5M, mod-002 Growth) ─────────────
 // Growth tilt with digital assets, PE, and INTC loss position (TLH candidate).
 //
-// D2/D28 — the nine positions summed to $4,832,000 against a $4,500,000 balance, and INTC still
+// The nine positions summed to $4,832,000 against a $4,500,000 balance, and INTC still
 // showed the full 12,000 shares five days after ord-004/rs-001 sold 5,000 of them. INTC is now the
 // 7,000 shares actually held (cost basis $35.00/share, matching rs-001's $175,000 on 5,000), and the
 // remaining holdings are scaled by 0.923909 (= $4,031,210 / $4,363,210) with quantities re-derived
@@ -36,7 +41,7 @@ const robertIndividualPositions: PositionSeed[] = [
   { id: 'pos-026', accountId: 'acc-002', symbol: 'IBIT', name: 'iShares Bitcoin Trust ETF', assetClass: 'digital_assets', quantity: 3234, price: 52.80, costBasis: 129_347, marketValue: 170_755.20, gainLoss: 41_408.20, gainLossPercent: 0.320 },
   { id: 'pos-027', accountId: 'acc-002', symbol: 'ETHE', name: 'Grayscale Ethereum Trust ETF', assetClass: 'digital_assets', quantity: 3882, price: 18.45, costBasis: 60_054, marketValue: 71_622.90, gainLoss: 11_568.90, gainLossPercent: 0.193 },
   { id: 'pos-028', accountId: 'acc-002', symbol: 'BXPE', name: 'Blackstone Private Equity Strategies Fund', assetClass: 'private_equity', quantity: 1110, price: 108.50, costBasis: 106_250, marketValue: 120_435, gainLoss: 14_185, gainLossPercent: 0.134 },
-  // Bought 2026-02-20 as the INTC tax-loss-harvest replacement (activities.ts, note-002, comp-006).
+  // Bought 2026-02-20 as the INTC tax-loss-harvest replacement (activities.ts, comp-006).
   { id: 'pos-265', accountId: 'acc-002', symbol: 'SMH', name: 'VanEck Semiconductor ETF', assetClass: 'us_equity', quantity: 180, price: 245.20, costBasis: 44_136, marketValue: 44_136, gainLoss: 0, gainLossPercent: 0 },
   { id: 'pos-025', accountId: 'acc-002', symbol: 'CASH', name: 'Money Market Fund', assetClass: 'cash', quantity: 1, price: 225_504, costBasis: 225_504, marketValue: 225_504, gainLoss: 0, gainLossPercent: 0 },
 ]
@@ -115,16 +120,14 @@ const jamesThompsonIRAPositions: PositionSeed[] = [
   { id: 'pos-105', accountId: 'acc-020', symbol: 'VCIT', name: 'Vanguard Intermediate-Term Corporate Bond ETF', assetClass: 'fixed_income', quantity: 2920, price: 83.50, costBasis: 248_000, marketValue: 243_820, gainLoss: -4_180, gainLossPercent: -0.017 },
   { id: 'pos-106', accountId: 'acc-020', symbol: 'QAI', name: 'IQ Hedge Multi-Strategy Tracker ETF', assetClass: 'alternatives', quantity: 3000, price: 35.20, costBasis: 108_000, marketValue: 105_600, gainLoss: -2_400, gainLossPercent: -0.022 },
   { id: 'pos-107', accountId: 'acc-020', symbol: 'VNQ', name: 'Vanguard Real Estate ETF', assetClass: 'real_estate', quantity: 1200, price: 89.20, costBasis: 100_000, marketValue: 107_040, gainLoss: 7_040, gainLossPercent: 0.070 },
-  // D3 — the eight non-cash holdings sum to $1,979,220, so cash is the $220,780 residual, not
+  // The eight non-cash holdings sum to $1,979,220, so cash is the $220,780 residual, not
   // $220,840: the account's positions overstated its $2,200,000 balance by $60.
   { id: 'pos-108', accountId: 'acc-020', symbol: 'CASH', name: 'Money Market Fund', assetClass: 'cash', quantity: 1, price: 220_780, costBasis: 220_780, marketValue: 220_780, gainLoss: 0, gainLossPercent: 0 },
 ]
 
 // ─── acc-029: Patel 529 Education ($340K, mod-006 Education) ────────────────
 // Age-based glide path with target-date logic for education goal.
-// D3 — the section claimed $600K against accounts.ts's $340,000. The glide-path narrative
-// (nba-016) needs the account, not the balance, so the holdings are scaled by 340/600 with
-// quantities re-derived as whole shares and cash taking the $42,800 residual.
+// Holdings sum to accounts.ts's $340,000: whole shares, with cash taking the $42,800 residual.
 const patel529Positions: PositionSeed[] = [
   { id: 'pos-120', accountId: 'acc-029', symbol: 'VTI', name: 'Vanguard Total Stock Market ETF', assetClass: 'us_equity', quantity: 397, price: 268.50, costBasis: 96_333, marketValue: 106_594.50, gainLoss: 10_261.50, gainLossPercent: 0.107 },
   { id: 'pos-121', accountId: 'acc-029', symbol: 'QQQ', name: 'Invesco QQQ Trust', assetClass: 'us_equity', quantity: 85, price: 485.20, costBasis: 36_833, marketValue: 41_242, gainLoss: 4_409, gainLossPercent: 0.120 },
@@ -151,7 +154,6 @@ const thomasKimPositions: PositionSeed[] = [
 
 // ─── acc-035: Linda Garcia Traditional IRA ($520K, mod-003 Conservative Income) ──
 // MASSIVE ALLOCATION MISMATCH: 61% equity for a 75-year-old on Conservative Income model (20% equity target)
-// Supports nba-006 "Allocation mismatch for client age"
 const lindaGarciaIRAPositions: PositionSeed[] = [
   { id: 'pos-140', accountId: 'acc-035', symbol: 'VTI', name: 'Vanguard Total Stock Market ETF', assetClass: 'us_equity', quantity: 600, price: 268.50, costBasis: 130_000, marketValue: 161_100, gainLoss: 31_100, gainLossPercent: 0.239 },
   { id: 'pos-141', accountId: 'acc-035', symbol: 'SPY', name: 'SPDR S&P 500 ETF', assetClass: 'us_equity', quantity: 300, price: 520.30, costBasis: 125_000, marketValue: 156_090, gainLoss: 31_090, gainLossPercent: 0.249 },
@@ -230,9 +232,9 @@ const muellerCHFPositions: PositionSeed[] = [
 
 // ── acc-045: Patel Digital Assets ($425K) ─────────────────────────────────────
 // Crypto portfolio in USD-denominated Coinbase account.
-// D4 — the eight positions summed to $393,630 and their weights to 0.925 against a $425,000
+// The eight positions summed to $393,630 and their weights to 0.925 against a $425,000
 // balance. The $31,370 shortfall is cash, and every weight is now marketValue / 425,000.
-// D24 — BTC's market value was rounded to $188,018 while 2.15 x $87,450 is $188,017.50, which is
+// BTC's market value was rounded to $188,018 while 2.15 x $87,450 is $188,017.50, which is
 // the one figure `marketValue === quantity * price` could not tolerate. Prices here are the book
 // of record for BTC/ETH/SOL/AVAX/DOT/LINK: trading.ts's quote feed and currencies.ts's implied
 // crypto rates both derive from them.
@@ -275,7 +277,7 @@ export const allPositions: PositionSeed[] = [
 ]
 
 /**
- * Task 10 — the single place a position weight comes into existence. `weight` is
+ * The single place a position weight comes into existence. `weight` is
  * `marketValue / totalValue` and nothing else, evaluated against the total this call was handed,
  * so no consumer can read a weight that disagrees with the money beside it. A zero-value account
  * has no meaningful weights, so it gets zeroes rather than a NaN that would propagate into every
@@ -289,28 +291,83 @@ function withDerivedWeights(seeds: readonly PositionSeed[], totalValue: number):
 }
 
 /**
- * Positions for an account, weights derived. Two paths: the 17 accounts with explicit rows in
- * `allPositions`, and a generated allocation for the rest. Both go through `withDerivedWeights` —
- * the generated path used to hand-type the same seven weights (0.348/0.145/0.087/0.210/0.140/
- * 0.050/0.020) that its own market values already implied.
+ * Positions as the fixtures state them, weights derived: the book before the session moved it. Two paths: the 17 accounts with
+ * explicit rows in `allPositions`, and for every other account its own model's lineup (`generatedPositions`).
  */
-export function getPositionsForAccount(accountId: string, totalValue: number): Position[] {
+export function seedPositionsForAccount(accountId: string, totalValue: number): Position[] {
   const explicit = allPositions.filter((p) => p.accountId === accountId)
-  if (explicit.length > 0) return withDerivedWeights(explicit, totalValue)
+  return withDerivedWeights(explicit.length > 0 ? explicit : generatedPositions(accountId, totalValue), totalValue)
+}
 
-  // Generate representative positions based on account value
-  const cash = totalValue * 0.02
-  const equity = totalValue * 0.58
-  const bonds = totalValue * 0.35
-  const other = totalValue * 0.05
+/** Each generated holding's unrealized result as a fraction of its cost: one figure per vehicle, the same across accounts. */
+const GENERATED_GAIN: Readonly<Record<string, number>> = {
+  VTI: 0.091, EFA: 0.087, VWO: 0.045, VXUS: 0.070, AGG: -0.032, QAI: 0.025, VNQ: 0.059, GLD: 0.111,
+}
 
-  return withDerivedWeights([
-    { id: `gen-${accountId}-1`, accountId, symbol: 'VTI', name: 'Vanguard Total Stock Market ETF', assetClass: 'us_equity', quantity: Math.round(equity * 0.6 / 268.5), price: 268.50, costBasis: equity * 0.55, marketValue: equity * 0.6, gainLoss: equity * 0.05, gainLossPercent: 0.091 },
-    { id: `gen-${accountId}-2`, accountId, symbol: 'EFA', name: 'iShares MSCI EAFE ETF', assetClass: 'intl_equity', quantity: Math.round(equity * 0.25 / 82.3), price: 82.30, costBasis: equity * 0.23, marketValue: equity * 0.25, gainLoss: equity * 0.02, gainLossPercent: 0.087 },
-    { id: `gen-${accountId}-3`, accountId, symbol: 'QQQ', name: 'Invesco QQQ Trust', assetClass: 'us_equity', quantity: Math.round(equity * 0.15 / 485.2), price: 485.20, costBasis: equity * 0.12, marketValue: equity * 0.15, gainLoss: equity * 0.03, gainLossPercent: 0.250 },
-    { id: `gen-${accountId}-4`, accountId, symbol: 'AGG', name: 'iShares Core US Aggregate Bond ETF', assetClass: 'fixed_income', quantity: Math.round(bonds * 0.6 / 98.5), price: 98.50, costBasis: bonds * 0.62, marketValue: bonds * 0.6, gainLoss: -bonds * 0.02, gainLossPercent: -0.032 },
-    { id: `gen-${accountId}-5`, accountId, symbol: 'BND', name: 'Vanguard Total Bond Market ETF', assetClass: 'fixed_income', quantity: Math.round(bonds * 0.4 / 72.4), price: 72.40, costBasis: bonds * 0.41, marketValue: bonds * 0.4, gainLoss: -bonds * 0.01, gainLossPercent: -0.024 },
-    { id: `gen-${accountId}-6`, accountId, symbol: 'GLD', name: 'SPDR Gold Shares', assetClass: 'commodities', quantity: Math.round(other / 215.6), price: 215.60, costBasis: other * 0.9, marketValue: other, gainLoss: other * 0.1, gainLossPercent: 0.111 },
-    { id: `gen-${accountId}-7`, accountId, symbol: 'CASH', name: 'Money Market Fund', assetClass: 'cash', quantity: 1, price: cash, costBasis: cash, marketValue: cash, gainLoss: 0, gainLossPercent: 0 },
-  ], totalValue)
+/** A deterministic uniform stream in [0, 1) seeded from a string, so an account's tilt is the same on every read. */
+function seededUniform(seed: string): () => number {
+  let state = [...seed].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7)
+  return () => {
+    state = (state * 1664525 + 1013904223) | 0
+    return (state >>> 0) / 0x1_0000_0000
+  }
+}
+
+/** The quote and name a vehicle carries in the explicit rows of a USD account: one price per symbol across the book. */
+function vehicle(symbol: string): Pick<PositionSeed, 'name' | 'assetClass' | 'price'> {
+  const row = allPositions.find((p) => p.symbol === symbol && (accounts.find((a) => a.id === p.accountId)?.baseCurrency ?? 'USD') === 'USD')
+  if (!row) throw new Error(`No USD quote for model vehicle ${symbol}`)
+  return { name: row.name, assetClass: row.assetClass, price: row.price }
+}
+
+/** The largest tilt a sleeve may take: about 0.5–3pp, never more than 60% of the model's band or half the sleeve's own target. */
+const tiltCap = (target: number, band: number) => Math.min(0.03, band * 0.6, target / 2)
+
+/**
+ * An account without explicit rows holds **its own model's** lineup (each sleeve's
+ * implementation symbol), each sleeve tilted by a deterministic amount seeded from the account id:
+ * about ±0.5–3pp, inside the model's drift band. Cash draws its own tilt and, as the residual, takes it once
+ * the sleeves' tilts are evened out to sum to minus it. Quantities are whole shares; the CASH row is the account's `cashBalance`, which
+ * accounts.ts states as the residual so the rows sum to the account's value (`position-weight-invariants`
+ * pins both). The generator used to hand every such account one 58/35/5/2 mix whatever its model, so
+ * 30 accounts shared one σ and most sat outside their bands.
+ */
+function generatedPositions(accountId: string, totalValue: number): PositionSeed[] {
+  const account = accounts.find((a) => a.id === accountId)
+  if (!account) throw new Error(`No account ${accountId} to generate positions for`)
+  if (account.mandate !== 'model') throw new NotModelManagedError(accountId)
+  const model = MODEL_DEFINITIONS.find((m) => m.id === account.modelId)
+  const band = MODEL_BANDS[account.modelId]?.driftTolerance
+  if (!model || band === undefined) throw new UnknownModelError(account.modelId)
+  const cashTarget = model.assetClasses.find((a) => a.assetClass === 'cash')?.targetWeight ?? 0
+  const sleeves = model.assetClasses.filter((a) => a.assetClass !== 'cash' && a.targetWeight > 0)
+  const rand = seededUniform(accountId)
+  const tilt = (target: number) => (rand() < 0.5 ? -1 : 1) * Math.min(tiltCap(target, band), 0.005 + rand() * 0.025)
+  const drawn = sleeves.map((s) => tilt(s.targetWeight))
+  // Cash draws its own tilt and is the residual, so the sleeves' tilts are evened out to sum to minus it.
+  const cashTilt = tilt(cashTarget)
+  const excess = drawn.reduce((sum, t) => sum + t, 0) + cashTilt
+  const rows = sleeves.map((s, i): PositionSeed => {
+    if (!s.implementationSymbol) throw new Error(`${model.id}'s ${s.assetClass} sleeve names no vehicle`)
+    const { name, assetClass, price } = vehicle(s.implementationSymbol)
+    const gain = GENERATED_GAIN[s.implementationSymbol]
+    if (gain === undefined) throw new Error(`No generated result for ${s.implementationSymbol}`)
+    const quantity = Math.floor((totalValue * (s.targetWeight + (drawn[i] ?? 0) - excess / sleeves.length)) / price)
+    const marketValue = Math.round(quantity * price * 100) / 100
+    const costBasis = Math.round(marketValue / (1 + gain))
+    return { id: `gen-${accountId}-${i + 1}`, accountId, symbol: s.implementationSymbol, name, assetClass, quantity, price, costBasis, marketValue, gainLoss: Math.round((marketValue - costBasis) * 100) / 100, gainLossPercent: gain }
+  })
+  const cash = account.cashBalance
+  return [...rows, { id: `gen-${accountId}-${rows.length + 1}`, accountId, symbol: 'CASH', name: 'Money Market Fund', assetClass: 'cash', quantity: 1, price: cash, costBasis: cash, marketValue: cash, gainLoss: 0, gainLossPercent: 0 }]
+}
+
+/** Positions for an account as they stand: the ledger's book once the session has moved it, else the fixtures'. */
+export function getPositionsForAccount(accountId: string, totalValue: number): Position[] {
+  const moved = bookOf(accountId)
+  return moved ? withDerivedWeights(moved.positions, totalValue) : seedPositionsForAccount(accountId, totalValue)
+}
+
+/** The account's cash as the book stands: its CASH position, which is the fixture `cashBalance` until a fill moves it. */
+export function cashBalanceOf(account: Pick<Account, 'id' | 'totalValue' | 'cashBalance'>): number {
+  return getPositionsForAccount(account.id, account.totalValue).find((p) => p.symbol === 'CASH')?.marketValue ?? account.cashBalance
 }

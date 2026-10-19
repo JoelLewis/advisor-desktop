@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { accounts } from '@/mocks/data/accounts'
 import { allPositions, getPositionsForAccount } from '@/mocks/data/positions'
+import { MODEL_DEFINITIONS } from '@/mocks/data/model-definitions'
+import { requireModelManaged } from '@/lib/mandate'
 
 /**
  * Task 10 · the Phase 1 charter defect — a stored figure that duplicates a derivable one and
@@ -64,7 +66,9 @@ describe('Position weight is derived from market value', () => {
     const drift: string[] = []
     for (const account of generatedAccounts) {
       const positions = getPositionsForAccount(account.id, account.totalValue)
-      expect(positions.length, `${account.id} served no positions`).toBe(7)
+      // Phase 7a · C1: one row per model sleeve with a vehicle, and cash.
+      const model = MODEL_DEFINITIONS.find((m) => m.id === requireModelManaged(account).modelId)!
+      expect(positions.length, `${account.id} served no positions`).toBe(model.assetClasses.filter((c) => c.targetWeight > 0).length)
       for (const position of positions) {
         checked++
         const derived = position.marketValue / account.totalValue

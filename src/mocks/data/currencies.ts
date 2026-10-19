@@ -6,7 +6,7 @@ import { digitalAssetSymbols } from './trading'
 // (e.g., 0.0000114 means 1 USD buys 0.0000114 BTC, i.e., BTC ≈ $87.5K)
 
 /**
- * D25 — a crypto FX rate is the reciprocal of that asset's price, so restating it invites the two
+ * A crypto FX rate is the reciprocal of that asset's price, so restating it invites the two
  * to drift: BTC was quoted at 0.000011 (implying $90,909) against a book price of $87,450, SOL at
  * 0.0042 ($238) against $142.50, and every other crypto rate here disagreed with its own quote.
  * The rates are now derived from `digitalAssetSymbols`, which in turn carries the position prices.
@@ -56,5 +56,3 @@ export const FX_RATES_USD_BASE = {
   USDC: 1.0,
   DAI: 1.0,
 } satisfies Record<string, number>
-
-export const FX_RATE_TIMESTAMP = '2026-02-25T16:00:00Z' as const

@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
 import { afterAll, afterEach, beforeAll, vi } from 'vitest'
+import { resetWorkspaceStore } from '@/mocks/data/workspace-store'
 import { server } from './server'
 
 // --- Browser API mocks (must be in setup so they exist before any module-level code) ---
@@ -30,11 +31,17 @@ class ResizeObserverMock {
 }
 window.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver
 
+// scrollIntoView — jsdom has none; the command line keeps its active option in view
+Element.prototype.scrollIntoView = vi.fn()
+
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 
 afterEach(() => {
   server.resetHandlers()
+  resetWorkspaceStore()
   cleanup()
+  sessionStorage.clear()
+  localStorage.clear()
 })
 
 afterAll(() => server.close())

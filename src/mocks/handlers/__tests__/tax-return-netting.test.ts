@@ -1,20 +1,19 @@
 import { describe, it, expect } from 'vitest'
 import { previewRebalance } from '@/services/oms'
-import { previewModelTrades } from '@/services/trading'
 import { accounts } from '@/mocks/data/accounts'
 import { additionalCapitalGainsTax, netTaxForLegs } from '@/lib/capital-gains'
 import { taxRateFor } from '@/lib/tax-rules'
-import { taxReturnFor, ytdRealisedOnReturn, sameWashSaleTaxpayer, openWashSaleWindowsFor } from '@/mocks/handlers/tax-return'
+import { taxReturnFor, ytdRealizedOnReturn, sameWashSaleTaxpayer, openWashSaleWindowsFor } from '@/mocks/handlers/tax-return'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
-import { realisedSales, washSaleWindow } from '@/mocks/data/realised-sales'
+import { realizedSales, washSaleWindow } from '@/mocks/data/realized-sales'
 import { generateTaxLots, washSaleAcquisitions } from '@/mocks/handlers/custodian'
 
 // The MSW server is started for every test file by src/test/setup.ts.
 const returnOf = (id: string) => taxReturnFor(accounts.find((a) => a.id === id)!)
-const sum = (trades: { realisedShortTerm: number; realisedLongTerm: number; realisedCollectibleLongTerm: number }[]) => ({
-  shortTerm: trades.reduce((s, t) => s + t.realisedShortTerm, 0),
-  longTerm: trades.reduce((s, t) => s + t.realisedLongTerm, 0),
-  collectibleLongTerm: trades.reduce((s, t) => s + t.realisedCollectibleLongTerm, 0),
+const sum = (trades: { realizedShortTerm: number; realizedLongTerm: number; realizedCollectibleLongTerm: number }[]) => ({
+  shortTerm: trades.reduce((s, t) => s + t.realizedShortTerm, 0),
+  longTerm: trades.reduce((s, t) => s + t.realizedLongTerm, 0),
+  collectibleLongTerm: trades.reduce((s, t) => s + t.realizedCollectibleLongTerm, 0),
 })
 
 const accountOf = (id: string) => accounts.find((a) => a.id === id)!
@@ -54,7 +53,7 @@ describe('which accounts share a tax return', () => {
     expect(returnOf('acc-005')).toBe(returnOf('acc-002'))
   })
 
-  it('an IRA or a Roth is on no return — its results are not recognised currently', () => {
+  it('an IRA or a Roth is on no return — its results are not recognized currently', () => {
     expect(returnOf('acc-003')).toBeNull()
     expect(returnOf('acc-004')).toBeNull()
   })
@@ -78,78 +77,64 @@ describe('which accounts share a tax return', () => {
   })
 })
 
-describe('year-to-date realised results on a return', () => {
+describe('year-to-date realized results on a return', () => {
   it('hh-001\'s joint return carries rs-001, the −$32,750 long-term INTC loss', () => {
-    expect(ytdRealisedOnReturn(returnOf('acc-002')!, MOCK_TODAY_ISO)).toEqual({ shortTerm: 0, longTerm: -32_750, collectibleLongTerm: 0 })
+    expect(ytdRealizedOnReturn(returnOf('acc-002')!, MOCK_TODAY_ISO)).toEqual({ shortTerm: 0, longTerm: -32_750, collectibleLongTerm: 0 })
   })
 
   it('the Chen irrevocable trust does not carry Margaret Chen\'s own rs-002 loss', () => {
-    expect(ytdRealisedOnReturn(returnOf('acc-006')!, MOCK_TODAY_ISO)).toEqual({ shortTerm: 0, longTerm: 0, collectibleLongTerm: 0 })
-    expect(ytdRealisedOnReturn(returnOf('acc-007')!, MOCK_TODAY_ISO)).toEqual({ shortTerm: -28_500, longTerm: 0, collectibleLongTerm: 0 })
+    expect(ytdRealizedOnReturn(returnOf('acc-006')!, MOCK_TODAY_ISO)).toEqual({ shortTerm: 0, longTerm: 0, collectibleLongTerm: 0 })
+    expect(ytdRealizedOnReturn(returnOf('acc-007')!, MOCK_TODAY_ISO)).toEqual({ shortTerm: -28_500, longTerm: 0, collectibleLongTerm: 0 })
   })
 
   it('Elizabeth Wong\'s acc-009 carries rs-002 from Margaret Chen\'s acc-007: one joint return', () => {
-    expect(ytdRealisedOnReturn(returnOf('acc-009')!, MOCK_TODAY_ISO)).toEqual({ shortTerm: -28_500, longTerm: 0, collectibleLongTerm: 0 })
+    expect(ytdRealizedOnReturn(returnOf('acc-009')!, MOCK_TODAY_ISO)).toEqual({ shortTerm: -28_500, longTerm: 0, collectibleLongTerm: 0 })
   })
 
   it('a sale after the as-of date, or in an earlier tax year, is not year-to-date', () => {
-    expect(ytdRealisedOnReturn(returnOf('acc-002')!, '2026-02-19')).toEqual({ shortTerm: 0, longTerm: 0, collectibleLongTerm: 0 })
-    expect(ytdRealisedOnReturn(returnOf('acc-002')!, '2027-01-05')).toEqual({ shortTerm: 0, longTerm: 0, collectibleLongTerm: 0 })
+    expect(ytdRealizedOnReturn(returnOf('acc-002')!, '2026-02-19')).toEqual({ shortTerm: 0, longTerm: 0, collectibleLongTerm: 0 })
+    expect(ytdRealizedOnReturn(returnOf('acc-002')!, '2027-01-05')).toEqual({ shortTerm: 0, longTerm: 0, collectibleLongTerm: 0 })
   })
 })
 
 describe('the rebalance estimate is the tax this proposal adds to its return', () => {
   it('acc-002: the proposal\'s +76,538 LT nets against rs-001\'s −32,750 → 43,788 x 23.8% = 10,422', async () => {
-    const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-002'], taxAware: true })
     expect(preview!.estimatedTaxImpact).toBe(10_422)
-    expect(preview!.ytdRealisedOnReturn).toEqual({ shortTerm: 0, longTerm: -32_750, collectibleLongTerm: 0 })
+    expect(preview!.ytdRealizedOnReturn).toEqual({ shortTerm: 0, longTerm: -32_750, collectibleLongTerm: 0 })
     expect(sum(preview!.trades)).toEqual({ shortTerm: 0, longTerm: 76_538, collectibleLongTerm: 0 })
-    expect(preview!.estimatedTaxImpact).toBe(additionalCapitalGainsTax(preview!.ytdRealisedOnReturn!, sum(preview!.trades), taxRateFor))
-  })
-
-  it('acc-002 onto mod-002: the model-trade preview states the same figure', async () => {
-    const [modelTrade] = await previewModelTrades('mod-002', ['acc-002'])
-    expect(modelTrade!.estimatedTaxImpact).toBe(10_422)
-    // Model-trade legs carry no realised results, so the pin is paired with the rebalance preview,
-    // whose figure is checked against the engine's arithmetic above.
-    const [preview] = await previewRebalance({ accountIds: ['acc-002'], taxAware: true })
-    expect(modelTrade!.estimatedTaxImpact).toBe(preview!.estimatedTaxImpact)
+    expect(preview!.estimatedTaxImpact).toBe(additionalCapitalGainsTax(preview!.ytdRealizedOnReturn!, sum(preview!.trades), taxRateFor))
   })
 
   it('acc-006 (irrevocable trust): nothing is netted from another taxpayer', async () => {
-    const [preview] = await previewRebalance({ accountIds: ['acc-006'], taxAware: true })
-    expect(preview!.ytdRealisedOnReturn).toEqual({ shortTerm: 0, longTerm: 0, collectibleLongTerm: 0 })
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-006'], taxAware: true })
+    expect(preview!.ytdRealizedOnReturn).toEqual({ shortTerm: 0, longTerm: 0, collectibleLongTerm: 0 })
     expect(preview!.estimatedTaxImpact).toBe(netTaxForLegs(preview!.trades, taxRateFor).net)
   })
 
   it('a tax-deferred account nets nothing and owes nothing', async () => {
-    const [preview] = await previewRebalance({ accountIds: ['acc-003'], taxAware: true })
-    expect(preview!.ytdRealisedOnReturn).toBeNull()
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-003'], taxAware: true })
+    expect(preview!.ytdRealizedOnReturn).toBeNull()
     expect(preview!.estimatedTaxImpact).toBe(0)
   })
 
   it('acc-001 + acc-002 in one batch: the YTD loss is netted once, so the figures sum to the return\'s added tax', async () => {
-    const previews = await previewRebalance({ accountIds: ['acc-001', 'acc-002'], taxAware: true })
+    const previews = await previewRebalance('user-001', { accountIds: ['acc-001', 'acc-002'], taxAware: true })
     const both = sum(previews.flatMap((p) => p.trades))
     const expected = additionalCapitalGainsTax({ shortTerm: 0, longTerm: -32_750 }, both, taxRateFor)
     expect(previews.reduce((s, p) => s + p.estimatedTaxImpact, 0)).toBe(expected)
-    // The second preview nets against what the first already realised on the same return.
+    // The second preview nets against what the first already realized on the same return.
     expect(previews[1]!.nettedWithAccountIds).toEqual(['acc-001'])
     expect(previews[0]!.nettedWithAccountIds).toEqual([])
-  })
-
-  it('the model-trade preview nets a batch the same way, and says which earlier accounts it netted with', async () => {
-    const previews = await previewModelTrades('mod-002', ['acc-001', 'acc-002'])
-    expect(previews.map((p) => p.nettedWithAccountIds)).toEqual([[], ['acc-001']])
   })
 })
 
 describe('a recorded loss sale counts at face value only because nothing washed it', () => {
-  // `ytdRealisedOnReturn` nets every recorded loss in full. That is right only while no lot of the
+  // `ytdRealizedOnReturn` nets every recorded loss in full. That is right only while no lot of the
   // same symbol was bought by the same taxpayer inside the sale's 61-day window (to date); if one
   // were, part of the loss would be disallowed and the YTD figure overstated.
   it('no recorded loss sale has a replacement bought by the same taxpayer inside its window', () => {
-    const losses = realisedSales.filter((sale) => sale.realisedGainLoss < 0)
+    const losses = realizedSales.filter((sale) => sale.realizedGainLoss < 0)
     expect(losses.length, 'vacuity guard').toBeGreaterThan(0)
     for (const sale of losses) {
       const { start, end } = washSaleWindow(sale.saleDate)

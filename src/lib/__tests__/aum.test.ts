@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   accountValueUSD, sumAccountsUSD, deriveHouseholdAUM, deriveClientAUM,
-  deriveBookAUM, deriveSegmentAUM, herfindahlIndex, effectiveN,
+  deriveBookAUM, herfindahlIndex, effectiveN,
 } from '@/lib/aum'
 
 const RATES = { HKD: 7.82, SGD: 1.34, EUR: 0.92, CHF: 0.88 }
@@ -58,22 +58,6 @@ describe('deriveHouseholdAUM / deriveClientAUM / deriveBookAUM', () => {
 
   it('returns 0 for an unknown household rather than throwing', () => {
     expect(deriveHouseholdAUM('nope', ACCOUNTS, RATES)).toBe(0)
-  })
-})
-
-describe('deriveSegmentAUM', () => {
-  const HOUSEHOLDS = [
-    { id: 'h1', segment: 'platinum' },
-    { id: 'h2', segment: 'gold' },
-  ]
-
-  it('groups by segment and reports shares that sum to 1', () => {
-    const segments = deriveSegmentAUM(HOUSEHOLDS, ACCOUNTS, RATES)
-    const platinum = segments.find((s) => s.segment === 'platinum')!
-    expect(platinum.householdCount).toBe(1)
-    // eslint-disable-next-line no-loss-of-precision -- full-precision figure for documentation; toBeCloseTo only checks 6 decimals
-    expect(platinum.aum).toBeCloseTo(2_598_465.4731457800, 6)
-    expect(segments.reduce((s, x) => s + x.pctOfAUM, 0)).toBeCloseTo(1, 9)
   })
 })
 

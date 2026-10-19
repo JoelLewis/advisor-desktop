@@ -16,7 +16,7 @@ export const heldAwayAssets: HeldAwayAsset[] = [
   {
     id: 'ha-002', clientId: 'cli-002', householdId: 'hh-001',
     institutionName: 'TIAA', accountType: '403(b) — University',
-    estimatedValue: 1_500_000, lastUpdated: '2025-11-15',
+    estimatedValue: 1_500_000, lastUpdated: '2025-11-14',
     assetClasses: [
       { assetClass: 'us_equity', percentage: 0.40 },
       { assetClass: 'fixed_income', percentage: 0.50 },
@@ -30,18 +30,19 @@ export const heldAwayAssets: HeldAwayAsset[] = [
     estimatedValue: 3_200_000, lastUpdated: '2025-10-01',
     assetClasses: [{ assetClass: 'us_equity', percentage: 1.0 }],
     consolidationOpportunity: false,
+    isPrivateCompanyStock: true,
   },
   {
     id: 'ha-004', clientId: 'cli-020', householdId: 'hh-002',
     institutionName: 'Real Estate Holdings', accountType: 'Commercial property',
-    estimatedValue: 1_600_000, lastUpdated: '2025-09-01',
+    estimatedValue: 1_600_000, lastUpdated: '2025-08-29',
     assetClasses: [{ assetClass: 'real_estate', percentage: 1.0 }],
     consolidationOpportunity: false,
   },
   {
     id: 'ha-005', clientId: 'cli-004', householdId: 'hh-003',
     institutionName: 'Fidelity', accountType: '401(k) — Law firm',
-    estimatedValue: 1_200_000, lastUpdated: '2025-11-01',
+    estimatedValue: 1_200_000, lastUpdated: '2025-10-31',
     assetClasses: [
       { assetClass: 'us_equity', percentage: 0.60 },
       { assetClass: 'fixed_income', percentage: 0.30 },
@@ -59,7 +60,7 @@ export const heldAwayAssets: HeldAwayAsset[] = [
   {
     id: 'ha-007', clientId: 'cli-009', householdId: 'hh-006',
     institutionName: 'Empower', accountType: '401(k) — Anderson Group',
-    estimatedValue: 1_200_000, lastUpdated: '2025-11-30',
+    estimatedValue: 1_200_000, lastUpdated: '2025-11-28',
     assetClasses: [
       { assetClass: 'us_equity', percentage: 0.50 },
       { assetClass: 'intl_equity', percentage: 0.10 },

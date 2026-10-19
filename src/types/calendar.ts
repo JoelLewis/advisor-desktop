@@ -6,58 +6,20 @@ export type MeetingType =
   | 'internal'
   | 'ad_hoc'
 
-export type ScheduleView = 'day' | 'week' | 'agenda'
-
 export type CalendarEvent = {
   id: string
   title: string
   clientId?: string
   clientName?: string
   meetingType: MeetingType
+  /** Eastern local time with its offset, e.g. 2026-02-25T14:00:00-05:00. */
   startTime: string
   endTime: string
   location?: string
   notes?: string
   prepCompleted: boolean
-}
-
-export type MeetingPrepItem = {
-  label: string
-  value: string
-  sentiment?: 'positive' | 'negative' | 'neutral'
-}
-
-export type MeetingPrep = {
-  eventId: string
-  clientName: string
-  meetingType: MeetingType
-  portfolioSummary: MeetingPrepItem[]
-  talkingPoints: string[]
-  actionItems: string[]
-  recentActivity: string[]
-  generatedAt: string
-}
-
-export type MeetingNoteSection = {
-  key: 'discussion' | 'decisions' | 'requests' | 'followups'
-  label: string
-  content: string
-}
-
-export type MeetingNote = {
-  id: string
-  eventId: string
-  sections: MeetingNoteSection[]
-  createdAt: string
-  updatedAt: string
-}
-
-export type MeetingFollowUp = {
-  id: string
-  eventId: string
-  title: string
-  assignee: 'advisor' | 'csa' | 'ai'
-  dueDate: string
-  completed: boolean
-  createdAt: string
+  /** The client's household, on every event with a client. */
+  householdId?: string
+  /** Person and client ids: the client and household members invited, and the firm's people. */
+  attendees: string[]
 }

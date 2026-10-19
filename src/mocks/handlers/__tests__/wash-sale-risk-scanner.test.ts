@@ -1,5 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
-import { lossAllowedNow, lossDeferred, lossDisallowed, washesOnSale } from '@/lib/tax-rules'
+import { lossAllowedNow, lossDeferred, lossDisallowed } from '@/lib/tax-rules'
+
+const washesOnSale = (lot: { saleWash: { deferredShares: number; disallowedShares: number } }) =>
+  lot.saleWash.deferredShares + lot.saleWash.disallowedShares > 0
 
 /**
  * Sell-side §1091 for each lot the harvest scanner lists. No fixture has a loss lot whose sale
@@ -15,16 +18,19 @@ const TRUST_SMH = 'pos-test-acc-001-smh'
 
 vi.mock('@/mocks/data/positions', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/mocks/data/positions')>()
+  // The planted holding is part of the book both ways the fixtures reach it: the live read and the seed the lots partition.
+  const withPlanted = (read: typeof original.getPositionsForAccount) => (accountId: string, totalValue: number) => {
+    const positions = read(accountId, totalValue)
+    if (accountId !== 'acc-001') return positions
+    return [...positions, {
+      id: TRUST_SMH, accountId, symbol: 'SMH', name: 'VanEck Semiconductor ETF', assetClass: 'us_equity',
+      quantity: 400, price: 245.20, costBasis: 120_000, marketValue: 98_080, gainLoss: -21_920, gainLossPercent: -18.27, weight: 0,
+    }]
+  }
   return {
     ...original,
-    getPositionsForAccount: (accountId: string, totalValue: number) => {
-      const positions = original.getPositionsForAccount(accountId, totalValue)
-      if (accountId !== 'acc-001') return positions
-      return [...positions, {
-        id: TRUST_SMH, accountId, symbol: 'SMH', name: 'VanEck Semiconductor ETF', assetClass: 'us_equity',
-        quantity: 400, price: 245.20, costBasis: 120_000, marketValue: 98_080, gainLoss: -21_920, gainLossPercent: -18.27, weight: 0,
-      }]
-    },
+    getPositionsForAccount: withPlanted(original.getPositionsForAccount),
+    seedPositionsForAccount: withPlanted(original.seedPositionsForAccount),
   }
 })
 
@@ -52,7 +58,7 @@ describe('saleWash: how many shares of this lot would a sale today wash?', () =>
     expect(smh.reduce((s, l) => s + l.saleWash.disallowedShares, 0)).toBe(0)
   })
 
-  it('only the washed proportion of the loss is held back: 220/400 is realised now, 180/400 deferred', async () => {
+  it('only the washed proportion of the loss is held back: 220/400 is realized now, 180/400 deferred', async () => {
     const { generateTaxLots } = await engine()
     const smh = generateTaxLots('acc-001', 8_200_000).filter((l) => l.positionId === TRUST_SMH)
     // −21,920 × 220/400 = −12,056 allowed now; −21,920 × 180/400 = −9,864 deferred; nothing lost.
@@ -87,7 +93,7 @@ describe('saleWash: how many shares of this lot would a sale today wash?', () =>
     const { generateTaxLots, generateRebalanceTrades } = await engine()
     const smhSell = generateRebalanceTrades('acc-001', true).find((t) => t.symbol === 'SMH' && t.side === 'sell')
     expect(smhSell, 'vacuity guard — the preview must sell the SMH').toBeDefined()
-    expect(smhSell!.realisedShortTerm + smhSell!.realisedLongTerm).toBeLessThan(0)
+    expect(smhSell!.realizedShortTerm + smhSell!.realizedLongTerm).toBeLessThan(0)
     const lots = generateTaxLots('acc-001', 8_200_000).filter((l) => l.positionId === TRUST_SMH)
     expect(smhSell!.washSaleRisk).toBe(true)
     expect(lots.some(washesOnSale)).toBe(true)

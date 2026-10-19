@@ -1,0 +1,34 @@
+name: CI
+
+# A pull request runs once, on pull_request; a push runs only on main, so a PR branch is not checked twice.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      # No version input: the action reads `packageManager` (pnpm@11.9.0) from package.json.
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          # The LTS line the workstation runs (22.17.0), pinned exactly.
+          node-version: 22.17.0
+          cache: pnpm
+      # pnpm 11 reads allowBuilds from pnpm-workspace.yaml, so install never stops to ask about a build script.
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm type-check
+      - run: pnpm vitest run
+      - run: pnpm build

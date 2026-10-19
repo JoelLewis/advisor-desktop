@@ -1,0 +1,54 @@
+import { describe, it, expect } from 'vitest'
+import { accounts } from '@/mocks/data/accounts'
+import { sessionNow } from '@/mocks/data/workspace-store'
+import { harvestOpportunities, runHarvestScanner } from '@/mocks/agents/harvest-scanner'
+import { accountLedger } from '../household-ledger'
+import { approvedStoryV3, ok, release } from './story-fixture'
+import { advanceProspect, recordCoffee } from '../prospect-steps'
+
+const robert = () => {
+  const a = accounts.find((x) => x.id === 'acc-002')
+  if (!a) throw new Error('acc-002')
+  return a
+}
+
+describe("the Harvest Scanner reads the day's fills", () => {
+  it('offers AGG for harvest before the release', () => {
+    expect(harvestOpportunities(robert(), '2026-02-25').map((o) => o.position.symbol)).toContain('AGG')
+  })
+  it('does not offer what the firm bought today, and says it was bought today', () => {
+    release(approvedStoryV3())
+    expect(accountLedger('acc-002').fillsOnDay.some((f) => f.side === 'buy' && f.symbol === 'AGG')).toBe(true)
+    expect(harvestOpportunities(robert(), '2026-02-25').map((o) => o.position.symbol)).not.toContain('AGG')
+    const findings = runHarvestScanner({ asOf: sessionNow(), subject: { type: 'account', id: 'acc-002' } })
+    expect(findings.find((f) => f.topic.kind === 'harvest_allowed' && f.topic.symbol === 'AGG')).toBeUndefined()
+    expect(findings.find((f) => f.topic.kind === 'bought_today' && f.topic.symbol === 'AGG')).toMatchObject({
+      attention: 'info',
+      claim: 'iShares Core US Aggregate Bond ETF was bought today in this account; a sale at a loss now would be partly washed by that purchase, so it is not offered for harvest.',
+      figures: [{ label: 'Bought today · AGG', unit: 'sh', source: 'ledger.fillsOnDay.quantity' }],
+    })
+  })
+  it('never says no loss can be sold while it explains why one is not offered', () => {
+    release(approvedStoryV3())
+    const findings = runHarvestScanner({ asOf: sessionNow(), subject: { type: 'account', id: 'acc-002' } })
+    expect(findings.some((f) => f.topic.kind === 'bought_today')).toBe(true)
+    expect(findings.map((f) => f.claim)).not.toContain('No position in this account can be sold at a loss today.')
+    expect(findings.find((f) => f.topic.kind === 'not_measured')?.claim).toBe('No loss in this account can be harvested today without a wash sale.')
+  })
+  it("reads the taxpayer, not the account: AGG bought in Robert's account is not offered from Patricia's, and says why", () => {
+    release(approvedStoryV3())
+    const patricia = runHarvestScanner({ asOf: sessionNow(), subject: { type: 'account', id: 'acc-005' } })
+    expect(patricia.find((f) => f.topic.kind === 'harvest_allowed' && f.topic.symbol === 'AGG')).toBeUndefined()
+    expect(patricia.find((f) => f.topic.kind === 'bought_today' && f.topic.symbol === 'AGG')?.claim)
+      .toBe('iShares Core US Aggregate Bond ETF was bought today in another account of the same taxpayer; a sale at a loss here now would be partly washed by that purchase, so it is not offered for harvest.')
+  })
+  it('reads the session day: on Thu 26 Feb nothing was bought today, and the Wednesday buy still washes part of a loss', () => {
+    release(approvedStoryV3())
+    ok(recordCoffee('user-001', 'prsp-011', 'Coffee after the introduction.'))
+    ok(advanceProspect('user-001', 'prsp-011', 'reply'))
+    const findings = runHarvestScanner({ asOf: sessionNow(), subject: { type: 'account', id: 'acc-002' } })
+    expect(findings.some((f) => f.topic.kind === 'bought_today')).toBe(false)
+    const agg = findings.find((f) => f.topic.kind === 'harvest_allowed' && f.topic.symbol === 'AGG')
+    if (agg) expect(agg.claim).toMatch(/part of the loss would be deferred/)
+  })
+})

@@ -2,14 +2,14 @@ import { describe, it, expect, vi } from 'vitest'
 
 // Inject an open household loss window on EFA, a symbol acc-002's rebalance BUYS, so the engine's
 // wiring is exercised on a leg that really is at risk (no recorded sale in the fixtures gives one).
-vi.mock('@/mocks/data/realised-sales', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@/mocks/data/realised-sales')>()
-  const template = original.realisedSales[0]!
+vi.mock('@/mocks/data/realized-sales', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@/mocks/data/realized-sales')>()
+  const template = original.realizedSales[0]!
   return {
     ...original,
     openWashSaleWindows: (asOf: string, householdId?: string) => [
       ...original.openWashSaleWindows(asOf, householdId),
-      { ...template, symbol: 'EFA', realisedGainLoss: -1_000, start: '2026-02-01', end: '2026-03-31', daysRemaining: 34 },
+      { ...template, symbol: 'EFA', realizedGainLoss: -1_000, start: '2026-02-01', end: '2026-03-31', daysRemaining: 34 },
     ],
   }
 })

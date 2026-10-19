@@ -1,7 +1,7 @@
 import { get } from './api-client'
 import type { Account } from '@/types/account'
 import type { TaxLot } from '@/types/portfolio'
-import type { OpenWashSaleWindow } from '@/mocks/data/realised-sales'
+import type { OpenWashSaleWindow } from '@/mocks/data/realized-sales'
 
 export type Transaction = {
   id: string
@@ -15,28 +15,17 @@ export type Transaction = {
   price?: number
 }
 
-export function getAccount(id: string) {
-  return get<Account>(`/custodian/accounts/${id}`)
+/** The custodian's records are the firm's: each read names its viewer, and an outsider is told they do not exist. */
+const as = (viewer: string) => ({ 'X-Viewer': viewer })
+
+export function getAccount(viewer: string, id: string) {
+  return get<Account>(`/custodian/accounts/${id}`, undefined, as(viewer))
 }
 
-export function getAccounts(params?: Record<string, string>) {
-  return get<Account[]>('/custodian/accounts', params)
+export function getTaxLots(viewer: string, accountId: string) {
+  return get<TaxLot[]>(`/custodian/accounts/${accountId}/tax-lots`, undefined, as(viewer))
 }
 
-export function getTransactions(accountId: string, params?: Record<string, string>) {
-  return get<Transaction[]>(`/custodian/accounts/${accountId}/transactions`, params)
-}
-
-export function getTaxLots(accountId: string) {
-  return get<TaxLot[]>(`/custodian/accounts/${accountId}/tax-lots`)
-}
-
-export function getBalances(accountId: string) {
-  return get<{ totalValue: number; cashBalance: number; marginBalance: number }>(
-    `/custodian/accounts/${accountId}/balances`,
-  )
-}
-
-export function getOpenWashSaleWindows(accountId: string) {
-  return get<OpenWashSaleWindow[]>(`/custodian/accounts/${accountId}/realised-sales`)
+export function getOpenWashSaleWindows(viewer: string, accountId: string) {
+  return get<OpenWashSaleWindow[]>(`/custodian/accounts/${accountId}/realized-sales`, undefined, as(viewer))
 }

@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest'
 import { clients } from '@/mocks/data/clients'
 import { accounts } from '@/mocks/data/accounts'
 import { households } from '@/mocks/data/households'
-import { nbas } from '@/mocks/data/nbas'
 import { plans } from '@/mocks/data/planning'
 
 const clientIdSet = new Set(clients.map((c) => c.id))
@@ -21,10 +20,6 @@ describe('Referential Integrity — Cross-Entity Validation', () => {
 
     it('has 13 households', () => {
       expect(households).toHaveLength(13)
-    })
-
-    it('has 20 NBAs', () => {
-      expect(nbas).toHaveLength(20)
     })
 
     it('has 7 financial plans', () => {
@@ -118,20 +113,6 @@ describe('Referential Integrity — Cross-Entity Validation', () => {
           (m: { clientId: string }) => m.clientId,
         )
         expect(memberClientIds).toContain(primaryContactId)
-      },
-    )
-  })
-
-  describe('NBA → Client references', () => {
-    it.each(nbas.map((n) => [n.id, n]))(
-      'NBA %s: all client.id references are valid clients',
-      (_nbaId, nba) => {
-        for (const client of nba.clients) {
-          expect(
-            clientIdSet.has(client.id),
-            `NBA ${nba.id} references unknown client ${client.id}`,
-          ).toBe(true)
-        }
       },
     )
   })

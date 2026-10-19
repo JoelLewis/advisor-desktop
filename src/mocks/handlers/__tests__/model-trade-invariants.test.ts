@@ -1,82 +1,71 @@
 import { beforeAll, describe, it, expect } from 'vitest'
-import { previewModelTrades, executeModelTrades } from '@/services/trading'
-import { getDrift, getPositions } from '@/services/pms'
-import { getAccounts } from '@/services/custodian'
-import { MODEL_DEFINITIONS, modelImplementationSecurity } from '@/mocks/handlers/pms'
+import { previewRebalance, type RebalancePreview } from '@/services/oms'
+import { getPositions } from '@/services/pms'
+import { accounts as accountFixture } from '@/mocks/data/accounts'
+import { cashBalanceOf } from '@/mocks/data/positions'
+import { usdQuoteFor } from '@/mocks/handlers/pms'
+import { MODEL_DEFINITIONS } from '@/mocks/data/model-definitions'
 import { generateRebalanceTrades } from '@/mocks/handlers/oms'
 import { convertCurrency } from '@/lib/currency'
 import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
-import { taxReturnFor, ytdRealisedOnReturn } from '@/mocks/handlers/tax-return'
+import { taxReturnFor, ytdRealizedOnReturn } from '@/mocks/handlers/tax-return'
 import { netCapitalGainsTax } from '@/lib/capital-gains'
 import { taxRateFor } from '@/lib/tax-rules'
 import { MOCK_TODAY_ISO } from '@/lib/clock'
 import type { Account } from '@/types/account'
-import type { DriftStatus, Position } from '@/types/portfolio'
-import type { ModelTradePreview } from '@/types/trading'
+import type { Position } from '@/types/portfolio'
+import { modelIdFor } from '@/lib/mandate'
 
 /**
- * Task 9 · `POST /api/oms/model-trade/preview` invented every field it served. The account was
- * named `Account acc-003`; the model was always 'Growth Balanced' whatever id was asked for; the
- * drift was `accId.charCodeAt(accId.length - 1) % 5 + 1.2`; and all 47 accounts received the same
- * AAPL sell and AGG/VXUS buys against positions most of them do not hold, each explained by the
- * same "from 47% to 42%".
- *
- * It is now `generateRebalanceTrades` driven with the requested model. These tests pin both halves
- * of that: the preview's own identity fields, and — because the shared engine gained a
- * target-model parameter this task — the engine's own money invariants across the migration space
- * the rebalance endpoint never reaches (47 accounts x 7 models), not only the account-on-its-own-
- * model diagonal Task 8 swept.
+ * Pins the shared trade generator across the migration space (47 accounts x 7 models, plus the
+ * threshold and tax-mode sweep) through `POST /api/oms/rebalance`, which takes the target `modelId`
+ * and so reaches every account-on-model combination, not only an account on its own model.
  */
 
-const OWN_MODEL = (a: Account) => a.modelId ?? 'mod-001'
+// Phase 7a · C1: a custom mandate has no model of its own; this sweep previews it onto Growth, as a
+// migration onto a model would be.
+const MIGRATION_TARGET = 'mod-002'
+const OWN_MODEL = (a: Account) => modelIdFor(a, a.mandate === 'custom' ? MIGRATION_TARGET : undefined)
 
 /**
- * The book the sweeps read, fetched once per file. Each sweep used to issue its own round-trip per
- * account — x7 for the migration sweeps — about 1,500 requests in this file, each ~1.5ms of
- * fetch + MSW transport against ~0.07ms of engine work. Under full-suite CPU contention the two
- * 377-request migration sweeps crossed the 5s test timeout. The endpoint takes an `accountIds` list
- * (the screen previews several accounts at once), so the whole book is now previewed in one
- * request per model; 'a batched preview is the same answer as previewing each account alone' pins
- * that this changes the transport, not the answer — except the tax estimate, which by design nets
- * an account against earlier accounts in the batch on the same tax return (`nettedWithAccountIds`).
- * `alone` holds each account previewed on its own model by itself, for the tax sweep.
+ * The book the sweeps read, fetched once per file: the whole book is previewed in one request per
+ * model. `alone` holds each account previewed on its own model by itself, for the tax sweep; a
+ * batch nets an account against earlier accounts on the same tax return (`nettedWithAccountIds`).
  */
 type Book = {
   accounts: Account[]
   positions: Map<string, Position[]>
-  drift: Map<string, DriftStatus>
-  previews: Map<string, Map<string, ModelTradePreview>>
-  alone: Map<string, ModelTradePreview>
+  previews: Map<string, Map<string, RebalancePreview>>
+  alone: Map<string, RebalancePreview>
 }
 
 let book: Book
 
 beforeAll(async () => {
-  const accounts = await getAccounts()
+  const accounts = accountFixture
   const ids = accounts.map((a) => a.id)
-  const [positions, drift, previews, alone] = await Promise.all([
-    Promise.all(ids.map(async (id) => [id, await getPositions(id)] as const)),
-    Promise.all(ids.map(async (id) => [id, await getDrift(id)] as const)),
+  const [positions, previews, alone] = await Promise.all([
+    Promise.all(ids.map(async (id) => [id, await getPositions('user-001', id)] as const)),
     Promise.all(MODEL_DEFINITIONS.map(async (m) => {
-      const batch = await previewModelTrades(m.id, ids)
+      const batch = await previewRebalance('user-001', { accountIds: ids, taxAware: true, modelId: m.id })
       return [m.id, new Map(batch.map((p) => [p.accountId, p]))] as const
     })),
     Promise.all(accounts.map(async (a) => {
-      const [preview] = await previewModelTrades(OWN_MODEL(a), [a.id])
+      const [preview] = await previewRebalance('user-001', { accountIds: [a.id], taxAware: true, modelId: OWN_MODEL(a) })
       if (!preview) throw new Error(`no preview for ${a.id} alone`)
       return [a.id, preview] as const
     })),
   ])
-  book = { accounts, positions: new Map(positions), drift: new Map(drift), previews: new Map(previews), alone: new Map(alone) }
+  book = { accounts, positions: new Map(positions), previews: new Map(previews), alone: new Map(alone) }
 })
 
-function previewOf(account: Account, modelId = OWN_MODEL(account)): ModelTradePreview {
+function previewOf(account: Account, modelId = OWN_MODEL(account)): RebalancePreview {
   const preview = book.previews.get(modelId)?.get(account.id)
   if (!preview) throw new Error(`no preview for ${account.id} on ${modelId}`)
   return preview
 }
 
-function previewAlone(account: Account): ModelTradePreview {
+function previewAlone(account: Account): RebalancePreview {
   const preview = book.alone.get(account.id)
   if (!preview) throw new Error(`no preview for ${account.id} alone`)
   return preview
@@ -88,24 +77,6 @@ function positionsOf(account: Account): Position[] {
   return positions
 }
 
-describe('the book snapshot the sweeps read', () => {
-  it('a batched preview is the same answer as previewing each account alone', async () => {
-    expect(book.accounts.length).toBeGreaterThan(40)
-    let nettedInBatch = 0
-    for (const account of book.accounts) {
-      const { estimatedTaxImpact: aloneTax, nettedWithAccountIds: aloneNetted, ...single } = previewAlone(account)
-      const { estimatedTaxImpact: batchTax, nettedWithAccountIds: batchNetted, ...batched } = previewOf(account)
-      expect(single, account.id).toEqual(batched)
-      expect(aloneNetted, account.id).toEqual([])
-      // The tax figure differs only where the batch netted an earlier account on the same return in.
-      if (batchNetted.length === 0) expect(aloneTax, account.id).toBe(batchTax)
-      else nettedInBatch++
-    }
-    // hh-001 files jointly, so its later taxable accounts net against acc-001 in a whole-book batch.
-    expect(nettedInBatch, 'vacuity guard — some account must net against an earlier one').toBeGreaterThan(0)
-  })
-})
-
 /** The model's cash target weight — the same `MODELS` table the engine's drift reads. */
 function cashTargetWeight(modelId: string): number {
   const model = MODEL_DEFINITIONS.find((m) => m.id === modelId)
@@ -113,94 +84,10 @@ function cashTargetWeight(modelId: string): number {
   return model.assetClasses.find((ac) => ac.assetClass === 'cash')?.targetWeight ?? 0
 }
 
-describe('the model-trade preview names the account and the model it was actually asked for', () => {
-  it('acc-003 under mod-003: the account\'s real name and the real model name, not "Account acc-003" / "Growth Balanced"', async () => {
-    const [preview] = await previewModelTrades('mod-003', ['acc-003'])
-    expect(preview).toBeDefined()
-    expect(preview!.accountName).toBe('Robert Johnson Traditional IRA')
-    expect(preview!.accountName).not.toBe('Account acc-003')
-    expect(preview!.modelId).toBe('mod-003')
-    // 'Growth Balanced' is not the name of any model in this book — it was never even a wrong
-    // lookup, just a string.
-    expect(preview!.modelName).not.toBe('Growth Balanced')
-    expect(preview!.modelName).toBe('Conservative Income')
-    expect(MODEL_DEFINITIONS.some((m) => m.name === 'Growth Balanced')).toBe(false)
-  })
-
-  it('every account gets its own name, and every model id resolves to that model\'s own name', async () => {
-    const accounts = await getAccounts()
-    expect(accounts.length).toBeGreaterThan(40)
-    for (const model of MODEL_DEFINITIONS) {
-      const previews = await previewModelTrades(model.id, accounts.map((a) => a.id))
-      expect(previews, model.id).toHaveLength(accounts.length)
-      for (const preview of previews) {
-        const account = accounts.find((a) => a.id === preview.accountId)!
-        expect(preview.accountName, preview.accountId).toBe(account.name)
-        expect(preview.modelName, `${preview.accountId} ${model.id}`).toBe(model.name)
-      }
-    }
-  })
-
-  it('previewing a MIGRATION names the model asked for, not the one the account is on today', async () => {
-    // acc-001 is assigned to mod-001 (Balanced Growth); the screen's purpose is to preview moving
-    // it onto another model, so the answer must describe mod-002.
-    const accounts = await getAccounts()
-    expect(OWN_MODEL(accounts.find((a) => a.id === 'acc-001')!)).toBe('mod-001')
-    const [preview] = await previewModelTrades('mod-002', ['acc-001'])
-    expect(preview!.modelId).toBe('mod-002')
-    expect(preview!.modelName).toBe('Growth')
-  })
-
-  it('an unknown model is refused, not silently served under mod-001\'s lineup', async () => {
-    await expect(previewModelTrades('mod-999', ['acc-001'])).rejects.toThrow()
-  })
-})
-
-describe('currentDrift is the account\'s real drift against the model asked for', () => {
-  it('for every account previewed on its own model, it is exactly the drift surface\'s own figure', async () => {
-    const { accounts } = book
-    let checked = 0
-    for (const account of accounts) {
-      const preview = previewOf(account)
-      const drift = book.drift.get(account.id)!
-      // Both sides are `maxAbsDrift x 100` off one 4dp-rounded value, so the only slack here is
-      // binary-float representation — bounded at ~1e-13, not at the 0.05 a display rounding would
-      // need. A hash of the account id, or `totalDrift` in place of `maxAbsDrift`, misses by
-      // whole percentage points.
-      expect(Math.abs(preview.currentDrift - drift.maxAbsDrift * 100), account.id).toBeLessThan(1e-9)
-      checked++
-    }
-    expect(checked, 'vacuity guard — the loop must have run over the whole book').toBe(accounts.length)
-    expect(checked).toBeGreaterThan(40)
-  })
-
-  it('it moves when the model moves: acc-001 is 7.05% adrift of its own model and 13.03% adrift of mod-002', async () => {
-    const [own] = await previewModelTrades('mod-001', ['acc-001'])
-    const [migrated] = await previewModelTrades('mod-002', ['acc-001'])
-    const drift = await getDrift('acc-001')
-    expect(own!.currentDrift).toBeCloseTo(drift.maxAbsDrift * 100, 9)
-    // The two must differ by a material amount — an implementation that ignored `modelId` (as the
-    // charCodeAt one did) returns the same number for both.
-    expect(Math.abs(migrated!.currentDrift - own!.currentDrift)).toBeGreaterThan(1)
-  })
-
-  it('it is not the character-code sequence it used to be', () => {
-    const { accounts } = book
-    const fabricated = (id: string) => +((id.charCodeAt(id.length - 1) % 5) + 1.2).toFixed(1)
-    let differing = 0
-    for (const account of accounts) {
-      const preview = previewOf(account)
-      if (Math.abs(preview.currentDrift - fabricated(account.id)) > 1e-9) differing++
-    }
-    // Every account, not merely most — the old formula could only ever emit 1.2–5.2.
-    expect(differing).toBe(accounts.length)
-  })
-})
-
 describe('the proposed trades are the account\'s own', () => {
   it('two accounts on the same model do not receive identical trade lists', async () => {
-    const [a] = await previewModelTrades('mod-002', ['acc-001'])
-    const [b] = await previewModelTrades('mod-002', ['acc-006'])
+    const [a] = await previewRebalance('user-001', { accountIds: ['acc-001'], taxAware: true, modelId: 'mod-002' })
+    const [b] = await previewRebalance('user-001', { accountIds: ['acc-006'], taxAware: true, modelId: 'mod-002' })
     expect(a!.trades.length).toBeGreaterThan(0)
     expect(b!.trades.length).toBeGreaterThan(0)
     expect(JSON.stringify(a!.trades)).not.toBe(JSON.stringify(b!.trades))
@@ -283,8 +170,7 @@ describe('the proposed trades are the account\'s own', () => {
     const { accounts } = book
     let checked = 0
     for (const account of accounts) {
-      const modelId = OWN_MODEL(account)
-      const preview = previewOf(account, modelId)
+      const preview = previewOf(account)
       const positions = positionsOf(account)
       const currency = account.baseCurrency ?? 'USD'
       for (const trade of preview.trades) {
@@ -292,10 +178,9 @@ describe('the proposed trades are the account\'s own', () => {
         // A buy into a class the account holds nothing of executes against the model's own
         // implementation security, quoted USD and converted into the account's currency once —
         // exactly what §9.7 does, re-derived here rather than read back from the answer.
-        const security = modelImplementationSecurity(modelId, trade.assetClass)
-        const price = held
-          ? held.price
-          : convertCurrency(security!.price, 'USD', currency, FX_RATES_USD_BASE)
+        const quote = held ? undefined : usdQuoteFor(trade.symbol)
+        if (!held && !quote) throw new Error(`${account.id} ${trade.symbol}: neither held nor a quoted implementation security`)
+        const price = held ? held.price : convertCurrency(quote!.price, 'USD', currency, FX_RATES_USD_BASE)
         checked++
         // The residual of a single `Math.round` is bounded in the unit rounded — whole currency
         // units — so the bound is exact equality, not a percentage of the notional.
@@ -307,49 +192,16 @@ describe('the proposed trades are the account\'s own', () => {
   })
 })
 
-describe('the reason names this account\'s own drift, not a fixed pair of percentages', () => {
-  it('every trade quotes the account\'s own weight and the model\'s own target for that sleeve', () => {
-    const { accounts } = book
-    let checked = 0
-    for (const account of accounts) {
-      const preview = previewOf(account)
-      const drift = book.drift.get(account.id)!
-      for (const trade of preview.trades) {
-        const sleeve = drift.assetClassDrifts.find((d) => d.assetClass === trade.assetClass)!
-        checked++
-        expect(trade.reason, `${account.id} ${trade.symbol}`)
-          .toContain(`${(sleeve.actual * 100).toFixed(1)}% against a ${(sleeve.target * 100).toFixed(1)}% target`)
-        expect(trade.reason).toContain(trade.side === 'sell' ? 'Reduce' : 'Increase')
-      }
-    }
-    expect(checked).toBeGreaterThan(100)
-  })
-
-  it('the fixed "from 47% to 42%" sentence appears nowhere in the book', () => {
-    const { accounts } = book
-    const reasons = new Set<string>()
-    for (const account of accounts) {
-      for (const trade of previewOf(account).trades) reasons.add(trade.reason)
-    }
-    expect(reasons.size, 'vacuity guard — reasons must exist').toBeGreaterThan(20)
-    for (const reason of reasons) {
-      expect(reason).not.toContain('from 47% to 42%')
-    }
-    // The distinct-reason count is the real claim: three hardcoded sentences served 47 accounts.
-    expect(reasons.size).toBeGreaterThan(40)
-  })
-})
-
 describe('§9.3 · the preview and its trades carry the account\'s own currency', () => {
   it('acc-041 (HKD): the preview and every trade on it are tagged HKD', async () => {
-    const [preview] = await previewModelTrades('mod-002', ['acc-041'])
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-041'], taxAware: true, modelId: 'mod-002' })
     expect(preview!.currency).toBe('HKD')
     expect(preview!.trades.length).toBeGreaterThan(0)
     expect(preview!.trades.every((t) => t.currency === 'HKD')).toBe(true)
   })
 
   it('acc-001 (USD) is still USD — the tag is read from the account, not hardcoded to the exotic case', async () => {
-    const [preview] = await previewModelTrades('mod-002', ['acc-001'])
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-001'], taxAware: true, modelId: 'mod-002' })
     expect(preview!.currency).toBe('USD')
     expect(preview!.trades.length).toBeGreaterThan(0)
     expect(preview!.trades.every((t) => t.currency === 'USD')).toBe(true)
@@ -357,11 +209,11 @@ describe('§9.3 · the preview and its trades carry the account\'s own currency'
 
   it('all four non-USD accounts carry their own currency', async () => {
     const expected = { 'acc-041': 'HKD', 'acc-042': 'SGD', 'acc-043': 'EUR', 'acc-044': 'CHF' } as const
-    const accounts = await getAccounts()
+    const accounts = accountFixture
     let sawATrade = false
     for (const [id, currency] of Object.entries(expected)) {
       const account = accounts.find((a) => a.id === id)!
-      const [preview] = await previewModelTrades(OWN_MODEL(account), [id])
+      const [preview] = await previewRebalance('user-001', { accountIds: [id], taxAware: true, modelId: OWN_MODEL(account) })
       expect(preview!.currency, id).toBe(currency)
       expect(preview!.trades.length, `${id} must propose trades`).toBeGreaterThan(0)
       sawATrade = true
@@ -370,13 +222,12 @@ describe('§9.3 · the preview and its trades carry the account\'s own currency'
     expect(sawATrade).toBe(true)
   })
 
-  it('a preview with no trades still states its currency and its drift', async () => {
+  it('a preview with no trades still states its currency', async () => {
     // acc-003 is 0.31 of a point adrift of its own model — below the engine's threshold, so it
     // proposes nothing, and the tag must not depend on the trade list being non-empty.
-    const [preview] = await previewModelTrades('mod-003', ['acc-003'])
+    const [preview] = await previewRebalance('user-001', { accountIds: ['acc-003'], taxAware: true, modelId: 'mod-003' })
     expect(preview!.trades).toHaveLength(0)
     expect(preview!.currency).toBe('USD')
-    expect(preview!.currentDrift).toBeGreaterThan(0)
     expect(preview!.estimatedTaxImpact).toBe(0)
   })
 })
@@ -396,33 +247,33 @@ describe('tax follows the account\'s own treatment and its own trades', () => {
         taxableWithTax++
       }
       // The estimate is what the proposal adds to its return, so it is negative only when the
-      // proposal's losses offset gains already realised this year (acc-011 against rs-004), and
+      // proposal's losses offset gains already realized this year (acc-011 against rs-004), and
       // it can never save more than that year-to-date tax. The YTD ledger is in USD; acc-041 (HKD)
       // and acc-042 (SGD) share hh-002's joint return with rs-002, so the floor is converted into
       // the preview's own currency, with a unit of slack for the rounding on either side.
       const returnId = taxReturnFor(account)
-      const ytd = returnId === null ? { shortTerm: 0, longTerm: 0 } : ytdRealisedOnReturn(returnId, MOCK_TODAY_ISO)
+      const ytd = returnId === null ? { shortTerm: 0, longTerm: 0 } : ytdRealizedOnReturn(returnId, MOCK_TODAY_ISO)
       const ytdTax = convertCurrency(netCapitalGainsTax(ytd.shortTerm, ytd.longTerm, taxRateFor), 'USD', preview.currency, FX_RATES_USD_BASE)
       expect(preview.estimatedTaxImpact, account.id).toBeGreaterThanOrEqual(-ytdTax - 1)
     }
     // Both guards matter: the first says the zero above was asserted against accounts that
     // actually traded, the second that a non-zero figure is reachable at all.
     expect(shelteredWithTrades, 'vacuity guard — sheltered accounts must have proposed trades').toBeGreaterThan(3)
-    expect(taxableWithTax, 'vacuity guard — some taxable account must realise gains').toBeGreaterThan(3)
+    expect(taxableWithTax, 'vacuity guard — some taxable account must realize gains').toBeGreaterThan(3)
   })
 })
 
 describe('the shared engine\'s money invariants hold across the whole migration space, not just the diagonal', () => {
-  // 47 accounts x 7 models. The rebalance endpoint can only ever exercise each account against
-  // its own model; the model-trade screen is what drives every other combination, and it is the
-  // reason `generateRebalanceTrades` gained a model parameter at all.
+  // 47 accounts x 7 models: a target `modelId` on the rebalance endpoint reaches every
+  // combination, not only an account on its own model, and it is the reason
+  // `generateRebalanceTrades` has a model parameter at all.
   it('post-trade cash stays within [start, target] and never goes negative, in money at zero tolerance', () => {
     const { accounts } = book
     let combos = 0
     let withTrades = 0
     const failures: string[] = []
     for (const account of accounts) {
-      const cashValue = positionsOf(account).find((p) => p.symbol === 'CASH')?.marketValue ?? account.cashBalance
+      const cashValue = positionsOf(account).find((p) => p.symbol === 'CASH')?.marketValue ?? cashBalanceOf(account)
       for (const model of MODEL_DEFINITIONS) {
         const preview = previewOf(account, model.id)
         combos++
@@ -474,8 +325,7 @@ describe('the shared engine\'s money invariants hold across the whole migration 
 })
 
 describe('the cap resolution reaches the cash band across the whole reachable configuration space', () => {
-  // The endpoint sweep above fixes `taxAware` and the drift threshold at what the model-trade
-  // screen sends. Both are real parameters of the shared engine — the rebalance wizard exposes a
+  // The endpoint sweep above fixes `taxAware` and the drift threshold at their defaults. Both are real parameters of the shared engine — the rebalance wizard exposes a
   // threshold control and a tax toggle — so the space that can actually reach
   // `generateRebalanceTrades` is 47 accounts x 7 models x 2 tax modes x 11 thresholds = 7,238,
   // not 329. Measuring only the 329 is how the previous four-pass cutoff looked adequate.
@@ -485,7 +335,7 @@ describe('the cap resolution reaches the cash band across the whole reachable co
     const { accounts } = book
     const cashByAccount = new Map<string, number>()
     for (const account of accounts) {
-      cashByAccount.set(account.id, positionsOf(account).find((p) => p.symbol === 'CASH')?.marketValue ?? account.cashBalance)
+      cashByAccount.set(account.id, positionsOf(account).find((p) => p.symbol === 'CASH')?.marketValue ?? cashBalanceOf(account))
     }
 
     let combos = 0
@@ -524,18 +374,5 @@ describe('the cap resolution reaches the cash band across the whole reachable co
     expect(combos).toBe(7238)
     expect(withTrades, 'vacuity guard — most configurations must actually propose trades').toBeGreaterThan(4000)
     expect(failures).toEqual([])
-  })
-})
-
-describe('execute reports the orders the preview actually proposed', () => {
-  it('ordersCreated is the real trade count, not accountIds.length x 3', async () => {
-    const accountIds = ['acc-001', 'acc-006', 'acc-041']
-    const previews: ModelTradePreview[] = await previewModelTrades('mod-002', accountIds)
-    const expected = previews.reduce((sum, p) => sum + p.trades.length, 0)
-    const result = await executeModelTrades('mod-002', accountIds)
-    expect(expected).toBeGreaterThan(0)
-    // The old formula and the truth must be distinguishable, or this test proves nothing.
-    expect(expected).not.toBe(accountIds.length * 3)
-    expect(result.ordersCreated).toBe(expected)
   })
 })

@@ -1,7 +1,7 @@
-export type HoldingCharacter = 'short' | 'long'
+type HoldingCharacter = 'short' | 'long'
 
 /**
- * §0.6 · what kind of asset a gain is on. A collectible (§408(m): art, coins, any metal) is taxed
+ * What kind of asset a gain is on. A collectible (§408(m): art, coins, any metal) is taxed
  * long-term at up to 28% (§1(h)(4)–(5)), not 20%. Short-term, it is ordinary income like any
  * other short-term gain.
  */
@@ -35,34 +35,34 @@ export function netCapitalGainsTax(shortTerm: number, longTerm: number, rateFor:
 }
 
 /**
- * What `netTaxForLegs` reads off each leg: its signed realised result by holding period, the part
+ * What `netTaxForLegs` reads off each leg: its signed realized result by holding period, the part
  * of the long-term result that is collectibles (absent: none), its own tax, and the part of its
- * realised loss IRC §1091 washes (absent: none; signed like the loss, so ≤ 0).
+ * realized loss IRC §1091 washes (absent: none; signed like the loss, so ≤ 0).
  */
 export type TaxedLeg = {
-  realisedShortTerm: number
-  realisedLongTerm: number
-  realisedCollectibleLongTerm?: number
+  realizedShortTerm: number
+  realizedLongTerm: number
+  realizedCollectibleLongTerm?: number
   taxImpact: number
-  washedLoss?: RealisedByCharacter
+  washedLoss?: RealizedByCharacter
 }
 
 /**
- * The result a leg puts on the return: what it realised less the loss §1091 washes. A washed loss
+ * The result a leg puts on the return: what it realized less the loss §1091 washes. A washed loss
  * is deferred into a replacement's basis or lost; either way it offsets no gain this year.
  */
-export function recognisedResult(leg: TaxedLeg): Required<RealisedByCharacter> {
+export function recognizedResult(leg: TaxedLeg): Required<RealizedByCharacter> {
   return {
-    shortTerm: leg.realisedShortTerm - (leg.washedLoss?.shortTerm ?? 0),
-    longTerm: leg.realisedLongTerm - (leg.washedLoss?.longTerm ?? 0),
-    collectibleLongTerm: (leg.realisedCollectibleLongTerm ?? 0) - (leg.washedLoss?.collectibleLongTerm ?? 0),
+    shortTerm: leg.realizedShortTerm - (leg.washedLoss?.shortTerm ?? 0),
+    longTerm: leg.realizedLongTerm - (leg.washedLoss?.longTerm ?? 0),
+    collectibleLongTerm: (leg.realizedCollectibleLongTerm ?? 0) - (leg.washedLoss?.collectibleLongTerm ?? 0),
   }
 }
 
 /**
- * The estimated tax on one proposal **on its own**: `net` is its legs' recognised results (realised
- * less any §1091-washed loss, `recognisedResult`) netted under §1222
- * (no year-to-date realised results, no other account), `gross` the sum of the legs' own tax on
+ * The estimated tax on one proposal **on its own**: `net` is its legs' recognized results (realized
+ * less any §1091-washed loss, `recognizedResult`) netted under §1222
+ * (no year-to-date realized results, no other account), `gross` the sum of the legs' own tax on
  * gains. Netting a proposal's own legs never raises its bill, so `net` is clamped to `gross`: it
  * rounds once where `gross` rounds per leg, and with nothing to net the two can differ by a dollar.
  *
@@ -71,18 +71,18 @@ export function recognisedResult(leg: TaxedLeg): Required<RealisedByCharacter> {
  */
 export function netTaxForLegs(legs: readonly TaxedLeg[], rateFor: RateFor): { net: number; gross: number } {
   const gross = legs.reduce((s, l) => s + l.taxImpact, 0)
-  const recognised = legs.map(recognisedResult)
-  const shortTerm = recognised.reduce((s, r) => s + r.shortTerm, 0)
-  const longTerm = recognised.reduce((s, r) => s + r.longTerm, 0)
-  const collectibleLongTerm = recognised.reduce((s, r) => s + r.collectibleLongTerm, 0)
+  const recognized = legs.map(recognizedResult)
+  const shortTerm = recognized.reduce((s, r) => s + r.shortTerm, 0)
+  const longTerm = recognized.reduce((s, r) => s + r.longTerm, 0)
+  const collectibleLongTerm = recognized.reduce((s, r) => s + r.collectibleLongTerm, 0)
   return { net: Math.min(netCapitalGainsTax(shortTerm, longTerm, rateFor, collectibleLongTerm), gross), gross }
 }
 
-/** Signed realised results by holding period; `collectibleLongTerm` is the part of `longTerm` on collectibles (absent: none). */
-export type RealisedByCharacter = { shortTerm: number; longTerm: number; collectibleLongTerm?: number }
+/** Signed realized results by holding period; `collectibleLongTerm` is the part of `longTerm` on collectibles (absent: none). */
+export type RealizedByCharacter = { shortTerm: number; longTerm: number; collectibleLongTerm?: number }
 
 /**
- * The tax `added` puts on a return that has already realised `prior` this year: §1222-netted tax
+ * The tax `added` puts on a return that has already realized `prior` this year: §1222-netted tax
  * on both together, less the tax `prior` already owes. How it relates to `added`'s own tax on
  * gains (a preview's `grossTaxOnGains`):
  * - **At most the gross when `prior` is a gain or nil in each rate group**: short-term,
@@ -94,15 +94,15 @@ export type RealisedByCharacter = { shortTerm: number; longTerm: number; collect
  *   LT +10,000 makes the ST gain taxable, 4,080 at 40.8% against 2,380 of its own tax. Likewise
  *   prior LT 0, made of +10,000 collectibles and −10,000 ordinary: adding ordinary LT +10,000
  *   un-shelters the collectibles gain, 3,180 at 31.8% against 2,380.
- * - **Negative when `added` lowers the bill**: a loss against gains already realised this year.
+ * - **Negative when `added` lowers the bill**: a loss against gains already realized this year.
  *   It is never below `−netCapitalGainsTax(prior)` — trades cannot save more than the year owes.
  *
  * Capital-gains tax only: the §1211(b) offset of net capital loss against ordinary income and any
- * §1212 carryforward from prior years are not modelled (`CAPITAL_LOSS_SCOPE_NOTE`).
+ * §1212 carryforward from prior years are not modeled (`CAPITAL_LOSS_SCOPE_NOTE`).
  */
 export function additionalCapitalGainsTax(
-  prior: RealisedByCharacter,
-  added: RealisedByCharacter,
+  prior: RealizedByCharacter,
+  added: RealizedByCharacter,
   rateFor: RateFor,
 ): number {
   const priorCollectibles = prior.collectibleLongTerm ?? 0
@@ -147,7 +147,7 @@ export const CAPITAL_LOSS_SCOPE_NOTE =
 
 /**
  * A return-level estimate is signed: positive is tax the trades add, negative tax they save
- * against what the year's realised results already owe. Surfaces state the direction in words and
+ * against what the year's realized results already owe. Surfaces state the direction in words and
  * the amount unsigned, rather than a signed "tax added" figure.
  */
 export function taxEstimateDirection(estimate: number): { direction: 'added to' | 'saved on'; amount: number } {

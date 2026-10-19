@@ -1,14 +1,23 @@
 import type { Account } from '@/types/account'
 import type { ProposedTrade, RepurchaseRestriction } from '@/services/oms'
 import { isSubjectToWashSale } from '@/lib/security-master'
-import { washSaleWindow } from '../data/realised-sales'
+import { washSaleWindow } from '../data/realized-sales'
 import { openWashSaleWindowsFor, sameWashSaleTaxpayer } from './tax-return'
+import { accounts } from '../data/accounts'
+import { accountDisplayName } from '@/lib/account-display'
+
+/** An account as people read it, "<Owner> · <Type> (…<last 4>)". */
+function displayNameOf(accountId: string): string {
+  const account = accounts.find((a) => a.id === accountId)
+  if (!account) throw new Error(`A wash-sale window names an unknown account ${accountId}`)
+  return accountDisplayName(account)
+}
 
 /** The legs of one account's proposal, as far as a restriction list needs them. */
 export type ProposalLegs = { accountId: string; legs: readonly Pick<ProposedTrade, 'symbol' | 'repurchaseBlockedUntil'>[] }
 
 /**
- * §0.2 · the IRC §1091 repurchase restrictions on `account`: every open window a recorded loss
+ * The IRC §1091 repurchase restrictions on `account`: every open window a recorded loss
  * sale by its wash-sale taxpayer opened, and every window a proposed loss leg in `proposals` by
  * that taxpayer would open if executed on `asOfISO`. The scope is the taxpayer, not the household
  * (`washSaleTaxpayer`): a purchase in the owner's or spouse's IRA washes the loss, while an
@@ -26,7 +35,7 @@ export function repurchaseRestrictionsFor(
     symbol: w.symbol,
     start: w.start,
     until: w.end,
-    source: { kind: 'recorded', saleId: w.id, accountId: w.accountId, saleDate: w.saleDate },
+    source: { kind: 'recorded', saleId: w.id, accountId: w.accountId, accountName: displayNameOf(w.accountId), saleDate: w.saleDate },
   }))
   const sameTaxpayer = new Set(sameWashSaleTaxpayer(account).map((a) => a.id))
   const { start } = washSaleWindow(asOfISO)
@@ -40,7 +49,7 @@ export function repurchaseRestrictionsFor(
         symbol: leg.symbol,
         start,
         until: leg.repurchaseBlockedUntil,
-        source: { kind: 'projected', accountId, saleDate: asOfISO },
+        source: { kind: 'projected', accountId, accountName: displayNameOf(accountId), saleDate: asOfISO },
       })
     }
   }

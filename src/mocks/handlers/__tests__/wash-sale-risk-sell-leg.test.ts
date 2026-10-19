@@ -14,16 +14,19 @@ const ROTH_INTC = 'pos-test-acc-004-intc'
 
 vi.mock('@/mocks/data/positions', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/mocks/data/positions')>()
+  // The planted holding is part of the book both ways the fixtures reach it: the live read and the seed the lots partition.
+  const withPlanted = (read: typeof original.getPositionsForAccount) => (accountId: string, totalValue: number) => {
+    const positions = read(accountId, totalValue)
+    if (scenario.current !== 'roth-buys-intc' || accountId !== 'acc-004') return positions
+    return [...positions, {
+      id: ROTH_INTC, accountId, symbol: 'INTC', name: 'Intel Corp.', assetClass: 'us_equity',
+      quantity: 100, price: 28.45, costBasis: 2_845, marketValue: 2_845, gainLoss: 0, gainLossPercent: 0, weight: 0,
+    }]
+  }
   return {
     ...original,
-    getPositionsForAccount: (accountId: string, totalValue: number) => {
-      const positions = original.getPositionsForAccount(accountId, totalValue)
-      if (scenario.current !== 'roth-buys-intc' || accountId !== 'acc-004') return positions
-      return [...positions, {
-        id: ROTH_INTC, accountId, symbol: 'INTC', name: 'Intel Corp.', assetClass: 'us_equity',
-        quantity: 100, price: 28.45, costBasis: 2_845, marketValue: 2_845, gainLoss: 0, gainLossPercent: 0, weight: 0,
-      }]
-    },
+    getPositionsForAccount: withPlanted(original.getPositionsForAccount),
+    seedPositionsForAccount: withPlanted(original.seedPositionsForAccount),
   }
 })
 
@@ -77,14 +80,14 @@ async function acc002Legs() {
   return generateRebalanceTrades('acc-002', true)
 }
 
-describe('washSaleRisk on a loss-realising sell, from the engine', () => {
+describe('washSaleRisk on a loss-realizing sell, from the engine', () => {
   beforeEach(() => { scenario.current = 'roth-buys-intc' })
 
   it('INTC sold at a loss with INTC bought in the household Roth 10 days earlier is at risk', async () => {
     const legs = await acc002Legs()
     const intc = legs.find((l) => l.symbol === 'INTC' && l.side === 'sell')
     expect(intc).toBeDefined()
-    expect(intc!.realisedShortTerm + intc!.realisedLongTerm).toBeLessThan(0)
+    expect(intc!.realizedShortTerm + intc!.realizedLongTerm).toBeLessThan(0)
     expect(intc!.washSaleRisk).toBe(true)
     // The flag is specific to the symbol: gain legs in the same proposal are not touched by it.
     expect(legs.filter((l) => l.side === 'sell' && l.symbol !== 'INTC').every((l) => !l.washSaleRisk)).toBe(true)
@@ -97,7 +100,7 @@ describe('washSaleRisk on a loss-realising sell, from the engine', () => {
     expect(intc).toBeDefined()
     // The whole position goes, so both lots — including the one bought 2026-02-15 — are sold.
     expect(intc!.quantity).toBe(7_000)
-    expect(intc!.realisedShortTerm + intc!.realisedLongTerm).toBeLessThan(0)
+    expect(intc!.realizedShortTerm + intc!.realizedLongTerm).toBeLessThan(0)
     expect(intc!.washSaleRisk).toBe(false)
   })
 

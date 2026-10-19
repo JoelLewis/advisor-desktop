@@ -1,4 +1,4 @@
-export type ReviewStatus = 'pending' | 'in_review' | 'approved' | 'flagged' | 'escalated'
+type ReviewStatus = 'pending' | 'in_review' | 'approved' | 'flagged' | 'escalated'
 
 export type AlertSeverity = 'info' | 'warning' | 'critical'
 
@@ -25,36 +25,4 @@ export type SupervisionRecord = {
   action: string
   notes: string
   timestamp: string
-}
-
-export type TradeComplianceRequest = {
-  accountId: string
-  trades: {
-    symbol: string
-    side: 'buy' | 'sell'
-    quantity: number
-    estimatedValue: number
-  }[]
-}
-
-export type TradeComplianceResult = {
-  accountId: string
-  checks: TradeComplianceCheck[]
-  overallStatus: 'pass' | 'warning' | 'fail'
-}
-
-export type TradeComplianceCheck = {
-  rule: string
-  category: 'restricted_securities' | 'concentration_limit' | 'sector_limit' | 'cash_minimum' | 'wash_sale' | 'position_limit'
-  status: 'pass' | 'warning' | 'fail'
-  message: string
-  details?: {
-    symbol?: string
-    currentWeight?: number
-    postTradeWeight?: number
-    limit?: number
-    cashBalance?: number
-    minimumCash?: number
-    preExisting?: boolean
-  }
 }

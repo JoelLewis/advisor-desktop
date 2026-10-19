@@ -1,21 +1,7 @@
 import { HttpResponse } from 'msw'
-import { deriveBookAUM } from '@/lib/aum'
-import { FX_RATES_USD_BASE } from '../data/currencies'
-import { accounts } from '../data/accounts'
-
-export function formatAUM(value: number): string {
-  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`
-  if (value >= 1_000) return `$${(value / 1_000).toFixed(0)}K`
-  return `$${value}`
-}
 
 export function notFound(): HttpResponse<null> {
   return new HttpResponse(null, { status: 404 })
-}
-
-/** Sum all account values, converting non-USD accounts at current FX rates */
-export function computeTotalAUM(): number {
-  return Math.round(deriveBookAUM(accounts, FX_RATES_USD_BASE))
 }
 
 export function roundTo(value: number, decimals: number): number {

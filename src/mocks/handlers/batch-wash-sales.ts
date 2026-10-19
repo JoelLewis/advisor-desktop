@@ -1,22 +1,24 @@
 import type { Account } from '@/types/account'
 import type { ProposedTrade } from '@/services/oms'
+import type { LotTake } from '@/types/workspace-proposal'
 import type { ProposedTradeLeg, RebalanceProposal } from './oms'
 import { hasUnwashedLossShares, matchWashedShares, washedLoss, type Acquisition, type SoldLossLot, type WashedShares } from '@/lib/wash-sale'
 import { isSubjectToWashSale, taxCharacterOf } from '@/lib/security-master'
 import { isTaxableAccount } from '@/lib/tax-treatment'
-import { washSaleWindow } from '../data/realised-sales'
+import { washSaleWindow } from '../data/realized-sales'
 import { generateTaxLots, washSaleAcquisitions, type CustodianLot } from './custodian'
 import { washSaleTaxpayer } from './tax-return'
 
-/** What one sell leg disposes of: every lot it draws on, and the shares of each it sells at a loss. */
-export type LegSale = { soldLosses: readonly SoldLossLot[]; consumedLotIds: readonly string[] }
+/** What one sell leg disposes of: every lot it draws on, what it takes from each, and the shares of each it sells at a loss. */
+export type LegSale = { soldLosses: readonly SoldLossLot[]; consumedLotIds: readonly string[]; lotTakes: readonly LotTake[] }
 
-type BatchEntry = { account: Account } & RebalanceProposal
+/** Settlement needs only the legs and what they sell. */
+type BatchEntry = { account: Account } & Pick<RebalanceProposal, 'legs' | 'sales'>
 
-const NOTHING_SOLD: LegSale = { soldLosses: [], consumedLotIds: [] }
+const NOTHING_SOLD: LegSale = { soldLosses: [], consumedLotIds: [], lotTakes: [] }
 
 /**
- * §0.2 · the IRC §1091 consequences of executing a whole batch today, settled across each wash-sale
+ * The IRC §1091 consequences of executing a whole batch today, settled across each wash-sale
  * taxpayer's accounts at once:
  * - Replacement shares are the taxpayer's purchases in the last 30 days (IRAs and Roths included)
  *   **and every buy the batch itself proposes in any of the taxpayer's accounts**, dated today.
@@ -49,7 +51,13 @@ export function settleBatchWashSales(batch: readonly BatchEntry[], asOfISO: stri
   }
   for (const entries of byTaxpayer.values()) {
     const sales = new Map(entries.flatMap((e) => [...e.sales]))
-    const saleOf = (leg: ProposedTradeLeg): LegSale => sales.get(leg) ?? NOTHING_SOLD
+    // A buy disposes of nothing; a sell without its lots would settle as if it sold no loss shares.
+    const saleOf = (leg: ProposedTradeLeg): LegSale => {
+      const sale = sales.get(leg)
+      if (sale) return sale
+      if (leg.side === 'buy') return NOTHING_SOLD
+      throw new Error(`settleBatchWashSales: the ${leg.symbol} sale carries no record of the lots it sells`)
+    }
     const allLegs = entries.flatMap((e) => e.legs)
     const sold = new Set(allLegs.flatMap((leg) => saleOf(leg).consumedLotIds))
     const held = washSaleAcquisitions(entries[0]!.account, lotsFor).filter((a) => !sold.has(a.lotId))

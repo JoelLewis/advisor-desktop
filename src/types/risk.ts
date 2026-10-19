@@ -1,41 +1,5 @@
 import type { Currency, Percentage } from './common';
 
-type RiskMetrics = {
-  /** Portfolio sensitivity to the global equity market (1.0 = market). */
-  beta: number;
-  /** (R₁ᵧ − risk-free) ÷ σ, from the same return series the performance tab shows. */
-  sharpe: number;
-  /** (R₁ᵧ − risk-free) ÷ downside deviation. */
-  sortino: number;
-  /** Modelled trailing-3-year peak-to-trough decline. */
-  maxDrawdown: Percentage;
-  /** Annualised standard deviation of returns. */
-  standardDeviation: Percentage;
-  downsideDeviation: Percentage;
-  riskFreeRate: Percentage;
-  /** Estimated loss not exceeded with `var95Confidence` probability over `var95Horizon`. */
-  var95: Currency;
-  var95Percent: Percentage;
-  var95Horizon: string;
-  var95Confidence: number;
-  var95Method: 'parametric' | 'historical' | 'monte_carlo';
-  /**
-   * Name of the benchmark that **tracking error** is measured against. Beta is not
-   * benchmark-relative: it is sensitivity to the global equity market, summed from
-   * `ASSET_CLASS_RISK`, and is the same number whichever model the account is assigned.
-   */
-  benchmark: string;
-  /** One annualised active-risk statistic, not a per-horizon value. */
-  trackingError: Percentage;
-  asOf: string;
-};
-
-type FactorExposure = {
-  factor: string;
-  exposure: number;
-  benchmark: number;
-};
-
 type PositionImpact = {
   positionId: string;
   symbol: string;
@@ -55,8 +19,5 @@ type StressScenario = {
 };
 
 export type {
-  RiskMetrics,
-  FactorExposure,
-  PositionImpact,
   StressScenario,
 };

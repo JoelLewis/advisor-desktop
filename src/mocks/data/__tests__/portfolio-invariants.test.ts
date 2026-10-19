@@ -97,8 +97,9 @@ describe('Portfolio Invariants', () => {
     })
 
     it('generates positions for accounts without explicit data', () => {
-      const positions = getPositionsForAccount('acc-010', 1_800_000)
-      expect(positions.length).toBe(7)
+      // Phase 7a · C1: acc-010 holds its own model's lineup (Aggressive Growth: five sleeves and cash).
+      const positions = getPositionsForAccount('acc-010', 420_000)
+      expect(positions.map((p) => p.symbol)).toEqual(['VTI', 'EFA', 'VWO', 'AGG', 'QAI', 'CASH'])
       expect(positions.every((p) => p.accountId === 'acc-010')).toBe(true)
       expect(positions.some((p) => p.symbol === 'CASH')).toBe(true)
     })

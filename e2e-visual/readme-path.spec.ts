@@ -1,0 +1,172 @@
+import { test, expect } from '@playwright/test'
+import { expectNoAxeViolations } from './axe'
+import {
+  PELL_ACCEPTANCE_TEXT, SUITABILITY_REASON, advanceTo, approve, approveProspect, askAgentNamed, askForRecap, context, conversation, deliver, deskLink,
+  draftNotes, embedOf, fileRecord, heading, holdTheMeeting, letterDraft, meetingPanel, recordTheCoffee, releaseByShortcut,
+  resolveBreakNamed, reviseToTwoTaxYears, runPrep, sendToHer, shareFindingTo, shareToTeamThread, bookColumn, openThread, viewAs, visit,
+} from './workspace-steps'
+
+/** The README's guided path, click for click and in its order, from a fresh session as Adrian Hale; axe runs at every dialog. */
+test("the README's five-minute path, end to end", async ({ page }) => {
+  test.setTimeout(600_000)
+  await page.setViewportSize({ width: 1440, height: 900 })
+  const back = () => page.getByRole('link', { name: 'Back to the thread' }).click()
+  const home = () => page.getByRole('banner').getByRole('link', { name: 'Advisor Desktop' }).click()
+  const path = page.getByRole('list', { name: 'The five-minute path' }).getByRole('listitem')
+  const axe = expectNoAxeViolations
+
+  // The home page: the eight steps, the first one next.
+  await visit(page, '/', 'light')
+  await expect(path).toHaveCount(8)
+  await expect(path.first()).toContainText('NEXT')
+
+  // 1. Your households, then the Brief: the queue, the Johnson household, the Brief.
+  const queue = bookColumn(page).getByRole('list', { name: 'Needs you today' })
+  const johnsonRow = queue.getByRole('link', { name: /^Johnson Household/ })
+  await expect(queue.getByRole('link').first()).toHaveAccessibleName(/^Johnson Household/)
+  await expect(johnsonRow).toContainText('Decision waiting')
+  await expect(johnsonRow).toContainText('Robert waiting')
+  await expect(johnsonRow).toContainText('review 14:00 ET')
+  await johnsonRow.click()
+  await expect(heading(page)).toHaveText('Johnson Household')
+  const holdings = page.getByRole('main').getByRole('table', { name: 'Holdings by asset class' })
+  await holdings.getByRole('button', { name: 'US Equity' }).focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('region', { name: 'US Equity · accounts holding it' })).toContainText('working: buy 200 QQQ, limit 480.00')
+  await expect(page.getByRole('complementary', { name: 'Conversations' })).toContainText('Johnson Rebalance Review')
+  await bookColumn(page).getByRole('link', { name: 'Brief', exact: true }).click()
+  await expect(heading(page)).toHaveText('Brief')
+  const today = page.getByRole('region', { name: 'Today' })
+  await expect(today).toContainText('14:00–15:15 ET')
+  await expect(today).toContainText('Coffee with Dr. Amanda Pell · Form CRS due before it (firm policy)')
+  await expect(page.getByRole('region', { name: 'Needs a decision' })).toContainText('Intel Corp.')
+  await expect(page.getByRole('region', { name: 'Needs a decision' })).toContainText("Growth sits above Robert Johnson's Moderate tolerance")
+
+  // 2. The Johnson rebalance and harvest: the finding to the team thread, v1, v2 "harvest only", v3 in the workbench, approved.
+  const intc = conversation(page).getByRole('article', { name: /^Harvest Scanner: The remaining Intel Corp\. shares can be sold at a loss today/ })
+  await shareFindingTo(intc, 'Johnson Rebalance Review')
+  await openThread(page, 'Johnson Rebalance Review')
+  await context(page).getByRole('button', { name: 'Ask Proposal Agent', exact: true }).click()
+  const embed = embedOf(page)
+  await expect(embed.getByRole('table', { name: 'Proposal legs · v1' })).toBeVisible()
+  await expect(embed).toContainText('Counts the working order already open in this account as filled: buy 200 QQQ, limit 480.00.')
+  await expect(embed.getByRole('table', { name: 'Proposal legs · v1' }).getByRole('row', { name: /^SPY/ })).toContainText('943')
+  await expect(embed).toContainText('Est. additional tax14,454USD')
+  await expect(embed.getByRole('list', { name: 'Pre-trade check' })).toContainText(/SPY is over the .+ limit today at .+ of this account; this proposal brings it under/)
+  await embed.getByRole('button', { name: 'Revise' }).click()
+  const revise = page.getByRole('dialog', { name: 'Revise the proposal' })
+  await expect(revise).toBeVisible()
+  await axe(page)
+  await revise.getByRole('checkbox', { name: 'Harvest only: sell only lots at a loss' }).check()
+  await revise.getByRole('button', { name: 'Ask Proposal Agent to revise' }).click()
+  await expect(embed.getByRole('table', { name: 'Proposal legs · v2' })).toBeVisible()
+  await embed.getByRole('link', { name: 'Workbench' }).click()
+  await expect(heading(page)).toHaveText('Johnson rebalance')
+  await page.getByRole('grid', { name: 'Legs · v2' }).getByRole('row', { name: /^QAI/ }).focus()
+  await page.keyboard.press('x')
+  await page.keyboard.press('ControlOrMeta+s')
+  await expect(page.getByRole('group', { name: 'Draft version' }).getByText('Saved as v3 · posted to the thread.')).toBeVisible()
+  await back()
+  await approve(page, 3)
+  await expect(context(page).getByRole('region', { name: 'Audit trail' })).toContainText(`Suitability reason · ${SUITABILITY_REASON}`)
+
+  // 3. The compliance release as Mark Davis, through the presenter's shortcut.
+  await releaseByShortcut(page, axe)
+
+  // 4. The blotter and the updated holdings.
+  await page.getByRole('link', { name: 'Open in the blotter' }).first().click()
+  await expect(heading(page)).toHaveText('Blotter')
+  await expect(page.getByRole('table', { name: 'Orders' })).toContainText('FILLED')
+  await back()
+  await context(page).getByRole('link', { name: /^Robert Johnson · Individual \(…3847\)/ }).click()
+  await expect(page.getByRole('table', { name: 'Holdings' }).getByRole('row', { name: /^INTC/ })).toHaveCount(0)
+  await back()
+  await openThread(page, 'Brief')
+  await expect(page.getByRole('region', { name: 'Needs a decision' })).not.toContainText('Intel Corp.')
+  await expect(page.getByRole('region', { name: 'Needs a decision' })).not.toContainText('Growth sits above')
+  await expect(page.getByRole('region', { name: 'Context' })).toContainText("Growth sits above Robert Johnson's Moderate tolerance")
+  await expect(page.getByRole('region', { name: 'Context' })).toContainText('Intel Corp.')
+  await bookColumn(page).getByRole('button', { name: 'Households' }).click()
+  const johnsonNow = bookColumn(page).getByRole('list', { name: 'Needs you today' }).getByRole('link', { name: /^Johnson Household/ })
+  await expect(johnsonNow).not.toContainText('Decision waiting')
+  await expect(johnsonNow).toContainText('review 14:00 ET')
+
+  // 5. The Johnson annual review: prep, hold, notes, file, recap.
+  await page.getByRole('region', { name: 'Today' }).getByRole('link', { name: 'Open the meeting thread' }).click()
+  await expect(heading(page)).toHaveText('Johnson annual review')
+  await runPrep(page)
+  await meetingPanel(page).getByRole('textbox', { name: 'New agenda item' }).fill('ESG alternatives for the trust')
+  await meetingPanel(page).getByRole('button', { name: 'Add to agenda', exact: true }).click()
+  await expect(meetingPanel(page).getByRole('list', { name: 'Agenda · v2' })).toBeVisible()
+  await meetingPanel(page).getByRole('link', { name: /Open the meeting view/ }).click()
+  await holdTheMeeting(page, axe)
+  await draftNotes(page)
+  await fileRecord(page, axe)
+  await back()
+  await openThread(page, 'Robert Johnson')
+  await askForRecap(page)
+  await letterDraft(page).getByRole('button', { name: 'Send to Robert and Patricia' }).click()
+  await expect(conversation(page)).toContainText('What we decided:')
+  await expect(conversation(page)).toContainText('Dear Robert and Patricia,')
+  await expect(context(page).getByRole('region', { name: 'Audit trail' })).toContainText('Message sent to Robert Johnson and Patricia Johnson')
+
+  // 6. Dr. Pell, from first contact to an onboarding opened.
+  await openThread(page, 'Brief')
+  await page.getByRole('region', { name: 'Today' }).getByRole('link', { name: 'Open her thread' }).click()
+  await expect(heading(page)).toHaveText('Dr. Amanda Pell')
+  await deliver(page, 'Form CRS', axe)
+  await recordTheCoffee(page, axe)
+  await advanceTo(page, 'reply')
+  await openThread(page, 'Pell · prospect work')
+  await askAgentNamed(page, 'Prospect Profile')
+  await askAgentNamed(page, 'Transfer-In')
+  await askAgentNamed(page, 'Proposal Agent')
+  await reviseToTwoTaxYears(page, axe)
+  await approveProspect(page, 2, axe)
+  await openThread(page, 'Dr. Amanda Pell')
+  await sendToHer(page, 2, axe)
+  await advanceTo(page, 'acceptance')
+  await expect(conversation(page)).toContainText(PELL_ACCEPTANCE_TEXT)
+  await openThread(page, 'Pell · prospect work')
+  await expect(context(page).getByRole('table', { name: 'Onboarding checklist' })).toBeVisible()
+
+  // 7. The reference views, under Reports in the thread list; each returns through the header's Advisor Desktop link.
+  for (const view of ['Billing', 'Models', 'Practice', 'Blotter'] as const) {
+    await deskLink(page, view).click()
+    await expect(heading(page)).toHaveText(view)
+    await expect(page.getByRole('heading', { name: 'Methods & sources' })).toBeVisible()
+    if (view === 'Practice') {
+      await expect(page.getByRole('main')).toContainText("Largest 3 clients' share of revenue")
+      await expect(page.getByRole('main')).toContainText("Largest 5 clients' share of revenue")
+    }
+    await home()
+  }
+  await bookColumn(page).getByRole('link', { name: 'Agents', exact: true }).click()
+  await expect(heading(page)).toHaveText('Agents')
+  await home()
+  await deskLink(page, 'Reconciliation').click()
+  await resolveBreakNamed(page, 'brk-002', 'Timing difference', 'Schwab confirmed the 24 Feb cash sweep posted after the file was cut.', axe)
+  await home()
+  await deskLink(page, 'Risk').click()
+  await shareToTeamThread(page, 'Patel Digital Assets Account (…0912)')
+  await home()
+  await expect(path.nth(7)).toContainText('NEXT')
+
+  // 8. View as Robert, then Patricia: one conversation each, the recap and its record.
+  await viewAs(page, 'Robert Johnson · Client')
+  await expect(page.getByRole('banner')).toContainText('Larkfield Advisory')
+  const threads = page.getByRole('navigation', { name: 'Threads' }).getByRole('link')
+  await expect(threads).toHaveCount(1)
+  await expect(threads).toHaveAccessibleName('Your conversation with Larkfield')
+  await threads.click()
+  await expect(page.getByLabel('Who can see')).toContainText('Larkfield compliance (review)')
+  await expect(conversation(page).getByRole('listitem')).toHaveCount(3)
+  await expect(conversation(page)).toContainText('What we decided:')
+  await viewAs(page, 'Patricia Johnson · Client')
+  const hers = page.getByRole('navigation', { name: 'Threads' }).getByRole('link')
+  await expect(hers).toHaveCount(1)
+  await hers.click()
+  await expect(heading(page)).toHaveText('Your conversation with Larkfield')
+  await expect(conversation(page).getByRole('listitem')).toHaveCount(2)
+  await expect(conversation(page)).toContainText("We won't trade in Patricia's accounts")
+})

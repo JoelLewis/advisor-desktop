@@ -1,0 +1,26 @@
+import type { AgentFinding } from './agent'
+import type { WholeStatus } from '@/types/reference-risk'
+
+/**
+ * What a finding is about, as the Brief groups it. Only the Brief's two agents tag their findings, and
+ * the tag stays in the engine: `withoutTopic` is applied before any finding is stored or served.
+ */
+export type BriefTopic =
+  | { kind: 'out_of_band'; assetClass: string }
+  | { kind: 'in_band' }
+  | { kind: 'off_model' }
+  | { kind: 'illiquid'; assetClass: string }
+  | { kind: 'replacement_hold'; held: string; sold: string }
+  | { kind: 'harvest_allowed'; symbol: string; name: string; remaining: boolean }
+  /** The firm bought this security in the account today: not offered for harvest. */
+  | { kind: 'bought_today'; symbol: string; name: string }
+  | { kind: 'realized_loss'; symbol: string; name: string; when: 'today' | 'recently' }
+  | { kind: 'held_away' }
+  /** The account's model sits above the client's tolerance; `model` is digit-free, and `whole` is where the client's accounts as a whole would sit after a full rebalance to the model. */
+  | { kind: 'model_above_tolerance'; accountId: string; model: string; clientName: string; tolerance: string; whole: WholeStatus }
+  /** Nothing to measure here: a custom mandate, no holdings, an untaxed account, or no loss to harvest. */
+  | { kind: 'not_measured' }
+
+export type TopicFinding = AgentFinding & { topic: BriefTopic }
+
+export const withoutTopic = ({ claim, figures, citations, attention }: TopicFinding): AgentFinding => ({ claim, figures, citations, attention })
