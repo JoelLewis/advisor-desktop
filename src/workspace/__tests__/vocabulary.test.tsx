@@ -3,11 +3,13 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
+import { showConversationsFor } from '@/test/book-mode'
 
 describe('the practice words', () => {
   it('the list says Firm, Reports and Agents; agents say what they can and cannot do', async () => {
+    showConversationsFor()
     renderRoutes(routes, '/t/th-johnson-review')
-    const list = await screen.findByRole('navigation', { name: 'Threads' })
+    const list = await screen.findByRole('navigation', { name: 'Book' })
     expect(await within(list).findByRole('heading', { name: 'Firm' })).toBeInTheDocument()
     expect(await within(list).findByRole('heading', { name: 'Reports' })).toBeInTheDocument()
     expect(await within(list).findByRole('heading', { name: 'Agents' })).toBeInTheDocument()

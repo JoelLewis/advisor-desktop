@@ -19,7 +19,7 @@ async function openWorkbench(path = '/proposals/prop-0001?from=th-johnson-review
 describe('the workbench layout', () => {
   it('takes the main pane; the thread list steps aside; the team thread is live in the right column', async () => {
     await openWorkbench()
-    expect(screen.queryByRole('navigation', { name: 'Threads' })).toBeNull()
+    expect(screen.queryByRole('navigation', { name: 'Book' })).toBeNull()
     expect(screen.getByRole('link', { name: 'Back to the thread' })).toHaveAttribute('href', '/t/th-johnson-review')
     expect(screen.getByRole('main')).toHaveTextContent('v1 is not approved')
     expect(screen.getByRole('main')).toHaveTextContent('The workbench never approves.')

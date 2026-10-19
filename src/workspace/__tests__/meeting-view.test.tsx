@@ -28,7 +28,7 @@ describe('the meeting full view', () => {
   it('takes the main pane beside the live meeting thread; before the meeting: when, who, the agenda and the household', async () => {
     await runMeetingPrep(ADRIAN, 'evt-010')
     await openMeeting()
-    expect(screen.queryByRole('navigation', { name: 'Threads' })).toBeNull()
+    expect(screen.queryByRole('navigation', { name: 'Book' })).toBeNull()
     expect(screen.getByRole('link', { name: 'Back to the thread' })).toHaveAttribute('href', '/t/th-johnson-meeting')
     const main = screen.getByRole('main')
     expect(main).toHaveTextContent('25 Feb 2026 · 14:00–15:15 ET · Office — Main')

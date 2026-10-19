@@ -193,6 +193,15 @@ export function fmtEasternWindow(start: string, end: string, sameDayAs?: string)
   return `${from}–${fmtEasternTime(end)} ET`
 }
 
+/** How long someone has waited, from `since` to `now`, in the largest whole unit: "45 min", "8h", "2d". Both must be moments. */
+export function fmtWaited(since: string, now: string): string {
+  const minutes = Math.floor((parseInstant(now).getTime() - parseInstant(since).getTime()) / 60_000)
+  if (minutes < 0) throw new MeasureError(`${since} is after ${now}`)
+  if (minutes < 60) return `${fmtQuantity(minutes)} min`
+  const hours = Math.floor(minutes / 60)
+  return hours < 48 ? `${fmtQuantity(hours)}h` : `${fmtQuantity(Math.floor(hours / 24))}d`
+}
+
 export function clientMoney(v: number): string {
   assertFinite(v)
   return sign(v, `$${numberFormat(0, 0).format(Math.abs(v))}`, false)

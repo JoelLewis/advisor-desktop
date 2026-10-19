@@ -1,7 +1,7 @@
 import { expectNoAxeViolations } from './axe'
 import { test, expect, type Locator, type Page } from '@playwright/test'
 import { SCREENSHOT, clippedLabels, pageOverflowX } from './layout-checks'
-import { approve, askProposalAgent } from './workspace-steps'
+import { approve, askProposalAgent, bookColumn, openThread, showConversations } from './workspace-steps'
 
 type Theme = 'light' | 'dark'
 type Scene = { name: string; hasContext: boolean; open: (page: Page) => Promise<void> }
@@ -47,7 +47,13 @@ async function accountFullView(page: Page) {
 
 const home = (theme: Theme) => async (page: Page) => {
   await visit(page, '/', theme)
-  await expect(page.getByRole('navigation', { name: 'Threads' }).getByRole('link', { name: 'Brief', exact: true })).toBeVisible()
+  await expect(bookColumn(page).getByRole('link', { name: 'Brief', exact: true })).toBeVisible()
+  await settle(page)
+}
+
+const households = (theme: Theme) => async (page: Page) => {
+  await visit(page, '/', theme)
+  await expect(page.getByRole('navigation', { name: 'Book' }).getByRole('list', { name: 'Needs you today' })).toBeVisible()
   await settle(page)
 }
 
@@ -63,6 +69,8 @@ const homeMidStory = async (page: Page) => {
 const SCENES: Scene[] = [
   { name: 'home-light', hasContext: false, open: home('light') },
   { name: 'home-dark', hasContext: false, open: home('dark') },
+  { name: 'households-light', hasContext: false, open: households('light') },
+  { name: 'households-dark', hasContext: false, open: households('dark') },
   { name: 'home-mid-story-light', hasContext: false, open: homeMidStory },
   { name: 'adrian-johnson-finding-light', hasContext: true, open: adrianAsksDriftMonitor('light') },
   { name: 'adrian-johnson-finding-dark', hasContext: true, open: adrianAsksDriftMonitor('dark') },
@@ -106,7 +114,7 @@ for (const scene of SCENES) {
         await page.setViewportSize({ width: 1440, height: 900 })
         await scene.open(page)
         const [threads, main, context] = await Promise.all([
-          boxOf(page.getByRole('navigation', { name: 'Threads' })), boxOf(page.getByRole('main')), boxOf(page.locator('#context-column')),
+          boxOf(page.getByRole('navigation', { name: /^(Book|Threads)$/ })), boxOf(page.getByRole('main')), boxOf(page.locator('#context-column')),
         ])
         expect(main.x).toBeGreaterThanOrEqual(threads.x + threads.width)
         expect(context.x).toBeGreaterThanOrEqual(main.x + main.width)
@@ -117,7 +125,7 @@ for (const scene of SCENES) {
         await page.setViewportSize({ width: 1024, height: 900 })
         await scene.open(page)
         const [threads, main, context] = await Promise.all([
-          boxOf(page.getByRole('navigation', { name: 'Threads' })), boxOf(page.getByRole('main')), boxOf(page.locator('#context-column')),
+          boxOf(page.getByRole('navigation', { name: /^(Book|Threads)$/ })), boxOf(page.getByRole('main')), boxOf(page.locator('#context-column')),
         ])
         expect(main.x).toBeGreaterThanOrEqual(threads.x + threads.width)
         expect(context.x).toBeGreaterThanOrEqual(main.x + main.width)
@@ -128,7 +136,7 @@ for (const scene of SCENES) {
         await page.setViewportSize({ width: 900, height: 900 })
         await scene.open(page)
         const [threads, main, context] = await Promise.all([
-          boxOf(page.getByRole('navigation', { name: 'Threads' })), boxOf(page.getByRole('main')), boxOf(page.locator('#context-column')),
+          boxOf(page.getByRole('navigation', { name: /^(Book|Threads)$/ })), boxOf(page.getByRole('main')), boxOf(page.locator('#context-column')),
         ])
         expect(main.x).toBeGreaterThanOrEqual(threads.x + threads.width)
         expect(Math.abs(main.y - threads.y)).toBeLessThanOrEqual(1)
@@ -143,9 +151,8 @@ test('the success path on the real app: ask, open the account and back, draft, s
   await page.setViewportSize({ width: 1440, height: 900 })
   const heading = page.getByRole('heading', { level: 1 })
   const conversation = page.getByRole('list', { name: 'Messages' })
-  const threadNav = page.getByRole('navigation', { name: 'Threads' })
-  const threadLinks = threadNav.getByRole('link')
-  const threadLink = (name: string) => threadNav.getByRole('link', { name, exact: true })
+  const bookLink = (name: string) => bookColumn(page).getByRole('link', { name, exact: true })
+  const threadLinks = page.getByRole('navigation', { name: 'Threads' }).getByRole('link')
   const viewAs = page.getByLabel('View as')
 
   // Adrian asks Drift Monitor in the Johnson thread.
@@ -162,7 +169,7 @@ test('the success path on the real app: ask, open the account and back, draft, s
 
   // Drafts in Robert's thread and sends it as a recorded act.
   const message = 'Your annual review is booked for next month.'
-  await threadLink('Robert Johnson').click()
+  await openThread(page, 'Robert Johnson')
   await expect(heading).toHaveText('Robert Johnson')
   await page.getByRole('textbox', { name: 'Message to Robert Johnson' }).fill(message)
   await page.getByRole('button', { name: 'Save draft' }).click()
@@ -178,9 +185,10 @@ test('the success path on the real app: ask, open the account and back, draft, s
 
   // Mark sees the firm threads and the finding, not Adrian's private brief.
   await viewAs.selectOption({ label: 'Mark Davis · Compliance' })
-  await expect(threadLink('Johnson Rebalance Review')).toHaveCount(1)
-  await expect(threadLink('Brief')).toHaveCount(0)
-  await threadLink('Johnson Rebalance Review').click()
+  await showConversations(page)
+  await expect(bookLink('Johnson Rebalance Review')).toHaveCount(1)
+  await expect(bookLink('Brief')).toHaveCount(0)
+  await openThread(page, 'Johnson Rebalance Review')
   await expect(heading).toHaveText('Johnson Rebalance Review')
   await expect(conversation.getByRole('article', { name: /^Drift Monitor: / }).first()).toBeVisible()
 })
@@ -219,7 +227,7 @@ test('opening a thread from the list focuses its title and leaves the shell head
   await page.setViewportSize({ width: 1440, height: 900 })
   await visit(page, '/t/th-brief', 'light')
   await settle(page)
-  await page.getByRole('navigation', { name: 'Threads' }).getByRole('link', { name: 'Johnson Rebalance Review', exact: true }).click()
+  await openThread(page, 'Johnson Rebalance Review')
   await expect(page.getByRole('heading', { level: 1, name: 'Johnson Rebalance Review' })).toBeFocused()
   expect(await page.evaluate(() => window.scrollY)).toBe(0)
   await expect(page.getByRole('link', { name: 'Advisor Desktop', exact: true })).toBeInViewport()

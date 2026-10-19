@@ -6,6 +6,7 @@ import { StatusCode } from '@/kit/status/StatusCode'
 import { Tag } from '@/kit/tag/Tag'
 import { Button } from '@/kit/button/Button'
 import { Checkbox } from '@/kit/checkbox/Checkbox'
+import { SegmentedControl } from '@/kit/segmented/SegmentedControl'
 import { RadioGroup } from '@/kit/radio-group/RadioGroup'
 import { NumberInput } from '@/kit/number-input/NumberInput'
 import { Attestation } from '@/kit/attestation/Attestation'
@@ -41,6 +42,7 @@ export function KitSections({ data }: { data: KitData }) {
   const [attested, setAttested] = useState(false)
   const [harvestOnly, setHarvestOnly] = useState(false)
   const [gainsCap, setGainsCap] = useState('')
+  const [view, setView] = useState<'households' | 'conversations'>('households')
   const [reason, setReason] = useState<'ips' | 'acknowledged' | 'whole' | undefined>('ips')
   const worst = [...drift.assetClassDrifts].sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift))[0]
   const gains = preview.trades.reduce((s, t) => s + Math.max(0, t.realizedShortTerm) + Math.max(0, t.realizedLongTerm), 0)
@@ -78,6 +80,8 @@ export function KitSections({ data }: { data: KitData }) {
             { value: 'whole', label: "The client's accounts as a whole stay within tolerance", disabled: true,
               hint: "Not available: after this proposal, the client's accounts as a whole sit above the tolerance." },
           ]} />
+          <SegmentedControl label="Show" value={view} onChange={setView}
+            options={[{ value: 'households', label: 'Households' }, { value: 'conversations', label: 'Conversations' }]} />
         </Pane>
         <Pane title="Drift against model" meta={`band ${fmtTolerance(drift.driftTolerance)} pp`}>
           <div className="flex flex-col gap-2">

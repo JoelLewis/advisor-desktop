@@ -20,14 +20,14 @@ export async function visit(page: Page, path: string, theme: Theme) {
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 15_000 })
 }
 
-const PHONE_PANE_REGION = { Threads: '#thread-list', Thread: '#main', Context: '#context-column' } as const
+const PHONE_PANE_REGION = { Book: '#thread-list', Threads: '#thread-list', Thread: '#main', Context: '#context-column' } as const
 
 /** The pane a phone shows: the tab bar's current one, or the page itself where there is no tab bar. */
 async function shownPhonePane(page: Page): Promise<keyof typeof PHONE_PANE_REGION> {
   const current = page.locator('nav[aria-label="Panes"] [aria-current="true"]')
   if (await current.count() === 0) return 'Thread'
   const word = (await current.textContent())?.trim()
-  if (word !== 'Threads' && word !== 'Thread' && word !== 'Context') throw new Error(`the pane bar shows an unknown pane "${word}"`)
+  if (word !== 'Book' && word !== 'Threads' && word !== 'Thread' && word !== 'Context') throw new Error(`the pane bar shows an unknown pane "${word}"`)
   return word
 }
 
@@ -52,7 +52,23 @@ async function checkOpenDialog(dialog: Locator, atDialog: AtDialog | undefined) 
 export const heading = (page: Page) => page.getByRole('heading', { level: 1 })
 export const conversation = (page: Page) => page.getByRole('list', { name: 'Messages' })
 export const context = (page: Page) => page.getByRole('complementary', { name: 'Details' })
-export const threadLink = (page: Page, name: string) => page.getByRole('navigation', { name: 'Threads' }).getByRole('link', { name, exact: true })
+
+/** The firm's left column. An outsider's is still named Threads. */
+export const bookColumn = (page: Page) => page.getByRole('navigation', { name: 'Book' })
+
+/** Shows the conversations in the Book; once chosen, the choice holds for the rest of the session. */
+export async function showConversations(page: Page) {
+  const button = bookColumn(page).getByRole('button', { name: 'Conversations' })
+  if (await button.getAttribute('aria-pressed') !== 'true') await button.click()
+  await expect(bookColumn(page).getByRole('button', { name: 'Conversations' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(bookColumn(page).getByRole('list', { name: 'Needs you today' })).toHaveCount(0)
+}
+
+/** Opens a conversation from the Book, as an advisor who has switched to Conversations would. */
+export async function openThread(page: Page, name: string) {
+  await showConversations(page)
+  await bookColumn(page).getByRole('link', { name, exact: true }).click()
+}
 export const embedOf = (page: Page) => page.getByRole('region', { name: 'Proposal · Johnson rebalance' })
 export const approvalOf = (page: Page) => context(page).getByRole('region', { name: 'Approval · Johnson rebalance' })
 export const letterDraft = (page: Page) => context(page).getByRole('article', { name: 'Draft · not sent' })
@@ -78,7 +94,7 @@ export async function approve(page: Page, version: number) {
 }
 
 export async function askForLetter(page: Page) {
-  await threadLink(page, 'Robert Johnson').click()
+  await openThread(page, 'Robert Johnson')
   await expect(heading(page)).toHaveText('Robert Johnson')
   await context(page).getByRole('button', { name: 'Ask Client Letter Agent', exact: true }).click()
   await expect(letterDraft(page)).toContainText('Dear Robert,')
@@ -91,13 +107,13 @@ export async function sendLetter(page: Page) {
 }
 
 /** On a phone the shell shows one pane at a time; the tab bar under the header switches them. */
-export const openPhonePane = (page: Page, name: 'Threads' | 'Thread' | 'Context') =>
+export const openPhonePane = (page: Page, name: 'Book' | 'Threads' | 'Thread' | 'Context') =>
   page.getByRole('navigation', { name: 'Panes' }).getByRole('button', { name, exact: true }).click()
 
 export const viewAs = (page: Page, label: string) => page.getByLabel('View as').selectOption({ label })
-/** A firm surface from the Firm pane at the top of the thread list. */
+/** A firm surface from the Firm and Reports panes at the foot of the Book. */
 export const deskLink = (page: Page, name: 'Supervision' | 'Archive' | 'Billing' | 'Reconciliation' | 'Risk' | 'Models' | 'Practice' | 'Blotter') =>
-  page.getByRole('navigation', { name: 'Threads' }).getByRole('link', { name, exact: true })
+  bookColumn(page).getByRole('link', { name, exact: true })
 
 /** The presenter's shortcut beside orders pending compliance release: Mark's default release, confirmed. */
 export async function releaseByShortcut(page: Page, atDialog?: AtDialog) {

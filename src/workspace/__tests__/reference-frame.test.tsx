@@ -7,7 +7,7 @@ import { resolveBreak, getReconciliation } from '@/services/reference'
 import { ReferencePage } from '@/workspace/reference/ReferencePage'
 import { OUTSIDER_THREAD_TITLE } from '@/workspace/people/roster'
 
-const threadNav = () => screen.getByRole('navigation', { name: 'Threads' })
+const threadNav = () => screen.getByRole('navigation', { name: 'Book' })
 const viewAsOnLoad = (id: string) => sessionStorage.setItem('ws-viewer', id)
 
 describe('the reference frame', () => {

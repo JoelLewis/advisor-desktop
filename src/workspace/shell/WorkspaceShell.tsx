@@ -7,13 +7,16 @@ import { KeyLegend } from '@/kit/keyboard/KeyLegend'
 import { useJumpKeys } from '@/kit/keyboard/use-jump-keys'
 import type { Binding } from '@/kit/keyboard/keys'
 import { MAIN_ID } from '@/kit/page/ids'
+import { useDirectory } from '@/hooks/use-workspace'
+import { isExternalViewerIn } from '@/workspace/people/directory-people'
+import { useViewer } from '@/workspace/viewer/use-viewer'
+import { BookColumn } from './BookColumn'
 import { Brand } from './Brand'
 import { contextColumnOf, threadListHidden } from './context-column'
 import { ContextAvailability } from './ContextAvailability'
-import { defaultPhonePane, PHONE_LAYOUT_QUERY, PHONE_PANE_WORDS, phonePanes, type PhonePane } from './phone-panes'
+import { defaultPhonePane, columnLabelOf, PHONE_LAYOUT_QUERY, phonePaneWords, phonePanes, type PhonePane } from './phone-panes'
 import { CONTEXT_COLUMN_ID, THREAD_LIST_ID } from './shell-ids'
 import { ThemeToggle } from './ThemeToggle'
-import { ThreadList } from './ThreadList'
 import { ViewAs } from './ViewAs'
 import { useFocusOnRouteChange } from './use-focus-on-route-change'
 
@@ -21,6 +24,9 @@ const PANE_REGION_ID: Readonly<Record<PhonePane, string>> = { threads: THREAD_LI
 
 export function WorkspaceShell() {
   const matches = useMatches()
+  const { viewerId } = useViewer()
+  const directory = useDirectory()
+  const external = directory.data !== undefined && isExternalViewerIn(directory.data, viewerId)
   const provided = contextColumnOf(matches)
   const listHidden = threadListHidden(matches)
   const [available, setAvailable] = useState(true)
@@ -38,7 +44,7 @@ export function WorkspaceShell() {
     if (chosen) document.getElementById(PANE_REGION_ID[chosen.pane])?.focus()
   }, [chosen])
   useJumpKeys('shell', [
-    ...(listHidden ? [] : [{ key: '[', label: 'Thread list', run: choose('threads') } satisfies Binding]),
+    ...(listHidden ? [] : [{ key: '[', label: external ? 'Thread list' : 'Book', run: choose('threads') } satisfies Binding]),
     { key: '\\', label: 'Conversation', run: choose('thread') },
     ...(context ? [{ key: ']', label: 'Context column', run: choose('context') } satisfies Binding] : []),
   ])
@@ -67,15 +73,15 @@ export function WorkspaceShell() {
           {panes.map((p) => (
             <Button key={p} rank="quiet" aria-current={p === pane ? 'true' : undefined} onClick={choose(p)}
               className={cn('min-h-11 flex-1 justify-center no-underline', p === pane && 'font-semibold underline decoration-ink')}>
-              {PHONE_PANE_WORDS[p]}
+              {phonePaneWords(external)[p]}
             </Button>
           ))}
         </nav>
       ) : null}
       <div className="mx-auto grid max-w-(--breakpoint-wide) grid-cols-12 gap-x-6 gap-y-10 px-6 py-8">
         {listHidden ? null : (
-          <nav id={THREAD_LIST_ID} tabIndex={-1} aria-label="Threads" onClick={showPageForSamePath} className={cn(hiddenOnPhone('threads'), 'col-span-12 min-w-0 narrow:col-span-4 narrow:row-span-2 split:col-span-3 split:row-span-1')}>
-            <ThreadList />
+          <nav id={THREAD_LIST_ID} tabIndex={-1} aria-label={columnLabelOf(external)} onClick={showPageForSamePath} className={cn(hiddenOnPhone('threads'), 'col-span-12 min-w-0 narrow:col-span-4 narrow:row-span-2 split:col-span-3 split:row-span-1')}>
+            <BookColumn />
           </nav>
         )}
         <main id={MAIN_ID} tabIndex={-1} className={cn(

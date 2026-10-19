@@ -3,7 +3,7 @@ import { test, expect, type Locator, type Page } from '@playwright/test'
 import { SCREENSHOT, clippedLabels, pageOverflowX } from './layout-checks'
 import {
   approve, askForRecap, askProposalAgent, context, conversation, deskLink, draftNotes, fileRecord, goTo, heading, holdTheMeeting,
-  letterDraft, meetingPanel, releaseByShortcut, runPrep, settle, threadLink, viewAs, visit, type Theme,
+  letterDraft, meetingPanel, releaseByShortcut, runPrep, bookColumn, settle, openThread, viewAs, visit, type Theme,
 } from './workspace-steps'
 
 type Layout = 'three-panes' | 'beside-thread' | 'full-width'
@@ -29,7 +29,7 @@ async function morning(page: Page, theme: Theme) {
 }
 
 async function toMeetingThread(page: Page) {
-  await threadLink(page, 'Johnson annual review').click()
+  await openThread(page, 'Johnson annual review')
   await expect(heading(page)).toHaveText('Johnson annual review')
 }
 
@@ -78,7 +78,7 @@ async function recapDrafted(page: Page) {
   await holdTheMeeting(page)
   await draftNotes(page)
   await fileRecord(page)
-  await threadLink(page, 'Robert Johnson').click()
+  await openThread(page, 'Robert Johnson')
   await expect(heading(page)).toHaveText('Robert Johnson')
   await askForRecap(page)
   await expect(letterDraft(page)).toContainText("Please don't buy Intel shares in any of your accounts through March 27, 2026.")
@@ -158,7 +158,7 @@ for (const scene of SCENES) {
       test('the meeting takes the main pane beside the live thread; no thread list', async ({ page }) => {
         await page.setViewportSize({ width: 1440, height: 900 })
         await scene.open(page)
-        await expect(page.getByRole('navigation', { name: 'Threads' })).toHaveCount(0)
+        await expect(bookColumn(page)).toHaveCount(0)
         const [main, live] = await Promise.all([boxOf(page.getByRole('main')), boxOf(liveThread(page))])
         expect(live.x).toBeGreaterThanOrEqual(main.x + main.width - 1)
       })
@@ -168,7 +168,7 @@ for (const scene of SCENES) {
       test('the view takes the full width, as Supervision does: no thread list', async ({ page }) => {
         await page.setViewportSize({ width: 1024, height: 900 })
         await scene.open(page)
-        await expect(page.getByRole('navigation', { name: 'Threads' })).toHaveCount(0)
+        await expect(bookColumn(page)).toHaveCount(0)
       })
     }
 
@@ -198,7 +198,7 @@ test('one presenter runs the Johnson annual review end to end; Robert sees only 
   await releaseByShortcut(page)
 
   // 2. The Brief's Today line for the meeting, to the meeting thread.
-  await threadLink(page, 'Brief').click()
+  await bookColumn(page).getByRole('link', { name: 'Brief', exact: true }).click()
   const today = page.getByRole('region', { name: 'Today' })
   await expect(today.getByRole('listitem').filter({ hasText: 'Johnson annual review' })).toContainText('14:00–15:15 ET')
   await today.getByRole('link', { name: 'Open the meeting thread' }).click()
@@ -239,7 +239,7 @@ test('one presenter runs the Johnson annual review end to end; Robert sees only 
   await expect(conversation(page).getByRole('article', { name: 'Tasks from the filed record' })).toBeVisible()
 
   // 8. Robert's thread: the recap, drafted and sent.
-  await threadLink(page, 'Robert Johnson').click()
+  await openThread(page, 'Robert Johnson')
   await expect(heading(page)).toHaveText('Robert Johnson')
   await askForRecap(page)
   await letterDraft(page).getByRole('button', { name: 'Send to Robert and Patricia' }).click()

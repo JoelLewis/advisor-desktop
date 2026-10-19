@@ -5,6 +5,7 @@ import { AGENTS } from '../data/people'
 import { holdMeeting, meetingSummaries, meetingView, reviseAgenda, saveNotes } from '../workspace/meetings'
 import { draftMeetingNotes, runMeetingPrep } from '../workspace/meeting-agents'
 import { draftRecap } from '../workspace/recap'
+import { householdBook } from '../workspace/household-book'
 import { clientView, householdView } from '../workspace/household-views'
 import { notFound } from './utils'
 import { badRequest, firmViewer, nonEmptyString, readJson, refusal } from './workspace-http'
@@ -134,6 +135,13 @@ export const workspaceMeetingHandlers = [
     if (!parsed.ok) return shapeRefusal(viewer.viewerId, eventId, parsed.message)
     const r = saveNotes(viewer.viewerId, eventId, parsed.lines)
     return r.ok ? viewOf(viewer.viewerId, eventId, 200) : refusal(r)
+  }),
+
+  http.get('/api/workspace/households', ({ request }) => {
+    const viewer = firmViewer(request)
+    if (!viewer.ok) return viewer.response
+    const book = householdBook(viewer.viewerId)
+    return book ? HttpResponse.json(book) : notFound()
   }),
 
   http.get('/api/workspace/households/:householdId', ({ request, params }) => {

@@ -22,7 +22,7 @@ test('the command line at 1440×600 shows its title, its field and Close · base
 test('the Resolve dialog at 320×400 scrolls to reach its title, its select and Confirm · baseline', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 400 })
   await visitPhone(page, '/', 'light')
-  await openPhonePane(page, 'Threads')
+  await openPhonePane(page, 'Book')
   await deskLink(page, 'Reconciliation').click()
   await page.getByRole('button', { name: 'Resolve brk-002', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Resolve brk-002?' })

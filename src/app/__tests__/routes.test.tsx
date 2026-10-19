@@ -10,6 +10,7 @@ import { getSupervisionRecords } from '@/services/compliance'
 import { fmtResult, fmtEasternStamp } from '@/kit/measure'
 import { previewRebalance } from '@/services/oms'
 import { RouteError } from '@/app/RouteError'
+import { showConversationsFor } from '@/test/book-mode'
 
 const renderAt = (path: string) => renderRoutes(routes, path)
 
@@ -157,6 +158,7 @@ describe('routes', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Directory offline')
   })
   it('the shell shows the engine error message when threads fail with a 500', async () => {
+    showConversationsFor()
     server.use(http.get('/api/workspace/threads', () => HttpResponse.json({ message: 'Threads store unavailable' }, { status: 500 })))
     renderAt('/')
     expect(await screen.findByRole('alert')).toHaveTextContent('Threads store unavailable')

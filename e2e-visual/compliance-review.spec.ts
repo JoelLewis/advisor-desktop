@@ -3,7 +3,7 @@ import { test, expect, type Locator, type Page } from '@playwright/test'
 import { SCREENSHOT, clippedLabels, pageOverflowX } from './layout-checks'
 import {
   approvalOf, approve, askForLetter, askProposalAgent, context, conversation, deskLink, embedOf, heading,
-  releaseByShortcut, sendLetter, settle, threadLink, viewAs, type Theme,
+  releaseByShortcut, sendLetter, bookColumn, settle, openThread, viewAs, type Theme,
 } from './workspace-steps'
 
 type Layout = 'supervision' | 'three-panes' | 'list-and-main'
@@ -45,7 +45,7 @@ const threadAfterRelease = async (page: Page) => {
 const briefAfterFills = async (page: Page) => {
   await approvedV1(page, 'light')
   await releaseByShortcut(page)
-  await threadLink(page, 'Brief').click()
+  await bookColumn(page).getByRole('link', { name: 'Brief', exact: true }).click()
   await expect(page.getByRole('region', { name: 'Context' })).toContainText('Every asset class is inside its tolerance band')
   await expect(page.getByRole('region', { name: 'Context' })).toContainText("Growth sits above Robert Johnson's Moderate tolerance")
   await settle(page)
@@ -87,7 +87,7 @@ for (const scene of SCENES) {
       test('the item sits beside the queue at 1440px and drops below it at 900px; no thread list', async ({ page }) => {
         await page.setViewportSize({ width: 1440, height: 900 })
         await scene.open(page)
-        await expect(page.getByRole('navigation', { name: 'Threads' })).toHaveCount(0)
+        await expect(bookColumn(page)).toHaveCount(0)
         const [queue, item] = await Promise.all([boxOf(queueOf(page)), boxOf(ordersItem(page, 1))])
         expect(item.x).toBeGreaterThanOrEqual(queue.x + queue.width)
         expect(Math.abs(item.y - queue.y)).toBeLessThanOrEqual(1)
@@ -175,7 +175,7 @@ test('one presenter closes the supervisory loop; the book moves; Robert sees not
   // 7. Adrian: Mark's slip and the fills, the account view, the Brief changed.
   await viewAs(page, 'Adrian Hale · Advisor')
   await page.getByRole('link', { name: 'Advisor Desktop' }).click()
-  await threadLink(page, 'Johnson Rebalance Review').click()
+  await openThread(page, 'Johnson Rebalance Review')
   await expect(conversation(page).getByRole('article', { name: 'Released the orders approved in v3 of the Johnson rebalance' })).toContainText('Mark Davis, Compliance')
   await expect(conversation(page).getByRole('article', { name: 'Fills · Johnson rebalance v3' })).toBeVisible()
   await expect(approvalOf(page)).toContainText('v3 was released by compliance and filled')
@@ -184,12 +184,12 @@ test('one presenter closes the supervisory loop; the book moves; Robert sees not
   await expect(holdings.getByRole('row', { name: /^VWO/ })).toHaveCount(1)
   await expect(holdings.getByRole('row', { name: /^INTC/ })).toHaveCount(0)
   await page.getByRole('link', { name: 'Back to the thread' }).click()
-  await threadLink(page, 'Brief').click()
+  await bookColumn(page).getByRole('link', { name: 'Brief', exact: true }).click()
   await expect(page.getByRole('region', { name: 'Needs a decision' })).not.toContainText('Intel Corp.')
   await expect(conversation(page)).toContainText('INTC loss sale of 25 Feb 2026 · Don\'t repurchase through 27 Mar 2026')
 
   // 8. Robert: exactly what he saw before.
-  await threadLink(page, 'Robert Johnson').click()
+  await openThread(page, 'Robert Johnson')
   await viewAs(page, 'Robert Johnson · Client')
   await expect(conversation(page)).toContainText('Dear Robert,')
   expect(await conversation(page).innerText()).toBe(robertBefore)
@@ -201,7 +201,7 @@ test('one presenter closes the supervisory loop; the book moves; Robert sees not
   await page.reload()
   await expect(heading(page)).toBeVisible()
   await viewAs(page, 'Adrian Hale · Advisor')
-  await threadLink(page, 'Johnson Rebalance Review').click()
+  await openThread(page, 'Johnson Rebalance Review')
   await expect(conversation(page).getByRole('article', { name: /^Fills · / })).toHaveCount(0)
   await context(page).getByRole('button', { name: 'Ask Proposal Agent', exact: true }).click()
   await expect(embedOf(page).getByRole('table', { name: 'Proposal legs · v1' })).toBeVisible()

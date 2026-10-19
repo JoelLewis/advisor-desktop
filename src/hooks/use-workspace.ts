@@ -258,3 +258,9 @@ export function useStoryProgress(enabled: boolean) {
   const { viewerId } = useViewer()
   return useQuery({ queryKey: ['workspace', viewerId, 'story'], queryFn: () => api.getStoryProgress(viewerId), enabled })
 }
+
+/** The advisor's book: the queue and every household. Under the workspace prefix, so every act and clock jump re-reads it. */
+export function useHouseholdBook() {
+  const { viewerId } = useViewer()
+  return useQuery({ queryKey: ['workspace', viewerId, 'households'], queryFn: () => api.getHouseholdBook(viewerId) })
+}

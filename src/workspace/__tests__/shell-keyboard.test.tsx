@@ -5,8 +5,9 @@ import { http, HttpResponse } from 'msw'
 import { server } from '@/test/server'
 import { routes } from '@/app/routes'
 import { renderRoutes } from '@/test/render'
+import { showConversationsFor } from '@/test/book-mode'
 
-const threadNav = () => screen.getByRole('navigation', { name: 'Threads' })
+const threadNav = () => screen.getByRole('navigation', { name: 'Book' })
 
 async function renderAt(path: string) {
   const view = renderRoutes(routes, path)
@@ -91,7 +92,7 @@ describe('keyboard in the shell', () => {
     const select = await screen.findByRole('combobox', { name: 'View as' })
     await screen.findByRole('option', { name: 'Robert Johnson · Client' })
     await user.selectOptions(select, 'Robert Johnson · Client')
-    await waitFor(() => expect(within(threadNav()).queryByRole('link', { name: 'Brief' })).toBeNull())
+    await waitFor(() => expect(screen.queryByRole('navigation', { name: 'Book' })).toBeNull())
     act(() => (document.activeElement as HTMLElement).blur())
     await openCommandLine()
     expect(destinationNames()).toEqual(['Workspace home', 'Thread · Your conversation with Larkfield'])
@@ -128,7 +129,7 @@ describe('keyboard in the shell', () => {
     await renderAt('/')
     await userEvent.keyboard('?')
     const sheet = screen.getByRole('dialog', { name: 'Keyboard' })
-    expect(sheet).toHaveTextContent('Thread list')
+    expect(sheet).toHaveTextContent('Book')
     expect(sheet).not.toHaveTextContent('Context column')
     await userEvent.keyboard('{Escape}')
     await userEvent.click(within(threadNav()).getByRole('link', { name: 'Brief' }))
@@ -157,6 +158,7 @@ describe('keyboard in the shell', () => {
   it('does not take focus from where the user moved it while the page loaded', async () => {
     let release = () => {}
     const gate = new Promise<void>((resolve) => { release = resolve })
+    showConversationsFor()
     // Holds the thread back until released, then falls through to the real handler.
     server.use(http.get('/api/workspace/threads/:id', async () => { await gate }))
     await renderAt('/')

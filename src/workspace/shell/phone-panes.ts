@@ -3,7 +3,11 @@ export const PHONE_LAYOUT_QUERY = '(width < 768px)'
 
 export type PhonePane = 'threads' | 'thread' | 'context'
 
-export const PHONE_PANE_WORDS: Readonly<Record<PhonePane, string>> = { threads: 'Threads', thread: 'Thread', context: 'Context' }
+/** The left column's name: the firm's Book, or an outsider's Threads. Its phone tab and jump key say the same. */
+export const columnLabelOf = (external: boolean): 'Book' | 'Threads' => (external ? 'Threads' : 'Book')
+
+export const phonePaneWords = (external: boolean): Readonly<Record<PhonePane, string>> =>
+  ({ threads: columnLabelOf(external), thread: 'Thread', context: 'Context' })
 
 export function phonePanes({ listHidden, hasContext }: { listHidden: boolean; hasContext: boolean }): PhonePane[] {
   return [...(listHidden ? [] : ['threads' as const]), 'thread', ...(hasContext ? ['context' as const] : [])]

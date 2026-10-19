@@ -3,7 +3,7 @@ import {
   MINUS, MeasureError, isNegative, fmtMoney, fmtResult, fmtPrice, fmtWeight, fmtReturn, fmtDrift,
   fmtTolerance, fmtQuantity, splitFraction, fmtDays, fmtScore, fmtDate, fmtEasternStamp, fmtUtcStamp, clientMoney,
   clientPercent, clientWholePercent, clientDate, fmtEasternTime, fmtEasternDayTime, fmtEasternRange, fmtEasternWindow, clientRate, fmtDayMonthYear,
-  fmtYear, fmtAsOf, isCalendarDate, driftChange, fmtEasternDay,
+  fmtYear, fmtAsOf, isCalendarDate, driftChange, fmtEasternDay, fmtWaited,
 } from '@/kit/measure'
 
 describe('measure', () => {
@@ -283,5 +283,18 @@ describe('fmtYear', () => {
     expect(fmtYear(2031)).toBe('2031')
     expect(() => fmtYear(2031.5)).toThrow('not a calendar year: 2031.5')
     expect(() => fmtYear(31)).toThrow('not a calendar year: 31')
+  })
+})
+
+describe('fmtWaited', () => {
+  it('says how long, in the largest whole unit', () => {
+    expect(fmtWaited('2026-02-25T12:01:00Z', '2026-02-25T12:46:00Z')).toBe('45 min')
+    expect(fmtWaited('2026-02-25T12:01:00Z', '2026-02-25T20:30:00Z')).toBe('8h')
+    expect(fmtWaited('2026-02-25T12:01:00Z', '2026-02-27T12:30:00Z')).toBe('2d')
+    expect(fmtWaited('2026-02-25T12:01:00Z', '2026-02-25T12:01:00Z')).toBe('0 min')
+  })
+  it('refuses a wait that ends before it starts, and a bare date', () => {
+    expect(() => fmtWaited('2026-02-25T13:00:00Z', '2026-02-25T12:00:00Z')).toThrow('2026-02-25T13:00:00Z is after 2026-02-25T12:00:00Z')
+    expect(() => fmtWaited('2026-02-25', '2026-02-25T12:00:00Z')).toThrow(MeasureError)
   })
 })

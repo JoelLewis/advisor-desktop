@@ -3,7 +3,7 @@ import { test, expect, type Locator, type Page } from '@playwright/test'
 import { SCREENSHOT, clippedLabels, pageOverflowX } from './layout-checks'
 import {
   approvalOf, approve, askForLetter, askProposalAgent, context, conversation, embedOf, heading, letterDraft, sendLetter,
-  settle, shareFindingTo, threadLink, visit, type Theme,
+  bookColumn, openThread, settle, shareFindingTo, showConversations, visit, type Theme,
 } from './workspace-steps'
 
 type Layout = 'three-panes' | 'workbench'
@@ -80,10 +80,10 @@ for (const scene of SCENES) {
       expect(column.x).toBeGreaterThanOrEqual(main.x + main.width)
       expect(Math.abs(column.y - main.y)).toBeLessThanOrEqual(1)
       if (scene.layout === 'three-panes') {
-        const threads = await boxOf(page.getByRole('navigation', { name: 'Threads' }))
+        const threads = await boxOf(page.getByRole('navigation', { name: /^(Book|Threads)$/ }))
         expect(main.x).toBeGreaterThanOrEqual(threads.x + threads.width)
       } else {
-        await expect(page.getByRole('navigation', { name: 'Threads' })).toHaveCount(0)
+        await expect(bookColumn(page)).toHaveCount(0)
       }
       await page.setViewportSize({ width: 900, height: 900 })
       const [narrowMain, narrowColumn] = await Promise.all([boxOf(page.getByRole('main')), boxOf(page.locator('#context-column'))])
@@ -113,7 +113,7 @@ test('one presenter runs Brief → proposal → revise → workbench → approve
   // 2. The INTC finding goes to the team thread.
   const intc = conversation(page).getByRole('article', { name: /^Harvest Scanner: The remaining Intel Corp\. shares can be sold at a loss today/ })
   await shareFindingTo(intc, 'Johnson Rebalance Review')
-  await threadLink(page, 'Johnson Rebalance Review').click()
+  await openThread(page, 'Johnson Rebalance Review')
   await expect(heading(page)).toHaveText('Johnson Rebalance Review')
   await expect(conversation(page).getByRole('article', { name: /^Shared from the Brief: The remaining Intel Corp\. shares/ })).toHaveCount(1)
 
@@ -197,9 +197,10 @@ test('one presenter runs Brief → proposal → revise → workbench → approve
 
   // 9. Mark: the firm threads but not the Brief; the orders pending compliance release; nothing for him to approve.
   await viewAs.selectOption({ label: 'Mark Davis · Compliance' })
-  await expect(threadLink(page, 'Johnson Rebalance Review')).toHaveCount(1)
-  await expect(threadLink(page, 'Brief')).toHaveCount(0)
-  await threadLink(page, 'Johnson Rebalance Review').click()
+  await showConversations(page)
+  await expect(bookColumn(page).getByRole('link', { name: 'Johnson Rebalance Review', exact: true })).toHaveCount(1)
+  await expect(bookColumn(page).getByRole('link', { name: 'Brief', exact: true })).toHaveCount(0)
+  await openThread(page, 'Johnson Rebalance Review')
   await expect(heading(page)).toHaveText('Johnson Rebalance Review')
   const markApproval = approvalOf(page)
   await expect(markApproval).toContainText('PENDING COMPLIANCE RELEASE')

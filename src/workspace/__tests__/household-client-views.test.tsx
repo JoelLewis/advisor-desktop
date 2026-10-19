@@ -79,6 +79,6 @@ describe('the household and client full views take the full width', () => {
   it.each(['/households/hh-001', '/clients/cli-001'])('%s steps the thread list aside, as Supervision does, so its accounts table fits the main pane at 1024px', async (path) => {
     renderRoutes(routes, path)
     await screen.findByRole('table', { name: /^(Household accounts|Accounts owned)$/ })
-    expect(screen.queryByRole('navigation', { name: 'Threads' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: 'Book' })).not.toBeInTheDocument()
   })
 })

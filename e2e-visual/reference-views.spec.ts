@@ -2,7 +2,7 @@ import { expectNoAxeViolations } from './axe'
 import { test, expect, type Page } from '@playwright/test'
 import { SCREENSHOT, clippedLabels, pageOverflowX } from './layout-checks'
 import {
-  approve, askProposalAgent, conversation, deskLink, goTo, heading, releaseByShortcut, resolveBreakNamed, settle, shareToTeamThread, threadLink, viewAs, visit, type Theme,
+  approve, askProposalAgent, conversation, deskLink, goTo, heading, releaseByShortcut, resolveBreakNamed, settle, shareToTeamThread, bookColumn, showConversations, viewAs, visit, type Theme,
 } from './workspace-steps'
 
 type Scene = { name: string; open: (page: Page) => Promise<void> }
@@ -50,7 +50,7 @@ for (const scene of SCENES) {
     test('the page takes the full width: no thread list', async ({ page }) => {
       await page.setViewportSize({ width: 1024, height: 900 })
       await scene.open(page)
-      await expect(page.getByRole('navigation', { name: 'Threads' })).toHaveCount(0)
+      await expect(bookColumn(page)).toHaveCount(0)
     })
   })
 }
@@ -105,7 +105,8 @@ test('one presenter: the release on the blotter, the released book in risk and a
   await page.getByRole('link', { name: 'In Risk · Patel Digital Assets Account' }).click()
   await expect(heading(page)).toHaveText('Risk · Patel Digital Assets Account')
   await expect(conversation(page).getByRole('article', { name: /^From Risk: Patel Digital Assets Account sits above / })).toBeVisible()
-  await expect(threadLink(page, 'Risk · Patel Digital Assets Account')).toBeVisible()
+  await showConversations(page)
+  await expect(bookColumn(page).getByRole('link', { name: 'Risk · Patel Digital Assets Account', exact: true })).toBeVisible()
 
   // 8. An outsider sees none of it.
   await viewAs(page, 'Robert Johnson · Client')

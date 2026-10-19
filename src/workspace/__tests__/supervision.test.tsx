@@ -29,7 +29,7 @@ describe('Supervision', () => {
       expect(queue.getByRole('heading', { name: group })).toBeInTheDocument()
     }
     expect(screen.getByText(/^Choose an item from the queue: its evidence/)).toBeInTheDocument()
-    expect(screen.queryByRole('navigation', { name: 'Threads' })).toBeNull()
+    expect(screen.queryByRole('navigation', { name: 'Book' })).toBeNull()
     await userEvent.setup().click(queue.getByRole('link', { name: /^Johnson rebalance · v1/ }))
     const item = await screen.findByRole('region', { name: 'Orders · Johnson rebalance · v1' })
     for (const text of [fingerprint, 'Adrian Hale, Advisor', 'REC-0001', 'This is the record of what was approved. The checks are not run again here.', 'PENDING COMPLIANCE RELEASE']) {

@@ -3,7 +3,7 @@ import { expectNoAxeViolations } from './axe'
 import {
   PELL_ACCEPTANCE_TEXT, SUITABILITY_REASON, advanceTo, approve, approveProspect, askAgentNamed, askForRecap, context, conversation, deliver, deskLink,
   draftNotes, embedOf, fileRecord, heading, holdTheMeeting, letterDraft, meetingPanel, recordTheCoffee, releaseByShortcut,
-  resolveBreakNamed, reviseToTwoTaxYears, runPrep, sendToHer, shareFindingTo, shareToTeamThread, threadLink, viewAs, visit,
+  resolveBreakNamed, reviseToTwoTaxYears, runPrep, sendToHer, shareFindingTo, shareToTeamThread, bookColumn, openThread, viewAs, visit,
 } from './workspace-steps'
 
 /** The README's guided path, click for click and in its order, from a fresh session as Adrian Hale; axe runs at every dialog. */
@@ -21,7 +21,7 @@ test("the README's five-minute path, end to end", async ({ page }) => {
   await expect(path.first()).toContainText('NEXT')
 
   // 1. The Brief: Today, Needs a decision, Context.
-  await threadLink(page, 'Brief').click()
+  await bookColumn(page).getByRole('link', { name: 'Brief', exact: true }).click()
   await expect(heading(page)).toHaveText('Brief')
   const today = page.getByRole('region', { name: 'Today' })
   await expect(today).toContainText('14:00–15:15 ET')
@@ -32,7 +32,7 @@ test("the README's five-minute path, end to end", async ({ page }) => {
   // 2. The Johnson rebalance and harvest: the finding to the team thread, v1, v2 "harvest only", v3 in the workbench, approved.
   const intc = conversation(page).getByRole('article', { name: /^Harvest Scanner: The remaining Intel Corp\. shares can be sold at a loss today/ })
   await shareFindingTo(intc, 'Johnson Rebalance Review')
-  await threadLink(page, 'Johnson Rebalance Review').click()
+  await openThread(page, 'Johnson Rebalance Review')
   await context(page).getByRole('button', { name: 'Ask Proposal Agent', exact: true }).click()
   const embed = embedOf(page)
   await expect(embed.getByRole('table', { name: 'Proposal legs · v1' })).toBeVisible()
@@ -64,7 +64,7 @@ test("the README's five-minute path, end to end", async ({ page }) => {
   await context(page).getByRole('link', { name: /^Robert Johnson · Individual \(…3847\)/ }).click()
   await expect(page.getByRole('table', { name: 'Holdings' }).getByRole('row', { name: /^INTC/ })).toHaveCount(0)
   await back()
-  await threadLink(page, 'Brief').click()
+  await bookColumn(page).getByRole('link', { name: 'Brief', exact: true }).click()
   await expect(page.getByRole('region', { name: 'Needs a decision' })).not.toContainText('Intel Corp.')
   await expect(page.getByRole('region', { name: 'Needs a decision' })).not.toContainText('Growth sits above')
   await expect(page.getByRole('region', { name: 'Context' })).toContainText("Growth sits above Robert Johnson's Moderate tolerance")
@@ -82,30 +82,30 @@ test("the README's five-minute path, end to end", async ({ page }) => {
   await draftNotes(page)
   await fileRecord(page, axe)
   await back()
-  await threadLink(page, 'Robert Johnson').click()
+  await openThread(page, 'Robert Johnson')
   await askForRecap(page)
   await letterDraft(page).getByRole('button', { name: 'Send to Robert and Patricia' }).click()
   await expect(conversation(page)).toContainText('What we decided:')
   await expect(conversation(page)).toContainText('Dear Robert and Patricia,')
 
   // 6. Dr. Pell, from first contact to an onboarding opened.
-  await threadLink(page, 'Brief').click()
+  await bookColumn(page).getByRole('link', { name: 'Brief', exact: true }).click()
   await page.getByRole('region', { name: 'Today' }).getByRole('link', { name: 'Open her thread' }).click()
   await expect(heading(page)).toHaveText('Dr. Amanda Pell')
   await deliver(page, 'Form CRS', axe)
   await recordTheCoffee(page, axe)
   await advanceTo(page, 'reply')
-  await threadLink(page, 'Pell · prospect work').click()
+  await openThread(page, 'Pell · prospect work')
   await askAgentNamed(page, 'Prospect Profile')
   await askAgentNamed(page, 'Transfer-In')
   await askAgentNamed(page, 'Proposal Agent')
   await reviseToTwoTaxYears(page, axe)
   await approveProspect(page, 2, axe)
-  await threadLink(page, 'Dr. Amanda Pell').click()
+  await openThread(page, 'Dr. Amanda Pell')
   await sendToHer(page, 2, axe)
   await advanceTo(page, 'acceptance')
   await expect(conversation(page)).toContainText(PELL_ACCEPTANCE_TEXT)
-  await threadLink(page, 'Pell · prospect work').click()
+  await openThread(page, 'Pell · prospect work')
   await expect(context(page).getByRole('table', { name: 'Onboarding checklist' })).toBeVisible()
 
   // 7. The reference views, under Reports in the thread list; each returns through the header's Advisor Desktop link.

@@ -3,7 +3,7 @@ import { test, expect, type Page } from '@playwright/test'
 import { SCREENSHOT, clippedLabels, pageOverflowX } from './layout-checks'
 import {
   PELL_ACCEPTANCE_TEXT, advanceTo, approveProspect, askAgentNamed, context, conversation, deliver, deskLink, goTo, heading, recordTheCoffee,
-  reviseToTwoTaxYears, sendToHer, settle, threadLink, viewAs, visit, type Theme,
+  reviseToTwoTaxYears, sendToHer, bookColumn, settle, openThread, viewAs, visit, type Theme,
 } from './workspace-steps'
 
 type Layout = 'three-panes' | 'full-width'
@@ -20,7 +20,7 @@ async function replied(page: Page, theme: Theme) {
 /** Her findings, v1, the phased-sale revision, v2 approved with the best-interest record. */
 async function approved(page: Page, theme: Theme) {
   await replied(page, theme)
-  await threadLink(page, 'Pell · prospect work').click()
+  await openThread(page, 'Pell · prospect work')
   await expect(heading(page)).toHaveText('Pell · prospect work')
   await askAgentNamed(page, 'Prospect Profile')
   await expect(conversation(page).getByRole('article', { name: /^Prospect Profile: Dr\. Amanda Pell's answers/ })).toBeVisible()
@@ -34,7 +34,7 @@ async function approved(page: Page, theme: Theme) {
 
 async function sent(page: Page, theme: Theme) {
   await approved(page, theme)
-  await threadLink(page, 'Dr. Amanda Pell').click()
+  await openThread(page, 'Dr. Amanda Pell')
   await expect(heading(page)).toHaveText('Dr. Amanda Pell')
   await sendToHer(page, 2)
 }
@@ -55,7 +55,7 @@ const pellThreadAsHer = async (page: Page) => {
 const pellWork = async (page: Page) => { await approved(page, 'light'); await settle(page) }
 const pellOnboarding = async (page: Page) => {
   await accepted(page, 'light')
-  await threadLink(page, 'Pell · prospect work').click()
+  await openThread(page, 'Pell · prospect work')
   await expect(context(page).getByRole('table', { name: 'Onboarding checklist' })).toBeVisible()
   await settle(page)
 }
@@ -100,7 +100,7 @@ for (const scene of SCENES) {
       test('the page takes the full width: no thread list', async ({ page }) => {
         await page.setViewportSize({ width: 1024, height: 900 })
         await scene.open(page)
-        await expect(page.getByRole('navigation', { name: 'Threads' })).toHaveCount(0)
+        await expect(bookColumn(page)).toHaveCount(0)
       })
     }
   })
@@ -124,7 +124,7 @@ test('one presenter takes Dr. Pell from first contact to an onboarding opened; s
   await expect(conversation(page).getByRole('article', { name: 'Dr. Amanda Pell · Shared two statements: Fidelity taxable brokerage and TIAA 403(b).' })).toBeVisible()
 
   // 3. The internal thread: findings, v1, a revision, v2 approved with the best-interest record.
-  await threadLink(page, 'Pell · prospect work').click()
+  await openThread(page, 'Pell · prospect work')
   await expect(conversation(page).getByRole('article', { name: /^Note · Coffee with Dr\. Amanda Pell/ })).toContainText('15:30–16:30 ET')
   await askAgentNamed(page, 'Prospect Profile')
   await askAgentNamed(page, 'Transfer-In')
@@ -137,7 +137,7 @@ test('one presenter takes Dr. Pell from first contact to an onboarding opened; s
   await expect(context(page).getByRole('region', { name: 'Follow-up' })).toContainText('comparison to follow')
 
   // 4. Her thread: v2 sent, with ADV 2A delivered in the same record, before it.
-  await threadLink(page, 'Dr. Amanda Pell').click()
+  await openThread(page, 'Dr. Amanda Pell')
   await sendToHer(page, 2)
   await expect(conversation(page).getByRole('article', { name: 'Delivered · Form ADV Part 2A (firm brochure)' })).toBeVisible()
 
@@ -154,7 +154,7 @@ test('one presenter takes Dr. Pell from first contact to an onboarding opened; s
   await viewAs(page, 'Adrian Hale · Advisor')
   await advanceTo(page, 'acceptance')
   await expect(conversation(page)).toContainText(PELL_ACCEPTANCE_TEXT)
-  await threadLink(page, 'Pell · prospect work').click()
+  await openThread(page, 'Pell · prospect work')
   const checklist = context(page).getByRole('table', { name: 'Onboarding checklist' })
   await expect(checklist).toContainText('CIP identity verification')
   await expect(checklist).toContainText('OFAC screen')

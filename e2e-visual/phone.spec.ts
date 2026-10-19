@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { SCREENSHOT, pageOverflowX, smallTargets } from './layout-checks'
 import { expectNoAxeViolations } from './axe'
-import { openPhonePane, settle, visit, visitPhone } from './workspace-steps'
+import { bookColumn, openPhonePane, settle, showConversations, visit, visitPhone } from './workspace-steps'
 
 /**
  * A full-page capture of an emulated phone drops the touch emulation (hover and pointer media revert to a
@@ -22,6 +22,11 @@ async function growToPage(page: Page) {
 type Scene = { name: string; open: (page: Page) => Promise<void> }
 const SCENES: Scene[] = [
   { name: 'phone-home-light', open: async (page) => { await visitPhone(page, '/', 'light'); await settle(page) } },
+  { name: 'phone-households-light', open: async (page) => {
+    await visitPhone(page, '/', 'light')
+    await expect(page.getByRole('navigation', { name: 'Book' }).getByRole('list', { name: 'Needs you today' })).toBeVisible()
+    await settle(page)
+  } },
   { name: 'phone-brief-light', open: async (page) => { await visitPhone(page, '/t/th-brief', 'light'); await settle(page) } },
   { name: 'phone-thread-light', open: async (page) => { await visitPhone(page, '/t/th-johnson-review', 'light'); await settle(page) } },
   { name: 'phone-context-light', open: async (page) => { await visitPhone(page, '/t/th-johnson-review', 'light'); await openPhonePane(page, 'Context'); await settle(page) } },
@@ -54,10 +59,12 @@ test.describe('a phone at 390px', () => {
     const main = await page.getByRole('main').boundingBox()
     if (!main) throw new Error('main is not rendered')
     expect(main.y).toBeLessThan(300)
-    await expect(page.getByRole('navigation', { name: 'Threads' })).toBeHidden()
-    await openPhonePane(page, 'Threads')
-    await expect(page.getByRole('navigation', { name: 'Threads' })).toBeFocused()
-    await page.getByRole('navigation', { name: 'Threads' }).getByRole('link', { name: 'Johnson Rebalance Review', exact: true }).click()
+    await expect(page.getByRole('navigation', { name: 'Panes' }).getByRole('button').first()).toHaveText('Book')
+    await expect(bookColumn(page)).toBeHidden()
+    await openPhonePane(page, 'Book')
+    await expect(bookColumn(page)).toBeFocused()
+    await showConversations(page)
+    await bookColumn(page).getByRole('link', { name: 'Johnson Rebalance Review', exact: true }).click()
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Johnson Rebalance Review')
     await expect(page.getByRole('navigation', { name: 'Panes' }).getByRole('button', { name: 'Thread', exact: true })).toHaveAttribute('aria-current', 'true')
   })
@@ -83,23 +90,23 @@ test.describe('a phone at 390px', () => {
   })
 
   const panes = (page: Page) => page.getByRole('navigation', { name: 'Panes' })
-  const threadList = (page: Page) => page.getByRole('navigation', { name: 'Threads' })
+  const threadList = bookColumn
 
-  test('the brand link home opens on the thread list, and focus lands in it', async ({ page }) => {
+  test('the brand link home opens on the Book, and focus lands in it', async ({ page }) => {
     await visitPhone(page, '/t/th-brief', 'light')
     await page.getByRole('link', { name: 'Advisor Desktop', exact: true }).click()
-    await expect(panes(page).getByRole('button', { name: 'Threads', exact: true })).toHaveAttribute('aria-current', 'true')
+    await expect(panes(page).getByRole('button', { name: 'Book', exact: true })).toHaveAttribute('aria-current', 'true')
     await expect(threadList(page)).toBeFocused()
   })
 
   test('back to a path left on its thread list or its context column focuses that pane', async ({ page }) => {
     await visitPhone(page, '/t/th-brief', 'light')
-    await openPhonePane(page, 'Threads')
+    await openPhonePane(page, 'Book')
     // A lazily loaded page: its h1 takes focus once the chunk and its data arrive.
     await threadList(page).getByRole('link', { name: 'Risk', exact: true }).click()
     await expect(page.getByRole('heading', { level: 1, name: 'Risk' })).toBeFocused()
     await page.goBack()
-    await expect(panes(page).getByRole('button', { name: 'Threads', exact: true })).toHaveAttribute('aria-current', 'true')
+    await expect(panes(page).getByRole('button', { name: 'Book', exact: true })).toHaveAttribute('aria-current', 'true')
     await expect(threadList(page)).toBeFocused()
 
     await visitPhone(page, '/t/th-johnson-review', 'light')
@@ -113,7 +120,8 @@ test.describe('a phone at 390px', () => {
 
   test('tapping the thread already open in the list shows it', async ({ page }) => {
     await visitPhone(page, '/t/th-johnson-review', 'light')
-    await openPhonePane(page, 'Threads')
+    await openPhonePane(page, 'Book')
+    await showConversations(page)
     await threadList(page).getByRole('link', { name: 'Johnson Rebalance Review', exact: true }).click()
     await expect(panes(page).getByRole('button', { name: 'Thread', exact: true })).toHaveAttribute('aria-current', 'true')
     await expect(page.getByRole('heading', { level: 1, name: 'Johnson Rebalance Review' })).toBeVisible()

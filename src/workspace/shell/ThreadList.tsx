@@ -21,13 +21,12 @@ export function ThreadList() {
   const { viewerId } = useViewer()
   const directory = useDirectory()
   // Whether the viewer is an outsider decides the rows' words and the panes, so the list waits for the directory too.
-  if (threads.isPending || directory.isPending) return <ThreadListSkeleton />
+  if (threads.isPending || directory.isPending) return <ThreadListSkeleton mode="conversations" />
   if (threads.isError) return <p role="alert" className="text-body">{threads.error.message}</p>
   if (directory.isError) return <p role="alert" className="text-body">{directory.error.message}</p>
   const external = isExternalViewerIn(directory.data, viewerId)
   return (
     <div className="flex flex-col gap-8">
-      {external ? null : <DeskLinks />}
       {GROUPS.map(({ visibility, title }) => {
         const group = threads.data.filter((t) => t.visibility === visibility)
         // An outsider sees only their own conversation, under the firm they deal with.
@@ -78,40 +77,6 @@ function DeskAgents({ threads, agents: everyAgent }: { threads: Thread[]; agents
     <Pane title="Agents">
       <ul className="flex flex-col gap-4">
         {agents.map((a) => <li key={a.id}><AgentScope agent={a} /></li>)}
-      </ul>
-    </Pane>
-  )
-}
-
-/** Firm surfaces that are not threads. A client is never offered them. */
-const DESK: readonly { to: string; label: string }[] = [{ to: '/supervision', label: 'Supervision' }, { to: '/archive', label: 'Archive' }]
-
-/** The firm's reference views, one step from every thread. */
-const REFERENCE: readonly { to: string; label: string }[] = [
-  { to: '/billing', label: 'Billing' }, { to: '/reconciliation', label: 'Reconciliation' }, { to: '/risk', label: 'Risk' },
-  { to: '/models', label: 'Models' }, { to: '/practice', label: 'Practice' }, { to: '/blotter', label: 'Blotter' },
-]
-
-function DeskLinks() {
-  return (
-    <>
-      <LinkPane title="Firm" links={DESK} />
-      <LinkPane title="Reports" links={REFERENCE} />
-    </>
-  )
-}
-
-function LinkPane({ title, links }: { title: string; links: readonly { to: string; label: string }[] }) {
-  return (
-    <Pane title={title}>
-      <ul className="flex flex-col">
-        {links.map(({ to, label }) => (
-          <li key={to}>
-            <NavLink to={to} className={({ isActive }) => cn('flex border-l-2 py-2 pl-3 pr-2 text-body hover:bg-face', isActive ? 'border-ink bg-face font-semibold' : 'border-transparent')}>
-              {label}
-            </NavLink>
-          </li>
-        ))}
       </ul>
     </Pane>
   )

@@ -4,6 +4,7 @@ import type { Archive, ArchiveFilters, ComplianceActRequest, PresenterItem, Supe
 import type { DraftPreview, LegEdit, ProposalConstraint, ProposalDetail } from '@/types/workspace-proposal'
 import type { AgendaItemInput, MeetingSummary, MeetingView, NoteLineInput } from '@/types/workspace-meeting'
 import type { ClientView, HouseholdView } from '@/types/workspace-household'
+import type { HouseholdBook } from '@/types/workspace-book'
 import type {
   DisclosureDocument, PartySteps, ProspectConstraint, ProspectProposalDetail, ProspectStepName, ProspectSummary, ProspectView, StepOutcome,
 } from '@/types/workspace-prospect'
@@ -87,6 +88,7 @@ export const fileMeetingRecord = (viewer: string, eventId: string, fingerprint: 
   post<BindingAct>('/workspace/acts', { kind: 'file_meeting_record', eventId, fingerprint }, as(viewer))
 export const draftRecap = (viewer: string, clientThreadId: string, eventId: string) =>
   post<Draft>(`/workspace/threads/${clientThreadId}/drafts/recap`, { eventId }, as(viewer))
+export const getHouseholdBook = (viewer: string) => get<HouseholdBook>('/workspace/households', undefined, as(viewer))
 export const getHousehold = (viewer: string, householdId: string) =>
   get<HouseholdView>(`/workspace/households/${householdId}`, undefined, as(viewer))
 export const getClientView = (viewer: string, clientId: string) =>
