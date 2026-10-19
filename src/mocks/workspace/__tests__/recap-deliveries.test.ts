@@ -7,6 +7,7 @@ import { draftRecap } from '../recap'
 import { sendToParty } from '../acts'
 import { supervisionQueue } from '../supervision'
 import { visibleThreads } from '../visibility'
+import { archiveFor } from '../archive'
 import { ok } from './story-fixture'
 
 const ADRIAN = 'user-001'
@@ -71,5 +72,23 @@ describe('the recap goes to both spouses', () => {
     const thread = await asPatricia('/threads/th-patricia')
     expect(JSON.stringify(thread.body)).toContain('What we decided:')
     expect((await asPatricia('/threads/th-robert')).status).toBe(404)
+  })
+
+  it('shows books and records one sent message per delivery, tied to the one act', () => {
+    const { act } = ok(sendToParty(ADRIAN, recap().id))
+    const archive = archiveFor(ADRIAN, {})
+    const sent = (archive?.entries ?? []).flatMap((e) => (e.kind === 'sent_message' ? [e] : []))
+    expect(sent.map((e) => [e.threadId, e.partyId, e.actId])).toEqual([['th-robert', 'cli-001', act.id], ['th-patricia', 'cli-002', act.id]])
+    expect(sent.map((e) => e.id)).toEqual((act.deliveries ?? []).map((d) => d.messageId))
+    expect((archive?.entries ?? []).filter((e) => e.kind === 'act' && e.act.kind === 'send_to_party')).toHaveLength(1)
+    for (const [partyId, threadId] of [['cli-001', 'th-robert'], ['cli-002', 'th-patricia']] as const) {
+      const own = archiveFor(ADRIAN, { partyId, kind: 'sent_message' })?.entries
+      expect(own?.map((e) => e.threadId), partyId).toEqual([threadId])
+    }
+  })
+
+  it('has no Archive for Patricia: it is firm only', () => {
+    ok(sendToParty(ADRIAN, recap().id))
+    expect(archiveFor(PATRICIA, {})).toBeUndefined()
   })
 })

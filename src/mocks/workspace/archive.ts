@@ -4,7 +4,7 @@ import { proposalById } from '@/mocks/data/proposals-store'
 import { store } from '@/mocks/data/workspace-store'
 import { prospectProposalById } from './prospect-proposals'
 import { alertById, alertContext } from './alerts'
-import { sentMessage } from './correspondence'
+import { sentMessage, sentMessages } from './correspondence'
 import { meetingEvent } from './meetings'
 import { breakClientId } from '@/mocks/reference/reconciliation'
 import { canSeeThread, isFirmViewer } from './visibility'
@@ -44,13 +44,16 @@ function entriesOf(act: BindingAct): ArchiveEntry[] {
     ...(partyId ? { partyId } : {}), ...(name ? { partyName: name } : {}),
     ...(thread ? { threadId: thread.id, threadTitle: thread.title } : {}),
   }
-  const sent = act.kind === 'send_to_party' && act.messageId ? sentMessage(act.messageId) : undefined
-  const sentParty = sent?.thread.partyId
-  if (!sent || !sentParty) return [entry]
-  return [entry, {
-    kind: 'sent_message', id: sent.message.id, at: sent.message.at, message: sent.message, actId: act.id, fingerprint: act.fingerprint,
-    partyId: sentParty, partyName: partyName(sentParty) ?? sent.thread.title, threadId: sent.thread.id, threadTitle: sent.thread.title,
-  }]
+  if (act.kind !== 'send_to_party') return [entry]
+  // One entry per delivery, all tied to the one act: a recap to both spouses is two sent messages.
+  const sentEntries = sentMessages().filter((m) => m.act.id === act.id).flatMap((sent): ArchiveEntry[] => {
+    const sentParty = sent.thread.partyId
+    return sentParty === undefined ? [] : [{
+      kind: 'sent_message', id: sent.message.id, at: sent.message.at, message: sent.message, actId: act.id, fingerprint: act.fingerprint,
+      partyId: sentParty, partyName: partyName(sentParty) ?? sent.thread.title, threadId: sent.thread.id, threadTitle: sent.thread.title,
+    }]
+  })
+  return [entry, ...sentEntries]
 }
 
 const kindOf = (e: ArchiveEntry): ArchiveKind => (e.kind === 'act' ? e.act.kind : 'sent_message')

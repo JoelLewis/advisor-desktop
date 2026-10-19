@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import type { RequestHandler } from 'msw'
 import { handlers } from '../index'
+import { store } from '@/mocks/data/workspace-store'
 import { PATRICIA_THREAD_ID } from '@/mocks/data/workspace-seed'
 import { holdMeeting, meetingView } from '@/mocks/workspace/meetings'
 import { draftMeetingNotes } from '@/mocks/workspace/meeting-agents'
@@ -129,7 +130,10 @@ describe('every route an outsider can reach', () => {
       answered.push(key)
       expect(res.text, `${key}: a firm record id`).not.toMatch(FIRM_RECORD_ID)
       expect(res.text, `${key}: a UTC stamp`).not.toMatch(UTC_STAMP)
-      if (viewer === PATRICIA) expect(res.text, `${key}: Robert's thread`).not.toContain('th-robert')
+      if (viewer === PATRICIA) {
+        expect(res.text, `${key}: Robert's thread`).not.toContain('th-robert')
+        for (const m of store().messages.filter((x) => x.threadId === 'th-robert')) expect(res.text, `${key}: Robert's message ${m.id}`).not.toContain(`"${m.id}"`)
+      }
       expect(firmOnlyKeysIn(JSON.parse(res.text)), key).toEqual([])
     }
     expect(answered.filter((r) => !OUTSIDER_ROUTES.has(r)), 'routes that answer an outsider but are not known to serve one').toEqual([])
