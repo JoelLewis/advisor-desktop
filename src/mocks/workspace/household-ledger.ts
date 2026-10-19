@@ -9,7 +9,7 @@ import { FX_RATES_USD_BASE } from '@/mocks/data/currencies'
 import { cashBalanceOf, getPositionsForAccount, seedPositionsForAccount } from '@/mocks/data/positions'
 import { allRealizedSales, openWashSaleWindows, type OpenWashSaleWindow, type RealizedSale } from '@/mocks/data/realized-sales'
 import { ledgerFills } from '@/mocks/data/portfolio-ledger'
-import { sessionNow, store } from '@/mocks/data/workspace-store'
+import { orderBook, sessionNow } from '@/mocks/data/workspace-store'
 import { generateTaxLots, type CustodianLot } from '@/mocks/handlers/custodian'
 import { currencyForAccount, orders } from '@/mocks/handlers/oms'
 import { usdQuoteFor } from '@/mocks/handlers/pms'
@@ -127,7 +127,7 @@ function openOrdersOf(account: Account, positions: readonly Position[]): OpenOrd
     side: ticketSide(o), ...ticketQuantity(o), status: 'working', estimatedValue: workingValue(o, positions),
     ...(o.limitPrice !== undefined ? { limitPrice: o.limitPrice } : {}), enteredAt: o.submittedAt, source: { kind: 'ticket', orderId: o.id },
   }))
-  const staged = store().staged.filter((o) => o.accountId === account.id && o.status === 'pending_compliance').map((o): OpenOrder => ({
+  const staged = orderBook().staged.filter((o) => o.accountId === account.id && o.status === 'pending_compliance').map((o): OpenOrder => ({
     id: o.id, accountId: o.accountId, symbol: o.symbol, assetClass: assetClassIn(account, o.symbol, positions),
     side: o.side, quantity: o.quantity, quantityUnit: 'sh', status: 'pending_compliance', estimatedValue: o.estimatedValue,
     enteredAt: o.stagedAt, source: { kind: 'proposal', stagedOrderId: o.id, proposalId: o.proposalId, version: o.version },

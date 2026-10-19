@@ -89,8 +89,17 @@ export function runHarvestScanner({ asOf, subject }: AgentContext): TopicFinding
     const usd = (amount: number) => Math.round(convertToBase(amount, currency, FX_RATES_USD_BASE))
     const window = washSaleWindow(today)
     const harvestable = harvestOpportunities(account)
+    const positions = accountLedger(account.id).positions
+    const boughtAtLoss = [...boughtToday(account.id)].flatMap(([symbol, quantity]) => {
+      const held = positions.find((p) => p.symbol === symbol)
+      return held && held.gainLoss < 0 ? [{ symbol, quantity, name: claimNameOf(symbol, held.name) }] : []
+    })
     if (harvestable.length === 0) {
-      findings.push({ claim: 'No position in this account can be sold at a loss today.', attention: 'info', figures: [], citations: lotsCite, topic: { kind: 'not_measured' } })
+      // A loss held in shares the firm bought today is not harvestable without a wash, so the summary may not say there is none.
+      const claim = boughtAtLoss.length > 0
+        ? 'No loss in this account can be harvested today without a wash sale.'
+        : 'No position in this account can be sold at a loss today.'
+      findings.push({ claim, attention: 'info', figures: [], citations: lotsCite, topic: { kind: 'not_measured' } })
     }
     for (const { position: p, losses } of harvestable) {
       const figures: Figure[] = [
@@ -106,13 +115,10 @@ export function runHarvestScanner({ asOf, subject }: AgentContext): TopicFinding
         topic: { kind: 'harvest_allowed', symbol: p.symbol, name: claimNameOf(p.symbol, p.name), remaining: partlySold.has(p.symbol) },
       })
     }
-    const positions = accountLedger(account.id).positions
-    for (const [symbol, quantity] of boughtToday(account.id)) {
-      const held = positions.find((p) => p.symbol === symbol)
-      if (!held || held.gainLoss >= 0) continue
+    for (const { symbol, quantity, name } of boughtAtLoss) {
       findings.push({
-        claim: `${claimNameOf(symbol, held.name)} was bought today in this account; selling it at a loss now would undo that trade and the purchase would wash the loss, so it is not offered for harvest.`,
-        attention: 'info', citations: lotsCite, topic: { kind: 'bought_today', symbol, name: claimNameOf(symbol, held.name) },
+        claim: `${name} was bought today in this account; a sale at a loss now would be partly washed by that purchase, so it is not offered for harvest.`,
+        attention: 'info', citations: lotsCite, topic: { kind: 'bought_today', symbol, name },
         figures: [{ label: `Bought today · ${symbol}`, value: quantity, unit: 'sh', source: 'ledger.fillsOnDay.quantity' }],
       })
     }

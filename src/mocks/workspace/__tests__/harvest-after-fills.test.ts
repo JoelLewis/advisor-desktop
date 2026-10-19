@@ -23,8 +23,15 @@ describe("the Harvest Scanner reads the day's fills", () => {
     expect(findings.find((f) => f.topic.kind === 'harvest_allowed' && f.topic.symbol === 'AGG')).toBeUndefined()
     expect(findings.find((f) => f.topic.kind === 'bought_today' && f.topic.symbol === 'AGG')).toMatchObject({
       attention: 'info',
-      claim: 'iShares Core US Aggregate Bond ETF was bought today in this account; selling it at a loss now would undo that trade and the purchase would wash the loss, so it is not offered for harvest.',
+      claim: 'iShares Core US Aggregate Bond ETF was bought today in this account; a sale at a loss now would be partly washed by that purchase, so it is not offered for harvest.',
       figures: [{ label: 'Bought today · AGG', unit: 'sh', source: 'ledger.fillsOnDay.quantity' }],
     })
+  })
+  it('never says no loss can be sold while it explains why one is not offered', () => {
+    release(approvedStoryV3())
+    const findings = runHarvestScanner({ asOf: sessionNow(), subject: { type: 'account', id: 'acc-002' } })
+    expect(findings.some((f) => f.topic.kind === 'bought_today')).toBe(true)
+    expect(findings.map((f) => f.claim)).not.toContain('No position in this account can be sold at a loss today.')
+    expect(findings.find((f) => f.topic.kind === 'not_measured')?.claim).toBe('No loss in this account can be harvested today without a wash sale.')
   })
 })

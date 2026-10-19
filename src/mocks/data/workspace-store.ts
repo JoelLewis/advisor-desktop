@@ -54,21 +54,35 @@ function seed(): WorkspaceState {
 // engine must finish loading before anything runs it.
 let state: WorkspaceState | undefined
 
+/** True while the morning Brief is composed, before any store exists. */
+let composingMorning = false
+
+/** What the household ledger reads of the session: its staged orders and event clock. */
+type OrderBook = Pick<WorkspaceState, 'staged' | 'sequence'>
+
+/** The morning book: no order is staged and no event has happened. */
+const MORNING_BOOK: OrderBook = { staged: [], sequence: SEED_LAST_SEQUENCE }
+
 /**
- * The morning Brief is composed from the household ledger, which reads this store, so the store exists (empty of
- * orders) while the Brief is composed; a Brief that cannot be composed leaves no half-seeded store behind.
+ * The staged orders and clock the ledger reads. The morning Brief is composed from the ledger while the store
+ * is being seeded, and the store does not exist yet, so the ledger reads the morning book then; never a partial store.
  */
+export function orderBook(): OrderBook {
+  return composingMorning ? MORNING_BOOK : store()
+}
+
 export function store(): WorkspaceState {
   if (state) return state
-  const seeded = seed()
-  state = seeded
+  if (composingMorning) throw new Error('store() was re-entered while the morning Brief is composed; the ledger reads orderBook()')
+  composingMorning = true
   try {
+    const seeded = seed()
     seeded.messages.unshift(...briefMessages())
-  } catch (error) {
-    state = undefined
-    throw error
+    state = seeded
+  } finally {
+    composingMorning = false
   }
-  return seeded
+  return state
 }
 
 export function resetWorkspaceStore(): void {
@@ -107,5 +121,5 @@ export function advanceClockTo(sequence: number): void {
 
 /** The session clock's present: the time of the latest recorded event (the frozen now plus the sequence). */
 export function sessionNow(): string {
-  return eventTime(store().sequence)
+  return eventTime(orderBook().sequence)
 }
