@@ -55,6 +55,7 @@ describe('keyboard in the shell', () => {
       'Thread · Johnson Rebalance Review',
       'Thread · Johnson annual review',
       'Thread · Robert Johnson',
+      'Thread · Patricia Johnson',
       'Thread · Dr. Amanda Pell',
       'Thread · Pell · prospect work',
       'Account · Robert Johnson · Individual (…3847)',

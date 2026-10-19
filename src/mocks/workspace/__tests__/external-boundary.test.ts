@@ -20,7 +20,8 @@ import { threadParty } from '@/workspace/people/thread-party'
 const PELL = 'prsp-011'
 const ROBERT = 'cli-001'
 const ADRIAN = 'user-001'
-const EXTERNAL = [PELL, ROBERT] as const
+const PATRICIA = 'cli-002'
+const EXTERNAL = [PELL, ROBERT, PATRICIA] as const
 const thread = (id: string) => {
   const t = store().threads.find((x) => x.id === id)
   if (!t) throw new Error(`no thread ${id}`)
@@ -37,9 +38,9 @@ function sourceFiles(dir: string): string[] {
 
 
 describe('who is outside the firm', () => {
-  it.each([[PELL, true], [ROBERT, true], [ADRIAN, false], ['cco-001', false], ['nobody', false]] as const)(
+  it.each([[PELL, true], [ROBERT, true], [PATRICIA, true], [ADRIAN, false], ['cco-001', false], ['nobody', false]] as const)(
     'isExternalViewer(%s) is %s', (id, expected) => expect(isExternalViewer(id)).toBe(expected))
-  it.each([[PELL, false], [ROBERT, false], [ADRIAN, true], ['user-003', true], ['nobody', false]] as const)(
+  it.each([[PELL, false], [ROBERT, false], [PATRICIA, false], [ADRIAN, true], ['user-003', true], ['nobody', false]] as const)(
     'isFirmViewer(%s) is %s', (id, expected) => expect(isFirmViewer(id)).toBe(expected))
   it('names each party by kind', () => {
     expect(partyOf(PELL)).toEqual({ id: PELL, kind: 'prospect', name: 'Dr. Amanda Pell' })
@@ -59,6 +60,10 @@ describe('each party sees only their own thread', () => {
     expect(visibleThreads(PELL).map((t) => t.id)).toEqual(['th-pell'])
     expect(canSeeThread(PELL, thread('th-robert'))).toBe(false)
     expect(canSeeThread(PELL, thread('th-pell-work'))).toBe(false)
+  })
+  it("Patricia sees hers, not Robert's", () => {
+    expect(visibleThreads(PATRICIA).map((t) => t.id)).toEqual(['th-patricia'])
+    expect(canSeeThread(PATRICIA, thread('th-robert'))).toBe(false)
   })
   it('Robert does not see hers', () => {
     expect(visibleThreads(ROBERT).map((t) => t.id)).toEqual(['th-robert'])
@@ -81,13 +86,13 @@ describe('every firm gate answers an external viewer as if nothing were there', 
     expect(supervisionQueue(viewer)).toBeUndefined()
     expect(archiveFor(viewer, {})).toBeUndefined()
     expect(readableProposals(viewer)).toBeUndefined()
-    expect(readableProposals(viewer, viewer === PELL ? 'th-pell' : 'th-robert')).toBeUndefined()
+    expect(readableProposals(viewer, viewer === PELL ? 'th-pell' : viewer === PATRICIA ? 'th-patricia' : 'th-robert')).toBeUndefined()
     expect(createProposal(viewer, 'th-johnson-review', 'acc-002')).toMatchObject({ ok: false, status: 404 })
     expect(actAsCco(viewer, { kind: 'alert', id: 'comp-001' })).toMatchObject({ ok: false, status: 404 })
-    expect(draftingClientThread(viewer, viewer === PELL ? 'th-pell' : 'th-robert')).toBeUndefined()
+    expect(draftingClientThread(viewer, viewer === PELL ? 'th-pell' : viewer === PATRICIA ? 'th-patricia' : 'th-robert')).toBeUndefined()
     expect(disposeAlert(viewer, 'comp-001', 'approve', 'X', 'Reviewed.')).toMatchObject({ ok: false, status: 404 })
   })
-  it.each([[PELL, 'th-pell'], [ROBERT, 'th-robert']] as const)(
+  it.each([[PELL, 'th-pell'], [ROBERT, 'th-robert'], [PATRICIA, 'th-patricia']] as const)(
     '%s cannot send or review a real draft and a real sent message in their own thread: 404, not 403', (viewer, threadId) => {
       resetWorkspaceStore()
       const s = store()
@@ -115,11 +120,11 @@ describe("an outsider's thread names only them", () => {
     if (res.status !== 200) throw new Error(`GET ${id} as ${viewer} answered ${res.status}`)
     return (await res.json()) as ThreadDetail
   }
-  it.each([['th-robert', ROBERT, 'Robert Johnson'], ['th-pell', PELL, 'Dr. Amanda Pell']] as const)(
+  it.each([['th-robert', ROBERT, 'Robert Johnson'], ['th-pell', PELL, 'Dr. Amanda Pell'], ['th-patricia', PATRICIA, 'Patricia Johnson']] as const)(
     'GET %s as %s serves their own name as its audience', async (id, viewer, name) => {
       expect((await threadAs(id, viewer)).audience).toEqual({ kind: 'party', name })
     })
-  it.each([[ROBERT, 'Robert Johnson'], [PELL, 'Dr. Amanda Pell']] as const)(
+  it.each([[ROBERT, 'Robert Johnson'], [PELL, 'Dr. Amanda Pell'], [PATRICIA, 'Patricia Johnson']] as const)(
     'the thread list as %s carries only their own thread, with only their own name as its audience', async (viewer, name) => {
       const res = await fetch('/api/workspace/threads', { headers: { 'X-Viewer': viewer } })
       const listed = (await res.json()) as ListedThread[]

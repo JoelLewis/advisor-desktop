@@ -48,7 +48,7 @@ describe("Robert's recap", () => {
     expect(draft).toHaveTextContent('What you asked us:')
     expect(draft).toHaveTextContent(/from the filed record REC-0001 · fingerprint [0-9A-F]{8}/)
     expect(store().drafts).toHaveLength(1)
-    await user.click(within(draft).getByRole('button', { name: 'Send to Robert' }))
+    await user.click(within(draft).getByRole('button', { name: 'Send to Robert and Patricia' }))
     await waitFor(() => expect(conversation().getAllByRole('listitem').some((li) => li.textContent?.includes('What we decided:'))).toBe(true))
     expect(within(panel).queryByRole('article', { name: 'Draft · not sent' })).toBeNull()
   })
@@ -93,12 +93,13 @@ describe("Robert's recap", () => {
     store().drafts.push({
       id: 'draft-9001', clientThreadId: 'th-robert', authorId: ADRIAN, body: 'Dear Robert, an older recap.', createdAt: '2026-02-25T20:30:00.000Z',
       agentId: 'client-letter', recordBasis: { eventId: 'evt-010', actId: 'REC-0001', fingerprint: 'DEADBEEF' },
+      copies: [{ threadId: 'th-patricia', partyName: 'Patricia Johnson' }],
     })
     const panel = await openRobert()
     const draft = await within(panel).findByRole('article', { name: 'Draft · not sent' })
     expect(draft).toHaveTextContent('STALE')
     expect(draft).toHaveTextContent('This recap was drafted from REC-0001, which no longer matches the filed record. Ask for a new recap.')
-    expect(within(draft).getByRole('button', { name: 'Send to Robert' })).toBeDisabled()
+    expect(within(draft).getByRole('button', { name: 'Send to Robert and Patricia' })).toBeDisabled()
   })
   it('a recap whose Intel window moved says so, not that the filed record changed', async () => {
     await filed()

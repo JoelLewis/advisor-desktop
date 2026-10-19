@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw'
+import type { BindingAct } from '@/types/workspace'
 import type { RiskAnswer } from '@/types/onboarding'
 import { isProspectStepName, type ProspectStepName } from '@/types/workspace-prospect'
 import { prospectSummaries, visibleProspect } from '../workspace/prospects'
@@ -24,10 +25,15 @@ function parseAnswers(value: unknown): { ok: true; value?: RiskAnswer[] } | { ok
   return { ok: true, value: answers }
 }
 
+function actThreadOf(act: BindingAct): string {
+  if (act.threadId === undefined) throw new Error(`Act ${act.id} has no thread an outsider could read it in`)
+  return act.threadId
+}
+
 /** A step's answer. An outsider (she, viewing as herself) reads the act stripped of the firm's provenance. */
 function stepped(r: StepDone | StepFailure, viewer: string) {
   if (!r.ok) return refusal(r)
-  const act = r.act && isExternalViewer(viewer) ? actForOutsider(withoutProvenance(r.act)) : r.act
+  const act = r.act && isExternalViewer(viewer) ? actForOutsider(withoutProvenance(r.act), actThreadOf(r.act)) : r.act
   return HttpResponse.json({ steps: r.steps, ...(act ? { act } : {}) }, { status: 201 })
 }
 

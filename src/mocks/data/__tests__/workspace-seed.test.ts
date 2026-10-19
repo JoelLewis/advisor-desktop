@@ -11,7 +11,7 @@ describe('workspace seed', () => {
     resetWorkspaceStore()
     const { threads } = store()
     expect(threads.map((t) => [t.id, t.visibility])).toEqual([
-      ['th-brief', 'private'], ['th-johnson-review', 'internal'], ['th-johnson-meeting', 'internal'], ['th-robert', 'client'], ['th-pell', 'client'], ['th-pell-work', 'internal'],
+      ['th-brief', 'private'], ['th-johnson-review', 'internal'], ['th-johnson-meeting', 'internal'], ['th-robert', 'client'], ['th-patricia', 'client'], ['th-pell', 'client'], ['th-pell-work', 'internal'],
     ])
     const [brief, review, , client] = threads
     expect(brief).toMatchObject({ ownerId: 'user-001', memberIds: ['user-001'] })

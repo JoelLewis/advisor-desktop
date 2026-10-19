@@ -8,7 +8,7 @@ const LINK_PANES: readonly { title: string; rows: number }[] = [{ title: 'Firm',
 const THREAD_PANES: readonly { visibility: Visibility; title: string; rows: number }[] = [
   { visibility: 'private', title: THREAD_GROUP_TITLE.private, rows: 1 },
   { visibility: 'internal', title: THREAD_GROUP_TITLE.internal, rows: 3 },
-  { visibility: 'client', title: THREAD_GROUP_TITLE.client, rows: 2 },
+  { visibility: 'client', title: THREAD_GROUP_TITLE.client, rows: 3 },
 ]
 
 const BLANK_LINE = ' '

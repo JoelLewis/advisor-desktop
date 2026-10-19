@@ -4,6 +4,8 @@ import { eventTime } from '@/lib/clock'
 import { PELL_ID, PELL_THREAD_ID, PELL_WORK_THREAD_ID } from './prospect-seed'
 import { PELL_INTRO } from './prospect-script'
 
+export const PATRICIA_THREAD_ID = 'th-patricia'
+
 export const SEED_THREADS: readonly Thread[] = [
   { id: 'th-brief', title: 'Brief', visibility: 'private', ownerId: 'user-001', memberIds: ['user-001'], agentIds: ['drift-monitor', 'harvest-scanner'],
     subject: { type: 'account', id: 'acc-002' } },
@@ -13,6 +15,8 @@ export const SEED_THREADS: readonly Thread[] = [
     agentIds: ['meeting-prep', 'meeting-notes'], subject: { type: 'household', id: 'hh-001' } },
   { id: 'th-robert', title: 'Robert Johnson', visibility: 'client', partyId: 'cli-001', memberIds: ['cli-001', 'user-001', 'user-002'],
     agentIds: [], subject: { type: 'client', id: 'cli-001' } },
+  { id: PATRICIA_THREAD_ID, title: 'Patricia Johnson', visibility: 'client', partyId: 'cli-002', memberIds: ['cli-002', 'user-001', 'user-002'],
+    agentIds: [], subject: { type: 'client', id: 'cli-002' } },
   { id: PELL_THREAD_ID, title: 'Dr. Amanda Pell', visibility: 'client', partyId: PELL_ID, memberIds: [PELL_ID, 'user-001', 'user-002'],
     agentIds: [], subject: { type: 'prospect', id: PELL_ID } },
   { id: PELL_WORK_THREAD_ID, title: 'Pell · prospect work', visibility: 'internal', memberIds: ['user-001', 'user-002', 'user-003'],

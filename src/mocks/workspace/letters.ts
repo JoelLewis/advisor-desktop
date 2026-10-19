@@ -49,6 +49,7 @@ export function reviseDraft(viewerId: string, clientThreadId: string, draftId: s
   // The edit keeps the letter's basis (so it still goes stale with the approval or the filing) but not its figures: the text is now the editor's.
   const draft: Draft = { id: nextId('draft'), clientThreadId: thread.id, authorId: viewerId, body, createdAt: nextAt(), agentId: old.agentId, basis: old.basis,
     ...(old.recordBasis ? { recordBasis: old.recordBasis } : {}), supersedes: old.id,
+    ...(old.copies ? { copies: old.copies } : {}),
     editorIds: [...new Set([...(old.editorIds ?? []), viewerId])] }
   s.drafts = s.drafts.map((d) => (d.id === old.id ? draft : d))
   return { ok: true, draft }

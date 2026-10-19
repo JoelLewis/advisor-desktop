@@ -7,13 +7,13 @@ const ids = (viewer: string) => visibleThreads(viewer).map((t) => t.id).sort()
 describe('viewer filtering (engine rule 2)', () => {
   beforeEach(() => resetWorkspaceStore())
   it('advisor sees all three; their private brief included', () => {
-    expect(ids('user-001')).toEqual(['th-brief', 'th-johnson-meeting', 'th-johnson-review', 'th-pell', 'th-pell-work', 'th-robert'])
+    expect(ids('user-001')).toEqual(['th-brief', 'th-johnson-meeting', 'th-johnson-review', 'th-patricia', 'th-pell', 'th-pell-work', 'th-robert'])
   })
   it('a csa sees firm threads they belong to, never another person\'s private thread', () => {
-    expect(ids('user-002')).toEqual(['th-johnson-meeting', 'th-johnson-review', 'th-pell', 'th-pell-work', 'th-robert'])
+    expect(ids('user-002')).toEqual(['th-johnson-meeting', 'th-johnson-review', 'th-patricia', 'th-pell', 'th-pell-work', 'th-robert'])
   })
   it('compliance supervises internal and client threads but not private ones', () => {
-    expect(ids('cco-001')).toEqual(['th-johnson-meeting', 'th-johnson-review', 'th-pell', 'th-pell-work', 'th-robert'])
+    expect(ids('cco-001')).toEqual(['th-johnson-meeting', 'th-johnson-review', 'th-patricia', 'th-pell', 'th-pell-work', 'th-robert'])
   })
   it('a client sees exactly their own client thread', () => {
     expect(ids('cli-001')).toEqual(['th-robert'])

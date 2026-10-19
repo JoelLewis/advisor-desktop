@@ -3,7 +3,7 @@ import { PEOPLE, AGENTS, CCO_ID, can, personById } from '../people'
 
 describe('people and permissions', () => {
   it('has the six roles and no real names', () => {
-    expect(PEOPLE.map((p) => p.role).sort()).toEqual(['advisor', 'analyst', 'client', 'compliance', 'csa', 'prospect'])
+    expect(PEOPLE.map((p) => p.role).sort()).toEqual(['advisor', 'analyst', 'client', 'client', 'compliance', 'csa', 'prospect'])
     expect(personById('user-001')?.name).toBe('Adrian Hale')
     expect(PEOPLE.some((p) => /joel/i.test(p.name))).toBe(false)
   })

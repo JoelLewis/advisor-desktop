@@ -7,6 +7,7 @@ export const PEOPLE: readonly Person[] = [
   { id: 'user-003', name: 'Mike Chen', role: 'analyst' },
   { id: 'cco-001', name: 'Mark Davis', role: 'compliance' },
   { id: 'cli-001', name: 'Robert Johnson', role: 'client' },
+  { id: 'cli-002', name: 'Patricia Johnson', role: 'client' },
   { id: 'prsp-011', name: 'Dr. Amanda Pell', role: 'prospect' },
 ]
 

@@ -7,10 +7,10 @@ import { useDrafts, useProposals, useReviseDraft, useSendToParty } from '@/hooks
 import { useViewer } from '@/workspace/viewer/use-viewer'
 import { personIn } from '@/workspace/people/directory-people'
 import { threadParty } from '@/workspace/people/thread-party'
-import { addressNameOf } from '@/lib/words'
 import type { Directory, Draft, Thread } from '@/types/workspace'
 import type { ProposalDetail } from '@/types/workspace-proposal'
 import { ContextSection } from './ContextSection'
+import { sendLabelOf } from './send-label'
 import { LetterControl } from './LetterControl'
 import { RecapControl } from './RecapControl'
 import { draftOrigin } from './draft-origin'
@@ -46,7 +46,6 @@ export function DraftsPanel({ thread, directory, onSent }: DraftsPanelProps) {
   if (drafts.isPending) return <p role="status" className="py-5 text-body text-ink-3">Loading drafts…</p>
   if (drafts.isError) return <p role="alert" className="py-5 text-body">{drafts.error.message}</p>
   if (!canDraft && drafts.data.length === 0 && !send.error) return null
-  const name = addressNameOf(party.name)
   return (
     <ContextSection title={`Drafts · message to ${party.name}`}>
       {canDraft && threadParty(thread) === 'client' ? <LetterControl thread={thread} /> : null}
@@ -54,7 +53,7 @@ export function DraftsPanel({ thread, directory, onSent }: DraftsPanelProps) {
       {drafts.data.map((d) => (
         <DraftView key={d.id} draft={d} directory={directory} threadId={thread.id} canEdit={canDraft}
           staleReason={d.stale ? staleReason(d, proposals.data) : undefined}
-          sendLabel={canSend ? `Send to ${name}` : undefined} sending={send.isPending} onSend={() => sendDraft(d.id)} />
+          sendLabel={canSend ? sendLabelOf(party.name, d) : undefined} sending={send.isPending} onSend={() => sendDraft(d.id)} />
       ))}
       {send.error ? <p role="alert" className="text-body">{send.error.message}</p> : null}
     </ContextSection>

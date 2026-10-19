@@ -36,6 +36,10 @@ export function draftRecap(viewerId: string, clientThreadId: string, eventId: st
   const signer = filedBy === undefined ? undefined : personById(filedBy)
   if (!signer) throw new Error(`The filing ${recordBasis.actId} names no recorded actor`)
   const attending = [client, ...clients.filter((c) => c.id !== client.id && c.householdId === meeting.householdId && event.attendees.some((a) => a.id === c.id))]
+  const copies = attending.slice(1).flatMap((c) => {
+    const own = s.threads.find((t) => t.visibility === 'client' && t.partyId === c.id)
+    return own ? [{ threadId: own.id, partyName: c.fullName }] : []
+  })
   const letter = writeMeetingRecap({
     addresseeId: client.id, greetingNames: attending.map((c) => firstNameOf(c.fullName)), filing: meeting.filed, signerName: signer.name,
     windowSentence: windowEnd === undefined ? undefined : intelWindowSentence(windowEnd),
@@ -43,6 +47,7 @@ export function draftRecap(viewerId: string, clientThreadId: string, eventId: st
   const draft: Draft = {
     id: nextId('draft'), clientThreadId: thread.id, authorId: viewerId, body: letter.body, createdAt: nextAt(),
     agentId: 'client-letter', recordBasis, figures: letter.figures,
+    ...(copies.length > 0 ? { copies } : {}),
   }
   s.drafts.push(draft)
   return { ok: true, draft, created: true }

@@ -81,6 +81,8 @@ export type CorrespondenceOutcome = 'reviewed' | 'flagged'
 export type PresenterPath = 'shortcut' | 'view_as' | 'scripted'
 /** Firm-only: how the one presenter performed an act recorded as someone else. No path: the shortcut. */
 export type ViaPresenter = { presenterId: string; path?: PresenterPath }
+/** Where a sent message landed: its thread and the message there. A recap to both spouses has two. Firm only. */
+type Delivery = { threadId: string; messageId: string }
 export type BindingAct = {
   id: string
   kind: BindingActKind
@@ -98,6 +100,8 @@ export type BindingAct = {
   editedBy?: string[]
   /** The message a send_to_party act delivered. */
   messageId?: string
+  /** Firm only: every thread a send reached and its message there; the first is the act's own thread. */
+  deliveries?: Delivery[]
   /** Why compliance disposed of the item as it did; every compliance act carries one. */
   rationale?: string
   outcome?: AlertOutcome | CorrespondenceOutcome | BreakResolution
@@ -117,7 +121,9 @@ export type ServedAct = Omit<BindingAct, 'fingerprint'> & { fingerprint?: string
 export type LetterBasis = { proposalId: string; version: number; fingerprint: string }
 /** A recap's basis: the filing it was written from and the Intel window end it states. It is stale once either no longer matches. */
 export type RecordBasis = { eventId: string; actId: string; fingerprint: string; windowEnd?: string }
-export type Draft = { id: string; clientThreadId: string; authorId: string; body: string; createdAt: string; agentId?: AgentId; basis?: LetterBasis; recordBasis?: RecordBasis; figures?: Figure[]; supersedes?: string; editorIds?: string[]; stale?: boolean; staleReason?: string }
+export type Draft = { id: string; clientThreadId: string; authorId: string; body: string; createdAt: string; agentId?: AgentId; basis?: LetterBasis; recordBasis?: RecordBasis; figures?: Figure[]; supersedes?: string; editorIds?: string[]; stale?: boolean; staleReason?: string
+  /** Firm only: the other client conversations this letter also goes to when sent, as one act. */
+  copies?: { threadId: string; partyName: string }[] }
 /** Who reads a thread besides the firm, as the band says it: its owner alone, the team (about these clients, by full name), or its party. */
 export type ThreadAudience = { kind: 'owner' } | { kind: 'team'; about: string[] } | { kind: 'party'; name: string }
 /** The thread, its messages, who reads it as the band says it, and everyone who reads it by name, as its viewer may be told. */

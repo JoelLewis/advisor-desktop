@@ -84,7 +84,7 @@ test("the README's five-minute path, end to end", async ({ page }) => {
   await back()
   await threadLink(page, 'Robert Johnson').click()
   await askForRecap(page)
-  await letterDraft(page).getByRole('button', { name: 'Send to Robert' }).click()
+  await letterDraft(page).getByRole('button', { name: 'Send to Robert and Patricia' }).click()
   await expect(conversation(page)).toContainText('What we decided:')
   await expect(conversation(page)).toContainText('Dear Robert and Patricia,')
 

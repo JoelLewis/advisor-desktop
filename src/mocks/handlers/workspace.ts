@@ -24,7 +24,7 @@ import { approveProposal, visibleProposal, withdrawApproval } from '../workspace
 import { previewAgent, runAgent } from '../workspace/run-agent'
 import { canSeeThread, isExternalViewer, viewerFrom, visibleThreads } from '../workspace/visibility'
 import { audienceOf } from '../workspace/party'
-import { actsForOutsider, messageForOutsider, messagesForOutsider } from '../workspace/outsider-view'
+import { actsForOutsider, actsReaching, messageForOutsider, messagesForOutsider } from '../workspace/outsider-view'
 import { rosterOf } from '../workspace/roster'
 import { notFound } from './utils'
 import { badRequest, firmViewer, nonEmptyString, readJson, refusal, unauthorized, withoutProvenance } from './workspace-http'
@@ -134,7 +134,7 @@ export const workspaceHandlers = [
     const threadId = new URL(request.url).searchParams.get('threadId')
     const thread = store().threads.find((t) => t.id === threadId)
     if (!thread || !canSeeThread(viewer, thread)) return notFound()
-    const acts = store().acts.filter((a) => a.threadId === thread.id)
+    const acts = actsReaching(thread.id)
     // An outsider sees the record of what reached them, not what it was made from (the firm's draft, its proposal, its editors) nor how the firm reviewed it.
     return HttpResponse.json(isExternalViewer(viewer)
       ? actsForOutsider(thread.id, acts.map(withoutProvenance))

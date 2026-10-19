@@ -92,11 +92,25 @@ const robertRecap = async (page: Page) => {
 /** Robert's own view once the recap is sent: his question, the recap and its slip. */
 const robertRecapClient = async (page: Page) => {
   await recapDrafted(page)
-  await letterDraft(page).getByRole('button', { name: 'Send to Robert' }).click()
+  await letterDraft(page).getByRole('button', { name: 'Send to Robert and Patricia' }).click()
   await expect(conversation(page)).toContainText('What we decided:')
   await viewAs(page, 'Robert Johnson · Client')
   await expect(heading(page)).toHaveText('Your conversation with Larkfield')
   await expect(conversation(page).getByRole('listitem')).toHaveCount(3)
+  await settle(page)
+}
+
+/** Patricia's own view once the recap is sent: the recap and its record, in her own conversation. */
+const patriciaRecapClient = async (page: Page) => {
+  await recapDrafted(page)
+  await letterDraft(page).getByRole('button', { name: 'Send to Robert and Patricia' }).click()
+  await expect(conversation(page)).toContainText('What we decided:')
+  await viewAs(page, 'Patricia Johnson · Client')
+  await expect(page.getByRole('navigation', { name: 'Threads' }).getByRole('link')).toHaveCount(1)
+  await page.getByRole('navigation', { name: 'Threads' }).getByRole('link').click()
+  await expect(heading(page)).toHaveText('Your conversation with Larkfield')
+  await expect(conversation(page).getByRole('listitem')).toHaveCount(2)
+  await expect(conversation(page)).toContainText("We won't trade in Patricia's accounts")
   await settle(page)
 }
 
@@ -110,6 +124,7 @@ const SCENES: Scene[] = [
   { name: 'client-light', layout: 'full-width', open: client },
   { name: 'robert-recap-light', layout: 'three-panes', open: robertRecap },
   { name: 'robert-recap-client-light', layout: 'three-panes', open: robertRecapClient },
+  { name: 'patricia-recap-client-light', layout: 'three-panes', open: patriciaRecapClient },
 ]
 
 async function boxOf(region: Locator) {
@@ -227,8 +242,9 @@ test('one presenter runs the Johnson annual review end to end; Robert sees only 
   await threadLink(page, 'Robert Johnson').click()
   await expect(heading(page)).toHaveText('Robert Johnson')
   await askForRecap(page)
-  await letterDraft(page).getByRole('button', { name: 'Send to Robert' }).click()
+  await letterDraft(page).getByRole('button', { name: 'Send to Robert and Patricia' }).click()
   await expect(conversation(page)).toContainText('What we decided:')
+  await expect(context(page).getByRole('region', { name: 'Audit trail' })).toContainText('Message sent to Robert Johnson and Patricia Johnson')
 
   // 9. Robert sees his question, the recap and its slip — nothing of the firm's record.
   await viewAs(page, 'Robert Johnson · Client')

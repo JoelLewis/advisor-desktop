@@ -7,13 +7,17 @@ export const isCorrespondenceOutcome = (value: unknown): value is Correspondence
 /** A message the firm sent a client: the send record, the message as delivered, and the client thread it is in. */
 export type SentMessage = { act: BindingAct; message: TextMessage; thread: Thread }
 
+/** Every message the firm sent a client, one per delivery: a recap to both spouses is two messages for compliance to review. */
 export function sentMessages(): SentMessage[] {
   const s = store()
   return s.acts.flatMap((act) => {
-    if (act.kind !== 'send_to_party' || !act.messageId) return []
-    const message = s.messages.find((m): m is TextMessage => m.kind === 'text' && m.id === act.messageId)
-    const thread = s.threads.find((t) => t.id === act.threadId)
-    return message && thread ? [{ act, message, thread }] : []
+    if (act.kind !== 'send_to_party') return []
+    const deliveries = act.deliveries ?? (act.messageId && act.threadId ? [{ threadId: act.threadId, messageId: act.messageId }] : [])
+    return deliveries.flatMap((d) => {
+      const message = s.messages.find((m): m is TextMessage => m.kind === 'text' && m.id === d.messageId)
+      const thread = s.threads.find((t) => t.id === d.threadId)
+      return message && thread ? [{ act, message, thread }] : []
+    })
   })
 }
 

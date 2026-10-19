@@ -40,7 +40,7 @@ describe('workspace shell', () => {
     expect(await screen.findByText('Loading threads…')).toBeInTheDocument()
     const skeleton = document.querySelector('[data-part="thread-list-skeleton"]')!
     expect(skeleton).toHaveAttribute('aria-hidden', 'true')
-    expect(skeleton.querySelectorAll('[data-part="skeleton-row"]')).toHaveLength(14)
+    expect(skeleton.querySelectorAll('[data-part="skeleton-row"]')).toHaveLength(15)
     expect(skeleton.querySelector('ul[aria-label="Visibility"]')).toBeNull()
     expect([...skeleton.querySelectorAll('h2')].map((h) => h.textContent)).toEqual(['Firm', 'Reports', 'Just me', 'Larkfield team', 'Client conversations'])
   })
@@ -68,16 +68,17 @@ describe('workspace shell', () => {
     expect(within(threadNav()).getByRole('link', { name: 'Johnson annual review' })).toHaveAccessibleDescription("Visibility: Larkfield team · Robert and Patricia can't see this")
     expect(within(threadNav()).getByRole('link', { name: 'Pell · prospect work' })).toHaveAccessibleDescription("Visibility: Larkfield team · Dr. Pell can't see this")
     expect(within(threadNav()).getByRole('link', { name: 'Robert Johnson' })).toHaveAccessibleDescription('Visibility: Robert Johnson can read this')
+    expect(within(threadNav()).getByRole('link', { name: 'Patricia Johnson' })).toHaveAccessibleDescription('Visibility: Patricia Johnson can read this')
     expect(within(threadNav()).getByRole('link', { name: 'Dr. Amanda Pell' })).toHaveAccessibleDescription('Visibility: Dr. Amanda Pell can read this')
     const spoken = within(threadNav()).queryAllByText(/^Visibility: /)
-    expect(spoken.length).toBe(6)
+    expect(spoken.length).toBe(7)
     for (const note of spoken) expect(note).toHaveClass('sr-only')
   })
 
   it('as Adrian lists six threads under the three headings, with one h1', async () => {
     const { container } = await renderHome()
     await waitFor(() => expect(groupHeadings()).toEqual(['Firm', 'Reports', 'Just me', 'Larkfield team', 'Client conversations', 'Agents']))
-    expect(threadLinks()).toEqual(['Supervision', 'Archive', 'Billing', 'Reconciliation', 'Risk', 'Models', 'Practice', 'Blotter', 'Brief', 'Johnson Rebalance Review', 'Johnson annual review', 'Pell · prospect work', 'Robert Johnson', 'Dr. Amanda Pell'])
+    expect(threadLinks()).toEqual(['Supervision', 'Archive', 'Billing', 'Reconciliation', 'Risk', 'Models', 'Practice', 'Blotter', 'Brief', 'Johnson Rebalance Review', 'Johnson annual review', 'Pell · prospect work', 'Robert Johnson', 'Patricia Johnson', 'Dr. Amanda Pell'])
     expect(within(threadNav()).getByRole('link', { name: 'Johnson Rebalance Review' })).toHaveAttribute('href', '/t/th-johnson-review')
     expect(container.querySelectorAll('h1')).toHaveLength(1)
     expect(screen.getByRole('heading', { level: 1, name: 'Workspace' })).toHaveAttribute('tabindex', '-1')
@@ -149,7 +150,7 @@ describe('workspace shell', () => {
     const select = await screen.findByRole('combobox', { name: 'View as' })
     await within(select).findByRole('option', { name: 'Mark Davis · Compliance' })
     expect(within(select).getAllByRole('option').map((o) => o.textContent)).toEqual([
-      'Adrian Hale · Advisor', 'Sarah Mitchell · Client service', 'Mike Chen · Analyst', 'Mark Davis · Compliance', 'Robert Johnson · Client', 'Dr. Amanda Pell · Prospect',
+      'Adrian Hale · Advisor', 'Sarah Mitchell · Client service', 'Mike Chen · Analyst', 'Mark Davis · Compliance', 'Robert Johnson · Client', 'Patricia Johnson · Client', 'Dr. Amanda Pell · Prospect',
     ])
     expect(select).toHaveValue('user-001')
   })
@@ -175,13 +176,13 @@ describe('workspace shell', () => {
     await renderHome()
     await viewAs('Robert Johnson · Client')
     await waitFor(() => expect(threadLinks()).toEqual(['Your conversation with Larkfield']))
-    expect(within(screen.getByRole('combobox', { name: 'View as' })).getAllByRole('option')).toHaveLength(6)
+    expect(within(screen.getByRole('combobox', { name: 'View as' })).getAllByRole('option')).toHaveLength(7)
   })
 
   it('viewing as Mark Davis shows the two firm threads, not the private brief', async () => {
     await renderHome()
     await viewAs('Mark Davis · Compliance')
-    await waitFor(() => expect(threadLinks()).toEqual(['Supervision', 'Archive', 'Billing', 'Reconciliation', 'Risk', 'Models', 'Practice', 'Blotter', 'Johnson Rebalance Review', 'Johnson annual review', 'Pell · prospect work', 'Robert Johnson', 'Dr. Amanda Pell']))
+    await waitFor(() => expect(threadLinks()).toEqual(['Supervision', 'Archive', 'Billing', 'Reconciliation', 'Risk', 'Models', 'Practice', 'Blotter', 'Johnson Rebalance Review', 'Johnson annual review', 'Pell · prospect work', 'Robert Johnson', 'Patricia Johnson', 'Dr. Amanda Pell']))
     expect(groupHeadings()).toEqual(['Firm', 'Reports', 'Larkfield team', 'Client conversations', 'Agents'])
   })
 

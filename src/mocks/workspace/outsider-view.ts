@@ -26,11 +26,16 @@ function easternIso(utcIso: string): string {
   return `${stamp}${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`
 }
 
+/** The acts that reached a thread: made in it, or delivered to it by a send that reached several. */
+export function actsReaching(threadId: string): BindingAct[] {
+  return store().acts.filter((a) => a.threadId === threadId || (a.deliveries ?? []).some((d) => d.threadId === threadId))
+}
+
 /** The thread's records as an outsider names them: "1", "2", … in the order they were made. Never the firm's record ids. */
 function anchorsOf(threadId: string): Map<string, string> {
   const anchors = new Map<string, string>()
-  store().acts
-    .filter((a) => a.threadId === threadId && PARTY_VISIBLE_ACTS.has(a.kind))
+  actsReaching(threadId)
+    .filter((a) => PARTY_VISIBLE_ACTS.has(a.kind))
     .sort((a, b) => a.at.localeCompare(b.at))
     .forEach((a, i) => anchors.set(a.id, String(i + 1)))
   return anchors
@@ -47,18 +52,18 @@ export type OutsiderAct = Omit<BindingAct, 'fingerprint'>
 
 const withoutFingerprint = ({ fingerprint: _fingerprint, ...act }: BindingAct): OutsiderAct => act
 
-function outsiderAct(act: BindingAct, anchors: Map<string, string>): OutsiderAct {
-  return { ...withoutFingerprint(act), id: anchorFor(anchors, act.id), at: easternIso(act.at) }
+/** The act as the thread being read holds it: its own thread id, never the firm thread a multi-delivery send was made in. */
+function outsiderAct(act: BindingAct, threadId: string, anchors: Map<string, string>): OutsiderAct {
+  return { ...withoutFingerprint(act), id: anchorFor(anchors, act.id), threadId, at: easternIso(act.at) }
 }
 
 export function actsForOutsider(threadId: string, acts: BindingAct[]): OutsiderAct[] {
   const anchors = anchorsOf(threadId)
-  return acts.filter((a) => PARTY_VISIBLE_ACTS.has(a.kind)).map((a) => outsiderAct(a, anchors))
+  return acts.filter((a) => PARTY_VISIBLE_ACTS.has(a.kind)).map((a) => outsiderAct(a, threadId, anchors))
 }
 
-export function actForOutsider(act: BindingAct): OutsiderAct {
-  if (act.threadId === undefined) throw new Error(`Act ${act.id} has no thread an outsider could read it in`)
-  return outsiderAct(act, anchorsOf(act.threadId))
+export function actForOutsider(act: BindingAct, readingThreadId: string): OutsiderAct {
+  return outsiderAct(act, readingThreadId, anchorsOf(readingThreadId))
 }
 
 export function messageForOutsider(message: Message, anchors: Map<string, string> = anchorsOf(message.threadId)): Message {
