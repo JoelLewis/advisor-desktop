@@ -8,12 +8,11 @@ import { ledgerFills } from '@/mocks/data/portfolio-ledger'
 import { proposalById } from '@/mocks/data/proposals-store'
 import { store } from '@/mocks/data/workspace-store'
 import { currencyForAccount, orders } from '@/mocks/handlers/oms'
+import { ticketQuantity, ticketSide, ticketValue } from '@/mocks/workspace/household-ledger'
 import { isFirmViewer } from '@/mocks/workspace/visibility'
 import { MOCK_NOW_ISO } from '@/lib/clock'
 import { isTradingDay, nyseSessionUtc } from '@/lib/trading-calendar'
 
-const BUY_SIDES: ReadonlySet<string> = new Set(['buy', 'purchase', 'buy_to_open', 'buy_to_close', 'buy_to_cover'])
-const SELL_SIDES: ReadonlySet<string> = new Set(['sell', 'redemption', 'sell_short', 'sell_to_open', 'sell_to_close'])
 const TICKET_STATUS: Readonly<Record<Order['status'], BlotterStatus>> = { pending: 'working', submitted: 'working', filled: 'filled', canceled: 'canceled' }
 const STAGED_STATUS: Readonly<Record<StagedOrder['status'], BlotterStatus>> = {
   pending_compliance: 'pending_compliance', filled: 'filled', withdrawn: 'withdrawn', returned: 'returned',
@@ -25,36 +24,6 @@ function accountName(id: string): string {
   return accountDisplayName(account)
 }
 
-function sideOf(order: Order): 'buy' | 'sell' {
-  if (BUY_SIDES.has(order.side)) return 'buy'
-  if (SELL_SIDES.has(order.side)) return 'sell'
-  throw new Error(`Ticket ${order.id} has a side the blotter cannot read: ${order.side}`)
-}
-
-/** Quantity × price; a bond's is par × price ÷ 100; an option's is contracts × price × its multiplier. */
-function ticketValue(order: Order): number | undefined {
-  if (order.status !== 'filled' || order.filledPrice === undefined) return undefined
-  if (order.assetClass === 'fixed_income') {
-    if (order.parAmount === undefined) throw new Error(`Bond ticket ${order.id} names no par amount`)
-    return (order.parAmount * order.filledPrice) / 100
-  }
-  if (order.assetClass === 'option') {
-    if (order.contractMultiplier === undefined) throw new Error(`Option ticket ${order.id} names no multiplier`)
-    return order.filledQuantity * order.filledPrice * order.contractMultiplier
-  }
-  return order.filledQuantity * order.filledPrice
-}
-
-/** An option ticket counts contracts and a bond ticket states par; everything else is shares. */
-function quantityOf(order: Order): Pick<BlotterRow, 'quantity' | 'quantityUnit'> {
-  if (order.assetClass === 'option') return { quantity: order.quantity, quantityUnit: 'contracts' }
-  if (order.assetClass === 'fixed_income') {
-    if (order.parAmount === undefined) throw new Error(`Bond ticket ${order.id} names no par amount`)
-    return { quantity: order.parAmount, quantityUnit: 'par' }
-  }
-  return { quantity: order.quantity, quantityUnit: 'sh' }
-}
-
 /** Entered on a trading day before the regular session opened, so queued for the open: the blotter says so. */
 const enteredBeforeTheOpen = (at: string): boolean => isTradingDay(at) && Date.parse(at) < Date.parse(nyseSessionUtc(at).open)
 const preMarket = (at: string) => (enteredBeforeTheOpen(at) ? { preMarket: true as const } : {})
@@ -64,7 +33,7 @@ function ticketRow(order: Order): BlotterRow {
   const price = status === 'filled' ? order.filledPrice : order.limitPrice
   const value = ticketValue(order)
   return {
-    id: order.id, accountId: order.accountId, accountName: accountName(order.accountId), symbol: order.symbol, side: sideOf(order), ...quantityOf(order),
+    id: order.id, accountId: order.accountId, accountName: accountName(order.accountId), symbol: order.symbol, side: ticketSide(order), ...ticketQuantity(order),
     ...(price !== undefined ? { price, priceKind: status === 'filled' ? 'fill' as const : 'limit' as const } : {}),
     ...(value !== undefined ? { value } : {}),
     currency: currencyForAccount(order.accountId), status, source: { kind: 'ticket' }, submittedAt: order.submittedAt, ...preMarket(order.submittedAt),
