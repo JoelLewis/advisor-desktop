@@ -44,7 +44,7 @@ export const routes: RouteObject[] = [
           { index: true, element: <WorkspaceHome /> },
           { path: 't/:threadId', element: <ThreadPage />, handle: threadHandle },
           { path: 'accounts/:accountId', element: <AccountView /> },
-          { path: 'households/:householdId', element: <HouseholdView />, handle: fullWidthHandle },
+          { path: 'households/:householdId', element: <HouseholdView /> },
           { path: 'clients/:clientId', element: <ClientView />, handle: fullWidthHandle },
           { path: 'archive', lazy: () => import('@/workspace/archive/ArchivePage').then((m) => ({ Component: m.ArchivePage })), HydrateFallback: PageLoading },
           { path: 'billing', lazy: () => import('@/workspace/reference/BillingPage').then((m) => ({ Component: m.BillingPage })), HydrateFallback: PageLoading, handle: fullWidthHandle },

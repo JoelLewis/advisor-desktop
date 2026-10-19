@@ -13,9 +13,9 @@ describe('the household full view', () => {
   it('carries the summary, the meetings, the documents, the communications and the activity', async () => {
     renderRoutes(routes, '/households/hh-001?from=th-johnson-meeting')
     expect(await screen.findByRole('heading', { level: 1, name: 'Johnson Household' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Back to the thread' })).toHaveAttribute('href', '/t/th-johnson-meeting')
+    expect(within(screen.getByRole('main')).getByRole('link', { name: 'Back to the thread' })).toHaveAttribute('href', '/t/th-johnson-meeting')
     expect(screen.getByRole('main')).toHaveTextContent("Larkfield team · Robert and Patricia can't see this")
-    expect(screen.getByRole('link', { name: 'Patricia Johnson' })).toHaveAttribute('href', '/clients/cli-002?from=th-johnson-meeting')
+    expect(within(screen.getByRole('main')).getByRole('link', { name: 'Patricia Johnson' })).toHaveAttribute('href', '/clients/cli-002?from=th-johnson-meeting')
     expect(screen.getByRole('table', { name: 'Household accounts' })).toHaveTextContent(/ties to the household total, [\d,]+ USD/)
     const upcoming = screen.getByRole('list', { name: 'Upcoming meetings' })
     expect(upcoming).toHaveTextContent('Johnson annual review · 25 Feb 2026 · 14:00–15:15 ET')
@@ -75,10 +75,15 @@ describe('the client full view', () => {
   })
 })
 
-describe('the household and client full views take the full width', () => {
-  it.each(['/households/hh-001', '/clients/cli-001'])('%s steps the thread list aside, as Supervision does, so its accounts table fits the main pane at 1024px', async (path) => {
-    renderRoutes(routes, path)
-    await screen.findByRole('table', { name: /^(Household accounts|Accounts owned)$/ })
+describe('the list column beside the household and client pages', () => {
+  it('stays beside the household page, which no longer steps it aside', async () => {
+    renderRoutes(routes, '/households/hh-001')
+    await within(screen.getByRole('main')).findByRole('table', { name: 'Household accounts' })
+    expect(screen.getByRole('navigation', { name: 'Book' })).toBeInTheDocument()
+  })
+  it('is stepped aside for the client page, as Supervision does, so its accounts table fits the main pane at 1024px', async () => {
+    renderRoutes(routes, '/clients/cli-001')
+    await screen.findByRole('table', { name: 'Accounts owned' })
     expect(screen.queryByRole('navigation', { name: 'Book' })).not.toBeInTheDocument()
   })
 })

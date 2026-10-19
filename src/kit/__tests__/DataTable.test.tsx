@@ -306,8 +306,10 @@ describe('DataTable row keys, muted rows, wrapping columns', () => {
       const [a, b] = within(grid).getAllByRole('row').slice(1)
       expect(a).toHaveAttribute('tabindex', '0')
       expect(b).toHaveAttribute('tabindex', '-1')
-      expect(a).toHaveAttribute('aria-expanded', 'false')
-      expect(b).toHaveAttribute('aria-expanded', 'true')
+      const [openerA, openerB] = [a, b].map((row) => within(row as HTMLElement).getAllByRole('gridcell')[0])
+      expect(openerA).toHaveAttribute('aria-expanded', 'false')
+      expect(openerB).toHaveAttribute('aria-expanded', 'true')
+      expect(a).not.toHaveAttribute('aria-expanded')
       expect(a).toHaveAttribute('aria-keyshortcuts', 'Enter x')
     })
 

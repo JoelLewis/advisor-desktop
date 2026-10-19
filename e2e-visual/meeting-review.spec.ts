@@ -60,12 +60,6 @@ const meetingAfter = (theme: Theme) => async (page: Page) => {
   await settle(page)
 }
 
-const household = async (page: Page) => {
-  await visit(page, '/households/hh-001', 'light')
-  await expect(page.getByRole('table', { name: 'Documents' })).toBeVisible()
-  await settle(page)
-}
-
 const client = async (page: Page) => {
   await visit(page, '/clients/cli-001', 'light')
   await expect(page.getByRole('table', { name: 'Accounts owned' })).toBeVisible()
@@ -120,7 +114,6 @@ const SCENES: Scene[] = [
   { name: 'meeting-before-dark', layout: 'beside-thread', open: meetingBefore('dark') },
   { name: 'meeting-after-light', layout: 'beside-thread', held: true, open: meetingAfter('light') },
   { name: 'meeting-after-dark', layout: 'beside-thread', held: true, open: meetingAfter('dark') },
-  { name: 'household-light', layout: 'full-width', open: household },
   { name: 'client-light', layout: 'full-width', open: client },
   { name: 'robert-recap-light', layout: 'three-panes', open: robertRecap },
   { name: 'robert-recap-client-light', layout: 'three-panes', open: robertRecapClient },
