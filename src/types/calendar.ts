@@ -1,4 +1,4 @@
-type MeetingType =
+export type MeetingType =
   | 'annual_review'
   | 'quarterly_review'
   | 'planning'
